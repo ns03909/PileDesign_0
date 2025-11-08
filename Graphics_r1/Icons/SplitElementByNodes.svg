@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #d92731;
+        stroke: #d92731;
+        stroke-width: .65px;
+      }
+
+      .cls-1, .cls-2 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #000;
+        stroke-width: 20px;
+      }
+    </style>
+  </defs>
+  <line class="cls-2" x1="49.11" y1="135.14" x2="99.11" y2="135.14"/>
+  <ellipse class="cls-1" cx="20.11" cy="135.14" rx="19.76" ry="19.5"/>
+  <ellipse class="cls-1" cx="128.11" cy="135.14" rx="19.76" ry="19.5"/>
+  <ellipse class="cls-1" cx="236.11" cy="135.14" rx="19.76" ry="19.5"/>
+  <line class="cls-2" x1="157.11" y1="135.14" x2="207.11" y2="135.14"/>
+</svg>

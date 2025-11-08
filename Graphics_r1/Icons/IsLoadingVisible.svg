@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+        stroke: #000;
+        stroke-miterlimit: 10;
+        stroke-width: 20px;
+      }
+
+      .cls-2 {
+        font-family: KozGoPr6N-Regular-90ms-RKSJ-H, 'Kozuka Gothic Pr6N';
+        font-size: 72px;
+      }
+    </style>
+  </defs>
+  <text class="cls-2" transform="translate(21 117.22)"><tspan x="0" y="0">慣性力</tspan></text>
+  <g>
+    <line class="cls-1" x1="149.41" y1="169.46" x2="18.01" y2="169.46"/>
+    <polygon points="129.59 140.41 238 169.46 129.59 198.51 129.59 140.41"/>
+  </g>
+</svg>

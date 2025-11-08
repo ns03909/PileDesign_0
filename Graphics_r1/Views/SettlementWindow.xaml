@@ -1,0 +1,822 @@
+﻿<Window x:Class="PileDesign.Views.SettlementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        d:DataContext="{d:DesignInstance Type=local:SettlementViewModel}"
+        mc:Ignorable="d"
+        xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        Title="Settlement Window" Height="600" Width="800">
+
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+
+    <Window.Resources>
+        <!-- 特定の列ヘッダーの色を変更するスタイル -->
+        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="SkyBlueHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#62B0E2"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <!-- 共通のスタイル定義 -->
+        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="CenterHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <conv:HeightToMaxHeightConverter x:Key="HeightToMaxHeightConverter" />
+
+        <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
+            <MenuItem Click="ExportCsvFromContextMenu_Click">
+                <MenuItem.Icon>
+                    <svgc:SvgViewbox Source="/Icons/CSVFileOutput.svg" Style="{StaticResource SvgIconStyle}"/>
+                </MenuItem.Icon>
+                <MenuItem.Header>
+                    <TextBlock Text="CSVファイル出力"/>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Header="コピー" Command="{Binding CopyDataGridSelectionCommand}"
+                      CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
+        
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 左側のプロット -->
+            <Grid Grid.Row="0" Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="auto" />
+                    <ColumnDefinition Width="75" />
+                    <ColumnDefinition Width="auto" />
+
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="SoilPileNo"/>
+
+                <ComboBox Grid.Row="0" Grid.Column="2" 
+                          x:Name="ComboBoxSoilPileNo"
+
+                      ItemsSource="{Binding SoilPilesCountList}"
+                      SelectedValue="{Binding SoilPileNo, UpdateSourceTrigger=LostFocus}"
+                      SelectionChanged = "ComboBoxSoilPileBodyNo_SelectionChanged"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="地盤番号"/>
+                <TextBox Grid.Row="1" Grid.Column="2" 
+                         Text="{Binding SoilPile.GroundNo, UpdateSourceTrigger=LostFocus}" 
+                             HorizontalContentAlignment="Right"
+                             IsReadOnly="true" Foreground="Gray"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="杭上端レベル" 
+                               />
+                <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SoilPile.Z, UpdateSourceTrigger=LostFocus}" 
+
+                             HorizontalContentAlignment="Right"
+                             IsReadOnly="true" Foreground="Gray"/>
+                <TextBlock Grid.Row="2" Grid.Column="3"  Text="m" />
+
+
+                <TextBlock Grid.Row="3" Grid.Column="0"  Text="杭体番号"                               />
+                <TextBox  Grid.Row="3" Grid.Column="2"  Text="{Binding SoilPile.PileBodyNo, UpdateSourceTrigger=LostFocus}" 
+
+                             HorizontalContentAlignment="Right"
+                             IsReadOnly="true" Foreground="Gray"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0"   Text="杭体符号" />
+                <TextBox  Grid.Row="4" Grid.Column="2"  x:Name="TextBoxPileBodyRef"
+                             Text="{Binding PileBody.PileBodyRef, UpdateSourceTrigger=LostFocus}"
+                             HorizontalContentAlignment="Right"
+                            IsReadOnly="true" Foreground="Gray"/>
+
+
+                <TextBlock  Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4" Text="プリセット沈下パラメータ"/>
+                <ComboBox  Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="4" 
+                           Name="ComboBoxPresetSettlementParameters"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding PileBody.PileTipSettlementPresetParameterNames}"
+                            SelectionChanged = "ComboBoxPresetSettlementParameters_SelectionChanged" />
+
+                <TextBlock  Grid.Row="7" Grid.Column="0"
+                            Text="杭先端沈下曲線パラメータ"/>
+                <TextBlock  Grid.Row="7" Grid.Column="1"
+                            Text="α"/>
+                <TextBox Grid.Row="7" Grid.Column="2" x:Name="TextBoxSettleAlpha"
+                            HorizontalContentAlignment="Right"
+                            LostFocus="OnPileBodyLostFocus"
+                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                             KeyDown="TextBox_KeyDown"
+                             >
+                    <Binding Path="PileBody.SettleAlpha" UpdateSourceTrigger="LostFocus" StringFormat="N2">
+                        <Binding.ValidationRules>
+                            <common:RangeValidationRule Min="0.05" Max="0.5" />
+                        </Binding.ValidationRules>
+                    </Binding>
+                    <TextBox.ToolTip >
+                        "適用範囲：0.05 ≦ α ≦ 0.50"
+                    </TextBox.ToolTip>
+                </TextBox>
+
+                <TextBlock  Grid.Row="8" Grid.Column="0" Text="杭先端沈下曲線パラメータ"/>
+                <TextBlock  Grid.Row="8" Grid.Column="1" Text="n" />
+                <TextBox  Grid.Row="8" Grid.Column="2"  
+                    x:Name="TextBoxSettleN"
+
+                            HorizontalContentAlignment="Right"
+                            LostFocus="OnPileBodyLostFocus"
+                            PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                            KeyDown="TextBox_KeyDown">
+                    <Binding Path="PileBody.SettleN" UpdateSourceTrigger="LostFocus" StringFormat="N1">
+                        <Binding.ValidationRules>
+                            <common:RangeValidationRule Min="1" Max="10" />
+                        </Binding.ValidationRules>
+                    </Binding>
+                    <TextBox.ToolTip >
+                        "適用範囲：1.0 ≦ α ≦ 10.0"
+                    </TextBox.ToolTip>
+                </TextBox>
+                <TextBlock   Grid.Row="9" Grid.Column="0" Text="沈下検討用杭先端径" />
+                <TextBlock   Grid.Row="9" Grid.Column="1" Text="d" />
+                <TextBox  Grid.Row="9" Grid.Column="2" 
+                          x:Name="TextBoxPileToeDia"
+                             Text="{Binding PileBody.PileToeDia, UpdateSourceTrigger=LostFocus, StringFormat=N0}"
+                             HorizontalContentAlignment="Right"
+                            LostFocus="OnPileBodyLostFocus" 
+                            PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                            KeyDown="TextBox_KeyDown"/>
+                <TextBlock  Grid.Row="9" Grid.Column="3" Text="mm"/>
+
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="既製杭先端閉塞率" />
+                <TextBox  Grid.Row="10" Grid.Column="2" 
+                              x:Name="TextBoxPrecastPileTipNonPermability"
+                             Text="{Binding PileBody.TipNonPermability, UpdateSourceTrigger=LostFocus}"
+                             HorizontalContentAlignment="Right"
+                            LostFocus="OnPileBodyLostFocus" 
+                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                              KeyDown="TextBox_KeyDown"/>
+
+                <TextBlock  Grid.Row="11" Grid.Column="0" 
+                            Text="鋼管杭先端閉塞率" />
+                <TextBox  Grid.Row="11" Grid.Column="2" 
+                        x:Name="TextBoxSteelPileTipNonPermability"
+                             Text="{Binding PileBody.TipNonPermability, 
+                        UpdateSourceTrigger=LostFocus}"
+                          
+                             HorizontalContentAlignment="Right"
+                            LostFocus="OnPileBodyLostFocus" 
+                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                        KeyDown="TextBox_KeyDown"/>
+
+
+                <TextBlock  Grid.Row="12" Grid.Column="0" Text="杭先端閉塞率"/>
+                <TextBox  Grid.Row="12" Grid.Column="2" 
+                             Text="{Binding SoilPile.PileToeEta, Mode=OneWay, StringFormat=N2}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+
+                <TextBlock  Grid.Row="13" Grid.Column="0" Text="杭先端径" />
+                <TextBlock  Grid.Row="13" Grid.Column="1" Text="D" />
+                <TextBox  Grid.Row="13" Grid.Column="2" 
+                            Text="{Binding SoilPile.D, Mode=OneWay, StringFormat=N3}" 
+                            IsReadOnly="True"
+                            Foreground="Gray"
+                            HorizontalContentAlignment="Right"
+                            LostFocus="OnPileBodyLostFocus" 
+                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                        KeyDown="TextBox_KeyDown"
+                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboartFocus"/>
+                <TextBlock  Grid.Row="13" Grid.Column="3" Text="m" />
+
+
+                <TextBlock  Grid.Row="14" Grid.Column="0" 
+                            Text="杭先端平均N値"/>
+                <TextBox  Grid.Row="14" Grid.Column="2" 
+                             Text="{Binding SoilPile.PileToeNValue,
+                        Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+
+
+                <TextBlock  Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2"
+                            Text="杭先端平均N値算定範囲上限レベル"/>
+                <TextBox  Grid.Row="15" Grid.Column="2" 
+                             Text="{Binding SoilPile.PileToeNValueAverageRangeUpperAltitude,
+                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="1157" Grid.Column="3" 
+                            Text="m"/>
+
+
+                <TextBlock Grid.Row="16" Grid.Column="0"  Text="杭先端レベル" 
+                               />
+                <TextBox Grid.Row="16" Grid.Column="2" 
+                         Text="{Binding SoilPile.PileBottomAltitude, UpdateSourceTrigger=LostFocus}" 
+
+                             HorizontalContentAlignment="Right"
+                             IsReadOnly="true" Foreground="Gray"/>
+                <TextBlock Grid.Row="16" Grid.Column="3"  Text="m" />
+
+
+                <TextBlock  Grid.Row="17" Grid.Column="0"  Grid.ColumnSpan="2"
+                            Text="杭先端平均N値算定範囲下限レベル"/>
+                <TextBox  Grid.Row="17" Grid.Column="2" 
+                             Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude, 
+                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="17" Grid.Column="3" 
+                            Text="m"/>
+
+
+
+                <TextBlock  Grid.Row="18" Grid.Column="0" 
+                                Text="杭先端支持力度" />
+                <TextBlock  Grid.Row="18" Grid.Column="1" 
+                                Text="qpu" />
+                <TextBox  Grid.Row="18" Grid.Column="2" 
+                             Text="{Binding SoilPile.Qpu, Mode=OneWay, StringFormat=N0}" 
+                        IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="18" Grid.Column="3" 
+                                Text="kN/m2" />
+
+                <TextBlock  Grid.Row="19" Grid.Column="0" 
+                            Text="杭先端面積" />
+                <TextBlock  Grid.Row="19" Grid.Column="1" 
+                            Text="Ap"/>
+                <TextBox  Grid.Row="19" Grid.Column="2" 
+                             Text="{Binding SoilPile.Ap, Mode=OneWay, StringFormat=N3}" 
+                        IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="19" Grid.Column="3" 
+                            Text="m2" />
+
+                <TextBlock  Grid.Row="20" Grid.Column="0" 
+                            Text="極限先端支持力"/>
+                <TextBlock  Grid.Row="20" Grid.Column="1" 
+                            Text="Rpu"/>
+                <TextBox  Grid.Row="20" Grid.Column="2" 
+                             Text="{Binding SoilPile.Rpu, Mode=OneWay, StringFormat=N0}" 
+                        IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="20" Grid.Column="3" 
+                            Text="kN"/>
+
+
+                <TextBlock  Grid.Row="21" Grid.Column="0" Text="極限周面抵抗力" />
+                <TextBlock  Grid.Row="21" Grid.Column="1" Text="Rfu"/>
+                
+                <TextBox  Grid.Row="21" Grid.Column="2" 
+                             Text="{Binding SoilPile.Rfu, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="21" Grid.Column="3" Text="kN"/>
+
+
+                <TextBlock  Grid.Row="22" Grid.Column="0" Text="終局限界引抜力" />
+                <TextBlock  Grid.Row="22" Grid.Column="1" Text="Rt_ULS"/>
+                <TextBox  Grid.Row="22" Grid.Column="2" 
+                             Text="{Binding SoilPile.Rt_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="22" Grid.Column="3" Text="kN"/>
+
+
+                <TextBlock  Grid.Row="23" Grid.Column="0" 
+                            Text="損傷限界引抜力"/>
+                <TextBlock  Grid.Row="23" Grid.Column="1" 
+                            Text="Rt_DLS"/>
+                <TextBox  Grid.Row="23" Grid.Column="2" 
+                             Text="{Binding SoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="23" Grid.Column="3" 
+                            Text="kN"/>
+
+                <TextBlock  Grid.Row="24" Grid.Column="0" 
+                            Text="使用限界引抜力"/>
+                <TextBlock  Grid.Row="24" Grid.Column="1" 
+                            Text="Rt_SLS"/>
+                <TextBox  Grid.Row="24" Grid.Column="2" 
+                             Text="{Binding SoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="24" Grid.Column="3" 
+                            Text="kN"/>
+
+
+                <TextBlock  Grid.Row="25" Grid.Column="0" Text="使用限界支持力" />
+                <TextBlock  Grid.Row="25" Grid.Column="1" Text="R_SLS" />
+                <TextBox  Grid.Row="25" Grid.Column="2" 
+                             Text="{Binding SoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="25" Grid.Column="3" Text="kN"/>
+
+
+                <TextBlock  Grid.Row="26" Grid.Column="0" Text="損傷限界支持力"/>
+                <TextBlock  Grid.Row="26" Grid.Column="1" Text="R_DLS"/>
+                <TextBox  Grid.Row="26" Grid.Column="2" 
+                             Text="{Binding SoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="26" Grid.Column="3" Text="kN"/>
+
+
+                <TextBlock  Grid.Row="27" Grid.Column="0" Text="終局限界支持力" />
+                <TextBlock  Grid.Row="27" Grid.Column="1" Text="R_ULS" />
+                <TextBox  Grid.Row="27" Grid.Column="2" 
+                             Text="{Binding SoilPile.R_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock  Grid.Row="27" Grid.Column="3" Text="kN" />
+
+                <Button  Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="4"
+                         Content="杭の荷重沈下関係解析実行" Command="{Binding ExecuteAnalysisCommand}"/>
+
+            </Grid>
+
+            <Canvas x:Name="Canvas"  Grid.Row="0" Grid.Column="1" Width="Auto" Height="Auto" Background="AliceBlue"/>
+
+            <!-- 右側のプロット -->
+            <TabControl x:Name="ResultTabControl" Grid.Row="0" Grid.Column="2"
+                        SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+                <!--<TabControl Grid.Row="0" Grid.Column="2" 
+                        MaxHeight="{Binding RelativeSource={RelativeSource AncestorType=Window}, 
+                Path=ActualHeight, 
+                Converter={StaticResource HeightToMaxHeightConverter}}">-->
+                <TabItem Header="杭先端沈下・杭周面抵抗力">
+                    <Grid >
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="杭先端沈下" FontWeight="Bold" Grid.Row="0" Grid.Column="0"/>
+                        <ScottPlot:WpfPlot x:Name="wpfPlotPileToe" Grid.Row="1" Grid.Column="0" />
+                        <TextBlock Text="{Binding CrosshairPositionText_PileToe}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
+
+                        <TextBlock Text="土層の杭周面抵抗力" FontWeight="Bold" Grid.Row="0" Grid.Column="1" />
+                        <ScottPlot:WpfPlot x:Name="wpfPlotCircum" Grid.Row="1" Grid.Column="1" />
+                        <TextBlock Text="{Binding CrosshairPositionText_PileCircum}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
+
+                        <common:EnhancedDataGrid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                            ItemsSource="{Binding SoilPile.PileCircumVerticals}"
+                                  SelectedItem="{Binding SelectedPileCircumVertical}"
+                                  AutoGenerateColumns="False"
+                                CanUserAddRows="False"
+                                SelectionChanged="DataGridCircum_SelecitonChanged"
+                                CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                  ColumnHeaderStyle="{StaticResource CenterHeaderStyle}" IsReadOnly="True" Foreground="Gray">
+                            <common:EnhancedDataGrid.AlternatingRowBackground>
+                                <ImageBrush/>
+                            </common:EnhancedDataGrid.AlternatingRowBackground>
+                            
+                            <common:EnhancedDataGrid.Style>
+                                <Style/>
+                            </common:EnhancedDataGrid.Style>
+
+                            <!--CSVファイル出力等-->
+                            <common:EnhancedDataGrid.ContextMenu>
+                                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+                            </common:EnhancedDataGrid.ContextMenu>
+                            
+                            <common:EnhancedDataGrid.Columns>
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding Top, StringFormat=N3}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="上端" TextAlignment="Center" />
+                                            <TextBlock Text="Z" TextAlignment="Center" />
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding Bottom, StringFormat=N3}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="下端" TextAlignment="Center" />
+                                            <TextBlock Text="Z" TextAlignment="Center" />
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding L, StringFormat=N3}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="長さ" TextAlignment="Center"/>
+                                            <TextBlock Text="L" TextAlignment="Center"/>
+                                            <TextBlock Text="(m)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding Psi, StringFormat=N3}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="周長" TextAlignment="Center"/>
+                                            <TextBlock Text="ψ" TextAlignment="Center"/>
+                                            <TextBlock Text="(m)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding PsiL, StringFormat=N3}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="周面" TextAlignment="Center"/>
+                                            <TextBlock Text="面積" TextAlignment="Center"/>
+                                            <TextBlock Text="ψL" TextAlignment="Center"/>
+                                            <TextBlock Text="(m2)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding GroundLayer.Name, StringFormat=N3}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="土層名" TextAlignment="Center" />
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding GroundLayer.IsPositiveCircumResistance}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="押込み" TextAlignment="Center"/>
+                                            <TextBlock Text="周面抵抗"
+                                                TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="考慮"
+                                                TextAlignment="Center" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding GroundLayer.IsNegativeCircumResistance}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="引抜き" TextAlignment="Center"/>
+                                            <TextBlock Text="周面抵抗"
+                                                TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="考慮"
+                                                TextAlignment="Center" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding S1, StringFormat=N1}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="S1" TextAlignment="Center"/>
+                                            <TextBlock Text="(mm)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding S2, StringFormat=N1}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="S2" TextAlignment="Center"/>
+                                            <TextBlock Text="(mm)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding Tau1, StringFormat=N1}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="τ1" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN/m2)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding Tau2, StringFormat=N1}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="τ2" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN/m2)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding TauT, StringFormat=N1}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+
+                                            <TextBlock Text="τT" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN/m2)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                Binding="{Binding Rf, StringFormat=N1}"
+                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="極限" TextAlignment="Center"/>
+                                            <TextBlock Text="周面" TextAlignment="Center"/>
+                                            <TextBlock Text="抵抗力" TextAlignment="Center"/>
+                                            <TextBlock Text="Rf" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN)"
+                                            TextAlignment="Center"
+                                            HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+                            </common:EnhancedDataGrid.Columns>
+                        </common:EnhancedDataGrid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="杭の荷重沈下解析結果　沈下曲線">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <!--<TextBlock  Grid.Row="0" Grid.Column="0" Text="杭頭沈下曲線" FontWeight="Bold"/>-->
+                        <ScottPlot:WpfPlot  Grid.Row="1" Grid.Column="0" x:Name="wpfPlotSettlement"/>
+                        <TextBlock Text="{Binding CrosshairPositionText_PileTopSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
+
+                        <!--<TextBlock Grid.Row="0" Grid.Column="1" Text="杭先端沈下曲線" FontWeight="Bold"/>-->
+                        <ScottPlot:WpfPlot Grid.Row="1" Grid.Column="1" x:Name="wpfPlotSettlementToe"/>
+                        <TextBlock Text="{Binding CrosshairPositionText_PileToeSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
+
+                        <common:EnhancedDataGrid  ItemsSource="{Binding VerticalLoadTransferMethod.LoadDisplacements}"    
+                                   SelectedItem="{Binding SelectedLoadDisplacement}"
+                                AutoGenerateColumns="False"
+                                CanUserAddRows="False"
+                                CanUserSortColumns="False"
+                                VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Auto"
+                                Grid.Row="3"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="2"
+                                SelectionChanged="DataGridLoadDisplacement_SelecitonChanged"
+                                CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                   ColumnHeaderStyle="{StaticResource CenterHeaderStyle}"
+                                    IsReadOnly="True" Foreground="Gray">
+                            <common:EnhancedDataGrid.AlternatingRowBackground>
+                                <ImageBrush/>
+                            </common:EnhancedDataGrid.AlternatingRowBackground>
+                            
+                            <common:EnhancedDataGrid.Style>
+                                <Style/>
+                            </common:EnhancedDataGrid.Style>
+                            
+                            <!--CSVファイル出力等-->
+                            <common:EnhancedDataGrid.ContextMenu>
+                                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+                            </common:EnhancedDataGrid.ContextMenu>
+                            
+                            <common:EnhancedDataGrid.Columns>
+                                <DataGridTextColumn Width="*"
+                                        Binding="{Binding PileTopLoad, StringFormat=N0, Mode=TwoWay}"
+                                        MinWidth="50"
+                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                        HeaderStyle="{StaticResource SkyBlueHeaderStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭頭荷重" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN)"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                        Binding="{Binding RzToe, StringFormat=N0, Mode=TwoWay}"
+                                        MinWidth="50"
+                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                        HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭先端支持力" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN)"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                        Binding="{Binding RzCircum, StringFormat=N0, Mode=TwoWay}"
+                                        MinWidth="50"
+                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                        HeaderStyle="{StaticResource YellowHeaderStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭周面抵抗力" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN)"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                        Binding="{Binding Weight, StringFormat=N0, Mode=TwoWay}"
+                                        MinWidth="50"
+                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                        HeaderStyle="{StaticResource GreenHeaderStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭自重" TextAlignment="Center"/>
+                                            <TextBlock Text="(kN)"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                        Binding="{Binding DD0s, StringFormat=N2, Mode=TwoWay}"
+                                        MinWidth="50"
+                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭頭変位" TextAlignment="Center"/>
+                                            <TextBlock Text="(mm)"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Width="*"
+                                        Binding="{Binding DDns, StringFormat=N2, Mode=TwoWay}"
+                                        MinWidth="50"
+                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭先端変位" TextAlignment="Center"/>
+                                            <TextBlock Text="(mm)"
+                                                TextAlignment="Center"
+                                                HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+                            </common:EnhancedDataGrid.Columns>
+                        </common:EnhancedDataGrid>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Ok" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding CancelCommand}"/>
+        </StackPanel>
+
+    </Grid>
+</Window>

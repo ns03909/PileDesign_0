@@ -1,0 +1,372 @@
+﻿<Window x:Class="PileDesign.Views.VerticalCalculationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        d:DataContext="{d:DesignInstance Type=local:VerticalCalculationViewModel}"
+        mc:Ignorable="d"
+        Title="VerticalCalculationWindow" Height="450" Width="800"
+        x:Name="VerticalCalcWin">
+    <Window.Resources>
+        <FrameworkElement x:Key="ProxyElement" DataContext="{Binding ElementName=MainWin, Path=DataContext}"/>
+        
+        <!-- 共通のスタイルを定義 -->
+        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+
+        <!-- Style for ComboBox elements to right-align text -->
+        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+
+        <!-- Style for ComboBox items to right-align text -->
+        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+        
+        <!-- 共通のスタイル定義 -->
+        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <!-- 特定の列ヘッダーの色を変更するスタイル -->
+        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#238966"/>
+        </Style>
+        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#F7B515"/>
+        </Style>
+        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#3271AD"/>
+        </Style>
+        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#E95541"/>
+        </Style>
+        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#D82531"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
+            <avalonDock:LayoutRoot>
+                <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
+                    <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="1*">
+                        <avalonDock:LayoutDocumentPane>
+                            
+                            <avalonDock:LayoutAnchorable Title="単杭の即時沈下量" CanClose="False" CanHide="False">
+                                <avalonDock:DockingManager x:Name="dockingManager0">
+                                    <avalonDock:LayoutRoot>
+                                        <avalonDock:LayoutPanel DockWidth="1.0*">
+                                            <avalonDock:LayoutDocumentPaneGroup DockWidth="1*">
+                                                <avalonDock:LayoutDocumentPane>
+                                                    <avalonDock:LayoutAnchorable Title="1" CanClose="False" CanHide="False">
+                                                    </avalonDock:LayoutAnchorable>
+                                                </avalonDock:LayoutDocumentPane>
+                                                <avalonDock:LayoutDocumentPane>
+                                                    <avalonDock:LayoutAnchorable Title="2" CanClose="False" CanHide="False">
+                                                    </avalonDock:LayoutAnchorable>
+                                                </avalonDock:LayoutDocumentPane>
+                                                <avalonDock:LayoutDocumentPane>
+                                                    <avalonDock:LayoutAnchorable Title="3" CanClose="False" CanHide="False">
+                                                    </avalonDock:LayoutAnchorable>
+                                                </avalonDock:LayoutDocumentPane>
+                                            </avalonDock:LayoutDocumentPaneGroup>
+                                        </avalonDock:LayoutPanel>
+                                    </avalonDock:LayoutRoot>
+                                </avalonDock:DockingManager>
+                            </avalonDock:LayoutAnchorable>
+                            
+                            <avalonDock:LayoutAnchorable Title="群杭の即時沈下量" CanClose="False" CanHide="False">
+                                <avalonDock:DockingManager x:Name="dockingManager1">
+                                    <avalonDock:LayoutRoot>
+                                        <avalonDock:LayoutPanel DockWidth="1.0*">
+                                            <avalonDock:LayoutDocumentPaneGroup DockWidth="1*">
+                                                <avalonDock:LayoutDocumentPane>
+                                                    <avalonDock:LayoutAnchorable Title="地盤条件" CanClose="False" CanHide="False">
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                                <RowDefinition Height="*"/>
+                                                            </Grid.RowDefinitions>
+
+                                                            <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Label Content="地盤番号" HorizontalContentAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
+                                                                    <ComboBox x:Name="ComboBoxGroundNo"
+                                                                          HorizontalAlignment="Left"
+                                                                          Height="25"
+                                                                          VerticalAlignment="Top"
+                                                                          Width="100"
+                                                                          SelectedValue="{Binding SelectedGroundNo, UpdateSourceTrigger=LostFocus}"
+                                                                          ItemsSource="{Binding InputModel.GroundsInputCountList, UpdateSourceTrigger=LostFocus}"
+                                                                          SelectionChanged="ComboBoxGroundNo_SelectionChanged">
+                                                                    </ComboBox>
+                                                                    <Label Content="地盤符号" HorizontalContentAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
+                                                                    <TextBox x:Name="TextBoxGroundRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center"
+                                                                            Text="{Binding GroundRef, UpdateSourceTrigger = LostFocus}" IsReadOnly="true" Foreground="Gray"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!--<StackPanel Orientation="Horizontal">-->
+                                                            <common:EnhancedDataGrid x:Name="DataGridGroundLayer"
+                                                                    AutoGenerateColumns="False"
+                                                                    HorizontalAlignment="Left"
+                                                                    CanUserAddRows="False"
+                                                                    CanUserSortColumns="False"
+                                                                    FrozenColumnCount="6"
+                                                                    ItemsSource="{Binding SelectedGroundLayerCollection}"
+                                                                    SelectedItem="{Binding SelectedGroundLayerOnDataGrid, Mode=TwoWay}"
+                                                                    LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                                    Grid.Row="1"
+                                                                    CellEditEnding="DataGridGroundLayer_CellEditEnding"
+                                                                    CellStyle="{StaticResource CustomDataGridCellStyle}">
+
+                                                                <common:EnhancedDataGrid.ColumnHeaderStyle>
+                                                                    <Style TargetType="DataGridColumnHeader">
+                                                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                                    </Style>
+                                                                </common:EnhancedDataGrid.ColumnHeaderStyle>
+
+                                                                <common:EnhancedDataGrid.Columns>
+                                                                    <DataGridTextColumn Binding="{Binding LayerThickness, StringFormat='{}{0:0.00}', UpdateSourceTrigger=LostFocus}"
+                                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="Gray">
+
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="層厚" TextAlignment="Center"/>
+                                                                                <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding BottomAltitude, StringFormat='{}{0:+0.00;-0.00;+0.00}'}"
+                                                                            IsReadOnly="True" Foreground="Gray"
+                                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="下端" TextAlignment="Center"/>
+                                                                                <TextBlock Text="Z" TextAlignment="Center"/>
+                                                                                <TextBlock Text="{Binding DataContext.InputModel.FundamentalInput.RefLevel, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                                        TextAlignment="Center"/>
+                                                                                <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding Name}"  IsReadOnly="True" Foreground="Gray">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="土質" TextAlignment="Center"/>
+                                                                                <TextBlock Text="名" TextAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTemplateColumn>
+                                                                        <DataGridTemplateColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="土層" TextAlignment="Center"/>
+                                                                                <TextBlock Text="分類" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTemplateColumn.Header>
+                                                                        <DataGridTemplateColumn.CellTemplate>
+                                                                            <DataTemplate>
+                                                                                <ComboBox SelectedItem="{Binding GranularityClass, UpdateSourceTrigger=LostFocus}"
+                                                                                        ItemsSource="{Binding GranularityClassOption}"  IsReadOnly="True" Foreground="Gray"/>
+                                                                            </DataTemplate>
+                                                                        </DataGridTemplateColumn.CellTemplate>
+                                                                    </DataGridTemplateColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding NValue}" IsReadOnly="True" Foreground="Gray"
+                                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="平均" TextAlignment="Center"/>
+                                                                                <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding Cohesive, StringFormat='{}{0:0.0}'}"
+                                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="Gray">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="粘着力" TextAlignment="Center"/>
+                                                                                <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding Vs, StringFormat='{}{0:0.0}'}"
+                                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="S波" TextAlignment="Center"/>
+                                                                                <TextBlock Text="速度" TextAlignment="Center"/>
+                                                                                <TextBlock Text="(m/s)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding Es, StringFormat='{}{0:0.0}'}"
+                                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="変形" TextAlignment="Center"/>
+                                                                                <TextBlock Text="係数" TextAlignment="Center"/>
+                                                                                <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+                                                                </common:EnhancedDataGrid.Columns>
+                                                            </common:EnhancedDataGrid>
+                                                        </Grid>
+                                                    </avalonDock:LayoutAnchorable>
+
+                                                    <avalonDock:LayoutAnchorable Title="荷重条件" CanClose="False" CanHide="False">
+                                                        <Grid>
+                                                            <StackPanel Orientation="Horizontal" Grid.Row="0">
+
+                                                            </StackPanel>
+                                                            <common:EnhancedDataGrid x:Name="DataGridPileLayout" ItemsSource="{Binding InputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
+                                                                SelectionChanged="DataGridPileLayout_SelectionChanged"
+                                                                AutoGenerateColumns="False"
+                                                                CanUserAddRows="False"
+                                                                CanUserSortColumns="False"
+                                                                VerticalScrollBarVisibility="Auto"
+                                                                HorizontalScrollBarVisibility="Auto"
+                                                                LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                                CellEditEnding="DataGridPileLayout_CellEditEnding"
+                                                                BeginningEdit="DataGridPileLayout_BeginningEdit"
+                                                                MouseRightButtonDown="DataGridPileLayout_MouseRightButtonDown"
+                                                                FrozenColumnCount="2"
+                                                                Grid.Row="1"
+                                                                VerticalAlignment="Top"
+                                                                CellStyle="{StaticResource CustomDataGridCellStyle}">
+
+                                                                <common:EnhancedDataGrid.ColumnHeaderStyle>
+                                                                    <Style TargetType="DataGridColumnHeader">
+                                                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                                    </Style>
+                                                                </common:EnhancedDataGrid.ColumnHeaderStyle>
+
+                                                                <common:EnhancedDataGrid.Columns>
+                                                                    <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="X"  TextAlignment="Center"/>
+                                                                                <TextBlock Text="(m)" TextAlignment="Center"  HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Width="*"  Binding="{Binding Y, StringFormat=N3}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="Y" TextAlignment="Center"/>
+                                                                                <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridTextColumn Binding="{Binding Z, StringFormat={}{0:+0.00;-0.00;+0.00}}"
+                                                                    Width="*"
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                    MinWidth="50">
+                                                                        <DataGridTextColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="杭頭" TextAlignment="Center"/>
+                                                                                <TextBlock Text="Z" TextAlignment="Center"
+                                                                            HorizontalAlignment="Center"/>
+                                                                                <TextBlock x:Name="TextBlockRefLevel"
+                                                                                      
+                                                                            Text="{Binding InputModel.FundamentalInput.RefLevel, UpdateSourceTrigger=LostFocus}"
+                                                                            TextAlignment="Center"/>
+                                                                                <TextBlock Text="(m)" TextAlignment="Center"
+                                                                            HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridTextColumn.Header>
+                                                                    </DataGridTextColumn>
+
+                                                                    <DataGridComboBoxColumn Width="*" x:Name="ColumnPileBodyNo"
+                                                                    SelectedItemBinding="{Binding PileBodyNo}"
+                                                                    ItemsSource="{Binding InputModel.PileBodiesCountList, UpdateSourceTrigger=LostFocus}"
+                                                                    MinWidth="50"
+                                                                    ElementStyle="{StaticResource RightAlignedComboBoxStyle}"
+                                                                    EditingElementStyle="{StaticResource RightAlignedComboBoxStyle}">
+                                                                        <DataGridComboBoxColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="杭体" TextAlignment="Center"/>
+                                                                                <TextBlock Text="番号" TextAlignment="Center"
+                                                                            HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridComboBoxColumn.Header>
+                                                                    </DataGridComboBoxColumn>
+
+                                                                    <DataGridComboBoxColumn Width="*" x:Name="ColumnGroundNo"
+                                                                        SelectedItemBinding="{Binding GroundNo}"
+                                                                        ItemsSource="{Binding InputModel.GroundsInputCountList, UpdateSourceTrigger=LostFocus}"
+                                                                        MinWidth="50"
+                                                                        ElementStyle="{StaticResource RightAlignedComboBoxStyle}"
+                                                                        EditingElementStyle="{StaticResource RightAlignedComboBoxStyle}">
+                                                                        <DataGridComboBoxColumn.Header>
+                                                                            <StackPanel>
+                                                                                <TextBlock Text="地盤" TextAlignment="Center"/>
+                                                                                <TextBlock Text="番号" TextAlignment="Center"
+                                                                                    HorizontalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </DataGridComboBoxColumn.Header>
+                                                                    </DataGridComboBoxColumn>
+                                                                </common:EnhancedDataGrid.Columns>
+                                                            </common:EnhancedDataGrid>
+                                                        </Grid>
+                                                    </avalonDock:LayoutAnchorable>
+                                                </avalonDock:LayoutDocumentPane>
+
+                                                <avalonDock:LayoutDocumentPane>
+                                                    <avalonDock:LayoutAnchorable Title="立面図" CanClose="False" CanHide="False">
+                                                    </avalonDock:LayoutAnchorable>
+                                                    <avalonDock:LayoutAnchorable Title="平面図" CanClose="False" CanHide="False">
+                                                    </avalonDock:LayoutAnchorable>
+                                                </avalonDock:LayoutDocumentPane>
+                                            </avalonDock:LayoutDocumentPaneGroup>
+                                        </avalonDock:LayoutPanel>
+                                    </avalonDock:LayoutRoot>
+                                </avalonDock:DockingManager>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
+                </avalonDock:LayoutPanel>
+            </avalonDock:LayoutRoot>
+        </avalonDock:DockingManager>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Ok" Height="30" VerticalAlignment="Top"
+                    Width="100" Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" VerticalAlignment="Top"
+                    Width="100" Command="{Binding CancelCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,267 @@
+﻿<Window x:Class="PileDesign.Views.HorizontalCalculationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
+        d:DataContext="{d:DesignInstance Type=local:HorizontalCalculationViewModel}"
+        mc:Ignorable="d"
+        Title="HorizontalCalculationWindow" Height="650" Width="800"
+        x:Name="LateralCalcWin">
+    
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.SelectAll"
+                        CanExecute="LogListBox_SelectAllCanExecute"
+                        Executed="LogListBox_SelectAllExecuted" />
+        <CommandBinding Command="ApplicationCommands.Copy"
+                        CanExecute="LogListBox_CopyCanExecute"
+                        Executed="LogListBox_CopyExecuted" />
+    </Window.CommandBindings>
+    
+    <Window.Resources>
+
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        
+        <FrameworkElement x:Key="ProxyElement" DataContext="{Binding ElementName=MainWin, Path=DataContext}"/>
+
+        <!-- 共通のスタイルを定義 -->
+        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+
+        <!-- Style for ComboBox elements to right-align text -->
+        <Style x:Key="RightAlignedComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+
+        <!-- Style for ComboBox items to right-align text -->
+        <Style x:Key="RightAlignedComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+
+        <!-- 共通のスタイル定義 -->
+        <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- 特定の列ヘッダーの色を変更するスタイル -->
+        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#238966"/>
+        </Style>
+        
+        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#F7B515"/>
+        </Style>
+        
+        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#3271AD"/>
+        </Style>
+        
+        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#E95541"/>
+        </Style>
+        
+        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#D82531"/>
+        </Style>
+
+        <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <!-- 既存リソース -->
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 上部コントロール -->
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical">
+
+            <!--<Button Content="水平解析モデル作成" Command="{Binding AnalysisModelingCommand}"/>-->
+
+            <Grid >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="節点数" Width="100" HorizontalAlignment="Left"/>
+                <TextBox Text="{Binding NodesCount, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
+            </Grid>
+
+            <Grid >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="要素数" Width="100" HorizontalAlignment="Left"/>
+                <TextBox Text="{Binding BeamsCount, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
+            </Grid>
+
+            <Grid >
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="剛体連結節点数" Width="100" HorizontalAlignment="Left"/>
+                <TextBox Text="{Binding RigidBodiesCount, UpdateSourceTrigger=PropertyChanged}" 
+                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="液状化" Width="100"/>
+                <RadioButton Content="あり" GroupName="Liquefaction"
+                IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Yes}" Margin="0,0,10,0"/>
+                <RadioButton Content="なし" GroupName="Liquefaction"
+                IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=None}" Margin="0,0,10,0"/>
+                <RadioButton Content="両方" GroupName="Liquefaction"
+                IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Both}"/>
+            </StackPanel>
+
+            <TextBlock Text="荷重ケース レベル1" Margin="0,10,0,0"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                <Button Content="すべて適用" Command="{Binding ApplyAllLoadCasesLevel1Command}" Width="80" Margin="0,0,5,0"/>
+                <Button Content="すべて不適用" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
+            </StackPanel>
+
+            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="None"
+                      CanUserAddRows="False">
+                <common:EnhancedDataGrid.Columns>
+                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto"/>
+                </common:EnhancedDataGrid.Columns>
+            </common:EnhancedDataGrid>
+
+            <TextBlock Text="荷重ケース レベル2" Margin="0,10,0,0"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                <Button Content="すべて適用" Command="{Binding ApplyAllLoadCasesLevel2Command}" Width="80" Margin="0,0,5,0"/>
+                <Button Content="すべて不適用" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
+            </StackPanel>
+
+            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="None"
+                      CanUserAddRows="False">
+                <common:EnhancedDataGrid.Columns>
+                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
+                </common:EnhancedDataGrid.Columns>
+            </common:EnhancedDataGrid>
+
+            <TextBlock Text="荷重組み合わせ"/>
+
+            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCombinations}" AutoGenerateColumns="False" HeadersVisibility="None"
+                      CanUserAddRows="False">
+                <common:EnhancedDataGrid.Columns>
+                    <!--<DataGridTextColumn Binding="{Binding Name}" Width="*" IsReadOnly="True" />-->
+                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
+                </common:EnhancedDataGrid.Columns>
+            </common:EnhancedDataGrid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Level1 1荷重あたり計算ステップ数" Grid.Column="0"  HorizontalAlignment="Left"/>
+                <TextBox Text="{Binding Level1CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1" Width="50" 
+                          HorizontalAlignment="Right" HorizontalContentAlignment="Right"/>
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Level2 1荷重あたり計算ステップ数" Grid.Column="0" HorizontalAlignment="Left"/>
+                <TextBox Text="{Binding Level2CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1" 
+                         Width="50" 
+                          HorizontalAlignment="Right" HorizontalContentAlignment="Right"/>
+            </Grid>
+
+
+            <TextBlock Text="解析ケース数:" Margin="0,10,0,0"/>
+            <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16"/>
+            <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Margin="0,10,0,0"/>
+            <TextBlock Text="現状途中で止めることができません。" Foreground="Red"/>
+            <TextBlock Text="自由度大の場合時間がかる場合があるので、" Margin="0,10,0,0" Foreground="Red"/>
+            <TextBlock Text="必要最小限の解析ケースに絞った方がよいかもしれません。" Foreground="Red"/>
+            
+            <!-- ...（省略: 節点数・要素数などのStackPanel）... -->
+            <Button Content="水平解析" Command="{Binding ExecuteAnalysisCommand}"/>
+
+            <!--<Button Content="一時停止" Command="{Binding PauseAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
+            <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
+            <Button Content="キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
+
+        </StackPanel>
+
+        <!-- メイン表示部: TabControlでタブ切替 -->
+        <StatusBar Grid.Row="2" Grid.ColumnSpan="2" Height="30"  VerticalAlignment="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <ProgressBar
+            Minimum="0"
+            Maximum="{Binding TotalCalculationCount}"
+            Value="{Binding CurrentProgress}"
+            Height="18"
+            Width="200"
+            Margin="10,0,0,0" Foreground="#62B0E2"/>
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding ProgressText}" Margin="10,0,0,0"/>
+            </StatusBarItem>
+        </StatusBar>
+        
+        <Grid Grid.Row="0" Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="計算ログ" Grid.Row="0"/>
+            <ListBox x:Name="LogListBox"
+             ItemsSource="{Binding CalculationLog}"
+             Loaded="ListBox_Loaded"
+             Grid.Row="1"
+             SelectionMode="Extended"
+             PreviewMouseLeftButtonDown="LogListBox_PreviewMouseLeftButtonDown"
+             PreviewMouseLeftButtonUp="LogListBox_PreviewMouseLeftButtonUp"
+             MouseMove="LogListBox_MouseMove"/>
+        </Grid>
+
+        <!-- 下部ボタン -->
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Ok 解析結果登録" Height="30" Width="200" Command="{Binding OkCommand}"
+                    Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" Width="100" Command="{Binding CancelCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

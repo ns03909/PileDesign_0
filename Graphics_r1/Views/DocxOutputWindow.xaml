@@ -1,0 +1,175 @@
+﻿<Window x:Class="PileDesign.Views.DocxOutputWindow"
+xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+xmlns:local="clr-namespace:PileDesign.ViewModels"
+xmlns:conv="clr-namespace:PileDesign.Converters"
+xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
+xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+xmlns:common="clr-namespace:PileDesign.Common"
+mc:Ignorable="d"
+Title="DocxOutputWindow" Height="600" Width="400">
+
+    <Window.DataContext>
+        <local:MainWindowViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
+
+        <!-- SvgViewboxコントロール用のスタイルを定義 -->
+        <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!--<GroupBox Header="地震荷重ケース" Grid.Row="0" Grid.Column="0" >
+                <CheckBox />
+            </GroupBox>
+            <GroupBox Header="荷重組み合わせケース" Grid.Row="1" Grid.Column="0" >
+                <CheckBox />
+            </GroupBox>-->
+
+
+            <StackPanel Grid.Row="0">
+                <!--<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="液状化" Width="100"/>
+                    <RadioButton Content="あり" GroupName="Liquefaction"
+                    IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Yes}" Margin="0,0,10,0"/>
+                    <RadioButton Content="なし" GroupName="Liquefaction"
+                    IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=None}" Margin="0,0,10,0"/>
+                    <RadioButton Content="両方" GroupName="Liquefaction"
+                    IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Both}"/>
+                </StackPanel>-->
+
+                <TextBlock Text="荷重ケース レベル1" Margin="0,10,0,0"/>
+
+                <!--<StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                    <Button Content="すべて適用" Command="{Binding ApplyAllLoadCasesLevel1Command}" Width="80" Margin="0,0,5,0"/>
+                    <Button Content="すべて不適用" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
+                </StackPanel>-->
+
+                <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="None"
+                          CanUserAddRows="False">
+                    <common:EnhancedDataGrid.Columns>
+                        <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
+                        <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto"/>
+                    </common:EnhancedDataGrid.Columns>
+                </common:EnhancedDataGrid>
+
+                <TextBlock Text="荷重ケース レベル2" Margin="0,10,0,0"/>
+
+                <!--<StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                    <Button Content="すべて適用" Command="{Binding ApplyAllLoadCasesLevel2Command}" Width="80" Margin="0,0,5,0"/>
+                    <Button Content="すべて不適用" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
+                </StackPanel>-->
+
+                <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="None"
+                          CanUserAddRows="False">
+                    <common:EnhancedDataGrid.Columns>
+                        <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
+                        <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
+                    </common:EnhancedDataGrid.Columns>
+                </common:EnhancedDataGrid>
+
+                <TextBlock Text="荷重組み合わせ"/>
+
+                <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.LoadCasesInput.LoadCombinations}" AutoGenerateColumns="False" HeadersVisibility="None"
+                          CanUserAddRows="False">
+                    <common:EnhancedDataGrid.Columns>
+                        <!--<DataGridTextColumn Binding="{Binding Name}" Width="*" IsReadOnly="True" />-->
+                        <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" />
+                        <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
+                    </common:EnhancedDataGrid.Columns>
+                </common:EnhancedDataGrid>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1">
+                <CheckBox Grid.Row="2" Grid.Column="0" 
+                  Content="地盤情報" 
+                  IsChecked="{Binding IncludeHeader, Mode=TwoWay}" 
+                  />
+                <CheckBox Grid.Row="3" Grid.Column="0" 
+                  Content="液状化検討" 
+                  IsChecked="{Binding IncludeHeader, Mode=TwoWay}" 
+                  />
+
+                <CheckBox Grid.Row="5" Grid.Column="0" 
+                      Content="支持力検討" 
+                      IsChecked="{Binding IncludeHeader, Mode=TwoWay}" 
+                      />
+                <CheckBox Grid.Row="6" Grid.Column="0" 
+                      Content="水平検討" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      />
+                <CheckBox Grid.Row="6" Grid.Column="0" 
+                      Content="曲げモーメント検討" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      Margin="15,0,0,0"/>
+                <CheckBox Grid.Row="6" Grid.Column="0" 
+                      Content="せん断力検討" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      Margin="15,0,0,0"/>
+                <CheckBox Grid.Row="6" Grid.Column="0" 
+                      Content="NMINT" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      Margin="15,0,0,0"/>
+                <CheckBox Grid.Row="6" Grid.Column="0" 
+                      Content="杭頭曲げモーメントマップ" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      Margin="15,0,0,0"/>
+                <CheckBox Grid.Row="6" Grid.Column="0" 
+                      Content="杭頭せん断力マップ" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      Margin="15,0,0,0"/>
+                <CheckBox Grid.Row="7" Grid.Column="0" 
+                      Content="沈下検討" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      />
+                <CheckBox Grid.Row="7" Grid.Column="0" 
+                      Content="荷重沈下曲線" 
+                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      />
+
+            </StackPanel>
+
+
+
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="1" HorizontalAlignment="Right">
+            <Button Content="計算書作成" Width="100" Click="OkButton_Click" Command="{Binding OutputWordFileCommand}"/>
+            <Button Content="Cancel" Width="100" Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

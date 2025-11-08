@@ -1,0 +1,388 @@
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+namespace PileDesign.Output
+{
+
+    public static class WordDocumentUtils
+    {
+
+        public enum DiagramAlignment
+        {
+            Left,
+            Center,
+            Right
+        }
+
+        public static JustificationValues GetJustification(DiagramAlignment alignment)
+        {
+            return alignment switch
+            {
+                DiagramAlignment.Left => JustificationValues.Left,
+                DiagramAlignment.Center => JustificationValues.Center,
+                DiagramAlignment.Right => JustificationValues.Right,
+                _ => JustificationValues.Center
+            };
+        }
+
+        public static void AddImageToBodyByMm(
+            MainDocumentPart mainPart,
+            Body body,
+            string imagePath,
+            double widthMm,
+            double heightMm,
+            DiagramAlignment alignment = DiagramAlignment.Center // 追加
+            )
+        {
+            try
+            {
+                if (!File.Exists(imagePath))
+                {
+                    System.Windows.MessageBox.Show($"画像ファイルが見つかりません: {imagePath}");
+                    return;
+                }
+                // mm→ピクセル変換
+                //int widthPx = (int)Math.Round(widthMm * dpi / 25.4);
+                //int heightPx = (int)Math.Round(heightMm * dpi / 25.4);
+
+                // 1インチ = 914400 EMU
+                // 1インチ = 25.4 mm、
+                // 1 mm = 914400 / 25.4 = 36000 EMU
+
+                // mm→EMU変換
+                long widthEmu = (long)(widthMm * 36_000);// * 96 / dpi);
+                long heightEmu = (long)(heightMm * 36_000);// * 96 / dpi);
+
+                var imagePart = mainPart.AddImagePart(
+                    imagePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                        ? ImagePartType.Png
+                        : ImagePartType.Jpeg
+                );
+
+                using (FileStream stream = new(imagePath, FileMode.Open, FileAccess.Read))
+                {
+                    imagePart.FeedData(stream);
+                }
+
+                string relationshipId = mainPart.GetIdOfPart(imagePart);
+
+                var element = new DocumentFormat.OpenXml.Wordprocessing.Drawing(
+                    new Inline(
+                        new Extent() { Cx = widthEmu, Cy = heightEmu },
+                        new EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
+                        new DocProperties() { Id = (UInt32Value)1U, Name = System.IO.Path.GetFileName(imagePath) },
+                        new DocumentFormat.OpenXml.Drawing.Wordprocessing.NonVisualGraphicFrameDrawingProperties(new GraphicFrameLocks() { NoChangeAspect = true }),
+                        new Graphic(
+                            new GraphicData(
+                                new DocumentFormat.OpenXml.Drawing.Pictures.Picture(
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureProperties(
+                                        new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties() { Id = (UInt32Value)0U, Name = System.IO.Path.GetFileName(imagePath) },
+                                        new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureDrawingProperties()
+                                    ),
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.BlipFill(
+                                        new DocumentFormat.OpenXml.Drawing.Blip() { Embed = relationshipId, CompressionState = DocumentFormat.OpenXml.Drawing.BlipCompressionValues.Print },
+                                        new DocumentFormat.OpenXml.Drawing.Stretch(new DocumentFormat.OpenXml.Drawing.FillRectangle())
+                                    ),
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.ShapeProperties(
+                                        new DocumentFormat.OpenXml.Drawing.Transform2D(
+                                            new DocumentFormat.OpenXml.Drawing.Offset() { X = 0L, Y = 0L },
+                                            new DocumentFormat.OpenXml.Drawing.Extents() { Cx = widthEmu, Cy = heightEmu }
+                                        ),
+                                        new DocumentFormat.OpenXml.Drawing.PresetGeometry(new DocumentFormat.OpenXml.Drawing.AdjustValueList()) { Preset = DocumentFormat.OpenXml.Drawing.ShapeTypeValues.Rectangle }
+                                    )
+                                )
+                            )
+                            { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }
+                        )
+                    )
+                );
+
+                // 配置指定付きの段落で画像を追加
+                var paragraph = new DocumentFormat.OpenXml.Wordprocessing.Paragraph(
+                    new DocumentFormat.OpenXml.Wordprocessing.ParagraphProperties(
+                        new DocumentFormat.OpenXml.Wordprocessing.Justification() { Val = GetJustification(alignment) }
+                    ),
+                    new DocumentFormat.OpenXml.Wordprocessing.Run(element)
+                );
+
+                body.AppendChild(paragraph);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"画像挿入時にエラー: {ex}");
+            }
+        }
+
+        //
+        public static void AddImageToBody(
+            MainDocumentPart mainPart, Body body, string imagePath,
+            int widthPx = 600, int heightPx = 400,
+            double? dpiX = null, double? dpiY = null)
+        {
+            double actualDpiX = dpiX ?? 96.0;
+            double actualDpiY = dpiY ?? 96.0;
+
+            // 画像からDPIを取得（引数未指定時のみ）
+            if (!dpiX.HasValue || !dpiY.HasValue)
+            {
+                using FileStream stream = new(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default);
+                if (decoder.Frames.Count > 0)
+                {
+                    actualDpiX = decoder.Frames[0].DpiX;
+                    actualDpiY = decoder.Frames[0].DpiY;
+                }
+            }
+
+            // EMU単位に変換（1インチ = 914400 EMU）
+            long widthEmu = (long)(widthPx / dpiX * 914400);
+            long heightEmu = (long)(heightPx / dpiY * 914400);
+
+            var imagePart = mainPart.AddImagePart(
+                imagePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                    ? ImagePartType.Png
+                    : ImagePartType.Jpeg
+            );
+
+            using (FileStream stream = new(imagePath, FileMode.Open, FileAccess.Read))
+            {
+                imagePart.FeedData(stream);
+            }
+
+            string relationshipId = mainPart.GetIdOfPart(imagePart);
+
+            var element = new DocumentFormat.OpenXml.Wordprocessing.Drawing(
+                new Inline(
+                    new Extent() { Cx = widthEmu, Cy = heightEmu },
+                    new EffectExtent() { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
+                    new DocProperties() { Id = (UInt32Value)1U, Name = System.IO.Path.GetFileName(imagePath) },
+                    new DocumentFormat.OpenXml.Drawing.Wordprocessing.NonVisualGraphicFrameDrawingProperties(new GraphicFrameLocks() { NoChangeAspect = true }),
+                    new Graphic(
+                        new GraphicData(
+                            new DocumentFormat.OpenXml.Drawing.Pictures.Picture(
+                                new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureProperties(
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualDrawingProperties() { Id = (UInt32Value)0U, Name = System.IO.Path.GetFileName(imagePath) },
+                                    new DocumentFormat.OpenXml.Drawing.Pictures.NonVisualPictureDrawingProperties()
+                                ),
+                                new DocumentFormat.OpenXml.Drawing.Pictures.BlipFill(
+                                    new Blip() { Embed = relationshipId, CompressionState = BlipCompressionValues.Print },
+                                    new DocumentFormat.OpenXml.Drawing.Stretch(new FillRectangle())
+                                ),
+                                new DocumentFormat.OpenXml.Drawing.Pictures.ShapeProperties(
+                                    new Transform2D(
+                                        new Offset() { X = 0L, Y = 0L },
+                                        new Extents() { Cx = widthEmu, Cy = heightEmu }
+                                    ),
+                                    new PresetGeometry(new AdjustValueList()) { Preset = ShapeTypeValues.Rectangle }
+                                )
+                            )
+                        )
+                        { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }
+                    )
+                )
+            );
+
+            // 画像を新しい段落として追加
+            body.AppendChild(new DocumentFormat.OpenXml.Wordprocessing.Paragraph(new DocumentFormat.OpenXml.Wordprocessing.Run(element)));
+        }
+
+
+
+        /// <summary>
+        /// DrawingContextにテキストを描画（中央・右揃え、複数行対応）
+        /// </summary>
+        /// <param name="dc">DrawingContext</param>
+        /// <param name="text">描画するテキスト（\nで複数行可）</param>
+        /// <param name="origin">基準位置（左上）</param>
+        /// <param name="fontSize">フォントサイズ</param>
+        /// <param name="brush">文字色</param>
+        /// <param name="typeface">フォント</param>
+        /// <param name="alignment">"left" "center" "right"</param>
+        //public static void DrawTextWithAlignment_origin(
+        //    DrawingContext dc,
+        //    string text,
+        //    System.Windows.Point origin,
+        //    double fontSize = 16,
+        //    Brush? brush = null,
+        //    Typeface? typeface = null,
+        //    string alignment = "left")
+        //{
+        //    brush ??= Brushes.Black;
+        //    typeface ??= new Typeface("Meiryo");
+
+        //    var lines = text.Replace("\r\n", "\n").Split('\n');
+        //    double y = origin.Y;
+
+        //    foreach (var line in lines)
+        //    {
+        //        var formattedText = new FormattedText(
+        //            line,
+        //            System.Globalization.CultureInfo.CurrentCulture,
+        //            FlowDirection.LeftToRight,
+        //            typeface,
+        //            fontSize,
+        //            brush,
+        //            VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip
+        //        );
+
+        //        double x = origin.X;
+        //        if (alignment.ToLower() == "center")
+        //        {
+        //            x -= formattedText.Width / 2;
+        //        }
+        //        else if (alignment.ToLower() == "right")
+        //        {
+        //            x -= formattedText.Width;
+        //        }
+
+        //        dc.DrawText(formattedText, new System.Windows.Point(x, y));
+        //        y += formattedText.Height;
+        //    }
+        //}
+
+        /// <summary>
+        /// DrawingContextにテキストを描画（中央・右揃え、複数行対応）
+        /// </summary>
+        /// <param name="dc">DrawingContext</param>
+        /// <param name="text">描画するテキスト（\nで複数行可）</param>
+        /// <param name="origin">基準位置（左上）</param>
+        /// <param name="fontSize">フォントサイズ</param>
+        /// <param name="brush">文字色</param>
+        /// <param name="typeface">フォント</param>
+        /// <param name="alignment">"left" "center" "right"</param>
+        public static void DrawTextWithAlignment(
+            DrawingContext dc,
+            string text,
+            System.Windows.Point origin,
+            double fontSize = 16,
+            Brush? brush = null,
+            Typeface? typeface = null,
+            string alignment = "left",
+            string verticalAlignment = "top",
+            double angle = 0 // ← 追加：回転角度（度、時計回り）
+        )
+        {
+            string rotateCenterH = alignment; // "left"|"center"|"right"|"origin"
+            string rotateCenterV = verticalAlignment;  // "top"|"center"|"bottom"|"origin"
+
+
+            brush ??= Brushes.Black;
+            typeface ??= new Typeface("Meiryo");
+
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            var formattedLines = new List<FormattedText>();
+            double totalHeight = 0;
+
+            // 各行のFormattedTextと高さ合計を取得
+            foreach (var line in lines)
+            {
+                var ft = new FormattedText(
+                    line,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    typeface,
+                    fontSize,
+                    brush,
+                    VisualTreeHelper.GetDpi(Application.Current.MainWindow).PixelsPerDip
+                );
+                formattedLines.Add(ft);
+                totalHeight += ft.Height;
+            }
+
+            double y = origin.Y;
+            if (string.Equals(verticalAlignment, "center"))
+                y -= totalHeight / 2;
+            else if (string.Equals(verticalAlignment, "bottom"))
+                y -= totalHeight;
+
+            foreach (var ft in formattedLines)
+            {
+                double x = origin.X;
+                if (string.Equals(alignment, "center"))
+                    x -= ft.Width / 2;
+                else if (string.Equals(alignment, "right"))
+                    x -= ft.Width;
+
+                // 回転中心の計算
+                double cx = x, cy = y;
+                if (string.Equals(rotateCenterH, "center"))
+                    cx = x + ft.Width / 2;
+                else if (string.Equals(rotateCenterH, "right"))
+                    cx = x + ft.Width;
+                // "left"または"origin"はxのまま
+
+                if (string.Equals(rotateCenterV, "center"))
+                    cy = y + ft.Height / 2;
+                else if (string.Equals(rotateCenterV, "bottom"))
+                    cy = y + ft.Height;
+                // "top"または"origin"はyのまま
+
+                if (Math.Abs(angle) > 1e-6)
+                {
+                    dc.PushTransform(new RotateTransform(angle, cx, cy));
+                    dc.DrawText(ft, new System.Windows.Point(x, y));
+                    dc.Pop();
+                }
+                else
+                {
+                    dc.DrawText(ft, new System.Windows.Point(x, y));
+                }
+                y += ft.Height;
+            }
+        }
+
+
+
+
+        //// Y座標の調整
+        //double y = origin.Y;
+        //    if (verticalAlignment.ToLower() == "center")
+        //    {
+        //        y -= totalHeight / 2;
+        //    }
+        //    else if (verticalAlignment.ToLower() == "bottom")
+        //    {
+        //        y -= totalHeight;
+        //    }
+        //    // "top" の場合はそのまま
+
+        //    // 各行を描画
+        //    foreach (var ft in formattedLines)
+        //    {
+        //        double x = origin.X;
+        //        if (alignment.ToLower() == "center")
+        //        {
+        //            x -= ft.Width / 2;
+        //        }
+        //        else if (alignment.ToLower() == "right")
+        //        {
+        //            x -= ft.Width;
+        //        }
+
+        //        if (Math.Abs(angle) > 1e-6)
+        //        {
+        //            // (x, y) を中心に回転
+        //            dc.PushTransform(new RotateTransform(angle, x, y));
+        //            dc.DrawText(ft, new System.Windows.Point(x, y));
+        //            dc.Pop();
+        //        }
+        //        else
+        //        {
+        //            dc.DrawText(ft, new System.Windows.Point(x, y));
+        //        }
+        //        y += ft.Height;
+        //        //dc.DrawText(ft, new System.Windows.Point(x, y));
+        //        //y += ft.Height;
+        //    }
+        //}
+    }
+}

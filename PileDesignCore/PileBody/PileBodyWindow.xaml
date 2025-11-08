@@ -1,0 +1,342 @@
+﻿<Window x:Class="PileDesignCore.PileBodyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesignCore" xmlns:sys="clr-namespace:System;assembly=mscorlib" d:DataContext="{d:DesignInstance Type=local:PileBodyViewModel}"
+        mc:Ignorable="d"
+        Title="PileBodyWindow" Height="800" Width="1200">
+    <Window.DataContext>
+        <local:PileBodyViewModel />
+    </Window.DataContext>
+    <Window.Resources>
+        <local:VisibilityConverter x:Key="VisibilityConverter"/>
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="0.5*"/>
+            <ColumnDefinition Width="0.5*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label Content="杭体番号" Width="100" HorizontalAlignment="Left" Background="#62B0E2"></Label>
+                <ComboBox x:Name="ComboBoxPileBodyNo"
+                      HorizontalAlignment="Left"
+                      Height="25"
+                      VerticalAlignment="Top"
+                      Width="100"
+                      SelectedValue="{Binding SelectedPileBodyNo, UpdateSourceTrigger=PropertyChanged}"
+                      SelectionChanged="ComboBoxPileBodyNo_SelectionChanged">
+                    <ComboBox.ItemsSource>
+                        <x:Array Type="{x:Type sys:Int32}">
+                            <sys:Int32>1</sys:Int32>
+                            <sys:Int32>2</sys:Int32>
+                            <sys:Int32>3</sys:Int32>
+                            <sys:Int32>4</sys:Int32>
+                            <sys:Int32>5</sys:Int32>
+                        </x:Array>
+                    </ComboBox.ItemsSource>
+                </ComboBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label Content="杭体符号" Width="100" Background="#62B0E2"></Label>
+                <TextBox x:Name="TextBoxPileBodyRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100" 
+                         Text="{Binding PileBodyRef, UpdateSourceTrigger=PropertyChanged}" TextChanged="PileBodyTextBox_TextChanged" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Label Content="杭体タイプ" Width="100"/>
+                <ComboBox x:Name="ComboBoxPileBodyType"
+                          HorizontalAlignment="Left" 
+                          Height="25" 
+                          VerticalAlignment="Center" 
+                          Width="200" 
+                          SelectedItem="{Binding SelectedPileBodyType, UpdateSourceTrigger=PropertyChanged}"
+                          ItemsSource="{Binding PileBodyTypeOption}"
+                          SelectionChanged="ComboBoxPileBodyType_SelectionChanged"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                    <Label Content="杭頭接合タイプ" Width="100"/>
+
+                <ComboBox x:Name="ComboBoxPileTopType" 
+                            Text="{Binding SelectedPileTopType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                            ItemsSource="{Binding SelectedPileTopTypeOption}"
+                            SelectionChanged="ComboBoxPileTopType_SelectionChanged"/>
+
+                <!--<ComboBox x:Name="ComboBoxPileTopTypeForInsituReinforcedConcretePile" 
+                            Text="{Binding SelectedPileTopType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                            ItemsSource="{Binding InsituReinforcedConcretePileTopTypeOption}"
+                            SelectionChanged="ComboBoxPileTopType_SelectionChanged"
+                            Visibility="{Binding SelectedPileBodyType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='場所打ち鉄筋コンクリート杭'}"/>
+
+                <ComboBox x:Name="ComboBoxPileTopTypeForInsituSteelReinforcedConcretePile" 
+                            Text="{Binding SelectedPileTopType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                            ItemsSource="{Binding InsituSteelPipedConcretePileTopTypeOption}"
+                            SelectionChanged="ComboBoxPileTopType_SelectionChanged"
+                            Visibility="{Binding SelectedPileBodyType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='場所打ち鋼管コンクリート杭'}"/>
+
+                <ComboBox x:Name="ComboBoxPileTopTypeForPrecastConcretePile" 
+                            Text="{Binding SelectedPileTopType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                            ItemsSource="{Binding PrecastConcretePileTopTypeOption}"
+                            SelectionChanged="ComboBoxPileTopType_SelectionChanged"
+                            Visibility="{Binding SelectedPileBodyType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='既製コンクリート杭'}"/>
+                
+                <ComboBox x:Name="ComboBoxPileTopTypeForPrecastSteelPile" 
+                            Text="{Binding SelectedPileTopType, UpdateSourceTrigger=PropertyChanged}" Width="150"
+                            ItemsSource="{Binding SteelPileTopTypeOption}"
+                            SelectionChanged="ComboBoxPileTopType_SelectionChanged"
+                            Visibility="{Binding SelectedPileBodyType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='鋼管杭'}"/>-->
+                <Button x:Name="ButtonEditPileHead"
+                                    Click="ButtonEditPileHead_Click" Content="編集"></Button>
+            </StackPanel>
+
+            <GroupBox Header="杭体区間">
+                <StackPanel>
+                    <DataGrid x:Name="DataGridPileBody" Height="150" Width="550" Loaded="DataGrid_Loaded" AutoGenerateColumns="False" CanUserAddRows="False" CanUserSortColumns="False"
+                          ItemsSource="{Binding SelectedPileBodyCollection}" LoadingRow="DataGridPileBody_LoadingRow" HorizontalAlignment="Left">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                <Setter Property="Foreground" Value="#62B0E2" />
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="区間長 (m)" Width="*" Binding="{Binding SegmentLength}" />
+                            <DataGridTextColumn Header="下端深さ (m)"  Width="*" Binding="{Binding SegmentDepth}" IsReadOnly="True" Foreground="Gray"/>
+                            <DataGridTemplateColumn Width="*" Header="杭断面編集">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button x:Name="ButtonPileSectionEdit"
+                                            Click="ButtonPileSectionEdit_Click"
+                                            Content="杭断面編集"
+                                            Tag="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="杭タイプ (mm)"  Width="*" Binding="{Binding PileSection.SelectedPileSectionType}" IsReadOnly="True" Foreground="Gray"/>
+                            <DataGridTextColumn Header="杭径 (mm)"  Width="*" Binding="{Binding PileSection.PileDiameter}" IsReadOnly="True" Foreground="Gray"/>
+                            
+                            <!--削除ボタンの表示-->
+                            <DataGridTemplateColumn Width="*" Header="区間削除" >
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button
+                                    x:Name="ButtonDelete"
+                                    Click="ButtonDelete_Click"
+                                    Content="区間削除"
+                                    Tag="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Orientation="Horizontal"  >
+                        <Button x:Name="ButtonAddGroundLayer" Content="区間追加" HorizontalAlignment="Left" Height="27"
+                                VerticalAlignment="Top" Width="100" Click="ButtonAddPileBody_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="杭先端支持力">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="杭工法" Width="100"/>
+                        <ComboBox Text="{Binding SelectedPileConstructionType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                            ItemsSource="{Binding InsituPileConstructionTypeOption}"
+                            SelectionChanged="ComboBoxPileConstructionType_SelectionChanged"
+                            Visibility="{Binding SelectedPileBodyType,
+                                Converter={StaticResource VisibilityConverter},
+                                ConverterParameter='場所打ち鉄筋コンクリート杭,場所打ち鋼管コンクリート杭'}"/>
+                        <ComboBox Text="{Binding SelectedPileConstructionType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                              ItemsSource="{Binding PrecastPileConstructionTypeOption}"
+                              SelectionChanged="ComboBoxPileConstructionType_SelectionChanged"
+                              Visibility="{Binding SelectedPileBodyType,
+                                Converter={StaticResource VisibilityConverter},
+                                ConverterParameter='既製コンクリート杭'}"/>
+                        <ComboBox Text="{Binding SelectedPileConstructionType, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                            ItemsSource="{Binding SteelPileConstructionTypeOption}"
+                            SelectionChanged="ComboBoxPileConstructionType_SelectionChanged"
+                            Visibility="{Binding SelectedPileBodyType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='鋼管杭'}"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal">
+                    <Label Content="杭先端径d (mm)" Width="100" HorizontalContentAlignment="Right"/>
+                    <TextBox x:Name="TextBoxPileToeDia" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                             Width="100" Text="{Binding PileToeDia, UpdateSourceTrigger=PropertyChanged}" TextChanged="PileBodyTextBox_TextChanged">
+                        <TextBox.ToolTip>
+                            <ToolTip>
+                                <TextBlock>
+                                    <Run>場所打ちコンクリート杭：先端径</Run><LineBreak/>
+                                    <Run>埋込み杭：根固め部径</Run><LineBreak/>
+                                    <Run>回転貫入杭：羽根径</Run><LineBreak/>
+                                    <Run>打込み杭：軸径</Run>
+                                </TextBlock>
+                            </ToolTip>
+                        </TextBox.ToolTip>
+                    </TextBox>
+                </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedPileBodyType,
+                          Converter={StaticResource VisibilityConverter},
+                          ConverterParameter='既製コンクリート杭'}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedPileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='打込み杭'}">
+                                <Label Content="杭先端形状" Width="100" HorizontalContentAlignment="Right"/>
+                                <ComboBox x:Name ="ComboBoxConcreteTipStyle" Text="{Binding SelectedTipStyle }"  Width="100"
+                              ItemsSource="{Binding TipStyleOption}"
+                             SelectionChanged="RecalculateTipNonPermability_SelectionChanged"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedTipStyle,
+                                Converter={StaticResource VisibilityConverter},
+                                ConverterParameter='開端杭'}">
+                                    <Label Content="支持層への根入れ深さLB(m)" Width="200" HorizontalContentAlignment="Right"/>
+                                    <TextBox x:Name="TextBoxEmbedmentIntoBearingSoil" Text="{Binding EmbedmentIntoBearingSoil}" Width="100"
+                                             TextChanged="RecalculateTipNonPermability_TextChanged"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedTipStyle,
+                                Converter={StaticResource VisibilityConverter},
+                                ConverterParameter='開端杭'}">
+                                    <Label Content="杭の内径dI(m)" Width="200" HorizontalContentAlignment="Right"/>
+                                    <TextBox x:Name="TextBoxPileInnerDia"  Text="{Binding PileInnerDia}" Width="100"
+                                             TextChanged="RecalculateTipNonPermability_TextChanged"/>
+                            </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Label Content="杭先端閉塞効率" Width="100" HorizontalContentAlignment="Right"/>
+                                    <TextBox x:Name="TextBoxPrecastPileTipNonPermability" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                         Width="100" Text="{Binding TipNonPermability }" IsReadOnly = "true" Foreground="gray" TextChanged="PileBodyTextBox_TextChanged">
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                        <Run>打込み杭(閉端杭)：1.0</Run><LineBreak/>
+                                        <Run>打込み杭(閉端杭)：</Run><LineBreak/>
+                                        <Run>2≦(LB/DI)≦5の場合 η=0.16(LB/dI)</Run><LineBreak/>
+                                        <Run>5＜(LB/DI)の場合η=0.80</Run><LineBreak/>
+                                        <Run>LB：支持層への根入れ長さ(m)</Run><LineBreak/>
+                                        <Run>dI：杭の内径(m)</Run>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                            </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedPileBodyType,
+                          Converter={StaticResource VisibilityConverter},
+                          ConverterParameter='鋼管杭'}">
+                        <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedPileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='回転貫入杭'}">
+                            <Label Content="杭先端形状" Width="100" HorizontalContentAlignment="Right"/>
+                            <ComboBox x:Name ="ComboBoxSteelTipStyle" Text="{Binding SelectedTipStyle, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                              ItemsSource="{Binding TipStyleOption}"
+                              SelectionChanged="RecalculateTipNonPermability_SelectionChanged"/>
+                            <Label Content="杭先端閉塞効率" Width="100" HorizontalContentAlignment="Right"/>
+                            <TextBox x:Name="TextBoxSteelPileTipNonPermability" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                             Width="100" Text="{Binding TipNonPermability }" IsReadOnly = "true" Foreground="gray" TextChanged="PileBodyTextBox_TextChanged">
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run>回転貫入杭(閉端杭)：1.0</Run><LineBreak/>
+                                            <Run>回転貫入杭(開端杭)：0.8</Run><LineBreak/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+            <GroupBox Header="杭先端沈下パラメータ">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="杭先端径dp (mm)" Width="150"  HorizontalContentAlignment="Right"/>
+                        <TextBox x:Name="TextBoxSettlePileToeDia" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                 Width="100" Text="{Binding SettlePileToeDia, UpdateSourceTrigger=PropertyChanged}" LostFocus="PileBodyTextBox_LostFocus">
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>埋込み杭では根固め部での杭径（ST杭では拡大径、節杭では節部径）を採用する</TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                        </TextBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                            <Label Content="α" Width="150" HorizontalContentAlignment="Right"/>
+                        <TextBox x:Name="TextBoxSettleAlpha" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100"
+                             Text="{Binding SettleAlpha, UpdateSourceTrigger=PropertyChanged}" TextChanged="PileBodyTextBox_TextChanged">
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <Run>基礎指針2001 場所打ちコンクリート杭             α=0.3 , n=2</Run><LineBreak/>
+                                        <Run>基礎指針2019 場所打ちコンクリート杭      砂質土 α=0.23, n=2.7</Run><LineBreak/>
+                                        <Run>基礎指針2019 場所打ちコンクリート杭      礫質土 α=0.12, n=3.3</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 既製コンクリート杭 砂質土 α=0.28, n=3.9</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 鋼管杭             砂質土 α=0.15, n=5.9</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 既製コンクリート杭 礫質土 α=0.10, n=3.7</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 鋼管杭             礫質土 α=0.14, n=3.9</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 既製コンクリート杭 粘性土 α=0.15, n=4.5</Run><LineBreak/>
+                                        <Run>基礎指針2019 回転貫入杭                         α=0.3 , n=4.0</Run>
+                                    </TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                        </TextBox>
+                        <Label Content="n" Width="50" HorizontalContentAlignment="Right"/>
+                        <TextBox x:Name="TextBoxSettleN" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100"
+                             Text="{Binding SettleN, UpdateSourceTrigger=PropertyChanged}" TextChanged="PileBodyTextBox_TextChanged">
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <Run>基礎指針2001 場所打ちコンクリート杭             α=0.3 , n=2</Run><LineBreak/>
+                                        <Run>基礎指針2019 場所打ちコンクリート杭      砂質土 α=0.23, n=2.7</Run><LineBreak/>
+                                        <Run>基礎指針2019 場所打ちコンクリート杭      礫質土 α=0.12, n=3.3</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 既製コンクリート杭 砂質土 α=0.28, n=3.9</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 鋼管杭             砂質土 α=0.15, n=5.9</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 既製コンクリート杭 礫質土 α=0.10, n=3.7</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 鋼管杭             礫質土 α=0.14, n=3.9</Run><LineBreak/>
+                                        <Run>基礎指針2019 埋込み杭 既製コンクリート杭 粘性土 α=0.15, n=4.5</Run><LineBreak/>
+                                        <Run>基礎指針2019 回転貫入杭                         α=0.3 , n=4.0</Run>
+                                    </TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                        </TextBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="プリセット沈下パラメータ" Width="150"/>
+                        <ComboBox x:Name="ComboBoxPresetSettlementParameters" Width="250"
+                                  SelectionChanged="ComboBoxPresetSettlementParameters_SelectionChanged"
+                                  ItemsSource="{Binding PileTipSettlementPresetParameterNames}"/>
+                    </StackPanel>
+
+                    <WindowsFormsHost Name="Chart1v" Grid.RowSpan="1" Height="200" Width="200"/>
+                </StackPanel>
+                
+            </GroupBox>
+            </StackPanel>
+
+        <GroupBox Header="杭姿図" Grid.Column="1">
+            <Canvas Name="Canvas" Height="300" Width="200"/>
+        </GroupBox>
+
+        <StackPanel Orientation="Horizontal" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                <Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="100"
+                        Click="ButtonOk_Click"/>
+                <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="100"
+                        Click="ButtonCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
+
+    

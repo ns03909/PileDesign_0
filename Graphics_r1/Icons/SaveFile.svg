@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-width: 20px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: none;
+        stroke: #000;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-2 {
+        stroke-width: 15px;
+      }
+    </style>
+  </defs>
+  <polygon class="cls-1" points="232.28 205 232.28 231 26.72 231 26.72 175.19 26.72 80.71 26.72 26 208 26 232.28 49 232.28 106 232.28 205"/>
+  <path class="cls-2" d="M193,28v57c0,6.6-5.4,12-12,12H78c-6.6,0-12-5.4-12-12V28"/>
+  <path class="cls-2" d="M49,232v-103c0-6.6,5.4-12,12-12H195c6.6,0,12,5.4,12,12v103"/>
+  <rect class="cls-2" x="157" y="46.77" width="18" height="33.23"/>
+</svg>

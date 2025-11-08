@@ -1,0 +1,72 @@
+﻿<Window x:Class="PileDesign.Views.AutoIsFrontPilesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=local:AutoIsFrontPileViewModel}"
+        Title="AutoIsFrontPilesWindow" Height= "200" Width="300">
+
+    <Grid>
+        <!--<Grid.ColumnDefinitions>
+            <ColumnDefinition Width="4*"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>-->
+        <StackPanel>
+            <FlowDocumentScrollViewer >
+                <FlowDocument FontSize="10" FontFamily="Arial" PagePadding="10">
+                    <Paragraph>
+                        <Run Foreground="Red">すべての杭について、それぞれ荷重方向を中心に両側角度a以内にほかの杭が存在すれば後方杭、存在しなければ前方杭に設定する。</Run>
+                    </Paragraph>
+                </FlowDocument>
+            </FlowDocumentScrollViewer>
+
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Label Content="角度a (°)"/>
+                <!--<TextBox x:Name="TextBoxAngle" Text="{Binding Angle, UpdateSourceTrigger=PropertyChanged}"
+                    Width="50" HorizontalContentAlignment="Right"
+                         TextChanged="TextBoxAngle_TextChanged"
+                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>-->
+                <!--<TextBox x:Name="TextBoxAngle">
+                    <TextBox.Text>
+                        <Binding Path="Angle" UpdateSourceTrigger="PropertyChanged" ValidatesOnDataErrors="True" ValidatesOnExceptions="True">
+                            <Binding.ValidationRules>
+                                <local:AngleRangeValidationRule />
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox.Text>
+                </TextBox>-->
+                <TextBox x:Name="TextBoxAngle"
+                         Width="50"
+                         HorizontalContentAlignment="Right"
+                         GotFocus="TextBox_GotFocus"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">   
+                    <TextBox.Text>
+                        <Binding Path="Angle"
+                             UpdateSourceTrigger="PropertyChanged"
+                             ValidatesOnDataErrors="True"
+                             ValidatesOnExceptions="True">
+                            <Binding.ValidationRules>
+                                <common:RangeValidationRule Min="0.0001" Max="89.9999"/>
+                            </Binding.ValidationRules>
+                        </Binding>
+                    </TextBox.Text>
+                </TextBox>
+            </StackPanel>
+            <CheckBox Content="方向1" IsChecked="{Binding IsChecked[0]}"/>
+            <CheckBox Content="方向2" IsChecked="{Binding IsChecked[1]}"/>
+            <CheckBox Content="方向3" IsChecked="{Binding IsChecked[2]}"/>
+            <CheckBox Content="方向4" IsChecked="{Binding IsChecked[3]}"/>
+
+            <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right">
+
+                <Button Content="Ok" Width="60" Click="OkButton_Click"/>
+                <Button Content="Cancel" Width="60" Click="CancelButton_Click"/>
+
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        stroke: #62b0e3;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6 {
+        fill: none;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-6 {
+        stroke-width: 15px;
+      }
+
+      .cls-1, .cls-3 {
+        stroke-dasharray: 0 0 11.12 7.41;
+      }
+
+      .cls-3, .cls-4 {
+        stroke: #9d2b1c;
+      }
+
+      .cls-5 {
+        stroke: #000;
+        stroke-width: 20px;
+      }
+
+      .cls-6 {
+        stroke: #b3b3b3;
+        stroke-dasharray: 0 0 11.83 7.89;
+      }
+    </style>
+  </defs>
+  <line class="cls-5" x1="128" y1="219" x2="128" y2="245"/>
+  <line class="cls-5" x1="128" y1="141" x2="128" y2="173"/>
+  <line class="cls-5" x1="128" y1="67" x2="128" y2="99"/>
+  <ellipse class="cls-6" cx="128.5" cy="55" rx="60" ry="24"/>
+  <ellipse class="cls-6" cx="128.5" cy="130" rx="60" ry="24"/>
+  <ellipse class="cls-6" cx="128.5" cy="205" rx="60" ry="24"/>
+  <line class="cls-5" x1="128" y1="15" x2="128" y2="67"/>
+  <line class="cls-5" x1="128" y1="99" x2="128" y2="141"/>
+  <g>
+    <line class="cls-2" x1="188" y1="130" x2="188" y2="136"/>
+    <line class="cls-1" x1="188" y1="143.41" x2="188" y2="195.29"/>
+    <line class="cls-2" x1="188" y1="199" x2="188" y2="205"/>
+  </g>
+  <g>
+    <line class="cls-2" x1="68" y1="130" x2="68" y2="136"/>
+    <line class="cls-1" x1="68" y1="143.41" x2="68" y2="195.29"/>
+    <line class="cls-2" x1="68" y1="199" x2="68" y2="205"/>
+  </g>
+  <line class="cls-5" x1="128" y1="173" x2="128" y2="219"/>
+  <g>
+    <line class="cls-4" x1="188" y1="55" x2="188" y2="61"/>
+    <line class="cls-3" x1="188" y1="68.41" x2="188" y2="120.29"/>
+    <line class="cls-4" x1="188" y1="124" x2="188" y2="130"/>
+  </g>
+  <g>
+    <line class="cls-4" x1="68" y1="55" x2="68" y2="61"/>
+    <line class="cls-3" x1="68" y1="68.41" x2="68" y2="120.29"/>
+    <line class="cls-4" x1="68" y1="124" x2="68" y2="130"/>
+  </g>
+</svg>

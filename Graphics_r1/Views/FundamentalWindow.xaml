@@ -1,0 +1,142 @@
+﻿<Window x:Class="PileDesign.Views.FundamentalWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
+        mc:Ignorable="d"
+        Title="基本設定" Height="300" Width="400">
+    
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+    
+    <Grid Margin="20,20,20,20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Text="プロジェクト番号" VerticalAlignment="Top" Grid.Column="0"
+                       />
+                <TextBox x:Name="textBoxProjectNo" Text="{Binding ProjectNo}" 
+                    TextWrapping="Wrap" VerticalAlignment="Top" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown">
+                </TextBox>
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="プロジェクト名" HorizontalAlignment="Left" Grid.Column="0"
+                       />
+                <TextBox x:Name="textBoxProjectName" Text="{Binding ProjectName}"
+                    TextWrapping="Wrap" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown">
+                </TextBox>
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Z軸符号" HorizontalAlignment="Left" Grid.Column="0"/>
+                <TextBox x:Name="textBoxRefLevel0" 
+                    TextWrapping="Wrap" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown">
+                    <TextBox.Text>
+                        <Binding Path="RefLevel" UpdateSourceTrigger="LostFocus">
+                            <Binding.ValidationRules>
+                                <local:StringMaxLengthValidationRule MaxLength="3" />
+                            </Binding.ValidationRules>
+                        </Binding>
+                        
+                    </TextBox.Text>
+                    <TextBox.ToolTip>
+                        <ToolTip>
+                            <TextBlock>
+                                <Run>3文字まで</Run>
+                            </TextBlock>
+                        </ToolTip>
+                    </TextBox.ToolTip>
+                </TextBox>
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="性能グレード" HorizontalAlignment="Left" Grid.Column="0"/>
+                <ComboBox ItemsSource="{Binding SeismicGradeOptions}" SelectedItem="{Binding SeismicGrade}"
+                          Grid.Column="1"
+                          SelectionChanged="ComboBoxSeismicGrade_SelectionChanged"
+                          Margin="0,0,0,10"/>
+                <!--<ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate> "-->
+            </Grid>
+
+            <Grid Margin="10,10,10,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                    <RowDefinition Height="auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Row="0" Grid.Column="0" BorderBrush="Gray" BorderThickness="0.5">
+                    <TextBlock Text="性能グレード" HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Grid.Row="1" Grid.Column="0" BorderBrush="Gray" BorderThickness="0.5">
+                    <TextBlock Text="S" HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Grid.Row="2" Grid.Column="0" BorderBrush="Gray" BorderThickness="0.5">
+                    <TextBlock Text="A" HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Grid.Row="0" Grid.Column="1" BorderBrush="Gray" BorderThickness="0.5">
+                    <TextBlock Text="レベル2荷重時基礎部材" HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Grid.Row="1" Grid.Column="1" BorderBrush="Gray" BorderThickness="0.5">
+                    <TextBlock Text="損傷限界状態を超えない" HorizontalAlignment="Center"/>
+                </Border>
+
+                <Border Grid.Row="2" Grid.Column="1" BorderBrush="Gray" BorderThickness="0.5">
+                    <TextBlock Text="安全限界状態を超えない" HorizontalAlignment="Center"/>
+                </Border>
+            </Grid>
+
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
+            <Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="100" Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="100" Command="{Binding CancelCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

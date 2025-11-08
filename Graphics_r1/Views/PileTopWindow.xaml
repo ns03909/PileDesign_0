@@ -1,0 +1,494 @@
+﻿<Window x:Class="PileDesign.Views.PileTopWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        mc:Ignorable="d"
+        xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
+        d:DataContext="{d:DesignInstance Type=local:PileTopViewModel}"
+        Title="杭頭部" Height="800" Width="1200"
+        Loaded="PileTopWindow_Loaded"
+        Closing="Window_Closing">
+
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+    
+    <Window.Resources>
+        <conv:VisibilityConverter x:Key="VisibilityConverter"/>
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <!-- DataGridCellのスタイルを定義 -->
+        <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Foreground" Value="White"/>
+                    <Setter Property="BorderBrush" Value="White"/>
+                    <Setter Property="BorderThickness" Value="0.75"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>-->
+        
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="0">
+            <avalonDock:LayoutRoot>
+                <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
+                    <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="入力" CanClose="False" CanHide="False">
+                                <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="杭頭タイプ" Width="100"/>
+                                        <TextBox Width="100" Text="{Binding PileTopType, UpdateSourceTrigger=PropertyChanged}"
+                                            IsReadOnly="True" Foreground="Gray"/>
+                                    </StackPanel>
+
+                                    <GroupBox Header="パイルキャップ">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="Fc (N/mm2)" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxPileCapFc" Width="50"
+                                                         Text="{Binding PileTop.PileCapFc, UpdateSourceTrigger=PropertyChanged}"
+                                                         HorizontalContentAlignment="Right"
+                                                         GotFocus="TextBox_GotFocus"
+                                                        PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                <!--</StackPanel>
+                                            <StackPanel Orientation="Horizontal">-->
+                                                <TextBlock Text="γ (kN/m3)" Width="100"  HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxPileCapGamma" Width="50"
+                                                         Text="{Binding PileTop.PileCapGamma, UpdateSourceTrigger=PropertyChanged}"
+                                                         HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"
+                                                        PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                <!--TextChanged="TextBoxPileCapGamma_TextChanged"-->
+                                                <!--</StackPanel>
+                                            <StackPanel Orientation="Horizontal">-->
+                                                <TextBlock Text="Ec (N/mm2)" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxPileCapEc" Width="50"
+                                                         Text="{Binding PileTop.PileCapEc, UpdateSourceTrigger=LostFocus, StringFormat='{}{0:N0}'}"
+                                                         IsReadOnly="True" Foreground="Gray" 
+                                                         HorizontalContentAlignment="Right"
+                                                         PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="定着筋工法" Visibility="{Binding PileTopType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='定着筋工法'}">
+                                        <StackPanel Visibility="{Binding PileBodyType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='場所打ち鋼管コンクリート杭'}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="杭径"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <StackPanel Visibility="{Binding PileBodyType,
+                                                     Converter={StaticResource VisibilityConverter},
+                                                     ConverterParameter='場所打ち鋼管コンクリート杭'}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                        </StackPanel>
+                                        
+                                        <GroupBox Header="鋼管（最上部杭区間）">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="鋼管外径(mm)×鋼管厚(mm)：" VerticalAlignment="Center"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                                <TextBlock Text="×" VerticalAlignment="Center"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeTs, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                            </StackPanel>
+                                        </GroupBox>
+
+                                        <GroupBox Header="鉄筋（最上部杭区間）">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
+                                                    <TextBox  Text="{Binding PileTop.MainBarNum2, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                               IsReadOnly="True" Foreground="Gray"
+                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                    <TextBlock Text ="-" Width="20"  HorizontalAlignment="Center"/>
+                                                    <ComboBox SelectedItem="{Binding PileTop.MainBarSize2, UpdateSourceTrigger=PropertyChanged}"
+                                                              ItemsSource="{Binding PileTop.MainBarSizeOption}" Width="50" IsEnabled="False" Foreground="Gray"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="規格" Width="100"  HorizontalAlignment="Right"/>
+                                                    <ComboBox  SelectedItem="{Binding PileTop.MainBarSpec2, UpdateSourceTrigger=PropertyChanged}"
+                                                               ItemsSource="{Binding PileTop.MainBarSpecOption}" Width="100" IsEnabled="False" Foreground="Gray"/>
+
+                                                    <TextBlock Text ="重心かぶり厚 (mm)" Width="150"  HorizontalAlignment="Right"/>
+                                                    <TextBox  Text="{Binding PileTop.MainBarCenterCover2, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
+                                                              IsReadOnly="True" Foreground="Gray"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </GroupBox>
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="{Binding PileBodyType,
+                                                     Converter={StaticResource VisibilityConverter},
+                                                     ConverterParameter='既製コンクリート杭'}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBlock Text="肉厚(mm)：" HorizontalAlignment="Right" Width="100"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteThickness, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="{Binding PileBodyType,
+                                                     Converter={StaticResource VisibilityConverter},
+                                                     ConverterParameter='場所打ち鋼管コンクリート杭,既製コンクリート杭'}">
+                                        <GroupBox Header="鉄筋（定着筋）">
+                                            <GroupBox.Style>
+                                                <Style TargetType="GroupBox">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <!-- 杭頭タイプが FT-Pile構法のときは非表示 -->
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="FT-Pile構法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </GroupBox.Style>
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
+                                                    <TextBox  Text="{Binding PileTop.MainBarNum1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                    <TextBlock Text ="-" Width="20"  HorizontalAlignment="Center"/>
+                                                    <ComboBox SelectedItem="{Binding PileTop.MainBarSize1, UpdateSourceTrigger=PropertyChanged}"
+                                                              ItemsSource="{Binding PileTop.MainBarSizeOption}" Width="50"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="規格" Width="100"  HorizontalAlignment="Right"/>
+                                                    <ComboBox  SelectedItem="{Binding PileTop.MainBarSpec1, UpdateSourceTrigger=PropertyChanged}"
+                                                               ItemsSource="{Binding PileTop.MainBarSpecOption}" Width="100"/>
+
+                                                    <TextBlock Text ="重心かぶり厚 (mm)" Width="150"  HorizontalAlignment="Right"/>
+                                                    <TextBox  Text="{Binding PileTop.MainBarCenterCover1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </GroupBox>
+                                        <!--<GroupBox Header="鉄筋（定着筋）">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
+                                                    <TextBox  Text="{Binding PileTop.MainBarNum1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                    <TextBlock Text ="-" Width="20"  HorizontalAlignment="Center"/>
+                                                    <ComboBox SelectedItem="{Binding PileTop.MainBarSize1, UpdateSourceTrigger=PropertyChanged}"
+                                                              ItemsSource="{Binding PileTop.MainBarSizeOption}" Width="50"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="規格" Width="100"  HorizontalAlignment="Right"/>
+                                                    <ComboBox  SelectedItem="{Binding PileTop.MainBarSpec1, UpdateSourceTrigger=PropertyChanged}"
+                                                               ItemsSource="{Binding PileTop.MainBarSpecOption}" Width="100"/>
+
+                                                    <TextBlock Text ="重心かぶり厚 (mm)" Width="150"  HorizontalAlignment="Right"/>
+                                                    <TextBox  Text="{Binding PileTop.MainBarCenterCover1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                              PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                              PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </GroupBox>-->
+
+                                    </StackPanel>
+
+                                    <!--<StackPanel  Visibility="{Binding PileBodyType,
+                                          Converter={StaticResource VisibilityConverter},
+                                          ConverterParameter='場所打ち鋼管コンクリート杭'}">
+
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
+                                            <TextBox  Text="{Binding PileTop.MainBarNum1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                            <TextBlock Text ="-" Width="20"  HorizontalAlignment="Center"/>
+                                            <ComboBox SelectedItem="{Binding PileTop.MainBarSize1, UpdateSourceTrigger=PropertyChanged}"
+                                                          ItemsSource="{Binding PileTop.MainBarSizeOption}" Width="50"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text ="規格" Width="100"  HorizontalAlignment="Right"/>
+                                            <ComboBox  SelectedItem="{Binding PileTop.MainBarSpec1, UpdateSourceTrigger=PropertyChanged}"
+                                                           ItemsSource="{Binding PileTop.MainBarSpecOption}" Width="100"/>
+
+                                            <TextBlock Text ="重心かぶり厚 (mm)" Width="150"  HorizontalAlignment="Right"/>
+                                            <TextBox  Text="{Binding PileTop.MainBarCenterCover1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                        </StackPanel>
+                                    </StackPanel>-->
+
+
+                                    <GroupBox Header="キャプテンパイル" Visibility="{Binding PileTopType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='キャプテンパイル工法'}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="PCリング" Width="100"  HorizontalAlignment="Right"/>
+                                                <ComboBox x:Name="ComboBoxPCRing" Width="100"
+                                                          ItemsSource="{Binding PileTop.CaptainPile.PCRingOption}"
+                                                          SelectedItem="{Binding PileTop.CaptainPile.SelectedPCRingName, UpdateSourceTrigger=PropertyChanged}"
+                                                          SelectionChanged="ComboBoxPCRingChanged"  HorizontalContentAlignment="Right" DropDownOpened="ComboBox_DropDownOpened">
+                                                </ComboBox>
+                                                <!--</StackPanel>
+                                            <StackPanel Orientation="Horizontal">-->
+                                                <TextBlock Text="絞り率ν" Width="50" HorizontalAlignment="Right"/>
+                                                <ComboBox x:Name="ComboBoxContractionRatio" Width="50" ItemsSource="{Binding PileTop.CaptainPile.ContractionRatioOption}"
+                                                            SelectedItem="{Binding PileTop.CaptainPile.Nu, UpdateSourceTrigger=PropertyChanged}"
+                                                          HorizontalContentAlignment="Right"
+                                                          SelectionChanged="ComboBoxContractionRatioSelectionChanged" DropDownOpened="ComboBox_DropDownOpened">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding StringFormat={}{0:F2}}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <CheckBox x:Name="CheckBoxHasTensionAnchors" Content= "引張定着筋" 
+                                                        IsChecked="{Binding PileTop.CaptainPile.CTPTensionRebars.HasTensionRebars, UpdateSourceTrigger=PropertyChanged}"
+                                                              Checked="CheckBoxHasTensionAnchorsChecked" Unchecked="CheckBoxHasTensionAnchorsUnchecked"/>
+
+                                            <GroupBox Header="引張定着筋" Visibility="{Binding ElementName=CheckBoxHasTensionAnchors, Path=IsChecked,
+                                                        Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                                                <StackPanel>
+                                                    <GroupBox Header="配置">
+                                                        <StackPanel>
+                                                            <RadioButton x:Name="RadioButtonSquare" Content="正方形配置" IsChecked="True"
+                                                                         Checked="RadioButton_Checked" Unchecked="RadioButton_Unchecked"/>
+                                                            <RadioButton x:Name="RadioButtonCircle" Content="円形配置" IsChecked="False"
+                                                                         Checked="RadioButton_Checked" Unchecked="RadioButton_Unchecked"/>
+                                                        </StackPanel>
+                                                    </GroupBox>
+
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <ComboBox x:Name="ComboBoxBarNumberSquare" Width="100"
+                                                                ItemsSource="{Binding PileTop.CaptainPile.CTPTensionRebars.CaptainPileTensionBarNumberOption_square,
+                                                            UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedItem="{Binding PileTop.CaptainPile.CTPTensionRebars.SelectedBarNumberSquare}"
+                                                                Visibility="Collapsed"  SelectionChanged="ComboBoxSelectionChanged" DropDownOpened="ComboBox_DropDownOpened">
+                                                        </ComboBox>
+
+                                                        <ComboBox x:Name="ComboBoxBarNumberCircle" Width="100"
+                                                                ItemsSource="{Binding PileTop.CaptainPile.CTPTensionRebars.CaptainPileTensionBarNumberOption_circle,
+                                                            UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedItem="{Binding PileTop.CaptainPile.CTPTensionRebars.SelectedBarNumberCircle}"
+                                                                Visibility="Collapsed" SelectionChanged="ComboBoxSelectionChanged" DropDownOpened="ComboBox_DropDownOpened">
+                                                        </ComboBox>
+
+                                                        <TextBlock Text="-"/>
+
+                                                        <ComboBox x:Name="ComboBoxTensionAnchorDia" Width="100"
+                                                                ItemsSource="{Binding PileTop.CaptainPile.CTPTensionRebars.TensionAnchorDiaOption}"
+                                                                SelectedItem="{Binding PileTop.CaptainPile.CTPTensionRebars.SelectedTensionAnchorDia,
+                                                            UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ComboBoxSelectionChanged" DropDownOpened="ComboBox_DropDownOpened">
+                                                        </ComboBox>
+                                                        <ComboBox x:Name="ComboBoxTensionAnchoGrade" Width="100"
+                                                                ItemsSource="{Binding PileTop.CaptainPile.CTPTensionRebars.TensionAnchorGradeOption}"
+                                                                SelectedItem="{Binding PileTop.CaptainPile.CTPTensionRebars.SelectedTensionAnchorGrade,
+                                                            UpdateSourceTrigger=PropertyChanged}" SelectionChanged="ComboBoxSelectionChanged" DropDownOpened="ComboBox_DropDownOpened">
+                                                        </ComboBox>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+
+                                                        <TextBlock Text="配置辺長tB (mm)" Width="150" HorizontalAlignment="Right"
+                                                               Visibility="{Binding PileTop.CaptainPile.CTPTensionRebars.IsSquareArrangement,
+                                                                Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <TextBlock Text="配置直径tD (mm)" Width="150" HorizontalAlignment="Right"
+                                                               Visibility="{Binding PileTop.CaptainPile.CTPTensionRebars.IsCircleArrangement,
+                                                                Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <TextBox x:Name="TextBoxTDorTB" Width="50"
+                                                                 Text="{Binding PileTop.CaptainPile.CTPTensionRebars.TDorTB, UpdateSourceTrigger=PropertyChanged}"
+                                                                TextChanged="TextBoxTDorTBTextChanged" HorizontalContentAlignment="Right"
+                                                                GotFocus="TextBox_GotFocus"
+                                                                PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                        <TextBlock Text="配置辺長tBmax (mm)" Width="150" HorizontalAlignment="Right"
+                                                               Visibility="{Binding PileTop.CaptainPile.CTPTensionRebars.IsSquareArrangement,
+                                                                Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <TextBlock Text="配置直径tDmax (mm)" Width="150" HorizontalAlignment="Right"
+                                                               Visibility="{Binding PileTop.CaptainPile.CTPTensionRebars.IsCircleArrangement,
+                                                                Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                        <TextBox x:Name="TextBoxTDorTBmax" Width="50"
+                                                                 Text="{Binding PileTop.CaptainPile.CTPTensionRebars.TDorTBmax, UpdateSourceTrigger=PropertyChanged}"
+                                                                IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right" 
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
+                                                                 />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <GroupBox Header="FTパイル" Visibility="{Binding PileTopType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='FT-Pile構法'}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="FTキャップ"/>
+                                                <ComboBox x:Name="ComboBoxFTCap" Width="100" HorizontalContentAlignment="Right"
+                                                    ItemsSource="{Binding PileTop.FTPile.FTCapOption}"
+                                                    SelectedItem="{Binding PileTop.SelectedFTCap, UpdateSourceTrigger=PropertyChanged}"
+                                                    SelectionChanged="ComboBoxFTCapChanged" />
+                                            </StackPanel>
+
+                                            <CheckBox x:Name="CheckBoxHasFTTensionAnchors" Content="引張定着筋"
+                                                      IsChecked="{Binding PileTop.FTPile.FTPileTensionBars.IsTensionType, UpdateSourceTrigger=PropertyChanged}"
+                                                      Checked="CheckBoxHasFTTensionAnchorsChecked" Unchecked="CheckBoxHasFTTensionAnchorsUnchecked"/>
+
+                                            <GroupBox Header="引張定着筋" Visibility="{Binding ElementName=CheckBoxHasFTTensionAnchors, Path=IsChecked,
+                                                        Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBox x:Name="TextBoxFTTensionNum"
+                                                                 Text="{Binding PileTop.FTPile.FTPileTensionBars.TensionAnchorNum, UpdateSourceTrigger=LostFocus}"
+                                                                 Width="50" TextChanged="TextBoxFTTensionNumChanged" HorizontalContentAlignment="Right"
+                                                                 GotFocus="TextBox_GotFocus"
+                                                                PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" PreviewKeyDown="TextBox_PreviewKeyDown"/>
+                                                        <TextBlock Text="-"/>
+                                                        <ComboBox x:Name="ComboBoxFTTensionBar" Width="150" HorizontalContentAlignment="Right"
+                                                                ItemsSource="{Binding PileTop.FTPile.FTPileTensionBars.TensionAnchorGradeOption}"
+                                                                SelectedItem="{Binding PileTop.FTPile.FTPileTensionBars.SelectedTensionAnchorGrade, UpdateSourceTrigger=LostFocus}">
+                                                        </ComboBox>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </GroupBox>
+                                </StackPanel>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="諸元" CanClose="False" CanHide="False">
+                                <!--<TextBlock Text="諸元"/>-->
+                                <common:EnhancedDataGrid x:Name="DrawGridSpecifications"
+                                          ItemsSource="{Binding PileTop.SelectedPileTopSpecification}"
+                                          AutoGenerateColumns="False"
+                                          CanUserSortColumns="False"
+                                          CellStyle="{StaticResource CustomDataGridCellStyle}">
+
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                            <Setter Property="Foreground" Value="#62B0E2" />
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="項目" Width="2*" Binding="{Binding Item}" IsReadOnly="True" Foreground="Gray"/>
+                                        <DataGridTextColumn Header="記号" Width="*" Binding="{Binding Mark}" IsReadOnly="True" Foreground="Gray"/>
+                                        <DataGridTextColumn Header="値" Width="*" Binding="{Binding Value}" IsReadOnly="True" Foreground="Gray">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Setter Property="HorizontalAlignment" Value="Right" />
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="単位" Width="*" Binding="{Binding Unit}" IsReadOnly="True" Foreground="Gray"/>
+                                    </DataGrid.Columns>
+                                </common:EnhancedDataGrid>
+                                <!--</StackPanel>-->
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
+
+                    <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="上面図" CanClose="False" CanHide="False">
+                                <Canvas x:Name="Canvas" Background="Transparent" Opacity="0.5" MouseRightButtonDown="Canvas_MouseRightButtonDown">
+                                    <Canvas.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="画像コピー" Click="ImageCopyMenuItem_Click"/>
+                                            <MenuItem Header="画像保存" Click="ImageSaveMenuItem_Click"/>
+                                        </ContextMenu>
+                                    </Canvas.ContextMenu>
+                                </Canvas>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="MNインタラクション" CanClose="False" CanHide="False">
+                                <!--<lvc:CartesianChart Grid.Row="1" AutoUpdateEnabled="True"
+                                        Series="{Binding ChartMNSeries, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                                        XAxes="{Binding ChartNAxes, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                                        YAxes="{Binding ChartMAxes, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                                        TooltipFindingStrategy="CompareAll">
+                                </lvc:CartesianChart>-->
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="auto"/>
+                                    </Grid.RowDefinitions>
+                                    <ScottPlot:WpfPlot x:Name="wpfPlotMN" Grid.Row="0"/>
+                                    <TextBlock Text="{Binding CrosshairPositionText_MN}" Margin="10" FontSize="14" Grid.Row="1"/>
+
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                            <avalonDock:LayoutAnchorable Title="θMインタラクション" CanClose="False" CanHide="False">
+                                <!--<lvc:CartesianChart Grid.Row="1" AutoUpdateEnabled="True"
+                                        Series="{Binding ChartThetaMSeries, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                                        XAxes="{Binding ChartThetaAxes, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                                        YAxes="{Binding ChartMAxes, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                                        LegendPosition="Right"
+                                        LegendTextSize="8"
+                                        TooltipFindingStrategy="CompareAll">
+                                </lvc:CartesianChart>-->
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="auto"/>
+                                    </Grid.RowDefinitions>
+                                    <ScottPlot:WpfPlot x:Name="wpfPlotThetaM" Grid.Row="0"/>
+                                    <TextBlock Text="{Binding CrosshairPositionText_ThetaM}" Margin="10" FontSize="14" Grid.Row="1"/>
+
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
+                </avalonDock:LayoutPanel>
+            </avalonDock:LayoutRoot>
+        </avalonDock:DockingManager>
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1"  HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Ok" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding CancelCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

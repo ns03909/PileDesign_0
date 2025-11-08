@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: Swiss721BT-BlackExtended, 'Swis721 BlkEx BT';
+        font-size: 130px;
+      }
+
+      .cls-2 {
+        fill: #f4ece2;
+      }
+
+      .cls-3 {
+        fill: #e3fae2;
+      }
+
+      .cls-4 {
+        fill: #ffe8bf;
+      }
+    </style>
+  </defs>
+  <rect class="cls-3" y="171" width="256" height="85"/>
+  <rect class="cls-2" y="85.25" width="256" height="85.5"/>
+  <rect class="cls-4" width="256" height="86"/>
+  <text class="cls-1" transform="translate(111.37 111.93)"><tspan x="0" y="0">N</tspan></text>
+</svg>

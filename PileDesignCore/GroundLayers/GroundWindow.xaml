@@ -1,0 +1,780 @@
+﻿<Window x:Class="PileDesignCore.GroundWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesignCore" xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
+        mc:Ignorable="d"
+        Title="地盤入力" WindowState="Maximized">
+    <Window.DataContext>
+        <local:GroundLayerViewModel />
+    </Window.DataContext>
+    <Window.Resources>
+        <local:DoubleLessThanConverter x:Key="DoubleLessThanConverter"/>
+        <!-- CheckBoxのスタイル定義 -->
+        <!--<Style x:Key="GrayCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="Gray"/>-->
+            <!--<Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Foreground" Value="Gray"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="False">
+                    <Setter Property="Foreground" Value="Gray"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="{x:Null}">
+                    <Setter Property="Foreground" Value="Gray"/>
+                </Trigger>
+            </Style.Triggers>-->
+        <!--</Style>-->
+    </Window.Resources>
+        <Grid>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="0">
+            <StackPanel Orientation="Horizontal">
+                <Label Content="地盤番号" HorizontalContentAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
+                <ComboBox x:Name="ComboBoxGroundNo"
+                      HorizontalAlignment="Left"
+                      Height="25"
+                      VerticalAlignment="Top"
+                      Width="100"
+                      SelectedValue="{Binding SelectedGroundNo, UpdateSourceTrigger=PropertyChanged}"
+                      SelectionChanged="ComboBoxGroundNo_SelectionChanged">
+                    <ComboBox.ItemsSource>
+                        <x:Array Type="{x:Type sys:Int32}">
+                            <sys:Int32>1</sys:Int32>
+                            <sys:Int32>2</sys:Int32>
+                            <sys:Int32>3</sys:Int32>
+                            <sys:Int32>4</sys:Int32>
+                            <sys:Int32>5</sys:Int32>
+                        </x:Array>
+                    </ComboBox.ItemsSource>
+                </ComboBox>
+                <Label Content="地盤符号" HorizontalContentAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Center" Width="100"/>
+                <TextBox x:Name="TextBoxGroundRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100"
+                         Text="{Binding GroundRef}" TextChanged="GroundTextBox_TextChanged" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <Label Content="孔口標高" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
+                       HorizontalContentAlignment="Right" Width="100"/>
+                <TextBox Text="{Binding DataContextFundamental.RefLevel}" Width="50" HorizontalContentAlignment="Right" IsEnabled="False"/>
+                <TextBox x:Name="TextBoxGroundTopAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
+                         Text ="{Binding GroundTopAltitude, UpdateSourceTrigger = PropertyChanged, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                         TextChanged="GroundTopAltitudeTextBox_TextChanged"/>
+                <Label Content="地下水位標高" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
+                       HorizontalContentAlignment="Right" Width="100"/>
+                <TextBox Text="{Binding DataContextFundamental.RefLevel}" Width="50" HorizontalContentAlignment="Right"  IsEnabled="False"/>
+                <TextBox x:Name="TextBoxGroundWaterTableAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
+                         Text="{Binding GroundWaterTableAltitude, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                         TextChanged="TextBoxGroundWaterTableAltitude_TextChanged"/>
+                <Label Content="地中応力計算用標高" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25"
+                       HorizontalContentAlignment="Right" Width="150"/>
+                <TextBox Text="{Binding DataContextFundamental.RefLevel}" Width="50"  HorizontalContentAlignment="Right" IsEnabled="False"/>
+                <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" 
+                         Text="{Binding StressAltitude, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                         TextChanged="TextBoxGroundStressAltitude_TextChanged"/>
+                <Label Content="レベル1荷重検討用地表面地表加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="250" HorizontalContentAlignment="Right" />
+                <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
+                         Text="{Binding GroundAcceleration1, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:0.00}'}"
+                         TextChanged="GroundTextBox_TextChanged"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <Label Content="孔口深度" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100"
+                       HorizontalContentAlignment="Right" />
+                <TextBox Text="GL" Width="50" IsEnabled="False" HorizontalContentAlignment="Right" VerticalAlignment="Center" Height="25" />
+                <TextBox x:Name="TextBoxGroundGLDepth" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" IsEnabled="False"
+                         Text="±0.00"/>
+                <Label Content="地下水位深度" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="100"
+                       HorizontalContentAlignment="Right" />
+                <TextBox Text="GL" Width="50" IsEnabled="False" HorizontalContentAlignment="Right" VerticalAlignment="Center" Height="25" />
+                <TextBox x:Name="TextBoxGroundWaterGLDepth" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
+                         Text="{Binding GroundWaterGLDepth, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                         TextChanged="TextBoxGroundWaterGLDepth_TextChanged"/>
+                <Label Content="地中応力計算用深度" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="150" HorizontalContentAlignment="Right" />
+                <TextBox Text="GL" Width="50" IsEnabled="False" HorizontalContentAlignment="Right" VerticalAlignment="Center" Height="25" />
+                <TextBox x:Name="TextBoxStressGLDepth" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
+                         Text="{Binding StressGLDepth, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                         TextChanged="TextBoxStressGLDepth_TextChanged"/>
+                <Label Content="レベル2荷重検討用地表面地表加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="250" HorizontalContentAlignment="Right" />
+                <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
+                         Text="{Binding GroundAcceleration2, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:0.00}'}"
+                         TextChanged="GroundTextBox_TextChanged"/>
+
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <Label Content="表層の土質" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="100" HorizontalContentAlignment="Right" />
+                <ComboBox x:Name="ComboBoxShallowSoilType" SelectedValue="{Binding ShallowSoilType, UpdateSourceTrigger=PropertyChanged}"
+                          ItemsSource ="{Binding ShallowSoilTypeOption}" VerticalAlignment="Center" Height="25" Width="100" SelectionChanged="GroundComboBox_SelectionChanged"/>
+
+                <Label Content="地盤変位算定法" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="150" HorizontalContentAlignment="Right" />
+                <ComboBox x:Name="ComboBoxCalculationMethod" SelectedValue="{Binding CalculationMethod, UpdateSourceTrigger=PropertyChanged}"
+                          ItemsSource ="{Binding CalculationMethodOption}" VerticalAlignment="Center" Height="25" Width="100" SelectionChanged="GroundComboBox_SelectionChanged"/>
+
+                <Label Content="工学的基盤単位体積重量(kN/m3)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="200" HorizontalContentAlignment="Right" />
+                <TextBox x:Name="TextBoxBedrockDensity"
+
+                          Text="{Binding BedrockDensity}" VerticalAlignment="Center" Height="25" Width="100" TextChanged="GroundTextBox_TextChanged"/>
+
+                <Label Content="工学的基盤せん断波速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                       Width="200" HorizontalContentAlignment="Right" />
+                <TextBox x:Name="TextBoxBedrockShearWaveVelocity"
+                          Text="{Binding BedrockShearWaveVelocity}" VerticalAlignment="Center" Height="25" Width="100" TextChanged="GroundTextBox_TextChanged"/>
+            </StackPanel>
+        </StackPanel>
+
+        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
+            <avalonDock:LayoutRoot>
+                <avalonDock:LayoutPanel Orientation="Horizontal">
+                    <avalonDock:LayoutAnchorablePaneGroup  Orientation="Vertical">
+                        <avalonDock:LayoutAnchorablePane>
+                            <avalonDock:LayoutAnchorable Title="土層入力" CanClose="False" CanHide="False">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <ToolBar Grid.Row="0">
+                                        <Button x:Name="ButtonAddGroundLayer" Content="土層追加"  Click="ButtonAddGroundLayer_Click"/>
+                                    </ToolBar>
+                                        
+                                    <ScrollViewer HorizontalScrollBarVisibility="Auto" Grid.Row="1">
+                                        <StackPanel Orientation="Horizontal">
+                                            <DataGrid x:Name="DataGridGroundLayer" AutoGenerateColumns="False" HorizontalAlignment="Left"
+                                                        CanUserAddRows="False" CanUserSortColumns="False" ItemsSource="{Binding SelectedGroundLayerCollection}"
+                                                        LoadingRow="DataGridGroundLayer_LoadingRow">
+                                                <DataGrid.ColumnHeaderStyle>
+                                                    <Style TargetType="DataGridColumnHeader">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                    </Style>
+                                                </DataGrid.ColumnHeaderStyle>
+                                                <DataGrid.Columns>
+
+                                                    <!--削除ボタンの表示-->
+                                                    <DataGridTemplateColumn Width="45" Header="削除">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <Button
+                                                                        x:Name="ButtonGroundLayerDelete"
+                                                                        Click="ButtonDeleteGroundLayer_Click"
+                                                                        Content="削除"
+                                                                        Tag="{Binding}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding LayerThickness, StringFormat='{}{0:0.00}', UpdateSourceTrigger=PropertyChanged}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="層厚" TextAlignment="Center"/>
+                                                                <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding BottomGLDepth, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                                                                        IsReadOnly="True" Foreground="Gray">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="下端" TextAlignment="Center"/>
+                                                                <TextBlock Text="深度" TextAlignment="Center"/>
+                                                                <TextBlock Text="GL" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+                                                    <DataGridTextColumn Binding="{Binding BottomElevation, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                                                                        IsReadOnly="True" Foreground="Gray">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="下端" TextAlignment="Center"/>
+                                                                <TextBlock Text="標高" TextAlignment="Center"/>
+                                                                <TextBlock Text="{Binding DataContext.DataContextFundamental.RefLevel, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" TextAlignment="Center"/>
+                                                                <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding LayerName}" >
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="土質" TextAlignment="Center"/>
+                                                                <TextBlock Text="名" TextAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTemplateColumn>
+                                                        <DataGridTemplateColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="土層" TextAlignment="Center"/>
+                                                                <TextBlock Text="分類" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <ComboBox SelectedItem="{Binding SelectedLayerClass, UpdateSourceTrigger=PropertyChanged}"
+                                                                            ItemsSource="{Binding LayerClassOption}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding Density, StringFormat='{}{0:0.00}'}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="単位" TextAlignment="Center"/>
+                                                                <TextBlock Text="体積" TextAlignment="Center"/>
+                                                                <TextBlock Text="重量" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTemplateColumn>
+                                                        <DataGridTemplateColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="年代" TextAlignment="Center"/>
+                                                                <TextBlock Text="分類" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTemplateColumn.Header>
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <ComboBox SelectedItem="{Binding SelectedLayerAge, UpdateSourceTrigger=PropertyChanged}"
+                                                                            ItemsSource="{Binding LayerAgesOption}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <DataGridCheckBoxColumn Binding="{Binding IsEngineeringBedrock}" IsReadOnly="True" > <!--ElementStyle="{StaticResource GrayCheckBoxStyle}">-->
+                                                        <DataGridCheckBoxColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="工学的" TextAlignment="Center" />
+                                                                <TextBlock Text="基盤" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            
+                                                        </DataGridCheckBoxColumn.Header>
+                                                        
+                                                    </DataGridCheckBoxColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding NValue}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="平均" TextAlignment="Center"/>
+                                                                <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn  Binding="{Binding Cohesive}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="粘着力" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding Vs}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="S波" TextAlignment="Center"/>
+                                                                <TextBlock Text="速度" TextAlignment="Center"/>
+                                                                <TextBlock Text="(m/s)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Binding="{Binding Es}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="変形" TextAlignment="Center"/>
+                                                                <TextBlock Text="係数" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridCheckBoxColumn Binding="{Binding IsPositiveCircumResistance}">
+                                                        <DataGridCheckBoxColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="押込側" TextAlignment="Center"/>
+                                                                <TextBlock Text="周面" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="抵抗" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridCheckBoxColumn.Header>
+                                                    </DataGridCheckBoxColumn>
+
+                                                    <DataGridCheckBoxColumn Binding="{Binding IsNegativeCircumResistance}" >
+                                                        <DataGridCheckBoxColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="引抜側" TextAlignment="Center"/>
+                                                                <TextBlock Text="周面" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="抵抗" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridCheckBoxColumn.Header>
+                                                    </DataGridCheckBoxColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        
+                                            <Slider x:Name="SliderEngineeringBedrock"
+                                                Minimum="1" Maximum="{Binding SelectedGroundLayerCollection.Count}"
+                                                Orientation="Vertical" TickPlacement="Both" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                SmallChange="1" LargeChange="1" ValueChanged="SliderEngineeringBedrock_ValueChanged">
+                                            </Slider>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Grid>
+
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutAnchorablePane>
+                    <!--</avalonDock:LayoutAnchorablePaneGroup>
+
+                    <avalonDock:LayoutAnchorablePaneGroup>-->
+                        <avalonDock:LayoutAnchorablePane>
+                            <avalonDock:LayoutAnchorable Title="土質点入力" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <ToolBar Grid.Row="0">
+                                        <Button x:Name="ButtonAddGroundMass" Content="土質点追加" Click="ButtonAddGroundMass_Click"/>
+                                        <Label Content="液状化・地盤変位表示レベル" HorizontalContentAlignment="Right" Height="25" VerticalAlignment="Top" Width="200"/>
+                                        <ComboBox x:Name="ComboBoxLevel"
+                                                    SelectedValue="{Binding SelectedLevel, UpdateSourceTrigger=PropertyChanged}"
+                                                    SelectionChanged ="ComboBoxLevel_SelectionChanged">
+                                            <ComboBox.ItemsSource>
+                                                <x:Array Type="{x:Type sys:Int32}">
+                                                    <sys:Int32>1</sys:Int32>
+                                                    <sys:Int32>2</sys:Int32>
+                                                </x:Array>
+                                            </ComboBox.ItemsSource>
+                                        </ComboBox>
+                                    </ToolBar>
+
+                                    <ScrollViewer HorizontalScrollBarVisibility="Auto"  Grid.Row="1">
+                                        <DataGrid x:Name="DataGridGroundMass" AutoGenerateColumns="False"  HorizontalAlignment="Left"
+                                                    CanUserAddRows="False" CanUserSortColumns="False" ItemsSource="{Binding SelectedGroundMassCollection}" CellEditEnding="DataGridGroundMass_CellEditEnding"
+                                                    LoadingRow="DataGridMassLayer_LoadingRow" >
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+                                            <DataGrid.Columns>
+
+                                                <!--削除ボタンの表示-->
+                                                <DataGridTemplateColumn Width="45" Header="削除">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button
+                                                                x:Name="ButtonDeleteGroundMass"
+                                                                Click="ButtonDeleteGroundMass_Click"
+                                                                Content="削除"
+                                                                Tag="{Binding}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Spacing, StringFormat='{}{0:0.00}'}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="間隔" TextAlignment="Center"/>
+                                                            <TextBlock Text="(m)" TextAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding GLDepth, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                                                                    IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="深度" TextAlignment="Center"/>
+                                                            <TextBlock Text="GL" TextAlignment="Center"/>
+                                                            <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding AltitudeDepth, StringFormat='{}{0:+0.00;-0.00;±0.00}'}"
+                                                                    IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="標高" TextAlignment="Center"/>
+                                                            <TextBlock Text="{Binding DataContext.DataContextFundamental.RefLevel, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" TextAlignment="Center"/>
+                                                            <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Name}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="土層" TextAlignment="Center"/>
+                                                            <TextBlock Text="名" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn  Header="N値" Binding="{Binding NValue}"/>
+
+                                                <DataGridTextColumn Binding="{Binding Fc}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="細粒分" TextAlignment="Center"/>
+                                                            <TextBlock Text="含有率" TextAlignment="Center"/>
+                                                            <TextBlock Text="Fc(%)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridCheckBoxColumn Binding="{Binding IsEngineeringBedrock}" IsReadOnly="True">
+                                                    <DataGridCheckBoxColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="工学的" TextAlignment="Center"/>
+                                                            <TextBlock Text="基盤" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridCheckBoxColumn.Header>
+                                                </DataGridCheckBoxColumn>
+
+
+                                                <DataGridTextColumn Binding="{Binding SigmaZ, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="全応力" TextAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding SigmaZPrime, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="有効" TextAlignment="Center"/>
+                                                            <TextBlock Text="応力" TextAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+
+                                                <DataGridTextColumn Binding="{Binding H, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="表層" TextAlignment="Center"/>
+                                                            <TextBlock Text="土厚" TextAlignment="Center"/>
+                                                            <TextBlock Text="H (m)" TextAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridCheckBoxColumn Binding="{Binding IsLiquefactionLayer}" IsReadOnly="True">
+                                                    <DataGridCheckBoxColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="液状化" TextAlignment="Center"/>
+                                                            <TextBlock Text="検討" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="対象" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridCheckBoxColumn.Header>
+                                                </DataGridCheckBoxColumn>
+
+                                                <DataGridTextColumn Binding="{Binding RD, StringFormat='{}{0:0.000}'}"  IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="低減" TextAlignment="Center"/>
+                                                            <TextBlock Text="係数" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding N1, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="換算" TextAlignment="Center"/>
+                                                            <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="N1" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+
+                                                <DataGridTextColumn Binding="{Binding DeltaNf, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="N値" TextAlignment="Center"/>
+                                                            <TextBlock Text="増分" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="⊿Nf" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding NL, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="補正" TextAlignment="Center"/>
+                                                            <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="Na" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding TauLonSigmaZPrime, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="液状化" TextAlignment="Center"/>
+                                                            <TextBlock Text="抵抗比" TextAlignment="Center"/>
+                                                            <TextBlock Text="τL/σz'" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding TauDonSigmaZPrime, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="繰り返し" TextAlignment="Center"/>
+                                                            <TextBlock Text="せん断" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="応力比" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="τd/σz'" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTemplateColumn IsReadOnly="True">
+                                                    <DataGridTemplateColumn.Header>
+                                                        <StackPanel ToolTip="1以下となる土層は液状化の危険性が高い">
+                                                            <TextBlock Text="液状化" TextAlignment="Center"/>
+                                                            <TextBlock Text="安全率" TextAlignment="Center"/>
+                                                            <TextBlock Text="FL" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTemplateColumn.Header>
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding FL, StringFormat='{}{0:0.00}'}" Foreground="Gray">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding FL, Converter={StaticResource DoubleLessThanConverter}, ConverterParameter=1}" Value="True">
+                                                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTextColumn Binding="{Binding BetaL, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="地盤反力" TextAlignment="Center"/>
+                                                            <TextBlock Text="係数" TextAlignment="Center"/>
+                                                            <TextBlock Text="低減率" TextAlignment="Center"/>
+                                                            <TextBlock Text="βL" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding GammaCy, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="繰り返し" TextAlignment="Center"/>
+                                                            <TextBlock Text="せん断" TextAlignment="Center"/>
+                                                            <TextBlock Text="ひずみ" TextAlignment="Center"/>
+                                                            <TextBlock Text="γcy(%)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding SigmaGammaCyH, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="液状化" TextAlignment="Center"/>
+                                                            <TextBlock Text="水平変位" TextAlignment="Center"/>
+                                                            <TextBlock Text="∑γcyH" TextAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+                                                <DataGridTextColumn Binding="{Binding Density, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="単位" TextAlignment="Center"/>
+                                                            <TextBlock Text="体積" TextAlignment="Center"/>
+                                                            <TextBlock Text="重量" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Mass, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="質量" TextAlignment="Center"/>
+                                                            <TextBlock Text="(ton/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding VS0, StringFormat='{}{0:0.0}'}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="初期" TextAlignment="Center"/>
+                                                            <TextBlock Text="S波" TextAlignment="Center"/>
+                                                            <TextBlock Text="速度" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(m/s)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding VSE, StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="等価" TextAlignment="Center"/>
+                                                            <TextBlock Text="S波" TextAlignment="Center"/>
+                                                            <TextBlock Text="速度" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(m/s)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding K, StringFormat='{}{0:N0}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="等価" TextAlignment="Center"/>
+                                                            <TextBlock Text="せん断" TextAlignment="Center"/>
+                                                            <TextBlock Text="ばね剛性" TextAlignment="Center"/>
+                                                            <TextBlock Text="k(kN/m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding U, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="仮の" TextAlignment="Center"/>
+                                                            <TextBlock Text="無次元化" TextAlignment="Center"/>
+                                                            <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="u" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding UStar, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="調整後" TextAlignment="Center"/>
+                                                            <TextBlock Text="無次元化" TextAlignment="Center"/>
+                                                            <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="u*" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding DmaxUStar, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="地盤の" TextAlignment="Center"/>
+                                                            <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="Dmax u*" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding DmaxUStarSigmaGammaCyH, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="地盤の" TextAlignment="Center"/>
+                                                            <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="Dmax u*" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="+ ∑γcyH" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </ScrollViewer >
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutAnchorablePane>
+                    </avalonDock:LayoutAnchorablePaneGroup>
+                <avalonDock:LayoutAnchorablePaneGroup>
+                    <avalonDock:LayoutAnchorablePane>
+                        <avalonDock:LayoutAnchorable Title="N値・粘着力" CanClose="False" CanHide="False">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <ToolBar Grid.Row="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Label Content="内容" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"/>
+                                        <ComboBox x:Name="ComboBoxChart1Content" SelectedValue="{Binding Chart1Content, UpdateSourceTrigger=PropertyChanged}"
+                                            ItemsSource ="{Binding Chart1ContentOption}" VerticalAlignment="Center" Height="25" Width="200"
+                                                SelectionChanged="GroundComboBox_SelectionChanged"/>                                    
+                                    </StackPanel>
+                                </ToolBar>
+                                <WindowsFormsHost Name="Chart1v"  Grid.Row="1"/> 
+                            </Grid>
+                            
+                            
+                        </avalonDock:LayoutAnchorable>
+                    </avalonDock:LayoutAnchorablePane>
+
+                    <avalonDock:LayoutAnchorablePane>
+                            <avalonDock:LayoutAnchorable Title="液状化・変位" CanClose="False" CanHide="False">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <ToolBar Grid.Row="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Label Content="内容" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"/>
+                                        <ComboBox x:Name="ComboBoxChart2Content" SelectedValue="{Binding Chart2Content, UpdateSourceTrigger=PropertyChanged}"
+                                            ItemsSource ="{Binding Chart2ContentOption}" VerticalAlignment="Center" Height="25" Width="200"
+                                            SelectionChanged="GroundComboBox_SelectionChanged"/>
+                                    </StackPanel>
+                                </ToolBar>
+
+                                <WindowsFormsHost Name="Chart2v"  Grid.Row="1"/>
+                            </Grid>
+                        </avalonDock:LayoutAnchorable>
+                    </avalonDock:LayoutAnchorablePane>
+                        </avalonDock:LayoutAnchorablePaneGroup>
+                </avalonDock:LayoutPanel>
+            </avalonDock:LayoutRoot>
+        </avalonDock:DockingManager>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Ok" Height="30" VerticalAlignment="Top"
+                    Width="100" Click="ButtonOk_Click"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" VerticalAlignment="Top"
+                    Width="100" Click="ButtonCancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

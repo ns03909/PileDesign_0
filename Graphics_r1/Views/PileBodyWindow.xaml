@@ -1,0 +1,830 @@
+﻿<Window x:Class="PileDesign.Views.PileBodyWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        d:DataContext="{d:DesignInstance Type=local:PileBodyViewModel}"
+        mc:Ignorable="d"
+        xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        Title="PileBodyWindow" WindowState="Maximized"
+        Loaded="PileBodyWindow_Loaded"
+        Closing="Window_Closing">
+
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+
+    <Window.Resources>
+        <conv:VisibilityConverter x:Key="VisibilityConverter"/>
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:HeightToMaxHeightConverter x:Key="HeightToMaxHeightConverter" />
+        <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
+        <!-- DataGridCellのスタイルを定義 -->
+        <Style x:Key="RightAlignedCellStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+        <Style x:Key="RightAlignedEditingStyle" TargetType="TextBox">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <common:LastItemTemplateSelector x:Key="LastItemTemplateSelector">
+            <common:LastItemTemplateSelector.DefaultTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}"/>
+                </DataTemplate>
+            </common:LastItemTemplateSelector.DefaultTemplate>
+            <common:LastItemTemplateSelector.LastItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" Foreground="Red" Background="Yellow"/>
+                </DataTemplate>
+            </common:LastItemTemplateSelector.LastItemTemplate>
+        </common:LastItemTemplateSelector>
+
+        <!-- SvgViewboxコントロール用のスタイルを定義 -->
+        <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.ToolTip>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="杭体番号" HorizontalAlignment="Center" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"/>
+                        <TextBlock Text="#" Grid.Row="1" Grid.Column="0"/>
+                        <TextBlock Text=": 既存データ" Grid.Row="1" Grid.Column="1"/>
+                        <TextBlock Text="#(New)" Grid.Row="2" Grid.Column="0"/>
+                        <TextBlock Text=": 新規データ" Grid.Row="2" Grid.Column="1"/>
+                    </Grid>
+                </StackPanel.ToolTip>
+
+
+                <TextBlock Text="杭体番号" Width="100" HorizontalAlignment="Left" Background="#62B0E2"/>
+                <ComboBox x:Name="ComboBoxPileBodyNo"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Width="100"
+                    SelectedItem="{Binding SelectedPileBodyNoItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    ItemsSource="{Binding PileBodiesCountPlusOneList}" 
+                          DropDownOpened="ComboBox_DropDownOpened"
+                          SelectionChanged="ComboBoxPileBodyNoSelectionChanged">
+                    <!--SelectedIndex="{Binding PileBodyNo, Converter={StaticResource IntToZeroBasedIndexConverter}, Mode=TwoWay, 
+                    UpdateSourceTrigger=PropertyChanged}"-->
+                    <!--SelectedItem="{Binding PileBodyNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    ItemsSource="{Binding PileBodiesCountPlusOneList, UpdateSourceTrigger=PropertyChanged}"
+                    ItemTemplateSelector="{StaticResource LastItemTemplateSelector}"
+                    SelectionChanged="ComboBoxPileBodyNoSelectionChanged">-->
+
+                </ComboBox>
+                <Button Content="削除" Command="{Binding DeletePileBodyCommand}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="杭体符号" Width="100" Background="#62B0E2"/>
+
+                <TextBox x:Name="TextBoxPileBodyRef" HorizontalAlignment="Left" VerticalAlignment="Center" Width="100" 
+                         Text="{Binding PileBody.PileBodyRef, UpdateSourceTrigger=LostFocus}"
+                         PreviewKeyDown="TextBox_PreviewKeyDown"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="TextChanged">
+                            <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}"
+                                               CommandParameter="{Binding Text, ElementName=TextBoxPileBodyRef}" />
+                        </i:EventTrigger>
+                        <!--<i:EventTrigger EventName="GotFocus">
+                            <i:InvokeCommandAction Command="{Binding TextBoxGotFocusCommand}"
+                                               CommandParameter="{Binding ElementName=TextBoxPileBodyRef}" />
+                        </i:EventTrigger>
+                        <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                            <i:InvokeCommandAction Command="{Binding TextBoxPreviewMouseLeftButtonDownCommand}"
+                                               CommandParameter="{Binding ElementName=TextBoxPileBodyRef}" />
+                        </i:EventTrigger>-->
+                    </i:Interaction.Triggers>
+                </TextBox>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="杭体タイプ" Width="100"/>
+                <ComboBox x:Name="ComboBoxPileBodyType"
+                          HorizontalAlignment="Left" 
+                          VerticalAlignment="Center" 
+                          Width="200" 
+                          SelectedItem="{Binding PileBody.PileBodyType, UpdateSourceTrigger=PropertyChanged}"
+                          DropDownOpened="ComboBox_DropDownOpened"
+                          ItemsSource="{Binding PileBody.PileBodyTypeOption}">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="SelectionChanged">
+                            <i:InvokeCommandAction Command="{Binding PileBodyTypeSelectionChangedCommand}"
+                                                   CommandParameter="{Binding SelectedItem, ElementName=ComboBoxPileBodyType}" />
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </ComboBox>
+                <TextBlock Text="既製コンクリート杭、鋼管杭未対応" Margin="10,0,0,0" Foreground="Red"/>
+            </StackPanel>
+            <GroupBox Header="杭頭">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="杭頭接合タイプ" Width="100"/>
+
+                    <ComboBox x:Name="ComboBoxPileTopType" 
+                          SelectedItem ="{Binding PileBody.PileTopType, UpdateSourceTrigger=PropertyChanged}"
+                          Width="150"
+                          ItemsSource="{Binding PileBody.PileTopTypeOption, UpdateSourceTrigger=PropertyChanged}"
+                          DropDownOpened="ComboBox_DropDownOpened">
+
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding PileTopTypeSelectionChangedCommand}"
+                                                   CommandParameter="{Binding}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+
+                    <Button x:Name="ButtonEditPileHead"
+                        Content="杭頭編集"
+                        Command="{Binding EditPileHeadCommand}">
+                    </Button>
+
+                    <TextBlock Text="未対応" Margin="10,0,0,0" Foreground="Red"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="杭体区間">
+                <StackPanel>
+                    <ToolBar>
+                        <Button x:Name="ButtonAddGroundLayer" Content="区間追加" HorizontalAlignment="Left"
+                                Command="{Binding AddSegmentCommand}"
+                                Background="#62B0E2" Foreground="White"/>
+                    </ToolBar>
+
+                    <common:EnhancedDataGrid x:Name="DataGridPileBody" Height="150" Width="500"
+                              Loaded="DataGrid_Loaded" AutoGenerateColumns="False"
+                              CanUserAddRows="False" CanUserSortColumns="False"
+                              ItemsSource="{Binding PileBody.PileBodySegments, UpdateSourceTrigger=LostFocus}"
+                              LoadingRow="DataGridPileBody_LoadingRow" HorizontalAlignment="Left"
+                              CellEditEnding="DataGridPileBody_CellEditEnding"
+                              CellStyle="{StaticResource CustomDataGridCellStyle}"
+                              BeginningEdit="DataGrid_BeginningEdit">
+
+                        <common:EnhancedDataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                <Setter Property="Foreground" Value="#62B0E2" />
+                            </Style>
+                        </common:EnhancedDataGrid.ColumnHeaderStyle>
+                        <common:EnhancedDataGrid.Columns>
+                            <DataGridTextColumn  Width="0.5*" Binding="{Binding SegmentLength, UpdateSourceTrigger=PropertyChanged}">
+                                <DataGridTextColumn.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="区間長" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataGridTextColumn.Header>
+                                <DataGridTextColumn.ElementStyle>
+                                    <StaticResource ResourceKey="RightAlignedCellStyle"/>
+                                </DataGridTextColumn.ElementStyle>
+                                <DataGridTextColumn.EditingElementStyle>
+                                    <StaticResource ResourceKey="RightAlignedEditingStyle"/>
+                                </DataGridTextColumn.EditingElementStyle>
+                            </DataGridTextColumn>
+                            
+                            <DataGridTextColumn  Width="0.5*" Binding="{Binding SegmentDepth, UpdateSourceTrigger=PropertyChanged}" 
+                                                IsReadOnly="True" Foreground="Gray">
+                                <DataGridTextColumn.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="下端" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="深さ" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataGridTextColumn.Header>
+                                <DataGridTextColumn.ElementStyle>
+                                    <StaticResource ResourceKey="RightAlignedCellStyle"/>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            
+                            <DataGridTemplateColumn Width="*" Header="杭断面編集">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button x:Name="ButtonPileSectionEdit"
+                                            Content="杭断面編集"
+                                            Command="{Binding DataContext.EditPileSectionCommand, 
+                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <DataGridTextColumn Header="杭断面タイプ"  Width="*" Binding="{Binding PileSection.PileSectionType, 
+                                UpdateSourceTrigger=PropertyChanged}"
+                                                IsReadOnly="True" Foreground="Gray"/>
+                            
+                            <DataGridTextColumn Header="杭断面概要" Width="*" Binding="{Binding PileSection.PileDescription, 
+                                UpdateSourceTrigger=PropertyChanged}"
+                                                IsReadOnly="True" Foreground="Gray"/>
+
+                            <!--削除ボタンの表示-->
+                            <DataGridTemplateColumn Width="*" Header="区間削除" >
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button
+                                    x:Name="ButtonDelete"
+                                    Command="{Binding DataContext.DeletePileBodySegmentCommand, 
+                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                    Content="区間削除"
+                                    Tag="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </common:EnhancedDataGrid.Columns>
+                    </common:EnhancedDataGrid>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="杭先端">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="杭工法" Width="150"/>
+
+                        <ComboBox SelectedItem="{Binding PileBody.PileConstructionType, 
+                                    UpdateSourceTrigger=PropertyChanged}"
+                                  Width="150"
+                                  ItemsSource="{Binding PileBody.PileConstructionTypeOption, 
+                                    UpdateSourceTrigger=PropertyChanged}"
+                                  DropDownOpened="ComboBox_DropDownOpened">
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="SelectionChanged">
+                                    <i:InvokeCommandAction Command="{Binding PileConstructionTypeSelectionChangedCommand}"
+                                                           CommandParameter="{Binding}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                        </ComboBox>
+
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="杭先端径d (mm)" Width="200" HorizontalAlignment="Right"/>
+                        <TextBox x:Name="TextBoxPileToeDia"
+                                 Width="100" HorizontalContentAlignment="Right"
+                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+
+                            <TextBox.Text>
+                                <Binding Path="PileBody.PileToeDia" UpdateSourceTrigger="LostFocus" 
+                                         ValidatesOnDataErrors="True" StringFormat="N1">
+                                    <Binding.ValidationRules>
+                                        <common:RangeValidationRule Min="300" Max="100000" />
+                                    </Binding.ValidationRules>
+                                </Binding>
+                            </TextBox.Text>
+
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="TextChanged">
+                                    <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}"
+                                                            CommandParameter="{Binding Text, ElementName=TextBoxPileToeDia}" />
+                                </i:EventTrigger>
+                                <i:EventTrigger EventName="GotFocus">
+                                    <i:InvokeCommandAction Command="{Binding TextBoxGotFocusCommand}"
+                                                            CommandParameter="{Binding ElementName=TextBoxPileToeDia}" />
+                                </i:EventTrigger>
+                                <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                                    <i:InvokeCommandAction Command="{Binding TextBoxPreviewMouseLeftButtonDownCommand}"
+                                                            CommandParameter="{Binding ElementName=TextBoxPileToeDia}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+
+                            <TextBox.ToolTip>
+                                <ToolTip>
+                                    <TextBlock>
+                                        <Run>場所打ちコンクリート杭：先端径</Run><LineBreak/>
+                                        <Run>埋込み杭：根固め部径</Run><LineBreak/>
+                                        <Run>回転貫入杭：羽根径</Run><LineBreak/>
+                                        <Run>打込み杭：軸径</Run>
+                                    </TextBlock>
+                                </ToolTip>
+                            </TextBox.ToolTip>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='場所打ちコンクリート杭'}">
+                        <TextBlock Text="場所打ち拡底杭先端立ち上がり (mm)" Width="200" />
+                        <TextBox Width="100" HorizontalContentAlignment="Right" 
+                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 >
+                            <TextBox.Text>
+                                <Binding Path="PileBody.InsituPileToeHeight" UpdateSourceTrigger="LostFocus" ValidatesOnDataErrors="True">
+                                    <Binding.ValidationRules>
+                                        <common:RangeValidationRule Min="0" Max="1000" />
+                                    </Binding.ValidationRules>
+                                </Binding>
+                            </TextBox.Text>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='場所打ちコンクリート杭'}">
+                        <TextBlock Text="場所打ち拡底杭杭先端角度" Width="200"/>
+                        <TextBox Width="100" HorizontalContentAlignment="Right" 
+                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 >
+                            <TextBox.Text>
+                                <Binding Path="PileBody.InsituPileToeAngle" UpdateSourceTrigger="LostFocus" ValidatesOnDataErrors="True">
+                                    <Binding.ValidationRules>
+                                        <common:RangeValidationRule Min="0" Max="60" />
+                                    </Binding.ValidationRules>
+                                </Binding>
+                            </TextBox.Text>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='埋込み杭（プレボーリング）,埋込み杭（中掘り）'}">
+                        <TextBlock Text="既製コンクリート杭根固め高さ径比" Width="200"/>
+                        <TextBox Width="100" HorizontalContentAlignment="Right" 
+                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 >
+                            <TextBox.Text>
+                                <Binding Path="PileBody.PrecastConcretePileToeHeightRatio" UpdateSourceTrigger="LostFocus" ValidatesOnDataErrors="True">
+                                    <Binding.ValidationRules>
+                                        <common:RangeValidationRule Min="1" Max="5" />
+                                    </Binding.ValidationRules>
+                                </Binding>
+                            </TextBox.Text>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileBodyType,
+                          Converter={StaticResource VisibilityConverter},
+                          ConverterParameter='既製コンクリート杭'}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileConstructionType,
+                                    Converter={StaticResource VisibilityConverter},
+                                    ConverterParameter='打込み杭'}">
+                                <TextBlock Text="杭先端形状" Width="150" HorizontalAlignment="Right"/>
+                                <ComboBox x:Name ="ComboBoxConcreteTipStyle" Text="{Binding PileBody.PileTipStyle , UpdateSourceTrigger=PropertyChanged}"  Width="100"
+                                    ItemsSource="{Binding PileBody.TipStyleOption, UpdateSourceTrigger=PropertyChanged}">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="SelectionChanged">
+                                            <i:InvokeCommandAction Command="{Binding RecalculateTipNonPermabilityCommand}"/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileTipStyle,
+                                        Converter={StaticResource VisibilityConverter},
+                                        ConverterParameter='開端杭'}">
+                                    <TextBlock Text="支持層への根入れ深さLB(m)" Width="200" HorizontalAlignment="Right"/>
+                                    <TextBox x:Name="TextBoxEmbedmentIntoBearingSoil" Text="{Binding PileBody.EmbedmentIntoBearingSoil}" Width="100"
+                                             HorizontalContentAlignment="Right" 
+                                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="TextChanged">
+                                                <i:InvokeCommandAction Command="{Binding RecalculateTipNonPermabilityCommand}"/>
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                    </TextBox>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileTipStyle,
+                                        Converter={StaticResource VisibilityConverter},
+                                        ConverterParameter='開端杭'}">
+                                    <TextBlock Text="杭の内径dI(m)" Width="200" HorizontalAlignment="Right"/>
+                                    <TextBox x:Name="TextBoxPileInnerDia"  Text="{Binding PileBody.PileInnerDia}" Width="100" HorizontalContentAlignment="Right"
+                                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
+                                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="TextChanged">
+                                                <i:InvokeCommandAction Command="{Binding RecalculateTipNonPermabilityCommand}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                    </TextBox>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileTipStyle,
+                                        Converter={StaticResource VisibilityConverter},
+                                        ConverterParameter='開端杭'}">
+                                    <TextBlock Text="杭先端閉塞効率" Width="200" HorizontalAlignment="Right"/>
+                                    <TextBox x:Name="TextBoxPrecastPileTipNonPermability" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                         Width="100" Text="{Binding PileBody.TipNonPermability }"  HorizontalContentAlignment="Right"
+                                             IsReadOnly = "true" Foreground="gray">
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="TextChanged">
+                                                <i:InvokeCommandAction Command="{Binding RecalculateTipNonPermabilityCommand}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                        <TextBox.ToolTip>
+                                            <ToolTip>
+                                                <TextBlock>
+                                                    <Run>打込み杭(閉端杭)：1.0</Run><LineBreak/>
+                                                    <Run>打込み杭(閉端杭)：</Run><LineBreak/>
+                                                    <Run>2≦(LB/DI)≦5の場合 η=0.16(LB/dI)</Run><LineBreak/>
+                                                    <Run>5＜(LB/DI)の場合η=0.80</Run><LineBreak/>
+                                                    <Run>LB：支持層への根入れ長さ(m)</Run><LineBreak/>
+                                                    <Run>dI：杭の内径(m)</Run>
+                                                </TextBlock>
+                                            </ToolTip>
+                                        </TextBox.ToolTip>
+                                    </TextBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileBodyType,
+                          Converter={StaticResource VisibilityConverter},
+                          ConverterParameter='鋼管杭'}">
+                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileBody.PileConstructionType,
+                            Converter={StaticResource VisibilityConverter},
+                            ConverterParameter='回転貫入杭'}">
+                            <TextBlock Text="杭先端形状" Width="100" HorizontalAlignment="Right"/>
+                            <ComboBox x:Name ="ComboBoxSteelTipStyle" Text="{Binding PileBody.PileTipStyle, UpdateSourceTrigger=PropertyChanged}"  Width="150"
+                              ItemsSource="{Binding PileBody.TipStyleOption}"
+                                      DropDownOpened="ComboBox_DropDownOpened">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="SelectionChanged">
+                                        <i:InvokeCommandAction Command="{Binding RecalculateTipNonPermabilityCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </ComboBox>
+                            <TextBlock Text="杭先端閉塞効率" Width="100" HorizontalAlignment="Right"/>
+                            <TextBox x:Name="TextBoxSteelPileTipNonPermability" HorizontalAlignment="Left" VerticalAlignment="Center"
+                             Width="100"  HorizontalContentAlignment="Right" PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     Text="{Binding PileBody.TipNonPermability }" IsReadOnly = "true" Foreground="gray">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="TextChanged">
+                                        <i:InvokeCommandAction Command="{Binding RecalculateTipNonPermabilityCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run>回転貫入杭(閉端杭)：1.0</Run><LineBreak/>
+                                            <Run>回転貫入杭(開端杭)：0.8</Run><LineBreak/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+
+        <GroupBox Header="杭姿図" Grid.Column="1">
+            <Canvas x:Name="Canvas" />
+        </GroupBox>
+
+        <!--<GroupBox Header="確認用地盤描画">-->
+        <StackPanel Grid.Column="2">
+            <StackPanel Orientation="Horizontal">
+                <svgc:SvgViewbox Source="/Icons/SoilLayerVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                <CheckBox Content="地盤" IsChecked="{Binding IsGroundLayerOverwrapped}">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="Checked">
+                            <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}" />
+                        </i:EventTrigger>
+                        <i:EventTrigger EventName="Unchecked">
+                            <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}" />
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
+                </CheckBox>
+            </StackPanel>
+
+
+            <StackPanel Visibility="{Binding IsGroundLayerOverwrapped, 
+                    Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="地盤No" Width="50"/>
+                    <ComboBox ItemsSource="{Binding InputModel.GroundsInputCountList}" SelectedItem="{Binding SelectedGroundNo}" Width="50">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}" />
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="地表Z" Width="50"/>
+                    <TextBlock Text="{Binding InputModel.FundamentalInput.RefLevel}"/>
+                    <TextBlock Text="{Binding SelectedGroundInput.GroundTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}', UpdateSourceTrigger=LostFocus}" Width="50"/>
+                    <TextBlock Text="m"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="杭頭Z" Width="50"/>
+                    <TextBlock Text="{Binding InputModel.FundamentalInput.RefLevel}"/>
+                    <TextBox Text="{Binding PileTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}" Width="50" 
+                             KeyDown="PileTopAltitude_KeyDown" 
+                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="PreviewLostKeyboardFocus">
+                                <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}" />
+                            </i:EventTrigger>
+
+                            <i:EventTrigger EventName="PreviewKeyDown">
+                                <!--<i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}" CommandParameter="{Binding ElementName=TextBoxPileTopAltitude}" />-->
+                                <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}"/>
+
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </TextBox>
+                    <TextBlock Text="m"/>
+                </StackPanel>
+
+                <!--<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="杭先端N値" Width="75"/>
+                    <TextBox Text="{Binding TemporarySoilPile.PileToeNValue, StringFormat=N1, Mode=OneWay}" 
+                             IsReadOnly="True" Foreground="Gray" Width="50"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="杭先端平均N値算定範囲上端レベル" Width="200"/>
+                    <TextBox Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeUpperAltitude, StringFormat=N1, Mode=OneWay}" 
+                             IsReadOnly="True" Foreground="Gray" Width="50"/>
+                    <TextBlock Text="m" Width="50"/>
+                </StackPanel>
+
+                
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="杭先端平均N値算定範囲下端レベル" Width="200"/>
+                    <TextBox Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeLowerAltitude, StringFormat=N1, Mode=OneWay}" 
+                             IsReadOnly="True" Foreground="Gray" Width="50"/>
+                    <TextBlock Text="m" Width="50"/>
+                </StackPanel>-->
+
+                <StackPanel>
+                    <!-- 左側のプロット -->
+                    <Grid Grid.Row="0" Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!--<TextBlock Grid.Row="10" Grid.Column="0" Text="既製杭先端閉塞率" />
+                        <TextBox  Grid.Row="10" Grid.Column="2" 
+                             Text="{Binding PileBody.TipNonPermability, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                             HorizontalContentAlignment="Right"
+                            PreviewLostKeyboardFocus="OnPileBodyPreviewLostKeyboardFocus" />
+
+                        <TextBlock  Grid.Row="11" Grid.Column="0" 
+                            Text="鋼管杭先端閉塞率" />
+                        <TextBox  Grid.Row="11" Grid.Column="2" 
+                             Text="{Binding PileBody.TipNonPermability, 
+                        UpdateSourceTrigger=PreviewLostKeyboardFocus}"
+                          
+                             HorizontalContentAlignment="Right"
+                            PreviewLostKeyboardFocus="OnPileBodyPreviewLostKeyboardFocus" />-->
+
+                        <TextBlock  Grid.Row="8" Grid.Column="0" Text="杭先端径" />
+                        <TextBlock  Grid.Row="8" Grid.Column="1" Text="D" />
+                        <TextBox  Grid.Row="8" Grid.Column="2" 
+                            Text="{Binding TemporarySoilPile.D, Mode=OneWay, StringFormat=N3}" 
+                            IsReadOnly="True"
+                            Foreground="Gray"
+                            HorizontalContentAlignment="Right"
+                            PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus" 
+                            PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                        <TextBlock  Grid.Row="8" Grid.Column="3" Text="m" />
+
+
+                        <TextBlock  Grid.Row="9" Grid.Column="0" 
+                            Text="杭先端平均N値"/>
+                        <TextBox  Grid.Row="9" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.PileToeNValue,
+                        Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+
+
+                        <TextBlock  Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2"
+                            Text="杭先端平均N値算定範囲上側レベル"/>
+                        <TextBox  Grid.Row="10" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeUpperAltitude,
+                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="10" Grid.Column="3" 
+                            Text="m"/>
+
+
+                        <TextBlock  Grid.Row="11" Grid.Column="0" Grid.ColumnSpan="2"
+                            Text="杭先端レベル"/>
+                        <TextBox  Grid.Row="11" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.PileBottomAltitude,
+                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="11" Grid.Column="3" 
+                            Text="m"/>
+
+                        <TextBlock  Grid.Row="12" Grid.Column="0"  Grid.ColumnSpan="2"
+                            Text="杭先端平均N値算定範囲下側レベル"/>
+                        <TextBox  Grid.Row="12" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeLowerAltitude, 
+                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="12" Grid.Column="3" 
+                            Text="m"/>
+
+                        <TextBlock  Grid.Row="13" Grid.Column="0" 
+                                Text="杭先端支持力度" />
+                        <TextBlock  Grid.Row="13" Grid.Column="1" 
+                                Text="qpu" />
+                        <TextBox  Grid.Row="13" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Qpu, Mode=OneWay, StringFormat=N0}" 
+                        IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="13" Grid.Column="3" 
+                                Text="kN/m2" />
+
+                        <TextBlock  Grid.Row="14" Grid.Column="0" 
+                            Text="杭先端面積" />
+                        <TextBlock  Grid.Row="14" Grid.Column="1" 
+                            Text="Ap"/>
+                        <TextBox  Grid.Row="14" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Ap, Mode=OneWay, StringFormat=N3}" 
+                        IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="14" Grid.Column="3" 
+                            Text="m2" />
+
+                        <TextBlock  Grid.Row="15" Grid.Column="0" 
+                            Text="極限先端支持力"/>
+                        <TextBlock  Grid.Row="15" Grid.Column="1" 
+                            Text="Rpu"/>
+                        <TextBox  Grid.Row="15" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Rpu, Mode=OneWay, StringFormat=N0}" 
+                        IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="15" Grid.Column="3" 
+                            Text="kN"/>
+
+
+
+                        <!--<TextBlock  Grid.Row="20" Grid.Column="0" Text="杭先端閉塞率"/>
+                        <TextBox  Grid.Row="20" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.PileToeEta, Mode=OneWay, StringFormat=N2}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>-->
+
+                        <TextBlock  Grid.Row="21" Grid.Column="0" Text="極限周面抵抗力" />
+                        <TextBlock  Grid.Row="21" Grid.Column="1" Text="Rfu"/>
+                        <TextBox  Grid.Row="21" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Rfu, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="21" Grid.Column="3" Text="kN"/>
+
+
+                        <TextBlock  Grid.Row="22" Grid.Column="0" Text="終局限界引抜力" />
+                        <TextBlock  Grid.Row="22" Grid.Column="1" Text="Rt_ULS"/>
+                        <TextBox  Grid.Row="22" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Rt_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="22" Grid.Column="3" Text="kN"/>
+
+
+                        <TextBlock  Grid.Row="23" Grid.Column="0" 
+                            Text="損傷限界引抜力"/>
+                        <TextBlock  Grid.Row="23" Grid.Column="1" 
+                            Text="Rt_DLS"/>
+                        <TextBox  Grid.Row="23" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="23" Grid.Column="3" 
+                            Text="kN"/>
+
+                        <TextBlock  Grid.Row="24" Grid.Column="0" 
+                            Text="使用限界引抜力"/>
+                        <TextBlock  Grid.Row="24" Grid.Column="1" 
+                            Text="Rt_SLS"/>
+                        <TextBox  Grid.Row="24" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="24" Grid.Column="3" 
+                            Text="kN"/>
+
+
+                        <TextBlock  Grid.Row="25" Grid.Column="0" Text="使用限界支持力" />
+                        <TextBlock  Grid.Row="25" Grid.Column="1" Text="R_SLS" />
+                        <TextBox  Grid.Row="25" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="25" Grid.Column="3" Text="kN"/>
+
+
+                        <TextBlock  Grid.Row="26" Grid.Column="0" Text="損傷限界支持力"/>
+                        <TextBlock  Grid.Row="26" Grid.Column="1" Text="R_DLS"/>
+                        <TextBox  Grid.Row="26" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="26" Grid.Column="3" Text="kN"/>
+
+
+                        <TextBlock  Grid.Row="27" Grid.Column="0" Text="終局限界支持力" />
+                        <TextBlock  Grid.Row="27" Grid.Column="1" Text="R_ULS" />
+                        <TextBox  Grid.Row="27" Grid.Column="2" 
+                             Text="{Binding TemporarySoilPile.R_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                        <TextBlock  Grid.Row="27" Grid.Column="3" Text="kN" />
+
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+        <!--</GroupBox>-->
+
+        <StackPanel Orientation="Horizontal" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="100"
+                        Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Right" Height="25" VerticalAlignment="Top" Width="100"
+                        Command="{Binding CancelCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>
+
+    

@@ -1,0 +1,48 @@
+﻿using PileDesign.FEM;
+using PileDesign.Models.InputData;
+using System.IO;
+using System.Text.Json;
+
+namespace PileDesign.Models
+{
+    public class ProjectData
+    {
+        public InputModel InputModel { get; set; }
+        public AnaModel AnaModel { get; set; }
+
+        // 保存メソッド
+        public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)
+        {
+            var projectData = new ProjectData
+            {
+                InputModel = inputModel,
+                AnaModel = anaModel
+            };
+
+            JsonSerializerOptions jsonSerializerOptions = new()
+            {
+                WriteIndented = true,
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
+            };
+            JsonSerializerOptions options = jsonSerializerOptions;
+
+            string json = JsonSerializer.Serialize(projectData, options);
+            File.WriteAllText(filePath, json);
+        }
+
+        // 復元メソッド
+        public static ProjectData LoadProject(string filePath)
+        {
+            JsonSerializerOptions jsonSerializerOptions = new()
+            {
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
+            };
+            JsonSerializerOptions options = jsonSerializerOptions;
+
+            string json = File.ReadAllText(filePath);
+            return JsonSerializer.Deserialize<ProjectData>(json, options);
+        }
+    }
+
+
+}

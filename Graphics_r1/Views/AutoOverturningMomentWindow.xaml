@@ -1,0 +1,121 @@
+﻿<Window x:Class="PileDesign.Views.AutoOverturningMomentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        mc:Ignorable="d"
+        Title="剛盤を仮定した転倒モーメントによる変動軸力の自動入力" Height="450" Width="600">
+    <!--<Window.DataContext>
+        <local:AutoOverturningMomentViewModel/>
+    </Window.DataContext>-->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <GroupBox Header="VL, VLadd"  Grid.Row="0" Grid.Column="1">
+            <StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="ΣVL0 (kN)" Width="150" Foreground="Gray"/>
+                    <TextBox Text="{Binding SumVL0, StringFormat=N0}" Width="100"
+                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="ΣVLadd (kN)" Width="150" Foreground="Gray"/>
+                    <TextBox Text="{Binding SumVLadd, StringFormat=N0}" Width="100" 
+                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="ΣVL (kN)" Width="150" Foreground="Gray"/>
+                    <TextBox Text="{Binding SumVL, StringFormat=N0}" Width="100"
+                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+
+        <StackPanel Grid.Row="0" Grid.Column="0">
+            <StackPanel Orientation="Horizontal">
+                <Label Content="OTM計算用建物重量 (kN)" Width="150"/>
+                <TextBox Text="{Binding BuildingWeight, StringFormat=N0, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalContentAlignment="Right"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal">
+                <Label Content="OTM計算用有効高さ (m)" Width="150"/>
+                <TextBox Text="{Binding EffectiveHeight, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalContentAlignment="Right"/>
+            </StackPanel>
+        </StackPanel>
+
+
+        <GroupBox Header="レベル1" Grid.Row="1" Grid.Column="0">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="OTM計算用層せん断力係数" Width="150"/>
+                    <TextBox Text="{Binding ShearCoefficient1, StringFormat=N3, UpdateSourceTrigger=PropertyChanged}" Width="100"  HorizontalContentAlignment="Right" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="転倒モーメント(MNm)" Width="150"/>
+                    <TextBox Text="{Binding OverturningMoment1, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100"
+                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+
+        <GroupBox Header="レベル2" Grid.Row="1" Grid.Column="1">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="OTM計算用層せん断力係数" Width="150"/>
+                    <TextBox Text="{Binding ShearCoefficient2, StringFormat=N3, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalContentAlignment="Right" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Label Content="転倒モーメント(MNm)" Width="150"/>
+                    <TextBox Text="{Binding OverturningMoment2, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100"
+                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+        <StackPanel Grid.Row="2" Grid.Column="0">
+            <CheckBox Content="レベル1" IsChecked="{Binding IsApplicableE1, UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E1-1への適用" IsChecked="{Binding IsApplicableE1s[0], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E1-2への適用" IsChecked="{Binding IsApplicableE1s[1], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E1-3への適用" IsChecked="{Binding IsApplicableE1s[2], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E1-4への適用" IsChecked="{Binding IsApplicableE1s[3], UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Grid.Column="1">
+            <CheckBox Content="レベル2" IsChecked="{Binding IsApplicableE2, UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E2-1への適用" IsChecked="{Binding IsApplicableE2s[0], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E2-2への適用" IsChecked="{Binding IsApplicableE2s[1], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E2-3への適用" IsChecked="{Binding IsApplicableE2s[2], UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="E2-4への適用" IsChecked="{Binding IsApplicableE2s[3], UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">
+            <CheckBox Content="地震時荷重へのVLの加算" IsChecked="{Binding IsApplicableVL, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="4" Grid.Column="1">
+            <Button Content="Ok" Width="60" Click="OkButton_Click" />
+            <Button Content="Cancel" Width="60" Click="CancelButton_Click" />
+        </StackPanel>
+
+    </Grid>
+</Window>

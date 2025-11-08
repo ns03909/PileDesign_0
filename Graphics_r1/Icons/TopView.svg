@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke: #2ea7e0;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        fill: none;
+      }
+
+      .cls-1, .cls-2, .cls-4 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-5 {
+        fill: #e0eff9;
+      }
+
+      .cls-2, .cls-3 {
+        stroke: gray;
+      }
+
+      .cls-2, .cls-3, .cls-4 {
+        stroke-width: 20px;
+      }
+
+      .cls-3 {
+        stroke-linejoin: round;
+      }
+
+      .cls-4 {
+        stroke: #000;
+      }
+
+      .cls-6 {
+        fill: #81c0e8;
+      }
+    </style>
+  </defs>
+  <g id="_色ライブペイント" data-name="色ライブペイント">
+    <g>
+      <g>
+        <polygon class="cls-6" points="238.72 86.9 237.5 88.5 158 88.5 158 27.82 159.5 26.5 238.72 86.9"/>
+        <polygon class="cls-5" points="237.5 88.5 237.5 228.5 159.15 167.18 158 167.18 158 88.5 237.5 88.5"/>
+        <polygon class="cls-5" points="237.5 228.5 97.5 228.5 97.5 167.82 158 167.82 158 167.18 159.15 167.18 237.5 228.5"/>
+        <polygon class="cls-5" points="158 167.18 158 167.82 97.5 167.82 97.5 88.5 158 88.5 158 167.18"/>
+        <polygon class="cls-6" points="158 27.82 158 88.5 97.5 88.5 18 27.82 158 27.82"/>
+        <polygon class="cls-5" points="97.5 167.82 97.5 228.5 96.5 229.5 17.12 168.97 18 167.82 97.5 167.82"/>
+        <polygon class="cls-5" points="97.5 88.5 97.5 167.82 18 167.82 18 27.82 97.5 88.5"/>
+      </g>
+      <g>
+        <line class="cls-1" x1="18" y1="27.82" x2="97.5" y2="88.5"/>
+        <polyline class="cls-1" points="16.5 168.5 17.12 168.97 96.5 229.5"/>
+        <polyline class="cls-1" points="159.5 26.5 238.72 86.9 239.5 87.5"/>
+        <line class="cls-1" x1="159.15" y1="167.18" x2="237.5" y2="228.5"/>
+        <polygon class="cls-1" points="158 167.18 158 167.82 97.5 167.82 18 167.82 18 27.82 158 27.82 158 88.5 158 167.18"/>
+        <polygon class="cls-1" points="237.5 228.5 97.5 228.5 97.5 167.82 97.5 88.5 158 88.5 237.5 88.5 237.5 228.5"/>
+      </g>
+    </g>
+  </g>
+  <g id="_レイヤー_1" data-name="レイヤー 1">
+    <line class="cls-2" x1="18" y1="27.82" x2="97.5" y2="88.5"/>
+    <line class="cls-2" x1="16.5" y1="168.5" x2="96.5" y2="229.5"/>
+    <line class="cls-3" x1="159.5" y1="26.5" x2="239.5" y2="87.5"/>
+    <line class="cls-2" x1="159.15" y1="167.18" x2="237.5" y2="228.5"/>
+    <rect class="cls-4" x="18" y="27.82" width="140" height="140"/>
+    <rect class="cls-4" x="97.5" y="88.5" width="140" height="140"/>
+  </g>
+</svg>

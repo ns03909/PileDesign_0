@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke: #b3b3b3;
+        stroke-width: 15px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: none;
+        stroke-miterlimit: 10;
+      }
+
+      .cls-2 {
+        stroke: #000;
+        stroke-width: 20px;
+      }
+    </style>
+  </defs>
+  <g>
+    <line class="cls-1" x1="101" y1="128.3" x2="101" y2="165.3"/>
+    <line class="cls-1" x1="171" y1="128.3" x2="171" y2="165.3"/>
+    <ellipse class="cls-1" cx="136.5" cy="165.3" rx="35" ry="14"/>
+    <line class="cls-1" x1="101" y1="25.25" x2="101" y2="128.3"/>
+    <line class="cls-1" x1="171" y1="25.61" x2="171" y2="128.3"/>
+    <line class="cls-1" x1="101" y1="163.75" x2="73" y2="214.75"/>
+    <line class="cls-1" x1="171" y1="163.75" x2="199" y2="215.75"/>
+    <ellipse class="cls-1" cx="136" cy="25.75" rx="35" ry="14"/>
+    <ellipse class="cls-1" cx="136" cy="218.85" rx="63.5" ry="25.4"/>
+  </g>
+  <g>
+    <line class="cls-2" x1="136.5" y1="63.41" x2="136.5" y2="-3.25"/>
+    <polygon points="165.55 43.59 136.5 152 107.45 43.59 165.55 43.59"/>
+  </g>
+</svg>

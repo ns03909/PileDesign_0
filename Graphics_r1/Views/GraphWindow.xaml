@@ -1,0 +1,124 @@
+﻿<Window x:Class="PileDesign.Views.GraphWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:conv="clr-namespace:PileDesign.Converters" d:DataContext="{d:DesignInstance Type=local:GraphViewModel}"
+        mc:Ignorable="d"
+        Title="GraphWindow" Height="450" Width="800"
+        PreviewKeyDown="GroundWindow_PreviewKeyDown"
+        >
+
+    <Window.Resources>
+        <conv:VisibilityConverter x:Key="VisibilityConverter"/>
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="150"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.Column="1">
+
+            <TextBlock Text="グラフの種類:" VerticalAlignment="Center"/>
+            <ComboBox x:Name="GraphComboBox"
+                ItemsSource="{Binding GraphOptions}"
+                SelectedItem="{Binding SelectedGraphOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <StackPanel Visibility="{Binding IsLoadCaseOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="荷重ケース:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="LoadCaseComboBox"
+                ItemsSource="{Binding LoadCaseOptions}"
+                SelectedItem="{Binding SelectedLoadCaseOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding IsLoadCombinationOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="荷重組み合わせ:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="LoadCombinationComboBox"
+                ItemsSource="{Binding LoadCombinationOptions}"
+                SelectedItem="{Binding SelectedLoadCombinationOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding IsPileOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="杭:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="PileComboBox"
+                ItemsSource="{Binding PileOptions}"
+                SelectedItem="{Binding SelectedPileOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding IsPileBodyOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="杭体:" VerticalAlignment="Center"/>
+                <ComboBox
+                    ItemsSource="{Binding PileBodyRefOptions}"
+                    SelectedItem="{Binding SelectedPileBodyRef, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding IsPileSegmentOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="杭区間番号:" VerticalAlignment="Center"/>
+                <ComboBox
+                    ItemsSource="{Binding PileSegmentOptions}"
+                    SelectedItem="{Binding SelectedPileSegmentNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding IsLiquefactionOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+
+                <TextBlock Text="液状化:" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding LiquefactionOptions}" SelectedItem="{Binding SelectedLiquefaction}"/>
+            </StackPanel>
+
+            <StackPanel Visibility="{Binding IsGridOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="通り心" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding GridOptions}" SelectedItem="{Binding SelectedGridOption}"/>
+            </StackPanel>
+
+
+            <Button Content="レジェンド表示切替" Command="{Binding ToggleLegendCommand}" />
+
+        </StackPanel>
+
+        <ScottPlot:WpfPlot x:Name="wpfPlot" Grid.Row="0" Grid.Column="0"
+                           Visibility="{Binding IsSingleGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <TextBlock Text="{Binding CrosshairPositionText}" Grid.Row="1" Grid.Column="0" Margin="10" FontSize="14"
+                   Visibility="{Binding IsSingleGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <Grid Grid.Row="0" Grid.Column="0"
+                Visibility="{Binding IsMultiGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ScottPlot:WpfPlot x:Name="wpfPlot1" Grid.Column="0"/>
+            <ScottPlot:WpfPlot x:Name="wpfPlot2" Grid.Column="1"/>
+            <ScottPlot:WpfPlot x:Name="wpfPlot3" Grid.Column="2"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Grid.Column="0"
+                Visibility="{Binding IsMultiGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding CrosshairPositionText1}" Margin="10" FontSize="14" Grid.Column="0"/>
+            <TextBlock Text="{Binding CrosshairPositionText2}" Margin="10" FontSize="14" Grid.Column="1"/>
+            <TextBlock Text="{Binding CrosshairPositionText3}" Margin="10" FontSize="14" Grid.Column="2"/>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="1" HorizontalAlignment="Right">
+            <Button x:Name="ButtonOk" Content="Close" Height="30" VerticalAlignment="Top"
+                    Width="100" Command="{Binding CloseCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

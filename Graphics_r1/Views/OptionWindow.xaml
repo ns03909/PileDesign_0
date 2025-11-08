@@ -1,0 +1,219 @@
+﻿<Window x:Class="PileDesign.Views.OptionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        mc:Ignorable="d"
+        Title="OptionWindow" Height="450" Width="400">
+
+    <Window.DataContext>
+        <local:MainWindowViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
+
+        <!-- SvgViewboxコントロール用のスタイルを定義 -->
+        <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <StackPanel>
+            <StackPanel Orientation="Vertical">
+
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton ToolTip="XYZ軸表示" IsChecked="{Binding IsXYZAxesVisible, Mode=TwoWay}">
+                        <svgc:SvgViewbox Source="/Icons/AxesVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                    </ToggleButton>
+                    <Label Content="軸中心(X,Y,Z)"/>
+                    <TextBox Text="{Binding CurrentInputModel.FundamentalInput.X0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                     Width="50" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"/>
+                    <TextBox Text="{Binding CurrentInputModel.FundamentalInput.Y0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                     Width="50" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"/>
+                    <TextBox Text="{Binding CurrentInputModel.FundamentalInput.Z0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                     Width="50" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"/>
+                </StackPanel>
+
+                <GroupBox Header="要素表示レベル">
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton ToolTip="杭頭" IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}">
+                            <svgc:SvgViewbox Source="/Icons/PileTopSelected.svg" Style="{StaticResource SvgIconStyle}"/>
+                        </ToggleButton>
+                        <ToggleButton ToolTip="沈下荷重面" IsChecked="{Binding IsElementShownAtSettlementPlane}">
+                            <svgc:SvgViewbox Source="/Icons/LoadingPlaneSelected.svg" Style="{StaticResource SvgIconStyle}"/>
+                        </ToggleButton>
+                    </StackPanel>
+                </GroupBox>
+
+                <StackPanel Orientation="Horizontal">
+
+                    <ToggleButton ToolTip="入力ラベル表示" IsChecked="{Binding IsLabelVisible, Mode=TwoWay}">
+                        <svgc:SvgViewbox Source="/Icons/LabelVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                    </ToggleButton>
+
+                    <GroupBox Visibility="{Binding IsLabelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+
+                            <TextBlock Text="ラベルサイズ" VerticalAlignment="Center"
+                                Visibility="{Binding IsLabelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            </TextBlock>
+
+                            <ComboBox SelectedItem="{Binding LabelSize}" ItemsSource="{Binding LabelSizeOption}"
+                                  Visibility="{Binding IsLabelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="SelectionChanged">
+                                        <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </ComboBox>
+                        </StackPanel>
+
+                    </GroupBox>
+
+                </StackPanel>
+
+                <StackPanel>
+                    <Label Content="荷重・解析条件"/>
+                </StackPanel>
+
+                <StackPanel>
+                    <Label Content="入力"/>
+                </StackPanel>
+
+                <StackPanel>
+                    <Label Content="応力"/>
+                </StackPanel>
+
+                <StackPanel>
+                    <Label Content="変位"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+
+                    <CheckBox Content="解析結果表示" IsChecked="{Binding IsAnalysisResultVisible, Mode=TwoWay}" Unchecked="CheckBoxAnalysisResult_Unchecked">
+
+                    </CheckBox>
+
+                    <GroupBox Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="内容" VerticalAlignment="Center">
+                            </TextBlock>
+                            <ComboBox SelectedItem="{Binding AnalysisResultContent}" ItemsSource="{Binding AnalysisResultContentOption}">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="SelectionChanged">
+                                        <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}" />
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </ComboBox>
+                        </StackPanel>
+                    </GroupBox>
+
+                </StackPanel>
+
+
+                <StackPanel Orientation="Horizontal">
+                    <ToggleButton ToolTip="バブル" IsChecked="{Binding IsBubbleVisible, UpdateSourceTrigger=PropertyChanged}">
+                        <svgc:SvgViewbox Source="/Icons/BubbleVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                    </ToggleButton>
+                    <ToggleButton ToolTip="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}">
+                        <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                    </ToggleButton>
+                    <ToggleButton ToolTip="変形後要素" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}">
+                        <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                    </ToggleButton>
+                </StackPanel>
+
+
+                <Expander Header="バブル・矢印サイズ">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+
+                            <svgc:SvgViewbox Source="/Icons/BubbleDia.svg" Style="{StaticResource SvgIconStyle}"/>
+                            <Slider Minimum="0" Maximum="200"
+                                Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/Icons/ArrowLength.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印全長"/>
+                            <Slider  Minimum="0" Maximum="200"
+                                    Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                    Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/Icons/ArrowHeadLength.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印頭長"/>
+                            <Slider  Minimum="0" Maximum="50"
+                                Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/Icons/ArrowHeadDia.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印頭径"/>
+                            <Slider  Minimum="0" Maximum="20"
+                                Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="ビュー">
+
+                    <StackPanel Orientation="vertical">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/Icons/HorizontalRotation.svg" Style="{StaticResource SvgIconStyle}" ToolTip="左右回転θ(°)"/>
+                            <Slider x:Name="SliderTheta" Minimum="-180" Maximum="180"
+                                Value="{Binding CanvasThreeDView.Tht, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding CanvasThreeDView.Tht, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
+                                 Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/Icons/VerticalRotation.svg" Style="{StaticResource SvgIconStyle}" ToolTip="上下回転φ(°)"/>
+                            <Slider x:Name="SliderPhi" Minimum="-90" Maximum="90"
+                                Value="{Binding CanvasThreeDView.Phi, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding CanvasThreeDView.Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
+                                 Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/Icons/Scale.svg" Style="{StaticResource SvgIconStyle}" ToolTip="スケール"/>
+                            <Slider x:Name="SliderScale" Minimum="1" Maximum="100"
+                                Value="{Binding CanvasThreeDView.Scale, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                            <TextBox Text="{Binding CanvasThreeDView.Scale, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
+                                 Width="50" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="杭体線幅" />
+                    <Slider Minimum="0.25" Maximum="1.5" TickFrequency="0.25" IsSnapToTickEnabled="True" 
+                            Value="{Binding PileStrokeThickness, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                    <TextBox Text="{Binding PileStrokeThickness, StringFormat=N2, UpdateSourceTrigger=LostFocus}" 
+                             Width="50" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="土層線幅" />
+                    <Slider Minimum="0.25" Maximum="1.5" TickFrequency="0.25" IsSnapToTickEnabled="True" 
+                            Value="{Binding SoilStrokeThickness, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
+                    <TextBox Text="{Binding SoilStrokeThickness, StringFormat=N2, UpdateSourceTrigger=LostFocus}" 
+                             Width="50" HorizontalContentAlignment="Right"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

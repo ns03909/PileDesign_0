@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+        stroke: #000;
+        stroke-width: 20px;
+      }
+
+      .cls-1, .cls-2 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-2 {
+        fill: #4d4d4d;
+        font-family: Swiss721BT-BlackExtended, 'Swis721 BlkEx BT';
+        font-size: 130px;
+        stroke: #4d4d4d;
+      }
+    </style>
+  </defs>
+  <g>
+    <circle class="cls-1" cx="85" cy="127" r="75"/>
+    <rect x="156.78" y="164.61" width="33.94" height="98.29" rx="12" ry="12" transform="translate(-100.25 185.47) rotate(-45)"/>
+  </g>
+  <text class="cls-2" transform="translate(155.26 113.36)"><tspan x="0" y="0">+</tspan><tspan x="22.57" y="75">-</tspan></text>
+</svg>

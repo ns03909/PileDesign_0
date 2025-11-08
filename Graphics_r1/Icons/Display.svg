@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-1, .cls-2, .cls-3 {
+        stroke: #000;
+        stroke-miterlimit: 10;
+        stroke-width: 20px;
+      }
+
+      .cls-4 {
+        fill: url(#_名称未設定グラデーション_21);
+      }
+
+      .cls-2 {
+        stroke-linecap: square;
+      }
+
+      .cls-2, .cls-3 {
+        fill: none;
+      }
+    </style>
+    <linearGradient id="_名称未設定グラデーション_21" data-name="名称未設定グラデーション 21" x1="51.5" y1="95.75" x2="211.5" y2="95.75" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="red"/>
+      <stop offset=".15" stop-color="#f90101"/>
+      <stop offset=".34" stop-color="#ea0607"/>
+      <stop offset=".55" stop-color="#d20e10"/>
+      <stop offset=".77" stop-color="#af181c"/>
+      <stop offset=".99" stop-color="#84262c"/>
+      <stop offset="1" stop-color="#83272d"/>
+    </linearGradient>
+  </defs>
+  <rect class="cls-1" x="26.5" y="20.75" width="210" height="150"/>
+  <line class="cls-3" x1="114" y1="175" x2="114" y2="199"/>
+  <line class="cls-3" x1="80" y1="192" x2="80" y2="239"/>
+  <line class="cls-3" x1="179" y1="192" x2="179" y2="239"/>
+  <line class="cls-3" x1="145" y1="175" x2="145" y2="199"/>
+  <line class="cls-2" x1="114" y1="195" x2="80" y2="195"/>
+  <line class="cls-2" x1="179" y1="236" x2="80" y2="236"/>
+  <line class="cls-2" x1="179" y1="195" x2="145" y2="195"/>
+  <rect class="cls-4" x="51.5" y="40.75" width="160" height="110"/>
+</svg>

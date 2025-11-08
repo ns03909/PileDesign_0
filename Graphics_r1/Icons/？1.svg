@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #62b0e3;
+        stroke: #62b0e3;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-2 {
+        fill: #d92731;
+      }
+
+      .cls-2, .cls-4 {
+        stroke: #d92731;
+      }
+
+      .cls-3 {
+        stroke: #000;
+      }
+
+      .cls-3, .cls-4 {
+        fill: none;
+        stroke-width: 20px;
+      }
+    </style>
+  </defs>
+  <path d="M236.5,164.46v71.04H20.5v-71.04H236.5m20-20H.5v111.04H256.5v-111.04h0Z"/>
+  <circle cx="68" cy="40" r="30"/>
+  <line class="cls-3" x1="140" y1="138" x2="68" y2="40"/>
+  <line class="cls-3" x1="68" y1="60" x2="68" y2="200"/>
+  <g>
+    <path class="cls-1" d="M134.98,49.99c0-14.32,9.87-19.77,15.62-21.96,11.96-4.56,50.76,7.64,50.76,7.64,0,0-38.76-4.65-44.91,10.98-2.44,6.21-21.48,13.86-21.48,3.34Z"/>
+    <polygon class="cls-1" points="156.46 46.64 156.46 98.21 134.98 98.21 134.98 49.99 156.46 46.64"/>
+    <polygon class="cls-1" points="143 150.05 187 98 99 98 143 150.05"/>
+  </g>
+  <g>
+    <circle class="cls-2" cx="193" cy="199.98" r="30"/>
+    <circle class="cls-2" cx="68" cy="199.98" r="30"/>
+    <line class="cls-4" x1="53" y1="199.98" x2="203" y2="199.98"/>
+  </g>
+</svg>

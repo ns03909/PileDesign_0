@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <style>
+      .cls-1 {
+        font-family: Swiss721BT-BlackExtended, 'Swis721 BlkEx BT';
+        font-size: 130px;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #b3b3b3;
+        stroke-miterlimit: 10;
+        stroke-width: 15px;
+      }
+    </style>
+  </defs>
+  <g>
+    <line class="cls-2" x1="41" y1="128.3" x2="41" y2="165.3"/>
+    <line class="cls-2" x1="111" y1="128.3" x2="111" y2="165.3"/>
+    <ellipse class="cls-2" cx="76.5" cy="165.3" rx="35" ry="14"/>
+    <line class="cls-2" x1="41" y1="25.25" x2="41" y2="128.3"/>
+    <line class="cls-2" x1="111" y1="25.61" x2="111" y2="128.3"/>
+    <line class="cls-2" x1="41" y1="163.75" x2="13" y2="214.75"/>
+    <line class="cls-2" x1="111" y1="163.75" x2="139" y2="215.75"/>
+    <ellipse class="cls-2" cx="76" cy="25.75" rx="35" ry="14"/>
+    <ellipse class="cls-2" cx="76" cy="218.85" rx="63.5" ry="25.4"/>
+  </g>
+  <text class="cls-1" transform="translate(129.55 112.03)"><tspan x="0" y="0">Z</tspan></text>
+</svg>
