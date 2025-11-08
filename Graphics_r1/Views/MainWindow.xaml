@@ -294,31 +294,28 @@
                     </MenuItem>
                 </MenuItem>
 
-                <!--<MenuItem Header="編集"/>-->
-
-                <!--<MenuItem Header="サブウィンドウ">
-                    <MenuItem Header="開く">
-                        <MenuItem Header="入力データ" Command="{Binding OpenInputDataAnchorableCommand}"/>
-                    </MenuItem>
-                </MenuItem>-->
-
-                <!--<MenuItem Header="解析結果画面表示">
-                    <MenuItem Header="変形">
-                    </MenuItem>
-                    <MenuItem Header="応力">
-                    </MenuItem>
-                </MenuItem>-->
-
-                <MenuItem Header="計算結果テーブル出力">
-                    <MenuItem Header="節点テーブル">
-                    </MenuItem>
-                    <MenuItem Header="要素テーブル">
-                    </MenuItem>
+                <MenuItem Header="編集">
+                    <MenuItem Header="基本設定" Command="{Binding OpenFundamentalWindowCommand}"/>
+                    <MenuItem Header="荷重ケース編集" Command="{Binding OpenLoadCaseWindowCommand}" InputGestureText="Ctrl + L"/>
+                    <MenuItem Header="地盤編集" Command="{Binding OpenGroundWindowCommand}" InputGestureText="Ctrl + G"/>
+                    <MenuItem Header="杭体編集" Command="{Binding OpenPileBodyWindowCommand}" InputGestureText="Ctrl + B"/>
+                    <MenuItem Header="杭セット・根入部セット要素分割" Command="{Binding OpenElementDivisionWindowCommand}" InputGestureText="Ctrl + D"/>
                 </MenuItem>
 
-                <MenuItem Header="解析結果グラフ表示" Command="{Binding OpenGraphWindowCommand}">
 
+
+                <MenuItem Header="解析実行">
+                    <MenuItem Header="水平解析" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" InputGestureText="F5"/>
+                    <MenuItem Header="単杭沈下解析" Command="{Binding OpenSettlementWindowCommand}" InputGestureText="F6"/>
                 </MenuItem>
+
+                <MenuItem Header="結果">
+                    <MenuItem Header="解析結果グラフ表示" Command="{Binding OpenGraphWindowCommand}"/>
+                    <MenuItem Header="節点テーブル"/>
+
+                    <MenuItem Header="要素テーブル"/>
+                </MenuItem>
+
 
                 <!--<MenuItem Header="ツール">
                     <MenuItem Header="オプション" Command="{Binding OpenOptionWindowCommand}">
@@ -326,7 +323,7 @@
                 </MenuItem>-->
                 <MenuItem Header="ヘルプ">
                     <MenuItem Header="ヘルプ" Command="{Binding OpenHelpWindowCommand}" InputGestureText="F1"/>
-                    <MenuItem Header="ショートカットキー一覧" Command="{Binding OpenShortcutKeysWindowCommand}"/>
+                    <MenuItem Header="ショートカットキー一覧" Command="{Binding OpenShortcutKeysWindowCommand}" InputGestureText="Ctrl + /"/>
                 </MenuItem>
                 <!--<MenuItem Header="ヘルプ" Command="{Binding OpenHelpWindowCommand}" InputGestureText="F1">
                 </MenuItem>-->
@@ -1404,7 +1401,7 @@
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
-                                                    
+
                                                     <!--<DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
                                                         <DataGridTextColumn.Header>
@@ -1552,7 +1549,7 @@
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
-                                                    
+
                                                     <!--<DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
                                                         <DataGridTextColumn.Header>
@@ -1700,7 +1697,7 @@
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
-                                                    
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding SoilPile.R_SLS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
                                                         Foreground="Gray" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
@@ -1772,7 +1769,7 @@
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
-                                                    
+
                                                 </DataGrid.Columns>
                                             </common:EnhancedDataGrid>
                                         </Grid>
@@ -1787,7 +1784,7 @@
                                                 <!--<ToolBar>-->
                                                 <Button x:Name ="ButtonAutoIsFrontPiles"
                                                     Content="自動選別"
-                                                    Command="{Binding AutoIsFrontPilesCommand}"/>       
+                                                    Command="{Binding AutoIsFrontPilesCommand}"/>
                                                 <!--</ToolBar>-->
                                             </StackPanel>
 
@@ -2464,7 +2461,7 @@
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
                                         </DataGrid.Columns>
-                                        </common:EnhancedDataGrid>
+                                    </common:EnhancedDataGrid>
                                 </Grid>
                             </avalonDock:LayoutDocument>
 
@@ -3482,7 +3479,7 @@
                                                     <CheckBox Content="土質点物理量表示"
                                                           IsChecked="{Binding IsSoilMassParamDisplayEnabled, Mode=TwoWay}"/>
                                                 </StackPanel>
-                                                
+
                                                 <ComboBox HorizontalAlignment="Right"
                                                     ItemsSource="{Binding SoilMassParamDisplayOptions}"
                                                           SelectedItem="{Binding SelectedSoilMassParamDisplay, Mode=TwoWay}"
@@ -3495,7 +3492,7 @@
                                                     </i:Interaction.Triggers>
                                                 </ComboBox>
                                             </StackPanel>
-                                            
+
                                             <CheckBox MinWidth="50" Content="土層・土質点値表示"
                                                           IsChecked="{Binding IsSoilValueVisible, UpdateSourceTrigger=PropertyChanged}">
                                                 <!--Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
@@ -3704,12 +3701,12 @@
                                                     <svgc:SvgViewbox Source="/Icons/IsLoadingVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                                                     <CheckBox Content="慣性力表示" IsChecked="{Binding IsMassLoadingVisible, UpdateSourceTrigger=PropertyChanged}"/>
                                                 </StackPanel>
-                                                
+
                                                 <StackPanel Orientation="Horizontal">
                                                     <svgc:SvgViewbox Source="/Icons/IsLoadingVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                                                     <CheckBox Content="軸力表示" IsChecked="{Binding IsAxialLoadingVisible, UpdateSourceTrigger=PropertyChanged}"/>
                                                 </StackPanel>
-                                                
+
                                                 <StackPanel Orientation="Horizontal">
                                                     <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                                                     <CheckBox Content="地盤変位表示" IsChecked="{Binding IsForcedDisplacementVisible, UpdateSourceTrigger=PropertyChanged}"/>
