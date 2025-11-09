@@ -15,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using Element = PileDesign.Models.InputData.Element;
+using Node = PileDesign.FEM.Node;
 using Path = System.Windows.Shapes.Path;
 using Point = System.Windows.Point;
 using TransformGroup = System.Windows.Media.TransformGroup;
@@ -205,10 +206,72 @@ namespace PileDesign.Views
         }
 
         // カラーバージオメトリ取得メソッド
+        //public static List<ColorBaredGeometry> GetColorBarGeometries(ObservableCollection<double> values)
+        //{
+        //    return GetColorBarGeometriesCore(values, t => ColorBar.GetColor(t));
+        //}
         public static List<ColorBaredGeometry> GetColorBarGeometries(ObservableCollection<double> values)
         {
-            return GetColorBarGeometriesCore(values, t => ColorBar.GetColor(t));
+            // Diverging カラーバー: 0 をグレー、負側を青へ、正側を赤へ、絶対値が大きい方を完全な青/赤にする
+            if (values == null || values.Count == 0)
+            {
+                return new List<ColorBaredGeometry>();
+            }
+
+            double minValue = values.Min();
+            double maxValue = values.Max();
+            double maxAbs = Math.Max(Math.Abs(minValue), Math.Abs(maxValue));
+
+            // 基準色定義
+            Color gray = Color.FromRgb(128, 128, 128);
+            Color blue = Color.FromRgb(0, 0, 255);
+            Color red = Color.FromRgb(255, 0, 0);
+
+            // getColor delegate は GetColorBarGeometriesCore により
+            // 中央レンジ (middleRange) を min..max に正規化した t (0..1) を受け取ります。
+            // ここでは t -> middle を復元し、middle/maxAbs に基づくダイバージング着色を行います。
+            return GetColorBarGeometriesCore(values, t =>
+            {
+                // middleRange を復元
+                double middle = minValue + t * (maxValue - minValue);
+
+                if (maxAbs <= 1e-12)
+                {
+                    // 全てゼロに近い場合はグレー固定
+                    return gray;
+                }
+
+                // -1..1 に正規化
+                double v = middle / maxAbs;
+                v = Math.Max(-1.0, Math.Min(1.0, v));
+
+                // ゼロ付近はグレー
+                if (Math.Abs(v) < 1e-9)
+                    return gray;
+
+                if (v > 0)
+                {
+                    // 0(グレー) -> +max(赤)
+                    return LerpColor(gray, red, v);
+                }
+                else
+                {
+                    // 0(グレー) -> -max(青)
+                    return LerpColor(gray, blue, -v);
+                }
+            });
         }
+
+        // 補助: 色の線形補間 (0..1)
+        private static Color LerpColor(Color a, Color b, double t)
+        {
+            t = Math.Max(0.0, Math.Min(1.0, t));
+            byte R = (byte)Math.Round(a.R + (b.R - a.R) * t);
+            byte G = (byte)Math.Round(a.G + (b.G - a.G) * t);
+            byte B = (byte)Math.Round(a.B + (b.B - a.B) * t);
+            return Color.FromRgb(R, G, B);
+        }
+
 
         // モノクロバージオメトリ取得メソッド
         public static List<ColorBaredGeometry> GetMonoColorBarGeometries(Color color, ObservableCollection<double> values)
@@ -1915,7 +1978,8 @@ namespace PileDesign.Views
                 unit,
                 values.Min(),
                 values.Max(),
-                "{0:N" + viewModel.DecimalPlaces + "}"
+                "{0:N" + viewModel.DecimalPlaces + "}",
+                        viewModel.LabelSize
                 );
         }
 
@@ -2248,7 +2312,8 @@ namespace PileDesign.Views
 
                     var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
                     List<double> values = [Math.Abs(originalForceI), Math.Abs(originalForceI), Math.Abs(originalForceJ), Math.Abs(originalForceJ)];
-                    AddColorPolyLineGeometry(points, values, colorBaredGeometries);
+                    AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
+
 
 
                     if (viewModel.IsResultValueVisible)
@@ -2339,7 +2404,8 @@ namespace PileDesign.Views
                         unit,
                         allValues.Min(), // 先に最小
                         allValues.Max(), // 次に最大
-                        "{0:N" + viewModel.DecimalPlaces + "}"
+                        "{0:N" + viewModel.DecimalPlaces + "}",
+                        viewModel.LabelSize
                     );
                 }
                 else
@@ -2643,6 +2709,146 @@ namespace PileDesign.Views
                     }
                 }
 
+                // --- 追加開始: θ系回転を楕円サイズで表示 ---
+                if (viewModel.AnalysisResultNodeDisplacementType == "θH"
+                    || viewModel.AnalysisResultNodeDisplacementType == "θX"
+                    || viewModel.AnalysisResultNodeDisplacementType == "θY"
+                    || viewModel.AnalysisResultNodeDisplacementType == "θZ")
+                {
+                    // 節点集合を作成（重複除去）
+                    var nodeSet = new HashSet<Node>();
+                    if (anaModel?.Beams != null)
+                    {
+                        foreach (var beam in anaModel.Beams)
+                        {
+                            if (beam?.NodeI != null) nodeSet.Add(beam.NodeI);
+                            if (beam?.NodeJ != null) nodeSet.Add(beam.NodeJ);
+                        }
+                    }
+                    if (anaModel?.DummyBeams != null)
+                    {
+                        foreach (var db in anaModel.DummyBeams)
+                        {
+                            if (db?.NodeI != null) nodeSet.Add(db.NodeI);
+                            if (db?.NodeJ != null) nodeSet.Add(db.NodeJ);
+                        }
+                    }
+
+                    var nodePoints = new List<Point3D>();
+                    var nodeValues = new List<double>();
+                    var nodeAngles = new List<double>(); // 回転向き（度）
+
+                    foreach (var node in nodeSet)
+                    {
+                        var nodeResult = node.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                        if (nodeResult == null) continue;
+                        var nd = nodeResult.CumulativeDisp;
+
+                        double rot = 0.0;
+                        // 向きベクトル（2D表示上の向きを決めるための X/Y 成分）
+                        double vecX = 0.0, vecY = 0.0;
+
+                        switch (viewModel.AnalysisResultNodeDisplacementType)
+                        {
+                            case "θH": // Rx,Ry を合成して向きも取る
+                                rot = Math.Sqrt(nd.Rx * nd.Rx + nd.Ry * nd.Ry);
+                                vecX = nd.Rx;
+                                vecY = nd.Ry;
+                                break;
+                            case "θX":
+                                rot = Math.Abs(nd.Rx);
+                                vecX = nd.Rx;
+                                vecY = 0.0;
+                                break;
+                            case "θY":
+                                rot = Math.Abs(nd.Ry);
+                                vecX = 0.0;
+                                vecY = nd.Ry;
+                                break;
+                            case "θZ":
+                                rot = Math.Abs(nd.Rz);
+                                // θZ（鉛直回転）は平面向きが意味を持ちにくいが符号で向き差を付けるため Rx 成分を使（0 の場合は0度）
+                                vecX = nd.Rz;
+                                vecY = 0.0;
+                                break;
+                        }
+
+                        // サイズ（表示倍率）: rad 系 multiplier は既に 1。DispDiagramMultiplier で視覚拡大
+                        double displayedValue = rot * multiplier * viewModel.DispDiagramMultiplier;
+
+                        // 角度（度）: vec を基に 2D の向きを計算（vec が 0 の場合は 0 度）
+                        double angleDeg = 0.0;
+                        if (Math.Abs(vecX) > 1e-12 || Math.Abs(vecY) > 1e-12)
+                        {
+                            angleDeg = Math.Atan2(vecY, vecX) * 180.0 / Math.PI;
+                        }
+
+                        nodePoints.Add(node.Coord);
+                        nodeValues.Add(Math.Abs(displayedValue));
+                        nodeAngles.Add(angleDeg);
+                    }
+
+                    // カラーバンドを使って楕円（回転付き）を描画する（UpdateValueBubbles ではなく直接 PathGeometry に追加）
+                    if (nodePoints.Count > 0 && nodeValues.Count > 0)
+                    {
+                        var flattening = viewModel.CanvasThreeDView.Flattening;
+                        double absMaxValue = Math.Max(Math.Abs(nodeValues.Max()), Math.Abs(nodeValues.Min()));
+
+                        for (int i = 0; i < nodePoints.Count; i++)
+                        {
+                            double value = nodeValues[i];
+                            Point3D p3 = nodePoints[i];
+                            Point center2D = viewModel.CanvasThreeDView.Transformation(p3);
+
+                            double bubbleDia2D;
+                            if (absMaxValue == 0)
+                            {
+                                bubbleDia2D = 0;
+                            }
+                            else
+                            {
+                                // UpdateValueBubbles と同じスケーリングルールを使用
+                                bubbleDia2D = Math.Abs(value) * viewModel.CanvasThreeDView.Scale * viewModel.DispDiagramMultiplier;
+                            }
+
+                            double rx = bubbleDia2D * 0.5;
+                            double ry = bubbleDia2D * 0.5 * flattening;
+
+                            var ellipse = new EllipseGeometry(center2D, rx, ry);
+
+                            // 回転を適用（中心を中心座標に指定）
+                            double angle = nodeAngles[i];
+                            Geometry geometryToAdd;
+                            if (Math.Abs(angle) > 1e-6)
+                            {
+                                var gg = new GeometryGroup();
+                                gg.Children.Add(ellipse);
+                                gg.Transform = new RotateTransform(angle, center2D.X, center2D.Y);
+                                geometryToAdd = gg;
+                            }
+                            else
+                            {
+                                geometryToAdd = ellipse;
+                            }
+
+                            // 値に対応するカラーバンドへ追加
+                            foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
+                            {
+                                if ((colorBaredGeometry.BottomRange <= value && value <= colorBaredGeometry.TopRange) ||
+                                    (colorBaredGeometry != colorBaredGeometries.First() && colorBaredGeometry.BottomRange < value && value <= colorBaredGeometry.TopRange))
+                                {
+                                    colorBaredGeometry.PathGeometry.AddGeometry(geometryToAdd);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // テキスト表示（必要なら）
+                        UpdateValueTexts(new ObservableCollection<Point3D>(nodePoints), new ObservableCollection<double>(nodeValues), colorBaredGeometries);
+                    }
+                }
+
+
                 // カラーバー描画
                 foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
                 {
@@ -2655,7 +2861,8 @@ namespace PileDesign.Views
                     unit,
                     allValues.Min(),
                     allValues.Max(),
-                    "{0:N" + viewModel.DecimalPlaces + "}"
+                    "{0:N" + viewModel.DecimalPlaces + "}",
+                        viewModel.LabelSize
                 );
             }
         }
@@ -3031,7 +3238,8 @@ namespace PileDesign.Views
                     "mm",
                     values.Min(),
                     values.Max(),
-                    "{0:N" + viewModel.DecimalPlaces + "}"
+                    "{0:N" + viewModel.DecimalPlaces + "}",
+                        viewModel.LabelSize
                 );
             }
 
@@ -4693,11 +4901,146 @@ namespace PileDesign.Views
             }
         }
 
+        private void AddColorPolyLineAreaGeometry(
+            IEnumerable<Point> points,
+            List<double> values,
+            List<ColorBaredGeometry> colorBaredGeometries,
+            bool isClosed = false)
+        {
+            // このメソッドは「4点ポリライン専用」
+            var pointList = points.ToList();
+            if (pointList.Count != 4 || values == null || values.Count != 4 || colorBaredGeometries == null) return;
+
+            var vm = DataContext as MainWindowViewModel;
+            bool fillAreasEnabled = vm?.IsAreaPainted ?? false;
+            if (!fillAreasEnabled)
+            {
+                // 色分割線だけ必要なら AddColorPolyLineGeometry を使ってください（ここは塗り領域処理専用）
+                return;
+            }
+
+            // カラーバンド境界（昇順）
+            var boundaries = BuildColorBandBoundaries(colorBaredGeometries);
+
+            // ポリライン点（期待順: p0=杭I, p1=Iの力点, p2=Jの力点, p3=杭J）
+            Point p0 = pointList[0];
+            Point p1 = pointList[1];
+            Point p2 = pointList[2];
+            Point p3 = pointList[3];
+
+            double v0 = values[0];
+            double v1 = values[1];
+            double v2 = values[2];
+            double v3 = values[3];
+
+            // 中央区間 p1-p2 を色分割する（p1 と p2 を必ず含む）
+            double segLen = GetDistanceBetweenTwoNodes(p1, p2);
+            if (segLen <= 1e-12)
+            {
+                // degenerate -> 何もしない
+                return;
+            }
+
+            // 交差するバンド値を抽出して、区間内の t (0..1) を求める
+            var crossBounds = boundaries
+                .Where(b => (b > Math.Min(v1, v2)) && (b < Math.Max(v1, v2)))
+                .ToList();
+
+            // 進行方向に合わせてソート（v1 -> v2 の方向）
+            if (v1 <= v2) crossBounds = crossBounds.OrderBy(x => x).ToList();
+            else crossBounds = crossBounds.OrderByDescending(x => x).ToList();
+
+            // tList: 0.0, t_cross..., 1.0
+            var tList = new List<double> { 0.0 };
+            foreach (var bound in crossBounds)
+            {
+                double t = (v2 == v1) ? 0.0 : (bound - v1) / (v2 - v1);
+                t = Math.Max(0.0, Math.Min(1.0, t));
+                tList.Add(t);
+            }
+            tList.Add(1.0);
+
+            // baseline vector (p0 -> p3)
+            Vector baselineVec = p3 - p0;
+
+            double maxAllowedDist = Math.Max(50, Math.Max(Canvas3DWidth, Canvas3DHeight) * 2); // はみ出し抑止
+
+            // 各小区間ごとに処理
+            for (int i = 0; i < tList.Count - 1; i++)
+            {
+                double t1 = tList[i];
+                double t2 = tList[i + 1];
+
+                // polyline 側の分割点
+                Point sp1 = new(p1.X + (p2.X - p1.X) * t1, p1.Y + (p2.Y - p1.Y) * t1);
+                Point sp2 = new(p1.X + (p2.X - p1.X) * t2, p1.Y + (p2.Y - p1.Y) * t2);
+
+                // 代表値: 区間中央の値空間
+                double valMid;
+                {
+                    // 中央の値は値空間上の中点（境界値がそのまま入る）
+                    double vv1 = v1 + (v2 - v1) * t1;
+                    double vv2 = v1 + (v2 - v1) * t2;
+                    valMid = (vv1 + vv2) * 0.5;
+                }
+
+                // カラー取得（範囲外はクリップして最後の帯を使う）
+                double rMin = colorBaredGeometries.Count > 0 ? colorBaredGeometries.First().BottomRange : valMid;
+                double rMax = colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last().TopRange : valMid;
+                if (!double.IsFinite(valMid)) continue;
+                valMid = Math.Min(Math.Max(valMid, rMin), rMax);
+                var colorGeo = PickColorGeometry(valMid, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(valMid, colorBaredGeometries) ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+
+                // polyline 側の線分を色分割線として追加（見える化）
+                colorGeo?.PathGeometry.AddGeometry(new LineGeometry(sp1, sp2));
+
+                // baseline 上の対応点（p0 -> p3 を t1/t2 比で分割）
+                Point bp1 = new(p0.X + baselineVec.X * t1, p0.Y + baselineVec.Y * t1);
+                Point bp2 = new(p0.X + baselineVec.X * t2, p0.Y + baselineVec.Y * t2);
+
+                // はみ出しチェック（安全）
+                if (GetDistanceBetweenTwoNodes(sp1, bp1) > maxAllowedDist || GetDistanceBetweenTwoNodes(sp2, bp2) > maxAllowedDist)
+                {
+                    continue;
+                }
+
+                // 四角形 (sp1 -> sp2 -> bp2 -> bp1) を作成して半透明で塗る
+                if (colorGeo != null && Canvas3DLayout != null)
+                {
+                    var fig = new PathFigure
+                    {
+                        StartPoint = sp1,
+                        IsClosed = true,
+                        IsFilled = true
+                    };
+                    fig.Segments.Add(new PolyLineSegment(new[] { sp2, bp2, bp1 }, true));
+                    var poly = new PathGeometry();
+                    poly.Figures.Add(fig);
+                    if (poly.CanFreeze) poly.Freeze();
+
+                    Color baseColor = colorGeo.Color;
+                    Color areaColor = Color.FromArgb(120, baseColor.R, baseColor.G, baseColor.B);
+                    var brush = new SolidColorBrush(areaColor);
+                    if (brush.CanFreeze) brush.Freeze();
+
+                    var path = new System.Windows.Shapes.Path
+                    {
+                        Data = poly,
+                        Fill = brush,
+                        Stroke = Brushes.Transparent,
+                        StrokeThickness = 0,
+                        IsHitTestVisible = false,
+                        CacheMode = new BitmapCache(1.0)
+                    };
+                    Canvas3DLayout.Children.Add(path);
+                }
+            }
+        }
+
 
         //ポリライン
         private void AddPolyLineGeometry(IEnumerable<Point> points, PathGeometry pathGeometry, bool isClosed = false)
         {
-
             var pointList = points.ToList();
             //if (pointList.Count < 2) return new PathGeometry();
 

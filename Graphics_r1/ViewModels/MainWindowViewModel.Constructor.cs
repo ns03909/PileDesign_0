@@ -176,6 +176,21 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // エリア塗りつぶし描画
+        private bool _isAreaPainted = true;
+        public bool IsAreaPainted
+        {
+            get => _isAreaPainted;
+            set
+            {
+                if (SetProperty(ref _isAreaPainted, value))
+                {
+                    UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新
+                }
+            }
+        }
+        
+
         // バブル描画
         private bool _isBubbleVisible;
         public bool IsBubbleVisible
@@ -438,10 +453,10 @@ namespace PileDesign.ViewModels
             "UX",
             "UY",
             "UZ",
-            //"θX",
-            //"θY",
-            //"θZ",
-            //"θH",
+            "θX",
+            "θY",
+            "θZ",
+            "θH",
             ];
 
         public ObservableCollection<string> AnalysisResultNodeDisplacementOption
@@ -456,6 +471,33 @@ namespace PileDesign.ViewModels
             set
             {
                 if (SetProperty(ref _analysisResultNodeDisplacementType, value))
+                    UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        private ObservableCollection<string> _analysisSoilSpringOption = [
+            "RH",
+            "RX",
+            "RY",
+            "RZ",
+            "MX",
+            "MY",
+            "MZ",
+            "MH",
+            ];
+
+        public ObservableCollection<string> AnalysisResultSoilSpringOption
+        {
+            get => _analysisResultNodeDisplacementOption;
+            set => SetProperty(ref _analysisResultNodeDisplacementOption, value);
+        }
+        private string _analysisResultSoilSpringType = "RH";
+        public string AnalysisResultSoilSpringType
+        {
+            get => _analysisResultSoilSpringType;
+            set
+            {
+                if (SetProperty(ref _analysisResultSoilSpringType, value))
                     UpdateCanvas3DAction?.Invoke();
             }
         }

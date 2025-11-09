@@ -116,6 +116,8 @@ namespace PileDesign.FEM
             (Mode == RotationalSpringMode.SingleDof && Curve is not null) ||
             (Mode == RotationalSpringMode.CombinedXY && CurveXY is not null);
 
+        public RotationalSpring() { }
+
         // 既定（CombinedXY想定）
         public RotationalSpring(string name, Node nodeI, Node nodeJ) : base(name, nodeI, nodeJ) { }
 

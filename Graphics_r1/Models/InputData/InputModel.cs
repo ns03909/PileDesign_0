@@ -50,8 +50,13 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 地盤数リスト
-        public ObservableCollection<int> GroundsInputCountList => new(Enumerable.Range(1, GroundsInput.Count));
+        // 地盤数リスト（内部 backing field を持ち、クラス内部で更新可能にする）
+        private ObservableCollection<int> _groundsInputCountList = new();
+        public ObservableCollection<int> GroundsInputCountList
+        {
+            get => _groundsInputCountList;
+            private set => SetProperty(ref _groundsInputCountList, value);
+        }
 
         // 杭体
         private ObservableCollection<PileBodyInput> _pileBodies;
@@ -67,8 +72,13 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 杭体数リスト
-        public ObservableCollection<int> PileBodiesCountList => new(Enumerable.Range(1, PileBodies.Count));
+        // 杭体数リスト（内部 backing field を持ち、クラス内部で更新可能にする）
+        private ObservableCollection<int> _pileBodiesCountList = new();
+        public ObservableCollection<int> PileBodiesCountList
+        {
+            get => _pileBodiesCountList;
+            private set => SetProperty(ref _pileBodiesCountList, value);
+        }
 
         // 杭配置
         private ObservableCollection<PileLayoutDataItem> _pileLayoutItems;
@@ -209,6 +219,8 @@ namespace PileDesign.Models.InputData
             OnPropertyChanged(nameof(GroundsInputCountList));
 
             RegenerateSoilPilesAndNotify();
+
+            UpdateCountLists();
         }
 
         private void HookGround(GroundInput g)
@@ -298,6 +310,8 @@ namespace PileDesign.Models.InputData
             OnPropertyChanged(nameof(PileBodiesCountList));
 
             RegenerateSoilPilesAndNotify();
+
+            UpdateCountLists();
         }
 
         private void HookPileBody(PileBodyInput pb)
@@ -521,8 +535,10 @@ namespace PileDesign.Models.InputData
 
         // コンストラクタ
         public InputModel()
-        {
+        { 
+            UpdateCountLists();
         }
+
 
         //public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
         //{
@@ -1146,6 +1162,22 @@ namespace PileDesign.Models.InputData
             }
             Scan(this, "InputModel", 0);
             return list;
+        }
+
+        // 追加: Ground / PileBody の番号リストを更新するユーティリティ
+        public void UpdateCountLists()
+        {
+            GroundsInputCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
+            GroundsInputCountList.Clear();
+            int gcount = GroundsInput?.Count ?? 0;
+            for (int i = 1; i <= Math.Max(1, gcount); i++) // 地盤が0件でも1を用意（UIが空白にならないように）
+                GroundsInputCountList.Add(i);
+
+            PileBodiesCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
+            PileBodiesCountList.Clear();
+            int pbcount = PileBodies?.Count ?? 0;
+            for (int i = 1; i <= Math.Max(1, pbcount); i++)
+                PileBodiesCountList.Add(i);
         }
     }
 }

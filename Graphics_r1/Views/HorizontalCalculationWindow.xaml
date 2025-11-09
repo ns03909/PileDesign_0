@@ -23,6 +23,14 @@
                         CanExecute="LogListBox_CopyCanExecute"
                         Executed="LogListBox_CopyExecuted" />
     </Window.CommandBindings>
+
+    <Window.InputBindings>
+        <!--<KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />-->
+        <!-- 追加: Ctrl+Enter で OkCommand を実行 -->
+        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </Window.InputBindings>
     
     <Window.Resources>
 
@@ -207,16 +215,13 @@
             <TextBlock Text="解析ケース数:" Margin="0,10,0,0"/>
             <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16"/>
             <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Margin="0,10,0,0"/>
-            <TextBlock Text="現状途中で止めることができません。" Foreground="Red"/>
-            <TextBlock Text="自由度大の場合時間がかる場合があるので、" Margin="0,10,0,0" Foreground="Red"/>
-            <TextBlock Text="必要最小限の解析ケースに絞った方がよいかもしれません。" Foreground="Red"/>
-            
+
             <!-- ...（省略: 節点数・要素数などのStackPanel）... -->
             <Button Content="水平解析" Command="{Binding ExecuteAnalysisCommand}"/>
 
             <!--<Button Content="一時停止" Command="{Binding PauseAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
-            <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
-            <Button Content="キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
+            <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
+            <Button Content="キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
 
         </StackPanel>
 
@@ -227,12 +232,13 @@
             </StatusBarItem>
             <StatusBarItem>
                 <ProgressBar
-            Minimum="0"
-            Maximum="{Binding TotalCalculationCount}"
-            Value="{Binding CurrentProgress}"
-            Height="18"
-            Width="200"
-            Margin="10,0,0,0" Foreground="#62B0E2"/>
+                    x:Name="ProgressBarMain"
+                    Minimum="0"
+                    Maximum="{Binding TotalCalculationCount}"
+                    Value="{Binding CurrentProgress}"
+                    Height="18"
+                    Width="200"
+                    Margin="10,0,0,0" Foreground="#62B0E2"/>
             </StatusBarItem>
             <StatusBarItem>
                 <TextBlock Text="{Binding ProgressText}" Margin="10,0,0,0"/>
@@ -258,9 +264,13 @@
 
         <!-- 下部ボタン -->
         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="Ok 解析結果登録" Height="30" Width="200" Command="{Binding OkCommand}"
+            <!--<Button x:Name="ButtonOk" Content="Ok 解析結果登録" Height="30" Width="200" Command="{Binding OkCommand}"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" Width="100" Command="{Binding CancelCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" Width="100" Command="{Binding CancelCommand}"/>-->
+            <Button x:Name="ButtonOk" Content="保存して閉じる(Ctrl+Enter)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}" Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <Button x:Name="ButtonCancel" Content="破棄して閉じる(Esc)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
         </StackPanel>
     </Grid>
 </Window>

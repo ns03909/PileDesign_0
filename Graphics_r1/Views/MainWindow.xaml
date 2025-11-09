@@ -299,10 +299,9 @@
                     <MenuItem Header="荷重ケース編集" Command="{Binding OpenLoadCaseWindowCommand}" InputGestureText="Ctrl + L"/>
                     <MenuItem Header="地盤編集" Command="{Binding OpenGroundWindowCommand}" InputGestureText="Ctrl + G"/>
                     <MenuItem Header="杭体編集" Command="{Binding OpenPileBodyWindowCommand}" InputGestureText="Ctrl + B"/>
+                    <MenuItem Header="軸力確認" Command="{Binding AxialForceCheckCommand}" InputGestureText="Ctrl + K"/>
                     <MenuItem Header="杭セット・根入部セット要素分割" Command="{Binding OpenElementDivisionWindowCommand}" InputGestureText="Ctrl + D"/>
                 </MenuItem>
-
-
 
                 <MenuItem Header="解析実行">
                     <MenuItem Header="水平解析" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" InputGestureText="F5"/>
@@ -310,12 +309,14 @@
                 </MenuItem>
 
                 <MenuItem Header="結果">
-                    <MenuItem Header="解析結果グラフ表示" Command="{Binding OpenGraphWindowCommand}"/>
-                    <MenuItem Header="節点テーブル"/>
-
-                    <MenuItem Header="要素テーブル"/>
+                    <MenuItem Header="グラフ表示" Command="{Binding OpenGraphWindowCommand}"/>
+                    <MenuItem Header="テーブル表示"/>
                 </MenuItem>
 
+                <MenuItem Header="計算例">
+                    <MenuItem Header="基礎指針'19計算例5" Command="{Binding Example5Command}"/>
+                    <MenuItem Header="基礎指針'19計算例9" Command="{Binding Example9Command}"/>
+                </MenuItem>
 
                 <!--<MenuItem Header="ツール">
                     <MenuItem Header="オプション" Command="{Binding OpenOptionWindowCommand}">
@@ -323,6 +324,7 @@
                 </MenuItem>-->
                 <MenuItem Header="ヘルプ">
                     <MenuItem Header="ヘルプ" Command="{Binding OpenHelpWindowCommand}" InputGestureText="F1"/>
+                    <MenuItem Header="クイックヒント" Command="{Binding QuickHintCommand}" InputGestureText="Shift + F1"/>
                     <MenuItem Header="ショートカットキー一覧" Command="{Binding OpenShortcutKeysWindowCommand}" InputGestureText="Ctrl + /"/>
                 </MenuItem>
                 <!--<MenuItem Header="ヘルプ" Command="{Binding OpenHelpWindowCommand}" InputGestureText="F1">
@@ -401,7 +403,7 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="基礎指針'19計算例9" Command="{Binding Example9Command}" Width="120" Margin="5,0,5,0" />
+                    <!--<Button Content="基礎指針'19計算例9" Command="{Binding Example9Command}" Width="120" Margin="5,0,5,0" />-->
                     <ToggleButton Content="クイックヒント" IsChecked="{Binding IsQuickHintVisible}" Width="70" Margin="5,0,5,0" />
                 </StackPanel>
             </Grid>

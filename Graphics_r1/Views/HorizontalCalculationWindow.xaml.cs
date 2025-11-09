@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace PileDesign.Views
 {
@@ -20,6 +21,8 @@ namespace PileDesign.Views
         public HorizontalCalculationWindow()
         {
             InitializeComponent();
+            this.Loaded += HorizontalCalculationWindow_Loaded;
+            this.Unloaded += HorizontalCalculationWindow_Unloaded;
 
             if (DataContext is HorizontalCalculationViewModel viewModel)
             {
@@ -110,6 +113,69 @@ namespace PileDesign.Views
                     this.Close();
                 };
             }
+            // DataContext が ViewModel の場合はイベントを購読
+            if (this.DataContext is HorizontalCalculationViewModel vm)
+            {
+                vm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
+            }
+            else
+            {
+                // DataContext が後からセットされる可能性に備えて監視
+                this.DataContextChanged += HorizontalCalculationWindow_DataContextChanged;
+            }
+        }
+
+
+        private void HorizontalCalculationWindow_Unloaded(object? sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is HorizontalCalculationViewModel vm)
+            {
+                vm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
+            }
+            this.Loaded -= HorizontalCalculationWindow_Loaded;
+            this.Unloaded -= HorizontalCalculationWindow_Unloaded;
+            this.DataContextChanged -= HorizontalCalculationWindow_DataContextChanged;
+        }
+
+        private void HorizontalCalculationWindow_DataContextChanged(object? sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.OldValue is HorizontalCalculationViewModel oldVm)
+            {
+                oldVm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
+            }
+            if (e.NewValue is HorizontalCalculationViewModel newVm)
+            {
+                newVm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
+            }
+        }
+
+        private void Vm_RequestClearProgressAnimation()
+        {
+            // UI スレッドで実行
+            Dispatcher.Invoke(() =>
+            {
+                if (ProgressBarMain == null) return;
+
+                // 現在値から 0 へ滑らかにアニメ
+                var duration = TimeSpan.FromMilliseconds(400);
+                var anim = new DoubleAnimation
+                {
+                    To = 0.0,
+                    Duration = new Duration(duration),
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                };
+
+                // 完了時に ViewModel.CurrentProgress を 0 に合わせる
+                anim.Completed += (s, ev) =>
+                {
+                    if (this.DataContext is HorizontalCalculationViewModel vm)
+                    {
+                        vm.CurrentProgress = 0;
+                    }
+                };
+
+                ProgressBarMain.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty, anim);
+            });
         }
 
         private void TextBox_GotFocus(object sender, RoutedEventArgs e)

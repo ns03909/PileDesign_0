@@ -1862,6 +1862,12 @@ namespace PileDesign.ViewModels
             helpWindow.Show();
         }
 
+        [RelayCommand]
+        public void OnQuickHint()
+        {
+            IsQuickHintVisible = true;
+        }
+
         //[RelayCommand]
         //private void DeleteAnalysisResults()
         //{
@@ -1890,7 +1896,7 @@ namespace PileDesign.ViewModels
         //}
 
         [RelayCommand]
-        private static void OpenShortcutKeysWindow()
+        public static void OpenShortcutKeysWindow()
         {
             var w = new PileDesign.Views.ShortcutKeysWindow
             {
@@ -2541,7 +2547,7 @@ namespace PileDesign.ViewModels
 
         // 荷重条件ウィンドウを開くメソッド
         [RelayCommand]
-        private void OpenLoadCaseWindow()
+        public void OpenLoadCaseWindow()
         {
             OpenDialogWindow<LoadCaseViewModel, LoadCaseWindow>(this);
             UpdateLoadCaseOption();
@@ -2550,20 +2556,20 @@ namespace PileDesign.ViewModels
 
         // 地盤ウィンドウを開くメソッド
         [RelayCommand]
-        private void OpenGroundWindow()
+        public void OpenGroundWindow()
         {
             OpenDialogWindow<GroundLayerViewModel, GroundWindow>(this);
         }
 
         // 杭体ウィンドウを開くメソッド
         [RelayCommand]
-        private void OpenPileBodyWindow()
+        public void OpenPileBodyWindow()
         {
             OpenDialogWindow<PileBodyViewModel, PileBodyWindow>(this);
         }
 
         [RelayCommand]
-        private void OnAxialForceCheck()
+        public void OnAxialForceCheck()
         {
             bool hasWarning = false;
             string warningMessage = "以下の項目に問題があります:\n";
@@ -2651,7 +2657,7 @@ namespace PileDesign.ViewModels
 
         // 要素分割ウィンドウを開くメソッド
         [RelayCommand]
-        private void OpenElementDivisionWindow()
+        public void OpenElementDivisionWindow()
         {
             if (IsPreparedForAnalysis())
             {
@@ -2670,7 +2676,7 @@ namespace PileDesign.ViewModels
 
         // 沈下ウィンドウを開くメソッド
         [RelayCommand]
-        private void OpenSettlementWindow()
+        public void OpenSettlementWindow()
         {
             if (IsPreparedForAnalysis())
             {
@@ -2695,7 +2701,7 @@ namespace PileDesign.ViewModels
 
         // 水平荷重解析ウィンドウを開くメソッド
         [RelayCommand]
-        private void OpenLateralLoadAnalysisWindow()
+        public void OpenLateralLoadAnalysisWindow()
         {
             if (IsPreparedForAnalysis())
             {

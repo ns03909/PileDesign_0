@@ -190,13 +190,13 @@ namespace PileDesign.Models.InputData
                 (_mainWindowViewModel, true, 1, 1, "VL+E1", 0.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, true, 1, 2, "VL+E2", 90.0, isSoilNonLinear, isPileNonLinear1,
+                (_mainWindowViewModel, false, 1, 2, "VL+E2", 90.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, true, 1, 3, "VL-E1", 180.0, isSoilNonLinear, isPileNonLinear1,
+                (_mainWindowViewModel, false, 1, 3, "VL-E1", 180.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, true, 1, 4, "VL-E2", 270.0, isSoilNonLinear, isPileNonLinear1,
+                (_mainWindowViewModel, false, 1, 4, "VL-E2", 270.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1,  x, y, z),
             ];
 
@@ -205,16 +205,16 @@ namespace PileDesign.Models.InputData
 
             LoadCasesLevel2 = [
             new LoadCase
-                (_mainWindowViewModel, true, 2, 1, "U1", 0.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, false, 2, 1, "U1", 0.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, true, 2, 2, "U2", 90.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, false, 2, 2, "U2", 90.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, true, 2, 3, "U5", 180.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, false, 2, 3, "U5", 180.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, true, 2, 4, "U6", 270.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, false, 2, 4, "U6", 270.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             ];
         }

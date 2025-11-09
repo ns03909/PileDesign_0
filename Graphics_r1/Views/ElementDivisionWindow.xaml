@@ -17,6 +17,10 @@
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <!-- 追加: Ctrl+Enter で OkCommand を実行 -->
+        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
+        <!-- 追加: Esc で CancelCommand を実行 -->
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
     </Window.InputBindings>
     
     <Window.Resources>
@@ -1002,10 +1006,11 @@
         </TabControl>
 
         <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="Ok" Height="30" VerticalAlignment="Top"
-                    Width="100" ToolTip="要素分割状態保存" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" VerticalAlignment="Top"
-                    Width="100" ToolTip="要素分割状態破棄" Command="{Binding CancelCommand}"/>
+            <Button x:Name="ButtonOk" Content="保存して閉じる(Ctrl+Enter)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="破棄して閉じる(Esc)" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+
         </StackPanel>
     </Grid>
 

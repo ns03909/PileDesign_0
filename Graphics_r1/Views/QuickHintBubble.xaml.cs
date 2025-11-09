@@ -2,18 +2,6 @@
 using System.Windows.Controls;
 
 namespace PileDesign.Views
-//{
-//    /// <summary>
-//    /// QuickHintBubble.xaml の相互作用ロジック
-//    /// </summary>
-//    public partial class QuickHintBubble : UserControl
-//    {
-//        public QuickHintBubble()
-//        {
-//            InitializeComponent();
-//        }
-//    }
-//}
 {
     public partial class QuickHintBubble : UserControl
     {

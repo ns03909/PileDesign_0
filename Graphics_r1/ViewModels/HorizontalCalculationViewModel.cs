@@ -202,6 +202,9 @@ namespace PileDesign.ViewModels
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
 
+        // 追加: View側へ「プログレスクリアアニメーション開始」を要求するためのイベント
+        public event Action? RequestClearProgressAnimation;
+
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ManualResetEventSlim _pauseEvent = new(true); // trueで初期状態は「進行」
 
@@ -281,7 +284,16 @@ namespace PileDesign.ViewModels
 
         private void OnPauseAnalysis() => _pauseEvent.Reset();
         private void OnResumeAnalysis() => _pauseEvent.Set();
-        private void OnCancelAnalysis() => _cancellationTokenSource?.Cancel();
+        //private void OnCancelAnalysis() => _cancellationTokenSource?.Cancel();
+        
+
+        private void OnCancelAnalysis()
+        {
+            _cancellationTokenSource?.Cancel();
+            // ユーザー操作でキャンセルしたときにプログレスを即座にリセット
+            RequestClearProgressAnimation?.Invoke();
+            //CurrentProgress = 0;
+        }
 
         [RelayCommand]
         private void ApplyAllLoadCasesLevel1()
@@ -468,6 +480,10 @@ namespace PileDesign.ViewModels
             {
                 await AddLogAsync("計算がキャンセルされました。");
                 IsAnalysisExecuted = false;
+                // UI にアニメーションでクリアするよう要求
+                RequestClearProgressAnimation?.Invoke();
+                // キャンセルによる終了時にプログレスをクリア
+                //CurrentProgress = 0;
             }
             finally
             {
@@ -863,6 +879,9 @@ namespace PileDesign.ViewModels
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
                                 await Task.Run(() =>
                                 {
+                                    // ここでトークンを投げて途中キャンセルを可能にする
+                                    token.ThrowIfCancellationRequested();
+
                                     // N は荷重ケース一定だが、簡便に毎回解決しても可（コストは小）
                                     //SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
 
@@ -898,6 +917,10 @@ namespace PileDesign.ViewModels
 
                                     // 診断値: 代表自由度の |d| 最大値（節点の増分変位から）
                                     dispMaxAbs = GetMaxAbsIncrementalDisp(targetModel);
+
+                                    // ループ内の要所で再チェック（重い処理の長い段階がある場合はここに複数入れる）
+                                    //token.ThrowIfCancellationRequested();
+
                                 }, token);
 
                                 // 残差ログ
@@ -930,6 +953,8 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
+
+            token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
             MessageBox.Show("計算が終了しました。");
         }

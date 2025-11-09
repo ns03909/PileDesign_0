@@ -2670,24 +2670,82 @@ namespace PileDesign.Views
             if (e.Key == Key.N && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 viewModel?.NewInputModelFile();
+                e.Handled = true;
             }
 
             // ファイルを開く
             if (e.Key == Key.O && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 viewModel?.OpenInputModelFile();
+                e.Handled = true;
             }
 
             // ファイル保存
             else if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 viewModel?.SaveInputModelFile();
+                e.Handled = true;
             }
 
             // 名前をつけてファイル保存
             else if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
                 viewModel?.SaveInputModelFileAs();
+                e.Handled = true;
+            }
+
+            // 荷重条件編集
+            else if (e.Key == Key.L && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel?.OpenLoadCaseWindow();
+                e.Handled = true;
+            }
+
+            // 地盤編集
+            else if (e.Key == Key.G && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel?.OpenGroundWindow();
+                e.Handled = true;
+            }
+
+            // 軸力確認
+            else if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel?.OnAxialForceCheck();
+                e.Handled = true;
+            }
+
+            // 杭体編集
+            else if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel?.OpenPileBodyWindow();
+                e.Handled = true;
+            }
+            // 要素分割
+            else if (e.Key == Key.D && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel?.OpenElementDivisionWindow();
+                e.Handled = true;
+            }
+
+            // 水平解析
+            else if (e.Key == Key.F5)
+            {
+                viewModel?.OpenLateralLoadAnalysisWindow();
+                e.Handled = true;
+            }
+
+            // 単杭沈下
+            else if (e.Key == Key.F6)
+            {
+                viewModel?.OpenSettlementWindow();
+                e.Handled = true;
+            }
+
+            // クイックヒント
+            else if (e.Key == Key.F1 && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            {
+                viewModel.IsQuickHintVisible = true;
             }
 
             // ヘルプ
@@ -2695,7 +2753,14 @@ namespace PileDesign.Views
             {
                 MainWindowViewModel.OpenHelpWindow();
             }
-        }
+
+            // ショートカット一覧
+            else if (
+                ((e.Key == Key.Oem2) || (e.Key == Key.Divide))
+                && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            { MainWindowViewModel.OpenShortcutKeysWindow(); }
+
+            }
 
         // CSVエクスポートのコンテキストメニュークリックイベントハンドラ
         private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)
