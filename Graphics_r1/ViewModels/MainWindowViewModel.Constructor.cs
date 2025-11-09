@@ -668,21 +668,6 @@ namespace PileDesign.ViewModels
         // VL+VLadd重心
         public Point3D GravityCenterVLplusVLadd => CurrentInputModel.GetVLplusVLaddGravityCenter();
 
-        //// VL0合計
-        //private double _sumVL0;
-        //public double SumVL0
-        //{
-        //    get => GetSumVL0();
-        //    set
-        //    {
-        //        if (_sumVL0 != value)
-        //        {
-        //            _sumVL0 = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
-
         private double GetSumVL0()
         {
             var items = CurrentInputModel?.PileLayoutItems;
@@ -694,20 +679,6 @@ namespace PileDesign.ViewModels
             return sum;
         }
 
-        //// VLadd合計
-        //private double _sumVLadd;
-        //public double SumVLadd
-        //{
-        //    get => GetSumVLadd();
-        //    set
-        //    {
-        //        if (_sumVLadd != value)
-        //        {
-        //            _sumVLadd = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
 
         private double GetSumVLadd()
         {
@@ -719,66 +690,6 @@ namespace PileDesign.ViewModels
                 sum += item.AxialForceVLAdditional;
             return sum;
         }
-
-        //// VL+VLadd合計
-        //private double _sumVL;
-        //public double SumVL
-        //{
-        //    get => GetSumVL0() + GetSumVLadd();
-        //    set
-        //    {
-        //        if (_sumVL != value)
-        //        {
-        //            _sumVL = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
-
-        //// VL重心
-        //private Point3D _gravityCenterVL0;
-        //public Point3D GravityCenterVL0
-        //{
-        //    get => CurrentInputModel.GetVLGravityCenter();
-        //    set
-        //    {
-        //        if (_gravityCenterVL0 != value)
-        //        {
-        //            _gravityCenterVL0 = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
-
-        //// VLadd重心
-        //private Point3D _gravityCenterVLadd;
-        //public Point3D GravityCenterVLadd
-        //{
-        //    get => CurrentInputModel.GetVLaddGravityCenter();
-        //    set
-        //    {
-        //        if (_gravityCenterVLadd != value)
-        //        {
-        //            _gravityCenterVLadd = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
-
-        //// VL+VLadd重心
-        //private Point3D _gravityCenterVLplusVLadd;
-        //public Point3D GravityCenterVLplusVLadd
-        //{
-        //    get => CurrentInputModel.GetVLplusVLaddGravityCenter();
-        //    set
-        //    {
-        //        if (_gravityCenterVLplusVLadd != value)
-        //        {
-        //            _gravityCenterVLplusVLadd = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
 
         // sum（get専用の計算プロパティに変更）
         public double Sum1_1 => GetSumLevel1(1);
@@ -813,112 +724,6 @@ namespace PileDesign.ViewModels
                 sum += item.AxialForceLevel2s[no - 1];
             return sum;
         }
-
-        ////sum
-        //private double _sum1_1;
-        //public double Sum1_1
-        //{
-        //    get => GetSumLevel1(1);
-        //    set
-        //    {
-        //        _sum1_1 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-        //private double _sum1_2;
-        //public double Sum1_2
-        //{
-        //    get => GetSumLevel1(2);
-        //    set
-        //    {
-        //        _sum1_2 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-        //private double _sum1_3;
-        //public double Sum1_3
-        //{
-        //    get => GetSumLevel1(3);
-        //    set
-        //    {
-        //        _sum1_3 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-        //private double _sum1_4;
-        //public double Sum1_4
-        //{
-        //    get => GetSumLevel1(4);
-        //    set
-        //    {
-        //        _sum1_4 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _sum2_1;
-        //public double Sum2_1
-        //{
-        //    get => GetSumLevel2(1);
-        //    set
-        //    {
-        //        _sum2_1 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-        //private double _sum2_2;
-        //public double Sum2_2
-        //{
-        //    get => GetSumLevel2(2);
-        //    set
-        //    {
-        //        _sum2_2 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-        //private double _sum2_3;
-        //public double Sum2_3
-        //{
-        //    get => GetSumLevel2(3);
-        //    set
-        //    {
-        //        _sum2_3 = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-        //private double _sum2_4;
-        //public double Sum2_4
-        //{
-        //    get => GetSumLevel2(4);
-        //    set
-        //    {
-        //        if (_sum2_4 != value)
-        //        {
-        //            _sum2_4 = value;
-        //            OnPropertyChanged();
-        //        }
-        //    }
-        //}
-
-        //private double GetSumLevel1(int No)
-        //{
-        //    double sum = 0;
-        //    foreach (var item in CurrentInputModel.PileLayoutItems)
-        //    {
-        //        sum += item.AxialForceLevel1s[No - 1];
-        //    }
-        //    return sum;
-        //}
-
-        //private double GetSumLevel2(int No)
-        //{
-        //    double sum = 0;
-        //    foreach (var item in CurrentInputModel.PileLayoutItems)
-        //    {
-        //        sum += item.AxialForceLevel2s[No - 1];
-        //    }
-        //    return sum;
-        //}
 
         // OTM（get専用の計算プロパティに変更）
         public double OverturningMoment1_1X => GetOverturningMoment(level: 1, dir: 1, axis: 'X');
@@ -1944,6 +1749,7 @@ namespace PileDesign.ViewModels
                     // "梁応力"の表示制御
                     const string beamForceLabel = "梁応力";
                     const string nodeDisplacementLabel = "節点変位";
+                    const string nodeSoilSpringLabel = "地盤ばね";
                     if (value)
                     {
                         // true: "梁応力"がなければ追加
@@ -1951,18 +1757,16 @@ namespace PileDesign.ViewModels
                             AnalysisResultContentOption.Add(beamForceLabel);
                         if (!AnalysisResultContentOption.Contains(nodeDisplacementLabel))
                             AnalysisResultContentOption.Add(nodeDisplacementLabel);
+                        if (!AnalysisResultContentOption.Contains(nodeSoilSpringLabel))
+                            AnalysisResultContentOption.Add(nodeSoilSpringLabel);
                     }
                     else
                     {
                         // false: "梁応力"があれば削除
                         AnalysisResultContentOption.Remove(beamForceLabel);
                         AnalysisResultContentOption.Remove(nodeDisplacementLabel);
+                        AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
                     }
-                    //// 解析後処理モードでなければチェック不可
-                    //if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone)
-                    //{
-                    //    AnalysisResultContent = string.Empty;
-                    //}
                 }
             }
         }

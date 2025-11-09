@@ -1994,8 +1994,7 @@ namespace PileDesign.Views
             if (anaModel == null || anaModel.Beams == null)
                 return;
 
-            string unit;
-
+            string unit; // 単位
 
             if (viewModel.AnalysisResultContent != "沈下")
             {
@@ -2339,55 +2338,6 @@ namespace PileDesign.Views
                     }
                 }
 
-                //var colorBaredGeometries = GetColorBarGeometries(allValues);
-
-                //foreach (var (beam, _, _, originalForceI, originalForceJ) in beamResults)
-                //{
-                //    double forceI = maxAbsValue == 0 ? 0 : originalForceI / maxAbsValue * viewModel.ForceDiagramMultiplier;
-                //    double forceJ = maxAbsValue == 0 ? 0 : -originalForceJ / maxAbsValue * viewModel.ForceDiagramMultiplier;
-
-                //    Point3D nodeI3D = beam.NodeI.Coord;
-                //    Point3D nodeIForce3D = new(
-                //        nodeI3D.X + forceI * transformedForceDirection[0],
-                //        nodeI3D.Y + forceI * transformedForceDirection[1],
-                //        nodeI3D.Z + forceI * transformedForceDirection[2]);
-                //    Point3D nodeJ3D = beam.NodeJ.Coord;
-                //    Point3D nodeJForce3D = new(
-                //        nodeJ3D.X + forceJ * transformedForceDirection[0],
-                //        nodeJ3D.Y + forceJ * transformedForceDirection[1],
-                //        nodeJ3D.Z + forceJ * transformedForceDirection[2]);
-                //    Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
-                //    Point nodeIForce2D = viewModel.CanvasThreeDView.Transformation(nodeIForce3D);
-                //    Point nodeJForce2D = viewModel.CanvasThreeDView.Transformation(nodeJForce3D);
-                //    Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
-                //    var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
-                //    List<double> values = [Math.Abs(originalForceI), Math.Abs(originalForceI), Math.Abs(originalForceJ), Math.Abs(originalForceJ)];
-                //    //AddPolyLineGeometry(points, viewModel.CanvasGeometry.PathGeoDisp);
-
-                //    AddColorPolyLineGeometry(points, values, colorBaredGeometries);
-
-                //    if (viewModel.IsResultValueVisible)
-                //    {
-                //        string format = "{0:N" + viewModel.DecimalPlaces + "}";
-                //        if (viewModel.IsPileTopResultValueVisibleOnly)
-                //        {
-                //            if (beam.IsPileTop)
-                //            {
-                //                AddText3D(Brushes.Black, string.Format(format, originalForceI),
-                //                nodeIForce2D.X, nodeIForce2D.Y, "C", "C", 0.0);
-                //            }
-                //        }
-                //        else
-                //        {
-                //            DrawResultValueTexts(
-                //            viewModel.IsResultValueVisible, Brushes.Black,
-                //            originalForceI, originalForceJ,
-                //            nodeIForce2D, nodeJForce2D,
-                //            nodeJ2D, nodeI2D,
-                //            format, format);
-                //        }
-                //    }
-                //}
 
                 foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
                 {
@@ -2414,315 +2364,81 @@ namespace PileDesign.Views
                 }
             }
 
-            //string unit = "unit";
-            // 変位表示
+            unit = "unit";
+            
             if (viewModel.AnalysisResultContent == "節点変位")
             {
                 string format = "{0:N" + viewModel.DecimalPlaces + "}";
                 Vector<double> effectiveVector;
                 double multiplier;
+                bool isThetaLocal;
                 switch (viewModel.AnalysisResultNodeDisplacementType)
                 {
                     case "UH":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([1, 1, 0, 0, 0, 0]);
-                        unit = "mm";
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 1, 1, 0, 0, 0, 0 });
                         multiplier = 1000;
-                        break;
-                    case "θH":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 1, 1, 0]);
-                        unit = "rad";
-                        multiplier = 1;
+                        isThetaLocal = false;
                         break;
                     case "UX":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([1, 0, 0, 0, 0, 0]);
-                        unit = "mm";
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 1, 0, 0, 0, 0, 0 });
                         multiplier = 1000;
+                        isThetaLocal = false;
                         break;
                     case "UY":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 1, 0, 0, 0, 0]);
-                        unit = "mm";
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 1, 0, 0, 0, 0 });
                         multiplier = 1000;
+                        isThetaLocal = false;
                         break;
                     case "UZ":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 1, 0, 0, 0]);
-                        unit = "mm";
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 1, 0, 0, 0 });
                         multiplier = 1000;
+                        isThetaLocal = false;
                         break;
-
-                    case "θX":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 1, 0, 0]);
-                        unit = "rad";
+                    case "θH":
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 1, 1, 0 });
                         multiplier = 1;
+                        isThetaLocal = true;
+                        break;
+                    case "θX":
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 1, 0, 0 });
+                        multiplier = 1;
+                        isThetaLocal = true;
                         break;
                     case "θY":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 0, 1, 0]);
-                        unit = "rad";
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 0, 1, 0 });
                         multiplier = 1;
+                        isThetaLocal = true;
                         break;
                     case "θZ":
-                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 0, 0, 1]);
-                        unit = "rad";
+                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 0, 0, 1 });
                         multiplier = 1;
+                        isThetaLocal = true;
                         break;
-
                     default:
                         return;
                 }
 
+                // 選択ケース/組合せ（既存）
                 var selectedLoadCase = LoadCases.GetLoadCase(
                     viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
                 var selectedLoadCombination = LoadCombinations.GetLoadCombination(
                     viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+                if (selectedLoadCase == null || selectedLoadCombination == null) return;
 
-                // 1. 全てのvalueを収集（必ず multiplier を掛ける）
-                ObservableCollection<double> allValues = [];
-
-                // DummyBeams
-                if (viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null)
+                // 1) 全節点（Dummy含むBeams端点）を一意に取り、必要な「表示値」を収集する
+                var nodeSet = new HashSet<Node>();
+                if (anaModel?.Nodes != null && anaModel.Nodes.Count > 0)
                 {
-                    foreach (var dummyBeam in anaModel.DummyBeams)
-                    {
-                        NodeDisp nodeDispI = dummyBeam.NodeI.GetNodeResult(
-                            anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                        double dispI = Math.Sqrt(
-                            Math.Pow(nodeDispI.Ux * effectiveVector[0], 2) +
-                            Math.Pow(nodeDispI.Uy * effectiveVector[1], 2) +
-                            Math.Pow(nodeDispI.Uz * effectiveVector[2], 2) +
-                            Math.Pow(nodeDispI.Rx * effectiveVector[3], 2) +
-                            Math.Pow(nodeDispI.Ry * effectiveVector[4], 2) +
-                            Math.Pow(nodeDispI.Rz * effectiveVector[5], 2));
-                        NodeDisp nodeDispJ = dummyBeam.NodeJ.GetNodeResult(
-                            anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                        double dispJ = Math.Sqrt(
-                            Math.Pow(nodeDispJ.Ux * effectiveVector[0], 2) +
-                            Math.Pow(nodeDispJ.Uy * effectiveVector[1], 2) +
-                            Math.Pow(nodeDispJ.Uz * effectiveVector[2], 2) +
-                            Math.Pow(nodeDispJ.Rx * effectiveVector[3], 2) +
-                            Math.Pow(nodeDispJ.Ry * effectiveVector[4], 2) +
-                            Math.Pow(nodeDispJ.Rz * effectiveVector[5], 2));
-                        allValues.Add(Math.Abs(dispI) * multiplier); // mm
-                        allValues.Add(Math.Abs(dispJ) * multiplier); // mm
-                    }
+                    foreach (var n in anaModel.Nodes) if (n != null) nodeSet.Add(n);
                 }
-
-                // Beams
-                foreach (var beam in anaModel.Beams)
+                else
                 {
-                    NodeDisp nodeDispI = beam.NodeI.GetNodeResult(
-                        anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                    double dispI = Math.Sqrt(
-                            Math.Pow(nodeDispI.Ux * effectiveVector[0], 2) +
-                            Math.Pow(nodeDispI.Uy * effectiveVector[1], 2) +
-                            Math.Pow(nodeDispI.Uz * effectiveVector[2], 2) +
-                            Math.Pow(nodeDispI.Rx * effectiveVector[3], 2) +
-                            Math.Pow(nodeDispI.Ry * effectiveVector[4], 2) +
-                            Math.Pow(nodeDispI.Rz * effectiveVector[5], 2));
-                    NodeDisp nodeDispJ = beam.NodeJ.GetNodeResult(
-                        anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                    double dispJ = Math.Sqrt(
-                            Math.Pow(nodeDispJ.Ux * effectiveVector[0], 2) +
-                            Math.Pow(nodeDispJ.Uy * effectiveVector[1], 2) +
-                            Math.Pow(nodeDispJ.Uz * effectiveVector[2], 2) +
-                            Math.Pow(nodeDispJ.Rx * effectiveVector[3], 2) +
-                            Math.Pow(nodeDispJ.Ry * effectiveVector[4], 2) +
-                            Math.Pow(nodeDispJ.Rz * effectiveVector[5], 2));
-                    allValues.Add(Math.Abs(dispI) * multiplier); // mm
-                    allValues.Add(Math.Abs(dispJ) * multiplier); // mm
-                }
-
-                // 2. カラーバーを一度だけ生成
-                var colorBaredGeometries = GetColorBarGeometries(allValues);
-
-                // 1回のループで最大値と描画を行う（maxAbsValue を multiplier 適用後で統一）
-                double maxAbsValue = 0;
-
-                // 根入れ部
-                if (viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null)
-                {
-                    var dummyBeamResults = new List<(
-                        DummyBeam dummyBeam,
-                        NodeDisp nodeDispI,
-                        NodeDisp nodeDispJ,
-                        double dispI,
-                        double dispJ,
-                        double originalDispI,
-                        double originalDispJ)
-                        >();
-
-                    // 根入れ部ダミー要素
-                    foreach (var dummyBeam in anaModel.DummyBeams)
-                    {
-                        NodeDisp originalNodeDispI = dummyBeam.NodeI.GetNodeResult(
-                            anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                        double originalDispI = Math.Sqrt(
-                            Math.Pow(originalNodeDispI.Ux * effectiveVector[0], 2) +
-                            Math.Pow(originalNodeDispI.Uy * effectiveVector[1], 2) +
-                            Math.Pow(originalNodeDispI.Uz * effectiveVector[2], 2) +
-                            Math.Pow(originalNodeDispI.Rx * effectiveVector[3], 2) +
-                            Math.Pow(originalNodeDispI.Ry * effectiveVector[4], 2) +
-                            Math.Pow(originalNodeDispI.Rz * effectiveVector[5], 2));
-                        NodeDisp originalNodeDispJ = dummyBeam.NodeJ.GetNodeResult(
-                            anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                        double originalDispJ = Math.Sqrt(
-                            Math.Pow(originalNodeDispJ.Ux * effectiveVector[0], 2) +
-                            Math.Pow(originalNodeDispJ.Uy * effectiveVector[1], 2) +
-                            Math.Pow(originalNodeDispJ.Uz * effectiveVector[2], 2) +
-                            Math.Pow(originalNodeDispJ.Rx * effectiveVector[3], 2) +
-                            Math.Pow(originalNodeDispJ.Ry * effectiveVector[4], 2) +
-                            Math.Pow(originalNodeDispJ.Rz * effectiveVector[5], 2));
-                        double absDispI = Math.Abs(originalDispI) * multiplier;
-                        double absDispJ = Math.Abs(originalDispJ) * multiplier;
-                        maxAbsValue = Math.Max(maxAbsValue, Math.Max(absDispI, absDispJ));
-                        //allValues.Add(absDispI);
-                        //allValues.Add(absDispJ);
-
-                        dummyBeamResults.Add((dummyBeam, originalNodeDispI, originalNodeDispJ, absDispI, absDispJ, originalDispI, originalDispJ));
-                    }
-
-                    // 根入れ部ダミー要素結果
-                    foreach (var (dummyBeam, originalNodeDispI, originalNodeDispJ, absDispI, absDispJ, originalDispI, originalDispJ) in dummyBeamResults)
-                    {
-                        if (maxAbsValue == 0) continue;
-
-                        Point3D nodeI3D = dummyBeam.NodeI.Coord;
-                        Point3D nodeIDisp3D = new(
-                            nodeI3D.X + originalNodeDispI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                            nodeI3D.Y + originalNodeDispI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                            nodeI3D.Z + originalNodeDispI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
-                        Point3D nodeJ3D = dummyBeam.NodeJ.Coord;
-                        Point3D nodeJDisp3D = new(
-                           nodeJ3D.X + originalNodeDispJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                           nodeJ3D.Y + originalNodeDispJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                           nodeJ3D.Z + originalNodeDispJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
-                        Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
-                        Point nodeIDisp2D = viewModel.CanvasThreeDView.Transformation(nodeIDisp3D);
-                        Point nodeJDisp2D = viewModel.CanvasThreeDView.Transformation(nodeJDisp3D);
-                        Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
-
-                        var points = new[] { nodeI2D, nodeIDisp2D, nodeJDisp2D, nodeJ2D };
-                        // AddColorPolyLineGeometry に渡す値は必ず multiplier 適用済み
-                        List<double> values = [absDispI, absDispI, absDispJ, absDispJ];
-                        //double absDispI = Math.Abs(originalDispI);
-                        //double absDispJ = Math.Abs(originalDispJ);
-                        ////List<double> values = [absDispI, absDispI, absDispJ, absDispJ];
-                        //List<double> values = new() {
-                        //    absDispI * multiplier, absDispI * multiplier, absDispJ * multiplier, absDispJ * multiplier };
-                        AddColorPolyLineGeometry(points, values, colorBaredGeometries);
-
-                        if (viewModel.IsResultValueVisible)
-                        {
-                            DrawResultValueTexts(
-                                viewModel.IsResultValueVisible, Brushes.Black,
-                                originalDispI * multiplier, originalDispJ * multiplier,
-                                nodeIDisp2D, nodeJDisp2D,
-                                nodeJ2D, nodeI2D,
-                                format, format);
-                        }
-                    }
-                }
-
-                var beamResults = new List<(
-                    Beam dummyBeam,
-                    NodeDisp nodeDispI,
-                    NodeDisp nodeDispJ,
-                    double dispI,
-                    double dispJ,
-                    double originalDispI,
-                    double originalDispJ
-                    )>();
-
-                // 梁要素
-                foreach (var beam in anaModel.Beams)
-                {
-                    NodeDisp originalNodeDispI = beam.NodeI.GetNodeResult(
-                        anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                    double originalDispI = Math.Sqrt(
-                            Math.Pow(originalNodeDispI.Ux * effectiveVector[0], 2) +
-                            Math.Pow(originalNodeDispI.Uy * effectiveVector[1], 2) +
-                            Math.Pow(originalNodeDispI.Uz * effectiveVector[2], 2) +
-                            Math.Pow(originalNodeDispI.Rx * effectiveVector[3], 2) +
-                            Math.Pow(originalNodeDispI.Ry * effectiveVector[4], 2) +
-                            Math.Pow(originalNodeDispI.Rz * effectiveVector[5], 2));
-                    NodeDisp originalNodeDispJ = beam.NodeJ.GetNodeResult(
-                        anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction).CumulativeDisp;
-                    double originalDispJ = Math.Sqrt(
-                            Math.Pow(originalNodeDispJ.Ux * effectiveVector[0], 2) +
-                            Math.Pow(originalNodeDispJ.Uy * effectiveVector[1], 2) +
-                            Math.Pow(originalNodeDispJ.Uz * effectiveVector[2], 2) +
-                            Math.Pow(originalNodeDispJ.Rx * effectiveVector[3], 2) +
-                            Math.Pow(originalNodeDispJ.Ry * effectiveVector[4], 2) +
-                            Math.Pow(originalNodeDispJ.Rz * effectiveVector[5], 2));
-                    double absDispI = Math.Abs(originalDispI) * 1000;
-                    double absDispJ = Math.Abs(originalDispJ) * 1000;
-                    maxAbsValue = Math.Max(maxAbsValue, Math.Max(absDispI, absDispJ));
-
-                    beamResults.Add((beam, originalNodeDispI, originalNodeDispJ, absDispI, absDispJ, originalDispI, originalDispJ));
-                }
-
-                // 梁要素結果
-                foreach (var (beam, originalNodeDispI, originalNodeDispJ, absDispI, absDispJ, originalDispI, originalDispJ) in beamResults)
-                {
-                    if (maxAbsValue == 0) continue;
-
-                    Point3D nodeI3D = beam.NodeI.Coord;
-                    Point3D nodeIDisp3D = new(
-                        nodeI3D.X + originalNodeDispI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                        nodeI3D.Y + originalNodeDispI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                        nodeI3D.Z + originalNodeDispI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
-                    Point3D nodeJ3D = beam.NodeJ.Coord;
-                    Point3D nodeJDisp3D = new(
-                        nodeJ3D.X + originalNodeDispJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                        nodeJ3D.Y + originalNodeDispJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                        nodeJ3D.Z + originalNodeDispJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
-                    Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
-                    Point nodeIDisp2D = viewModel.CanvasThreeDView.Transformation(nodeIDisp3D);
-                    Point nodeJDisp2D = viewModel.CanvasThreeDView.Transformation(nodeJDisp3D);
-                    Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
-
-                    var points = new[] { nodeI2D, nodeIDisp2D, nodeJDisp2D, nodeJ2D };
-                    List<double> values = [absDispI, absDispI, absDispJ, absDispJ];
-                    //double absDispI = Math.Abs(originalDispI) * multiplier;
-                    //double absDispJ = Math.Abs(originalDispJ) * multiplier;
-                    //List<double> values = [absDispI, absDispI, absDispJ, absDispJ];
-                    AddColorPolyLineGeometry(points, values, colorBaredGeometries);
-
-                    if (viewModel.IsResultValueVisible)
-                    {
-                        //string format = "{0:N" + viewModel.DecimalPlaces + "}";
-                        if (viewModel.IsPileTopResultValueVisibleOnly)
-                        {
-                            if (beam.IsPileTop)
-                            {
-                                AddText3D(Brushes.Black, string.Format(format, originalDispI * multiplier),
-                                nodeIDisp2D.X, nodeIDisp2D.Y, "C", "C", 0.0);
-                            }
-                        }
-                        else
-                        {
-                            DrawResultValueTexts(
-                                viewModel.IsResultValueVisible, Brushes.Black,
-                                originalDispI * multiplier, originalDispJ * multiplier,
-                                nodeIDisp2D, nodeJDisp2D,
-                                nodeJ2D, nodeI2D,
-                                format, format);
-                        }
-                    }
-                }
-
-                // --- 追加開始: θ系回転を楕円サイズで表示 ---
-                if (viewModel.AnalysisResultNodeDisplacementType == "θH"
-                    || viewModel.AnalysisResultNodeDisplacementType == "θX"
-                    || viewModel.AnalysisResultNodeDisplacementType == "θY"
-                    || viewModel.AnalysisResultNodeDisplacementType == "θZ")
-                {
-                    // 節点集合を作成（重複除去）
-                    var nodeSet = new HashSet<Node>();
                     if (anaModel?.Beams != null)
                     {
-                        foreach (var beam in anaModel.Beams)
+                        foreach (var b in anaModel.Beams)
                         {
-                            if (beam?.NodeI != null) nodeSet.Add(beam.NodeI);
-                            if (beam?.NodeJ != null) nodeSet.Add(beam.NodeJ);
+                            if (b?.NodeI != null) nodeSet.Add(b.NodeI);
+                            if (b?.NodeJ != null) nodeSet.Add(b.NodeJ);
                         }
                     }
                     if (anaModel?.DummyBeams != null)
@@ -2733,139 +2449,281 @@ namespace PileDesign.Views
                             if (db?.NodeJ != null) nodeSet.Add(db.NodeJ);
                         }
                     }
+                }
 
-                    var nodePoints = new List<Point3D>();
-                    var nodeValues = new List<double>();
-                    var nodeAngles = new List<double>(); // 回転向き（度）
+                var allValues = new ObservableCollection<double>();
+                // U系: ノルム（multiplier を掛けたユーザー表示値）
+                // θ系: 回転量（rad 等）を multiplier（=1）・表示倍率でスケールしてカラーバーに使う
+                foreach (var node in nodeSet)
+                {
+                    if (node == null) continue;
+                    var nr = node.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                    if (nr == null) continue;
+                    var nd = nr.CumulativeDisp;
+                    // 値の抽出（effectiveVector に従う）
+                    double val = Math.Sqrt(
+                        Math.Pow(nd.Ux * effectiveVector[0], 2) +
+                        Math.Pow(nd.Uy * effectiveVector[1], 2) +
+                        Math.Pow(nd.Uz * effectiveVector[2], 2) +
+                        Math.Pow(nd.Rx * effectiveVector[3], 2) +
+                        Math.Pow(nd.Ry * effectiveVector[4], 2) +
+                        Math.Pow(nd.Rz * effectiveVector[5], 2));
+                    if (isThetaLocal)
+                    {
+                        // θ 系は表示上の値領域とカラーバーを揃えるため DispDiagramMultiplier を乗ずる
+                        allValues.Add(Math.Abs(val) * multiplier * viewModel.DispDiagramMultiplier);
+                    }
+                    else
+                    {
+                        allValues.Add(Math.Abs(val) * multiplier);
+                    }
+                }
 
+                // 2) カラーバー作成
+                var colorBaredGeometries = GetColorBarGeometries(allValues);
+
+                // 3) 描画：U系 と θ系で分岐
+                if (!isThetaLocal)
+                {
+                    // U 系（従来の変形ポリライン / 値ラベル描画に近い処理）
+                    // Beam/DummyBeam 毎に端点の変位を取得してポリライン描画
+                    double maxAbsValue = allValues.Count > 0 ? Math.Max(Math.Abs(allValues.Min()), Math.Abs(allValues.Max())) : 0.0;
+
+                    // DummyBeams（根入れ部）描画（従来通り）
+                    if (viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
+                    {
+                        foreach (var dummyBeam in anaModel.DummyBeams)
+                        {
+                            var nrI = dummyBeam.NodeI?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                            var nrJ = dummyBeam.NodeJ?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                            if (nrI == null || nrJ == null) continue;
+
+                            var ndI = nrI.CumulativeDisp;
+                            var ndJ = nrJ.CumulativeDisp;
+                            double origI = Math.Sqrt(
+                                Math.Pow(ndI.Ux * effectiveVector[0], 2) +
+                                Math.Pow(ndI.Uy * effectiveVector[1], 2) +
+                                Math.Pow(ndI.Uz * effectiveVector[2], 2) +
+                                Math.Pow(ndI.Rx * effectiveVector[3], 2) +
+                                Math.Pow(ndI.Ry * effectiveVector[4], 2) +
+                                Math.Pow(ndI.Rz * effectiveVector[5], 2));
+                            double origJ = Math.Sqrt(
+                                Math.Pow(ndJ.Ux * effectiveVector[0], 2) +
+                                Math.Pow(ndJ.Uy * effectiveVector[1], 2) +
+                                Math.Pow(ndJ.Uz * effectiveVector[2], 2) +
+                                Math.Pow(ndJ.Rx * effectiveVector[3], 2) +
+                                Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
+                                Math.Pow(ndJ.Rz * effectiveVector[5], 2));
+
+                            // 変位量をモデル座標でスケール（multiplier はユーザー単位 -> 描画には DispDiagramMultiplier を使う）
+                            Point3D nI = dummyBeam.NodeI.Coord;
+                            Point3D nJ = dummyBeam.NodeJ.Coord;
+                            Point3D nIDisp3D = new(
+                                nI.X + ndI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
+                                nI.Y + ndI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
+                                nI.Z + ndI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+                            Point3D nJDisp3D = new(
+                                nJ.X + ndJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
+                                nJ.Y + ndJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
+                                nJ.Z + ndJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+
+                            Point pI = viewModel.CanvasThreeDView.Transformation(nI);
+                            Point pIDisp = viewModel.CanvasThreeDView.Transformation(nIDisp3D);
+                            Point pJDisp = viewModel.CanvasThreeDView.Transformation(nJDisp3D);
+                            Point pJ = viewModel.CanvasThreeDView.Transformation(nJ);
+
+                            if (!double.IsNaN(pI.X) && !double.IsNaN(pJ.Y))
+                            {
+                                if (!viewModel.AnalysisResultNodeDisplacementType.StartsWith("θ"))
+                                {
+                                    AddColorPolyLineGeometry(new[] { pI, pIDisp, pJDisp, pJ }, new List<double> { Math.Abs(origI) * multiplier, Math.Abs(origI) * multiplier, Math.Abs(origJ) * multiplier, Math.Abs(origJ) * multiplier }, colorBaredGeometries, isClosed: false);
+                                }
+                            }
+
+                            if (viewModel.IsResultValueVisible)
+                            {
+                                DrawResultValueTexts(viewModel.IsResultValueVisible, Brushes.Black, origI * multiplier, origJ * multiplier, pIDisp, pJDisp, pJ, pI, format, format);
+                            }
+                        }
+                    }
+
+                    // Beams（杭要素）描画
+                    foreach (var beam in anaModel.Beams)
+                    {
+                        var nrI = beam.NodeI?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                        var nrJ = beam.NodeJ?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                        if (nrI == null || nrJ == null) continue;
+
+                        var ndI = nrI.CumulativeDisp;
+                        var ndJ = nrJ.CumulativeDisp;
+
+                        double origI = Math.Sqrt(
+                            Math.Pow(ndI.Ux * effectiveVector[0], 2) +
+                            Math.Pow(ndI.Uy * effectiveVector[1], 2) +
+                            Math.Pow(ndI.Uz * effectiveVector[2], 2) +
+                            Math.Pow(ndI.Rx * effectiveVector[3], 2) +
+                            Math.Pow(ndI.Ry * effectiveVector[4], 2) +
+                            Math.Pow(ndI.Rz * effectiveVector[5], 2));
+                        double origJ = Math.Sqrt(
+                            Math.Pow(ndJ.Ux * effectiveVector[0], 2) +
+                            Math.Pow(ndJ.Uy * effectiveVector[1], 2) +
+                            Math.Pow(ndJ.Uz * effectiveVector[2], 2) +
+                            Math.Pow(ndJ.Rx * effectiveVector[3], 2) +
+                            Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
+                            Math.Pow(ndJ.Rz * effectiveVector[5], 2));
+
+                        Point3D nodeI3D = beam.NodeI.Coord;
+                        Point3D nodeJ3D = beam.NodeJ.Coord;
+                        Point3D nodeIDisp3D = new(
+                            nodeI3D.X + ndI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
+                            nodeI3D.Y + ndI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
+                            nodeI3D.Z + ndI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+                        Point3D nodeJDisp3D = new(
+                            nodeJ3D.X + ndJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
+                            nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
+                            nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+
+                        Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
+                        Point nodeIDisp2D = viewModel.CanvasThreeDView.Transformation(nodeIDisp3D);
+                        Point nodeJDisp2D = viewModel.CanvasThreeDView.Transformation(nodeJDisp3D);
+                        Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
+
+                        if (!isThetaLocal)
+                        {
+                            AddColorPolyLineGeometry(new[] { nodeI2D, nodeIDisp2D, nodeJDisp2D, nodeJ2D }, new List<double> { Math.Abs(origI) * multiplier, Math.Abs(origI) * multiplier, Math.Abs(origJ) * multiplier, Math.Abs(origJ) * multiplier }, colorBaredGeometries);
+                        }
+
+                        if (viewModel.IsResultValueVisible)
+                        {
+                            if (viewModel.IsPileTopResultValueVisibleOnly)
+                            {
+                                if (beam.IsPileTop)
+                                {
+                                    AddText3D(Brushes.Black, string.Format(format, origI * multiplier), nodeIDisp2D.X, nodeIDisp2D.Y, "C", "C", 0.0);
+                                }
+                            }
+                            else
+                            {
+                                DrawResultValueTexts(viewModel.IsResultValueVisible, Brushes.Black, origI * multiplier, origJ * multiplier, nodeIDisp2D, nodeJDisp2D, nodeJ2D, nodeI2D, format, format);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // θ 系：全節点に対して楕円を描く（ProjectionUtils を利用）
+                    double flattening = viewModel.CanvasThreeDView.Flattening;
+
+                    // カラーバー用 allValues は既に「rot * multiplier * DispDiagramMultiplier」で作成済み（上で）
+                    // colorBaredGeometries を使って楕円を色分けする
                     foreach (var node in nodeSet)
                     {
-                        var nodeResult = node.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
-                        if (nodeResult == null) continue;
-                        var nd = nodeResult.CumulativeDisp;
+                        if (node == null) continue;
+                        var nr = node.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                        if (nr == null) continue;
+                        var nd = nr.CumulativeDisp;
 
+                        // 回転量と軸
                         double rot = 0.0;
-                        // 向きベクトル（2D表示上の向きを決めるための X/Y 成分）
-                        double vecX = 0.0, vecY = 0.0;
-
+                        Vector3D axis = new Vector3D(0, 0, 1);
                         switch (viewModel.AnalysisResultNodeDisplacementType)
                         {
-                            case "θH": // Rx,Ry を合成して向きも取る
+                            case "θH":
                                 rot = Math.Sqrt(nd.Rx * nd.Rx + nd.Ry * nd.Ry);
-                                vecX = nd.Rx;
-                                vecY = nd.Ry;
+                                axis = new Vector3D(nd.Rx, nd.Ry, 0);
                                 break;
                             case "θX":
                                 rot = Math.Abs(nd.Rx);
-                                vecX = nd.Rx;
-                                vecY = 0.0;
+                                axis = new Vector3D(nd.Rx, 0, 0);
                                 break;
                             case "θY":
                                 rot = Math.Abs(nd.Ry);
-                                vecX = 0.0;
-                                vecY = nd.Ry;
+                                axis = new Vector3D(0, nd.Ry, 0);
                                 break;
                             case "θZ":
                                 rot = Math.Abs(nd.Rz);
-                                // θZ（鉛直回転）は平面向きが意味を持ちにくいが符号で向き差を付けるため Rx 成分を使（0 の場合は0度）
-                                vecX = nd.Rz;
-                                vecY = 0.0;
+                                axis = new Vector3D(0, 0, nd.Rz);
                                 break;
                         }
+                        if (rot <= 1e-15) continue;
 
-                        // サイズ（表示倍率）: rad 系 multiplier は既に 1。DispDiagramMultiplier で視覚拡大
-                        double displayedValue = rot * multiplier * viewModel.DispDiagramMultiplier;
+                        double displayedMagnitude = rot * multiplier;
+                        double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DispDiagramMultiplier;
+                        if (targetPixelDiameter <= 0) continue;
 
-                        // 角度（度）: vec を基に 2D の向きを計算（vec が 0 の場合は 0 度）
-                        double angleDeg = 0.0;
-                        if (Math.Abs(vecX) > 1e-12 || Math.Abs(vecY) > 1e-12)
+                        var proj = ProjectionUtils.ProjectCircleAsEllipseExact(node.Coord, axis, 1.0, viewModel.CanvasThreeDView.Transformation);
+                        if (proj == null) continue;
+                        var (center2DUnit, majorUnitPx, minorUnitPx, angleDegUnit) = proj.Value;
+                        if (majorUnitPx <= 1e-9) continue;
+
+                        double scale = (targetPixelDiameter * 0.5) / majorUnitPx;
+                        double finalMajor = majorUnitPx * scale;
+                        double finalMinor = minorUnitPx * scale;
+
+                        EllipseGeometry ellipse = new(center2DUnit, finalMajor, finalMinor);
+                        Geometry geometryToAdd;
+                        if (Math.Abs(angleDegUnit) > 1e-6)
                         {
-                            angleDeg = Math.Atan2(vecY, vecX) * 180.0 / Math.PI;
+                            var gg = new GeometryGroup();
+                            gg.Children.Add(ellipse);
+                            gg.Transform = new RotateTransform(angleDegUnit, center2DUnit.X, center2DUnit.Y);
+                            geometryToAdd = gg;
+                        }
+                        else
+                        {
+                            geometryToAdd = ellipse;
                         }
 
-                        nodePoints.Add(node.Coord);
-                        nodeValues.Add(Math.Abs(displayedValue));
-                        nodeAngles.Add(angleDeg);
-                    }
+                        // midValue はカラーバーに合わせたスケール（同じスケールで allValues を作っているのでそれを使う）
+                        double midValue = Math.Abs(displayedMagnitude) * viewModel.DispDiagramMultiplier;
 
-                    // カラーバンドを使って楕円（回転付き）を描画する（UpdateValueBubbles ではなく直接 PathGeometry に追加）
-                    if (nodePoints.Count > 0 && nodeValues.Count > 0)
-                    {
-                        var flattening = viewModel.CanvasThreeDView.Flattening;
-                        double absMaxValue = Math.Max(Math.Abs(nodeValues.Max()), Math.Abs(nodeValues.Min()));
-
-                        for (int i = 0; i < nodePoints.Count; i++)
+                        var picked = PickColorGeometry(midValue, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(midValue, colorBaredGeometries);
+                        if (picked != null)
                         {
-                            double value = nodeValues[i];
-                            Point3D p3 = nodePoints[i];
-                            Point center2D = viewModel.CanvasThreeDView.Transformation(p3);
-
-                            double bubbleDia2D;
-                            if (absMaxValue == 0)
-                            {
-                                bubbleDia2D = 0;
-                            }
-                            else
-                            {
-                                // UpdateValueBubbles と同じスケーリングルールを使用
-                                bubbleDia2D = Math.Abs(value) * viewModel.CanvasThreeDView.Scale * viewModel.DispDiagramMultiplier;
-                            }
-
-                            double rx = bubbleDia2D * 0.5;
-                            double ry = bubbleDia2D * 0.5 * flattening;
-
-                            var ellipse = new EllipseGeometry(center2D, rx, ry);
-
-                            // 回転を適用（中心を中心座標に指定）
-                            double angle = nodeAngles[i];
-                            Geometry geometryToAdd;
-                            if (Math.Abs(angle) > 1e-6)
-                            {
-                                var gg = new GeometryGroup();
-                                gg.Children.Add(ellipse);
-                                gg.Transform = new RotateTransform(angle, center2D.X, center2D.Y);
-                                geometryToAdd = gg;
-                            }
-                            else
-                            {
-                                geometryToAdd = ellipse;
-                            }
-
-                            // 値に対応するカラーバンドへ追加
-                            foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
-                            {
-                                if ((colorBaredGeometry.BottomRange <= value && value <= colorBaredGeometry.TopRange) ||
-                                    (colorBaredGeometry != colorBaredGeometries.First() && colorBaredGeometry.BottomRange < value && value <= colorBaredGeometry.TopRange))
-                                {
-                                    colorBaredGeometry.PathGeometry.AddGeometry(geometryToAdd);
-                                    break;
-                                }
-                            }
+                            picked.PathGeometry.AddGeometry(geometryToAdd);
                         }
 
-                        // テキスト表示（必要なら）
-                        UpdateValueTexts(new ObservableCollection<Point3D>(nodePoints), new ObservableCollection<double>(nodeValues), colorBaredGeometries);
+                        if (viewModel.IsResultValueVisible)
+                        {
+                            AddText3D(Brushes.Black, GetNumberString(rot * multiplier, viewModel.DecimalPlaces), center2DUnit.X, center2DUnit.Y - finalMajor, "C", "B", 0.0);
+                        }
                     }
                 }
 
-
-                // カラーバー描画
-                foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
+                // 最後にカラーバーと Path を描画
+                if (colorBaredGeometries != null)
                 {
-                    colorBaredGeometry.DrawPathes(Canvas3DLayout);
+                    foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
+                    {
+                        colorBaredGeometry.DrawPathes(Canvas3DLayout);
+                    }
+
+                    if (allValues.Count > 0)
+                    {
+                        ColorBar.DrawStepColorBar(
+                            ColorBarCanvas,
+                            colorBaredGeometries,
+                            viewModel.AnalysisResultNodeDisplacementType,
+                            unit,
+                            allValues.Min(),
+                            allValues.Max(),
+                            "{0:N" + viewModel.DecimalPlaces + "}",
+                            viewModel.LabelSize
+                        );
+                    }
+                    else
+                    {
+                        ColorBarCanvas.Children.Clear();
+                    }
                 }
-                ColorBar.DrawStepColorBar(
-                    ColorBarCanvas,
-                    colorBaredGeometries,
-                    viewModel.AnalysisResultNodeDisplacementType,
-                    unit,
-                    allValues.Min(),
-                    allValues.Max(),
-                    "{0:N" + viewModel.DecimalPlaces + "}",
-                        viewModel.LabelSize
-                );
+            }
+            else if(viewModel.AnalysisResultContent == "地盤ばね")
+            {
+                DrawHorizontalSoilSpringsResult3D(viewModel, anaModel);
             }
         }
+
+
 
         private void DrawResultValueTexts(
             bool isVisible, Brush solidColorBrush,
@@ -2891,6 +2749,151 @@ namespace PileDesign.Views
                     pointI.X - textAdjustX, pointI.Y - textAdjustY, "C", "C", 0.0);
                 AddText3D(solidColorBrush, string.Format(formatJ, valueJ),
                     pointJ.X + textAdjustX, pointJ.Y + textAdjustY, "C", "C", 0.0);
+            }
+        }
+
+        // 追加: 地盤ばね描画ヘルパー（UpdateAnalysisResult3D 内から呼び出してください）
+        private void DrawHorizontalSoilSpringsResult3D(MainWindowViewModel viewModel, AnaModel anaModel)
+        {
+            if (viewModel == null || anaModel == null) return;
+            if (anaModel.HorizontalSoilSprings == null || anaModel.HorizontalSoilSprings.Count == 0) return;
+            if (Canvas3DLayout == null || ColorBarCanvas == null) return;
+
+            // 1) 全ばねの力大きさを収集（カラーバー用）
+            var allForceMags = new ObservableCollection<double>();
+            foreach (var s in anaModel.HorizontalSoilSprings)
+            {
+                try
+                {
+                    // 最新の要素内力をセット（secant を想定）
+                    s.SetBeamDispAndForce(isTan: false);
+
+                    // I端の並進力 (0..2 が I端の Fx,Fy,Fz)
+                    double fx = s.CumulativeForce.GetByIndex(0);
+                    double fy = s.CumulativeForce.GetByIndex(1);
+                    double fz = s.CumulativeForce.GetByIndex(2);
+                    var fv = new System.Windows.Media.Media3D.Vector3D(fx, fy, fz);
+                    allForceMags.Add(fv.Length);
+                }
+                catch
+                {
+                    // 念のため無視して続行
+                }
+            }
+
+            if (allForceMags.Count == 0)
+            {
+                ColorBarCanvas.Children.Clear();
+                return;
+            }
+
+            // カラーバージオメトリ（力大きさに基づく）
+            var colorBaredGeometries = GetColorBarGeometries(allForceMags);
+
+            // 2) 各ばねについて、I点（head）と tail ( = head - scaled (dispI - dispJ)) を求めて描画
+            foreach (var s in anaModel.HorizontalSoilSprings)
+            {
+                if (s?.NodeI == null || s.NodeJ == null) continue;
+
+                try
+                {
+                    // 要素内力を更新（安全）
+                    s.SetBeamDispAndForce(isTan: false);
+
+                    // I端の力（並進成分）
+                    double fx = s.CumulativeForce.GetByIndex(0);
+                    double fy = s.CumulativeForce.GetByIndex(1);
+                    double fz = s.CumulativeForce.GetByIndex(2);
+                    var forceVec = new System.Windows.Media.Media3D.Vector3D(fx, fy, fz);
+                    double forceMag = forceVec.Length;
+
+                    // ノードの変位差 (I - J)（並進成分のみ）
+                    var di = s.NodeI.CumulativeDisp;
+                    var dj = s.NodeJ.CumulativeDisp;
+                    var dispDiff = new System.Windows.Media.Media3D.Vector3D(
+                        di.Ux - dj.Ux,
+                        di.Uy - dj.Uy,
+                        di.Uz - dj.Uz
+                    );
+
+                    // 表示スケール: viewModel.DispDiagramMultiplier を使う（必要に応じて調整してください）
+                    var scaledDisp = dispDiff * viewModel.DispDiagramMultiplier;
+
+                    // 矢印の頂点（I点）と尾（頂点 - scaledDisp）
+                    var head3D = s.NodeI.Coord;
+                    var tail3D = new System.Windows.Media.Media3D.Point3D(
+                        head3D.X - scaledDisp.X,
+                        head3D.Y - scaledDisp.Y,
+                        head3D.Z - scaledDisp.Z
+                    );
+
+                    // 2D投影
+                    Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
+                    Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
+
+                    // カラー帯の選択（力大きさで色分け）
+                    // midValue として力大きさをそのまま使う
+                    var picked = PickColorGeometry(forceMag, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(forceMag, colorBaredGeometries) ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+                    if (picked == null) continue;
+
+                    // 線分（尾 -> 頭）
+                    var line = new LineGeometry(tail2D, head2D);
+                    picked.PathGeometry.AddGeometry(line);
+
+                    // 矢印頭（小楕円）と簡易ヘッド線を描く
+                    double arrowHeadDia2D = viewModel.ArrowHeadDia;
+                    // 楕円中心を頭に少し引いた位置に置く（見た目調整）
+                    Vector dir = head2D - tail2D;
+                    double dirLen = dir.Length;
+                    Vector dirNorm = dirLen > 1e-9 ? dir / dirLen : new Vector(0, -1);
+                    Point centerEllipse = head2D - dirNorm * (viewModel.ArrowHeadLength * 0.4);
+
+                    var ellipse = new EllipseGeometry(centerEllipse, arrowHeadDia2D * 0.5, arrowHeadDia2D * 0.5 * viewModel.CanvasThreeDView.Flattening);
+                    picked.PathGeometry.AddGeometry(ellipse);
+
+                    // 簡易なヘッドの母線（2本）
+                    Vector ortho = GetUnitOrthogonalVector(dirNorm);
+                    Point side1 = centerEllipse - dirNorm * (viewModel.ArrowHeadLength * 0.6) + ortho * (arrowHeadDia2D * 0.5);
+                    Point side2 = centerEllipse - dirNorm * (viewModel.ArrowHeadLength * 0.6) - ortho * (arrowHeadDia2D * 0.5);
+                    picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side1));
+                    picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side2));
+
+                    // 値ラベル（任意、力の大きさを表示）
+                    if (viewModel.IsResultValueVisible)
+                    {
+                        string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+                        AddText3D(Brushes.Black, string.Format(fmt, forceMag), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", GetAngle(dir));
+                    }
+                }
+                catch
+                {
+                    // 個別失敗は無視して続行
+                }
+            }
+
+            // 3) Path を Canvas に描画
+            foreach (var geo in colorBaredGeometries)
+            {
+                geo.DrawPathes(Canvas3DLayout);
+            }
+
+            // 4) カラーバー表示（力の最小/最大）
+            if (allForceMags.Count > 0)
+            {
+                ColorBar.DrawStepColorBar(
+                    ColorBarCanvas,
+                    colorBaredGeometries,
+                    "地盤ばね力",
+                    "kN",
+                    allForceMags.Min(),
+                    allForceMags.Max(),
+                    "{0:N" + viewModel.DecimalPlaces + "}",
+                    viewModel.LabelSize
+                );
+            }
+            else
+            {
+                ColorBarCanvas.Children.Clear();
             }
         }
 
@@ -6299,6 +6302,82 @@ namespace PileDesign.Views
                     cm.IsOpen = true;
                 }
             }
+        }
+    }
+
+    public static class ProjectionUtils
+    {
+        public static (Point center2D, double major, double minor, double angleDeg)? ProjectCircleAsEllipseExact(
+            Point3D center3D,
+            Vector3D normal,
+            double radius,
+            Func<Point3D, Point> canvasTransform)
+        {
+            if (canvasTransform == null) throw new ArgumentNullException(nameof(canvasTransform));
+            if (radius <= 0) return null;
+
+            if (normal.Length == 0) normal = new Vector3D(0, 0, 1);
+            normal.Normalize();
+
+            // 平面内の直交基底 u, v を作る
+            Vector3D any = Math.Abs(normal.Z) < 0.9 ? new Vector3D(0, 0, 1) : new Vector3D(0, 1, 0);
+            Vector3D u = Vector3D.CrossProduct(normal, any);
+            if (u.LengthSquared == 0) u = Vector3D.CrossProduct(normal, new Vector3D(1, 0, 0));
+            u.Normalize();
+            Vector3D v = Vector3D.CrossProduct(normal, u);
+            v.Normalize();
+
+            // radius を掛けた基底
+            u *= radius;
+            v *= radius;
+
+            // 中心の画像座標
+            Point center2D = canvasTransform(center3D);
+
+            // 基底ベクトルを投影して画像上の差分ベクトルを得る
+            Point imgUpt = canvasTransform(new Point3D(center3D.X + u.X, center3D.Y + u.Y, center3D.Z + u.Z));
+            Point imgVpt = canvasTransform(new Point3D(center3D.X + v.X, center3D.Y + v.Y, center3D.Z + v.Z));
+
+            Vector imageU = imgUpt - center2D;
+            Vector imageV = imgVpt - center2D;
+
+            double eps = 1e-9;
+            if (imageU.Length <= eps && imageV.Length <= eps) return null;
+
+            // 2x2 行列 A = [imageU imageV]（列ベクトル）
+            var A = MathNet.Numerics.LinearAlgebra.Double.DenseMatrix.OfArray(new double[,]
+            {
+                { imageU.X, imageV.X },
+                { imageU.Y, imageV.Y }
+            });
+
+            // SVD により A = U * Σ * V^T
+            var svd = A.Svd(computeVectors: true);
+            if (svd == null || svd.S == null || svd.S.Count < 2) return null;
+
+            // 特異値と U 行列を取得
+            double s1 = svd.S[0];
+            double s2 = svd.S[1];
+            var Umat = svd.U;
+            if (Umat == null || Umat.RowCount < 2 || Umat.ColumnCount < 2) return null;
+
+            // 長軸・短軸を決定（特異値は非負）
+            double major = Math.Max(s1, s2);
+            double minor = Math.Min(s1, s2);
+
+            // 長軸に対応する U の列インデックス
+            int idxMajor = s1 >= s2 ? 0 : 1;
+
+            // U の idxMajor 列が画像上の長軸方向（正規化済み列）
+            double ux = Umat[0, idxMajor];
+            double uy = Umat[1, idxMajor];
+
+            // 角度は x 軸から反時計回り（ラジアン）
+            double angleRad = Math.Atan2(uy, ux);
+
+            double angleDeg = angleRad * 180.0 / Math.PI;
+
+            return (center2D, major, minor, angleDeg);
         }
     }
 }
