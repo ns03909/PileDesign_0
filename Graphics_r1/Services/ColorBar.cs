@@ -224,10 +224,21 @@ namespace PileDesign.Services
                 y += unitHeight + 4 * scale;
             }
 
-            // 表示フォーマットはバンド幅から決める（GetFormat）
-            string format = displayList.Count > 0
-                ? GetFormat(Math.Abs(displayList[0].TopRange - displayList[0].BottomRange))
-                : (string.IsNullOrEmpty(formatVal) ? "N4" : formatVal);
+            // 表示フォーマット: ユーザー指定があれば優先、それ以外はバンド幅に応じて自動決定
+            string format;
+            if (!string.IsNullOrEmpty(formatVal))
+            {
+                // formatVal が composite 型 ("{0:N3}") の場合と単純な numeric format ("N3") の両方に対応
+                format = formatVal;
+            }
+            else if (displayList.Count > 0)
+            {
+                format = GetFormat(Math.Abs(displayList[0].TopRange - displayList[0].BottomRange));
+            }
+            else
+            {
+                format = "N4";
+            }
 
             // 少し下にオフセットしてから描画（タイトルと重ならないように）
             y += extraVerticalSpacing;
@@ -253,9 +264,16 @@ namespace PileDesign.Services
                     StrokeThickness = 0.5 * scale
                 };
 
+                // フォーマット文字列が composite 形式かどうかを判定して表示文字列を作る
+                string labelText;
+                if (format.Contains("{"))
+                    labelText = string.Format(format, value);
+                else
+                    labelText = value.ToString(format);
+
                 var label = new TextBlock
                 {
-                    Text = value.ToString(format),
+                    Text = labelText,
                     Foreground = Brushes.Black,
                     FontSize = tickFont
                 };
@@ -299,9 +317,10 @@ namespace PileDesign.Services
             double maxDisp = maxValue ?? (boundaries.Count > 0 ? boundaries[^1] : 0.0);
 
             // max: バーの上
+            string maxText = format.Contains("{") ? string.Format(format, maxDisp) : maxDisp.ToString(format);
             var maxValueBlock = new TextBlock
             {
-                Text = maxDisp.ToString(format),
+                Text = maxText,
                 Foreground = Brushes.Black,
                 FontSize = minMaxFontSize,
                 TextAlignment = TextAlignment.Right
@@ -322,9 +341,10 @@ namespace PileDesign.Services
             colorBarCanvas.Children.Add(maxLabelBlock);
 
             // min: バーの下
+            string minText = format.Contains("{") ? string.Format(format, minDisp) : minDisp.ToString(format);
             var minValueBlock = new TextBlock
             {
-                Text = minDisp.ToString(format),
+                Text = minText,
                 Foreground = Brushes.Black,
                 FontSize = minMaxFontSize,
                 TextAlignment = TextAlignment.Right
@@ -361,253 +381,7 @@ namespace PileDesign.Services
             Canvas.SetTop(background, top);
             colorBarCanvas.Children.Insert(0, background);
         }
-        //public static void DrawStepColorBar(
-        //    Canvas colorBarCanvas,
-        //    List<ColorBaredGeometry> colorBaredGeometries,
-        //    string title = "title",
-        //    string unit = "mm",
-        //    double? minValue = 100,
-        //    double? maxValue = 1000,
-        //    string formatVal = "N3")
-        //{
-        //    if (double.IsNaN(colorBarCanvas.Height) || double.IsNaN(colorBarCanvas.Width))
-        //        return;
-
-        //    colorBarCanvas.IsHitTestVisible = false;
-        //    //Panel.SetZIndex(colorBarCanvas, -1);
-        //    colorBarCanvas.RenderTransform = Transform.Identity;
-
-        //    int numberOfColors = colorBaredGeometries.Count;
-        //    if (numberOfColors == 0) { return; }
-
-        //    double barHeight = 10;
-        //    double barWidth = 20;
-
-        //    colorBarCanvas.Children.Clear();
-
-        //    // 右端のX座標
-        //    double rightX = colorBarCanvas.Width - 4;
-
-        //    // --- 1. タイトル・単位（カラーバーの上） ---
-        //    double y = 0;
-        //    double titleHeight = 0;
-        //    double titleWidth = 0;
-        //    if (!string.IsNullOrEmpty(title))
-        //    {
-        //        TextBlock titleBlock = new()
-        //        {
-        //            Text = title,
-        //            Foreground = Brushes.Black,
-        //            FontSize = 12,
-        //            FontWeight = FontWeights.Bold,
-        //            TextAlignment = TextAlignment.Right
-        //        };
-        //        titleBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //        titleWidth = titleBlock.DesiredSize.Width;
-        //        titleHeight = titleBlock.DesiredSize.Height;
-        //        Canvas.SetLeft(titleBlock, barWidth - titleWidth);
-        //        Canvas.SetTop(titleBlock, y);
-        //        colorBarCanvas.Children.Add(titleBlock);
-        //        y += titleHeight + 2;
-        //    }
-
-        //    double unitHeight = 0;
-        //    if (!string.IsNullOrEmpty(unit))
-        //    {
-        //        TextBlock unitBlock = new()
-        //        {
-        //            Text = unit,
-        //            Foreground = Brushes.Black,
-        //            FontSize = 11,
-        //            TextAlignment = TextAlignment.Right
-        //        };
-        //        unitBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //        double unitWidth = unitBlock.DesiredSize.Width;
-        //        unitHeight = unitBlock.DesiredSize.Height;
-        //        Canvas.SetLeft(unitBlock, barWidth - unitWidth);
-        //        Canvas.SetTop(unitBlock, y);
-        //        colorBarCanvas.Children.Add(unitBlock);
-        //        y += unitHeight + 4;
-        //    }
-
-        //    // --- 2. カラーバー本体 ---
-        //    double yOffset = y;
-        //    int j = 0;
-        //    double maxLabelRight = 0;
-        //    string format = colorBaredGeometries.Count > 0
-        //        ? GetFormat(colorBaredGeometries[0].TopRange - colorBaredGeometries[0].BottomRange)
-        //        : "N4";
-
-        //    int numberOfTicks = numberOfColors + 1;
-        //    double value;
-        //    List<double> labelRights = [];
-        //    for (int i = 0; i < numberOfTicks; i++)
-        //    {
-        //        value = (i == 0)
-        //            ? colorBaredGeometries[i].BottomRange
-        //            : colorBaredGeometries[i - 1].TopRange;
-
-        //        Line tick = new()
-        //        {
-        //            X1 = 0,
-        //            Y1 = yOffset + i * barHeight,
-        //            X2 = -5,
-        //            Y2 = yOffset + i * barHeight,
-        //            Stroke = Brushes.Black,
-        //            StrokeThickness = 0.5
-        //        };
-
-        //        TextBlock label = new()
-        //        {
-        //            Text = value.ToString(format),
-        //            Foreground = Brushes.Black,
-        //            FontSize = 10,
-        //        };
-
-        //        label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //        double labelHeight = label.DesiredSize.Height;
-        //        double labelWidth = label.DesiredSize.Width;
-
-        //        double labelLeft = -8 - labelWidth;
-        //        double labelRight = labelLeft + labelWidth;
-        //        labelRights.Add(labelRight);
-        //        if (labelRight > maxLabelRight) maxLabelRight = labelRight;
-
-        //        Canvas.SetLeft(label, labelLeft);
-        //        Canvas.SetTop(label, yOffset + i * barHeight - labelHeight / 2);
-
-        //        colorBarCanvas.Children.Add(tick);
-        //        colorBarCanvas.Children.Add(label);
-        //    }
-
-        //    // カラーバー本体
-        //    j = 0;
-        //    foreach (ColorBaredGeometry colorbaredGeometry in colorBaredGeometries)
-        //    {
-        //        SolidColorBrush brush = new(colorbaredGeometry.Color);
-
-        //        Rectangle colorBar = new()
-        //        {
-        //            Width = barWidth,
-        //            Height = barHeight,
-        //            Fill = brush,
-        //            Stroke = Brushes.Black,
-        //            StrokeThickness = 0.5
-        //        };
-
-        //        Canvas.SetLeft(colorBar, 0);
-        //        Canvas.SetTop(colorBar, yOffset + j * barHeight);
-        //        colorBarCanvas.Children.Add(colorBar);
-        //        j += 1;
-        //    }
-
-        //    // --- 3. min/max（カラーバーの下、目盛ラベルの右端に右揃え） ---
-        //    double minDisp = minValue ?? colorBaredGeometries[0].BottomRange;
-        //    double maxDisp = maxValue ?? colorBaredGeometries[^1].TopRange;
-
-        //    // FontSizeを目盛ラベルと同じにする
-        //    double minMaxFontSize = 10;
-
-        //    // min数値
-        //    TextBlock minValueBlock = new()
-        //    {
-        //        Text = string.Format(formatVal, minDisp),
-        //        //Text = minDisp.ToString(formatVal),
-        //        Foreground = Brushes.Black,
-        //        FontSize = minMaxFontSize,
-        //        TextAlignment = TextAlignment.Right
-        //    };
-        //    minValueBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double minValueWidth = minValueBlock.DesiredSize.Width;
-        //    double minValueHeight = minValueBlock.DesiredSize.Height;
-        //    double minY = yOffset + numberOfColors * barHeight + 10;
-
-        //    Canvas.SetLeft(minValueBlock, maxLabelRight - minValueWidth - 8); // 目盛ラベルの右端に右揃え
-        //    Canvas.SetTop(minValueBlock, minY);
-        //    colorBarCanvas.Children.Add(minValueBlock);
-
-        //    // minラベル
-        //    TextBlock minLabelBlock = new()
-        //    {
-        //        Text = "min",
-        //        Foreground = Brushes.Black,
-        //        FontSize = minMaxFontSize
-        //    };
-        //    minLabelBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double minLabelWidth = minLabelBlock.DesiredSize.Width;
-        //    //Canvas.SetLeft(minLabelBlock, maxLabelRight + 4);
-        //    Canvas.SetLeft(minLabelBlock, barWidth - minLabelWidth);
-        //    Canvas.SetTop(minLabelBlock, minY);
-        //    colorBarCanvas.Children.Add(minLabelBlock);
-
-        //    // 目盛ラベルの左端（最小値ラベルの位置と同じ計算方法）
-        //    double labelLeftMin = -8 - minValueBlock.DesiredSize.Width;
-
-        //    // 水平線を描画
-        //    Line separatorLine = new()
-        //    {
-        //        X1 = labelLeftMin,
-        //        Y1 = minY - 1,
-        //        X2 = barWidth,
-        //        Y2 = minY - 1,
-        //        Stroke = Brushes.Black,
-        //        StrokeThickness = 0.5
-        //    };
-
-        //    colorBarCanvas.Children.Add(separatorLine);
-
-        //    // max数値
-        //    TextBlock maxValueBlock = new()
-        //    {
-        //        Text = string.Format(formatVal, maxDisp),
-        //        //Text = maxDisp.ToString(format),
-        //        Foreground = Brushes.Black,
-        //        FontSize = minMaxFontSize,
-        //        TextAlignment = TextAlignment.Right
-        //    };
-        //    maxValueBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double maxValueWidth = maxValueBlock.DesiredSize.Width;
-        //    double maxValueHeight = maxValueBlock.DesiredSize.Height;
-        //    double maxY = minY + minValueHeight;
-        //    Canvas.SetLeft(maxValueBlock, maxLabelRight - maxValueWidth - 8);
-        //    Canvas.SetTop(maxValueBlock, maxY);
-        //    colorBarCanvas.Children.Add(maxValueBlock);
-
-        //    // maxラベル
-        //    TextBlock maxLabelBlock = new()
-        //    {
-        //        Text = "max",
-        //        Foreground = Brushes.Black,
-        //        FontSize = minMaxFontSize
-        //    };
-        //    maxLabelBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        //    double maxLabelWidth = maxLabelBlock.DesiredSize.Width;
-        //    Canvas.SetLeft(maxLabelBlock, barWidth - maxLabelWidth);
-        //    //Canvas.SetLeft(maxLabelBlock, maxLabelRight + 4);
-        //    Canvas.SetTop(maxLabelBlock, maxY);
-        //    colorBarCanvas.Children.Add(maxLabelBlock);
-
-        //    // --- 背景の白い長方形を描画 ---
-        //    //double backgroundWidth = Math.Max(barWidth, maxLabelRight - labelRights.Min());
-        //    //double backgroundHeight = maxY + maxValueHeight - y + 10; // 全体の高さを計算
-        //    double margin = 5;
-        //    double top = 0 - margin;
-        //    double bottom = maxY + minLabelBlock.DesiredSize.Height + margin;
-        //    double backgroundHeight = -top + bottom;
-        //    double left = Math.Min(Math.Min(Math.Min(barWidth - titleWidth, maxLabelRight - minValueWidth - 8), maxLabelRight - maxValueWidth - 8), barWidth - maxLabelWidth) - margin;
-        //    double right = barWidth + margin;
-        //    double backgroundWidth = right - left;
-        //    Rectangle background = new()
-        //    {
-        //        Width = backgroundWidth,
-        //        Height = backgroundHeight,
-        //        Fill = new SolidColorBrush(Color.FromArgb(192, 255, 255, 255)) // 半透明の白 (128は透明度: 0=完全透明, 255=完全不透明)
-        //    };
-        //    Canvas.SetLeft(background, left);
-        //    Canvas.SetTop(background, top);
-        //    colorBarCanvas.Children.Insert(0, background); // 背景を最背面に追加
-
-        //}
+       
 
         private static string GetFormat(double step)
         {
@@ -635,9 +409,25 @@ namespace PileDesign.Services
             {
                 return "N5";
             }
-            else
+            else if (step >= 0.00001)
             {
                 return "N6";
+            }
+            else if (step >= 0.000001)
+            {
+                return "N7";
+            }
+            else if (step >= 0.0000001)
+            {
+                return "N8";
+            }
+            else if (step >= 0.00000001)
+            {
+                return "N9";
+            }
+            else
+            {
+                return "N9";
             }
         }
 

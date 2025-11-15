@@ -40,8 +40,7 @@ namespace PileDesign.Views
                 if (viewModel.IsApplicableE1s[i])
                 {
                     var loadCase = viewModel.InputModel.LoadCasesInput.LoadCasesLevel1[i];
-                    List<double> reactions = viewModel.InputModel.GetReactionForUnitMoment(loadCase.LoadAngle)
-                        .Select(r => r * viewModel.OverturningMoment1 * 1000).ToList();
+                    List<double> reactions = [.. viewModel.InputModel.GetReactionForUnitMoment(loadCase.LoadAngle).Select(r => r * viewModel.OverturningMoment1 * 1000)];
 
                     for (int j = 0; j < viewModel.InputModel.PileLayoutItems.Count; j++)
                     {
@@ -61,8 +60,7 @@ namespace PileDesign.Views
                 if (viewModel.IsApplicableE2s[i])
                 {
                     var loadCase = viewModel.InputModel.LoadCasesInput.LoadCasesLevel2[i];
-                    List<double> reactions = viewModel.InputModel.GetReactionForUnitMoment(loadCase.LoadAngle)
-                        .Select(r => r * viewModel.OverturningMoment2 * 1000).ToList();
+                    List<double> reactions = [.. viewModel.InputModel.GetReactionForUnitMoment(loadCase.LoadAngle).Select(r => r * viewModel.OverturningMoment2 * 1000)];
 
                     for (int j = 0; j < viewModel.InputModel.PileLayoutItems.Count; j++)
                     {

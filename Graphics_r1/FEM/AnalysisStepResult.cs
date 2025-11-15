@@ -41,32 +41,3 @@ namespace PileDesign.FEM
         }
     }
 }
-//namespace PileDesign.FEM
-//{
-//    public class AnalysisStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step, int iteration, double residualValue)
-//    {
-//        public LoadCase LoadCase { get; } = loadCase;
-//        public LoadCombination LoadCombination { get; } = loadCombination;
-//        public bool IsLiquefaction = isLiquefaction;
-
-//        public int Step { get; } = step;
-//        public int Iteration { get; } = iteration;
-//        public double ResidualValue { get; } = residualValue;
-
-//        public int GetLastStep()
-//        { return Step; }
-
-//        public AnalysisStepResult DeepCopy()
-//        {
-//            return new AnalysisStepResult(
-//                this.LoadCase.DeepCopy(),
-//                this.LoadCombination.DeepCopy(),
-//                this.IsLiquefaction,
-//                this.Step,
-//                this.Iteration,
-//                this.ResidualValue
-//            );
-//        }
-
-//    }
-//}

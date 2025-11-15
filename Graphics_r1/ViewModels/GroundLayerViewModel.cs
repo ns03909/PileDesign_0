@@ -60,28 +60,9 @@ namespace PileDesign.ViewModels
             }
         }
 
+
+
         // コンストラクタ内: 末尾の Update() 呼び出し前に購読済みになるように GroundInput の代入経路を通っていればOK
-        //public GroundLayerViewModel(MainWindowViewModel mainWindowViewModel)
-        //{
-        //    _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
-
-        //    PrevGroundsInput = new ObservableCollection<GroundInput>(
-        //        InputModel.GroundsInput.Select(groundInput => groundInput.DeepCopy())
-        //    );
-
-        //    GroundsInput = new ObservableCollection<GroundInput>(
-        //        InputModel.GroundsInput.Select(groundInput => groundInput.DeepCopy())
-        //    );
-
-        //    _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
-
-        //    UpdateGroundsCountPlusOneList();
-
-        //    // ここで GroundInput セッターを通す（購読される）
-        //    GroundInput = GroundsInput[GroundNo - 1];
-
-        //    Update();
-        //}
         public GroundLayerViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -382,6 +363,33 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _dataContextFundamental, value);
         }
 
+        public ObservableCollection<ExampleItem> ExampleItems { get; } = new();
+
+        private ExampleItem? _selectedExampleItem;
+        public ExampleItem? SelectedExampleItem
+        {
+            get => _selectedExampleItem;
+            set
+            {
+                // null をセットする場合はそのまま反映（UIクリア用）
+                if (value == null)
+                {
+                    SetProperty(ref _selectedExampleItem, null);
+                    return;
+                }
+
+                // 選択されたら、まず現在状態を undo スタックへ保存
+                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+
+                // 実行（ExampleItem が ICommand を保持している前提）
+                value.Command?.Execute(null);
+
+                // 実行後に選択をクリアして、同じ項目を再選択できるようにする
+                _selectedExampleItem = null;
+                OnPropertyChanged(nameof(SelectedExampleItem));
+            }
+        }
+
         [RelayCommand]
         private void OnSliderEngineeringBedrockValueChanged(double value)
         {
@@ -665,6 +673,9 @@ namespace PileDesign.ViewModels
         // GroundWindowInstance が設定された後に初期化処理を行う
         public void Initialize()
         {
+            // コンテキスト（Window, DataContext）が準備された段階で呼ばれる想定なのでここで初期項目を用意
+            InitializeExampleItems();
+
             Update();
         }
 

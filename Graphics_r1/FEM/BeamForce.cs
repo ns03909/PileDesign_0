@@ -31,7 +31,7 @@ namespace PileDesign.FEM
         public Vector<double> GetVector()
         {
             // より簡潔かつ効率的に6成分を配列でまとめて生成
-            return Vector<double>.Build.DenseOfArray([Fxi, Fyi, Fyi, Mxi, Myi, Mzi, Fxj, Fyj, Fzj, Mxj, Myj, Mzj]);
+            return Vector<double>.Build.DenseOfArray([Fxi, Fyi, Fzi, Mxi, Myi, Mzi, Fxj, Fyj, Fzj, Mxj, Myj, Mzj]);
         }
 
         public void SetVector(Vector<double> vector)

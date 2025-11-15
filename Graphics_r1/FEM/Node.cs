@@ -9,7 +9,6 @@ using System.Windows.Media.Media3D;
 
 namespace PileDesign.FEM
 {
-    //public class Node(string name, double coordX, double coordY, double coordZ) : BaseModel
     public class Node : BaseModel
     {
         public string Name { get; set; }
@@ -40,8 +39,6 @@ namespace PileDesign.FEM
         public NodeDisp SoilDisp { get; set; } // 基準変位ベクトル
         public NodeDisp SoilDispIncrement { get; set; } // 基準変位ベクトル
 
-        //public Vector3D SlaveArm { get; set; } = new(0, 0, 0);
-
         // マスター
         public Node[] MasterNodes { get; set; } = new Node[6];
         public Vector3S SlaveArm { get; set; } = new(0, 0, 0);
@@ -58,14 +55,6 @@ namespace PileDesign.FEM
 
         [JsonIgnore]
         public Matrix<double> TransferMatrix { get; set; } = Matrix<double>.Build.DenseIdentity(6);
-
-        // シリアライズ用プロパティ
-        //[JsonPropertyName("TransferMatrixArray")]
-        //public double[,] TransferMatrixArray
-        //{
-        //    get => TransferMatrix?.ToArray();
-        //    set => TransferMatrix = value != null ? Matrix<double>.Build.DenseOfArray(value) : null;
-        //}
 
         public ObservableCollection<NodeResult> NodeResults { get; set; } = [];
 
@@ -88,7 +77,6 @@ namespace PileDesign.FEM
                 }
             }
 
-            //MessageBox.Show("Analysis result Not found.");
             return null;
         }
 
@@ -205,13 +193,10 @@ namespace PileDesign.FEM
                 2 => (float)SlaveArm.Z,
                 _ => throw new Exception("不正なインデックス"),
             };
-
-
         }
 
-        public void SetDisp2(Vector<double> dd/*, AnaModel anaModel*/)
+        public void SetDisp2(Vector<double> dd)
         {
-            //(Node[] masterNodes, Vector3D armVector) = anaModel.GetMasterNodesArmVector(this);
 
             double[] ddisp = new double[6];
 
@@ -275,7 +260,7 @@ namespace PileDesign.FEM
             CumulativeDisp = new NodeDisp(cum[0], cum[1], cum[2], cum[3], cum[4], cum[5]);
         }
         //節点変位の累加変位Node.Dispへの追加
-        public void SetDisp(Vector<double> dd/*, AnaModel anaModel*/)
+        public void SetDisp(Vector<double> dd)
         {
             double[] ddisp = new double[6];
 
@@ -323,7 +308,8 @@ namespace PileDesign.FEM
                     ddisp[1] += dd[e_num_xx] * -SlaveArm.Z;
                 }
             }
-            else if (e_num <= 0)
+            //else if (e_num <= 0)
+            else if (e_num >= 0)
             {
                 ddisp[1] = dd[e_num];
             }
@@ -520,15 +506,6 @@ namespace PileDesign.FEM
         // Node.dLoad、Node.Loadの全体荷重ベクトルload_vectorへのマップオン
         private Vector<double> MapOnGlobalLoad(Vector<double> loadVector, bool isF/*, AnaModel anaModel*/)
         {
-            //NodeLoad load;
-            //if(isF == true)
-            //{
-            //    load = IncrementalLoad;
-            //}
-            //else
-            //{
-            //    load = CumulativedLoad;
-            //}
             NodeLoad load = isF == true ? IncrementalLoad : CumulativedLoad;
 
             for (int index = 0; index < 6; index++)
@@ -580,9 +557,8 @@ namespace PileDesign.FEM
         }
 
         // 節点ばね剛性を全体剛性マトリクスにマップオンする
-        public Matrix<double> MapSpringOnGlobalStiff(Matrix<double> matrixGlobalStiffness, bool isTan/*, AnaModel anaModel*/)
+        public Matrix<double> MapSpringOnGlobalStiff(Matrix<double> matrixGlobalStiffness, bool isTan)
         {
-            //(Node[] masterNodes, Vector3D _) = anaModel.GetMasterNodesArmVector(this);
 
             NodeSpring ns = isTan ? TangentSpring : SecantSpring;
 
@@ -687,45 +663,7 @@ namespace PileDesign.FEM
                 NodeResults = new ObservableCollection<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
             };
             return copy;
-            //var copy = new Node(this.Name, this.Coord.X, this.Coord.Y, this.Coord.Z)
-            //{
-            //    Boundary = new Boundary(
-            //        this.Boundary.Ux, this.Boundary.Uy, this.Boundary.Uz,
-            //        this.Boundary.Tx, this.Boundary.Ty, this.Boundary.Tz),
-            //    EquationNumber = (int[])this.EquationNumber.Clone(),
-
-            //    IncrementalLoad = this.IncrementalLoad.Clone(),
-            //    CumulativedLoad = this.CumulativedLoad.Clone(),
-
-            //    IncrementalDisp = this.IncrementalDisp.Clone(),
-            //    CumulativeDisp = this.CumulativeDisp.Clone(),
-
-            //    IsLoaded = this.IsLoaded,
-            //    IsSpringed = this.IsSpringed,
-
-            //    IncrementalReaction = this.IncrementalReaction.Clone(),
-            //    CumulativeReaction = this.CumulativeReaction.Clone(),
-
-            //    SoilDisp = this.SoilDisp?.Clone(),
-            //    SoilDispIncrement = this.SoilDispIncrement?.Clone(),
-
-            //    MasterNodes = (Node[])this.MasterNodes.Clone(), // 参照コピー。必要に応じてID等で再構築
-            //    SlaveArm = new Vector3S(this.SlaveArm.X, this.SlaveArm.Y, this.SlaveArm.Z),
-
-            //    CumulativeSpringForce = this.CumulativeSpringForce.Clone(),
-            //    IncrementalSpringForce = this.IncrementalSpringForce.Clone(),
-
-            //    CumulativeForcedDisp = this.CumulativeForcedDisp.Clone(),
-            //    IncrementalForcedDisp = this.IncrementalForcedDisp.Clone(),
-
-            //    IsForcedDisped = this.IsForcedDisped,
-
-            //    TransferMatrix = this.TransferMatrix.Clone(),
-            //    NodeResults = new ObservableCollection<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
-            //};
-
-            //return copy;
+           
         }
-
     }
 }

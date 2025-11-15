@@ -8,6 +8,22 @@ namespace PileDesign.ViewModels
     public partial class GroundLayerViewModel : ObservableObject, ICloseable
 
     {
+        private void InitializeExampleItems()
+        {
+            ExampleItems.Clear();
+
+            // 既存のコマンド名に合わせて登録します（GroundLayerViewModelExamples.cs に定義済みの前提）
+            ExampleItems.Add(new ExampleItem("基礎指針'19計算例1", Example1Command));
+            ExampleItems.Add(new ExampleItem("基礎指針'19計算例2", Example2Command));
+            ExampleItems.Add(new ExampleItem("基礎指釈'19計算例9", Example9Command)); // 表示名の誤字があれば合わせてください
+            ExampleItems.Add(new ExampleItem("設計例集3.1", Example3_1Command));
+            ExampleItems.Add(new ExampleItem("設計例集3.2", Example3_2Command));
+            ExampleItems.Add(new ExampleItem("設計例集3.3", Example3_3Command));
+            ExampleItems.Add(new ExampleItem("設計例集3.4", Example3_4Command));
+            ExampleItems.Add(new ExampleItem("関東支部8章", Example8Command));
+            ExampleItems.Add(new ExampleItem("八重洲二丁目No.1", ExampleYeasu2Command));
+        }
+
         // 基礎指針'19 計算例1
         [RelayCommand]
         private void Example1()

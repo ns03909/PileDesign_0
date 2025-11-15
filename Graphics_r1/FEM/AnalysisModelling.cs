@@ -50,12 +50,7 @@ namespace PileDesign.FEM
             Nodes[0].SetBoundary(GetActionPointBoundary());
 
             // RigidBodies[0] : 完全剛体（DGB ノード + CapNode 用）
-            RigidBodies.Add(new(actionNode, new[] { true, true, true, true, true, true }));
-
-            // RigidBodies[1] : 並進は剛、Rx,Ry は連結しない（将来回転剛性を別途与える）
-            // 配列は [Ux, Uy, Uz, Rx, Ry, Rz]
-            RigidBodies.Add(new(actionNode, new[] { true, true, true, false, false, true }));
-            //RigidBodies.Add(new(actionNode, new[] { true, true, true, true, true, true }));
+            RigidBodies.Add(new(actionNode, [true, true, true, true, true, true])); // 
         }
 
         // 杭配置により作用点の拘束を返すメソッド
@@ -160,17 +155,17 @@ namespace PileDesign.FEM
         {
             if (InputModel.PileLayoutItems == null) return;
 
-            foreach (PileLayoutDataItem item in InputModel.PileLayoutItems)
+            foreach (var pile in InputModel.PileLayoutItems)
             {
-                item.PileNodes.Clear();
-                item.SoilNodes.Clear();
-                item.Beams.Clear();
-                item.HorizontalSoilSprings.Clear();
+                pile.PileNodes.Clear();
+                pile.SoilNodes.Clear();
+                pile.Beams.Clear();
+                pile.HorizontalSoilSprings.Clear();
 
-                double x = item.X;
-                double y = item.Y;
+                double x = pile.X;
+                double y = pile.Y;
 
-                int soilPileAltNo = item.SoilPileAltNo;
+                int soilPileAltNo = pile.SoilPileAltNo;
 
                 double initialRotK = 10e12;
 
@@ -186,9 +181,9 @@ namespace PileDesign.FEM
                 // 剛床側（キャップ側）節点を同一点に生成し、剛体へスレーブ
                 Node capNode = new();
                 double z0 = soilPile.ZDataItems[0].Z;
-                capNode.SetNodeInfo($"CapNode-{item.No}", x, y, z0);
+                capNode.SetNodeInfo($"CapNode-{pile.No}", x, y, z0);
                 Nodes.Add(capNode);
-                RigidBodies[0].AddSlaveNode(capNode);
+                RigidBodies[0].AddSlaveNode(capNode); // Cap Nodeをスレーブにする。
 
                 Node prevPileNode = null; // 直前の杭節点
                 for (int i = 0; i < soilPile.ZDataItems.Count; i++)
@@ -196,17 +191,17 @@ namespace PileDesign.FEM
                     double z = soilPile.ZDataItems[i].Z;
 
                     Node pileNode = new();
-                    pileNode.SetNodeInfo($"PileNode-{item.No}-{i}", x, y, z);
+                    pileNode.SetNodeInfo($"PileNode-{pile.No}-{i}", x, y, z);
                     Nodes.Add(pileNode);
-                    item.PileNodes.Add(pileNode);
+                    pile.PileNodes.Add(pileNode);
 
 
                     if (i == 0)
                     {
                         // 杭頭回転ばね（初期剛性を与える）
-                        var rxy = new RotationalSpring($"RθXY-{item.No}", capNode, pileNode, initialRotK)
+                        var rxy = new RotationalSpring($"RθXY-{pile.No}", capNode, pileNode, initialRotK)
                         {
-                            PileBodyNo = item.PileBodyNo,
+                            PileBodyNo = pile.PileBodyNo,
                             TieUx = false,
                             TieUy = false,
                             TieUz = false,
@@ -214,10 +209,10 @@ namespace PileDesign.FEM
                             Kbig = 10e12
                         };
                         RotationalSprings.Add(rxy);
-                        item.PileTopRotationalSpring = rxy;
+                        pile.PileTopRotationalSpring = rxy;
 
                         // pileNode を RigidBodies[1] にスレーブ登録（並進＋Rz を剛結、Rx,Ry は自由）
-                        RigidBodies[1].AddSlaveNode(pileNode);
+                        //RigidBodies[0].AddSlaveNode(pileNode); // pile_0をスレーブにする。
 
                         prevPileNode = pileNode; // 上端ノードはここで初期化
                     }
@@ -228,7 +223,7 @@ namespace PileDesign.FEM
                         SetPileElement(soilPile, i - 1, prevPileNode, pileNode);
                         Beams[^1].PileBodyNo = soilPile.PileBodyNo;
                         Beams[^1].SegmentIndex = i - 1;
-                        item.Beams.Add(Beams[^1]);
+                        pile.Beams.Add(Beams[^1]);
                         if (i == 1) Beams[^1].SetPileTopFlag(true);
 
                         prevPileNode = pileNode; // 次要素の上端に更新
@@ -240,22 +235,22 @@ namespace PileDesign.FEM
                         SetPileElement(soilPile, i - 1, prevPileNode, pileNode);
                         Beams[^1].PileBodyNo = soilPile.PileBodyNo;
                         Beams[^1].SegmentIndex = i - 1;
-                        item.Beams.Add(Beams[^1]);
+                        pile.Beams.Add(Beams[^1]);
                         pileNode.SetBoundary(new(false, false, true, false, false, false));
                     }
 
                     // 土節点
                     Node soilNode = new();
-                    soilNode.SetNodeInfo($"SoilNode-{item.No}-{i}", x, y, z);
+                    soilNode.SetNodeInfo($"SoilNode-{pile.No}-{i}", x, y, z);
                     soilNode.SetIsForcedDisped(true);
                     soilNode.SetBoundary(new(false, false, true, true, true, true));
                     Nodes.Add(soilNode);
-                    item.SoilNodes.Add(soilNode);
+                    pile.SoilNodes.Add(soilNode);
 
                     // 水平土ばね（杭節点−土節点）
-                    var hspring = new HorizontalSoilSpring($"HorizontalSoilSpring-{item.No}-{i}", pileNode, soilNode);
+                    var hspring = new HorizontalSoilSpring($"HorizontalSoilSpring-{pile.No}-{i}", pileNode, soilNode);
                     HorizontalSoilSprings.Add(hspring);
-                    item.HorizontalSoilSprings.Add(hspring);
+                    pile.HorizontalSoilSprings.Add(hspring);
                 }
             }
 

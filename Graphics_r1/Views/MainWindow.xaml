@@ -3289,8 +3289,17 @@
                                                           Click="CheckBoxCommonActionPoint3D_Click"></CheckBox>
                                     </ToolBar>
 
-                                    <h:HelixViewport3D x:Name="HelixViewport" ShowCoordinateSystem="True" Grid.Row="1"
-                                                       MouseLeftButtonDown="HelixViewport_MouseLeftButtonDown"/>
+                                    <h:HelixViewport3D x:Name="HelixViewport" 
+                                                       ShowCoordinateSystem="True" 
+                                                       Grid.Row="1"
+                                                       MouseLeftButtonDown="HelixViewport_MouseLeftButtonDown" />
+                                    
+                                    <!--<hx:Viewport3DX x:Name="DxViewport"
+                                                    Grid.Row="1"
+                                                    Background="White"
+                                                    ShowCoordinateSystem="True"
+                                                    ZoomExtentsWhenLoaded="True"
+                                                    MouseDown3D="DxViewport_MouseDown3D" />-->
                                 </Grid>
                             </avalonDock:LayoutDocument>
                         </avalonDock:LayoutDocumentPane>

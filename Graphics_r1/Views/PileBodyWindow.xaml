@@ -31,6 +31,55 @@
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:HeightToMaxHeightConverter x:Key="HeightToMaxHeightConverter" />
         <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
+
+
+        <!-- 共通フォームスタイル（Window.Resources に追加） -->
+        <Style x:Key="FormLabelStyle" TargetType="TextBlock">
+            <Setter Property="Width" Value="100"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Background" Value="#62B0E2"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+
+        <Style x:Key="FormTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinWidth" Value="70"/>
+        </Style>
+
+        <Style x:Key="FormComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinWidth" Value="70"/>
+        </Style>
+
+        <Style x:Key="FormButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="MinWidth" Value="70"/>
+        </Style>
+
+        <!-- 追加: セパレータ用スタイル（Window.Resources 内） -->
+        <Style x:Key="VerticalSeparatorStyle" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="Background" Value="#DDDDDD"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Height" Value="28"/>
+        </Style>
+
+        <!-- 小さな横間隔を統一するための簡易スタイル -->
+        <Style x:Key="SmallRightMargin" TargetType="FrameworkElement">
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+
+
         <!-- DataGridCellのスタイルを定義 -->
         <Style x:Key="RightAlignedCellStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -90,29 +139,26 @@
                 </StackPanel.ToolTip>
 
 
-                <TextBlock Text="杭体番号" Width="100" HorizontalAlignment="Left" Background="#62B0E2"/>
+                <!--<TextBlock Text="杭体番号" Width="100" HorizontalAlignment="Left" Background="#62B0E2"/>-->
+                <Label Content="_杭体番号" Target="{Binding ElementName=ComboBoxPileBodyNo}" 
+                        HorizontalAlignment="Left"/>
                 <ComboBox x:Name="ComboBoxPileBodyNo"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
-                    Width="100"
-                    SelectedItem="{Binding SelectedPileBodyNoItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    ItemsSource="{Binding PileBodiesCountPlusOneList}" 
-                          DropDownOpened="ComboBox_DropDownOpened"
-                          SelectionChanged="ComboBoxPileBodyNoSelectionChanged">
-                    <!--SelectedIndex="{Binding PileBodyNo, Converter={StaticResource IntToZeroBasedIndexConverter}, Mode=TwoWay, 
-                    UpdateSourceTrigger=PropertyChanged}"-->
-                    <!--SelectedItem="{Binding PileBodyNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                    ItemsSource="{Binding PileBodiesCountPlusOneList, UpdateSourceTrigger=PropertyChanged}"
-                    ItemTemplateSelector="{StaticResource LastItemTemplateSelector}"
-                    SelectionChanged="ComboBoxPileBodyNoSelectionChanged">-->
+                        Style="{StaticResource FormComboBoxStyle}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        SelectedItem="{Binding SelectedPileBodyNoItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        ItemsSource="{Binding PileBodiesCountPlusOneList}" 
+                        DropDownOpened="ComboBox_DropDownOpened"
+                        SelectionChanged="ComboBoxPileBodyNoSelectionChanged">
 
                 </ComboBox>
-                <Button Content="削除" Command="{Binding DeletePileBodyCommand}"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="杭体符号" Width="100" Background="#62B0E2"/>
+                <!-- セパレータ -->
+                <Border Style="{StaticResource VerticalSeparatorStyle}"/>
 
-                <TextBox x:Name="TextBoxPileBodyRef" HorizontalAlignment="Left" VerticalAlignment="Center" Width="100" 
+                <Label Content="_杭体符号" Target="{Binding ElementName=TextBoxPileBodyRef}" 
+                        HorizontalAlignment="Left"/>
+                <TextBox x:Name="TextBoxPileBodyRef" Style="{StaticResource FormTextBoxStyle}"
+                         HorizontalAlignment="Left" VerticalAlignment="Center" 
                          Text="{Binding PileBody.PileBodyRef, UpdateSourceTrigger=LostFocus}"
                          PreviewKeyDown="TextBox_PreviewKeyDown"
                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
@@ -122,16 +168,15 @@
                             <i:InvokeCommandAction Command="{Binding PileBodyTextChangedCommand}"
                                                CommandParameter="{Binding Text, ElementName=TextBoxPileBodyRef}" />
                         </i:EventTrigger>
-                        <!--<i:EventTrigger EventName="GotFocus">
-                            <i:InvokeCommandAction Command="{Binding TextBoxGotFocusCommand}"
-                                               CommandParameter="{Binding ElementName=TextBoxPileBodyRef}" />
-                        </i:EventTrigger>
-                        <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
-                            <i:InvokeCommandAction Command="{Binding TextBoxPreviewMouseLeftButtonDownCommand}"
-                                               CommandParameter="{Binding ElementName=TextBoxPileBodyRef}" />
-                        </i:EventTrigger>-->
                     </i:Interaction.Triggers>
                 </TextBox>
+                <!-- セパレータ -->
+                <Border Style="{StaticResource VerticalSeparatorStyle}"/>
+                <Button Content="削除" Command="{Binding DeletePileBodyCommand}"/>
+                
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="杭体タイプ" Width="100"/>

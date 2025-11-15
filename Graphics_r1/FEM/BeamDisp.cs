@@ -27,7 +27,7 @@ namespace PileDesign.FEM
 
         public Vector<double> GetVector()
         {
-            return Vector<double>.Build.DenseOfArray([Dxi, Dyi, Dyi, Rxi, Ryi, Rzi, Dxj, Dyj, Dzj, Rxj, Ryj, Rzj]);
+            return Vector<double>.Build.DenseOfArray([Dxi, Dyi, Dzi, Rxi, Ryi, Rzi, Dxj, Dyj, Dzj, Rxj, Ryj, Rzj]);
         }
 
         public void SetVector(Vector<double> vector)
@@ -103,29 +103,6 @@ namespace PileDesign.FEM
             );
         }
 
-        //// i端の合成せん断力を返すメソッド
-        //public double GetAbsFi()
-        //{
-        //    return Math.Sqrt(Dyi * Dyi + Dzi * Dzi);
-        //}
-
-        //// i端の合成曲げモーメントを返すメソッド
-        //public double GetAbsMi()
-        //{
-        //    return Math.Sqrt( Ryi * Ryi + Rzi * Rzi);
-        //}
-
-        //// j端の合成せん断力を返すメソッド
-        //public double GetAbsFj()
-        //{
-        //    return Math.Sqrt(Dyj * Dyj + Dzj * Dzj);
-        //}
-
-        //// j端の合成曲げモーメントを返すメソッド
-        //public double GetAbsMj()
-        //{
-        //    return Math.Sqrt(Ryj * Ryj + Rzj * Rzj);
-        //}
 
         public BeamDisp Clone()
         {

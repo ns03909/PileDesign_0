@@ -361,10 +361,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ACadSharp" Version="3.2.22" />
-    <PackageReference Include="CSparse" Version="4.2.0" />
+    <PackageReference Include="CSparse" Version="4.3.0" />
+    <PackageReference Include="HelixToolkit.Geometry" Version="3.1.1" />
+    <PackageReference Include="HelixToolkit.Maths" Version="3.1.1" />
     <PackageReference Include="HelixToolkit.SharpDX.Core" Version="2.27.3" />
     <PackageReference Include="HelixToolkit.SharpDX.Core.Wpf" Version="2.27.3" />
-    <PackageReference Include="HelixToolkit.Wpf" Version="2.27.3" />
+    <PackageReference Include="HelixToolkit.Wpf" Version="3.1.1" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
     <PackageReference Include="Rhino3dm" Version="8.17.0" />
     <PackageReference Include="ScottPlot" Version="5.1.57" />
@@ -381,7 +383,7 @@
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="WebView2.Runtime.X64" Version="139.0.3405.125" />
+    <PackageReference Include="WebView2.Runtime.X64" Version="142.0.3595.80" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
@@ -400,7 +402,7 @@
     <PackageReference Include="HarfBuzzSharp" Version="8.3.1.2" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.2" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.2" />
-    <PackageReference Include="HelixToolkit" Version="2.27.3" />
+    <PackageReference Include="HelixToolkit" Version="3.1.1" />
     <PackageReference Include="LiveChartsCore" Version="2.0.0-rc4.5" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView" Version="2.0.0-rc4.5" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc4.5" />

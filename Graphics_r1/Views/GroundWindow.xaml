@@ -29,6 +29,52 @@
         <local:DoubleLessThanConverter x:Key="DoubleLessThanConverter"/>
         <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
 
+        <!-- 共通フォームスタイル（Window.Resources に追加） -->
+        <Style x:Key="FormLabelStyle" TargetType="TextBlock">
+          <Setter Property="Width" Value="100"/>
+          <Setter Property="VerticalAlignment" Value="Center"/>
+          <Setter Property="Background" Value="#62B0E2"/>
+          <Setter Property="Foreground" Value="White"/>
+          <Setter Property="Padding" Value="6,3"/>
+          <Setter Property="TextAlignment" Value="Center"/>
+          <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+
+        <Style x:Key="FormTextBoxStyle" TargetType="TextBox">
+          <Setter Property="Height" Value="26"/>
+          <Setter Property="VerticalContentAlignment" Value="Center"/>
+          <Setter Property="Margin" Value="0,0,8,0"/>
+          <Setter Property="MinWidth" Value="70"/>
+        </Style>
+
+        <Style x:Key="FormComboBoxStyle" TargetType="ComboBox">
+          <Setter Property="Height" Value="26"/>
+          <Setter Property="VerticalContentAlignment" Value="Center"/>
+          <Setter Property="Margin" Value="0,0,8,0"/>
+          <Setter Property="MinWidth" Value="70"/>
+        </Style>
+
+        <Style x:Key="FormButtonStyle" TargetType="Button">
+          <Setter Property="Height" Value="26"/>
+          <Setter Property="Padding" Value="8,3"/>
+          <Setter Property="Margin" Value="0,0,8,0"/>
+          <Setter Property="MinWidth" Value="70"/>
+        </Style>
+
+        <!-- 追加: セパレータ用スタイル（Window.Resources 内） -->
+        <Style x:Key="VerticalSeparatorStyle" TargetType="Border">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="Background" Value="#DDDDDD"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Height" Value="28"/>
+        </Style>
+
+        <!-- 小さな横間隔を統一するための簡易スタイル -->
+        <Style x:Key="SmallRightMargin" TargetType="FrameworkElement">
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+        
         <!-- GranularityClassComboBoxのスタイルを定義 -->
         <Style x:Key="AgeCategoryComboBoxStyle" TargetType="ComboBox">
             <Style.Triggers>
@@ -411,16 +457,16 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="0">
-            <StackPanel Orientation="Horizontal">
-                <StackPanel.ToolTip>
+            <Grid>
+                <Grid.ToolTip>
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>  
                             <RowDefinition Height="auto"/>
                             <RowDefinition Height="auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="auto" SharedSizeGroup="LabelCol"/>
                             <ColumnDefinition Width="auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="地盤番号" HorizontalAlignment="Center" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"/>
@@ -429,42 +475,96 @@
                         <TextBlock Text="#(New)" Grid.Row="2" Grid.Column="0"/>
                         <TextBlock Text=": 新規データ" Grid.Row="2" Grid.Column="1"/>
                     </Grid>
-                </StackPanel.ToolTip>
-                <TextBlock Text="地盤番号" HorizontalAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
-                <ComboBox x:Name="ComboBoxGroundNo"
-                    HorizontalAlignment="Left"
-                    Height="25"
-                    VerticalAlignment="Top"
-                    Width="100"
-                    SelectedIndex="{Binding GroundNo, Converter={StaticResource IntToZeroBasedIndexConverter}, Mode=TwoWay}"
-                    ItemsSource="{Binding GroundCountPlusOneList}" SelectionChanged="ComboBoxGroundNo_SelectionChanged">
-                    <!--SelectedValue="{Binding GroundNo, UpdateSourceTrigger=PropertyChanged}"
-                      ItemsSource="{Binding GroundCountPlusOneList, UpdateSourceTrigger=PropertyChanged}"
-                      SelectionChanged="ComboBoxGroundNo_SelectionChanged">-->
-                </ComboBox>
-                <Button Content="削除" Command="{Binding GroundDeleteCommand}"/>
-                <TextBlock Text="地盤符号" HorizontalAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
-                <TextBox x:Name="TextBoxGroundRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center"
-                         Text="{Binding GroundInput.GroundRef}" 
-                         
-                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
+                </Grid.ToolTip>
 
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="LabelCol"/>
+                    <!-- ラベル幅を他と揃える -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- ComboBox -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- separator -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 削除ボタン -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- separator -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 地盤符号ラベル -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 地盤符号 TextBox -->
+                    <ColumnDefinition Width="*" />
+                    <!-- 可変スペース -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 計算例ボタン（右端） -->
+                </Grid.ColumnDefinitions>
+                
+                <!--<TextBlock Grid.Column="0" Text="地盤番号" Style="{StaticResource FormLabelStyle}"/>-->
+                <!-- Label を使うと Alt+アクセスや Target による関連付けができる -->
+                <Label Grid.Column="0" Target="{Binding ElementName=ComboBoxGroundNo}"
+                        Content="_地盤番号"  VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1" x:Name="ComboBoxGroundNo"
+                        Style="{StaticResource FormComboBoxStyle}"
+                        Width="110"
+                        SelectedIndex="{Binding GroundNo, Converter={StaticResource IntToZeroBasedIndexConverter}, Mode=TwoWay}"
+                        ItemsSource="{Binding GroundCountPlusOneList}"
+                        SelectionChanged="ComboBoxGroundNo_SelectionChanged"
+                        ToolTip="地盤番号を選択します。新規は '#(New)' と表示されます。">
+                    <!-- 新規項目の色や太字を変えて視認性を向上 -->
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding}" Value="#(New)">
+                                    <Setter Property="Foreground" Value="DarkOrange"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                </ComboBox>
+
+                <!-- セパレータ -->
+                <Border Grid.Column="2" Style="{StaticResource VerticalSeparatorStyle}"/>
+
+                <!--<TextBlock Text="地盤符号"  Style="{StaticResource FormLabelStyle}"/>-->
+                <Label Grid.Column="3" Target="{Binding ElementName=TextBoxGroundRef}"
+                        Content="_地盤符号"  VerticalAlignment="Center"/>
+                <TextBox Grid.Column="4" x:Name="TextBoxGroundRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center"
+                         Text="{Binding GroundInput.GroundRef}" 
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
+                         KeyDown="TextBox_Common_KeyDown"/>
+
+                <!-- セパレータ -->
+                <Border Grid.Column="5" Style="{StaticResource VerticalSeparatorStyle}"/>
+                <Button Grid.Column="6" Content="削除" Command="{Binding GroundDeleteCommand}" Style="{StaticResource FormButtonStyle}"/>
+                <!-- セパレータ -->
+                <!--<Border Grid.Column="7" Style="{StaticResource VerticalSeparatorStyle}"/>-->
+                
+                <!--<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">-->
+                <Button Grid.Column="7" x:Name="ButtonExamples"
+                            Content="計算例 ▼"
+                            Width="75"
+                            Height="26"
+                            VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                            Click="ButtonExamples_Click"
+                           
+                            ToolTip="計算例を選択">
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="ContextMenuExamples" ItemsSource="{Binding ExampleItems}">
+                                <ContextMenu.ItemContainerStyle>
+                                    <Style TargetType="MenuItem" >
+                                        <!-- 表示 -->
+                                        <Setter Property="Header" Value="{Binding Display}" />
+                                        <!-- クリックをコードビハインドで受けて undo を積んでから実行 -->
+                                        <EventSetter Event="Click" Handler="ExampleMenuItem_Click" />
+                                    </Style>
+                                </ContextMenu.ItemContainerStyle>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                 <!--</StackPanel>-->
-                <!--<Expander>-->
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="基礎指針'19計算例1" Command="{Binding Example1Command}"/>
-                    <Button Content="基礎指針'19計算例2" Command="{Binding Example2Command}"/>
-                    <Button Content="基礎指針'19計算例9" Command="{Binding Example9Command}"/>
-                    <Button Content="設計例集3.1" Command="{Binding Example3_1Command}"/>
-                    <Button Content="設計例集3.2" Command="{Binding Example3_2Command}"/>
-                    <Button Content="設計例集3.3" Command="{Binding Example3_3Command}"/>
-                    <Button Content="設計例集3.4" Command="{Binding Example3_4Command}"/>
-                    <Button Content="関東支部8章" Command="{Binding Example8Command}"/>
-                    <Button Content="八重洲二丁目No.1" Command="{Binding ExampleYeasu2Command}"/>
-                    
-                </StackPanel>
                 <!--</Expander>-->
-            </StackPanel>
+            </Grid>
             <StackPanel Orientation="Horizontal">
                 <TabControl>
                     <TabItem Header="孔口レベル・地下水位">

@@ -2568,9 +2568,17 @@ namespace PileDesign.ViewModels
             OpenDialogWindow<PileBodyViewModel, PileBodyWindow>(this);
         }
 
+        // 軸力チェック
         [RelayCommand]
         public void OnAxialForceCheck()
         {
+            // 杭配置が無ければ即時メッセージ表示して終了
+            if (CurrentInputModel == null || CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
+            {
+                MessageBox.Show("杭配置が存在しません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             bool hasWarning = false;
             string warningMessage = "以下の項目に問題があります:\n";
 

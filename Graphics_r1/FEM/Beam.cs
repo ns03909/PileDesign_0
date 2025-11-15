@@ -17,7 +17,6 @@ namespace PileDesign.FEM
         public double Length { get; set; }
         public bool IsPileTop { get; set; } = false;
 
-
         // どの杭体/どのセグメントか（Solver が PileSection に辿るためのメタ情報）
         public int? PileBodyNo { get; set; }
         public int? SegmentIndex { get; set; }
@@ -32,7 +31,6 @@ namespace PileDesign.FEM
         private MomentCurvatureCurve? _combinedCurve;
         private MomentCurvatureCurve? _yCurve;
         private MomentCurvatureCurve? _zCurve;
-
 
         // 追加: PileSection.GetMPhiRelationship で得た曲線（合成）を直接設定
         public void SetResolvedCombinedMphi(System.Collections.Generic.IEnumerable<double> phis,
@@ -153,11 +151,6 @@ namespace PileDesign.FEM
                 System.Diagnostics.Debug.WriteLine($"ResolveMphiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
             }
         }
-        //{
-        //    _combinedCurve = (Mphi_ByN != null) ? AxialCurveFamily.ResolveMPhi(Mphi_ByN, axialN) : null;
-        //    _yCurve = (MphiY_ByN != null) ? AxialCurveFamily.ResolveMPhi(MphiY_ByN, axialN) : null;
-        //    _zCurve = (MphiZ_ByN != null) ? AxialCurveFamily.ResolveMPhi(MphiZ_ByN, axialN) : null;
-        //}
 
         // 要素中央曲率から接線剛性（EI_eff）を返す
         // 合成: φres=√(φy^2+φz^2) → dM/dφ(φres) を両軸に適用
@@ -228,28 +221,6 @@ namespace PileDesign.FEM
         public Matrix<double> KeSec { get; set; }
         [JsonIgnore]
         public Vector<double> Curve { get; set; }
-
-        // Matrix<double>ラップ用プロパティ
-        //[JsonPropertyName("KeTanArray")]
-        //public double[,] KeTanArray
-        //{
-        //    get => KeTan?.ToArray();
-        //    set => KeTan = value != null ? Matrix<double>.Build.DenseOfArray(value) : null;
-        //}
-
-        //[JsonPropertyName("KeSecArray")]
-        //public double[,] KeSecArray
-        //{
-        //    get => KeSec?.ToArray();
-        //    set => KeSec = value != null ? Matrix<double>.Build.DenseOfArray(value) : null;
-        //}
-
-        //[JsonPropertyName("CurveArray")]
-        //public double[] CurveArray
-        //{
-        //    get => Curve?.ToArray();
-        //    set => Curve = value != null ? Vector<double>.Build.DenseOfArray(value) : null;
-        //}
 
         public HorizontalSoilReactionItem HorizontalSoilReactionItem { get; set; }
         public ObservableCollection<BeamResult> BeamResults { get; set; } = [];

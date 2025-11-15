@@ -445,9 +445,10 @@ namespace PileDesign.ViewModels
                 AnalysisModelling.RigidBodies,
                 AnalysisModelling.HorizontalSoilSprings,
                 AnalysisModelling.RotationalSprings
-            );
-
-            editModel.RotationalSprings = AnalysisModelling.RotationalSprings;
+            )
+            {
+                RotationalSprings = AnalysisModelling.RotationalSprings
+            };
 
             // 既に編集用モデルが存在する場合は入れ替え
             if (AnaModels.Count > 1)
@@ -520,8 +521,8 @@ namespace PileDesign.ViewModels
                 try
                 {
                     result = mi.GetParameters().Length == 1
-                        ? mi.Invoke(section, new object[] { axialN })
-                        : mi.Invoke(section, new object[] { axialN, 1.0 });
+                        ? mi.Invoke(section, [axialN])
+                        : mi.Invoke(section, [axialN, 1.0]);
                 }
                 catch
                 {
@@ -553,7 +554,7 @@ namespace PileDesign.ViewModels
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
             // 試行するメソッド名一覧（小文字/大文字両対応）
-            string[] candidateNames = { "GetMphiRelationship", "GetMPhiRelationship" };
+            string[] candidateNames = ["GetMphiRelationship", "GetMPhiRelationship"];
             MethodInfo? methodInfo = null;
             string foundName = "<none>";
 
@@ -575,9 +576,9 @@ namespace PileDesign.ViewModels
             {
                 ret = methodInfo.GetParameters().Length switch
                 {
-                    1 => methodInfo.Invoke(pileSection, new object[] { axialN }),
-                    2 => methodInfo.Invoke(pileSection, new object[] { axialN, 1.0 }),
-                    _ => methodInfo.Invoke(pileSection, new object[] { axialN })
+                    1 => methodInfo.Invoke(pileSection, [axialN]),
+                    2 => methodInfo.Invoke(pileSection, [axialN, 1.0]),
+                    _ => methodInfo.Invoke(pileSection, [axialN])
                 };
             }
             catch (Exception ex)
@@ -825,6 +826,33 @@ namespace PileDesign.ViewModels
                     {
                         targetModel.InitializeStates();
 
+                        // 荷重ケース固有の剛体スレーブ割当を適用（回転ばねの有効/無効を切替）
+                        ApplyPileHeadRigidBindingForLoadCase(targetModel, loadCase);
+
+
+                        //// 杭頭回転ばねを用いる場合 ---
+                        //var activeRotationalSprings = new HashSet<RotationalSpring>();
+                        //if (loadCase.IsPileNonLinear && targetModel.RotationalSprings != null)
+                        //{
+                        //    foreach (var pile in InputModel.PileLayoutItems)
+                        //    {
+                        //        // 杭頭回転ばねの定義
+                        //        MomentRotationCurve curve = new([(0, 0), (0.1, 100), (1, 200)]);
+                        //        // 杭頭回転ばねの設定
+                        //        pile.PileTopRotationalSpring.SetCurve(curve);
+                        //        // 杭頭節点の剛体従属節点の解除
+                        //        AnaModels[1].RigidBodies[0].RemoveSlaveNode(pile.PileNodes[0]);
+                        //    }
+                        //}
+                        //else // 杭頭回転ばねなしの場合
+                        //{
+                        //    foreach (var pile in InputModel.PileLayoutItems)
+                        //    {
+                        //        // 杭頭節点の剛体従属節点の解除
+                        //        AnaModels[1].RigidBodies[0].AddSlaveNode(pile.PileNodes[0]);
+                        //    }
+                        //}
+
                         // 杭非線形ONのときだけ M–φ/M–θ をセット
                         if (loadCase.IsPileNonLinear)
                         {
@@ -947,8 +975,16 @@ namespace PileDesign.ViewModels
                                 beam.BeamResults.Add(new(loadCase, loadCombination, isLiquefaction, step, beam));
                             foreach (var spring in targetModel.HorizontalSoilSprings)
                                 spring.HorizontalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, spring));
-                            foreach (var rotationalSpring in targetModel.RotationalSprings)
-                                rotationalSpring.RotationalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, rotationalSpring));
+                            //foreach (var rotationalSpring in targetModel.RotationalSprings)
+                            //    rotationalSpring.RotationalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, rotationalSpring));
+                            if (targetModel.RotationalSprings != null)
+                            {
+                                foreach (var rotationalSpring in targetModel.RotationalSprings)
+                                {
+                                    rotationalSpring.RotationalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, rotationalSpring));
+                                    // else: この荷重ケースでは回転ばねは存在するが「使用されなかった」ため結果を保存しない
+                                }
+                            }
                         }
                     }
                 }
@@ -959,6 +995,36 @@ namespace PileDesign.ViewModels
             MessageBox.Show("計算が終了しました。");
         }
 
+        // RunAsync 内の荷重ケース処理の先頭に以下ヘルパを呼ぶか、そのまま挿入してください。
+        // 杭頭回転角helper を別メソッドとして定義する例を示します。
+        private void ApplyPileHeadRigidBindingForLoadCase(AnaModel targetModel, LoadCase loadCase)
+        {
+            if (targetModel?.RigidBodies == null || targetModel.RigidBodies.Count == 0) return;
+
+            var rb0 = targetModel.RigidBodies[0];
+
+            // まずすべての pile head を一旦削除（ViewModel 側で一貫して操作するため）
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                var head = pile.PileNodes?.FirstOrDefault();
+                if (head == null) continue;
+                rb0.RemoveSlaveNode(head);
+            }
+
+            // 非線形 OFF (回転ばねを無効にしたい) 場合は RigidBodies[0] にスレーブして剛結にする
+            if (!loadCase.IsPileNonLinear)
+            {
+                foreach (var pile in InputModel.PileLayoutItems)
+                {
+                    var head = pile.PileNodes?.FirstOrDefault();
+                    if (head == null) continue;
+                    rb0.AddSlaveNode(head);
+                }
+            }
+
+            // 変更を反映：転送行列等を更新
+            targetModel.SetSlaveNodes();
+        }
 
         // 接線剛性用: 端部回転から要素中央曲率を評価し、dM/dφ を EI_eff として Ktan（倍率）に反映
         private void UpdateBeamMPhiTangent(AnaModel model)

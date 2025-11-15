@@ -151,11 +151,19 @@ namespace PileDesign.FEM
             Curve = curve ?? throw new ArgumentNullException(nameof(curve));
         }
 
+
+        public void SetCurve(MomentRotationCurve? curve)
+        {
+            Curve = curve;
+        }
+
         // 結果格納ラッパ
         public void SetBeamDispAndForce(bool isTan = false)
         {
             base.SetBeamDispAndForce(isTan, CumulativeDisp, CumulativeForce);
         }
+
+
 
         public RotationalSpring DeepCopy()
         {

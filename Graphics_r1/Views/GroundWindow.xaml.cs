@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 
@@ -607,6 +608,97 @@ namespace PileDesign.Views
                 {
                     viewModel._undoManager.PushState([.. viewModel.GroundsInput.Select(x => x.DeepCopy())]);
                 }
+            }
+        }
+
+        //private void ExampleCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        //{
+        //    if (sender is not ComboBox cb) return;
+        //    if (cb.SelectedItem is not ComboBoxItem item) return;
+        //    string label = item.Content?.ToString() ?? string.Empty;
+
+        //    if (DataContext is not GroundLayerViewModel vm)
+        //    {
+        //        // DataContext が予想と異なる場合は何もしない
+        //        cb.SelectedIndex = -1;
+        //        return;
+        //    }
+
+        //    switch (label)
+        //    {
+        //        case "基礎指針'19計算例1":
+        //            vm.Example1Command?.Execute(null);
+        //            break;
+        //        case "基礎指針'19計算例2":
+        //            vm.Example2Command?.Execute(null);
+        //            break;
+        //        case "基礎指針'19計算例9":
+        //            vm.Example9Command?.Execute(null);
+        //            break;
+        //        case "設計例集3.1":
+        //            vm.Example3_1Command?.Execute(null);
+        //            break;
+        //        case "設計例集3.2":
+        //            vm.Example3_2Command?.Execute(null);
+        //            break;
+        //        case "設計例集3.3":
+        //            vm.Example3_3Command?.Execute(null);
+        //            break;
+        //        case "設計例集3.4":
+        //            vm.Example3_4Command?.Execute(null);
+        //            break;
+        //        case "関東支部8章":
+        //            vm.Example8Command?.Execute(null);
+        //            break;
+        //        case "八重洲二丁目No.1":
+        //            vm.ExampleYeasu2Command?.Execute(null);
+        //            break;
+        //        default:
+        //            break;
+        //    }
+
+        //    // 選択をクリアして同じ項目を再選択できるようにする
+        //    cb.SelectedIndex = -1;
+        //}
+
+        // Button を押したときに ContextMenu を開く
+        private void ButtonExamples_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn) return;
+            var cm = btn.ContextMenu;
+            if (cm == null) return;
+
+            // ContextMenu をボタン右下に表示
+            cm.PlacementTarget = btn;
+            cm.Placement = PlacementMode.Bottom;
+            cm.IsOpen = true;
+        }
+
+        // ContextMenu 内の MenuItem が選択されたとき（DataContext は ExampleItem）
+        private void ExampleMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem mi) return;
+            if (mi.DataContext is not PileDesign.ViewModels.ExampleItem exampleItem) return;
+
+            if (DataContext is not GroundLayerViewModel vm)
+            {
+                // 念のため閉じる
+                if (mi.Parent is ContextMenu parentCm) parentCm.IsOpen = false;
+                return;
+            }
+
+            try
+            {
+                // 実行前に undo スタックへ現在状態を保存（既存パターンに合わせる）
+                vm._undoManager.PushState([.. vm.GroundsInput.Select(x => x.DeepCopy())]);
+
+                // 実行
+                exampleItem.Command?.Execute(null);
+            }
+            finally
+            {
+                // メニューを閉じる
+                if (mi.Parent is ContextMenu parentCm) parentCm.IsOpen = false;
             }
         }
     }

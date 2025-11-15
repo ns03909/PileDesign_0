@@ -1,14 +1,25 @@
-﻿using HelixToolkit.Wpf;
+﻿using DocumentFormat.OpenXml.Math;
+using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Wordprocessing;
+using HelixToolkit; // MeshBuilder はこの名前空間
+using HelixToolkit.Geometry;
+using HelixToolkit.Wpf; // ConverterExtensions のため追加
 using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
+using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
+using static Rhino.DocObjects.Font;
+using Color = System.Windows.Media.Color;
+using Colors = System.Windows.Media.Colors;
+using Media3DMaterial = System.Windows.Media.Media3D.Material;
 
 namespace PileDesign.Views
 {
@@ -43,29 +54,46 @@ namespace PileDesign.Views
         //
         private void AddLinesVisual3D(Point3D start, Point3D end, Color color, double thickness)
         {
-            LinesVisual3D linesVisual = new()
+            // CA1416 対策: Windows 7.0 以降のみでサポートされる API を使用するため、ガード条件を追加
+            if (OperatingSystem.IsWindowsVersionAtLeast(7))
             {
-                Points = [start, end],
-                Color = color,
-                Thickness = thickness
-            };
-            HelixViewport.Children.Add(linesVisual);
+                LinesVisual3D linesVisual = new()
+                {
+                    Points = [start, end],
+                    Color = color,
+                    Thickness = thickness
+                };
+                HelixViewport.Children.Add(linesVisual);
+            }
+            else
+            {
+                // サポートされていないプラットフォームの場合は何もしない、またはログ出力
+                // 例: System.Diagnostics.Debug.WriteLine("LinesVisual3D is not supported on this platform.");
+            }
         }
 
         // XYグリッド更新メソッド
         private void AddViewportGrid3D()
         {
-            // GridLinesVisual3Dの追加
-            GridLinesVisual3D gridLines = new()
+            // CA1416 対策: Windows 7.0 以降のみでサポートされる API を使用するため、ガード条件を追加
+            if (OperatingSystem.IsWindowsVersionAtLeast(7))
             {
-                Width = 100,
-                Length = 100,
-                MinorDistance = 1,
-                MajorDistance = 1,
-                Thickness = 0.01,
-                Fill = Brushes.LightGray
-            };
-            HelixViewport.Children.Add(gridLines);
+                GridLinesVisual3D gridLines = new()
+                {
+                    Width = 100,
+                    Length = 100,
+                    MinorDistance = 1,
+                    MajorDistance = 1,
+                    Thickness = 0.01,
+                    Fill = Brushes.LightGray
+                };
+                HelixViewport.Children.Add(gridLines);
+            }
+            else
+            {
+                // サポートされていないプラットフォームの場合は何もしない、またはログ出力
+                // 例: System.Diagnostics.Debug.WriteLine("GridLinesVisual3D is not supported on this platform.");
+            }
         }
 
         // XYZ軸更新メソッド
@@ -164,115 +192,185 @@ namespace PileDesign.Views
             }
         }
 
-        // 拡底形状更新メソッド
-        private void AddConeShapePileToe(Brush brush, Point3D origin, double baseDia, double topDia, double height = 0.3)
+        //// 拡底形状更新メソッド
+        //private void AddConeShapePileToe(Brush brush, Point3D origin, double baseDia, double topDia, double height = 0.3)
+        //{
+        //    Point3D coneBottoom = new(origin.X, origin.Y, origin.Z + height);
+        //    AddCylinder(brush, origin, coneBottoom, baseDia);
+        //    double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12 * Math.PI / 180);
+        //    AddCone(brush, coneBottoom, new Vector3D(0, 0, 1), baseDia * 0.5, topDia * 0.5, coneHeight);
+        //}
+
+        // 拡底形状更新メソッド (下向きに修正 & 直径統一)
+        //private void AddConeShapePileToe(Brush brush, Point3D pileBottom, double baseDia, double topDia, double cylHeight = 0.3)
+        //{
+        //    // 拡底円柱部 (短い下向き円柱)
+        //    Point3D cylLower = new(pileBottom.X, pileBottom.Y, pileBottom.Z - cylHeight);
+        //    AddCylinder(brush, pileBottom, cylLower, baseDia);
+
+        //    // 円錐台高さ (12度の側面傾斜仮定)
+        //    double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12 * Math.PI / 180.0);
+
+        //    // 円錐台 (さらに下へ伸ばす)
+        //    Point3D coneOrigin = cylLower;
+        //    AddCone(brush, coneOrigin, new Vector3D(0, 0, -1), baseDia, topDia, coneHeight);
+        //}
+
+        private void AddConeShapePileToe(
+            Brush brush,
+            Point3D pileBottom,
+            double baseDia,
+            double topDia,
+            double cylHeight = 0.3,
+            bool isDownward = false)
         {
-            Point3D coneBottoom = new(origin.X, origin.Y, origin.Z + height);
-            AddCylinder(brush, origin, coneBottoom, baseDia);
-            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12 * Math.PI / 180);
-            AddCone(brush, coneBottoom, new Vector3D(0, 0, 1), baseDia * 0.5, topDia * 0.5, coneHeight);
+            // 向き決定 (Z: 上向き / -Z: 下向き)
+            double sign = isDownward ? -1.0 : 1.0;
+            Vector3D axis = new(0, 0, sign);
+
+            // 円柱部終点
+            Point3D cylEnd = new(pileBottom.X, pileBottom.Y, pileBottom.Z + sign * cylHeight);
+            AddCylinder(brush, pileBottom, cylEnd, baseDia);
+
+            // 円錐台高さ (拡底杭の側面角度 12° 仮定)
+            double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12 * Math.PI / 180.0);
+
+            // 円錐台起点（円柱終点からさらに同方向へ伸ばす）
+            Point3D coneOrigin = cylEnd;
+            AddCone(brush, coneOrigin, axis, baseDia, topDia, coneHeight);
+        }
+
+        private static System.Numerics.Vector3 ToVector3(Point3D p)
+        {
+            return new System.Numerics.Vector3((float)p.X, (float)p.Y, (float)p.Z);
         }
 
         // 球更新メソッド
         private void AddSphere(Brush brush, Point3D position, double radius)
         {
-            var meshBuilder = new MeshBuilder();
+            var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
+            meshBuilder.AddSphere(
+                ToVector3(position),
+                (float)radius
+            );
 
-            meshBuilder.AddSphere(position, radius);
-
-            // メッシュをジオメトリとして取得
             var mesh = meshBuilder.ToMesh();
-
-            // マテリアルを作成
+            // var wpfMesh = ConverterExtensions.ToMeshGeometry3D(mesh);
+            var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
             var material = new DiffuseMaterial(brush);
-
-            // ジオメトリモデルを作成
-            //var model = new GeometryModel3D(mesh, semiTransparentMaterial);
-            var model = new GeometryModel3D(mesh, material);
-            // モデルビジュアル3Dを作成
+            var model = new GeometryModel3D(wpfMesh, material);
             var modelVisual = new ModelVisual3D { Content = model };
-
-            // ビューポートにモデルを追加
             HelixViewport.Children.Add(modelVisual);
         }
 
         // 立方体更新メソッド
         private void AddCube(Brush brush, Point3D center, double x, double y, double z)
         {
-            // メッシュビルダーを使って立方体を作成
-            var meshBuilder = new MeshBuilder();
-            meshBuilder.AddBox(center, x, y, z);
+            var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
+            meshBuilder.AddBox(ToVector3(center), (float)x, (float)y, (float)z);
 
-            // メッシュをジオメトリとして取得
             var mesh = meshBuilder.ToMesh();
-
-            // マテリアルを作成
-            //var material = new DiffuseMaterial(new SolidColorBrush(Colors.White));
-
-            // 半透明なマテリアルを作成
-            //var semiTransparentBrush = brush;
-            //{
-            //    Opacity = 0.5
-            //};
-
+            // var wpfMesh = ConverterExtensions.ToMeshGeometry3D(mesh);
+            var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
             var semiTransparentMaterial = new DiffuseMaterial(brush);
-
-            // ジオメトリモデルを作成
-            //var model = new GeometryModel3D(mesh, semiTransparentMaterial);
-            var model = new GeometryModel3D(mesh, semiTransparentMaterial);
-            // モデルビジュアル3Dを作成
+            var model = new GeometryModel3D(wpfMesh, semiTransparentMaterial);
             var modelVisual = new ModelVisual3D { Content = model };
-
-            // ビューポートにモデルを追加
             HelixViewport.Children.Add(modelVisual);
         }
 
         // 円柱更新メソッド
-        private void AddCylinder(Brush brush, Point3D p1, Point3D p2, double dia, int thetaDiv = 25, bool cap1 = true, bool cap2 = true)
+        //private void AddCylinder(Brush brush, Point3D p1, Point3D p2, double dia, int thetaDiv = 25, bool cap1 = true, bool cap2 = true)
+        //{
+        //    var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
+        //    meshBuilder.AddCylinder(
+        //        ToVector3(p1),
+        //        ToVector3(p2),
+        //        (float)dia, thetaDiv, cap1, cap2);
+
+        //    var mesh = meshBuilder.ToMesh();
+        //    // var wpfMesh = ConverterExtensions.ToMeshGeometry3D(mesh);
+        //    var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
+        //    var material = new DiffuseMaterial(brush);
+        //    var model = new GeometryModel3D(wpfMesh, material);
+        //    var modelVisual = new ModelVisual3D { Content = model };
+        //    HelixViewport.Children.Add(modelVisual);
+        //}
+        private void AddCylinder(Brush brush, Point3D p1, Point3D p2, double diameter, int thetaDiv = 25, bool cap1 = true, bool cap2 = true)
         {
-            // メッシュビルダーを使って立方体を作成
-            var meshBuilder = new MeshBuilder();
-            meshBuilder.AddCylinder(p1, p2, dia * 0.5, thetaDiv, cap1, cap2);
+            var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
+            double radius = diameter * 0.5;
+            meshBuilder.AddCylinder(
+                ToVector3(p1),
+                ToVector3(p2),
+                (float)radius,
+                thetaDiv,
+                cap1,
+                cap2);
 
-
-            // メッシュをジオメトリとして取得
             var mesh = meshBuilder.ToMesh();
-
-            // マテリアルを作成
+            var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
             var material = new DiffuseMaterial(brush);
-
-            // ジオメトリモデルを作成
-            var model = new GeometryModel3D(mesh, material);
-
-            // モデルビジュアル3Dを作成
-            var modelVisual = new ModelVisual3D { Content = model };
-
-            // ビューポートにモデルを追加
-            HelixViewport.Children.Add(modelVisual);
+            var model = new GeometryModel3D(wpfMesh, material);
+            HelixViewport.Children.Add(new ModelVisual3D { Content = model });
         }
 
-        // 円錐更新メソッド
-        private void AddCone(Brush brush, Point3D origin, Vector3D direction, double baseRadius, double topRadius, double height, bool baseCap = true, bool topCap = true, int thetaDiv = 25)
+        //// 円錐更新メソッド
+        //private void AddCone(Brush brush, Point3D origin, Vector3D direction, double baseRadius, double topRadius, double height, bool baseCap = true, bool topCap = true, int thetaDiv = 25)
+        //{
+        //    var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
+        //    meshBuilder.AddCone(
+        //        ToVector3(origin),
+        //        new System.Numerics.Vector3((float)direction.X, (float)direction.Y, (float)direction.Z),
+        //        (float)baseRadius, (float)topRadius, (float)height, baseCap, topCap, thetaDiv);
+
+        //    var mesh = meshBuilder.ToMesh();
+        //    // var wpfMesh = ConverterExtensions.ToMeshGeometry3D(mesh);
+        //    var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
+        //    var material = new DiffuseMaterial(brush);
+        //    var model = new GeometryModel3D(wpfMesh, material);
+        //    var modelVisual = new ModelVisual3D { Content = model };
+        //    HelixViewport.Children.Add(modelVisual);
+        //}
+        // 円錐台更新メソッド (直径受け取り・方向正規化)
+        private void AddCone(
+            Brush brush,
+            Point3D origin,
+            Vector3D axis,
+            double baseDia,
+            double topDia,
+            double height,
+            bool baseCap = true,
+            bool topCap = true,
+            int thetaDiv = 25)
         {
-            // メッシュビルダーを使って立方体を作成
-            var meshBuilder = new MeshBuilder();
-            meshBuilder.AddCone(origin, direction, baseRadius, topRadius, height, baseCap, topCap, thetaDiv);
+            var dir = axis;
+            if (dir.Length == 0) dir = new Vector3D(0, 0, -1);
+            dir.Normalize();
 
-            // メッシュをジオメトリとして取得
-            var mesh = meshBuilder.ToMesh();
+            double baseRadius = baseDia * 0.5;
+            double topRadius = topDia * 0.5;
 
-            // マテリアルを作成
+            var builder = new HelixToolkit.Geometry.MeshBuilder();
+            builder.AddCone(
+                ToVector3(origin),
+                new System.Numerics.Vector3((float)dir.X, (float)dir.Y, (float)dir.Z),
+                (float)baseRadius,
+                (float)topRadius,
+                (float)height,
+                baseCap,
+                topCap,
+                thetaDiv);
+
+            var mesh = builder.ToMesh();
+            var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
             var material = new DiffuseMaterial(brush);
-
-            // ジオメトリモデルを作成
-            var model = new GeometryModel3D(mesh, material);
-
-            // モデルビジュアル3Dを作成
-            var modelVisual = new ModelVisual3D { Content = model };
-
-            // ビューポートにモデルを追加
-            HelixViewport.Children.Add(modelVisual);
+            HelixViewport.Children.Add(new ModelVisual3D
+            {
+                Content = new GeometryModel3D(wpfMesh, material)
+            });
         }
+
+
 
         // ビューポートの画像保存メソッド
         private void HelixViewportSaveImageButton_Click(object sender, RoutedEventArgs e)
@@ -372,17 +470,121 @@ namespace PileDesign.Views
         }
 
 
-        private void HelixViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
+        //private void HelixViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        //{
+        //    if (e.LeftButton == MouseButtonState.Pressed)
+        //    {
 
-            }
-        }
+        //    }
+        //}
 
         private void HelixViewport_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
 
+        }
+
+        /////
+        ///
+
+        private readonly HashSet<GeometryModel3D> _selectedClassic = new();
+        private readonly Dictionary<GeometryModel3D, (Media3DMaterial Front, Media3DMaterial? Back)> _origMatClassic = new();
+        private DiffuseMaterial? _highlightClassic;
+
+        private void EnsureHighlightClassic()
+        {
+            if (_highlightClassic != null) return;
+            var brush = new SolidColorBrush(Colors.Orange);
+            brush.Freeze();
+            _highlightClassic = new DiffuseMaterial(brush);
+        }
+
+        private void ApplyHighlightClassic(GeometryModel3D g)
+        {
+            EnsureHighlightClassic();
+            if (!_origMatClassic.ContainsKey(g))
+                _origMatClassic[g] = (g.Material, g.BackMaterial);
+            g.Material = _highlightClassic!;
+            g.BackMaterial = _highlightClassic!;
+        }
+
+        private void RemoveHighlightClassic(GeometryModel3D g)
+        {
+            if (_origMatClassic.TryGetValue(g, out var saved))
+            {
+                g.Material = saved.Front;
+                g.BackMaterial = saved.Back;
+                _origMatClassic.Remove(g);
+            }
+        }
+
+        private void ClearSelectionClassic()
+        {
+            foreach (var g in _selectedClassic)
+                RemoveHighlightClassic(g);
+            _selectedClassic.Clear();
+        }
+
+        private void AddSelectClassic(GeometryModel3D g)
+        {
+            if (_selectedClassic.Add(g))
+                ApplyHighlightClassic(g);
+        }
+
+        private void ToggleSelectClassic(GeometryModel3D g)
+        {
+            if (_selectedClassic.Contains(g))
+            {
+                _selectedClassic.Remove(g);
+                RemoveHighlightClassic(g);
+            }
+            else
+            {
+                _selectedClassic.Add(g);
+                ApplyHighlightClassic(g);
+            }
+        }
+
+        // 既存のハンドラに実装（XAMLで HelixViewport_MouseLeftButtonDown がバインド済）
+        private void HelixViewport_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (HelixViewport is null) return;
+
+            var pos = e.GetPosition(HelixViewport);
+            var hits = Viewport3DHelper.FindHits(HelixViewport.Viewport, pos);
+
+            // 最前面の GeometryModel3D を取得
+            GeometryModel3D? geo = null;
+            foreach (var h in hits)
+            {
+                geo = h.Model as GeometryModel3D;
+                if (geo != null) break;
+            }
+
+            var mods = Keyboard.Modifiers;
+            bool ctrl = mods.HasFlag(ModifierKeys.Control);
+            bool shift = mods.HasFlag(ModifierKeys.Shift);
+
+            if (geo == null)
+            {
+                // 無修飾クリックで何もヒットしなければ全解除
+                if (!ctrl && !shift)
+                    ClearSelectionClassic();
+                // カメラ操作との共存を優先して Handled は設定しない
+                return;
+            }
+
+            if (ctrl)
+                ToggleSelectClassic(geo);     // Ctrl: トグル
+            else if (shift)
+                AddSelectClassic(geo);        // Shift: 追加
+            else
+            {
+                ClearSelectionClassic();      // 無修飾: 単一選択
+                AddSelectClassic(geo);
+            }
+
+            // 単クリックでカメラ操作を抑制したい場合は true にする
+            // e.Handled = true;
         }
     }
 }

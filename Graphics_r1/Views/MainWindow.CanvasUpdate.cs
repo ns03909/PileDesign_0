@@ -1,4 +1,5 @@
 ﻿//using DocumentFormat.OpenXml.Wordprocessing;
+using DocumentFormat.OpenXml.Bibliography;
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -27,30 +28,163 @@ namespace PileDesign.Views
     /// </summary>
     /// 
 
+
+
+
     public partial class MainWindow : Window
     {
+        // 追加: ビュー操作中フラグ
+        private bool _isViewInteracting = false;
+
+        // 追加: 操作開始/終了ヘルパ
+        private void BeginViewInteraction()
+        {
+            _isViewInteracting = true;
+            isLightweightDrawing = true; // 操作中は軽量描画
+            // 既存のラベル画像を即時消す
+            if (_textLayerImage != null) _textLayerImage.Source = null;
+            TextBlockInfos.Clear();
+        }
+
+        private void EndViewInteraction()
+        {
+            _isViewInteracting = false;
+            isLightweightDrawing = false;
+            RequestUpdateCanvas3D(); // 最終状態をフル描画
+        }
+
+        private int _renderBatchDepth = 0;
+        private bool _renderPending = false;
+        private System.Windows.Threading.DispatcherTimer? _renderTimer;
 
         private bool isLightweightDrawing = false;
 
+        private void ClearCanvasDrawingLayerPathsOnly()
+        {
+            if (Canvas3DLayout == null) return;
+            for (int i = Canvas3DLayout.Children.Count - 1; i >= 0; i--)
+            {
+                if (Canvas3DLayout.Children[i] is System.Windows.Shapes.Path)
+                {
+                    Canvas3DLayout.Children.RemoveAt(i);
+                }
+            }
+        }
+
+        // レンダリングの遅延要求（16msデバウンス）
+        private void RequestUpdateCanvas3D()
+        {
+            if (_renderBatchDepth > 0)
+            {
+                _renderPending = true;
+                return;
+            }
+            if (_renderTimer == null)
+            {
+                _renderTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(16)
+                };
+                _renderTimer.Tick += OnRenderTimerTick;
+            }
+            _renderTimer.Stop();
+            _renderTimer.Start();
+        }
+
+        private void OnRenderTimerTick(object? sender, EventArgs e)
+        {
+            _renderTimer?.Stop();
+            // 直近の大量更新を避けるため、ここで1回だけ実描画
+            UpdateCanvas3D();
+        }
+
+        // バッチ制御（using で呼ぶ）
+        private void BeginRenderBatch() => _renderBatchDepth++;
+        private void EndRenderBatch()
+        {
+            if (_renderBatchDepth > 0) _renderBatchDepth--;
+            if (_renderBatchDepth == 0 && _renderPending)
+            {
+                _renderPending = false;
+                // バッチ終了時に1回だけ描画
+                UpdateCanvas3D();
+            }
+        }
+
+        // using(var _ = DeferRender()) { ... } で呼ぶためのスコープ
+        private sealed class RenderScope : IDisposable
+        {
+            private readonly MainWindow _owner;
+            private readonly bool _restoreLightweight;
+            public RenderScope(MainWindow owner, bool forceLightweight)
+            {
+                _owner = owner;
+                _owner.BeginRenderBatch();
+                if (forceLightweight)
+                {
+                    _restoreLightweight = _owner.isLightweightDrawing == false;
+                    _owner.isLightweightDrawing = true; // 大量更新中は軽量描画
+                }
+            }
+            public void Dispose()
+            {
+                // 軽量描画を元に戻す
+                if (_restoreLightweight) _owner.isLightweightDrawing = false;
+                _owner.EndRenderBatch();
+            }
+        }
+
+        // 公開ヘルパ（軽量描画ONでの一括更新）
+        private IDisposable DeferRender(bool forceLightweight = true) => new RenderScope(this, forceLightweight);
+
+
+        // MainWindow 内に追加（コマンドやメニューから呼び出し）
+        private void DeleteSelectedPiles_Batched()
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            var targets = vm.CurrentInputModel.PileLayoutItems
+                .Where(p => p.IsVisible && p.IsSelected).ToList();
+            if (targets.Count == 0) return;
+
+            using (DeferRender(forceLightweight: true))
+            {
+                // DataGrid の選択同期や描画は抑止されたまま
+                foreach (var p in targets)
+                    vm.CurrentInputModel.PileLayoutItems.Remove(p);
+
+                // 付随データのクリーンアップ等があればここでまとめて実施
+                vm.CanvasGeometry.Clear();
+                TextBlockInfos.Clear();
+            }
+        }
+
+
         public void UpdateCanvas3D()
         {
-            Canvas3DLayout?.Children.Clear();
+            // バッチ中は保留…
+            if (_renderBatchDepth > 0) { _renderPending = true; return; }
+
+            ClearCanvasDrawingLayerPathsOnly();
+
+            // 操作中/軽量描画中はテキストを消しておく（前フレームの残骸防止）
+            if (_isViewInteracting || isLightweightDrawing)
+            {
+                if (_textLayerImage != null) _textLayerImage.Source = null;
+                TextBlockInfos.Clear();
+            }
 
             if (DataContext is not MainWindowViewModel viewModel) return;
-
 
             viewModel.CanvasGeometry.Clear();
             TextBlockInfos.Clear();
 
             if (isLightweightDrawing)
-            {    // 軽量描画: ノード・要素・軸・グリッドのみ
+            {
+                // 軽量描画（ラベルなし）
                 UpdateNodes3D();
                 if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
-                UpdateCanvasCube(); // XYZキューブの更新
-
-                // 追加: 組み立てたジオメトリを実際に描画する
+                UpdateCanvasCube();
                 viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
-
                 return;
             }
 
@@ -150,8 +284,11 @@ namespace PileDesign.Views
             // 全てのパスを描画
             viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
 
-            // テキスト一括レンダリング
-            RenderTextBlocksWithDrawingVisual();
+            // 最後のテキストレンダリングは、操作中はスキップ
+            if (!_isViewInteracting)
+            {
+                RenderTextBlocksWithDrawingVisual();
+            }
         }
 
         // カラーバージオメトリコア
@@ -215,7 +352,7 @@ namespace PileDesign.Views
             // Diverging カラーバー: 0 をグレー、負側を青へ、正側を赤へ、絶対値が大きい方を完全な青/赤にする
             if (values == null || values.Count == 0)
             {
-                return new List<ColorBaredGeometry>();
+                return [];
             }
 
             double minValue = values.Min();
@@ -1838,13 +1975,13 @@ namespace PileDesign.Views
             }
 
             // 描画する要素に対して、IsHitTestVisibleをfalseに設定
-            foreach (UIElement element in Canvas3DLayout.Children)
-            {
-                element.IsHitTestVisible = false;
-            }
+            //foreach (UIElement element in Canvas3DLayout.Children)
+            //{
+            //    element.IsHitTestVisible = false;
+            //}
 
-            // ZIndexを調整して他のUI要素の背面に配置
-            Panel.SetZIndex(Canvas3DLayout, -1);
+            //// ZIndexを調整して他のUI要素の背面に配置
+            //Panel.SetZIndex(Canvas3DLayout, -1);
         }
 
         // 有効数字1桁の値を返すメソッド
@@ -2204,11 +2341,18 @@ namespace PileDesign.Views
 
                     double absForceI = Math.Abs(originalForceI);
                     double absForceJ = Math.Abs(originalForceJ);
-                    allValues.Add(absForceI);
-                    allValues.Add(absForceJ);
+                    //allValues.Add(absForceI);
+                    //allValues.Add(absForceJ);
+
+                    // ここを絶対値追加から符号付き追加へ変更
+                    allValues.Add(originalForceI);
+                    allValues.Add(originalForceJ);
+
                     maxAbsValue = Math.Max(maxAbsValue, Math.Max(absForceI, absForceJ));
 
-                    beamResults.Add((beam, absForceI, absForceJ, originalForceI, originalForceJ));
+                    //beamResults.Add((beam, absForceI, absForceJ, originalForceI, originalForceJ));
+                    // 既存の beamResults に入れるtupleはそのままにしておく（必要に応じて表示側でabs/符号を使い分ける）
+                    beamResults.Add((beam, Math.Abs(originalForceI), Math.Abs(originalForceJ), originalForceI, originalForceJ));
                 }
 
                 // カラーバー用ジオメトリを一度だけ生成（描画ループの前）
@@ -2375,42 +2519,42 @@ namespace PileDesign.Views
                 switch (viewModel.AnalysisResultNodeDisplacementType)
                 {
                     case "UH":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 1, 1, 0, 0, 0, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([1, 1, 0, 0, 0, 0]);
                         multiplier = 1000;
                         isThetaLocal = false;
                         break;
                     case "UX":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 1, 0, 0, 0, 0, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([1, 0, 0, 0, 0, 0]);
                         multiplier = 1000;
                         isThetaLocal = false;
                         break;
                     case "UY":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 1, 0, 0, 0, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 1, 0, 0, 0, 0]);
                         multiplier = 1000;
                         isThetaLocal = false;
                         break;
                     case "UZ":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 1, 0, 0, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 1, 0, 0, 0]);
                         multiplier = 1000;
                         isThetaLocal = false;
                         break;
                     case "θH":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 1, 1, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 1, 1, 0]);
                         multiplier = 1;
                         isThetaLocal = true;
                         break;
                     case "θX":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 1, 0, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 1, 0, 0]);
                         multiplier = 1;
                         isThetaLocal = true;
                         break;
                     case "θY":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 0, 1, 0 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 0, 1, 0]);
                         multiplier = 1;
                         isThetaLocal = true;
                         break;
                     case "θZ":
-                        effectiveVector = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 0, 0, 1 });
+                        effectiveVector = Vector<double>.Build.DenseOfArray([0, 0, 0, 0, 0, 1]);
                         multiplier = 1;
                         isThetaLocal = true;
                         break;
@@ -2534,9 +2678,9 @@ namespace PileDesign.Views
 
                             if (!double.IsNaN(pI.X) && !double.IsNaN(pJ.Y))
                             {
-                                if (!viewModel.AnalysisResultNodeDisplacementType.StartsWith("θ"))
+                                if (!viewModel.AnalysisResultNodeDisplacementType.StartsWith('θ'))
                                 {
-                                    AddColorPolyLineGeometry(new[] { pI, pIDisp, pJDisp, pJ }, new List<double> { Math.Abs(origI) * multiplier, Math.Abs(origI) * multiplier, Math.Abs(origJ) * multiplier, Math.Abs(origJ) * multiplier }, colorBaredGeometries, isClosed: false);
+                                    AddColorPolyLineGeometry([pI, pIDisp, pJDisp, pJ], [Math.Abs(origI) * multiplier, Math.Abs(origI) * multiplier, Math.Abs(origJ) * multiplier, Math.Abs(origJ) * multiplier], colorBaredGeometries, isClosed: false);
                                 }
                             }
 
@@ -2590,7 +2734,7 @@ namespace PileDesign.Views
 
                         if (!isThetaLocal)
                         {
-                            AddColorPolyLineGeometry(new[] { nodeI2D, nodeIDisp2D, nodeJDisp2D, nodeJ2D }, new List<double> { Math.Abs(origI) * multiplier, Math.Abs(origI) * multiplier, Math.Abs(origJ) * multiplier, Math.Abs(origJ) * multiplier }, colorBaredGeometries);
+                            AddColorPolyLineGeometry([nodeI2D, nodeIDisp2D, nodeJDisp2D, nodeJ2D], [Math.Abs(origI) * multiplier, Math.Abs(origI) * multiplier, Math.Abs(origJ) * multiplier, Math.Abs(origJ) * multiplier], colorBaredGeometries);
                         }
 
                         if (viewModel.IsResultValueVisible)
@@ -2625,7 +2769,7 @@ namespace PileDesign.Views
 
                         // 回転量と軸
                         double rot = 0.0;
-                        Vector3D axis = new Vector3D(0, 0, 1);
+                        Vector3D axis = new(0, 0, 1);
                         switch (viewModel.AnalysisResultNodeDisplacementType)
                         {
                             case "θH":
@@ -2723,8 +2867,6 @@ namespace PileDesign.Views
             }
         }
 
-
-
         private void DrawResultValueTexts(
             bool isVisible, Brush solidColorBrush,
             double valueI, double valueJ,
@@ -2813,11 +2955,11 @@ namespace PileDesign.Views
                     var dispDiff = new System.Windows.Media.Media3D.Vector3D(
                         di.Ux - dj.Ux,
                         di.Uy - dj.Uy,
-                        di.Uz - dj.Uz
+                        0
                     );
 
                     // 表示スケール: viewModel.DispDiagramMultiplier を使う（必要に応じて調整してください）
-                    var scaledDisp = dispDiff * viewModel.DispDiagramMultiplier;
+                    var scaledDisp = dispDiff * viewModel.ForceDiagramMultiplier *1000;
 
                     // 矢印の頂点（I点）と尾（頂点 - scaledDisp）
                     var head3D = s.NodeI.Coord;
@@ -2862,7 +3004,8 @@ namespace PileDesign.Views
                     if (viewModel.IsResultValueVisible)
                     {
                         string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
-                        AddText3D(Brushes.Black, string.Format(fmt, forceMag), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", GetAngle(dir));
+                        //AddText3D(Brushes.Black, string.Format(fmt, forceMag), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", GetAngle(dir));
+                        AddText3D(Brushes.Black, string.Format(fmt, forceMag), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", 0);
                     }
                 }
                 catch
@@ -4950,8 +5093,8 @@ namespace PileDesign.Views
                 .ToList();
 
             // 進行方向に合わせてソート（v1 -> v2 の方向）
-            if (v1 <= v2) crossBounds = crossBounds.OrderBy(x => x).ToList();
-            else crossBounds = crossBounds.OrderByDescending(x => x).ToList();
+            if (v1 <= v2) crossBounds = [.. crossBounds.OrderBy(x => x)];
+            else crossBounds = [.. crossBounds.OrderByDescending(x => x)];
 
             // tList: 0.0, t_cross..., 1.0
             var tList = new List<double> { 0.0 };
@@ -5016,7 +5159,7 @@ namespace PileDesign.Views
                         IsClosed = true,
                         IsFilled = true
                     };
-                    fig.Segments.Add(new PolyLineSegment(new[] { sp2, bp2, bp1 }, true));
+                    fig.Segments.Add(new PolyLineSegment([sp2, bp2, bp1], true));
                     var poly = new PathGeometry();
                     poly.Figures.Add(fig);
                     if (poly.CanFreeze) poly.Freeze();
@@ -5176,49 +5319,114 @@ namespace PileDesign.Views
         }
 
         //// ラベル取得メソッド
+        //private string GetLabelText(PileLayoutDataItem pilelocation)
+        //{
+        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+        //    string label = string.Empty;
+
+        //    if (viewModel.IsPileRefVisible) label += pilelocation.PileBodyNo.ToString() + ", ";
+        //    if (viewModel.IsSoilRefVisible) label += pilelocation.GroundNo.ToString() + ", ";
+        //    if (viewModel.IsPileTopLevelVisible) label += pilelocation.Point3D.Z.ToString("N3") + ", ";
+        //    if (viewModel.IsGroupPileFactorLabelVisible) label += pilelocation.GroupPileFactor.ToString("N3") + ", ";
+        //    if (viewModel.IsPileDiaSpacingRatioLabelVisible) label += pilelocation.PileSpacingFactor.ToString("N3") + ", ";
+        //    if (viewModel.IsFrontPileLabelVisible)
+        //    {
+        //        var selectedLoadCase = LoadCases.GetLoadCase(viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+
+        //        if (selectedLoadCase.Level == 1)
+        //        {
+        //            var loadCases1 = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1;
+        //            for (int i = 0; i < loadCases1.Count; i++)
+        //            {
+        //                if (loadCases1[i].LoadName == selectedLoadCase.LoadName)
+        //                {
+        //                    label += pilelocation.IsFrontPiles[i] == true ? "前, " : "後, ";
+        //                    break;
+        //                }
+        //            }
+        //        }
+        //        else if (selectedLoadCase.Level == 2)
+        //        {
+        //            var loadCases2 = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2;
+        //            for (int i = 0; i < loadCases2.Count; i++)
+        //            {
+        //                if (loadCases2[i].LoadName == selectedLoadCase.LoadName)
+        //                {
+        //                    label += pilelocation.IsFrontPiles[i] == true ? "前, " : "後, ";
+        //                    break;
+        //                }
+        //            }
+        //        }
+        //    }
+        //    if (label.Length > 0)
+        //    {
+        //        label = label[..^2]; // 最後のカンマとスペースを削除
+        //    }
+        //    return label;
+        //}
+        //// ラベル取得メソッド（Nullガード強化）
         private string GetLabelText(PileLayoutDataItem pilelocation)
         {
-            MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-            string label = string.Empty;
+            var vm = DataContext as MainWindowViewModel;
+            if (vm == null) return string.Empty;
 
-            if (viewModel.IsPileRefVisible) label += pilelocation.PileBodyNo.ToString() + ", ";
-            if (viewModel.IsSoilRefVisible) label += pilelocation.GroundNo.ToString() + ", ";
-            if (viewModel.IsPileTopLevelVisible) label += pilelocation.Point3D.Z.ToString("N3") + ", ";
-            if (viewModel.IsGroupPileFactorLabelVisible) label += pilelocation.GroupPileFactor.ToString("N3") + ", ";
-            if (viewModel.IsPileDiaSpacingRatioLabelVisible) label += pilelocation.PileSpacingFactor.ToString("N3") + ", ";
-            if (viewModel.IsFrontPileLabelVisible)
+            var sb = new System.Text.StringBuilder();
+
+            // 基本ラベル
+            if (vm.IsPileRefVisible) sb.Append($"{pilelocation.PileBodyNo}, ");
+            if (vm.IsSoilRefVisible) sb.Append($"{pilelocation.GroundNo}, ");
+            if (vm.IsPileTopLevelVisible) sb.Append($"{pilelocation.Point3D.Z:N3}, ");
+            if (vm.IsGroupPileFactorLabelVisible) sb.Append($"{pilelocation.GroupPileFactor:N3}, ");
+            if (vm.IsPileDiaSpacingRatioLabelVisible) sb.Append($"{pilelocation.PileSpacingFactor:N3}, ");
+
+            // 前後杭ラベル
+            if (vm.IsFrontPileLabelVisible)
             {
-                var selectedLoadCase = LoadCases.GetLoadCase(viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                var lci = vm.CurrentInputModel?.LoadCasesInput;
+                var selected = (lci?.AllLoadCases != null)
+                    ? LoadCases.GetLoadCase(lci.AllLoadCases, vm.SelectedLoadCaseName)
+                    : null;
 
-                if (selectedLoadCase.Level == 1)
+                if (selected != null && pilelocation.IsFrontPiles != null)
                 {
-                    var loadCases1 = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1;
-                    for (int i = 0; i < loadCases1.Count; i++)
+                    if (selected.Level == 1)
                     {
-                        if (loadCases1[i].LoadName == selectedLoadCase.LoadName)
+                        var list = lci?.LoadCasesLevel1;
+                        if (list != null)
                         {
-                            label += pilelocation.IsFrontPiles[i] == true ? "前, " : "後, ";
-                            break;
+                            for (int i = 0; i < list.Count; i++)
+                            {
+                                if (list[i]?.LoadName == selected.LoadName)
+                                {
+                                    if (i < pilelocation.IsFrontPiles.Count)
+                                        sb.Append(pilelocation.IsFrontPiles[i] ? "前, " : "後, ");
+                                    break;
+                                }
+                            }
                         }
                     }
-                }
-                else if (selectedLoadCase.Level == 2)
-                {
-                    var loadCases2 = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2;
-                    for (int i = 0; i < loadCases2.Count; i++)
+                    else if (selected.Level == 2)
                     {
-                        if (loadCases2[i].LoadName == selectedLoadCase.LoadName)
+                        var list = lci?.LoadCasesLevel2;
+                        if (list != null)
                         {
-                            label += pilelocation.IsFrontPiles[i] == true ? "前, " : "後, ";
-                            break;
+                            for (int i = 0; i < list.Count; i++)
+                            {
+                                if (list[i]?.LoadName == selected.LoadName)
+                                {
+                                    if (i < pilelocation.IsFrontPiles.Count)
+                                        sb.Append(pilelocation.IsFrontPiles[i] ? "前, " : "後, ");
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
-            if (label.Length > 0)
-            {
+
+            var label = sb.ToString();
+            if (label.EndsWith(", "))
                 label = label[..^2]; // 最後のカンマとスペースを削除
-            }
             return label;
         }
 
@@ -6013,7 +6221,8 @@ namespace PileDesign.Views
             {
                 element.IsSelected = false;
             }
-            UpdateCanvas3D();
+            //UpdateCanvas3D();
+            RequestUpdateCanvas3D();
             MatchDataGridSelectedItems();
         }
 
@@ -6062,7 +6271,7 @@ namespace PileDesign.Views
                     nearestPileLayoutDataItem.IsSelected = true;
                     hasSelected = true;
                 }
-                UpdateCanvas3D();
+                RequestUpdateCanvas3D(); // UpdateCanvas3D();
                 MatchDataGridSelectedItems();
             }
 
@@ -6089,7 +6298,7 @@ namespace PileDesign.Views
                 {
                     nearestElement.IsSelected = true;
                     hasSelected = true;
-                    UpdateCanvas3D();
+                    RequestUpdateCanvas3D(); // UpdateCanvas3D();
                 }
             }
             return hasSelected;
@@ -6229,7 +6438,8 @@ namespace PileDesign.Views
                 }
             }
             MatchDataGridSelectedItems();
-            UpdateCanvas3D();
+            //UpdateCanvas3D();
+            RequestUpdateCanvas3D();
         }
 
         private bool IsLineIntersectingRectangle(Point p1, Point p2, double x1, double y1, double x2, double y2)
