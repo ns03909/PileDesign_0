@@ -14,6 +14,7 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:views="clr-namespace:PileDesign.Views"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:ribbon="clr-namespace:System.Windows.Controls.Ribbon;assembly=System.Windows.Controls.Ribbon"
         mc:Ignorable="d"
         Loaded="Window_Loaded"
         Closed="Window_Closed"
@@ -56,7 +57,7 @@
         <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
             <MenuItem Click="ExportCsvFromContextMenu_Click">
                 <MenuItem.Icon>
-                    <svgc:SvgViewbox Source="/Icons/CSVFileOutput.svg" Style="{StaticResource SvgIconStyle}"/>
+                    <svgc:SvgViewbox Source="/Icons/CSVFileOutput.svg" Style="{DynamicResource SvgIconStyle16}"/>
                 </MenuItem.Icon>
                 <MenuItem.Header>
                     <TextBlock Text="CSVファイル出力"/>
@@ -194,9 +195,31 @@
         </Style>
 
         <!-- SvgViewboxコントロール用のスタイルを定義 -->
-        <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
+        <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
             <Setter Property="Width" Value="16"/>
             <Setter Property="Height" Value="16"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="StretchDirection" Value="DownOnly"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+        
+        <Style x:Key="SvgIconStyle24" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="StretchDirection" Value="DownOnly"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <Style x:Key="SvgIconStyle32" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="StretchDirection" Value="DownOnly"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
 
         <!-- ToolTipのスタイルを定義 -->
@@ -250,7 +273,7 @@
 
                     <MenuItem Command="{Binding NewInputModelFileCommand}" InputGestureText="Ctrl+N">
                         <!--<MenuItem.Icon>
-                            <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle}"/>
+                            <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle16}"/>
                         </MenuItem.Icon>-->
                         <MenuItem.Header>
                             <TextBlock Text="新規"/>
@@ -259,7 +282,7 @@
 
                     <MenuItem Command="{Binding OpenInputModelFileCommand}" InputGestureText="Ctrl+O">
                         <MenuItem.Icon>
-                            <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle}"/>
+                            <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle16}"/>
                         </MenuItem.Icon>
                         <MenuItem.Header>
                             <TextBlock Text="開く"/>
@@ -268,7 +291,7 @@
 
                     <MenuItem Command="{Binding SaveInputModelFileCommand}" InputGestureText="Ctrl+S">
                         <MenuItem.Icon>
-                            <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle}"/>
+                            <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle16}"/>
                         </MenuItem.Icon>
                         <MenuItem.Header>
                             <TextBlock Text="保存"/>
@@ -277,7 +300,7 @@
 
                     <MenuItem Command="{Binding SaveInputModelFileAsCommand}" InputGestureText="Ctrl+Shift+S">
                         <MenuItem.Icon>
-                            <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle}"/>
+                            <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle16}"/>
                         </MenuItem.Icon>
                         <MenuItem.Header>
                             <TextBlock Text="名前を付けて保存"/>
@@ -286,7 +309,7 @@
 
                     <MenuItem Command="{Binding OpenDocxOutputWindowCommand}">
                         <MenuItem.Icon>
-                            <svgc:SvgViewbox Source="/Icons/DocxFileOutput.svg" Style="{StaticResource SvgIconStyle}"/>
+                            <svgc:SvgViewbox Source="/Icons/DocxFileOutput.svg" Style="{StaticResource SvgIconStyle16}"/>
                         </MenuItem.Icon>
                         <MenuItem.Header>
                             <TextBlock Text="Docxファイル出力"/>
@@ -295,22 +318,58 @@
                 </MenuItem>
 
                 <MenuItem Header="編集">
-                    <MenuItem Header="基本設定" Command="{Binding OpenFundamentalWindowCommand}"/>
-                    <MenuItem Header="荷重ケース編集" Command="{Binding OpenLoadCaseWindowCommand}" InputGestureText="Ctrl + L"/>
-                    <MenuItem Header="地盤編集" Command="{Binding OpenGroundWindowCommand}" InputGestureText="Ctrl + G"/>
-                    <MenuItem Header="杭体編集" Command="{Binding OpenPileBodyWindowCommand}" InputGestureText="Ctrl + B"/>
-                    <MenuItem Header="軸力確認" Command="{Binding AxialForceCheckCommand}" InputGestureText="Ctrl + K"/>
-                    <MenuItem Header="杭セット・根入部セット要素分割" Command="{Binding OpenElementDivisionWindowCommand}" InputGestureText="Ctrl + D"/>
+                    <MenuItem Header="基本設定" Command="{Binding OpenFundamentalWindowCommand}">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/FundamentalWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="荷重ケース編集" Command="{Binding OpenLoadCaseWindowCommand}" InputGestureText="Ctrl + L">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/LoadCaseWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="地盤編集" Command="{Binding OpenGroundWindowCommand}" InputGestureText="Ctrl + G">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/GroundWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="杭体編集" Command="{Binding OpenPileBodyWindowCommand}" InputGestureText="Ctrl + B">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/PileBodyWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="軸力確認" Command="{Binding AxialForceCheckCommand}" InputGestureText="Ctrl + K">
+                        <!--<MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/DocxFileOutput.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>-->
+                    </MenuItem>
+                    <MenuItem Header="杭セット・根入部セット要素分割" Command="{Binding OpenElementDivisionWindowCommand}" InputGestureText="Ctrl + D">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/ElementDivisionWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                 </MenuItem>
 
                 <MenuItem Header="解析実行">
-                    <MenuItem Header="水平解析" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" InputGestureText="F5"/>
-                    <MenuItem Header="単杭沈下解析" Command="{Binding OpenSettlementWindowCommand}" InputGestureText="F6"/>
+                    <MenuItem Header="水平解析" Command="{Binding OpenLateralLoadAnalysisWindowCommand}" InputGestureText="F5">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/LateralLoadAnalysisWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="単杭沈下解析" Command="{Binding OpenSettlementWindowCommand}" InputGestureText="F6">
+                        <MenuItem.Icon>
+                            <svgc:SvgViewbox Source="/Icons/SettlementWindow.svg" Style="{StaticResource SvgIconStyle16}"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
                 </MenuItem>
 
                 <MenuItem Header="結果">
-                    <MenuItem Header="グラフ表示" Command="{Binding OpenGraphWindowCommand}"/>
-                    <MenuItem Header="テーブル表示"/>
+                    <MenuItem Header="グラフ表示" Command="{Binding OpenGraphWindowCommand}">
+                        <svgc:SvgViewbox Source="/Icons/Graph.svg" Style="{StaticResource SvgIconStyle16}"/>
+                    </MenuItem>
+                    <MenuItem Header="テーブル表示">
+                        <svgc:SvgViewbox Source="/Icons/Table.svg" Style="{StaticResource SvgIconStyle16}"/>
+                    </MenuItem>
                 </MenuItem>
 
                 <MenuItem Header="計算例">
@@ -339,19 +398,27 @@
 
                 <StackPanel Orientation="Horizontal" Grid.Column="0" Grid.ColumnSpan="2">
 
-                    <Button x:Name="ButtonFundamental" Content="基本設定" Width="70" Margin="5,0,5,0"
-                            Command="{Binding OpenFundamentalWindowCommand}"/>
+                    <Button x:Name="ButtonFundamental" ToolTip="基本設定" 
+                            Command="{Binding OpenFundamentalWindowCommand}">
+                        <svgc:SvgViewbox Source="/Icons/FundamentalWindow.svg" Style="{StaticResource SvgIconStyle32}"/>
+                    </Button>
 
-                    <Button x:Name="ButtonLoadCase" Content="荷重条件" Width="70" Margin="5,0,5,0"
-                            Command="{Binding OpenLoadCaseWindowCommand}"/>
+                    <Button x:Name="ButtonLoadCase" ToolTip="荷重条件"
+                            Command="{Binding OpenLoadCaseWindowCommand}">
+                        <svgc:SvgViewbox Source="/Icons/LoadCaseWindow.svg" Style="{StaticResource SvgIconStyle32}"/>
+                    </Button>
 
-                    <Button x:Name="ButtonGround" Content="地盤" Width="70" Margin="5,0,5,0"
+                    <Button x:Name="ButtonGround" ToolTip="地盤" 
                             PreviewMouseDown="ButtonGround_PreviewMouseDown"
-                            Command="{Binding OpenGroundWindowCommand}"/>
+                            Command="{Binding OpenGroundWindowCommand}">
+                        <svgc:SvgViewbox Source="/Icons/GroundWindow.svg" Style="{StaticResource SvgIconStyle32}"/>
+                    </Button>
 
-                    <Button x:Name="ButtonPileBody" Content="杭体" Width="70" Margin="5,0,5,0"
+                    <Button x:Name="ButtonPileBody" ToolTip="杭体" 
                             PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
-                            Command="{Binding OpenPileBodyWindowCommand}"/>
+                            Command="{Binding OpenPileBodyWindowCommand}">
+                        <svgc:SvgViewbox Source="/Icons/PileBodyWindow.svg" Style="{StaticResource SvgIconStyle32}"/>
+                    </Button>
 
                     <Rectangle Width="5" Height="18" Fill="LightGray"/>
 
@@ -387,8 +454,8 @@
                             IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
 
-                    <!--<Separator Width="1" Height="24" Margin="5,5" 
-                               BorderBrush="Black" BorderThickness="100"/>-->
+                    <Separator Width="1" Height="24" Margin="5,5" 
+                               BorderBrush="Black" BorderThickness="100"/>
                     <Rectangle Width="5" Height="18" Fill="LightGray"/>
 
                     <Button x:Name ="ButtonGroupPileSettlement"
@@ -397,14 +464,96 @@
                             Width="100" Margin="5,0,5,0"
                             Style="{StaticResource OpenGroupPileSettlementWindowButtonStyle}"
                             Click="ButtonGroupPileSettlement_Click"/>
-                    <!--Command="{Binding OpenGroupPileSettlementAnalysisWindowCommand}"-->
-                    <!--Command="{Binding OpenPileBodyWindowCommand}"/>-->
+                    <!--Command="{Binding OpenGroupPileSettlementAnalysisWindowCommand}"
+                    Command="{Binding OpenPileBodyWindowCommand}"/>-->
 
                 </StackPanel>
+                <!--<ribbon:Ribbon Grid.Column="0" Grid.ColumnSpan="2">
+                    <ribbon:RibbonTab Header="メイン">
+                        <ribbon:RibbonGroup Header="設定">
+                            <ribbon:RibbonButton x:Name="ButtonFundamental"
+                                 Label="基本設定"
+                                 Command="{Binding OpenFundamentalWindowCommand}">
 
+                                <svgc:SvgViewbox Source="/Icons/FundamentalWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+
+                            <ribbon:RibbonButton x:Name="ButtonLoadCase"
+                                 Label="荷重条件"
+                                 Command="{Binding OpenLoadCaseWindowCommand}">
+                                <svgc:SvgViewbox Source="/Icons/LoadCaseWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+
+                            <ribbon:RibbonButton x:Name="ButtonGround"
+                                 Label="地盤"
+                                 PreviewMouseDown="ButtonGround_PreviewMouseDown"
+                                 Command="{Binding OpenGroundWindowCommand}">
+                                <svgc:SvgViewbox Source="/Icons/GroundWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+
+                            <ribbon:RibbonButton x:Name="ButtonPileBody"
+                                 Label="杭体"
+                                 PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
+                                 Command="{Binding OpenPileBodyWindowCommand}">
+                                <svgc:SvgViewbox Source="/Icons/PileBodyWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+
+                            <ribbon:RibbonButton x:Name="ButtonAxialForceCheck"
+                                 Label="軸力確認"
+                                 PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
+                                 Command="{Binding AxialForceCheckCommand}">
+                                <svgc:SvgViewbox Source="/Icons/DocxFileOutput.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+                        </ribbon:RibbonGroup>
+
+                        <ribbon:RibbonGroup Header="解析">
+                            <ribbon:RibbonButton x:Name="ButtonExecuteAnalyse"
+                                 Label="{Binding IsElementSplit, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='要素分割(済),要素分割(未)'}"
+                                 Command="{Binding OpenElementDivisionWindowCommand}">
+                                <svgc:SvgViewbox Source="/Icons/ElementDivisionWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+
+                            <ribbon:RibbonButton x:Name="ButtonLateralLoadAnalysisSettlement"
+                                 Label="{Binding IsHorizontalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='水平解析(済),水平解析(未)'}"
+                                 Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
+                                 IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <svgc:SvgViewbox Source="/Icons/LateralLoadAnalysisWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+
+                            <ribbon:RibbonButton x:Name="ButtonSettlement"
+                                 Label="{Binding IsVerticalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='単杭沈下解析(済),単杭沈下解析(未)'}"
+                                 PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
+                                 Command="{Binding OpenSettlementWindowCommand}"
+                                 IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <svgc:SvgViewbox Source="/Icons/SettlementWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+                        </ribbon:RibbonGroup>
+
+                        <ribbon:RibbonGroup Header="群杭">
+                            <ribbon:RibbonButton x:Name="ButtonGroupPileSettlement"
+                                 Label="{Binding IsGroupPileSettlementAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='群杭沈下解析(済),群杭沈下解析(未)'}"
+                                 Click="ButtonGroupPileSettlement_Click">
+                                <svgc:SvgViewbox Source="/Icons/SettlementWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonButton>
+                        </ribbon:RibbonGroup>
+
+                        <ribbon:RibbonGroup Header="ヘルプ">
+                            <ribbon:RibbonToggleButton x:Name="RibbonQuickHintToggle"
+                                       Label="クイックヒント"
+                                       IsChecked="{Binding IsQuickHintVisible}"
+                                       Checked="QuickHintToggle_Checked"
+                                       Unchecked="QuickHintToggle_Unchecked">
+                                <svgc:SvgViewbox Source="/Icons/Help.svg" Style="{StaticResource SvgIconStyle24}"/>
+                            </ribbon:RibbonToggleButton>
+                        </ribbon:RibbonGroup>
+                    </ribbon:RibbonTab>
+                </ribbon:Ribbon>-->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <!--<Button Content="基礎指針'19計算例9" Command="{Binding Example9Command}" Width="120" Margin="5,0,5,0" />-->
-                    <ToggleButton Content="クイックヒント" IsChecked="{Binding IsQuickHintVisible}" Width="70" Margin="5,0,5,0" />
+                    <ToggleButton ToolTip="クイックヒント" IsChecked="{Binding IsQuickHintVisible}"  Margin="5,0,5,0" Checked="QuickHintToggle_Checked"
+                        Unchecked="QuickHintToggle_Unchecked">
+                        <svgc:SvgViewbox Source="/Icons/QuickHint.svg" Style="{StaticResource SvgIconStyle24}"/>
+                    </ToggleButton>
                 </StackPanel>
             </Grid>
 
@@ -415,37 +564,37 @@
                 <ToolBar Band="1" BandIndex="1" IsOverflowOpen="True" >
 
                     <Button ToolTip="すべて選択 (Ctrl + Shift + A)" Click="SelectAllNodesButton_Click" >
-                        <svgc:SvgViewbox Source="/Icons/SelectAll.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/SelectAll.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button ToolTip="全選択解除 (escape)" Click="DeselectAllNodesButton_Click" >
-                        <svgc:SvgViewbox Source="/Icons/DeselectAll.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/DeselectAll.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
 
                 </ToolBar>
 
                 <ToolBar Band="1" BandIndex="2">
                     <Button ToolTip="すべてアクティブ (ctrl + A)" Click="ShowAllNodesButton_Click" >
-                        <svgc:SvgViewbox Source="/Icons/ActiveAll.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/ActiveAll.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button ToolTip="アクティブ (F2)" Click="ShowSelectedNodesButton_Click" >
-                        <svgc:SvgViewbox Source="/Icons/SelectedActive.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/SelectedActive.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button ToolTip="非アクティブ (Shift + F2)" Click="ShowUnselectedNodesButton_Click">
-                        <svgc:SvgViewbox Source="/Icons/SelectedInactive.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/SelectedInactive.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button ToolTip="アクティブ反転" Click="InvertActiveNodesButton_click">
-                        <svgc:SvgViewbox Source="/Icons/InvertActive.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/InvertActive.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
 
                 </ToolBar>
                 <!--<ToolBar Band="1" BandIndex="3">
 
                     <ToggleButton ToolTip="節点表示" IsChecked="{Binding IsNodeVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/NodeVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/NodeVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="要素表示" IsChecked="{Binding IsElementVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/ElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/ElementVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                 </ToolBar>-->
@@ -456,7 +605,7 @@
                                 節点番号表示
                             </ToolTip>
                         </ToggleButton.ToolTip>
-                        <svgc:SvgViewbox Source="/Icons/NodeNo.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/NodeNo.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton IsChecked="{Binding IsElementNoVisible, UpdateSourceTrigger=PropertyChanged}">
@@ -465,7 +614,7 @@
                                 要素番号表示
                             </ToolTip>
                         </ToggleButton.ToolTip>
-                        <svgc:SvgViewbox Source="/Icons/ElementNo.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/ElementNo.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                 </ToolBar>-->
@@ -473,60 +622,60 @@
                 <ToolBar Band="1" BandIndex="5">
 
                     <Button ToolTip="重複節点削除" Click="MergeNodesButton_click">
-                        <svgc:SvgViewbox Source="/Icons/MergeNodes.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/MergeNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
 
                     <Button ToolTip="重複要素削除" Click="MergeElementsButton_click">
-                        <svgc:SvgViewbox Source="/Icons/MergeElements.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/MergeElements.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                 </ToolBar>
 
                 <!--<ToolBar Band="1" BandIndex="6">
                     <ToggleButton ToolTip="通り心表示" IsChecked="{Binding IsGridLineVisible, Mode=TwoWay}" >
-                        <svgc:SvgViewbox Source="/Icons/GridVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/GridVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="目盛表示" IsChecked="{Binding IsTickMarkVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/TickMarkVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/TickMarkVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="杭体形状表示" IsChecked="{Binding IsPileSectionVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/WireFrameVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/WireFrameVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="根入部形状表示" IsChecked="{Binding IsEmbedmentBoxVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/IsEmbedmentBoxVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/IsEmbedmentBoxVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="杭周土層表示" IsChecked="{Binding IsGroundVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="慣性力中心表示" x:Name="CheckBoxCommonActionPoint"
                             IsChecked="{Binding IsActionPointVisible, Mode=TwoWay}">
                         <svgc:SvgViewbox Source="/Icons/LateralLoadActionPointVisible.svg" 
-                                         Style="{StaticResource SvgIconStyle}"/>
+                                         Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="群杭沈下用土層表示" IsChecked="{Binding IsSettlementGroundVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/SoilLayerVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/SoilLayerVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="群杭沈下用荷重面表示" IsChecked="{Binding IsSettlementLoadVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/LoadingPlaneVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/LoadingPlaneVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                 </ToolBar>
 
                 <ToolBar Band="1" BandIndex="7">
                     <ToggleButton ToolTip="要素縮小表示" 
                                   IsChecked="{Binding IsShrinkElementMode, UpdateSourceTrigger=PropertyChanged}">
-                        <svgc:SvgViewbox Source="/Icons/ShrinkElementMode.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/ShrinkElementMode.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                 </ToolBar>-->
 
                 <ToolBar Band="1" BandIndex="8">
                     <Button ToolTip="ズームフィット (ctrl + 0)" Click="ZoomFitButton_Click">
-                        <svgc:SvgViewbox Source="/Icons/ZoomFit.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/ZoomFit.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                 </ToolBar>
 
@@ -534,40 +683,42 @@
                     <!--<Separator Margin="2"/>-->
 
                     <Button x:Name="ButtonXYPlane" Click="ButtonXYPlane_Clicked" ToolTip="平面 (Ctrl + Shift + T)">
-                        <svgc:SvgViewbox Source="/Icons/TopView.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/TopView.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button x:Name="ButtonYZPlane"  Click="ButtonYZPlane_Clicked" ToolTip="右面 (Ctrl + Shift + R)">
-                        <svgc:SvgViewbox Source="/Icons/RightView.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/RightView.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button x:Name="ButtonXZPlane" Click="ButtonXZPlane_Clicked" ToolTip="正面 (Ctrl + Shift + F)">
-                        <svgc:SvgViewbox Source="/Icons/FrontView.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/FrontView.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                     <Button x:Name="ButtonIsometric" Click="ButtonIsometric_Clicked" ToolTip="アイソメ (Ctrl + Shift + I)">
-                        <svgc:SvgViewbox Source="/Icons/IsometricView.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/IsometricView.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
                 </ToolBar>
 
                 <!--<ToolBar Band="1" BandIndex="10">
                     <ToggleButton ToolTip="解析前処理モード (F7)"
                         IsChecked="{Binding IsPostAnalysisMode, Converter={StaticResource BooleanNegationConverter}, UpdateSourceTrigger=PropertyChanged}">
-                        <svgc:SvgViewbox Source="/Icons/PreAnalysisMode.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/PreAnalysisMode.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                     <ToggleButton ToolTip="解析後処理モード (Ctrl + F7)"
                         IsChecked="{Binding IsPostAnalysisMode, UpdateSourceTrigger=PropertyChanged}">
-                        <svgc:SvgViewbox Source="/Icons/PostAnalysisMode.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/PostAnalysisMode.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                 </ToolBar>-->
 
                 <ToolBar Band="1" BandIndex="11">
                     <Button ToolTip="ディスプレイ"  Command="{Binding OpenOptionWindowCommand}">
-                        <svgc:SvgViewbox Source="/Icons/Display.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/Display.svg" Style="{StaticResource SvgIconStyle24}"/>
                     </Button>
-                    <Button Content="✗解析結果削除" ToolTip="解析結果削除" Command="{Binding DeleteAnalysisResultsCommand}"/>
+                    <Button ToolTip="解析結果削除" Command="{Binding DeleteAnalysisResultsCommand}">
+                        <svgc:SvgViewbox Source="/Icons/RemoveResults.svg" Style="{StaticResource SvgIconStyle24}"/>
+                    </Button>
                 </ToolBar>
 
                 <!--<ToolBar Band="1" BandIndex="12" >
                     <ToggleButton ToolTip="XYZ軸表示" IsChecked="{Binding IsXYZAxesVisible, Mode=TwoWay}">
-                        <svgc:SvgViewbox Source="/Icons/AxesVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/AxesVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <StackPanel Orientation="Horizontal" ToolBar.OverflowMode="Always">
@@ -585,10 +736,10 @@
                 <!--<ToolBar Band="1" BandIndex="13">
                     <ToggleButton ToolTip="杭頭" IsChecked="{Binding IsElementShownAtSettlementPlane,
                         Converter={StaticResource BooleanNegationConverter}}">
-                        <svgc:SvgViewbox Source="/Icons/PileTopSelected.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/PileTopSelected.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                     <ToggleButton ToolTip="沈下荷重面" IsChecked="{Binding IsElementShownAtSettlementPlane}">
-                        <svgc:SvgViewbox Source="/Icons/LoadingPlaneSelected.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/LoadingPlaneSelected.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                 </ToolBar>
 
@@ -596,23 +747,23 @@
 
                     <ToggleButton ToolTip="バブル" IsChecked="{Binding IsBubbleVisible, UpdateSourceTrigger=PropertyChanged}"
                                   Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <svgc:SvgViewbox Source="/Icons/BubbleVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/BubbleVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     <ToggleButton ToolTip="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}"
                                   Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
                     <ToggleButton ToolTip="変形後要素" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}"
                                   Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                     </ToggleButton>
 
                     -->
                 <!-- バブル径グループ -->
                 <!--
                     <StackPanel Orientation="Horizontal" ToolBar.OverflowMode="Always">
-                        <svgc:SvgViewbox Source="/Icons/BubbleDia.svg" Style="{StaticResource SvgIconStyle}"/>
+                        <svgc:SvgViewbox Source="/Icons/BubbleDia.svg" Style="{StaticResource SvgIconStyle16}"/>
                         <Slider Minimum="0" Maximum="200"
                             Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                         <TextBox Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -623,7 +774,7 @@
                 <!-- 矢印全長グループ -->
                 <!--
                     <StackPanel Orientation="Horizontal" ToolBar.OverflowMode="Always">
-                        <svgc:SvgViewbox Source="/Icons/ArrowLength.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印全長"/>
+                        <svgc:SvgViewbox Source="/Icons/ArrowLength.svg" Style="{StaticResource SvgIconStyle16}" ToolTip="矢印全長"/>
                         <Slider Minimum="0" Maximum="200"
                             Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                         <TextBox Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -634,7 +785,7 @@
                 <!-- 矢印頭長グループ -->
                 <!--
                     <StackPanel Orientation="Horizontal" ToolBar.OverflowMode="Always">
-                        <svgc:SvgViewbox Source="/Icons/ArrowHeadLength.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印頭長"/>
+                        <svgc:SvgViewbox Source="/Icons/ArrowHeadLength.svg" Style="{StaticResource SvgIconStyle16}" ToolTip="矢印頭長"/>
                         <Slider Minimum="0" Maximum="50"
                             Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                         <TextBox Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -645,7 +796,7 @@
                 <!-- 矢印頭径グループ -->
                 <!--
                     <StackPanel Orientation="Horizontal" ToolBar.OverflowMode="Always">
-                        <svgc:SvgViewbox Source="/Icons/ArrowHeadDia.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印頭径"/>
+                        <svgc:SvgViewbox Source="/Icons/ArrowHeadDia.svg" Style="{StaticResource SvgIconStyle16}" ToolTip="矢印頭径"/>
                         <Slider Minimum="0" Maximum="20"
                             Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                         <TextBox Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -709,25 +860,28 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <!--<Expander>-->
 
-                                                    <!--<StackPanel Orientation="Horizontal"-->
-                                                    <Button Content="慣性力作用点杭配置図心移動" 
-                                                        Command="{Binding MoveForceActionPointToAverageCenterCommand}" 
-                                                        Grid.Column="0" HorizontalAlignment="Stretch"/>
-                                                    <Button Content="群杭係数グラフ確認" 
-                                                        Command="{Binding GroupPileFactorCommand}" 
-                                                        Grid.Column="1" HorizontalAlignment="Stretch"/>
-                                                    <!--</StackPanel>-->
+                                                    <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                                        <Button ToolTip="慣性力作用点杭配置図心移動"  Command="{Binding MoveForceActionPointToAverageCenterCommand}" >
+                                                            <svgc:SvgViewbox Source="/Icons/MoveActionPointToCentroid.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
+                                                        <Button ToolTip="群杭係数グラフ確認" 
+                                                            Command="{Binding GroupPileFactorCommand}" >
+                                                            <svgc:SvgViewbox Source="/Icons/GroupPileGraph.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
+                                                    </StackPanel>
                                                 </Grid>
 
                                                 <Separator/>
                                                 <!--</Expander>-->
                                                 <Button x:Name="ButtonAddPile"
-                                                    Content="杭配置追加"
+                                                    ToolTip="杭配置追加"
                                                     Foreground="white"
                                                     Background="#62B0E2"
-                                                    Command="{Binding AddPileCommand}" VerticalAlignment="Top"/>
+                                                    Command="{Binding AddPileCommand}" VerticalAlignment="Top">
+                                                    <svgc:SvgViewbox Source="/Icons/AddPileLoc.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                                
                                                 <Popup x:Name="QuickHintPopup1"
                                                         PlacementTarget="{Binding ElementName=ButtonAddPile}"
                                                         Placement="Bottom"
@@ -874,9 +1028,9 @@
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Binding="{Binding Z, StringFormat={}{0:+0.00;-0.00;+0.00}, Mode=TwoWay}"
-                                                Width="*"
-                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                MinWidth="50">
+                                                            Width="*"
+                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                            MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="杭頭" TextAlignment="Center"/>
@@ -988,10 +1142,10 @@
                                                         <DataGridTemplateColumn.CellTemplate>
                                                             <DataTemplate>
                                                                 <Button
-                                                            x:Name="ButtonPileLayoutDelete"
-                                                            Click="ButtonPileLayoutDelete_Click"
-                                                            Content="削除"
-                                                            Tag="{Binding}" />
+                                                                    x:Name="ButtonPileLayoutDelete"
+                                                                    Click="ButtonPileLayoutDelete_Click"
+                                                                    Content="削除"
+                                                                    Tag="{Binding}" />
                                                             </DataTemplate>
                                                         </DataGridTemplateColumn.CellTemplate>
                                                     </DataGridTemplateColumn>
@@ -1033,11 +1187,17 @@
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
+                                                        <StackPanel Orientation="Horizontal" Grid.Column="0" >
+                                                            <Button x:Name="ButtonEInput" ToolTip="転倒モーメント簡易入力" 
+                                                            Command="{Binding AutoOverturningMomentCommand}">
+                                                            <svgc:SvgViewbox Source="/Icons/OTMInput.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
+                                                        <Button ToolTip="慣性力作用点のVL重心への移動" 
+                                                            Command="{Binding AutoActionPointXYCommand}">
+                                                            <svgc:SvgViewbox Source="/Icons/MoveActionPointToGravityCenter.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
+                                                        </StackPanel>
 
-                                                        <Button x:Name="ButtonEInput" Content="転倒モーメント簡易入力" Grid.Column="0" HorizontalAlignment="Stretch"
-                                                            Command="{Binding AutoOverturningMomentCommand}"/>
-                                                        <Button Content="慣性力作用点のVL重心への移動" Grid.Column="1" HorizontalAlignment="Stretch"
-                                                            Command="{Binding AutoActionPointXYCommand}"/>
                                                     </Grid>
 
                                                     <!--</StackPanel>-->
@@ -1785,8 +1945,10 @@
                                             <StackPanel Grid.Row="0" Orientation="Vertical">
                                                 <!--<ToolBar>-->
                                                 <Button x:Name ="ButtonAutoIsFrontPiles"
-                                                    Content="自動選別"
-                                                    Command="{Binding AutoIsFrontPilesCommand}"/>
+                                                    ToolTip="自動選別"
+                                                    Command="{Binding AutoIsFrontPilesCommand}">
+                                                    <svgc:SvgViewbox Source="/Icons/AutoFrontRear.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
                                                 <!--</ToolBar>-->
                                             </StackPanel>
 
@@ -1888,7 +2050,7 @@
                                                              Grid.Row="0" Grid.Column="1"
                                                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                              KeyDown="TextBox_KeyDown"/>
-                                                    <Button Content="根入部平面自動調整" Command="{ Binding AdjustEmbedmentPlanCommand}"
+                                                    <Button Command="{ Binding AdjustEmbedmentPlanCommand}"
                                                             Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                                             Click="EmbedmentAdjustButton_Click">
                                                         <Button.ToolTip>
@@ -1897,6 +2059,7 @@
                                                                         外周の杭心～外面距離を指定の距離とする形状にします
                                                             </TextBlock>
                                                         </Button.ToolTip>
+                                                        <svgc:SvgViewbox Source="/Icons/AdjustEmbedmentPlan.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
                                                 </Grid>
                                             </GroupBox>
@@ -2144,7 +2307,7 @@
                                         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0">
                                             <StackPanel Orientation="Horizontal">
                                                 <ToggleButton ToolTip="要素追加モード (Alt + 1)" IsChecked="{Binding IsElementAddMode}" Unchecked="ToggleButtonElementAddMode_Unchecked">
-                                                    <svgc:SvgViewbox Source="/Icons/AddElementMode.svg" Style="{StaticResource SvgIconStyle}"/>
+                                                    <svgc:SvgViewbox Source="/Icons/AddElementMode.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </ToggleButton>
                                                 <TextBlock Text="要素追加モード (Alt + 1)" 
                                                            ToolTip="要素追加方法：2つの節点位置を順にクリック"/>
@@ -2162,7 +2325,7 @@
                                         />
                                         <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0">
                                             <Button ToolTip="要素の節点分割 (Alt + 7)" Command="{Binding SplitElementsByNodesCommand}">
-                                                <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle}"/>
+                                                <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
                                             </Button>
                                             <TextBlock Text="要素の節点分割"/>
                                         </StackPanel>
@@ -2273,8 +2436,10 @@
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                                    <Button x:Name="ButtonAddGridX" Content="Y軸平行通り心追加"  Background="#62B0E2" Foreground="white"
-                                                Command="{Binding AddGridXCommand}" Grid.Row="0" Grid.Column="0"/>
+                                    <Button x:Name="ButtonAddGridX" ToolTip="Y軸平行通り心追加"  Background="#62B0E2" Foreground="white"
+                                                Command="{Binding AddGridXCommand}" Grid.Row="0" Grid.Column="0">
+                                        <svgc:SvgViewbox Source="/Icons/AddXGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                    </Button>
 
                                     <common:EnhancedDataGrid x:Name="DataGridGridX" ItemsSource="{Binding CurrentInputModel.GridXItems, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                             Grid.Row="1" Grid.Column="0"
@@ -2370,8 +2535,10 @@
                                     </common:EnhancedDataGrid>
 
 
-                                    <Button x:Name="ButtonAddGridY" Content="X軸平行通り心追加"  Background="#62B0E2" Foreground="white"
-                                                Command="{Binding AddGridYCommand}" Grid.Row="0" Grid.Column="1"/>
+                                    <Button x:Name="ButtonAddGridY" ToolTip="X軸平行通り心追加"  Background="#62B0E2" Foreground="white"
+                                                Command="{Binding AddGridYCommand}" Grid.Row="0" Grid.Column="1">
+                                        <svgc:SvgViewbox Source="/Icons/AddYGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                    </Button>
 
                                     <common:EnhancedDataGrid x:Name="DataGridGridY"  ItemsSource="{Binding CurrentInputModel.GridYItems, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                         Grid.Row="1" Grid.Column="1" AutoGenerateColumns="False"
@@ -2587,9 +2754,11 @@
                                                             </Grid>
                                                         </GroupBox>
 
-                                                        <Button Content="矩形荷重面追加" 
+                                                        <Button ToolTip="矩形荷重面追加" 
                                                                 Grid.Row="1" Grid.Column="0" Command="{Binding AddRectLoadCommand}" 
-                                                                Foreground="white" Background="#62B0E2"/>
+                                                                Foreground="white" Background="#62B0E2">
+                                                            <svgc:SvgViewbox Source="/Icons/AddRectLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
                                                     </Grid>
 
                                                     <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
@@ -2979,13 +3148,17 @@
                                                         </Grid>
                                                     </GroupBox>
 
-                                                    <Button Content="土層追加" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
+                                                    <Button ToolTip="土層追加" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
                                                             Command="{Binding AddSettlementSoilLayerCommand}"
-                                                            Foreground="white" Background="#62B0E2"/>
+                                                            Foreground="white" Background="#62B0E2">
+                                                        <svgc:SvgViewbox Source="/Icons/AddSettlementSoilLayer.svg" Style="{StaticResource SvgIconStyle16}"/>
+                                                    </Button>
 
-                                                    <Button Content="全土層削除" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
+                                                    <Button ToolTip="全土層削除" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" 
                                                            Command="{Binding DeleteAllSettlementSoilLayersCommand}"
-                                                           Foreground="white" Background="#62B0E2"/>
+                                                           Foreground="white" Background="#62B0E2">
+                                                        <svgc:SvgViewbox Source="/Icons/DeleteAllSettlementSoilLayers.svg" Style="{StaticResource SvgIconStyle16}"/>
+                                                    </Button>
 
                                                     <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.SettlementSoilLayers, Mode=TwoWay,
                                                             UpdateSourceTrigger=LostFocus}"
@@ -3293,7 +3466,7 @@
                                                        ShowCoordinateSystem="True" 
                                                        Grid.Row="1"
                                                        MouseLeftButtonDown="HelixViewport_MouseLeftButtonDown" />
-                                    
+
                                     <!--<hx:Viewport3DX x:Name="DxViewport"
                                                     Grid.Row="1"
                                                     Background="White"
@@ -3357,14 +3530,46 @@
                                         </ComboBox.Visibility>
                                     </ComboBox>
 
-                                    <CheckBox Content="液状化" IsChecked="{Binding IsLiquefaction, UpdateSourceTrigger=PropertyChanged}">
-                                        <CheckBox.Visibility>
-                                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                                <Binding Path="SelectedLoadCaseName"/>
-                                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                                            </MultiBinding>
-                                        </CheckBox.Visibility>
-                                    </CheckBox>
+                                    <!--<StackPanel Orientation="Horizontal">
+                                        <svgc:SvgViewbox Source="/Icons/Liquefaction.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                        <CheckBox Content="液状化" IsChecked="{Binding IsLiquefaction, UpdateSourceTrigger=PropertyChanged}">
+                                            <CheckBox.Visibility>
+                                                <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                                    <Binding Path="SelectedLoadCaseName"/>
+                                                    <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                                                </MultiBinding>
+                                            </CheckBox.Visibility>
+                                        </CheckBox>
+                                    </StackPanel>-->
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <!--<svgc:SvgViewbox Source="/Icons/Liquefaction.svg" Style="{StaticResource SvgIconStyle24}"/>-->
+
+                                        <!-- 非液状化（IsLiquefaction=false のとき押下） -->
+                                        <ToggleButton ToolTip="非液状化状態" Margin="6,0,0,0" IsChecked="{Binding IsLiquefaction, 
+                                            Converter={StaticResource BooleanNegationConverter}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                            <svgc:SvgViewbox Source="/Icons/NonLiquefaction.svg" Style="{StaticResource SvgIconStyle24}"/>
+
+                                            <ToggleButton.Visibility>
+                                                <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                                    <Binding Path="SelectedLoadCaseName"/>
+                                                    <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                                                </MultiBinding>
+                                            </ToggleButton.Visibility>
+                                        </ToggleButton>
+
+                                        <!-- 液状化（IsLiquefaction=true のとき押下） -->
+                                        <ToggleButton ToolTip="液状化状態" Margin="6,0,0,0" IsChecked="{Binding IsLiquefaction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                            <svgc:SvgViewbox Source="/Icons/Liquefaction.svg" Style="{StaticResource SvgIconStyle24}"/>
+
+                                            <ToggleButton.Visibility>
+                                                <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                                    <Binding Path="SelectedLoadCaseName"/>
+                                                    <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                                                </MultiBinding>
+                                            </ToggleButton.Visibility>
+                                        </ToggleButton>
+                                    </StackPanel>
 
                                     <Separator/>
 
@@ -3375,7 +3580,9 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!--<StackPanel Orientation="Horizontal">-->
-                                        <TextBlock Text="ラベルサイズ" VerticalAlignment="Center" Grid.Column="0"/>
+                                        <StackPanel Orientation="Horizontal" Grid.Column="0">
+                                            <svgc:SvgViewbox Source="/Icons/LabelSize.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="ラベルサイズ"/>
+                                        </StackPanel>
                                         <ComboBox SelectedItem="{Binding LabelSize}" ItemsSource="{Binding LabelSizeOption}" 
                                                               HorizontalContentAlignment="Right" Grid.Column="1" Width="50" HorizontalAlignment="Right">
                                             <i:Interaction.Triggers>
@@ -3392,14 +3599,10 @@
                                     <TabItem Header="一般1">
                                         <StackPanel>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/AxesVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="XYZ軸表示" IsChecked="{Binding IsXYZAxesVisible, Mode=TwoWay}"/>
-                                            </StackPanel>
-
                                             <StackPanel Orientation="Horizontal" ToolBar.OverflowMode="Always">
-
-                                                <TextBlock Text="軸中心(X,Y,Z)" ToolTip=""/>
+                                                <ToggleButton ToolTip="XYZ軸表示" IsChecked="{Binding IsXYZAxesVisible, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/AxesVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                                 <TextBox Text="{Binding CurrentInputModel.FundamentalInput.X0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                                         Width="40" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"
                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
@@ -3412,69 +3615,136 @@
                                                         Width="40" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"
                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          KeyDown="TextBox_KeyDown"/>
-
                                             </StackPanel>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/TickMarkVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="目盛表示" IsChecked="{Binding IsTickMarkVisible, Mode=TwoWay}" 
-                                                          ToolTip="目盛は、XY平面平行ビュー、またはZ軸直交ビューで表示されます"/>
-                                            </StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/GridVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="通り心表示" IsChecked="{Binding IsGridLineVisible, Mode=TwoWay}" />
+
+                                                <ToggleButton IsChecked="{Binding IsTickMarkVisible, Mode=TwoWay}" 
+                                                          ToolTip="目盛表示:XY平面平行ビュー、またはZ軸直交ビューで表示されます">
+                                                    <svgc:SvgViewbox Source="/Icons/TickMarkVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+
+                                                <ToggleButton ToolTip="通り心表示" IsChecked="{Binding IsGridLineVisible, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/GridVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <Separator/>
 
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/ShrinkElementMode.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="梁要素縮小表示" IsChecked="{Binding IsShrinkElementMode, Mode=TwoWay}" />
+
+                                                <ToggleButton ToolTip="梁要素縮小表示" IsChecked="{Binding IsShrinkElementMode, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/ShrinkElementMode.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="節点番号表示" IsChecked="{Binding IsNodeNoVisible, Mode=TwoWay}" 
+                                                          Foreground="Blue">
+                                                    <svgc:SvgViewbox Source="/Icons/NodeNo.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="要素番号表示" IsChecked="{Binding IsElementNoVisible, Mode=TwoWay}" 
+                                                          Foreground="Brown">
+                                                    <svgc:SvgViewbox Source="/Icons/ElementNo.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/NodeNo.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="節点番号表示" IsChecked="{Binding IsNodeNoVisible, Mode=TwoWay}" 
-                                                          Foreground="Blue"/>
-                                            </StackPanel>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/ElementNo.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="要素番号表示" IsChecked="{Binding IsElementNoVisible, Mode=TwoWay}" 
-                                                          Foreground="Brown"/>
-                                            </StackPanel>
+                                                <ToggleButton ToolTip="杭体形状表示" IsChecked="{Binding IsPileSectionVisible, Mode=TwoWay}" >
+                                                    <svgc:SvgViewbox Source="/Icons/WireFrameVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/WireFrameVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="杭体形状表示" IsChecked="{Binding IsPileSectionVisible, Mode=TwoWay}" />
-                                            </StackPanel>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsElementLocalAxesVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="梁要素座標軸表示" ToolTip="梁要素座標表示"  IsChecked="{Binding IsBeamLocalAxesVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
+                                                <ToggleButton ToolTip="梁要素座標軸表示" IsChecked="{Binding IsBeamLocalAxesVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsElementLocalAxesVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="杭周土層表示" IsChecked="{Binding IsGroundVisible, Mode=TwoWay}" />
+
+                                                <ToggleButton ToolTip="杭周土層表示" IsChecked="{Binding IsGroundVisible, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <!--<StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                                                <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                                                 <CheckBox Content="N値表示" IsChecked="{Binding IsNValueVisible, Mode=TwoWay}" />
                                             </StackPanel>-->
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                    <CheckBox Content="土層物理量表示"
-                                                          IsChecked="{Binding IsSoilLayerParamDisplayEnabled, Mode=TwoWay}"/>
-                                                </StackPanel>
+
+
+
+
+                                            <StackPanel Orientation="Horizontal">
+                                                
+                                                <ToggleButton IsChecked="{Binding IsForcedDisplacementVisible, UpdateSourceTrigger=PropertyChanged}"
+                                                          ToolTip="地盤変位表示:「解析結果」タブの「変位スケール適用」">
+                                                    <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+
+                                                <ToggleButton ToolTip="慣性力作用点表示" IsChecked="{Binding IsActionPointVisible, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/LateralLoadActionPointVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="剛体連結表示" IsChecked="{Binding IsRigidFloorVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsRigidConnectionVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+
+                                                <ToggleButton ToolTip="根入部形状表示" IsChecked="{Binding IsEmbedmentBoxVisible, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsEmbedmentBoxVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal">
+
+                                                <ToggleButton ToolTip="杭体番号ラベル表示"  Foreground="Green"
+                                                          IsChecked="{Binding IsPileRefVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsPileRefVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="杭頭Z(m)ラベル表示" Foreground="Green"
+                                                          IsChecked="{Binding IsPileTopLevelVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsPileTopLevelVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="杭間隔比ラベル表示" Foreground="Green"
+                                                          IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsPileDiaSpacingRatioVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="前後方杭ラベル表示"  Foreground="Green"
+                                                          IsChecked="{Binding IsFrontPileLabelVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsFrontPileVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="地盤番号ラベル表示"   Foreground="Green"
+                                                          IsChecked="{Binding IsSoilRefVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsSoilRefVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="群杭係数ラベル表示"   Foreground="Green"
+                                                          IsChecked="{Binding IsGroupPileFactorLabelVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsGroupPileFactorVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+                                            </StackPanel>
+
+                                            <Separator/>
+
+                                            <StackPanel Orientation="Horizontal">
+
+                                                <ToggleButton ToolTip="土層物理量表示"
+                                                          IsChecked="{Binding IsSoilLayerParamDisplayEnabled, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/GroundLayerParametersVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
                                                 <ComboBox HorizontalAlignment="Right"
                                                     ItemsSource="{Binding SoilParamDisplayOptions}"
                                                           SelectedItem="{Binding SelectedSoilParamDisplay, Mode=TwoWay}"
                                                           IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"
+                                                          Visibility="{Binding IsSoilLayerParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                           Width="90" Margin="8,0,0,0">
                                                     <i:Interaction.Triggers>
                                                         <i:EventTrigger EventName="SelectionChanged">
@@ -3483,18 +3753,19 @@
                                                     </i:Interaction.Triggers>
                                                 </ComboBox>
                                             </StackPanel>
+                                            
+                                            <StackPanel Orientation="Horizontal">
 
-                                            <StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                    <CheckBox Content="土質点物理量表示"
-                                                          IsChecked="{Binding IsSoilMassParamDisplayEnabled, Mode=TwoWay}"/>
-                                                </StackPanel>
+                                                <ToggleButton ToolTip="土質点物理量表示"
+                                                          IsChecked="{Binding IsSoilMassParamDisplayEnabled, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/GroundPointParametersVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
 
                                                 <ComboBox HorizontalAlignment="Right"
                                                     ItemsSource="{Binding SoilMassParamDisplayOptions}"
                                                           SelectedItem="{Binding SelectedSoilMassParamDisplay, Mode=TwoWay}"
                                                           IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
+                                                          Visibility="{Binding IsSoilMassParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                           Width="90" Margin="8,0,0,0">
                                                     <i:Interaction.Triggers>
                                                         <i:EventTrigger EventName="SelectionChanged">
@@ -3504,91 +3775,14 @@
                                                 </ComboBox>
                                             </StackPanel>
 
-                                            <CheckBox MinWidth="50" Content="土層・土質点値表示"
-                                                          IsChecked="{Binding IsSoilValueVisible, UpdateSourceTrigger=PropertyChanged}">
-                                                <!--Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
-                                            </CheckBox>
-                                            <!--<StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="粘着力表示" IsChecked="{Binding IsCohesiveVisible, Mode=TwoWay}" />
-                                            </StackPanel>
-
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="Vs表示" IsChecked="{Binding IsVsVisible, Mode=TwoWay}" />
+
+                                                <ToggleButton ToolTip="土層・土質点値表示"
+                                                              IsChecked="{Binding IsSoilValueVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/GroundParameterValueVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    <!--Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
+                                                </ToggleButton>
                                             </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/SurroundingSoilVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="Es表示" IsChecked="{Binding IsEsVisible, Mode=TwoWay}" />
-                                            </StackPanel>-->
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="地盤変位表示" IsChecked="{Binding IsForcedDisplacementVisible, UpdateSourceTrigger=PropertyChanged}"
-                                                          ToolTip="「解析結果」タブの「変位スケール適用」"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/LateralLoadActionPointVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="慣性力作用点表示" IsChecked="{Binding IsActionPointVisible, Mode=TwoWay}" />
-                                            </StackPanel>
-
-                                            <!--<StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsElementLocalAxesVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="慣性力作用点ラベル表示" IsChecked="{Binding IsActionPointLabelVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>-->
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsRigidConnectionVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="剛体連結表示" ToolTip="剛盤表示"  IsChecked="{Binding IsRigidFloorVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsEmbedmentBoxVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="根入部形状表示" IsChecked="{Binding IsEmbedmentBoxVisible, Mode=TwoWay}" />
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsPileRefVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="杭体番号ラベル表示"  Foreground="Green"
-                                                          IsChecked="{Binding IsPileRefVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsPileTopLevelVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="杭頭Z(m)ラベル表示" Foreground="Green"
-                                                          IsChecked="{Binding IsPileTopLevelVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsPileDiaSpacingRatioVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="杭間隔比ラベル表示" Foreground="Green"
-                                                          IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsFrontPileVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="前後方杭ラベル表示"  Foreground="Green"
-                                                          IsChecked="{Binding IsFrontPileLabelVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsSoilRefVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="地盤番号ラベル表示"   Foreground="Green"
-                                                          IsChecked="{Binding IsSoilRefVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsGroupPileFactorVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="群杭係数ラベル表示"   Foreground="Green"
-                                                          IsChecked="{Binding IsGroupPileFactorLabelVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
-
-                                            <!--<StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsAxialForceVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="軸力(kN)ラベル表示" IsChecked="{Binding IsAxialForceLabelVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>-->
 
                                         </StackPanel>
                                     </TabItem>
@@ -3597,43 +3791,43 @@
                                         <StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsRigidConnectionVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="群杭沈下グリッド表示" ToolTip="群杭沈下グリッド表示"  IsChecked="{Binding IsGroupPileGridVisible, UpdateSourceTrigger=PropertyChanged}"/>
-                                            </StackPanel>
+                                                
+                                                <ToggleButton ToolTip="群杭沈下グリッド表示"  IsChecked="{Binding IsGroupPileGridVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsSettlementGridVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/SoilLayerVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="群杭沈下用土層表示" IsChecked="{Binding IsSettlementGroundVisible, Mode=TwoWay}" />
-                                            </StackPanel>
+                                                
+                                                <ToggleButton ToolTip="群杭沈下用土層表示" IsChecked="{Binding IsSettlementGroundVisible, Mode=TwoWay}">
+                                                    <svgc:SvgViewbox Source="/Icons/SoilLayerVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/LoadingPlaneVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="群杭沈下用荷重面表示" IsChecked="{Binding IsSettlementLoadVisible, Mode=TwoWay}" />
-                                            </StackPanel>
-
-                                            <Separator/>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/LoadingPlaneSelected.svg" Style="{StaticResource SvgIconStyle}"/>
-
-                                                <CheckBox Content="杭頭位置" IsChecked="{Binding IsElementShownAtSettlementPlane, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/PileTopSelected.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="沈下荷重面位置" IsChecked="{Binding IsElementShownAtSettlementPlane, Mode=TwoWay}" />
+                                                
+                                                <ToggleButton ToolTip="群杭沈下用荷重面表示" IsChecked="{Binding IsSettlementLoadVisible, Mode=TwoWay}" >
+                                                    <svgc:SvgViewbox Source="/Icons/LoadingPlaneVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <Separator/>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/NodeVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="節点表示" IsChecked="{Binding IsNodeVisible, Mode=TwoWay}" />
-                                            </StackPanel>
 
-                                            <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/ElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="梁要素表示" IsChecked="{Binding IsElementVisible, Mode=TwoWay}" />
+
+                                                <ToggleButton ToolTip="杭頭位置" IsChecked="{Binding IsElementShownAtSettlementPlane, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}">
+                                                    <svgc:SvgViewbox Source="/Icons/LoadingPlaneSelected.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="沈下荷重面位置" IsChecked="{Binding IsElementShownAtSettlementPlane, Mode=TwoWay}" >
+                                                    <svgc:SvgViewbox Source="/Icons/PileTopSelected.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+                                                <ToggleButton ToolTip="節点表示" IsChecked="{Binding IsNodeVisible, Mode=TwoWay}" >
+                                                    <svgc:SvgViewbox Source="/Icons/NodeVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
+
+
+                                                <ToggleButton ToolTip="梁要素表示" IsChecked="{Binding IsElementVisible, Mode=TwoWay}" >
+                                                    <svgc:SvgViewbox Source="/Icons/ElementVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                         </StackPanel>
@@ -3643,8 +3837,10 @@
                                         <StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="群杭グリッド変位表示" IsChecked="{Binding IsGroupPileGridDeformationVisible, UpdateSourceTrigger=PropertyChanged}"/>
+                                                
+                                                <ToggleButton ToolTip="群杭グリッド変位表示" IsChecked="{Binding IsGroupPileGridDeformationVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <ToggleButton Content="解析結果表示" IsChecked="{Binding IsAnalysisResultVisible, Mode=TwoWay}" 
@@ -3705,22 +3901,28 @@
                                                 <Separator/>
 
                                                 <!--<StackPanel Orientation="Horizontal">
-                                                    <svgc:SvgViewbox Source="/Icons/IsLoadingVisible.svg" Style="{StaticResource SvgIconStyle}"/>
+                                                    <svgc:SvgViewbox Source="/Icons/IsLoadingVisible.svg" Style="{StaticResource SvgIconStyle16}"/>
                                                     <CheckBox Content="軸力・慣性力表示" IsChecked="{Binding IsLoadingVisible, UpdateSourceTrigger=PropertyChanged}"/>
                                                 </StackPanel>-->
                                                 <StackPanel Orientation="Horizontal">
-                                                    <svgc:SvgViewbox Source="/Icons/IsLoadingVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                    <CheckBox Content="慣性力表示" IsChecked="{Binding IsMassLoadingVisible, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    
+                                                    <ToggleButton ToolTip="慣性力表示" IsChecked="{Binding IsMassLoadingVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                        <svgc:SvgViewbox Source="/Icons/IsActionPointLoadVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    </ToggleButton>
                                                 </StackPanel>
 
                                                 <StackPanel Orientation="Horizontal">
-                                                    <svgc:SvgViewbox Source="/Icons/IsLoadingVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                    <CheckBox Content="軸力表示" IsChecked="{Binding IsAxialLoadingVisible, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                                    <ToggleButton ToolTip="軸力表示" IsChecked="{Binding IsAxialLoadingVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                        <svgc:SvgViewbox Source="/Icons/IsAxialLoadVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    </ToggleButton>
                                                 </StackPanel>
 
                                                 <StackPanel Orientation="Horizontal">
-                                                    <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                    <CheckBox Content="地盤変位表示" IsChecked="{Binding IsForcedDisplacementVisible, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                                    <ToggleButton ToolTip="地盤変位表示" IsChecked="{Binding IsForcedDisplacementVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                        <svgc:SvgViewbox Source="/Icons/IsForcedDispVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    </ToggleButton>
                                                 </StackPanel>
 
                                                 <Separator/>
@@ -3750,7 +3952,8 @@
                                             </MultiBinding>
                                         </StackPanel.Visibility>-->
                                                     <!--Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
-                                                    <TextBlock Text="テキスト位置調整" Width="90"/>
+                                                    <svgc:SvgViewbox Source="/Icons/AdjustTextPositions.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="テキスト位置"/>
+                                                   
                                                     <Slider Value="{Binding TextPosiitonAdjuster, UpdateSourceTrigger=PropertyChanged}"
                                                             Minimum="0" Maximum="20" TickFrequency="0.1" Grid.Row="1" Grid.Column="0"
                                                             VerticalAlignment="Center" Width="70"  
@@ -3765,7 +3968,8 @@
                                                 <!--<StackPanel Orientation="Horizontal"
                                                         Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="小数点以下" Width="90"/>
+                                                    <svgc:SvgViewbox Source="/Icons/DecimalPoint.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="小数点以下桁数"/>
+                                                   
                                                     <Slider Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
                                                             Minimum="0" Maximum="5" TickFrequency="0.1" Grid.Row="1" Grid.Column="0"
                                                             VerticalAlignment="Center" Width="70"  
@@ -3780,7 +3984,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <!--<StackPanel Orientation="Horizontal"
                                                         Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
-                                                    <TextBlock Text="荷重応力スケール" Width="90"/>
+                                                    <svgc:SvgViewbox Source="/Icons/LoadForceScale.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="荷重応力スケール"/>
                                                     <Slider Value="{Binding ForceDiagramMultiplier, UpdateSourceTrigger=PropertyChanged}"
                                                         Minimum="0.5" Maximum="10.0" TickFrequency="0.1" Grid.Row="1" Grid.Column="0"
                                                         VerticalAlignment="Center" Width="70"  
@@ -3796,7 +4000,7 @@
                                                 <StackPanel Orientation="Horizontal" Visibility="{Binding IsDispDiagramMultiplierApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                     <!--<StackPanel Orientation="Horizontal"
                                                         Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">-->
-                                                    <TextBlock Text="変位スケール" Width="90"  Margin="10,0,0,0"/>
+                                                    <svgc:SvgViewbox Source="/Icons/DisplacementScale.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="変位スケール"/>
                                                     <Slider Value="{Binding DispDiagramMultiplier, Converter={StaticResource LogSliderConverter}, UpdateSourceTrigger=PropertyChanged}"
                                                             Minimum="0.1" Maximum="1000.0" TickFrequency="0.1" Grid.Row="1" Grid.Column="0"
                                                             VerticalAlignment="Center" Width="60"  
@@ -3806,7 +4010,6 @@
                                                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                              KeyDown="TextBox_KeyDown"/>
                                                 </StackPanel>
-
                                             </StackPanel>
                                         </StackPanel>
                                     </TabItem>
@@ -3814,17 +4017,17 @@
                                     <TabItem>
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/BubbleVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="バブル" IsChecked="{Binding IsBubbleVisible, UpdateSourceTrigger=PropertyChanged}">
-                                                </CheckBox>
+                                                
+                                                <ToggleButton ToolTip="バブル" IsChecked="{Binding IsBubbleVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/BubbleVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <!-- バブル径グループ -->
                                             <StackPanel Orientation="Horizontal" >
-                                                <StackPanel Orientation="Horizontal" Width="90">
-                                                    <svgc:SvgViewbox Source="/Icons/BubbleDia.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                    <TextBlock Text="バブル径"/>
-                                                </StackPanel>
+                                                
+                                                    <svgc:SvgViewbox Source="/Icons/BubbleDia.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="バブル径"/>
+                                                
                                                 <Slider  Minimum="0" Maximum="200"
                                                     Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                                                 <TextBox Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -3834,16 +4037,17 @@
                                             </StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}" />
+                                                
+                                                <ToggleButton ToolTip="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}" >
+                                                    <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
 
                                             <!-- 矢印全長グループ -->
                                             <StackPanel Orientation="Horizontal" >
-                                                <StackPanel Orientation="Horizontal" Width="90">
-                                                    <svgc:SvgViewbox Source="/Icons/ArrowLength.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印全長"/>
-                                                    <TextBlock Text="矢印全長"/>
-                                                </StackPanel>
+                                                
+                                                    <svgc:SvgViewbox Source="/Icons/ArrowLength.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="矢印全長"/>
+                                            
                                                 <Slider Minimum="0" Maximum="200"
                                                     Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                                                 <TextBox Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -3854,10 +4058,9 @@
 
                                             <!-- 矢印頭長グループ -->
                                             <StackPanel Orientation="Horizontal" >
-                                                <StackPanel Orientation="Horizontal" Width="90">
-                                                    <svgc:SvgViewbox Source="/Icons/ArrowHeadLength.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印頭長"/>
-                                                    <TextBlock Text="矢印頭長"/>
-                                                </StackPanel>
+                                   
+                                                    <svgc:SvgViewbox Source="/Icons/ArrowHeadLength.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="矢印頭長"/>
+                                  
                                                 <Slider Minimum="0" Maximum="50"
                                                     Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                                                 <TextBox Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -3868,10 +4071,9 @@
 
                                             <!-- 矢印頭径グループ -->
                                             <StackPanel Orientation="Horizontal" >
-                                                <StackPanel Orientation="Horizontal" Width="90">
-                                                    <svgc:SvgViewbox Source="/Icons/ArrowHeadDia.svg" Style="{StaticResource SvgIconStyle}" ToolTip="矢印頭径"/>
-                                                    <TextBlock Text="矢印頭径"/>
-                                                </StackPanel>
+                              
+                                                    <svgc:SvgViewbox Source="/Icons/ArrowHeadDia.svg" Style="{StaticResource SvgIconStyle24}" ToolTip="矢印頭径"/>
+                              
                                                 <Slider Minimum="0" Maximum="20"
                                                     Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                                                 <TextBox Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
@@ -3881,9 +4083,9 @@
                                             </StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
-                                                <CheckBox Content="変形後要素" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}">
-                                                </CheckBox>
+                                                <ToggleButton ToolTip="変形後要素" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}">
+                                                    <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </ToggleButton>
                                             </StackPanel>
                                         </StackPanel>
                                     </TabItem>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,0,-1424)">
+        <rect id="DeleteAllSettlementSoilLayers" x="0" y="1424" width="128" height="128" style="fill:none;"/>
+        <g id="DeleteAllSettlementSoilLayers1" serif:id="DeleteAllSettlementSoilLayers">
+            <g transform="matrix(1,0,0,0.3125,0,1345.125)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(1,50,32);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(1,0,0,0.15625,0,1408.5625)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(244,164,96);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(1,0,0,0.234375,0,1336.84375)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-1144.833348,1346.203707)">
+                <text x="1146.333px" y="184.277px" style="font-family:'MS-UIGothic', 'MS UI Gothic', sans-serif;font-size:125px;fill:rgb(173,96,50);">✗</text>
+            </g>
+        </g>
+    </g>
+</svg>

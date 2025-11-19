@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-178,-356)">
+        <rect id="OTMInput" x="178" y="356" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="OTMInput1" serif:id="OTMInput" x="178" y="356" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(1,0,0,1.399932,0,-167.971477)">
+                <g transform="matrix(1,-0,-0,0.71432,178,374.283497)">
+                    <path d="M121.626,59L109.126,84L96.626,59C102.876,65.25 115.376,65.25 121.626,59Z" style="fill:rgb(128,128,128);"/>
+                    <path d="M18.874,64C18.874,-0.434 109.126,-0.347 109.126,64" style="fill:none;stroke:rgb(128,128,128);stroke-width:8.33px;"/>
+                </g>
+            </g>
+            <g transform="matrix(1,0,0,1,-966.833348,347.663853)">
+                <g transform="matrix(62.5,0,0,62.5,1272.833348,136.336147)">
+                </g>
+                <text x="1138.708px" y="136.336px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:62.5px;fill:rgb(50,113,173);">OTM</text>
+            </g>
+        </g>
+    </g>
+</svg>

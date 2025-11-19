@@ -1,43 +1,32 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        stroke-width: 19.27px;
-      }
-
-      .cls-1, .cls-2, .cls-3, .cls-4 {
-        fill: none;
-        stroke-linecap: square;
-        stroke-miterlimit: 10;
-      }
-
-      .cls-1, .cls-4 {
-        stroke: #d92731;
-      }
-
-      .cls-2, .cls-3 {
-        stroke: #000;
-      }
-
-      .cls-2, .cls-4 {
-        stroke-width: 20px;
-      }
-
-      .cls-3 {
-        stroke-width: 19.08px;
-      }
-    </style>
-  </defs>
-  <line class="cls-2" x1="13" y1="84" x2="243" y2="84"/>
-  <line class="cls-2" x1="35.5" y1="64" x2="35.5" y2="104"/>
-  <line class="cls-2" x1="27" y1="71" x2="27.5" y2="94"/>
-  <line class="cls-2" x1="220" y1="64" x2="220" y2="104"/>
-  <line class="cls-2" x1="228.5" y1="74" x2="228.5" y2="94"/>
-  <line class="cls-2" x1="220.5" y1="157" x2="220.5" y2="192"/>
-  <line class="cls-2" x1="228.5" y1="157" x2="228.5" y2="192"/>
-  <line class="cls-4" x1="35.5" y1="157" x2="35.5" y2="192"/>
-  <line class="cls-3" x1="137.49" y1="174" x2="243.51" y2="174"/>
-  <line class="cls-1" x1="12.6" y1="174" x2="118.4" y2="174"/>
-  <line class="cls-4" x1="27.5" y1="157" x2="27.5" y2="192"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-356,-1068)">
+        <g id="InvertActive" transform="matrix(1,0,0,1,356,0)">
+            <rect x="0" y="1068" width="128" height="128" style="fill:none;"/>
+            <g transform="matrix(1,0,0,1,-0.378028,852.081277)">
+                <path d="M14.756,264.25L114,264.25" style="fill:none;stroke:black;stroke-width:8.33px;"/>
+            </g>
+            <g transform="matrix(0.5,0,0,1,7,883.825448)">
+                <path d="M14.756,264.25L114,264.25" style="fill:none;stroke:rgb(255,0,0);stroke-width:10.54px;stroke-linecap:butt;"/>
+            </g>
+            <g>
+                <g transform="matrix(0.5,0,0,1,56.621972,883.825448)">
+                    <path d="M14.756,264.25L114,264.25" style="fill:none;stroke:black;stroke-width:10.54px;stroke-linecap:butt;"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,-19.701486,1073.643713)">
+                    <circle cx="62.214" cy="76.707" r="18.055"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,-19.701486,1105.387883)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,79.542459,1073.643713)">
+                    <circle cx="62.214" cy="76.707" r="18.055"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,79.542459,1105.387883)">
+                    <circle cx="62.214" cy="76.707" r="18.055"/>
+                </g>
+            </g>
+        </g>
+    </g>
 </svg>

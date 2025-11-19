@@ -1,27 +1,23 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        stroke: #3271ae;
-      }
-
-      .cls-1, .cls-2, .cls-3 {
-        fill: none;
-        stroke-miterlimit: 10;
-        stroke-width: 20px;
-      }
-
-      .cls-2 {
-        stroke: #248a66;
-      }
-
-      .cls-3 {
-        stroke: #d92731;
-      }
-    </style>
-  </defs>
-  <line class="cls-3" x1="135" y1="152" x2="237.71" y2="211.71"/>
-  <line class="cls-2" x1="16.29" y1="211.71" x2="120" y2="152"/>
-  <line class="cls-1" x1="128" y1="140" x2="127.5" y2="20.09"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1958,-712)">
+        <g id="AxesVisible" transform="matrix(1,0,0,1,712,712)">
+            <rect x="1246" y="0" width="128" height="128" style="fill:none;"/>
+            <g>
+                <g transform="matrix(0.933439,0,0,0.933439,87.195162,0.442386)">
+                    <path d="M1310,64L1310,6.646" style="fill:none;stroke:rgb(0,0,255);stroke-width:8.93px;"/>
+                </g>
+                <g transform="matrix(-0.461571,0.799464,-0.799464,-0.461571,1969.64109,-951.553529)">
+                    <path d="M1310,64L1310,6.646" style="fill:none;stroke:rgb(255,0,0);stroke-width:9.03px;"/>
+                </g>
+                <g transform="matrix(-0.461571,-0.799464,0.799464,-0.461571,1859.67461,1143.042706)">
+                    <path d="M1310,64L1310,6.646" style="fill:none;stroke:rgb(0,255,0);stroke-width:9.03px;"/>
+                </g>
+            </g>
+            <g transform="matrix(1,0,0,1,-182.573918,-707.12366)">
+                <circle cx="1492.574" cy="771.124" r="3.818" style="fill:white;fill-opacity:0.5;"/>
+            </g>
+        </g>
+    </g>
 </svg>

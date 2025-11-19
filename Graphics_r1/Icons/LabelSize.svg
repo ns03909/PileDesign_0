@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-1246,-1246)">
+        <g id="LabelSize" transform="matrix(1,0,0,1,534,0)">
+            <rect x="712" y="1246" width="128" height="128" style="fill:none;"/>
+            <g transform="matrix(1,0,0,1,-457.198967,1188.424522)">
+                <text x="1173.985px" y="165.355px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:100px;fill:rgb(50,113,173);">A</text>
+            </g>
+            <g transform="matrix(1,0,0,1,-378.41992,1215.792328)">
+                <g transform="matrix(66.666667,0,0,66.666667,1208.833348,138.211636)">
+                </g>
+                <text x="1164.633px" y="138.212px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:66.667px;fill:rgb(50,113,173);">A</text>
+            </g>
+        </g>
+    </g>
+</svg>

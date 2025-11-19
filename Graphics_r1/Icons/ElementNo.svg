@@ -1,30 +1,23 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        font-family: Swiss721BT-BlackExtended, 'Swis721 BlkEx BT';
-        font-size: 130px;
-      }
-
-      .cls-2 {
-        fill: #d92731;
-        stroke: #d92731;
-      }
-
-      .cls-2, .cls-3 {
-        stroke-miterlimit: 10;
-      }
-
-      .cls-3 {
-        fill: none;
-        stroke: #000;
-        stroke-width: 20px;
-      }
-    </style>
-  </defs>
-  <text class="cls-1" transform="translate(117.52 112.03)"><tspan x="0" y="0">N</tspan></text>
-  <line class="cls-3" x1="60" y1="180" x2="196" y2="180"/>
-  <circle class="cls-2" cx="30.5" cy="180.5" r="30"/>
-  <circle class="cls-2" cx="226" cy="180" r="30"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-534,-890)">
+        <g id="ElementNo" transform="matrix(1,0,0,1,534,712)">
+            <rect x="0" y="178" width="128" height="128" style="fill:none;"/>
+            <g transform="matrix(1,0,0,1,-0.378028,-22.250344)">
+                <path d="M14.756,264.25L114,264.25" style="fill:none;stroke:rgb(98,176,226);stroke-width:8.33px;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,-19.701486,199.312091)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,79.542459,199.312091)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-1112.833348,100.203707)">
+                <g transform="matrix(62.5,0,0,62.5,1199.052098,136.4664)">
+                </g>
+                <text x="1154.615px" y="136.466px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:62.5px;fill:rgb(173,96,50);">N</text>
+            </g>
+        </g>
+    </g>
 </svg>

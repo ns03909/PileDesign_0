@@ -1373,13 +1373,13 @@ namespace PileDesign.Views
         //            if (currentPoint.X >= startPoint.X)
         //            {
         //                selectionRectangle.Fill = Brushes.LightBlue;
-        //                selectionRectangle.StrokeDashArray = null;
+        //                selectionRectangle.StrokeDashArray = null; // 実線
         //                viewModel.IsCrossSelectionMode = false;
         //            }
         //            else
         //            {
         //                selectionRectangle.Fill = Brushes.LightGreen;
-        //                selectionRectangle.StrokeDashArray = new DoubleCollection { 4, 2 };
+        //                selectionRectangle.StrokeDashArray = new DoubleCollection { 4, 2 }; // 破線
         //                viewModel.IsCrossSelectionMode = true;
         //            }
         //        }
@@ -3084,6 +3084,18 @@ namespace PileDesign.Views
             {
                 vm.IsEmbedmentBoxVisible = true;
             }
+        }
+
+        private void QuickHintToggle_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_isViewInteracting) return; // ビュー操作中なら無視
+            var vm = DataContext as MainWindowViewModel;
+            if (vm != null) vm.IsQuickHintVisible = true;
+        }
+        private void QuickHintToggle_Unchecked(object sender, RoutedEventArgs e)
+        {
+            var vm = DataContext as MainWindowViewModel;
+            if (vm != null) vm.IsQuickHintVisible = false;
         }
     }
 }

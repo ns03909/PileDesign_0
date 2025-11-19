@@ -1,42 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        stroke: gray;
-      }
-
-      .cls-1, .cls-2 {
-        fill: none;
-        stroke-miterlimit: 10;
-        stroke-width: 20px;
-      }
-
-      .cls-2 {
-        stroke: #000;
-      }
-
-      .cls-3 {
-        fill: #a1d0ee;
-      }
-    </style>
-  </defs>
-  <g id="_色ライブペイント" data-name="色ライブペイント">
-    <g>
-      <polygon class="cls-3" points="226.67 70.12 226.67 185.37 225.8 185.87 225.51 185.37 126.28 128.08 126.28 127.42 126.86 127.75 226.67 70.12"/>
-      <polygon class="cls-3" points="226.67 70.12 126.86 127.75 126.28 127.42 126.28 122.56 126.28 13.08 126.18 12.89 126.86 12.5 226.67 70.12"/>
-      <polygon class="cls-3" points="225.51 185.37 225.8 185.87 126.86 243 124.19 241.46 126.28 237.81 126.28 128.33 126.28 128.08 225.51 185.37"/>
-      <polygon class="cls-3" points="126.28 128.33 126.28 237.81 124.19 241.46 27.05 185.37 27.05 184.71 125.71 127.75 126.28 128.08 126.28 128.33"/>
-      <polygon class="cls-3" points="126.28 127.42 126.28 128.08 125.71 127.75 27.05 184.71 27.05 70.12 126.28 127.42"/>
-      <polygon class="cls-3" points="126.28 122.56 126.28 127.42 27.05 70.12 126.18 12.89 126.28 13.08 126.28 122.56"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1780,-1246)">
+        <g id="IsometricView" transform="matrix(1,0,0,1,712,712)">
+            <rect x="1068" y="534" width="128" height="128" style="fill:none;"/>
+            <g>
+                <g transform="matrix(1.053191,0,0,1.356241,-85.92594,464.359406)">
+                    <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(98,176,226);stroke:black;stroke-width:6.86px;"/>
+                </g>
+                <g transform="matrix(-0.526595,-0.91209,1.174539,-0.678121,1625.22682,1719.575101)">
+                    <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(98,176,226);stroke:black;stroke-width:6.86px;"/>
+                </g>
+                <g transform="matrix(-0.526595,0.91209,-1.174539,-0.678121,1856.69912,-389.934507)">
+                    <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(98,176,226);stroke:black;stroke-width:6.86px;"/>
+                </g>
+            </g>
+            <g transform="matrix(1,0,0,1,-16.833348,502.907512)">
+                <g transform="matrix(75,0,0,75,1208.833348,155.092488)">
+                </g>
+                <text x="1186.483px" y="155.092px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">I</text>
+            </g>
+        </g>
     </g>
-  </g>
-  <g id="_レイヤー_1" data-name="レイヤー 1">
-    <line class="cls-1" x1="129" y1="13" x2="129" y2="126"/>
-    <line class="cls-1" x1="29" y1="185" x2="127" y2="127"/>
-    <line class="cls-1" x1="229" y1="188" x2="129" y2="129"/>
-    <polyline class="cls-2" points="27 70.12 129.07 130.37 231.14 70.12"/>
-    <polygon class="cls-2" points="29.05 70.12 29.05 185.37 128.86 243 228.67 185.37 228.67 70.12 128.86 12.5 29.05 70.12"/>
-    <line class="cls-2" x1="129" y1="129" x2="129" y2="242"/>
-  </g>
 </svg>

@@ -1,14 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        fill: none;
-        stroke: #248a66;
-        stroke-miterlimit: 10;
-        stroke-width: 20px;
-      }
-    </style>
-  </defs>
-  <polygon class="cls-1" points="226.66 128 128 187.02 29.34 128 128 68.98 226.66 128"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1068,-1246)">
+        <g id="LoadingPlaneVisible" transform="matrix(1,0,0,1,534,0)">
+            <rect x="534" y="1246" width="128" height="128" style="fill:none;"/>
+            <g transform="matrix(0.647673,0,0,0.647673,172.894464,483.184621)">
+                <path d="M598.941,1260.425L633.57,1270.425L598.941,1280.425L564.313,1270.425L598.941,1260.425Z" style="fill:white;stroke:rgb(0,120,0);stroke-width:12.87px;"/>
+            </g>
+            <g transform="matrix(0.647673,0,0,0.647673,210.372536,470.231157)">
+                <path d="M598.941,1260.425L633.57,1270.425L598.941,1280.425L564.313,1270.425L598.941,1260.425Z" style="fill:white;stroke:rgb(0,120,0);stroke-width:12.87px;"/>
+            </g>
+            <g transform="matrix(0.647673,0,0,0.647673,210.372536,496.732698)">
+                <path d="M598.941,1260.425L633.57,1270.425L598.941,1280.425L564.313,1270.425L598.941,1260.425Z" style="fill:white;stroke:rgb(0,120,0);stroke-width:12.87px;"/>
+            </g>
+            <g transform="matrix(0.647673,0,0,0.647673,247.268912,483.20943)">
+                <path d="M598.941,1260.425L633.57,1270.425L598.941,1280.425L564.313,1270.425L598.941,1260.425Z" style="fill:white;stroke:rgb(0,120,0);stroke-width:12.87px;"/>
+            </g>
+        </g>
+    </g>
 </svg>

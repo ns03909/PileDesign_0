@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-356,-178)">
+        <rect id="AdjustEmbedmentPlan" x="356" y="178" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="AdjustEmbedmentPlan1" serif:id="AdjustEmbedmentPlan" x="356" y="178" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(0.827771,0,0,1.012102,367.597373,-543.348686)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(247,181,21);stroke-width:9.01px;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,356.632092,160.605431)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,356.632092,238.426165)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,414.452826,238.426165)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,414.452826,160.605431)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,32 +1,22 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        stroke: #fcee21;
-      }
-
-      .cls-1, .cls-2, .cls-3, .cls-4 {
-        fill: none;
-        stroke-miterlimit: 10;
-        stroke-width: 20px;
-      }
-
-      .cls-2 {
-        stroke: #3271ae;
-      }
-
-      .cls-3 {
-        stroke: #248a66;
-      }
-
-      .cls-4 {
-        stroke: #d92731;
-      }
-    </style>
-  </defs>
-  <line class="cls-3" x1="25.9" y1="184.5" x2="128.1" y2="125.5"/>
-  <line class="cls-2" x1="25.9" y1="68.5" x2="128.1" y2="127.5"/>
-  <line class="cls-1" x1="128" x2="128" y2="256"/>
-  <line class="cls-4" x1="128" y1="128" x2="128" y2="228"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-2136,-712)">
+        <g id="IsElementLocalAxesVisible" transform="matrix(1,0,0,1,534,712)">
+            <rect x="1602" y="0" width="128" height="128" style="fill:none;"/>
+            <path d="M1666,9.727L1666,116.155" style="fill:none;stroke:rgb(119,119,119);stroke-width:8.33px;"/>
+            <g transform="matrix(0.768728,0.46871,-0.46871,0.768728,410.982186,-767.458787)">
+                <path d="M1666,62.941L1621.776,64" style="fill:none;stroke:rgb(0,0,255);stroke-width:9.26px;"/>
+            </g>
+            <g transform="matrix(0.790279,-0.431384,0.431384,0.790279,318.426661,734.089106)">
+                <path d="M1666,62.941L1621.776,64" style="fill:none;stroke:rgb(0,255,0);stroke-width:9.26px;"/>
+            </g>
+            <g transform="matrix(0.021297,-0.889511,0.889511,0.021297,1574.532593,1548.402731)">
+                <path d="M1666,62.941L1621.776,64" style="fill:none;stroke:rgb(255,0,0);stroke-width:9.37px;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,173.426082,-707.12366)">
+                <circle cx="1492.574" cy="771.124" r="3.818" style="fill:white;fill-opacity:0.5;"/>
+            </g>
+        </g>
+    </g>
 </svg>

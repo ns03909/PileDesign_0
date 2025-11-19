@@ -17,29 +17,53 @@
   <ItemGroup>
     <None Remove="Icons\ActiveAll.svg" />
     <None Remove="Icons\AddElementMode.svg" />
+    <None Remove="Icons\AddPileLoc.svg" />
+    <None Remove="Icons\AddRectLoad.svg" />
+    <None Remove="Icons\AddSettlementSoilLayer.svg" />
+    <None Remove="Icons\AddXGrid.svg" />
+    <None Remove="Icons\AddYGrid.svg" />
+    <None Remove="Icons\AdjustEmbedmentPlan.svg" />
+    <None Remove="Icons\AdjustTextPositions.svg" />
     <None Remove="Icons\AnalysisResultVisilbe.svg" />
     <None Remove="Icons\ArrowHeadDia.svg" />
     <None Remove="Icons\ArrowHeadLength.svg" />
     <None Remove="Icons\ArrowLength.svg" />
     <None Remove="Icons\ArrowVisible.svg" />
+    <None Remove="Icons\AutoFrontRear.png" />
+    <None Remove="Icons\AutoFrontRear.svg" />
+    <None Remove="Icons\AxesVisible.png" />
     <None Remove="Icons\AxesVisible.svg" />
     <None Remove="Icons\BoundaryCondition.svg" />
     <None Remove="Icons\BubbleDia.svg" />
     <None Remove="Icons\BubbleVisible.svg" />
     <None Remove="Icons\Cancel.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
+    <None Remove="Icons\DecimalPoint.png" />
+    <None Remove="Icons\DecimalPoint.svg" />
     <None Remove="Icons\DeformedElementVisible.svg" />
+    <None Remove="Icons\DeleteAllSettlementSoilLayers.svg" />
     <None Remove="Icons\DeselectAll.svg" />
+    <None Remove="Icons\DisplacementScale.svg" />
     <None Remove="Icons\Display.svg" />
+    <None Remove="Icons\Display2.svg" />
     <None Remove="Icons\DocxFileOutput.svg" />
+    <None Remove="Icons\ElementDivisionWindow.svg" />
     <None Remove="Icons\ElementNo.svg" />
     <None Remove="Icons\ElementVisible.svg" />
     <None Remove="Icons\FrontView.svg" />
-    <None Remove="Icons\Grid.png" />
+    <None Remove="Icons\FundamentalWindow.svg" />
+    <None Remove="Icons\Graph.svg" />
     <None Remove="Icons\GridVisible.svg" />
+    <None Remove="Icons\GroundLayerParametersVisible.svg" />
+    <None Remove="Icons\GroundParameterValueVisible.svg" />
+    <None Remove="Icons\GroundPointParametersVisible.svg" />
+    <None Remove="Icons\GroundWindow.svg" />
+    <None Remove="Icons\GroupPileGraph.svg" />
     <None Remove="Icons\HorizontalRotation.svg" />
     <None Remove="Icons\InvertActive.svg" />
+    <None Remove="Icons\IsActionPointLoadVisible.svg" />
     <None Remove="Icons\IsAxialForceVisible.svg" />
+    <None Remove="Icons\IsAxialLoadVisible.svg" />
     <None Remove="Icons\IsElementLocalAxesVisible.svg" />
     <None Remove="Icons\IsElementLocalAxesVisible_1.svg" />
     <None Remove="Icons\IsEmbedmentBoxVisible.svg" />
@@ -53,21 +77,38 @@
     <None Remove="Icons\IsPileRefVisible.svg" />
     <None Remove="Icons\IsPileTopLevelVisible.svg" />
     <None Remove="Icons\IsRigidConnectionVisible.svg" />
+    <None Remove="Icons\IsRigidConnectionVisible_2.svg" />
     <None Remove="Icons\IsSoilRefVisible.svg" />
+    <None Remove="Icons\LabelSize.svg" />
     <None Remove="Icons\LabelVisible.svg" />
     <None Remove="Icons\LateralLoadActionPointVisible.svg" />
+    <None Remove="Icons\LateralLoadAnalysisWindow.svg" />
+    <None Remove="Icons\Liquefaction.svg" />
+    <None Remove="Icons\LoadCaseWindow.svg" />
+    <None Remove="Icons\LoadForceScale.svg" />
     <None Remove="Icons\LoadingPlaneSelected.svg" />
+    <None Remove="Icons\LoadingPlaneVisible.png" />
     <None Remove="Icons\LoadingPlaneVisible.svg" />
     <None Remove="Icons\MergeElements.svg" />
     <None Remove="Icons\MergeNodes.svg" />
+    <None Remove="Icons\MoveActionPointToCentroid.svg" />
+    <None Remove="Icons\MoveActionPointToGravityCenter.svg" />
     <None Remove="Icons\NodeNo.svg" />
+    <None Remove="Icons\NodeVisible.png" />
     <None Remove="Icons\NodeVisible.svg" />
+    <None Remove="Icons\NonLiquefaction.svg" />
+    <None Remove="Icons\NotLequefaction.svg" />
     <None Remove="Icons\OpenFile.svg" />
+    <None Remove="Icons\OTMInput.svg" />
+    <None Remove="Icons\PileBodyWindow.svg" />
     <None Remove="Icons\PileTopSelected.svg" />
     <None Remove="Icons\Play.svg" />
     <None Remove="Icons\PostAnalysisMode.svg" />
     <None Remove="Icons\PreAnalysisMode.svg" />
+    <None Remove="Icons\QuickHint.svg" />
     <None Remove="Icons\Redo.svg" />
+    <None Remove="Icons\RemoveResults.png" />
+    <None Remove="Icons\RemoveResults.svg" />
     <None Remove="Icons\Resume.svg" />
     <None Remove="Icons\RightView.svg" />
     <None Remove="Icons\SaveFile.svg" />
@@ -75,19 +116,25 @@
     <None Remove="Icons\SelectAll.svg" />
     <None Remove="Icons\SelectedActive.svg" />
     <None Remove="Icons\SelectedInactive.svg" />
+    <None Remove="Icons\SettlementWindow.svg" />
     <None Remove="Icons\ShrinkElementMode.svg" />
     <None Remove="Icons\SoilLayerVisible.svg" />
     <None Remove="Icons\SplitElementByNodes.svg" />
     <None Remove="Icons\Stop.svg" />
     <None Remove="Icons\SurroundingSoilVisible.svg" />
+    <None Remove="Icons\SvgIconStyle.svg" />
+    <None Remove="Icons\Table.svg" />
     <None Remove="Icons\TickMarkVisible.svg" />
     <None Remove="Icons\TopView.svg" />
     <None Remove="Icons\Undo.svg" />
     <None Remove="Icons\VerticalRotation.svg" />
     <None Remove="Icons\WireFrameVisible.svg" />
     <None Remove="Icons\ZoomFit.svg" />
+    <None Remove="Icons\アートボード12.svg" />
+    <None Remove="Icons\アートボード2.svg" />
+    <None Remove="Icons\アートボード3.svg" />
+    <None Remove="Icons\アートボード6.svg" />
     <None Remove="Icons\？1.svg" />
-    <None Remove="Icons\？2.png" />
     <None Remove="Icons\？2.svg" />
     <None Remove="Models\PileLibrary\CaptainPileTensionBarPCD_circle.csv" />
     <None Remove="Models\PileLibrary\CaptainPileTensionBarPCD_square.csv" />
@@ -121,6 +168,27 @@
     <Resource Include="Icons\AddElementMode.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AddPileLoc.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddRectLoad.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddSettlementSoilLayer.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddXGrid.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddYGrid.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AdjustEmbedmentPlan.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AdjustTextPositions.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\AnalysisResultVisilbe.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -134,6 +202,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ArrowVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AutoFrontRear.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AutoFrontRear.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AxesVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AxesVisible.svg">
@@ -154,16 +231,34 @@
     <Resource Include="Icons\CsvFileOutput.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\DecimalPoint.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DecimalPoint.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\DeformedElementVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DeleteAllSettlementSoilLayers.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DeselectAll.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\DisplacementScale.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\Display.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\Display2.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\DocxFileOutput.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ElementDivisionWindow.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ElementNo.svg">
@@ -175,10 +270,28 @@
     <Resource Include="Icons\FrontView.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="Icons\Grid.png">
+    <Resource Include="Icons\FundamentalWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Graph.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GridVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundLayerParametersVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundParameterValueVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundPointParametersVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileGraph.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\HorizontalRotation.svg">
@@ -187,7 +300,13 @@
     <Resource Include="Icons\InvertActive.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\IsActionPointLoadVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\IsAxialForceVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsAxialLoadVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsElementLocalAxesVisible.svg">
@@ -229,7 +348,13 @@
     <Resource Include="Icons\IsRigidConnectionVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\IsRigidConnectionVisible_2.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\IsSoilRefVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LabelSize.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LabelVisible.svg">
@@ -238,7 +363,22 @@
     <Resource Include="Icons\LateralLoadActionPointVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\LateralLoadAnalysisWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Liquefaction.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LoadCaseWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LoadForceScale.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\LoadingPlaneSelected.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LoadingPlaneVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadingPlaneVisible.svg">
@@ -250,13 +390,37 @@
     <Resource Include="Icons\MergeNodes.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\MoveActionPointToCentroid.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MoveActionPointToGravityCenter.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\NodeNo.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NodeVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NodeVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\NonLiquefaction - コピー.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NonLiquefaction.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NotLequefaction.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\OpenFile.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\OTMInput.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\PileBodyWindow.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\PileTopSelected.svg">
@@ -271,7 +435,16 @@
     <Resource Include="Icons\PreAnalysisMode.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\QuickHint.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\Redo.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RemoveResults.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RemoveResults.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Resume.svg">
@@ -295,6 +468,9 @@
     <Resource Include="Icons\SelectedInactive.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\SettlementWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ShrinkElementMode.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -308,6 +484,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SurroundingSoilVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SvgIconStyle.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Table.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\TickMarkVisible.svg">
@@ -328,10 +510,19 @@
     <Resource Include="Icons\ZoomFit.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="Icons\？1.svg">
+    <Resource Include="Icons\アートボード12.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="Icons\？2.png">
+    <Resource Include="Icons\アートボード2.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\アートボード3.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\アートボード6.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\？1.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\？2.svg">

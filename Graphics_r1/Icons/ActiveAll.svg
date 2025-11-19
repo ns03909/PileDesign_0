@@ -1,27 +1,29 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        fill: #d92731;
-      }
-
-      .cls-1, .cls-2 {
-        stroke: #d92731;
-        stroke-miterlimit: 10;
-      }
-
-      .cls-2 {
-        fill: none;
-        stroke-width: 20px;
-      }
-    </style>
-  </defs>
-  <path d="M235.92,20.08V235.92H20.08V20.08H235.92M256,0H0V256H256V0h0Z"/>
-  <circle class="cls-1" cx="71" cy="60" r="30"/>
-  <circle class="cls-1" cx="71" cy="200" r="30"/>
-  <circle class="cls-1" cx="191" cy="98" r="30"/>
-  <line class="cls-2" x1="191" y1="100" x2="71" y2="60"/>
-  <line class="cls-2" x1="71" y1="200" x2="191" y2="100"/>
-  <line class="cls-2" x1="71" y1="57" x2="71" y2="197"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-178,-712)">
+        <g id="ActiveAll" transform="matrix(1,0,0,1,356,0)">
+            <rect x="-178" y="712" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="-178" y="712" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.553852,0,0,0.553852,-179.107994,697.209304)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,-119.503665,717.209304)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,-164.713082,771.456773)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+                </g>
+                <g transform="matrix(1.01207,0,0,1.012102,-178.103126,-9.348686)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:black;stroke-width:8.23px;"/>
+                </g>
+                <g transform="matrix(1.106667,0,0,1.126977,-188.170028,-103.35211)">
+                    <path d="M39.325,748.059L93.184,765.806L52.332,813.941L39.325,748.059Z" style="fill:none;stroke:rgb(255,0,0);stroke-width:7.46px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
 </svg>

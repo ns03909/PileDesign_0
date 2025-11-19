@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1424,-1246)">
+        <rect id="AddRectLoad" x="1424" y="1246" width="128" height="128" style="fill:none;"/>
+        <g id="AddRectLoad1" serif:id="AddRectLoad">
+            <g transform="matrix(1.348481,0,0,1.348481,680.339048,-403.14307)">
+                <path d="M598.941,1260.425L633.57,1270.425L598.941,1280.425L564.313,1270.425L598.941,1260.425Z" style="fill:white;stroke:rgb(0,120,0);stroke-width:6.18px;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,343.311812,1168.203707)">
+                <g transform="matrix(50,0,0,50,1208.833348,128)">
+                </g>
+                <text x="1174.833px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(50,113,173);">+</text>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -1,19 +1,39 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        fill: none;
-        stroke: #00d495;
-        stroke-dasharray: 0 0 20 20;
-        stroke-miterlimit: 10;
-        stroke-width: 14px;
-      }
-    </style>
-  </defs>
-  <line class="cls-1" x1="206" y1="247" x2="47" y2="5"/>
-  <line class="cls-1" x1="5" y1="68" x2="237" y2="182"/>
-  <line class="cls-1" x1="115" y1="9" x2="134" y2="255"/>
-  <line class="cls-1" x1="59" y1="159" x2="187" y2="101"/>
-  <line class="cls-1" x1="171" y1="54" x2="81" y2="211"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1068,-1424)">
+        <g id="IsRigidConnectionVisible" transform="matrix(1,0,0,1,534,0)">
+            <rect x="534" y="1424" width="128" height="128" style="fill:none;"/>
+            <g transform="matrix(1,0,0,1,0,1.095245)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,22.059566,1.095245)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,44.119133,1.095245)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-22.059566,1.095245)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-44.119133,1.095245)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(0,1,-1,0,2084.904755,890)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(0,1,-1,0,2084.904755,912.059566)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(0,1,-1,0,2084.904755,934.119133)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(0,1,-1,0,2084.904755,867.940434)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+            <g transform="matrix(0,1,-1,0,2084.904755,845.880867)">
+                <path d="M598,1432.531L598,1541.278" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+            </g>
+        </g>
+    </g>
 </svg>
