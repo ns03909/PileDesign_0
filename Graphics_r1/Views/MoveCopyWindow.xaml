@@ -60,8 +60,24 @@
                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                 </StackPanel>
             </StackPanel>
+            
+        <!--<Button Content="2節点差分取得モード開始"
+        Command="{Binding StartNodePairSelectionCommand}"
+        Margin="4"/>
+
+        <Button Content="キャンセル"
+        Command="{Binding CancelNodePairSelectionCommand}"
+        Margin="4"
+        Visibility="{Binding IsNodePairSelectionMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+        <TextBlock Text="キャンバス上で節点を2つクリックしてください"
+           Foreground="Orange"
+           Margin="4"
+           Visibility="{Binding IsNodePairSelectionMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>-->
         </StackPanel>
+
         
+
         <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right" Grid.Row="1">
 
             <Button Content="Ok" Width="60" Click="OkButton_Click"/>

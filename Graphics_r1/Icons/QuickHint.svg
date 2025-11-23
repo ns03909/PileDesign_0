@@ -6,11 +6,13 @@
             <rect x="356" y="0" width="128" height="128" style="fill:none;"/>
             <g transform="matrix(1,0,0,1,45.145195,-6.473649)">
                 <g>
-                    <g transform="matrix(1,0,0,1,-223.145122,-172.889223)">
-                        <path d="M598,186.085C635.968,186.085 643.769,212.669 643.145,219.475C641.462,237.826 629.194,244.02 623.702,255.942C618.368,267.519 620.28,279.835 617.273,279.783C597.808,279.442 598,279.783 598,279.783" style="fill:url(#_Radial1);"/>
-                    </g>
-                    <g transform="matrix(-1,0,0,1,972.854733,-172.889223)">
-                        <path d="M598,186.085C635.968,186.085 643.769,212.669 643.145,219.475C641.462,237.826 629.194,244.02 623.702,255.942C618.368,267.519 620.28,279.835 617.273,279.783C597.808,279.442 598,279.783 598,279.783" style="fill:url(#_Radial2);"/>
+                    <g>
+                        <g transform="matrix(1,0,0,1,-223.145122,-172.889223)">
+                            <path d="M598,186.085C635.968,186.085 643.769,212.669 643.145,219.475C641.462,237.826 629.194,244.02 623.702,255.942C618.368,267.519 620.28,279.835 617.273,279.783C597.808,279.442 598,279.783 598,279.783" style="fill:url(#_Radial1);"/>
+                        </g>
+                        <g transform="matrix(-1,0,0,1,972.854733,-172.889223)">
+                            <path d="M598,186.085C635.968,186.085 643.769,212.669 643.145,219.475C641.462,237.826 629.194,244.02 623.702,255.942C618.368,267.519 620.28,279.835 617.273,279.783C597.808,279.442 598,279.783 598,279.783" style="fill:url(#_Radial2);"/>
+                        </g>
                     </g>
                 </g>
                 <g transform="matrix(-1,-0,0,-1,975.092152,428.194447)">
@@ -26,8 +28,8 @@
         </g>
     </g>
     <defs>
-        <radialGradient id="_Radial1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.645777,-46.848868,46.848868,-1.645777,597.999928,232.933954)"><stop offset="0" style="stop-color:rgb(242,255,212);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(255,248,173);stop-opacity:1"/></radialGradient>
-        <radialGradient id="_Radial2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1.645777,-46.848868,-46.848868,-1.645777,597.999928,232.933954)"><stop offset="0" style="stop-color:rgb(242,255,212);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(255,248,173);stop-opacity:1"/></radialGradient>
+        <radialGradient id="_Radial1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(-1.645777,-46.848868,46.848868,-1.645777,597.999928,232.933954)"><stop offset="0" style="stop-color:rgb(242,255,255);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(255,245,77);stop-opacity:1"/></radialGradient>
+        <radialGradient id="_Radial2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1.645777,-46.848868,-46.848868,-1.645777,597.999928,232.933954)"><stop offset="0" style="stop-color:rgb(242,255,255);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(255,245,77);stop-opacity:1"/></radialGradient>
         <linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,23.837171,-23.837171,0,600.237346,297.463677)"><stop offset="0" style="stop-color:rgb(233,151,0);stop-opacity:1"/><stop offset="0.25" style="stop-color:rgb(255,242,242);stop-opacity:1"/><stop offset="0.5" style="stop-color:rgb(192,124,0);stop-opacity:1"/><stop offset="0.75" style="stop-color:white;stop-opacity:1"/><stop offset="1" style="stop-color:rgb(227,176,0);stop-opacity:1"/></linearGradient>
         <linearGradient id="_Linear4" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,-17.480595,23.837171,0,594.956652,303.055465)"><stop offset="0" style="stop-color:rgb(233,151,0);stop-opacity:1"/><stop offset="0.16" style="stop-color:rgb(237,166,39);stop-opacity:1"/><stop offset="0.21" style="stop-color:rgb(246,202,136);stop-opacity:1"/><stop offset="0.25" style="stop-color:rgb(255,242,242);stop-opacity:1"/><stop offset="0.3" style="stop-color:rgb(229,194,143);stop-opacity:1"/><stop offset="0.35" style="stop-color:rgb(203,146,44);stop-opacity:1"/><stop offset="0.5" style="stop-color:rgb(192,124,0);stop-opacity:1"/><stop offset="0.66" style="stop-color:rgb(203,146,43);stop-opacity:1"/><stop offset="0.71" style="stop-color:rgb(228,199,146);stop-opacity:1"/><stop offset="0.75" style="stop-color:white;stop-opacity:1"/><stop offset="0.8" style="stop-color:rgb(243,222,147);stop-opacity:1"/><stop offset="0.85" style="stop-color:rgb(232,190,44);stop-opacity:1"/><stop offset="1" style="stop-color:rgb(227,176,0);stop-opacity:1"/></linearGradient>
     </defs>

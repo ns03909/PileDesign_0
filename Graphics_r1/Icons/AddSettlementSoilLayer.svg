@@ -13,10 +13,10 @@
             <g transform="matrix(1,0,0,0.234375,178,1336.84375)">
                 <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
             </g>
-            <g transform="matrix(1,0,0,1,-906.833348,1346.203707)">
-                <g transform="matrix(50,0,0,50,1208.833348,128)">
+            <g transform="matrix(1,0,0,1,-902.833348,1346.203707)">
+                <g transform="matrix(75,0,0,75,1208.833348,138.096293)">
                 </g>
-                <text x="1174.833px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(50,113,173);">+</text>
+                <text x="1157.833px" y="138.096px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">+</text>
             </g>
         </g>
     </g>

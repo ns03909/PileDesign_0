@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-890,-2136)">
+        <rect id="CollapseRibbon" x="890" y="2136" width="128" height="128" style="fill:none;"/>
+        <g id="CollapseRibbon1" serif:id="CollapseRibbon">
+            <g transform="matrix(1,0,0,1,-254.833348,2072)">
+                <g transform="matrix(45.833333,0,0,45.833333,1273.618765,128)">
+                </g>
+                <text x="1144.048px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:45.833px;">MENU</text>
+            </g>
+            <g transform="matrix(1,0,0,1,-254.833348,2122.203707)">
+                <g transform="matrix(45.833333,0,0,45.833333,1231.750015,128)">
+                </g>
+                <text x="1185.917px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:45.833px;">×</text>
+            </g>
+        </g>
+    </g>
+</svg>

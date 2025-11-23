@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
     <g transform="matrix(1,0,0,1,-712,-712)">
         <g id="NodeVisible" transform="matrix(1,0,0,1,712,712)">
             <rect x="0" y="0" width="128" height="128" style="fill:none;"/>
-            <g transform="matrix(0.553852,0,0,0.553852,29.542459,21.515798)">
-                <circle cx="62.214" cy="76.707" r="18.055" style="fill:rgb(255,0,0);"/>
+            <clipPath id="_clip1">
+                <rect x="0" y="0" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.553852,0,0,0.553852,29.542459,21.515798)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+                </g>
+                <g transform="matrix(1,0,0,1,-178,-4.334811)">
+                    <g transform="matrix(0.745781,0,0,0.745781,-461.229345,-583.126279)">
+                        <path d="M963.037,812.42C977.638,796.405 1002.974,797.394 1018,812.42" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;stroke-linecap:square;stroke-linejoin:miter;"/>
+                    </g>
+                    <g transform="matrix(-0.745781,-0,0,-0.745781,1016.19046,630.708284)">
+                        <path d="M963.037,812.42C977.638,796.405 1002.974,797.394 1018,812.42" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;stroke-linecap:square;stroke-linejoin:miter;"/>
+                    </g>
+                    <g transform="matrix(0.745781,0,0,0.745781,-410.424194,-586.256374)">
+                        <circle cx="922.395" cy="817.998" r="5.578" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;stroke-linecap:square;stroke-linejoin:miter;"/>
+                    </g>
+                </g>
             </g>
         </g>
     </g>

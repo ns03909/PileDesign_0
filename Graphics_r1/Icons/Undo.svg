@@ -1,6 +1,26 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <path d="M206.8,99c29.35,0,40.5,20.22,45,32,9.35,24.51-15.65,104-15.65,104,0,0,9.52-79.41-22.5-92-12.72-5-28.39-44-6.85-44Z"/>
-  <polygon points="213.65 143 108 143 108 99 206.8 99 213.65 143"/>
-  <polygon points="1.37 120.5 108 184 108 57 1.37 120.5"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-890,-2314)">
+        <rect id="Undo" x="890" y="2314" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="Undo1" serif:id="Undo" x="890" y="2314" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(1,0,0,1,-1.957808,0)">
+                <g transform="matrix(1.042022,0,0,1.630334,-13.495554,-1480.333822)">
+                    <g transform="matrix(0.959672,-0,-0,0.613371,868.938639,2327.335224)">
+                        <path d="M54.134,8.717L4.134,46.217L54.134,83.717L54.134,8.717Z"/>
+                        <path d="M44.134,46.217L88.636,46.217" style="fill:none;stroke:black;stroke-width:16.67px;"/>
+                    </g>
+                </g>
+                <g transform="matrix(0.5,0,0,0.5,503.593635,1236.214836)">
+                    <path d="M911.293,2355.683L954,2355.683" style="fill:none;stroke:black;stroke-width:33.33px;"/>
+                </g>
+                <g transform="matrix(1,0,0,1,-20.921524,9.427948)">
+                    <path d="M1001.515,2350.789C1016.373,2350.789 1028.435,2362.851 1028.435,2377.709C1028.435,2392.566 1016.373,2404.628 1001.515,2404.628" style="fill:none;stroke:black;stroke-width:16.67px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
 </svg>

@@ -15,124 +15,227 @@
   </ItemGroup>	
 
   <ItemGroup>
+    <None Remove="Icons\ActiveAll.png" />
     <None Remove="Icons\ActiveAll.svg" />
+    <None Remove="Icons\AddElementMode.png" />
     <None Remove="Icons\AddElementMode.svg" />
+    <None Remove="Icons\AddPileLoc.png" />
     <None Remove="Icons\AddPileLoc.svg" />
+    <None Remove="Icons\AddRectLoad.png" />
     <None Remove="Icons\AddRectLoad.svg" />
+    <None Remove="Icons\AddSettlementSoilLayer.png" />
     <None Remove="Icons\AddSettlementSoilLayer.svg" />
+    <None Remove="Icons\AddXGrid.png" />
     <None Remove="Icons\AddXGrid.svg" />
+    <None Remove="Icons\AddYGrid.png" />
     <None Remove="Icons\AddYGrid.svg" />
+    <None Remove="Icons\AdjustEmbedmentPlan.png" />
     <None Remove="Icons\AdjustEmbedmentPlan.svg" />
+    <None Remove="Icons\AdjustTextPositions.png" />
     <None Remove="Icons\AdjustTextPositions.svg" />
     <None Remove="Icons\AnalysisResultVisilbe.svg" />
     <None Remove="Icons\ArrowHeadDia.svg" />
     <None Remove="Icons\ArrowHeadLength.svg" />
     <None Remove="Icons\ArrowLength.svg" />
+    <None Remove="Icons\ArrowVisible.png" />
     <None Remove="Icons\ArrowVisible.svg" />
     <None Remove="Icons\AutoFrontRear.png" />
     <None Remove="Icons\AutoFrontRear.svg" />
     <None Remove="Icons\AxesVisible.png" />
     <None Remove="Icons\AxesVisible.svg" />
+    <None Remove="Icons\AxialForceVeirification.png" />
+    <None Remove="Icons\AxialForceVeirification.svg" />
     <None Remove="Icons\BoundaryCondition.svg" />
     <None Remove="Icons\BubbleDia.svg" />
+    <None Remove="Icons\BubbleVisible.png" />
     <None Remove="Icons\BubbleVisible.svg" />
     <None Remove="Icons\Cancel.svg" />
+    <None Remove="Icons\CollapseRibbon.png" />
+    <None Remove="Icons\CollapseRibbon.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
     <None Remove="Icons\DecimalPoint.png" />
     <None Remove="Icons\DecimalPoint.svg" />
+    <None Remove="Icons\DeformedElementVisible.png" />
     <None Remove="Icons\DeformedElementVisible.svg" />
+    <None Remove="Icons\DeleteAllSettlementSoilLayers.png" />
     <None Remove="Icons\DeleteAllSettlementSoilLayers.svg" />
+    <None Remove="Icons\DeselectAll.png" />
     <None Remove="Icons\DeselectAll.svg" />
+    <None Remove="Icons\DisplacementScale.png" />
     <None Remove="Icons\DisplacementScale.svg" />
+    <None Remove="Icons\Display.png" />
     <None Remove="Icons\Display.svg" />
     <None Remove="Icons\Display2.svg" />
+    <None Remove="Icons\DocxFileOutput.png" />
     <None Remove="Icons\DocxFileOutput.svg" />
+    <None Remove="Icons\ElementDivisionWindow.png" />
     <None Remove="Icons\ElementDivisionWindow.svg" />
+    <None Remove="Icons\ElementDivisionWindowDone.png" />
+    <None Remove="Icons\ElementDivisionWindowDone.svg" />
+    <None Remove="Icons\ElementNo.png" />
     <None Remove="Icons\ElementNo.svg" />
+    <None Remove="Icons\ElementVisible.png" />
     <None Remove="Icons\ElementVisible.svg" />
+    <None Remove="Icons\FrontView.png" />
     <None Remove="Icons\FrontView.svg" />
+    <None Remove="Icons\FundamentalWindow.png" />
     <None Remove="Icons\FundamentalWindow.svg" />
+    <None Remove="Icons\Graph.png" />
     <None Remove="Icons\Graph.svg" />
+    <None Remove="Icons\GridVisible.png" />
     <None Remove="Icons\GridVisible.svg" />
+    <None Remove="Icons\GroundLayerParametersVisible.png" />
     <None Remove="Icons\GroundLayerParametersVisible.svg" />
+    <None Remove="Icons\GroundParameterValueVisible.png" />
     <None Remove="Icons\GroundParameterValueVisible.svg" />
+    <None Remove="Icons\GroundPointParametersVisible.png" />
     <None Remove="Icons\GroundPointParametersVisible.svg" />
+    <None Remove="Icons\GroundWindow.png" />
     <None Remove="Icons\GroundWindow.svg" />
+    <None Remove="Icons\GroupPileGraph.png" />
     <None Remove="Icons\GroupPileGraph.svg" />
+    <None Remove="Icons\Help.png" />
+    <None Remove="Icons\Help.svg" />
+    <None Remove="Icons\HideRibbon.png" />
+    <None Remove="Icons\HideRibbon.svg" />
     <None Remove="Icons\HorizontalRotation.svg" />
+    <None Remove="Icons\InvertActive.png" />
     <None Remove="Icons\InvertActive.svg" />
+    <None Remove="Icons\IsActionPointLoadVisible.png" />
     <None Remove="Icons\IsActionPointLoadVisible.svg" />
     <None Remove="Icons\IsAxialForceVisible.svg" />
+    <None Remove="Icons\IsAxialLoadVisible.png" />
     <None Remove="Icons\IsAxialLoadVisible.svg" />
+    <None Remove="Icons\IsElementLocalAxesVisible.png" />
     <None Remove="Icons\IsElementLocalAxesVisible.svg" />
     <None Remove="Icons\IsElementLocalAxesVisible_1.svg" />
+    <None Remove="Icons\IsEmbedmentBoxVisible.png" />
     <None Remove="Icons\IsEmbedmentBoxVisible.svg" />
+    <None Remove="Icons\IsForcedDispVisible.png" />
     <None Remove="Icons\IsForcedDispVisible.svg" />
+    <None Remove="Icons\IsFrontPileVisible.png" />
     <None Remove="Icons\IsFrontPileVisible.svg" />
     <None Remove="Icons\IsGridVisible.svg" />
+    <None Remove="Icons\IsGroupPileFactorVisible.png" />
     <None Remove="Icons\IsGroupPileFactorVisible.svg" />
     <None Remove="Icons\IsLoadingVisible.svg" />
+    <None Remove="Icons\IsometricView.png" />
     <None Remove="Icons\IsometricView.svg" />
+    <None Remove="Icons\IsPileDiaSpacingRatioVisible.png" />
     <None Remove="Icons\IsPileDiaSpacingRatioVisible.svg" />
+    <None Remove="Icons\IsPileRefVisible.png" />
     <None Remove="Icons\IsPileRefVisible.svg" />
+    <None Remove="Icons\IsPileTopLevelVisible.png" />
     <None Remove="Icons\IsPileTopLevelVisible.svg" />
+    <None Remove="Icons\IsRigidConnectionVisible.png" />
     <None Remove="Icons\IsRigidConnectionVisible.svg" />
     <None Remove="Icons\IsRigidConnectionVisible_2.svg" />
+    <None Remove="Icons\IsSettlementGridVisible.png" />
+    <None Remove="Icons\IsSettlementGridVisible.svg" />
+    <None Remove="Icons\IsSoilRefVisible.png" />
     <None Remove="Icons\IsSoilRefVisible.svg" />
+    <None Remove="Icons\LabelSize.png" />
     <None Remove="Icons\LabelSize.svg" />
     <None Remove="Icons\LabelVisible.svg" />
+    <None Remove="Icons\LateralLoadActionPointVisible.png" />
     <None Remove="Icons\LateralLoadActionPointVisible.svg" />
+    <None Remove="Icons\LateralLoadAnalysisWindow.png" />
     <None Remove="Icons\LateralLoadAnalysisWindow.svg" />
+    <None Remove="Icons\Liquefaction.png" />
     <None Remove="Icons\Liquefaction.svg" />
+    <None Remove="Icons\LoadCaseWindow.png" />
     <None Remove="Icons\LoadCaseWindow.svg" />
+    <None Remove="Icons\LoadForceScale.png" />
     <None Remove="Icons\LoadForceScale.svg" />
+    <None Remove="Icons\LoadingPlaneSelected.png" />
     <None Remove="Icons\LoadingPlaneSelected.svg" />
     <None Remove="Icons\LoadingPlaneVisible.png" />
     <None Remove="Icons\LoadingPlaneVisible.svg" />
+    <None Remove="Icons\MergeElements.png" />
     <None Remove="Icons\MergeElements.svg" />
+    <None Remove="Icons\MergeNodes.png" />
     <None Remove="Icons\MergeNodes.svg" />
+    <None Remove="Icons\MoveActionPointToCentroid.png" />
     <None Remove="Icons\MoveActionPointToCentroid.svg" />
+    <None Remove="Icons\MoveActionPointToGravityCenter.png" />
     <None Remove="Icons\MoveActionPointToGravityCenter.svg" />
+    <None Remove="Icons\NewFile.png" />
+    <None Remove="Icons\NewFile.svg" />
+    <None Remove="Icons\NodeNo.png" />
     <None Remove="Icons\NodeNo.svg" />
     <None Remove="Icons\NodeVisible.png" />
     <None Remove="Icons\NodeVisible.svg" />
+    <None Remove="Icons\NonLiquefaction.png" />
     <None Remove="Icons\NonLiquefaction.svg" />
     <None Remove="Icons\NotLequefaction.svg" />
+    <None Remove="Icons\OpenFile.png" />
     <None Remove="Icons\OpenFile.svg" />
+    <None Remove="Icons\OTMInput.png" />
     <None Remove="Icons\OTMInput.svg" />
+    <None Remove="Icons\PileBodyWindow.png" />
     <None Remove="Icons\PileBodyWindow.svg" />
+    <None Remove="Icons\PileTopSelected.png" />
     <None Remove="Icons\PileTopSelected.svg" />
     <None Remove="Icons\Play.svg" />
     <None Remove="Icons\PostAnalysisMode.svg" />
     <None Remove="Icons\PreAnalysisMode.svg" />
+    <None Remove="Icons\QuickHint.png" />
     <None Remove="Icons\QuickHint.svg" />
+    <None Remove="Icons\Redo.png" />
     <None Remove="Icons\Redo.svg" />
     <None Remove="Icons\RemoveResults.png" />
     <None Remove="Icons\RemoveResults.svg" />
     <None Remove="Icons\Resume.svg" />
+    <None Remove="Icons\RibbonMinimize.png" />
+    <None Remove="Icons\RibbonMinimize.svg" />
+    <None Remove="Icons\RibbonVisible.png" />
+    <None Remove="Icons\RibbonVisible.svg" />
+    <None Remove="Icons\RightView.png" />
     <None Remove="Icons\RightView.svg" />
+    <None Remove="Icons\SaveFile.png" />
     <None Remove="Icons\SaveFile.svg" />
+    <None Remove="Icons\SaveFileAs.png" />
+    <None Remove="Icons\SaveFileAs.svg" />
     <None Remove="Icons\Scale.svg" />
+    <None Remove="Icons\SelectAll.png" />
     <None Remove="Icons\SelectAll.svg" />
+    <None Remove="Icons\SelectedActive.png" />
     <None Remove="Icons\SelectedActive.svg" />
+    <None Remove="Icons\SelectedInactive.png" />
     <None Remove="Icons\SelectedInactive.svg" />
+    <None Remove="Icons\SettlementWindow.png" />
     <None Remove="Icons\SettlementWindow.svg" />
+    <None Remove="Icons\ShortcutKeys.png" />
+    <None Remove="Icons\ShortcutKeys.svg" />
+    <None Remove="Icons\ShrinkElementMode.png" />
     <None Remove="Icons\ShrinkElementMode.svg" />
+    <None Remove="Icons\SoilLayerVisible.png" />
     <None Remove="Icons\SoilLayerVisible.svg" />
+    <None Remove="Icons\SplitElementByNodes.png" />
     <None Remove="Icons\SplitElementByNodes.svg" />
     <None Remove="Icons\Stop.svg" />
+    <None Remove="Icons\SurroundingSoilVisible.png" />
     <None Remove="Icons\SurroundingSoilVisible.svg" />
+    <None Remove="Icons\SvgIconStyle.png" />
     <None Remove="Icons\SvgIconStyle.svg" />
+    <None Remove="Icons\Table.png" />
     <None Remove="Icons\Table.svg" />
+    <None Remove="Icons\TickMarkVisible.png" />
     <None Remove="Icons\TickMarkVisible.svg" />
+    <None Remove="Icons\TopView.png" />
     <None Remove="Icons\TopView.svg" />
+    <None Remove="Icons\Undo.png" />
     <None Remove="Icons\Undo.svg" />
     <None Remove="Icons\VerticalRotation.svg" />
+    <None Remove="Icons\WireFrameVisible.png" />
     <None Remove="Icons\WireFrameVisible.svg" />
+    <None Remove="Icons\ZoomFit.png" />
     <None Remove="Icons\ZoomFit.svg" />
+    <None Remove="Icons\アートボード12.png" />
     <None Remove="Icons\アートボード12.svg" />
     <None Remove="Icons\アートボード2.svg" />
     <None Remove="Icons\アートボード3.svg" />
+    <None Remove="Icons\アートボード6.png" />
     <None Remove="Icons\アートボード6.svg" />
     <None Remove="Icons\？1.svg" />
     <None Remove="Icons\？2.svg" />
@@ -162,371 +265,680 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Icons\ActiveAll.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ActiveAll.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddElementMode.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AddElementMode.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddPileLoc.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AddPileLoc.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddRectLoad.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AddRectLoad.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddSettlementSoilLayer.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AddSettlementSoilLayer.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddXGrid.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AddXGrid.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddYGrid.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AddYGrid.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AdjustEmbedmentPlan.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AdjustEmbedmentPlan.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AdjustTextPositions.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AdjustTextPositions.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AnalysisResultVisilbe.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ArrowHeadDia.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ArrowHeadLength.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ArrowLength.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ArrowVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ArrowVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AutoFrontRear.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AutoFrontRear.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AxesVisible.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AxesVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AxialForceVeirification.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AxialForceVeirification.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BoundaryCondition.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BubbleDia.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BubbleVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BubbleVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Cancel.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CollapseRibbon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CollapseRibbon.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CsvFileOutput.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DecimalPoint.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DecimalPoint.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DeformedElementVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DeformedElementVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DeleteAllSettlementSoilLayers.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DeleteAllSettlementSoilLayers.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DeselectAll.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DeselectAll.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DisplacementScale.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DisplacementScale.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Display.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Display.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Display2.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DocxFileOutput.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DocxFileOutput.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ElementDivisionWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ElementDivisionWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ElementDivisionWindowDone.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ElementDivisionWindowDone.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ElementNo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ElementNo.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ElementVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ElementVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\FrontView.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\FrontView.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\FundamentalWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\FundamentalWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Graph.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Graph.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GridVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GridVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundLayerParametersVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroundLayerParametersVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundParameterValueVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroundParameterValueVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundPointParametersVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroundPointParametersVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroundWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroundWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileGraph.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroupPileGraph.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Help.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Help.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\HideRibbon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\HideRibbon.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\HorizontalRotation.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\InvertActive.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\InvertActive.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsActionPointLoadVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsActionPointLoadVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsAxialForceVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsAxialLoadVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsAxialLoadVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsElementLocalAxesVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsElementLocalAxesVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsElementLocalAxesVisible_1.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsEmbedmentBoxVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsEmbedmentBoxVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsForcedDispVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsForcedDispVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsFrontPileVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsFrontPileVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsGridVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsGroupPileFactorVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsGroupPileFactorVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsLoadingVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsometricView.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsometricView.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsPileDiaSpacingRatioVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsPileDiaSpacingRatioVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsPileRefVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsPileRefVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsPileTopLevelVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsPileTopLevelVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsRigidConnectionVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsRigidConnectionVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsRigidConnectionVisible_2.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsSettlementGridVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsSettlementGridVisible.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsSoilRefVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsSoilRefVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LabelSize.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LabelSize.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LabelVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LateralLoadActionPointVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LateralLoadActionPointVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LateralLoadAnalysisWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LateralLoadAnalysisWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Liquefaction.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Liquefaction.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LoadCaseWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadCaseWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LoadForceScale.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadForceScale.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\LoadingPlaneSelected.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadingPlaneSelected.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadingPlaneVisible.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadingPlaneVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MergeElements.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MergeElements.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MergeNodes.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MergeNodes.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MoveActionPointToCentroid.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MoveActionPointToCentroid.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MoveActionPointToGravityCenter.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MoveActionPointToGravityCenter.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NewFile.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NewFile.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NodeNo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NodeNo.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NodeVisible.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NodeVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NonLiquefaction - コピー.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NonLiquefaction.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NonLiquefaction.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NotLequefaction.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\OpenFile.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\OpenFile.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\OTMInput.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\OTMInput.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\PileBodyWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\PileBodyWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\PileTopSelected.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\PileTopSelected.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Play.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\PostAnalysisMode.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\PreAnalysisMode.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\QuickHint.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\QuickHint.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Redo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Redo.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\RemoveResults.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\RemoveResults.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Resume.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RibbonMinimize.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RibbonMinimize.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RibbonVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RibbonVisible.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\RightView.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\RightView.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SaveFile.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SaveFile.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SaveFileAs.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SaveFileAs.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Scale.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SelectAll.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SelectAll.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SelectedActive.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SelectedActive.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SelectedInactive.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SelectedInactive.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SettlementWindow.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SettlementWindow.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ShortcutKeys.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ShortcutKeys.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ShrinkElementMode.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ShrinkElementMode.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SoilLayerVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SoilLayerVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SplitElementByNodes.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SplitElementByNodes.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Stop.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SurroundingSoilVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SurroundingSoilVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SvgIconStyle.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SvgIconStyle.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Table.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Table.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\TickMarkVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\TickMarkVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\TopView.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\TopView.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Undo.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Undo.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\VerticalRotation.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\WireFrameVisible.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\WireFrameVisible.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ZoomFit.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ZoomFit.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\アートボード12.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\アートボード12.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\アートボード2.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\アートボード3.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\アートボード6.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\アートボード6.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\？1.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\？2.svg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Content Include="Models\PileLibrary\JIS_A_5525_2019.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -7,10 +7,10 @@
             <g transform="matrix(1.348481,0,0,1.348481,680.339048,-403.14307)">
                 <path d="M598.941,1260.425L633.57,1270.425L598.941,1280.425L564.313,1270.425L598.941,1260.425Z" style="fill:white;stroke:rgb(0,120,0);stroke-width:6.18px;"/>
             </g>
-            <g transform="matrix(1,0,0,1,343.311812,1168.203707)">
-                <g transform="matrix(50,0,0,50,1208.833348,128)">
+            <g transform="matrix(1,0,0,1,343.166652,1168.203707)">
+                <g transform="matrix(75,0,0,75,1208.833348,138.096293)">
                 </g>
-                <text x="1174.833px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(50,113,173);">+</text>
+                <text x="1157.833px" y="138.096px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">+</text>
             </g>
         </g>
     </g>

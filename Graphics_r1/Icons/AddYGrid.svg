@@ -10,10 +10,10 @@
             <g transform="matrix(1,0,0,1,963.811537,849.077416)">
                 <circle cx="568.324" cy="282.923" r="16.316" style="fill:rgb(98,176,226);fill-opacity:0;stroke:rgb(98,0,226);stroke-width:8.33px;"/>
             </g>
-            <g transform="matrix(1,0,0,1,343.311812,990.203707)">
-                <g transform="matrix(50,0,0,50,1208.833348,128)">
+            <g transform="matrix(1,0,0,1,343.166652,990.203707)">
+                <g transform="matrix(75,0,0,75,1208.833348,138.096293)">
                 </g>
-                <text x="1174.833px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(50,113,173);">+</text>
+                <text x="1157.833px" y="138.096px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">+</text>
             </g>
             <g transform="matrix(1,0,0,1,893.838798,927.294439)">
                 <path d="M621.98,204.706L534,204.706" style="fill:none;stroke:rgb(98,0,226);stroke-width:8.33px;"/>

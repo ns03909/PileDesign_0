@@ -16,6 +16,17 @@
             <g transform="matrix(1,0,0,0.234375,1602,446.84375)">
                 <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
             </g>
+            <g transform="matrix(1,0,0,1,1424,529.665189)">
+                <g transform="matrix(0.745781,0,0,0.745781,-461.229345,-583.126279)">
+                    <path d="M963.037,812.42C977.638,796.405 1002.974,797.394 1018,812.42" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;"/>
+                </g>
+                <g transform="matrix(-0.745781,-0,0,-0.745781,1016.19046,630.708284)">
+                    <path d="M963.037,812.42C977.638,796.405 1002.974,797.394 1018,812.42" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;"/>
+                </g>
+                <g transform="matrix(0.745781,0,0,0.745781,-410.424194,-586.256374)">
+                    <circle cx="922.395" cy="817.998" r="5.578" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;"/>
+                </g>
+            </g>
             <g transform="matrix(1,0,0,1,0,0.006716)">
                 <path d="M1666,662C1697.912,618.05 1697.784,571.35 1697.784,572" style="fill:none;stroke:black;stroke-width:8.33px;"/>
             </g>

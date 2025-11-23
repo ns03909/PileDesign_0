@@ -70,6 +70,70 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 追加: ビュー操作用デリゲート（コードビハインド側でセット）
+        public Action? ZoomFitAction { get; set; }
+        public Action<double, double>? AnimateViewAnglesAction { get; set; }
+
+        // ズームフィット
+        [RelayCommand]
+        private void ZoomFit()
+        {
+            ZoomFitAction?.Invoke();
+        }
+
+        // XY平面
+        [RelayCommand]
+        private void ViewXYPlane()
+        {
+            // θ=-90, φ=90
+            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 90);
+            else
+            {
+                CanvasThreeDView.Tht = -90;
+                CanvasThreeDView.Phi = 90;
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        // YZ平面
+        [RelayCommand]
+        private void ViewYZPlane()
+        {
+            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(0, 0);
+            else
+            {
+                CanvasThreeDView.Tht = 0;
+                CanvasThreeDView.Phi = 0;
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        // XZ平面
+        [RelayCommand]
+        private void ViewXZPlane()
+        {
+            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 0);
+            else
+            {
+                CanvasThreeDView.Tht = -90;
+                CanvasThreeDView.Phi = 0;
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        // アイソメ
+        [RelayCommand]
+        private void ViewIsometric()
+        {
+            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-45, 45);
+            else
+            {
+                CanvasThreeDView.Tht = -45;
+                CanvasThreeDView.Phi = 45;
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
         // イベントハンドラの実装
         private void HandleDataGridSettlementSoilLayersCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {

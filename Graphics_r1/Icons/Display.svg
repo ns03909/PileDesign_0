@@ -9,15 +9,22 @@
             </clipPath>
             <g clip-path="url(#_clip1)">
                 <g transform="matrix(1.083152,0,0,0.850236,-4.569678,636.516831)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:url(#_Radial2);"/>
+                </g>
+                <g transform="matrix(0.415992,0,0,0.039335,37.038279,1341.155217)">
                     <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(247,181,21);"/>
                 </g>
-                <g transform="matrix(0.415992,0,0,0.172353,38.448274,1230.083881)">
+                <g transform="matrix(0.102068,0,0,0.193616,56.911483,1207.680793)">
                     <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(247,181,21);"/>
                 </g>
-                <g transform="matrix(0.751878,0,0,0.547503,16.401821,871.415024)">
-                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(98,176,226);"/>
+                <g transform="matrix(0.944028,0,0,0.687422,4.237637,762.847793)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:url(#_Radial3);"/>
                 </g>
             </g>
         </g>
     </g>
+    <defs>
+        <radialGradient id="_Radial2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(59.086814,0,0,59.08497,63.305684,775.925313)"><stop offset="0" style="stop-color:white;stop-opacity:1"/><stop offset="1" style="stop-color:rgb(247,181,21);stop-opacity:1"/></radialGradient>
+        <radialGradient id="_Radial3" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(59.086814,0,0,59.08497,63.305684,775.925313)"><stop offset="0" style="stop-color:white;stop-opacity:1"/><stop offset="1" style="stop-color:rgb(98,176,226);stop-opacity:1"/></radialGradient>
+    </defs>
 </svg>

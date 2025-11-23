@@ -53,10 +53,15 @@
                 <g transform="matrix(0.162354,0,0,0.230069,697.659836,1413.541103)">
                     <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
                 </g>
-                <g transform="matrix(1,0,0,1,-432.833348,1741.101853)">
+                <g transform="matrix(1,0,0,1,-432.833348,1721.5)">
                     <g transform="matrix(50,0,0,50,1271.833348,128)">
                     </g>
                     <text x="1145.833px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;">SPLIT</text>
+                </g>
+                <g transform="matrix(1,0,0,1,-368.833348,1771.5)">
+                    <g transform="matrix(50,0,0,50,1201.833348,128)">
+                    </g>
+                    <text x="1151.833px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(255,0,0);">未</text>
                 </g>
             </g>
         </g>

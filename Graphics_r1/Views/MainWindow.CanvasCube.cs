@@ -23,7 +23,6 @@ namespace PileDesign.Views
 
     public partial class MainWindow : Window
     {
-
         private static bool IsEdgeHidden(Vector3D viewVector, Point3D p3a, Point3D p3b, int closestVertexIndex, Point3D[] cubePoints)
         {
             // 元のロジック: 注視点に最も近い頂点を含む辺を陰線とする
@@ -51,7 +50,7 @@ namespace PileDesign.Views
                 CanvasCube.Children.Clear();
             }
 
-            double d = 20;　// キューブの寸法
+            double d = 16;　// キューブの寸法
 
             Point3D[] cubePoints =
             [
@@ -93,11 +92,165 @@ namespace PileDesign.Views
                 }
             }
 
+            // Z軸周り円環の描画（キューブエッジ描画後）
+            DrawZAxisRing(viewVector, d);
+
             // 各面の中心に文字を描画
             DrawFaceLabels(viewVector, cubePoints, transformedPoints, d);
 
             // 既存 UpdateCanvasCube の末尾近くにこの1行を追加（面ラベル描画の後）
             BuildCubeHitItems(viewVector, cubePoints, transformedPoints, d);
+        }
+
+
+        /// <summary>
+        /// Z軸回りの帯状円環。地震荷重ケース選択時は荷重角度方向線を描画。
+        /// 継ぎ目の放射線が出ないよう、塗りと枠線を分離。
+        /// </summary>
+        private void DrawZAxisRing(Vector3D viewVector, double d)
+        {
+            if (DataContext is not MainWindowViewModel vm || CanvasCube == null) return;
+
+            // 円環寸法（調整可）
+            double ringOuterR = d * 2.0;   // 外径
+            double ringInnerR = d * 1.6;   // 内径
+            int segments = 128;
+
+            // 0..segments-1（重複点を作らない）
+            var outerPts = new List<Point>(segments);
+            var innerPts = new List<Point>(segments);
+            for (int k = 0; k < segments; k++)
+            {
+                double ang = 2.0 * Math.PI * k / segments;
+                var p3Outer = new Point3D(ringOuterR * Math.Cos(ang), ringOuterR * Math.Sin(ang), 0.0);
+                var p3Inner = new Point3D(ringInnerR * Math.Cos(ang), ringInnerR * Math.Sin(ang), 0.0);
+                outerPts.Add(vm.CanvasThreeDView.CubeTransformation(p3Outer, CanvasCube));
+                innerPts.Add(vm.CanvasThreeDView.CubeTransformation(p3Inner, CanvasCube));
+            }
+
+            // 共通: Figure を組み立てるヘルパ
+            static PathFigure BuildClosedFigure(IReadOnlyList<Point> pts)
+            {
+                var fig = new PathFigure { StartPoint = pts[0], IsClosed = true, IsFilled = true };
+                fig.Segments.Add(new PolyLineSegment(pts.Skip(1).ToList(), true));
+                return fig;
+            }
+
+            // 塗り用 PathGeometry（外周・内周を別 Figure、EvenOdd で穴にする）
+            var fillGeom = new PathGeometry { FillRule = FillRule.EvenOdd };
+            fillGeom.Figures.Add(BuildClosedFigure(outerPts));
+            fillGeom.Figures.Add(BuildClosedFigure(innerPts));
+
+            var fillPath = new Path
+            {
+                Data = fillGeom,
+                Fill = new SolidColorBrush(Color.FromArgb(55, 100, 140, 200)), // 半透明塗り
+                Stroke = null,
+                IsHitTestVisible = false
+            };
+            Panel.SetZIndex(fillPath, 30);
+            CanvasCube.Children.Add(fillPath);
+
+            // 外周枠線
+            var outerGeom = new PathGeometry();
+            outerGeom.Figures.Add(BuildClosedFigure(outerPts));
+            var outerStrokePath = new Path
+            {
+                Data = outerGeom,
+                Fill = Brushes.Transparent,
+                Stroke = new SolidColorBrush(Color.FromArgb(160, 80, 120, 170)),
+                StrokeThickness = 1.2,
+                IsHitTestVisible = false
+            };
+            Panel.SetZIndex(outerStrokePath, 31);
+            CanvasCube.Children.Add(outerStrokePath);
+
+            // 内周枠線
+            var innerGeom = new PathGeometry();
+            innerGeom.Figures.Add(BuildClosedFigure(innerPts));
+            var innerStrokePath = new Path
+            {
+                Data = innerGeom,
+                Fill = Brushes.Transparent,
+                Stroke = new SolidColorBrush(Color.FromArgb(160, 80, 120, 170)),
+                StrokeThickness = 1.2,
+                IsHitTestVisible = false
+            };
+            Panel.SetZIndex(innerStrokePath, 31);
+            CanvasCube.Children.Add(innerStrokePath);
+
+            // 地震荷重方向表示（必要なら角度基準に合わせて±補正）
+            bool isSeismic = vm.CurrentInputModel.LoadCasesInput.AllSeismicLoadCases
+                                .Any(lc => lc.LoadName == vm.SelectedLoadCaseName);
+            if (!isSeismic) return;
+
+            double deg = vm.SelectedDirection + 180.0; // 既存仕様：反転＋180°
+            double rad = deg * Math.PI / 180.0;
+
+            // 3D上 (XY平面 Z=0) の外径側=底辺中心, 内径側=頂点
+            var p3A = new Point3D(ringOuterR * Math.Cos(rad), ringOuterR * Math.Sin(rad), 0.0); // 底辺中心
+            var p3B = new Point3D(ringInnerR * Math.Cos(rad), ringInnerR * Math.Sin(rad), 0.0); // 頂点
+
+            // 高さベクトル (3D)
+            Vector3D hVec3 = p3B - p3A;
+            double h = hVec3.Length;
+            double minHeight = 8.0; // 投影後も形状が視認できる最低高さ
+            if (h < minHeight)
+            {
+                if (h > 1e-6)
+                {
+                    hVec3.Normalize();
+                    p3B = p3A + hVec3 * minHeight;
+                    hVec3 = p3B - p3A;
+                    h = minHeight;
+                }
+                else
+                {
+                    return; // 退避
+                }
+            }
+
+            // 正三角形底辺長
+            double s = 2.0 * h / Math.Sqrt(3.0);
+
+            // 法線ベクトル(-dy, dx, 0) を正規化（XY平面内）
+            Vector3D n3 = new(-hVec3.Y, hVec3.X, 0.0);
+            double nLen = n3.Length;
+            if (nLen < 1e-6) return;
+            n3 /= nLen;
+
+            // 底辺端点 (3D)
+            var p3Base1 = p3A + n3 * (s * 0.5);
+            var p3Base2 = p3A - n3 * (s * 0.5);
+
+            // 2D変換
+            Point pA = vm.CanvasThreeDView.CubeTransformation(p3A, CanvasCube);
+            Point pB = vm.CanvasThreeDView.CubeTransformation(p3B, CanvasCube);
+            Point pBase1 = vm.CanvasThreeDView.CubeTransformation(p3Base1, CanvasCube);
+            Point pBase2 = vm.CanvasThreeDView.CubeTransformation(p3Base2, CanvasCube);
+
+            // 三角形 PathFigure (底辺両端→頂点)
+            var triFig = new PathFigure
+            {
+                StartPoint = pBase1,
+                IsClosed = true,
+                IsFilled = true
+            };
+            triFig.Segments.Add(new PolyLineSegment(new[] { pBase2, pB }, true));
+
+            var triGeom = new PathGeometry(new[] { triFig });
+
+            var trianglePath = new Path
+            {
+                Data = triGeom,
+                Fill = new SolidColorBrush(Color.FromArgb(160, 255, 140, 0)), // 半透明オレンジ
+                Stroke = Brushes.OrangeRed,
+                StrokeThickness = 1.5,
+                StrokeLineJoin = PenLineJoin.Round,
+                IsHitTestVisible = false
+            };
+            Panel.SetZIndex(trianglePath, 65);
+            CanvasCube.Children.Add(trianglePath);
         }
 
         // 最寄りの節点のindexを返すメソッド
@@ -283,8 +436,8 @@ namespace PileDesign.Views
                         if (sx == -1 && sy == 0 && sz == 0) { tht = 180; phi = 0; return true; }   // -X
                         if (sx == 0 && sy == +1 && sz == 0) { tht = 90; phi = 0; return true; }   // +Y
                         if (sx == 0 && sy == -1 && sz == 0) { tht = 270; phi = 0; return true; }   // -Y
-                        if (sx == 0 && sy == 0 && sz == +1) { tht = 0; phi = 89.99; return true; }   // +Z
-                        if (sx == 0 && sy == 0 && sz == -1) { tht = 0; phi = -89.99; return true; }   // -Z
+                        if (sx == 0 && sy == 0 && sz == +1) { tht = -90; phi = 90; return true; }   // +Z
+                        if (sx == 0 && sy == 0 && sz == -1) { tht = -90; phi = -90; return true; }   // -Z
                         break;
                     }
 

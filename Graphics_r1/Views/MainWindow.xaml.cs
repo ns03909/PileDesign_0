@@ -86,9 +86,18 @@ namespace PileDesign.Views
 
             var viewModel = _mainWindowViewModel;
 
+            // 追加: ZoomFitAction をコードビハインド実装に接続
+            viewModel.ZoomFitAction = ZoomFit;
+
+            // （任意）アニメーション角度用も接続したい場合
+            viewModel.AnimateViewAnglesAction = async (tht, phi) =>
+            {
+                await AnimateToAnglesAsync(tht, phi);
+            };
+
+
             // TextBoxElementNodeInput を ViewModel にバインド
             _mainWindowViewModel.TextBoxElementNodeInput = TextBoxElementNodeInput;
-
 
             InitializeViewModels();
             SetupEventHandlers();
@@ -2863,15 +2872,20 @@ namespace PileDesign.Views
 
         private void InvertActiveNodesButton_click(object sender, RoutedEventArgs e)
         {
-            foreach (var pileLayoutItem in ((MainWindowViewModel)DataContext).CurrentInputModel.PileLayoutItems)
-            {
-                if (pileLayoutItem.IsVisible)
-                { pileLayoutItem.IsVisible = false; }
-                else
-                {
-                    pileLayoutItem.IsVisible = true;
-                }
-            }
+            //foreach (var pileLayoutItem in ((MainWindowViewModel)DataContext).CurrentInputModel.PileLayoutItems)
+            //{
+            //    if (pileLayoutItem.IsVisible)
+            //    { pileLayoutItem.IsVisible = false; }
+            //    else
+            //    {
+            //        pileLayoutItem.IsVisible = true;
+            //    }
+            //}
+            var vm = (MainWindowViewModel)DataContext;
+            foreach (var item in vm.CurrentInputModel.PileLayoutItems)
+                item.IsVisible = !item.IsVisible;
+
+            vm.UpdateViewCommand?.Execute(null); // 既存の再描画コマンドがあれば
         }
 
         private void MergeElementsButton_click(object sender, RoutedEventArgs e)

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-1246,-534)">
+        <rect id="ShortcutKeys" x="1246" y="534" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="ShortcutKeys1" serif:id="ShortcutKeys" x="1246" y="534" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(2.290529,-2.290529,4.662918,4.662918,-1853.912733,301.559718)">
+                <path d="M598,373.479L598,368.622L634.107,368.622L634.107,361.336L653.882,371.05L634.107,380.764L634.107,373.479L598,373.479Z" style="fill:url(#_Linear2);"/>
+            </g>
+        </g>
+    </g>
+    <defs>
+        <linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(55.882292,0,0,19.428436,598,371.050151)"><stop offset="0" style="stop-color:white;stop-opacity:1"/><stop offset="0.7" style="stop-color:rgb(43,43,43);stop-opacity:1"/><stop offset="1" style="stop-color:black;stop-opacity:1"/></linearGradient>
+    </defs>
+</svg>

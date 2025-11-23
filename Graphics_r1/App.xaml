@@ -8,6 +8,21 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/PileDesign;component/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            
+            <!-- 全 FrameworkElement の ToolTip 設定 -->
+            <Style TargetType="FrameworkElement">
+                <Setter Property="ToolTipService.InitialShowDelay" Value="0"/>
+                <!-- 初回表示遅延 -->
+                <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
+                <!-- 再表示遅延 -->
+                <Setter Property="ToolTipService.ShowDuration" Value="60000"/>
+                <!-- 表示継続時間(ms) -->
+            </Style>
+            
         </ResourceDictionary>
+
+
+        
     </Application.Resources>
 </Application>

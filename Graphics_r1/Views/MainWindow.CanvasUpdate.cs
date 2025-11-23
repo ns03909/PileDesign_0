@@ -223,31 +223,31 @@ namespace PileDesign.Views
             if ((MainWindowViewModel)DataContext == null) return;
 
             // 平面図の場合
-            if (viewModel.CanvasThreeDView.Phi == 90 && viewModel.CanvasThreeDView.IsPerspective == false)
+            if (Math.Abs(viewModel.CanvasThreeDView.Phi - 90.0) < 0.5 && !viewModel.CanvasThreeDView.IsPerspective)
             {
                 if (viewModel.IsTickMarkVisible) UpdateTickMarks3DPlan();  // 目盛りの更新
                 if (viewModel.IsGridLineVisible) UpdateGridLines3DPlan(); // 通り心の更新
 
-                if (viewModel.CanvasThreeDView.Tht == -90) // XY（平面）の場合
+                if (Math.Abs(viewModel.CanvasThreeDView.Tht + 90) < 0.5) // XY（平面）の場合
                 {
                     if (viewModel.IsGridLineVisible) UpdateDimensionLines3DPlan();
                 }
             }
 
             // 側面図の場合
-            else if (viewModel.CanvasThreeDView.Phi == 0 && viewModel.CanvasThreeDView.IsPerspective == false)
+            else if (Math.Abs(viewModel.CanvasThreeDView.Phi) < 0.5 && viewModel.CanvasThreeDView.IsPerspective == false)
             {
 
                 if (viewModel.IsSettlementGroundVisible) UpdateSettlementGround3D(); // 側面図用沈下描画の更新
                 UpdateTickMarks3DElevation(); // 目盛りの更新
 
-                if (viewModel.CanvasThreeDView.Tht == 0) // YZ（右側面）の場合
+                if (Math.Abs(viewModel.CanvasThreeDView.Tht) < 0.5) // YZ（右側面）の場合
                 {
                     if (viewModel.IsTickMarkVisible) UpdateTickMarks3DYofYZ();
                     if (viewModel.IsGridLineVisible) UpdateGridLinesAndDimensionsYforYZ(); // 通り心の更新
                 }
 
-                if (viewModel.CanvasThreeDView.Tht == -90) // XZ（正面）の場合
+                if (Math.Abs(viewModel.CanvasThreeDView.Tht + 90) < 0.5) // XZ（正面）の場合
                 {
                     if (viewModel.IsTickMarkVisible) UpdateTickMarks3DXofXZ();
                     if (viewModel.IsGridLineVisible) UpdateGridLinesAndDimensionsXforXZ(); // 通り心の更新

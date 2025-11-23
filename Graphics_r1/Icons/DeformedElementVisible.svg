@@ -1,25 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_レイヤー_1" data-name="レイヤー 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <style>
-      .cls-1 {
-        stroke: #b3b3b3;
-      }
-
-      .cls-1, .cls-2 {
-        fill: none;
-        stroke-miterlimit: 10;
-        stroke-width: 15px;
-      }
-
-      .cls-2 {
-        stroke: #000;
-      }
-    </style>
-  </defs>
-  <line class="cls-1" x1="14" y1="92.92" x2="244" y2="92.92"/>
-  <line class="cls-1" x1="16.5" y1="142" x2="16.5" y2="85"/>
-  <line class="cls-1" x1="129" y1="162.92" x2="129" y2="90.42"/>
-  <line class="cls-1" x1="241.5" y1="142" x2="241.5" y2="85"/>
-  <polyline class="cls-2" points="11 135 129 163.42 247 135"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1602,-1958)">
+        <rect id="DeformedElementVisible" x="1602" y="1958" width="128" height="128" style="fill:none;"/>
+        <g id="DeformedElementVisible1" serif:id="DeformedElementVisible">
+            <g transform="matrix(1,0,0,0.5,0,1018.550919)">
+                <path d="M1617.507,1993.641L1617.507,2037.102" style="fill:none;stroke:rgb(179,179,179);stroke-width:10.54px;"/>
+            </g>
+            <g transform="matrix(1,0,0,0.623016,0,773.301422)">
+                <path d="M1666,1993.641L1666,2051.284" style="fill:none;stroke:rgb(179,179,179);stroke-width:10px;"/>
+            </g>
+            <g transform="matrix(1,0,0,0.5,0,1018.550919)">
+                <path d="M1714.493,1993.641L1714.493,2037.102" style="fill:none;stroke:rgb(179,179,179);stroke-width:10.54px;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,1.075455,7.319681)">
+                <path d="M1616.432,2029.782L1666,2043.964L1713.417,2030.18" style="fill:none;stroke:black;stroke-width:8.33px;"/>
+            </g>
+            <g transform="matrix(0.853986,0,0,1,236.021047,9.835811)">
+                <path d="M1616.432,2005.536L1730,2005.536" style="fill:none;stroke:rgb(121,120,120);stroke-width:8.96px;"/>
+            </g>
+        </g>
+    </g>
 </svg>

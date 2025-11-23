@@ -89,6 +89,51 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _labelSizeOption, value);
         }
 
+        // リボン最小化
+        private bool _isRibbonMinimized;
+        public bool IsRibbonMinimized
+        {
+            get => _isRibbonMinimized;
+            set => SetProperty(ref _isRibbonMinimized, value);
+        }
+
+        // リボン表示/非表示
+        private bool _isRibbonVisible = true;
+        public bool IsRibbonVisible
+        {
+            get => _isRibbonVisible;
+            set => SetProperty(ref _isRibbonVisible, value);
+        }
+
+        // XYZ軸トグル用プロパティ
+        private bool _isCenterCoordEditorVisible;
+        public bool IsCenterCoordEditorVisible
+        {
+            get => _isCenterCoordEditorVisible;
+            set
+            {
+                if (_isCenterCoordEditorVisible == value) return;
+                _isCenterCoordEditorVisible = value;
+                OnPropertyChanged(nameof(IsCenterCoordEditorVisible));
+            }
+        }
+
+        // 展開トグル用プロパティ（バブル設定）
+        private bool _isBubbleSettingExpanded = false;
+        public bool IsBubbleSettingExpanded
+        {
+            get => _isBubbleSettingExpanded;
+            set => SetProperty(ref _isBubbleSettingExpanded, value);
+        }
+
+        // 展開トグル用プロパティ（矢印設定）
+        private bool _isArrowSettingExpanded = false;
+        public bool IsArrowSettingExpanded
+        {
+            get => _isArrowSettingExpanded;
+            set => SetProperty(ref _isArrowSettingExpanded, value);
+        }
+
         // プロパティ
         public LayoutAnchorable InputDataAnchorable { get; set; }
 
@@ -378,11 +423,6 @@ namespace PileDesign.ViewModels
         }
 
         private ObservableCollection<string> _analysisResultContentOption = []; /*= [*/
-        //"梁応力",
-        //"節点変位",
-        //"沈下",
-        //];
-
         public ObservableCollection<string> AnalysisResultContentOption
         {
             get => _analysisResultContentOption;
@@ -401,10 +441,6 @@ namespace PileDesign.ViewModels
         }
 
         private ObservableCollection<string> _analysisResultSettlementOption = []; //= [
-        //    "単杭",
-        //    "群杭",
-        //    "単杭+群杭",
-        //    ];
         public ObservableCollection<string> AnalysisResultSettlementOption
         {
             get => _analysisResultSettlementOption;
@@ -488,8 +524,8 @@ namespace PileDesign.ViewModels
 
         public ObservableCollection<string> AnalysisResultSoilSpringOption
         {
-            get => _analysisResultNodeDisplacementOption;
-            set => SetProperty(ref _analysisResultNodeDisplacementOption, value);
+            get => _analysisSoilSpringOption;
+            set => SetProperty(ref _analysisSoilSpringOption, value);
         }
         private string _analysisResultSoilSpringType = "RH";
         public string AnalysisResultSoilSpringType
