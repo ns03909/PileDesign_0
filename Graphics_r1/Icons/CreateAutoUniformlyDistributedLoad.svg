@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-178,-178)">
+        <rect id="CreateAutoUniformlyDistributedLoad" x="178" y="178" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="CreateAutoUniformlyDistributedLoad1" serif:id="CreateAutoUniformlyDistributedLoad" x="178" y="178" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(0.827771,0,0,1.012102,189.597373,-543.348686)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:9.01px;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,180.979969,162.953308)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;stroke-linecap:round;stroke-linejoin:round;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,180.979969,236.078288)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;stroke-linecap:round;stroke-linejoin:round;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,234.104949,162.953308)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;stroke-linecap:round;stroke-linejoin:round;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,234.104949,236.078288)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;stroke-linecap:round;stroke-linejoin:round;"/>
+            </g>
+        </g>
+    </g>
+</svg>

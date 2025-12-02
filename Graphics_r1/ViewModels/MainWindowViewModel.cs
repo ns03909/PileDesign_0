@@ -2,8 +2,11 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
+using PileDesign.FEM;
 using PileDesign.Models;
 using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
+using PileDesign.Services;
 using PileDesign.Views;
 using System;
 using System.Collections.Generic;
@@ -19,11 +22,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
-
 using static PileDesign.Views.AutoIsFrontPilesWindow;
 using static PileDesign.Views.EditPileLayoutWindow;
 using static PileDesign.Views.MoveCopyWindow;
 using Point = System.Windows.Point;
+using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
@@ -36,6 +39,20 @@ namespace PileDesign.ViewModels
             WriteIndented = true,
             ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
         };
+
+        private double _rightBlankWidthPx = 100.0;
+        public double RightBlankWidthPx
+        {
+            get => _rightBlankWidthPx;
+            set
+            {
+                if (Math.Abs(_rightBlankWidthPx - value) < double.Epsilon) return;
+                _rightBlankWidthPx = value;
+                OnPropertyChanged(nameof(RightBlankWidthPx));
+                // スライダー変更時に再描画
+                UpdateCanvas3DAction?.Invoke();
+            }
+        }
 
         public InputModel CurrentInputModel { get; set; }
 
@@ -1894,15 +1911,22 @@ namespace PileDesign.ViewModels
             optionWindow.Show();
         }
 
-        [RelayCommand]
+        // 解析結果が1つでも存在するか
+        private bool HasAnyAnalysisResult()
+            => IsHorizontalAnalysisDone || IsVerticalAnalysisDone || IsGroupPileSettlementAnalysisDone;
+
+        // コマンド状態一括更新ヘルパ
+        private void RaiseResultCommandsCanExecute()
+        {
+            if (OpenTableWindowCommand is ToolkitRelayCommand tc) tc.NotifyCanExecuteChanged();
+            OpenGraphWindowCommand?.NotifyCanExecuteChanged();
+        }
+
+        [RelayCommand(CanExecute = nameof(CanOpenGraphWindow))]
         private void OpenGraphWindow()
         {
-            if (!IsHorizontalAnalysisDone && !IsVerticalAnalysisDone && !IsGroupPileSettlementAnalysisDone)
-            {
-                System.Windows.MessageBox.Show("解析結果が存在しません", "情報",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                return;
-            }
+            // CanExecute で制御されるため通常は不要だが保険として
+            if (!HasAnyAnalysisResult()) return;
 
             // MainWindowViewModelのインスタンス(this)を必ず渡す
             var viewModel = new GraphViewModel(this)
@@ -1913,9 +1937,74 @@ namespace PileDesign.ViewModels
             };
             viewModel.Initialize();
 
-
             var graphWindow = new GraphWindow(viewModel);
             graphWindow.Show();
+        }
+        private bool CanOpenGraphWindow() => HasAnyAnalysisResult();
+
+
+        // フィールド追加
+        private readonly AnalysisResultTableService _tableService = new();
+
+        // プロパティ
+        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = [];
+
+        // 解析完了後 (既存処理内末尾に追加)
+        private void OnAnalysisFinished(AnalysisStepResult result)
+        {
+            // AnaModel が未セットなら結果テーブル生成をスキップ
+            if (CurrentModel == null)
+            {
+                LatestResultTables = [];
+                OnPropertyChanged(nameof(LatestResultTables));
+                RaiseResultCommandsCanExecute();
+                return;
+            }
+
+            LatestResultTables = _tableService.BuildTables(
+                CurrentModel,
+                result.LoadCase,
+                result.LoadCombination,
+                result.IsLiquefaction,
+                result.Step);
+
+            OnPropertyChanged(nameof(LatestResultTables));
+            RaiseResultCommandsCanExecute();
+        }
+
+        public ICommand OpenTableWindowCommand { get; private set; }
+
+        private void OpenTableWindow()
+        {
+            var vm = new TableWindowViewModel();
+            vm.LoadTables(LatestResultTables);
+            var w = new Views.TableWindow { DataContext = vm };
+            w.Show();
+        }
+
+        // 解析結果テーブル再生成
+        public void RefreshResultTablesFromLastStep()
+        {
+            //if (CurrentModel == null || CurrentModel.AnalysisStepResults == null || CurrentModel.AnalysisStepResults.Count == 0)
+            if (!HasAnyAnalysisResult())
+            {
+                LatestResultTables = [];
+                OnPropertyChanged(nameof(LatestResultTables));
+                if (OpenTableWindowCommand is ToolkitRelayCommand tc) tc.NotifyCanExecuteChanged();
+                return;
+            }
+
+            // 最終ステップ結果を取得
+            var last = CurrentModel.AnalysisStepResults.Last();
+            LatestResultTables = _tableService.BuildTables(
+                CurrentModel,
+                last.LoadCase,
+                last.LoadCombination,
+                last.IsLiquefaction,
+                last.Step);
+
+            OnPropertyChanged(nameof(LatestResultTables));
+            RaiseResultCommandsCanExecute();
         }
 
         // ヘルプメウィンドウ表示メソッド
@@ -3120,5 +3209,11 @@ namespace PileDesign.ViewModels
             // ウィンドウの更新
             UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
         }
+
+
+        // コマンド CanExecute を緩和するためのヘルパ
+        private bool CanOpenTableWindow()
+            => (CurrentModel?.AnalysisStepResults?.Count ?? 0) > 0
+               && (LatestResultTables?.Count ?? 0) > 0;
     }
 }

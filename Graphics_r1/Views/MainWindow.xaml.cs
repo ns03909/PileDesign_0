@@ -31,8 +31,6 @@ namespace PileDesign.Views
         // クラス内フィールドを追加
         private readonly Dictionary<(object item, string path), object?> _dgOldValues = [];
 
-
-
         private object _prevLoadingType;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -50,8 +48,8 @@ namespace PileDesign.Views
         private Stack<UndoAction> undoStack = [];
 
         private readonly double tickSpacing = 5.0;
-        private readonly double acturalTickPointSize = 2.0;
-        private readonly double acturalNodeSize = 3.0;
+        private readonly double actualTickPointSize = 2.0;
+        private readonly double actualNodeSize = 3.0;
 
         private Point previousMousePosition;
         private bool IsMouseWheelPressed = false;
@@ -72,6 +70,8 @@ namespace PileDesign.Views
         public CanvasThreeDView CanvasThreeDViewModel { get; set; }
 
         private OptionWindow _optionWindow;
+
+        private bool _startupQuickHintShown = false;
 
         // MainWindowクラスコンストラクタ
         public MainWindow()
@@ -195,72 +195,26 @@ namespace PileDesign.Views
             UpdatePerspectiveView();
             var viewModel = _mainWindowViewModel;
 
-            //// 重心の更新
-            //UpdateGravityCenters();
-
-            //// 合計荷重の更新
-            //UpdateSumLoads();
-
-            //// OTMの更新
-            //UpdateOverturningMoment();
-
             // ツリービューの更新
             viewModel.UpdateTreeView();
         }
 
-
-        //// 重心の更新メソッド
-        //private void UpdateGravityCenters()
-        //{
-        //    var viewModel = _mainWindowViewModel;
-        //    viewModel.GravityCenterVL0 = viewModel.CurrentInputModel.GetVLGravityCenter();
-        //    viewModel.GravityCenterVLadd = viewModel.CurrentInputModel.GetVLaddGravityCenter();
-        //    viewModel.GravityCenterVLplusVLadd = viewModel.CurrentInputModel.GetVLplusVLaddGravityCenter();
-        //}
-
-        //// 合計荷重の更新メソッド
-        //private void UpdateSumLoads()
-        //{
-        //    var viewModel = _mainWindowViewModel;
-        //    viewModel.SumVL0 = viewModel.CurrentInputModel.GetSumVL();
-        //    viewModel.SumVLadd = viewModel.CurrentInputModel.GetSumVLadd();
-        //    viewModel.SumVL = viewModel.CurrentInputModel.GetSumVLplusVLadd();
-        //}
-
-
-        //// OTMの更新メソッド
-        //private void UpdateOverturningMoment()
-        //{
-        //    var viewModel = _mainWindowViewModel;
-        //    viewModel.Sum1_1 = viewModel.CurrentInputModel.GetSum(1, 0);
-        //    viewModel.Sum1_2 = viewModel.CurrentInputModel.GetSum(1, 1);
-        //    viewModel.Sum1_3 = viewModel.CurrentInputModel.GetSum(1, 2);
-        //    viewModel.Sum1_4 = viewModel.CurrentInputModel.GetSum(1, 3);
-
-        //    viewModel.Sum2_1 = viewModel.CurrentInputModel.GetSum(2, 0);
-        //    viewModel.Sum2_2 = viewModel.CurrentInputModel.GetSum(2, 1);
-        //    viewModel.Sum2_3 = viewModel.CurrentInputModel.GetSum(2, 2);
-        //    viewModel.Sum2_4 = viewModel.CurrentInputModel.GetSum(2, 3);
-
-        //    (viewModel.OverturningMoment1_1X, viewModel.OverturningMoment1_1Y) = viewModel.CurrentInputModel.GetOverturningMoment(1, 0);
-        //    (viewModel.OverturningMoment1_2X, viewModel.OverturningMoment1_2Y) = viewModel.CurrentInputModel.GetOverturningMoment(1, 1);
-        //    (viewModel.OverturningMoment1_3X, viewModel.OverturningMoment1_3Y) = viewModel.CurrentInputModel.GetOverturningMoment(1, 2);
-        //    (viewModel.OverturningMoment1_4X, viewModel.OverturningMoment1_4Y) = viewModel.CurrentInputModel.GetOverturningMoment(1, 3);
-
-        //    (viewModel.OverturningMoment2_1X, viewModel.OverturningMoment2_1Y) = viewModel.CurrentInputModel.GetOverturningMoment(2, 0);
-        //    (viewModel.OverturningMoment2_2X, viewModel.OverturningMoment2_2Y) = viewModel.CurrentInputModel.GetOverturningMoment(2, 1);
-        //    (viewModel.OverturningMoment2_3X, viewModel.OverturningMoment2_3Y) = viewModel.CurrentInputModel.GetOverturningMoment(2, 2);
-        //    (viewModel.OverturningMoment2_4X, viewModel.OverturningMoment2_4Y) = viewModel.CurrentInputModel.GetOverturningMoment(2, 3);
-        //}
-
-
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //var proxyElement = (FrameworkElement)Resources["ProxyElement"];
-            //proxyElement.DataContext = this.DataContext;
 
             var layoutAnchorable = inputDataAnchorable;
             layoutAnchorable?.ToggleAutoHide();
+
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.PropertyChanged += VmOnPropertyChanged;
+            }
+            UpdateCanvasRightBlankClip();
+        }
+        private void VmOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainWindowViewModel.RightBlankWidthPx))
+                UpdateCanvasRightBlankClip();
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -281,6 +235,63 @@ namespace PileDesign.Views
 
             // SizeChanged イベントを登録
             Canvas3DLayout.SizeChanged += ColorBarCanvas_SizeChanged;
+
+            // 親Gridサイズ変更に追随
+            if (Canvas3DLayout.Parent is FrameworkElement parent)
+                parent.SizeChanged += (_, __) => UpdateCanvasRightBlankClip();
+
+            UpdateCanvasRightBlankClip(); // 初期適用
+
+            //// --- ここから追加: 起動時に QuickHintPopup を一度だけ表示して自動閉じ ---
+            //if (!_startupQuickHintShown)
+            //{
+            //    _startupQuickHintShown = true;
+            //    _ = Task.Run(async () =>
+            //    {
+            //        // レイアウト確定のための短い遅延
+            //        await Task.Delay(300);
+
+            //        // 表示（UI スレッド）
+            //        Dispatcher.Invoke(() =>
+            //        {
+            //            try
+            //            {
+            //                if (DataContext is MainWindowViewModel vm)
+            //                {
+            //                    if (!vm.IsQuickHintVisible)
+            //                        vm.IsQuickHintVisible = true;
+            //                }
+            //                else if (this.FindName("QuickHintPopup1") is System.Windows.Controls.Primitives.Popup popup)
+            //                {
+            //                    popup.IsOpen = true;
+            //                }
+            //            }
+            //            catch { /* 無害に握りつぶす */ }
+            //        });
+
+            //        // 表示時間（ミリ秒） — 好きな値（例: 5000 = 5秒）に変更可
+            //        await Task.Delay(5000);
+
+            //        // 自動で閉じる（UI スレッド）
+            //        Dispatcher.Invoke(() =>
+            //        {
+            //            try
+            //            {
+            //                if (DataContext is MainWindowViewModel vm)
+            //                {
+            //                    if (vm.IsQuickHintVisible)
+            //                        vm.IsQuickHintVisible = false;
+            //                }
+            //                else if (this.FindName("QuickHintPopup1") is System.Windows.Controls.Primitives.Popup popup)
+            //                {
+            //                    popup.IsOpen = false;
+            //                }
+            //            }
+            //            catch { }
+            //        });
+            //    });
+            //}
+            //// --- 追加ここまで ---
         }
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -2402,6 +2413,9 @@ namespace PileDesign.Views
             Canvas3DHeight = Canvas3DLayout.ActualHeight;
             Canvas3DWidth = Canvas3DLayout.ActualWidth;
             UpdateCanvas3D();
+
+            // 右余白クリップ更新
+            UpdateCanvasRightBlankClip();
         }
 
         private void DataGridPileLayout_LoadingRow_Numbering(object sender, DataGridRowEventArgs e)
@@ -3100,16 +3114,52 @@ namespace PileDesign.Views
             }
         }
 
+        //private void QuickHintToggle_Checked(object sender, RoutedEventArgs e)
+        //{
+        //    if (_isViewInteracting) return; // ビュー操作中なら無視
+        //    var vm = DataContext as MainWindowViewModel;
+        //    if (vm != null) vm.IsQuickHintVisible = true;
+        //}
         private void QuickHintToggle_Checked(object sender, RoutedEventArgs e)
         {
-            if (_isViewInteracting) return; // ビュー操作中なら無視
-            var vm = DataContext as MainWindowViewModel;
-            if (vm != null) vm.IsQuickHintVisible = true;
+            try
+            {
+                // 「杭」ドキュメントを前面に
+                PileLayoutDocument.IsSelected = true;
+
+                // 「配置」タブを選択（0番）
+                var tc = this.FindName("PileTabControl") as TabControl;
+                if (tc != null && tc.SelectedIndex != 0)
+                    tc.SelectedIndex = 0;
+            }
+            catch
+            {
+                // 失敗してもアプリ動作には影響しないよう握りつぶす
+            }
         }
         private void QuickHintToggle_Unchecked(object sender, RoutedEventArgs e)
         {
             var vm = DataContext as MainWindowViewModel;
             if (vm != null) vm.IsQuickHintVisible = false;
+        }
+
+        private void UpdateCanvasRightBlankClip()
+        {
+            if (Canvas3DLayout == null) return;
+            if (DataContext is not MainWindowViewModel vm) return;
+            if (Canvas3DLayout.Parent is not FrameworkElement parent) return;
+
+            double parentWidth = parent.ActualWidth;
+            if (parentWidth <= 0) return;
+
+            double blank = vm.RightBlankWidthPx;
+            blank = Math.Clamp(blank, 0, parentWidth - 1);
+
+            double usable = parentWidth - blank;
+            if (usable < 0) usable = 0;
+
+            Canvas3DLayout.Width = usable;
+            Canvas3DLayout.Clip = null; // Clip不要
         }
     }
 }

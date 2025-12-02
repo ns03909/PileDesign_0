@@ -202,10 +202,14 @@ namespace PileDesign.FEM
                         var rxy = new RotationalSpring($"RθXY-{pile.No}", capNode, pileNode, initialRotK)
                         {
                             PileBodyNo = pile.PileBodyNo,
-                            TieUx = false,
-                            TieUy = false,
-                            TieUz = false,
-                            TieRz = false,
+                            //TieUx = false,
+                            //TieUy = false,
+                            //TieUz = false,
+                            //TieRz = false,
+                            TieUx = true,
+                            TieUy = true,
+                            TieUz = true,
+                            TieRz = true, // Rz も一致させたいなら true
                             Kbig = 10e12
                         };
                         RotationalSprings.Add(rxy);
@@ -228,7 +232,7 @@ namespace PileDesign.FEM
 
                         prevPileNode = pileNode; // 次要素の上端に更新
                     }
-                    else
+                    else // 先端
                     {
                         // 先端処理（同様に prevPileNode を利用）
                         if (prevPileNode == null) throw new InvalidOperationException("prevPileNode is null for tip");

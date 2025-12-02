@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-356,0)">
+        <rect id="CrossFormPressure" x="356" y="0" width="128" height="128" style="fill:none;"/>
+        <g id="CrossFormPressure1" serif:id="CrossFormPressure">
+            <g transform="matrix(1.334591,0,0,2.625047,-1789.486144,-4773.610377)">
+                <ellipse cx="1655.553" cy="1842.867" rx="25.432" ry="12.844" style="fill:none;stroke:rgb(255,0,0);stroke-width:4px;"/>
+            </g>
+            <g transform="matrix(0.441882,0,0,0.413258,391.586441,-256.877407)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:19.48px;stroke-linecap:butt;"/>
+            </g>
+            <g transform="matrix(0.144052,0,0,0.223385,375.819859,-109.330439)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;stroke-linecap:butt;"/>
+            </g>
+            <g transform="matrix(0,-0.144052,0.223385,0,246.669561,105.828198)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;stroke-linecap:butt;"/>
+            </g>
+            <g transform="matrix(0,-0.144052,0.223385,0,246.669561,39.970421)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;stroke-linecap:butt;"/>
+            </g>
+            <g transform="matrix(0.144052,0,0,0.223385,445.061705,-109.330439)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;stroke-linecap:butt;"/>
+            </g>
+        </g>
+    </g>
+</svg>

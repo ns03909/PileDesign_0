@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
 using static PileDesign.ViewModels.MainWindowViewModel;
+using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
@@ -109,12 +110,13 @@ namespace PileDesign.ViewModels
 
             InputModel.FundamentalInput.PropertyChanged += FundamentalInput_PropertyChanged;
 
-            // コマンドの初期化
-            UndoCommand = new RelayCommand(Undo, () => _undoManager.CanUndo);
-            RedoCommand = new RelayCommand(Redo, () => _undoManager.CanRedo);
 
-            OkCommand = new RelayCommand(OnOk);
-            CancelCommand = new RelayCommand(OnCancel);
+            // ToolkitRelayCommand (パラメータ無し Action / Func<bool> 対応)
+            UndoCommand = new ToolkitRelayCommand(Undo, () => _undoManager.CanUndo);
+            RedoCommand = new ToolkitRelayCommand(Redo, () => _undoManager.CanRedo);
+            OkCommand = new ToolkitRelayCommand(OnOk);
+            CancelCommand = new ToolkitRelayCommand(OnCancel);
+            CloseWindowCommand = new ToolkitRelayCommand(() => RequestClose?.Invoke(this, EventArgs.Empty));
         }
 
         private void Undo() => _undoManager.Undo();

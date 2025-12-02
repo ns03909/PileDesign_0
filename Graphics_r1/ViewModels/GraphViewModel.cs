@@ -447,7 +447,8 @@ namespace PileDesign.ViewModels
 
         public bool IsMultiGraphVisible
         {
-            get => SelectedGraphOption != null && SelectedGraphOption.StartsWith('杭');
+            // 「杭」のときのみ三分割表示
+            get => SelectedGraphOption == "杭";
         }
 
         public bool IsSingleGraphVisible
@@ -592,6 +593,7 @@ namespace PileDesign.ViewModels
                 //GraphOptions.Add("杭変位U");
                 GraphOptions.Add("杭");
                 GraphOptions.Add("NMINT");
+                GraphOptions.Add("杭頭M-θ");
 
             }
             if (IsVerticalAnalysisDone)
@@ -621,7 +623,16 @@ namespace PileDesign.ViewModels
         }
 
         // プロット
-        private void ConfigurePlot(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText, string title, string xLabel, string yLabel)
+        private void ConfigurePlot(
+            WpfPlot wpfPlot,
+            Crosshair crosshair,
+            string CrosshairPositionText,
+            string title,
+            string xLabel,
+            string yLabel,
+            int decimalPlacesX = 1,
+            int decimalPlacesY = 1)
+            
         {
             if (SelectedGraphOption.StartsWith('杭'))
             {
@@ -653,8 +664,8 @@ namespace PileDesign.ViewModels
             wpfPlot.Plot.Axes.AutoScaleExpandX();
             wpfPlot.Plot.Axes.AutoScaleExpandY();
 
-            int decimalPlacesX = 3;
-            int decimalPlacesY = 3;
+            //int decimalPlacesX = 3;
+            //int decimalPlacesY = 3;
             // クロスヘアの初期化
             crosshair = PlotHelper.InitCrosshair(wpfPlot, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             if (SelectedGraphOption.StartsWith('杭'))
@@ -678,6 +689,13 @@ namespace PileDesign.ViewModels
                 decimalPlacesX = 1;
                 decimalPlacesY = 1;
             }
+            else if (SelectedGraphOption.StartsWith("杭頭M-θ"))
+            {
+                // M-θはθ(M-θ)の見やすさ重視でX=4桁/Y=1桁などに設定可（任意）
+                decimalPlacesX = 4;
+                decimalPlacesY = 1;
+            }
+
             wpfPlot.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, CrosshairPositionText, xLabel, yLabel, decimalPlacesX, decimalPlacesY);
             wpfPlot.Refresh();
         }
@@ -1010,7 +1028,7 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-            else if (SelectedGraphOption.StartsWith('杭'))
+            else if (SelectedGraphOption=="杭")
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -1060,8 +1078,128 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-            // レジェンド描画
-            UpdateLegendVisibility();
+
+            else if (SelectedGraphOption.StartsWith("杭頭M-θ"))
+            {
+                // M-θ は水平解析結果に依存
+                IsLoadCaseOptionVisible = true;            // 軸力Nをロードケースから選びたい場合に備えてON（曲線自体はAnaModelに既に設定済み）
+                IsLoadCombinationOptionVisible = false;
+                IsPileOptionVisible = true;                // 対象杭選択
+                IsPileBodyOptionVisible = false;
+                IsPileSegmentOptionVisible = false;
+                IsLiquefactionOptionVisible = false;
+                IsGridOptionVisible = false;
+
+                DrawMThetaCurves(WpfPlot, MyCrosshair, "CrosshairPositionText");
+            }
+                // レジェンド描画
+                UpdateLegendVisibility();
+        }
+
+        // 杭頭M-θ関係描画
+        // 杭頭M-θ関係描画（荷重ケース・組合せ・軸力付きレジェンド）
+        private void DrawMThetaCurves(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
+        {
+            var model = AnaModel;
+            if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0)
+            {
+                wpfPlot.Plot.Clear();
+                wpfPlot.Refresh();
+                return;
+            }
+
+            // 選択された杭（All の場合は全て）
+            var targetPiles = GetSelectedPileLayouts();
+            var targetPileNos = new HashSet<int>(targetPiles.Select(p => p.No));
+
+            // 対象荷重ケース・荷重組合せ
+            var selectedLoadCases = GetSelectedLoadCases();
+            var selectedCombinations = GetSelectedLoadCombinations();
+
+            wpfPlot.Plot.Clear();
+
+            // 各荷重ケース×組合せで曲線を出し分け（軸力依存を視覚化）
+            foreach (var loadCase in selectedLoadCases)
+            {
+                foreach (var rs in model.RotationalSprings)
+                {
+                    // 対応杭レイアウト探索
+                    PileLayoutDataItem? pileLayout = null;
+
+                    // PileBodyNo 経由
+                    if (rs.PileBodyNo is int pb && pb > 0 && pb <= InputModel.PileBodies.Count)
+                    {
+                        // 杭体 pb に属する杭を一つ選ぶ（複数ある構成なら NodeJ 照合へフォールバック）
+                        pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.PileBodyNo == pb);
+                    }
+                    // NodeJ 照合フォールバック
+                    if (pileLayout == null && rs.NodeJ != null)
+                    {
+                        pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.PileNodes.Count > 0 && ReferenceEquals(pl.PileNodes[0], rs.NodeJ));
+                    }
+
+                    if (pileLayout == null) continue;
+                    if (SelectedPileOption != "All" && !targetPileNos.Contains(pileLayout.No)) continue;
+
+                    // 軸力推定
+                    double axialN = 0.0;
+                    // (1) LoadCase に NonlinearAxialForceN があれば
+                    var prop = loadCase.GetType().GetProperty("NonlinearAxialForceN");
+                    if (prop?.GetValue(loadCase) is double nlc && double.IsFinite(nlc) && nlc != 0.0)
+                    {
+                        axialN = nlc;
+                    }
+                    else
+                    {
+                        // (2) 杭個別地震軸力
+                        double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                        if (double.IsFinite(nSeis) && nSeis != 0.0)
+                            axialN = nSeis;
+                        else
+                        {
+                            // (3) 現在累積軸力
+                            if (double.IsFinite(pileLayout.AxialForce) && pileLayout.AxialForce != 0.0)
+                                axialN = pileLayout.AxialForce;
+                        }
+                    }
+
+                    // 曲線 or 線形
+                    double[] thetas;
+                    double[] moments;
+                    string modeTag;
+                    if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
+                    {
+                        (thetas, moments) = rs.CurveXY.ToArrays();
+                        modeTag = "XY";
+                    }
+                    else if (rs.Mode == RotationalSpringMode.SingleDof && rs.Curve != null)
+                    {
+                        (thetas, moments) = rs.Curve.ToArrays();
+                        modeTag = rs.Dof.ToString();
+                    }
+                    else
+                    {
+                        // 線形補完
+                        double? k = rs.Mode == RotationalSpringMode.CombinedXY ? rs.KthetaXY : rs.Ktheta;
+                        if (!k.HasValue || k.Value <= 0.0) continue;
+                        const double thetaMax = 0.02;
+                        int nDiv = 50;
+                        thetas = Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1)).ToArray();
+                        moments = thetas.Select(t => k.Value * t).ToArray();
+                        modeTag = rs.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
+                    }
+                    if (thetas.Length == 0 || moments.Length == 0) continue;
+
+                    // レジェンド（荷重ケース名, 組合せ, 軸力, 杭番号, モード）
+                    string legend = $"LC:{loadCase.LoadName}|N:{axialN:F0}|Pile:{pileLayout.No}|Mode:{modeTag}";
+                    var scatter = wpfPlot.Plot.Add.Scatter(thetas, moments);
+                    scatter.LegendText = legend;
+                }
+            }
+
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "杭頭M-θ", "θ (rad)", "M (kN·m)");
+            wpfPlot.Plot.ShowLegend();
+            wpfPlot.Refresh();
         }
 
         // 変位描画

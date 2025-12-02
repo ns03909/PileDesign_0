@@ -1,0 +1,45 @@
+﻿<Window x:Class="PileDesign.Views.TableWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="解析結果テーブル" Width="1150" Height="680">
+    <DockPanel>
+        <StackPanel Width="220" Margin="6" DockPanel.Dock="Left">
+            <TextBlock Text="テーブル一覧" FontWeight="Bold" Margin="0,0,0,4"/>
+            <ListBox ItemsSource="{Binding FilteredTables}"
+                     DisplayMemberPath="Name"
+                     SelectedItem="{Binding SelectedTable}"
+                     SelectionChanged="ListBox_SelectionChanged"
+                     Height="280"/>
+
+            <Separator Margin="0,8,0,8"/>
+
+            <TextBlock Text="荷重条件フィルタ" Margin="0,0,0,2"/>
+            <ComboBox ItemsSource="{Binding LoadCaseFilterOptions}"
+                      SelectedItem="{Binding SelectedLoadCaseFilter}"
+                      Margin="0,0,0,6"/>
+
+            <TextBlock Text="荷重組合せフィルタ" Margin="0,0,0,2"/>
+            <ComboBox ItemsSource="{Binding LoadCombinationFilterOptions}"
+                      SelectedItem="{Binding SelectedLoadCombinationFilter}"
+                      Margin="0,0,0,6"/>
+
+            <TextBlock Text="液状化フィルタ" Margin="0,0,0,2"/>
+            <ComboBox ItemsSource="{Binding LiquefactionFilterOptions}"
+                      SelectedItem="{Binding SelectedLiquefactionFilter}"
+                      Margin="0,0,0,12"/>
+
+            <Button Content="CSV出力"
+                    Command="{Binding ExportCsvCommand}"
+                    IsEnabled="{Binding SelectedTable}"
+                    Height="32"/>
+        </StackPanel>
+
+        <DataGrid x:Name="ResultGrid"
+                  Margin="6"
+                  AutoGenerateColumns="False"
+                  ItemsSource="{Binding SelectedTable.Rows}"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  Loaded="ResultGrid_Loaded"/>
+    </DockPanel>
+</Window>

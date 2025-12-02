@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
@@ -231,9 +232,10 @@ namespace PileDesign.ViewModels
             _mainWindowViewModel = mainWindowViewModel;
 
             OnAnalysisModeling();
-            PauseAnalysisCommand = new RelayCommand(OnPauseAnalysis, () => IsAnalysisRunning);
-            ResumeAnalysisCommand = new RelayCommand(OnResumeAnalysis, () => IsAnalysisRunning);
-            CancelAnalysisCommand = new RelayCommand(OnCancelAnalysis, () => IsAnalysisRunning);
+
+            PauseAnalysisCommand = new ToolkitRelayCommand(OnPauseAnalysis, () => IsAnalysisRunning);
+            ResumeAnalysisCommand = new ToolkitRelayCommand(OnResumeAnalysis, () => IsAnalysisRunning);
+            CancelAnalysisCommand = new ToolkitRelayCommand(OnCancelAnalysis, () => IsAnalysisRunning);
 
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
                 item.PropertyChanged += LoadCase_PropertyChanged;
@@ -284,9 +286,7 @@ namespace PileDesign.ViewModels
 
         private void OnPauseAnalysis() => _pauseEvent.Reset();
         private void OnResumeAnalysis() => _pauseEvent.Set();
-        //private void OnCancelAnalysis() => _cancellationTokenSource?.Cancel();
         
-
         private void OnCancelAnalysis()
         {
             _cancellationTokenSource?.Cancel();
@@ -295,70 +295,43 @@ namespace PileDesign.ViewModels
             //CurrentProgress = 0;
         }
 
+        // 全レベル1荷重適用
         [RelayCommand]
         private void ApplyAllLoadCasesLevel1()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel1 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
                 item.IsApplicable = true;
-
-            //// コレクションを再代入してDataGridを強制更新
-            //var newCollection = new ObservableCollection<LoadCase>(InputModel.LoadCasesInput.LoadCasesLevel1);
-            //InputModel.LoadCasesInput.LoadCasesLevel1 = newCollection;
-            //// 新しいコレクションの各アイテムにPropertyChangedを再購読
-            //foreach (var item in newCollection)
-            //    item.PropertyChanged += LoadCase_PropertyChanged;
-
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
+        // 全レベル1荷重非適用
         [RelayCommand]
         private void UnapplyAllLoadCasesLevel1()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel1 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
                 item.IsApplicable = false;
-
-            //// コレクションを再代入してDataGridを強制更新
-            //var newCollection = new ObservableCollection<LoadCase>(InputModel.LoadCasesInput.LoadCasesLevel1);
-            //InputModel.LoadCasesInput.LoadCasesLevel1 = newCollection;
-
-            //// 新しいコレクションの各アイテムにPropertyChangedを再購読
-            //foreach (var item in newCollection)
-            //    item.PropertyChanged += LoadCase_PropertyChanged;
-
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
+        // 全レベル2荷重適用
         [RelayCommand]
         private void ApplyAllLoadCasesLevel2()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel2 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel2)
                 item.IsApplicable = true;
-            //// コレクションを再代入してDataGridを強制更新
-            //var newCollection = new ObservableCollection<LoadCase>(InputModel.LoadCasesInput.LoadCasesLevel2);
-            //InputModel.LoadCasesInput.LoadCasesLevel2 = newCollection;
-            //// 新しいコレクションの各アイテムにPropertyChangedを再購読
-            //foreach (var item in newCollection)
-            //    item.PropertyChanged += LoadCase_PropertyChanged;
-
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
+        // 全レベル2荷重非適用
         [RelayCommand]
         private void UnapplyAllLoadCasesLevel2()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel2 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel2)
                 item.IsApplicable = false;
-            //// コレクションを再代入してDataGridを強制更新
-            //var newCollection = new ObservableCollection<LoadCase>(InputModel.LoadCasesInput.LoadCasesLevel2);
-            //InputModel.LoadCasesInput.LoadCasesLevel2 = newCollection;
-            //// 新しいコレクションの各アイテムにPropertyChangedを再購読
-            //foreach (var item in newCollection)
-            //    item.PropertyChanged += LoadCase_PropertyChanged;
-
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
@@ -379,13 +352,12 @@ namespace PileDesign.ViewModels
             }
 
             // MainWindowViewModelにCurrentModelをセット
-            if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
+            if (Application.Current.MainWindow.DataContext is MainWindowViewModel vm)
             {
-                mainWindowViewModel.CurrentModel = this.CurrentModel; // AnaModels[0]など
-                mainWindowViewModel.IsHorizontalAnalysisDone = this.CurrentModel != null;
+                vm.CurrentModel = this.CurrentModel; // AnaModels[0]など
+                vm.IsHorizontalAnalysisDone = this.CurrentModel != null;
+                vm.RefreshResultTablesFromLastStep(); // 追加
             }
-
-
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
@@ -418,8 +390,6 @@ namespace PileDesign.ViewModels
             if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 mainWindowViewModel.CurrentModel = this.CurrentModel; // AnaModels[0]など
-                //mainWindowViewModel.IsHorizontalAnalysisDone = this.CurrentModel != null;
-                //mainWindowViewModel.IsHorizontalAnalysisDone = false; // ← ここを必ずfalseに
             }
 
             // ダイアログを閉じる
@@ -483,8 +453,6 @@ namespace PileDesign.ViewModels
                 IsAnalysisExecuted = false;
                 // UI にアニメーションでクリアするよう要求
                 RequestClearProgressAnimation?.Invoke();
-                // キャンセルによる終了時にプログレスをクリア
-                //CurrentProgress = 0;
             }
             finally
             {
@@ -493,13 +461,13 @@ namespace PileDesign.ViewModels
         }
 
         // 荷重ケースの代表軸力Nで PileSection.GetMphi/MPhiRelationship を呼び、各梁にセット
+        // こちらも安全なヘルパに統一（例外発生源を除去）
         private void SetupMphiFromPileSectionForLoadCase(AnaModel model, LoadCase loadCase)
         {
             if (model == null) return;
             if (!loadCase.IsPileNonLinear) return;
 
             double axialN = loadCase.GetType().GetProperty("NonlinearAxialForceN")?.GetValue(loadCase) is double n ? n : 0.0;
-            var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
             foreach (var beam in model.Beams)
             {
@@ -512,36 +480,14 @@ namespace PileDesign.ViewModels
                 var section = pileBody.PileBodySegments[seg].PileSection;
                 if (section == null) continue;
 
-                // 修正: 両表記対応（先に小文字p, 次に大文字P）
-                var mi = section.GetType().GetMethod("GetMphiRelationship", flags)
-                         ?? section.GetType().GetMethod("GetMPhiRelationship", flags);
-                if (mi == null) continue;
+                var curve = TryCallMphiRelationship(section, axialN);
+                if (curve is null) continue;
 
-                object? result = null;
-                try
-                {
-                    result = mi.GetParameters().Length == 1
-                        ? mi.Invoke(section, [axialN])
-                        : mi.Invoke(section, [axialN, 1.0]);
-                }
-                catch
-                {
-                    continue;
-                }
-                if (result == null) continue;
-
-                var t = result.GetType();
-                var item1 = t.GetProperty("Item1")?.GetValue(result) as System.Collections.IEnumerable;
-                var item2 = t.GetProperty("Item2")?.GetValue(result) as System.Collections.IEnumerable;
-                if (item1 == null || item2 == null) continue;
-
-                var phis = item1.Cast<object>().Select(x => Convert.ToDouble(x)).ToList();
-                var moments = item2.Cast<object>().Select(x => Convert.ToDouble(x)).ToList();
-
-                beam.SetResolvedCombinedMphi(phis, moments);
+                beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
             }
         }
 
+        // M-φ関係
         private static (IList<double> Phis, IList<double> Moments)? TryCallMphiRelationship(object pileSection, double axialN)
         {
             if (pileSection == null)
@@ -553,32 +499,45 @@ namespace PileDesign.ViewModels
             var t = pileSection.GetType();
             var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-            // 試行するメソッド名一覧（小文字/大文字両対応）
+            // 候補名（大小両対応）
             string[] candidateNames = ["GetMphiRelationship", "GetMPhiRelationship"];
+
+            // すべての候補を列挙し、(double) または (double,double) のものを優先選択
             MethodInfo? methodInfo = null;
             string foundName = "<none>";
 
-            foreach (var name in candidateNames)
+            var methods = t.GetMethods(flags)
+                           .Where(m => candidateNames.Contains(m.Name))
+                           .ToArray();
+
+            // 優先順位: (double) → (double,double) → それ以外の最初
+            methodInfo = methods.FirstOrDefault(m =>
             {
-                methodInfo = t.GetMethod(name, flags);
-                if (methodInfo != null)
-                {
-                    foundName = name;
-                    break;
-                }
-            }
+                var ps = m.GetParameters();
+                return ps.Length == 1 && ps[0].ParameterType == typeof(double);
+            })
+            ?? methods.FirstOrDefault(m =>
+            {
+                var ps = m.GetParameters();
+                return ps.Length == 2 && ps.All(p => p.ParameterType == typeof(double));
+            })
+            ?? methods.FirstOrDefault();
 
-            System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: type={t.FullName}, foundMethod={foundName}");
-            if (methodInfo == null) return null;
+            if (methodInfo == null)
+                return null;
 
+            foundName = methodInfo.Name;
+            System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: type={t.FullName}, foundMethod={foundName}, params={methodInfo.GetParameters().Length}");
+
+            // 呼び出し
             object? ret;
             try
             {
                 ret = methodInfo.GetParameters().Length switch
                 {
-                    1 => methodInfo.Invoke(pileSection, [axialN]),
-                    2 => methodInfo.Invoke(pileSection, [axialN, 1.0]),
-                    _ => methodInfo.Invoke(pileSection, [axialN])
+                    1 => methodInfo.Invoke(pileSection, new object[] { axialN }),
+                    2 => methodInfo.Invoke(pileSection, new object[] { axialN, 1.0 }),
+                    _ => methodInfo.Invoke(pileSection, new object[] { axialN })
                 };
             }
             catch (Exception ex)
@@ -587,15 +546,11 @@ namespace PileDesign.ViewModels
                 return null;
             }
 
-            if (ret == null)
-            {
-                System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: {foundName} returned null for N={axialN:E}");
-                return null;
-            }
+            if (ret == null) return null;
 
             var rtype = ret.GetType();
 
-            // 1) Tuple-like: Item1/Item2 を探す
+            // 1) Tuple-like: Item1/Item2
             var itm1Prop = rtype.GetProperty("Item1");
             var itm2Prop = rtype.GetProperty("Item2");
             if (itm1Prop != null && itm2Prop != null)
@@ -606,19 +561,13 @@ namespace PileDesign.ViewModels
                     var v2 = itm2Prop.GetValue(ret) as System.Collections.IEnumerable;
                     var phis = v1?.Cast<object?>().Where(x => x != null).Select(x => Convert.ToDouble(x)).ToList();
                     var ms = v2?.Cast<object?>().Where(x => x != null).Select(x => Convert.ToDouble(x)).ToList();
-                    if (phis != null && ms != null)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: {foundName} returned Item1/Item2 sizes phis={phis.Count}, moments={ms.Count}");
-                        if (phis.Count >= 2 && phis.Count == ms.Count) return (phis, ms);
-                    }
+                    if (phis != null && ms != null && phis.Count >= 2 && phis.Count == ms.Count)
+                        return (phis, ms);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: parsing Item1/Item2 failed: {ex}");
-                }
+                catch { /* fallthrough */ }
             }
 
-            // 2) Points プロパティを探す (MomentCurvatureCurve 等)
+            // 2) Points プロパティ（MomentCurvatureCurve等）
             var pointsProp = rtype.GetProperty("Points") ?? rtype.GetProperty("points");
             if (pointsProp != null)
             {
@@ -650,17 +599,13 @@ namespace PileDesign.ViewModels
                                 continue;
                             }
                         }
-                        System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: Points-based returned count={phis.Count}");
                         if (phis.Count >= 2 && phis.Count == ms.Count) return (phis, ms);
                     }
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: parsing Points failed: {ex}");
-                }
+                catch { /* fallthrough */ }
             }
 
-            // 3) ret 自体が IEnumerable of pairs のケース
+            // 3) 列挙 of ペア
             if (ret is System.Collections.IEnumerable retSeq)
             {
                 try
@@ -688,13 +633,9 @@ namespace PileDesign.ViewModels
                             continue;
                         }
                     }
-                    System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: IEnumerable-of-pairs parsed count={phis.Count}");
                     if (phis.Count >= 2 && phis.Count == ms.Count) return (phis, ms);
                 }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: parsing enumerable-of-pairs failed: {ex}");
-                }
+                catch { /* fallthrough */ }
             }
 
             System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: unable to parse return type {rtype.FullName}");
@@ -708,7 +649,7 @@ namespace PileDesign.ViewModels
 
             double axialN = loadCase.GetType().GetProperty("NonlinearAxialForceN")?.GetValue(loadCase) is double n ? n : 0.0;
             const double Kmin = 1e-6;   // 特異化回避用の下限
-            const double Kbig = 1e12;   // 非線形OFF時に「最大の線形剛性」として使用する大きな値（剛体相当）
+            const double Kbig = 1e12;   // 剛体相当
 
             foreach (var spring in model.RotationalSprings)
             {
@@ -718,42 +659,42 @@ namespace PileDesign.ViewModels
                 var pileBody = InputModel.PileBodies[pb - 1];
                 var def = pileBody.GetMThetaRelationship(axialN);
 
+                // 非線形OFF: つねに剛体相当
                 if (!loadCase.IsPileNonLinear)
                 {
-                    // 非線形OFF: 曲線は使わず「大きな線形剛性」で剛性を代替（剛体に近い扱い）
-                    if (def.Mode == PileHeadRotationMode.CombinedXY || def.Mode == PileHeadRotationMode.Rigid)
-                    {
-                        spring.Mode = RotationalSpringMode.CombinedXY;
-                        spring.CurveXY = null;
-                        // 本来の定義値があれば尊重するが、非線形OFFでは最大値を優先
-                        spring.KthetaXY = Kbig;
-                    }
-                    else // Separate
-                    {
-                        spring.Mode = RotationalSpringMode.SingleDof;
-                        spring.Curve = null;
-                        if (spring.Dof == RotationalDof.Rx)
-                        {
-                            spring.Ktheta = Kbig;
-                        }
-                        else if (spring.Dof == RotationalDof.Ry)
-                        {
-                            spring.Ktheta = Kbig;
-                        }
-                    }
+                    spring.Mode = RotationalSpringMode.CombinedXY;
+                    spring.CurveXY = null;
+                    spring.KthetaXY = Kbig;
                     continue;
                 }
 
-                // 非線形ON: 曲線/線形いずれか（ゼロなら下限）
+                // 非線形ON
                 switch (def.Mode)
                 {
                     case PileHeadRotationMode.Rigid:
+                        // 非線形ONでも「剛」は剛のまま扱う
+                        spring.Mode = RotationalSpringMode.CombinedXY;
+                        spring.CurveXY = null;
+                        spring.KthetaXY = Kbig;
+                        break;
+
                     case PileHeadRotationMode.CombinedXY:
                         spring.Mode = RotationalSpringMode.CombinedXY;
                         spring.CurveXY = def.CurveXY;
-                        spring.KthetaXY = def.KthetaXY;
-                        if (spring.CurveXY == null && (!spring.KthetaXY.HasValue || spring.KthetaXY.Value <= 0.0))
+                        // sec 側の代替として KthetaXY を設定（優先順位: def.KthetaXY → 曲線の初期接線 → Kmin）
+                        if (def.KthetaXY.HasValue && def.KthetaXY.Value > 0.0)
+                        {
+                            spring.KthetaXY = def.KthetaXY;
+                        }
+                        else if (spring.CurveXY != null)
+                        {
+                            double k0 = Math.Max(spring.CurveXY.EvaluateTangent(1e-6), 0.0);
+                            spring.KthetaXY = Math.Max(k0, Kmin);
+                        }
+                        else
+                        {
                             spring.KthetaXY = Kmin;
+                        }
                         break;
 
                     case PileHeadRotationMode.Separate:
@@ -761,22 +702,115 @@ namespace PileDesign.ViewModels
                         if (spring.Dof == RotationalDof.Rx)
                         {
                             spring.Curve = def.CurveX;
-                            spring.Ktheta = def.Kx;
-                            if (spring.Curve == null && (!spring.Ktheta.HasValue || spring.Ktheta.Value <= 0.0))
+                            if (def.Kx.HasValue && def.Kx.Value > 0.0)
+                            {
+                                spring.Ktheta = def.Kx;
+                            }
+                            else if (spring.Curve != null)
+                            {
+                                double k0 = Math.Max(spring.Curve.EvaluateTangent(1e-6), 0.0);
+                                spring.Ktheta = Math.Max(k0, Kmin);
+                            }
+                            else
+                            {
                                 spring.Ktheta = Kmin;
+                            }
                         }
                         else if (spring.Dof == RotationalDof.Ry)
                         {
                             spring.Curve = def.CurveY;
-                            spring.Ktheta = def.Ky;
-                            if (spring.Curve == null && (!spring.Ktheta.HasValue || spring.Ktheta.Value <= 0.0))
+                            if (def.Ky.HasValue && def.Ky.Value > 0.0)
+                            {
+                                spring.Ktheta = def.Ky;
+                            }
+                            else if (spring.Curve != null)
+                            {
+                                double k0 = Math.Max(spring.Curve.EvaluateTangent(1e-6), 0.0);
+                                spring.Ktheta = Math.Max(k0, Kmin);
+                            }
+                            else
+                            {
                                 spring.Ktheta = Kmin;
+                            }
                         }
                         break;
                 }
             }
         }
+        //private void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
+        //{
+        //    if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0) return;
 
+        //    double axialN = loadCase.GetType().GetProperty("NonlinearAxialForceN")?.GetValue(loadCase) is double n ? n : 0.0;
+        //    const double Kmin = 1e-6;   // 特異化回避用の下限
+        //    const double Kbig = 1e12;   // 非線形OFF時に「最大の線形剛性」として使用する大きな値（剛体相当）
+
+        //    foreach (var spring in model.RotationalSprings)
+        //    {
+        //        int pb = (spring.PileBodyNo is int v && v > 0) ? v : 1;
+        //        if (pb <= 0 || pb > InputModel.PileBodies.Count) continue;
+
+        //        var pileBody = InputModel.PileBodies[pb - 1];
+        //        var def = pileBody.GetMThetaRelationship(axialN);
+
+        //        if (!loadCase.IsPileNonLinear)
+        //        {
+        //            // 非線形OFF: 曲線は使わず「大きな線形剛性」で剛性を代替（剛体に近い扱い）
+        //            if (def.Mode == PileHeadRotationMode.CombinedXY || def.Mode == PileHeadRotationMode.Rigid)
+        //            {
+        //                spring.Mode = RotationalSpringMode.CombinedXY;
+        //                spring.CurveXY = null;
+        //                // 本来の定義値があれば尊重するが、非線形OFFでは最大値を優先
+        //                spring.KthetaXY = Kbig;
+        //            }
+        //            else // Separate
+        //            {
+        //                spring.Mode = RotationalSpringMode.SingleDof;
+        //                spring.Curve = null;
+        //                if (spring.Dof == RotationalDof.Rx)
+        //                {
+        //                    spring.Ktheta = Kbig;
+        //                }
+        //                else if (spring.Dof == RotationalDof.Ry)
+        //                {
+        //                    spring.Ktheta = Kbig;
+        //                }
+        //            }
+        //            continue;
+        //        }
+
+        //        // 非線形ON: 曲線/線形いずれか（ゼロなら下限）
+        //        switch (def.Mode)
+        //        {
+        //            case PileHeadRotationMode.Rigid:
+        //            case PileHeadRotationMode.CombinedXY:
+        //                spring.Mode = RotationalSpringMode.CombinedXY;
+        //                spring.CurveXY = def.CurveXY;
+        //                spring.KthetaXY = def.KthetaXY;
+        //                if (spring.CurveXY == null && (!spring.KthetaXY.HasValue || spring.KthetaXY.Value <= 0.0))
+        //                    spring.KthetaXY = Kmin;
+        //                break;
+
+        //            case PileHeadRotationMode.Separate:
+        //                spring.Mode = RotationalSpringMode.SingleDof;
+        //                if (spring.Dof == RotationalDof.Rx)
+        //                {
+        //                    spring.Curve = def.CurveX;
+        //                    spring.Ktheta = def.Kx;
+        //                    if (spring.Curve == null && (!spring.Ktheta.HasValue || spring.Ktheta.Value <= 0.0))
+        //                        spring.Ktheta = Kmin;
+        //                }
+        //                else if (spring.Dof == RotationalDof.Ry)
+        //                {
+        //                    spring.Curve = def.CurveY;
+        //                    spring.Ktheta = def.Ky;
+        //                    if (spring.Curve == null && (!spring.Ktheta.HasValue || spring.Ktheta.Value <= 0.0))
+        //                        spring.Ktheta = Kmin;
+        //                }
+        //                break;
+        //        }
+        //    }
+        //}
 
         // 直近のばね剛性最小/最大を保持（PrepareKmatで更新）
         private double _lastSpringKMin = double.NaN;
@@ -829,29 +863,6 @@ namespace PileDesign.ViewModels
                         // 荷重ケース固有の剛体スレーブ割当を適用（回転ばねの有効/無効を切替）
                         ApplyPileHeadRigidBindingForLoadCase(targetModel, loadCase);
 
-
-                        //// 杭頭回転ばねを用いる場合 ---
-                        //var activeRotationalSprings = new HashSet<RotationalSpring>();
-                        //if (loadCase.IsPileNonLinear && targetModel.RotationalSprings != null)
-                        //{
-                        //    foreach (var pile in InputModel.PileLayoutItems)
-                        //    {
-                        //        // 杭頭回転ばねの定義
-                        //        MomentRotationCurve curve = new([(0, 0), (0.1, 100), (1, 200)]);
-                        //        // 杭頭回転ばねの設定
-                        //        pile.PileTopRotationalSpring.SetCurve(curve);
-                        //        // 杭頭節点の剛体従属節点の解除
-                        //        AnaModels[1].RigidBodies[0].RemoveSlaveNode(pile.PileNodes[0]);
-                        //    }
-                        //}
-                        //else // 杭頭回転ばねなしの場合
-                        //{
-                        //    foreach (var pile in InputModel.PileLayoutItems)
-                        //    {
-                        //        // 杭頭節点の剛体従属節点の解除
-                        //        AnaModels[1].RigidBodies[0].AddSlaveNode(pile.PileNodes[0]);
-                        //    }
-                        //}
 
                         // 杭非線形ONのときだけ M–φ/M–θ をセット
                         if (loadCase.IsPileNonLinear)
@@ -1003,7 +1014,7 @@ namespace PileDesign.ViewModels
 
             var rb0 = targetModel.RigidBodies[0];
 
-            // まずすべての pile head を一旦削除（ViewModel 側で一貫して操作するため）
+            // すべての pile head を一旦削除（ViewModel 側で一貫して操作するため）
             foreach (var pile in InputModel.PileLayoutItems)
             {
                 var head = pile.PileNodes?.FirstOrDefault();
@@ -1025,6 +1036,7 @@ namespace PileDesign.ViewModels
             // 変更を反映：転送行列等を更新
             targetModel.SetSlaveNodes();
         }
+
 
         // 接線剛性用: 端部回転から要素中央曲率を評価し、dM/dφ を EI_eff として Ktan（倍率）に反映
         private void UpdateBeamMPhiTangent(AnaModel model)
@@ -1605,7 +1617,14 @@ namespace PileDesign.ViewModels
                     // 引数は (kx, ky, kz, kxx(Rx), kyy(Ry), kzz(Rz), isTan)
                     System.Diagnostics.Debug.WriteLine($"PrepareKmat: RotSpring={rxy.Name}, Mode={rxy.Mode}, dRx={dRx:E3}, dRy={dRy:E3}, set_kRx={kRx:E3}, set_kRy={kRy:E3}, isTan={isTan}");
 
-                    rxy.SetKe(0.0, 0.0, 0.0, kRx, kRy, 0.0, isTan);
+                    const double Kbig = 1e12; // 数値不安定なら 1e9～1e11 に調整
+                    double kx = rxy.TieUx ? Kbig : 0.0;
+                    double ky = rxy.TieUy ? Kbig : 0.0;
+                    double kz = rxy.TieUz ? Kbig : 0.0;
+                    double kRz = rxy.TieRz ? Kbig : 0.0;
+                    // Rx/Ry は M–θ に基づき算出した kRx/kRy を用いる
+                    rxy.SetKe(kx, ky, kz, kRx, kRy, kRz, isTan);
+
                 }
             }
 

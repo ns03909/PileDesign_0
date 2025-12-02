@@ -1,4 +1,5 @@
-﻿using PileDesign.ViewModels;
+﻿using DocumentFormat.OpenXml.Vml.Spreadsheet;
+using PileDesign.ViewModels;
 using System;
 using System.Reflection;
 using System.Windows;
@@ -141,27 +142,6 @@ namespace PileDesign.Views
             viewModel.ResetStatus();
             Close();
         }
-        //private void OkButton_Click(object sender, RoutedEventArgs e)
-        //{
-        //    if (viewModel.DX == 0 && viewModel.DY == 0)
-        //    {
-        //        MessageBox.Show("DXとDYの両方が0です。値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-        //        return;
-        //    }
-
-        //    MoveCopyEventArgs args = new()
-        //    {
-        //        IsMove = viewModel.IsMoveSelected,
-        //        IsCopy = viewModel.IsCopySelected,
-        //        DX = viewModel.DX,
-        //        DY = viewModel.DY,
-        //        RepetitionNumber = viewModel.RepetitionNumber
-        //    };
-
-        //    MoveCopyCompleted?.Invoke(this, args);
-        //    viewModel.ResetStatus();
-        //    Close();
-        //}
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
@@ -210,6 +190,21 @@ namespace PileDesign.Views
             if (DataContext is MoveCopyViewModel viewModel)
             {
                 Console.WriteLine($"IsCopySelected: {viewModel.IsCopySelected}, IsMoveSelected: {viewModel.IsMoveSelected}");
+            }
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
+                CancelButton_Click(null, new RoutedEventArgs());
+                return;
+            }
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                OkButton_Click(null, new RoutedEventArgs());
             }
         }
     }

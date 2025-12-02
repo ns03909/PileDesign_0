@@ -15,6 +15,58 @@
   </ItemGroup>	
 
   <ItemGroup>
+    <None Remove="Help\images\0669.jpg" />
+    <None Remove="Help\images\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" />
+    <None Remove="Help\images\332-8002.jpg" />
+    <None Remove="Help\images\cover.png" />
+    <None Remove="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
+    <None Remove="Help\images\Fig_6.1.2.png" />
+    <None Remove="Help\images\Fig_6.1.3.png" />
+    <None Remove="Help\images\Fig_6.1.4.png" />
+    <None Remove="Help\images\Fig_6.1.6.png" />
+    <None Remove="Help\images\Fig_6.1.8.png" />
+    <None Remove="Help\images\Fig_6.1.9.png" />
+    <None Remove="Help\images\Fig_6.2.20.png" />
+    <None Remove="Help\images\Fig_6.3.10.png" />
+    <None Remove="Help\images\Fig_6.3.11.png" />
+    <None Remove="Help\images\Fig_6.3.12.png" />
+    <None Remove="Help\images\Fig_6.3.2.png" />
+    <None Remove="Help\images\Fig_6.3.3.png" />
+    <None Remove="Help\images\Fig_6.3.4.png" />
+    <None Remove="Help\images\Fig_6.3.6.png" />
+    <None Remove="Help\images\Fig_6.3.7.png" />
+    <None Remove="Help\images\Fig_6.5.10.png" />
+    <None Remove="Help\images\Fig_6.5.11.png" />
+    <None Remove="Help\images\Fig_6.5.12.png" />
+    <None Remove="Help\images\Fig_6.6.1.png" />
+    <None Remove="Help\images\Fig_6.6.10.png" />
+    <None Remove="Help\images\Fig_6.6.2.png" />
+    <None Remove="Help\images\Fig_6.6.3.png" />
+    <None Remove="Help\images\Fig_6.6.4.png" />
+    <None Remove="Help\images\Fig_6.6.7.png" />
+    <None Remove="Help\images\Fig_6.6.8.png" />
+    <None Remove="Help\images\Fig_6.6.9%28a%29.png" />
+    <None Remove="Help\images\Fig_6.6.9%28b%29.png" />
+    <None Remove="Help\images\manyu5.jpg" />
+    <None Remove="Help\images\mouse.png" />
+    <None Remove="Help\images\RightClickMenu.png" />
+    <None Remove="Help\images\viewCube.png" />
+    <None Remove="Help\images\図2.1.jpeg" />
+    <None Remove="Help\images\図3.1.png" />
+    <None Remove="Help\images\図3.2.png" />
+    <None Remove="Help\images\解説図1.1.png" />
+    <None Remove="Help\images\解説図1.1_r1.png" />
+    <None Remove="Help\images\解説図2.1.jpeg" />
+    <None Remove="Help\images\解説図2.1.jpg" />
+    <None Remove="Help\images\解説図2.2a.png" />
+    <None Remove="Help\images\解説図2.3a.jpeg" />
+    <None Remove="Help\images\解説図2.3b.jpeg" />
+    <None Remove="Help\images\解説図2.4.png" />
+    <None Remove="Help\images\解説図2.5.png" />
+    <None Remove="Help\images\解説図3.21.png" />
+    <None Remove="Help\images\解説図4.12.png" />
+    <None Remove="Help\images\解説図4.2.png" />
+    <None Remove="Help\images\解説図4.8.png" />
     <None Remove="Icons\ActiveAll.png" />
     <None Remove="Icons\ActiveAll.svg" />
     <None Remove="Icons\AddElementMode.png" />
@@ -34,6 +86,8 @@
     <None Remove="Icons\AdjustTextPositions.png" />
     <None Remove="Icons\AdjustTextPositions.svg" />
     <None Remove="Icons\AnalysisResultVisilbe.svg" />
+    <None Remove="Icons\AnyFormPressure.png" />
+    <None Remove="Icons\AnyFormPressure.svg" />
     <None Remove="Icons\ArrowHeadDia.svg" />
     <None Remove="Icons\ArrowHeadLength.svg" />
     <None Remove="Icons\ArrowLength.svg" />
@@ -52,6 +106,12 @@
     <None Remove="Icons\Cancel.svg" />
     <None Remove="Icons\CollapseRibbon.png" />
     <None Remove="Icons\CollapseRibbon.svg" />
+    <None Remove="Icons\CopySoilLayer.png" />
+    <None Remove="Icons\CopySoilLayer.svg" />
+    <None Remove="Icons\CreateAutoUniformlyDistributedLoad.png" />
+    <None Remove="Icons\CreateAutoUniformlyDistributedLoad.svg" />
+    <None Remove="Icons\CrossFormPressure.png" />
+    <None Remove="Icons\CrossFormPressure.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
     <None Remove="Icons\DecimalPoint.png" />
     <None Remove="Icons\DecimalPoint.svg" />
@@ -94,6 +154,8 @@
     <None Remove="Icons\GroundWindow.svg" />
     <None Remove="Icons\GroupPileGraph.png" />
     <None Remove="Icons\GroupPileGraph.svg" />
+    <None Remove="Icons\GroupPileSettlement.png" />
+    <None Remove="Icons\GroupPileSettlement.svg" />
     <None Remove="Icons\Help.png" />
     <None Remove="Icons\Help.svg" />
     <None Remove="Icons\HideRibbon.png" />
@@ -167,6 +229,8 @@
     <None Remove="Icons\NodeVisible.svg" />
     <None Remove="Icons\NonLiquefaction.png" />
     <None Remove="Icons\NonLiquefaction.svg" />
+    <None Remove="Icons\NoPressure.png" />
+    <None Remove="Icons\NoPressure.svg" />
     <None Remove="Icons\NotLequefaction.svg" />
     <None Remove="Icons\OpenFile.png" />
     <None Remove="Icons\OpenFile.svg" />
@@ -265,6 +329,162 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Help\images\0669.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\332-8002.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\cover.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】(BCJ評定-FD0141-05).png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.1.2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.1.3.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.1.4.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.1.6.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.1.8.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.1.9.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.2.20.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.10.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.11.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.12.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.3.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.4.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.6.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.3.7.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.5.10.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.5.11.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.5.12.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.10.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.3.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.4.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.7.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.8.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.9(a).png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\Fig_6.6.9(b).png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\manyu5.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\mouse.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\RightClickMenu.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\viewCube.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\図2.1.jpeg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\図3.1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\図3.2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図1.1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図1.1_r1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.1.jpeg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.1.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.2a.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.3a.jpeg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.3b.jpeg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.4.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図2.5.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図3.21.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図4.12.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図4.2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\解説図4.8.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Resource Include="Icons\ActiveAll.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
@@ -322,6 +542,12 @@
     <Resource Include="Icons\AnalysisResultVisilbe.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AnyFormPressure.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AnyFormPressure.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ArrowHeadDia.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
@@ -374,6 +600,24 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CollapseRibbon.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopySoilLayer.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopySoilLayer.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CreateAutoUniformlyDistributedLoad.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CreateAutoUniformlyDistributedLoad.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CrossFormPressure.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CrossFormPressure.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CsvFileOutput.svg">
@@ -500,6 +744,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroupPileGraph.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileSettlement.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileSettlement.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Help.png">
@@ -715,13 +965,16 @@
     <Resource Include="Icons\NodeVisible.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
-    <Resource Include="Icons\NonLiquefaction - コピー.svg">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
     <Resource Include="Icons\NonLiquefaction.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NonLiquefaction.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NoPressure.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\NoPressure.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\NotLequefaction.svg">
@@ -963,13 +1216,13 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ACadSharp" Version="3.2.22" />
+    <PackageReference Include="ACadSharp" Version="3.3.0" />
     <PackageReference Include="CSparse" Version="4.3.0" />
-    <PackageReference Include="HelixToolkit.Geometry" Version="3.1.1" />
-    <PackageReference Include="HelixToolkit.Maths" Version="3.1.1" />
+    <PackageReference Include="HelixToolkit.Geometry" Version="3.1.2" />
+    <PackageReference Include="HelixToolkit.Maths" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.SharpDX.Core" Version="2.27.3" />
     <PackageReference Include="HelixToolkit.SharpDX.Core.Wpf" Version="2.27.3" />
-    <PackageReference Include="HelixToolkit.Wpf" Version="3.1.1" />
+    <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
     <PackageReference Include="Rhino3dm" Version="8.17.0" />
     <PackageReference Include="ScottPlot" Version="5.1.57" />
@@ -986,7 +1239,7 @@
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="WebView2.Runtime.X64" Version="142.0.3595.80" />
+    <PackageReference Include="WebView2.Runtime.X64" Version="142.0.3595.94" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
@@ -1005,7 +1258,7 @@
     <PackageReference Include="HarfBuzzSharp" Version="8.3.1.2" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.macOS" Version="8.3.1.2" />
     <PackageReference Include="HarfBuzzSharp.NativeAssets.Win32" Version="8.3.1.2" />
-    <PackageReference Include="HelixToolkit" Version="3.1.1" />
+    <PackageReference Include="HelixToolkit" Version="3.1.2" />
     <PackageReference Include="LiveChartsCore" Version="2.0.0-rc4.5" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView" Version="2.0.0-rc4.5" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc4.5" />
@@ -1019,7 +1272,7 @@
     <PackageReference Include="SharpDX.Direct3D9" Version="4.2.0" />
     <PackageReference Include="SharpDX.DXGI" Version="4.2.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.3" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Settings.Designer.cs">

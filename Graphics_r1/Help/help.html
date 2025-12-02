@@ -2,12 +2,17 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>構造解析ヘルプ</title>
+    <title>杭基礎設計支援ツールヘルプ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" /> <!-- 追加 -->
     <script>
         window.MathJax = {
-          tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']]
-          }
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']]
+            },
+            options: {
+                // 追加: コードはMathJaxから除外
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            }
         };
     </script>
 
@@ -15,14 +20,10 @@
     <script id="MathJax-script" async
             src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
-
     <style>
-
-        h2 {
-            color: #62B0E2;
-        }
-
-
+        /* =========================
+                                                            Layout
+                                                        ========================= */
         body {
             margin: 0;
             font-family: "Segoe UI", sans-serif;
@@ -30,7 +31,6 @@
             height: 100vh;
         }
 
-        /* 左ペイン */
         .sidebar {
             width: 300px;
             background-color: #f0f0f0;
@@ -39,6 +39,15 @@
             flex-direction: column;
         }
 
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* =========================
+                                                            Tabs
+                                                        ========================= */
         .tabs {
             display: flex;
             border-bottom: 1px solid #ccc;
@@ -52,11 +61,11 @@
             background-color: #e0e0e0;
         }
 
-            .tab.active {
-                background-color: #ffffff;
-                font-weight: bold;
-                border-bottom: 2px solid #0078d7;
-            }
+        .tab--active {
+            background-color: #fff;
+            font-weight: bold;
+            border-bottom: 2px solid #0078d7;
+        }
 
         .tab-content {
             flex: 1;
@@ -64,10 +73,39 @@
             overflow-y: auto;
         }
 
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
+        /* =========================
+                                                            見出しのindent
+                                                        ========================= */
+        h1.indent-level-1,
+        p.indent-level-1 {
+            margin-left: 0em;
+        }
+
+        h2.indent-level-2,
+        p.indent-level-2 {
+            margin-left: 1em;
+        }
+
+        h3.indent-level-3,
+        p.indent-level-3 {
+            margin-left: 2em;
+        }
+
+        h4.indent-level-4,
+        p.indent-level-4 {
+            margin-left: 3em;
+        }
+
+        h5.indent-level-5,
+        p.indent-level-5 {
+            margin-left: 4em;
+        }
+
+        /* =========================
+                                                            Typography & Links
+                                                        ========================= */
+        h2 {
+            color: #62B0E2;
         }
 
         a {
@@ -84,6 +122,9 @@
             box-sizing: border-box;
         }
 
+        /* =========================
+                                                            Controls
+                                                        ========================= */
         .controls {
             display: flex;
             align-items: center;
@@ -91,6 +132,9 @@
             margin-bottom: 10px;
         }
 
+        /* =========================
+                                                            Highlighting
+                                                        ========================= */
         mark {
             background-color: #F7B515;
         }
@@ -99,47 +143,33 @@
                 background-color: #E95541;
             }
 
-        .formula-block {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 1em;
-        }
-
-        .formula-left p {
-            text-align: left;
-        }
-
-
-        .formula-left {
-            margin-left: 5em;
-        }
-
-        .formula-right {
-            margin-left: 1em;
-            white-space: nowrap;
-        }
-
+        /* =========================
+                                                            Formula Blocks
+                                                        ========================= */
         .formula-block {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
         }
 
-        /* .formula-left {
-                                          flex: 1;
-                                        } */
+        .formula-left {
+            margin-left: 5em;
+        }
+
+            .formula-left p {
+                text-align: left;
+            }
+
+        .formula-right {
+            margin-left: 1em;
+            white-space: nowrap;
+        }
 
         .formula-row {
             display: flex;
             align-items: center;
             margin-bottom: 8px;
         }
-
-        /* .formula {
-                                          margin: 0;
-                                          flex: 1;
-                                        } */
 
         .annotation {
             margin-left: 20px;
@@ -148,6 +178,9 @@
             color: #555;
         }
 
+        /* =========================
+                                                            Symbol List
+                                                        ========================= */
         .symbol-list {
             list-style: none;
             margin-top: 0.5em;
@@ -161,9 +194,9 @@
             }
 
         .symbol-label {
-            flex: 0 0 6em; /* 固定幅 */
+            flex: 0 0 6em;
             font-weight: bold;
-            margin-left: 0.5em; /* ← ここで右に寄せる */
+            margin-left: 0.5em;
         }
 
         .symbol-desc {
@@ -174,8 +207,9 @@
             margin-bottom: 0.5em;
         }
 
-
-
+        /* =========================
+                                                            Figures
+                                                        ========================= */
         figure {
             text-align: center;
             margin: 20px 0;
@@ -187,20 +221,316 @@
             margin-top: 8px;
         }
 
+        /* =========================
+                                                            Table of Contents (TOC)
+                                                        ========================= */
+        #toc nav {
+            padding: 1em;
+        }
+
+        #toc summary {
+            display: list-item;
+            cursor: pointer;
+            padding: 4px 0;
+            white-space: nowrap;
+        }
+
+            #toc summary > span.summary-label {
+                display: inline-block;
+                vertical-align: middle;
+                font-weight: bold;
+            }
+
+            #toc summary > a.toc-link {
+                display: inline-block;
+                vertical-align: middle;
+                margin-left: 1em;
+                font-size: 0.9em;
+                text-decoration: underline;
+            }
+
+        #toc a {
+            font-weight: bold;
+            color: #0077cc;
+        }
+
+            #toc a.toc-link.h1 {
+                color: inherit;
+            }
+
+            #toc a.toc-link.h2 {
+                color: #62B0E2;
+            }
+
+        .toc-summary.h1 {
+            padding-left: 0.5em;
+        }
+
+        .toc-summary.h2 {
+            padding-left: 1.0em;
+            color: #62B0E2;
+        }
+
+        #toc .toc-subsection {
+            margin-left: 1.5em;
+        }
+
+        .toc-link.h3 {
+            display: block;
+            margin-left: 0;
+            color: inherit;
+            text-decoration: underline;
+        }
+
+        details summary {
+            display: list-item;
+            padding: 4px 0;
+        }
+
+            details summary span {
+                font-weight: bold;
+            }
+
+            details summary.h1 {
+                padding-left: 0;
+            }
+
+            details summary.h2 span {
+                color: #0077cc;
+                padding-left: 0.5em;
+            }
+
+        .toc-jump {
+            font-size: 0.9em;
+            color: #0077cc;
+            text-decoration: underline;
+            margin-left: 1em;
+        }
+
+        /* =========================
+                                                            Tables
+                                                        ========================= */
+        .table-doc {
+            /* 既存の width:100%, max-width:600px, white-space:nowrap を上書き */
+            width: max-content; /* 内容に合わせて横幅を決定 */
+            max-width: none; /* 上限を撤廃 */
+            display: block; /* overflow を有効にするため block に */
+            overflow-x: auto; /* 画面より広いとき横スクロール */
+            -webkit-overflow-scrolling: touch;
+            table-layout: auto; /* 既定だが明示 */
+            white-space: normal; /* セル内で折返し可（必要に応じて） */
+            background-color: #62B0E2; /* 元の青 */
+            color: #fff; /* 元の白文字 */
+            border: 1px solid #fff; /* 元の白枠 */
+            border-collapse: collapse; /* 元のボーダー結合 */
+        }
+
+            .table-doc caption {
+                caption-side: top;
+                padding: 8px;
+                font-weight: bold;
+                background-color: #3A8CC1;
+                color: white;
+                text-align: left;
+            }
+
+            /* セル内テキストの折返し（長い語の分割も許可） */
+            .table-doc th,
+            .table-doc td {
+                white-space: normal;
+                word-break: break-word; /* 連続英数などのはみ出し対策 */
+                border: 1px solid #fff;
+            }
+
+        /* =========================
+                                                            Section Window
+                                                        ========================= */
+
+        .selection-window {
+            background-color: #f9f9f9;
+            border-left: 4px solid #62B0E2;
+            padding: 1em;
+            margin-bottom: 1.5em;
+        }
+
+            .selection-window dl {
+                margin: 0;
+            }
+
+            .selection-window dt {
+                font-weight: bold;
+                margin-top: 0.8em;
+                color: #333;
+            }
+
+            .selection-window dd {
+                margin-left: 1em;
+                color: #555;
+            }
+
+
+
+        /* 画像・表の基本レスポンシブ */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .table-doc {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap; /* 列幅が狭い端末で崩れないように */
+        }
+
+        /* 数式ブロックの折返し/縦積み対応 */
+        .formula-block {
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 900px) {
+            .formula-block {
+                flex-direction: column;
+                gap: .25rem;
+            }
+
+            .formula-left {
+                margin-left: 0;
+            }
+
+            .formula-right {
+                margin-left: 0;
+                align-self: flex-end; /* 数式番号などを右寄せ表示 */
+                white-space: nowrap;
+            }
+        }
+
+        /* 追記: モバイルヘッダ（ハンバーガー） */
+        .mobile-header {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #ccc;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .mobile-title {
+            font-weight: bold;
+        }
+
+        #menuToggle {
+            appearance: none;
+            border: 1px solid #ccc;
+            background: #f7f7f7;
+            border-radius: 4px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        /* 追記: サイドバーのドロワー化 */
+        .sidebar {
+            transition: left .2s ease;
+        }
+
+        .sidebar-overlay {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                min-height: 100vh;
+            }
+
+            .mobile-header {
+                display: flex;
+            }
+            /* サイドバーをオフキャンバスに */
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: min(80vw, 320px);
+                height: 100%;
+                z-index: 1001;
+            }
+
+                .sidebar.sidebar--open {
+                    left: 0;
+                }
+            /* 背景オーバーレイ */
+            .sidebar-overlay {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,.25);
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity .2s ease, visibility .2s ease;
+                z-index: 1000;
+            }
+
+                .sidebar-overlay.visible {
+                    opacity: 1;
+                    visibility: visible;
+                }
+            /* 本文は全幅使用 */
+            .main-content {
+                padding: 12px;
+            }
+            /* 目次内のリンクが詰まり過ぎないように */
+            #toc nav {
+                padding: .5em;
+            }
+        }
+
+        /* コード＋キャプション */
+        .code-figure {
+            margin: 16px 0;
+            text-align: left;
+        }
+
+            .code-figure figcaption {
+                background: #f0f0f0;
+                border-left: 4px solid #62B0E2;
+                padding: 6px 10px;
+                font-weight: bold;
+                text-align: left;
+            }
+
+            .code-figure pre {
+                margin: 0;
+                background: #f5f5f5;
+                padding: 1em;
+                overflow: auto;
+                text-align: left;
+            }
     </style>
 </head>
+
 <body>
-    <div class="sidebar">
+    <div class="mobile-header">
+        <button id="menuToggle" aria-controls="sidebar" aria-expanded="false" title="目次を開く/閉じる">☰ 目次</button>
+        <div class="mobile-title">杭基礎設計支援ツールヘルプ</div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
         <div class="tabs">
             <div class="tab active" onclick="showTab('toc')">目次</div>
             <div class="tab" onclick="showTab('search')">検索</div>
         </div>
+
         <div class="tab-content" id="toc">
-            <!--                <a href="#chapter1">構造モデルの定義</a>
-                                <a href="#chapter2">荷重の設定</a>
-                                <a href="#chapter3">境界条件</a>
-                                <a href="#chapter4">解析の実行</a> -->
+            <nav aria-label="目次">
+                <!-- JavaScriptで動的に目次リンクを生成する場所 -->
+            </nav>
         </div>
+
+        <!-- 検索機能 -->
         <div class="tab-content" id="search" style="display:none;">
             <input type="text" id="searchInput" placeholder="検索語を入力">
             <div class="controls">
@@ -214,18 +544,9 @@
         </div>
     </div>
 
+    <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
+
     <div class="main-content" id="mainText">
-        <!--         <h2 id="chapter1">構造モデルの定義</h2>
-                <p>構造モデルは節点と部材で構成されます。各部材には断面特性を定義します。</p>
-
-                <h2 id="chapter2">荷重の設定</h2>
-                <p>荷重は節点荷重、部材荷重、面荷重などが設定可能です。</p>
-
-                <h2 id="chapter3">境界条件</h2>
-                <p>拘束条件は節点ごとに設定し、固定・ローラー・ピンなどを指定します。</p>
-
-                <h2 id="chapter4">解析の実行</h2>
-                <p>解析は静的解析、動的解析、応答スペクトル解析などに対応しています。</p> -->
 
         <section id="section1">
             <p><strong>基礎杭検討プログラム (基礎地盤研究会)</strong> <span style="color:red;">ver α-0.1　2025/7/14</span></p>
@@ -234,80 +555,241 @@
         <section id="section0">
 
             <h1>操作編</h1>
-            <h2>主旨</h2>
-            <p>非線形解析や繰り返し計算、多くの荷重ケースに対して行うことが求められる計算を、できるだけ可視化し、一貫的に、迅速に正確に行えるようにすること。</p>
-            <p>なお、地盤は性状性質はばらつきが大きく、限られた範囲の調査により想定するものにすぎない。一つの解に過ぎないことに留意する必要がある。</p>
-            <!--             <p>加えて、検討手法そのものも大きなばらつきを含んでいる。</p>
-                        <p>例えば</p>
-                        <ul style="list-style-type: square;">
-                            <li>液状化検討における繰り返しせん断ひずみの読み取り倍半分の曲線が示された図からの読み取りが必要であり、特に繰り返しせん断応力比、補正N値が小さい範囲では曲線が密集し、読み取り方法により大きなばらつきが生じる。</li>
-                            <li>地盤調査時の有効応力を使って大きな範囲が掘削された後の地盤の性状を判断してよいのか。</li>
-                            <li>スタインブレナーの近似式単層モデルでもFEMと比較して少なくとも数割の誤差が生じることがわかっている。また、多層地盤では極端に薄い層を含む場合にひずみが逆転するような場合がある。</li>
-                            <li>群杭係数設計実務では考慮される場合、されない場合があるが、水平地盤反力に倍半分以上の影響がある。</li>
-                            <li>前方杭と後方杭設計実務で考慮されることはほとんどないと思われるが、その適用により杭の性状にはきわめて大きな影響を持つ。</li>
-                        </ul>
-                        <p>建築基準法で求められるのは中地震に対する一次設計のみであり、現行の基礎指針の内容とは違いがあります。
-                        大地震に対する設計法が整備されてきた中で、法律による最低限の要求、経済性、これまでの設計実務との連続性、実績を踏まえながら
-                        今後の杭基礎の設計をどうするべきか、パラメータを変化させながら影響を検討把握をし、説明材料をつくり、設計判断を行うことを可能とすることが本プログラムの目的である。</p>
-             -->
-            <h3>準拠指針・参考文献</h3>
-            <ul style="list-style-type: square;">
-                <li>
-                    <p>準拠指針・参考文献</p>
-                    <ol>
-                        <li>日本建築学会「建築基礎構造設計指針」（第3版、2019年）</li>
-                        <li>日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）</li>
-                        <li>構造計画研究所「キャプリングパイル（CP）工法 キャプテンパイル（CTP）工法　構造計算プログラム開発　利用者マニュアル」(2021年3月改定)</li>
-                        <li>F.T.Pile構法既製杭協会「F.T.Pile構法既製コンクリート杭　設計・施工指針【暫定版】」(BCJ評定-FD0141-05)(2018年12月)</li>
-                    </ol>
-                </li>
-            </ul>
+            <h2>はじめに</h2>
+            <h3>アプリケーションの目的</h3>
+            <p>非線形解析や繰り返し計算、多くの荷重ケースに対して行うことが求められる計算を、できるだけ可視化し、手軽に正確に行えるようにすることを目的とします。</p>
 
-            <figure>
-                <img src="cover.png" alt="基礎指針'19" width="150">
-                <figcaption>図　建築基礎構造設計指針2019年版</figcaption>
-            </figure>
+            <p>
+                一般的な杭基礎の検討項目について、本プログラムでは、下表のように扱います。
+                <section id="section3">
+                    <table-caption>一般的な杭基礎検討項目</table-caption>
+                    <table style="border-collapse: collapse; width: 100%; background-color: #62B0E2; color: white; border: 1px solid white;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;border: 1px solid white; width: 30%;min-width: 100px;">杭基礎の設計フロー</th>
+                                <th style="text-align: center;border: 1px solid white; width: 5%;min-width: 50px;">適用範囲</th>
+                                <th style="text-align: center;border: 1px solid white; width: 60%;min-width: 100px;">適用</th>
+                                <th style="text-align: center;border: 1px solid white; width: 10%;min-width: 100px;">基礎指針'19</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid white;">杭基礎の基本設定</td>
+                                <td style="text-align: center;border: 1px solid white; color: gray;">✗</td>
+                                <td style="text-align: center;border: 1px solid white; color: gray;">（設計者が把握します。）</td>
+                                <td style="border: 1px solid white;">6.1節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">荷重の設定</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">
+                                    上部構造から基礎に伝達される荷重のうち、慣性力は「荷重条件」で入力します。<br>
+                                    杭頭鉛直力は「杭軸力」シートで入力します。<br>
+                                    基礎指針のa法、b法に基づいた地盤変位は「地盤」入力ウィンドウで計算されます。
+                                </td>
+                                <td style="border: 1px solid white;">4章</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">杭種・杭径・杭長・杭材・工法の設定</td>
+                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
+                                <td style="text-align: center; border: 1px solid white;color: gray;">（設計者が適切に選定します。）</td>
+                                <td style="border: 1px solid white;">2章、6章</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">液状化に対する検討</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">
+                                    地盤ウィンドウにおいて検討します。<br>
+                                    FL値の確認、杭周地盤の反力係数低減率α、βの計算等を行います。
+                                </td>
+                                <td style="border: 1px solid white;">3.2節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">地盤の鉛直支持力の算定（杭体の圧縮耐力の算定）</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。</td>
+                                <td style="border: 1px solid white;">6.2節、6.6節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">負の摩擦力に対する検討</td>
+                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
+                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
+                                <td style="border: 1px solid white;">3.1節、6.4節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">地盤の引抜抵抗の算定</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。</td>
+                                <td style="border: 1px solid white;">6.5節、6.6節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">杭頭沈下量の算定（杭の鉛直支持力算定用）</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">
+                                    単杭の荷重-沈下関係は、「地盤・杭」セットごとに、検討します。<br>
+                                    群杭としての沈下量は、任意矩形荷重面もしくは各杭ごとの等価十字荷重面に対して成層多層地盤におけるSteinnbrenerの近似解による検討を行います。
+                                </td>
+                                <td style="border: 1px solid white;">6.3節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">鉛直荷重に対する杭の設計</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。</td>
+                                <td style="border: 1px solid white;">6.1節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">
+                                    地盤の水平方向特性<br>
+                                    ・水平地盤反力係数<br>
+                                    ・水平地盤反力度の算定
+                                </td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、設定します。</td>
+                                <td style="border: 1px solid white;">6.6節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">
+                                    杭基礎の地震時応力の算定（レベル1荷重）<br>
+                                    単杭の静的非線形解析<br>
+                                    液状化地盤では応答変位法
+                                </td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">すべて非線形解析で行います。</td>
+                                <td style="border: 1px solid white;">6.6節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">性能グレードの設定</td>
+                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
+                                <td style="text-align: center; color: gray;">（設計者が適切に設定します。）</td>
+                                <td style="border: 1px solid white;">6.6節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">
+                                    杭基礎の地震時応力の算定（レベル2荷重）<br>
+                                    【群杭フレーム静的非線形解析<br>
+                                    １種地盤以外は応答変位法
+                                </td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">すべて非線形解析で行います。</td>
+                                <td style="border: 1px solid white;">6.6節</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">杭頭接合部の設計</td>
+                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="border: 1px solid white;">行う予定。</td>
+                                <td style="border: 1px solid white;">6.6節</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
 
-            <figure>
-                <img src="0669.jpg" alt="強度と変形性能" width="150">
-                <figcaption>図　基礎部材の強度と変形性能</figcaption>
-            </figure>
+                <h3>準拠指針・参考文献</h3>
+                <div style="max-width: 200mm; margin: 0 auto; overflow-x: auto;">
+
+                    <table style="border-collapse: collapse; width: 100%;">
+                        <thead>
+                            <tr>
+                                <th style="border-bottom: 1px solid #ccc; text-align: center; background-color: #f0f0f0;">文献</th>
+                                <th style="border-bottom: 1px solid #ccc; text-align: center; background-color: #f0f0f0;">表紙画像</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="background-color: #f9f9f9;">
+                                    <a href="https://www.aij.or.jp/service/index.html"
+                                       target="_blank" rel="noopener noreferrer"
+                                       style="display:inline; margin:0; color:#0078d7; text-decoration:underline;">
+                                        日本建築学会「建築基礎構造設計指針」（第3版、2019年）
+                                    </a>
+                                </td>
+                                <td style="background-color: #f9f9f9;">
+                                    <figure>
+                                        <img src="images/cover.png" alt="基礎指針'19" width="100">
+                                        <!--             <figcaption>図　建築基礎構造設計指針2019年版</figcaption> -->
+                                    </figure>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f9f9f9;">日本建築学会「基礎部材の強度と変形性能」（第1版、2022年）</td>
+                                <td style="background-color: #f9f9f9;">
+                                    <figure>
+                                        <img src="images/0669.jpg" alt="強度と変形性能" width="100">
+                                        <!--             <figcaption>図　基礎部材の強度と変形性能</figcaption> -->
+                                    </figure>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f9f9f9;">日本建築学会「建築基礎構造設計例集」（第3版、2024年）</td>
+                                <td style="background-color: #f9f9f9;">
+                                    <figure>
+                                        <img src="images/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" alt="建築基礎構造設計例集" width="100">
+                                        <!--             <figcaption>図　建築基礎構造設計例集</figcaption> -->
+                                    </figure>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f9f9f9;">日本建築学会 関東支部「基礎構造の設計　学びやすい構造設計」（第4版、2023年）</td>
+                                <td style="background-color: #f9f9f9;">
+                                    <figure>
+                                        <img src="images/332-8002.jpg" alt="基礎構造の設計　学びやすい構造設計" width="100">
+                                        <!--             <figcaption>図　学びやすい構造設計</figcaption> -->
+                                    </figure>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f9f9f9;">
+                                    <a href="http://www.cepia.biz/images/manual_v5.pdf"
+                                       target="_blank" rel="noopener noreferrer"
+                                       style="display:inline; margin:0; color:#0078d7; text-decoration:underline;">
+                                        キャプテンパイル工法（場所打ち杭用杭頭半固定工法）設計・施工マニュアル」(第5版、2021年4月改定)
+                                    </a>
+                                </td>
+                                <td style="background-color: #f9f9f9;">
+                                    <figure>
+                                        <img src="images/manyu5.jpg" alt="キャプテンパイル工法" width="100">
+                                        <!--             <figcaption>図　キャプテンパイル工法</figcaption> -->
+                                    </figure>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #f9f9f9;">F.T.Pile構法既製杭協会「F.T.Pile構法既製コンクリート杭　設計・施工指針【暫定版】」(BCJ評定-FD0141-05)(2018年12月)</td>
+                                <td style="background-color: #f9f9f9;">
+
+                                    <img src="F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】(BCJ評定-FD0141-05).png" alt="F.T.Pile構法" width="100">
+                                    <!--             <figcaption>図　F.T.Pile構法</figcaption> -->
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+
 
             <p>設計用限界値</p>
 
             <figure>
-                <img src="Fig_6.1.2.png" alt="___" width="600">
+                <img src="images/Fig_6.1.2.png" alt="___" width="600">
                 <figcaption>基礎指針'19　図6.1.2</figcaption>
             </figure>
 
 
             <p>解析モデル</p>
-            <p>基礎指針'19 図6.1.3の分類では、本プログラムの単杭沈下モデルは(a)、水平解析用解析モデルは(b)に相当する。</p>
+            <p>基礎指針'19 図6.1.3の分類では、本プログラムの単杭沈下モデルは(a)、水平解析用解析モデルは(b)に相当します。</p>
             <figure>
-                <img src="Fig_6.1.3.png" alt="___" width="600">
+                <img src="images/Fig_6.1.3.png" alt="___" width="600">
                 <figcaption>基礎指針'19　図6.1.3</figcaption>
             </figure>
 
             <p>
-                基礎指針'19では、1スパン建物を支持する杭基礎において、押込み側と引抜き側の性状、挙動の違いがの指摘されている。
-                本プログラムでは、軸力に応じた杭の復元力を考慮するとともに、前方杭、後方杭の指定により、これを考慮した検討をすることができる。
+                基礎指針'19では、1スパン建物を支持する杭基礎において、押込み側と引抜き側の性状、挙動の違いがの指摘されています。
+                本プログラムでは、軸力に応じた杭の復元力を考慮するとともに、前方杭、後方杭の指定により、これを考慮した検討をすることができます。
             </p>
             <figure>
-                <img src="Fig_6.1.4.png" alt="___" width="400">
+                <img src="images/Fig_6.1.4.png" alt="___" width="400">
                 <figcaption>基礎指針'19　図6.1.4</figcaption>
             </figure>
 
-            <p>
-                基礎指針'19では、地盤の液状化に対する設計上の留意事項として、図6.1.6が示されている。
-                本プログラムでは、(a)の地盤の水平抵抗力の低下は基礎指針'19、3.2節の$\alpha_L$、$\beta_L$を自動的に考慮する。
-                (b)の浮力の増大、根入れ部の側圧の増大は、それに応じた杭軸力を指定すれば考慮することができる。
-                ただし、現状は液状化の有無により杭軸力を変化させることはできないため、液状化なしに対しても同じ値を使う。
-                (c)の側方流動のような現象は考慮できない。が懸念される場合は、別途地盤改良などの対策が必要であろう。
-            </p>
-            <figure>
-                <img src="Fig_6.1.6.png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.1.6</figcaption>
-            </figure>
 
             <!--             <figure>
                             <img src="Fig_6.1.8.png" alt="___" width="400">
@@ -317,92 +799,10 @@
                             <img src="Fig_6.1.9.png" alt="___" width="400">
                             <figcaption>図6.1.9</figcaption>
                         </figure> -->
-
-            <p>
-                本プログラムでは、ブロック破壊により沈下性状が決まる杭には対応していない。
-            </p>
-            <figure>
-                <img src="Fig_6.2.20.png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.2.20</figcaption>
-            </figure>
-            <p>
-                単杭の即時沈下量は、本プログラムでは、荷重伝達解析（既往の載荷試験で得られた杭の先端抵抗-先端変位量関係と周面抵抗-変位量関係に基づいて単杭の荷重-沈下量関係を解析的に求める方法）によって求める。
-                なお、杭自重も考慮する。本来杭打設時の自重は場所打ち杭、プレボーリング杭ではすべて先端で支持されるべきであるが、本プログラムでは、周面抵抗が有効としている。
-            </p>
-            <figure>
-                <img src="Fig_6.3.2.png" alt="___" width="400">
-                <figcaption>基礎指針'19　図6.3.2</figcaption>
-            </figure>
-            <p>
-                杭周面抵抗は基礎指針'19　表6.3.2の土層の種類と計算された極限周面抵抗力によるトリリニアモデルでモデル化する。
-
-                <figure>
-                    <img src="Fig_6.3.3.png" alt="___" width="400">
-                    <figcaption>基礎指針'19　図6.3.3</figcaption>
-                </figure>
-
-            </p>杭先端抵抗は、基礎指針'19の6.3.1式による。沈下曲線のパラメータである$\alpha$と$n$は任意の値とすることができる。
-            <figure>
-                <img src="Fig_6.3.4.png" alt="___" width="400">
-                <figcaption>基礎指針'19　図6.3.4</figcaption>
-            </figure>
-
             <!--             <figure>
                             <img src="Fig_6.3.6.png" alt="___" width="400">
                             <figcaption>図6.3.6</figcaption>
                         </figure> -->
-
-            <p>
-                建物の杭は、杭間の相互作用（群杭効果）を無視できない場合が多く、即時沈下量の検討においてその効果を考慮する必要がある。
-                本プログラムでは、基礎指針'19　図6.3.11のような等価荷重面法を考慮できる。
-                ただし、等価荷重面はその形状、数は任意のものとすることができるが、任意の一つのレベルに設定する必要がある。
-                また、地盤モデルは一つの成層多層地盤とする必要がある。
-                なお、地震時の沈下量に対する群杭効果は基礎指針'19(p231)に考慮する必要がないことが示されており、本プログラムでも考慮しない。
-
-            </p>
-            <figure>
-                <img src="Fig_6.3.7.png" alt="___" width="400">
-                <figcaption>基礎指針'19　図6.3.7</figcaption>
-            </figure>
-
-            <figure>
-                <img src="Fig_6.3.10.png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.3.10</figcaption>
-            </figure>
-
-            <figure>
-                <img src="Fig_6.3.11.png" alt="___" width="400">
-                <figcaption>基礎指針'19　図6.3.11</figcaption>
-            </figure>
-            <p>
-                地震時の荷重沈下関係は、基礎指針'19(p232)によると、即時沈下における荷重-沈下関係を用いることができる。本プログラムでもこれに従う。
-            </p>
-            <figure>
-                <img src="Fig_6.3.12.png" alt="___" width="400">
-                <figcaption>基礎指針'19　図6.3.12</figcaption>
-            </figure>
-
-            <figure>
-                <img src="Fig_6.5.10.png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.5.10</figcaption>
-            </figure>
-
-            <p>引抜き荷重に対する荷重-沈下量関係は、押込み側と同様に荷重伝達法による。ただし、杭先端の抵抗力は0とし、引抜き側杭周面抵抗力は基礎指針'19　p247に従い砂質土は押込み側の2/3倍、粘性土は押込み側の4/5倍とする。</p>
-            <figure>
-                <img src="Fig_6.5.11.png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.5.11</figcaption>
-            </figure>
-            <p>ブロック破壊で決まる引抜き抵抗は本プログラムでは考慮できない。</p>
-            <figure>
-                <img src="Fig_6.5.12.png" alt="___" width="400">
-                <figcaption>基礎指針'19　図6.5.12</figcaption>
-            </figure>
-            <p>水平抵抗に対する基礎部材の設計は、基礎部材の強度と変形性能による。</p>
-            <figure>
-                <img src="Fig_6.6.1.png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.6.1</figcaption>
-            </figure>
-
             <!--             <figure>
                             <img src="Fig_6.6.2.png" alt="___" width="400">
                             <figcaption>図6.6.2</figcaption>
@@ -422,13 +822,6 @@
                             <figcaption>図6.6.8</figcaption>
                         </figure>
              -->
-
-            <p>本プログラムでは、水平抵抗に対する検討では、基礎指針'19　図6.6.9(a)の示された模式図に従う。ただし、3次元のモデルとする。</p>
-            <figure>
-                <img src="Fig_6.6.9(a).png" alt="___" width="600">
-                <figcaption>基礎指針'19　図6.6.9(a)</figcaption>
-            </figure>
-
             <!--             <figure>
                             <img src="Fig_6.6.9(b).png" alt="___" width="400">
                             <figcaption>図6.6.9(b)</figcaption>
@@ -442,148 +835,649 @@
         </section>
 
         <section id="section2">
-            <h2>本解析モデルでの杭の構成</h2>
-            <p>杭モデルは、「杭頭」、「杭体」、「杭先端」で構成されます。</p>
+            <h2>杭モデル</h2>
+            <p>１本の杭は、「杭頭」、「杭体」、「杭先端」で構成されます。</p>
             <p>「杭頭」の入力は、地震時の検討で影響します。解析上弾性時に回転固定度を無限大に仮定する <strong>鉄筋定着工法</strong> と、杭頭半固定工法として、杭径3000mm以下の場所打ち鉄筋コンクリート杭に適用できる <strong>キャプテンパイル工法</strong>、既製コンクリート杭に適用できる <strong>F.T.Pile構法</strong> が適用できます。</p>
             <p>「杭体」の入力は、支持力、沈下および地震時の検討に影響します。「杭体の種類」としては、<strong>場所打ち鉄筋コンクリート杭</strong>、<strong>場所打ち鋼管コンクリート杭</strong>、<strong>既製コンクリート杭</strong> が選択可能です。「杭体」は、単数または複数の <strong>杭体（断面）区間</strong> から構成することができます。場所打ち鋼管コンクリート杭では、<strong>鋼管コンクリート部</strong>、または <strong>鉄筋コンクリート部</strong> のいずれかを、既製コンクリート杭では、<strong>PHC杭</strong>、<strong>PRC杭</strong>、<strong>SC杭</strong> のいずれかを選択します。</p>
             <p>「杭先端」の入力は、支持力、沈下検討に影響します。最下段の杭区間よりも大きな先端径を入力した場合、場所打ちコンクリート杭では <strong>拡底杭</strong>、既製コンクリート杭では <strong>拡大根固め杭</strong> として検討します。</p>
         </section>
 
-        <section id="section3">
-            <h2>一般的な杭基礎検討項目</h2>
-            <table style="border-collapse: collapse; width: 100%; background-color: #62B0E2; color: white; border: 1px solid white;">
+        <section>
+
+            <h2 style="font-weight: bold; font-size: 1.5em;">操作方法</h2>
+
+            <h3 style="font-weight: bold;">マウス操作</h3>
+
+            <img src="images/mouse.png" alt="___" width="300">
+
+            <table class="table-doc">
+                <caption style="text-align: center">メインビューでのマウス操作</caption>
                 <thead>
-
-                <th style="text-align: center;border: 1px solid white; width: 30%;min-width: 100px;">杭基礎の設計フロー</th>
-                <th style="text-align: center;border: 1px solid white; width: 5%;min-width: 50px;">適用範囲</th>
-                <th style="text-align: center;border: 1px solid white; width: 60%;min-width: 100px;">適用</th>
-                <th style="text-align: center;border: 1px solid white; width: 10%;min-width: 100px;">基礎指針'19</th>
-
-                </tr>
+                    <tr>
+                        <th style="text-align: center">マウス操作</th>
+                        <th style="text-align: center">動作</th>
+                    </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="border: 1px solid white;">杭基礎の基本設定</td>
-                        <td style="text-align: center;border: 1px solid white; color: gray;">✗</td>
-                        <td style="text-align: center;border: 1px solid white; color: gray;">（設計者が把握します。）</td>
-                        <td style="border: 1px solid white;">6.1節</td>
+                        <td>右ボタンクリック</td>
+                        <td>右ボタンクリックメニューを開く</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid white;">荷重の設定</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;">
-                            上部構造から基礎に伝達される荷重のうち、慣性力は「荷重条件」で入力します。<br>
-                            杭頭鉛直力は「杭軸力」シートで入力します。<br>
-                            基礎指針のa法、b法に基づいた地盤変位は「地盤」入力ウィンドウで計算されます。
-                        </td>
-                        <td style="border: 1px solid white;">4章</td>
+                        <td>右ボタンプレスドラッグ</td>
+                        <td>ビューの回転</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid white;">杭種・杭径・杭長・杭材・工法の設定</td>
-                        <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                        <td style="text-align: center; border: 1px solid white;color: gray;">（設計者が適切に選定します。）</td>
-                        <td style="border: 1px solid white;">2章、6章</td>
+                        <td>Shift+右ボタンプレスドラッグ</td>
+                        <td>ビューの平行移動</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid white;">液状化に対する検討</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;">
-                            地盤ウィンドウにおいて検討します。<br>
-                            FL値の確認、杭周地盤の反力係数低減率α、βの計算等を行います。
-                        </td>
-                        <td style="border: 1px solid white;">3.2節</td>
+                        <td>中ボタンプレスドラッグ</td>
+                        <td>ビューの平行移動</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid white;">地盤の鉛直支持力の算定（杭体の圧縮耐力の算定）</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;color: #D82531;">地盤、杭セットごとに、検討します。</td>
-                        <td style="border: 1px solid white;">6.2節、6.6節</td>
+                        <td>左ボタンクリック</td>
+                        <td>選択</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid white;">負の摩擦力に対する検討</td>
-                        <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                        <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                        <td style="border: 1px solid white;">3.1節、6.4節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">地盤の引抜抵抗の算定</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;color: #D82531;">地盤、杭セットごとに、検討します。</td>
-                        <td style="border: 1px solid white;">6.5節、6.6節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">杭頭沈下量の算定（杭の鉛直支持力算定用）</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;color: #D82531;">
-                            単杭の荷重-沈下関係は、地盤、杭セットごとに、検討します。<br>
-                            群杭としての沈下量は、任意矩形荷重面もしくは各杭ごとの等価十字荷重面に対して成層多層地盤におけるSteinnbrenerの近似解による検討を行います。
-                        </td>
-                        <td style="border: 1px solid white;">6.3節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">鉛直荷重に対する杭の設計</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;color: #D82531;">地盤、杭セットごとに、検討します。</td>
-                        <td style="border: 1px solid white;">6.1節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">
-                            地盤の水平方向特性<br>
-                            ・水平地盤反力係数<br>
-                            ・水平地盤反力度の算定
-                        </td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;">地盤、杭セットごとに、設定します。</td>
-                        <td style="border: 1px solid white;">6.6節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">
-                            杭基礎の地震時応力の算定（レベル1荷重）<br>
-                            単杭の静的非線形解析<br>
-                            液状化地盤では応答変位法
-                        </td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;">すべて非線形解析で行う予定。</td>
-                        <td style="border: 1px solid white;">6.6節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">性能グレードの設定</td>
-                        <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                        <td style="text-align: center; color: gray;">（設計者が適切に設定します。）</td>
-                        <td style="border: 1px solid white;">6.6節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">
-                            杭基礎の地震時応力の算定（レベル2荷重）<br>
-                            【群杭フレーム静的非線形解析<br>
-                            １種地盤以外は応答変位法
-                        </td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;">すべて非線形解析で行う予定。</td>
-                        <td style="border: 1px solid white;">6.6節</td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">杭頭接合部の設計</td>
-                        <td style="text-align: center;border: 1px solid white;">✓</td>
-                        <td style="border: 1px solid white;">行う予定。</td>
-                        <td style="border: 1px solid white;">6.6節</td>
+                        <td>左ボタンプレスドラッグリリース</td>
+                        <td>（※）選択窓による選択</td>
                     </tr>
                 </tbody>
             </table>
-        </section>
-        <section>
-            <h2 style="font-weight: bold; font-size: 1.5em;">操作方法</h2>
+            <p />
+            <img src="images/RightClickMenu.png" alt="___" width="150">
+
+            <table class="table-doc">
+                <caption style="text-align: center">メインビューでの右クリックメニュー</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">右クリックメニュー</th>
+                        <th style="text-align: center">動作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>選択節点コピー／平面移動</td>
+                        <td>選択した杭節点をコピー／平面移動するウィンドウを開きます。</td>
+                    </tr>
+                    <tr>
+                        <td>選択節点プロパティ変更／追加</td>
+                        <td>選択した杭節点のプロパティを変更／追加するウィンドウを開きます。</td>
+                    </tr>
+                    <tr>
+                        <td>選択節点削除</td>
+                        <td>選択した節点を削除します。</td>
+                    </tr>
+                    <tr>
+                        <td>選択解除</td>
+                        <td>選択を解除します。[ESC]と同じ。</td>
+                    </tr>
+                    <tr>
+                        <td>画像保存</td>
+                        <td>画像を保存します</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <section class="selection-window">
+                <p><strong>（※）選択窓の動作</strong></p>
+                <dl>
+                    <dt>左から右へのドラッグ</dt>
+                    <dd>窓に <strong>完全におさまる</strong> 節点・要素をすべて選択します。</dd>
+
+                    <dt>右から左へのドラッグ</dt>
+                    <dd>窓に <strong>完全におさまる</strong>、または <strong>交差する</strong> 節点・要素をすべて選択します。</dd>
+                </dl>
+            </section>
+
+            <img src="images/viewCube.png" alt="___" width="150">
+            <table class="table-doc">
+
+                <caption style="text-align: center">ビューキューブにおけるマウス操作</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">操作</th>
+                        <th style="text-align: center">動作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>面クリック</td>
+                        <td>選択した面が手前となるようにビュー回転</td>
+                    </tr>
+                    <tr>
+                        <td>辺クリック</td>
+                        <td>選択した辺が手前となるようにビュー回転</td>
+                    </tr>
+                    <tr>
+                        <td>頂点クリック</td>
+                        <td>選択した頂点が手前となるようにビュー回転</td>
+                    </tr>
+                    <tr>
+                        <td>水平スクロールバー</td>
+                        <td>水平ビュー回転</td>
+                    </tr>
+                    <tr>
+                        <td>垂直スクロールバー</td>
+                        <td>垂直ビュー回転</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="font-weight: bold;">データグリッド(表)操作</h3>
+            <p>
+                データグリッド上の編集可能なセルには、Microsoft Excel Worksheet上の値をコピーした状態で[Ctrl]+[V]を押すことでペーストすることができます。
+                このとき、選択範囲の左上のセルを起点とし、コピーしたセルの行数、列数の範囲にペーストされます。ただし、貼り付け範囲の各セルで入力可能な値でなければエラーメッセージが表示されます。
+            </p>
+            <p>
+                データグリッド上のデータは、セルを選択してた[Ctrl]+[C]を押すことでコピーすることができます。
+            </p>
+
+            <h3>左ペインアイテム</h3>
+            <h4 style="font-weight: bold;">「杭」</h4>
+            <p>
+                左側ペインの「杭」タブをクリックして開くタブパネルで、内容を入力します。
+                「杭」タブの直下には、「配置」、「軸力」、「前後方杭」タブがあります。
+            </p>
+            <h5>「配置」</h5>
+            <p>「杭配置追加」ボタンをクリックすると、最も大きな杭配置番号の杭位置からX正方向7.2mの位置に新たな杭を配置します。</p>
+            <p>「杭配置追加」ボタン下のデータグリッドには、すべての杭配置のリストが表示されます。</p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">杭配置入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>X(m)</td>
+                        <td>杭中心のX座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>Y(m)</td>
+                        <td>杭中心のY座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>杭頭Z(m)</td>
+                        <td>杭頭のZ座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>杭体番号</td>
+                        <td>適用する杭体の杭体番号</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>地盤番号</td>
+                        <td>適用する地盤の地盤番号</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>群杭係数</td>
+                        <td>（※）選択窓による選択</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>杭間隔比</td>
+                        <td>R/Bを入力します</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5>「軸力」</h5>
+            <p>データグリッドで、配置済みの杭配置に、軸力を入力します。</p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">杭軸力入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>X(m)</td>
+                        <td>杭中心のX座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Y(m)</td>
+                        <td>杭中心のY座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>VL0(kN)</td>
+                        <td>常時軸力（基礎自重等）</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>VLadd(kN)</td>
+                        <td>追加軸力（上部構造等の加算）</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>VL(kN)</td>
+                        <td>合計軸力（VL0 + VLadd）</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>1-1(kN)～1-4(kN)</td>
+                        <td>各レベル1地震ケース時の軸力（常時荷重を含む合計軸力）</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>2-1(kN)～2-4(kN)</td>
+                        <td>各レベル2地震ケース時の軸力（常時荷重を含む合計軸力）</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>R_SLS(kN)</td>
+                        <td>押込み側使用限界支持力</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Rt_SLS(kN)</td>
+                        <td>引抜き側使用限界軸力</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>R_DLS(kN)</td>
+                        <td>押込み側損傷限界支持力</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Rt_DLS(kN)</td>
+                        <td>引抜き側損傷限界軸力</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>R_ULS(kN)</td>
+                        <td>押込み側安全限界支持力</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Rt_ULS(kN)</td>
+                        <td>引抜き側安全限界軸力</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+
+                </tbody>
+            </table>
+
+            <h5>前後方杭</h5>
+            <p>
+                データグリッドで、配置済みの杭配置の方向別の前方杭/後方杭を指定します。「方向1」は荷重ケース「1-1」、「2-1]に
+                、「方向2」は荷重ケース「1-2」、「2-2」に、以下同様に対応します。
+            </p>
+            <p>
+                「自動選別」ボタンをクリックすると、方向別にそれぞれの杭について指定した角度の範囲にほかの杭の有無を調べ、自動的に前方杭
+                後方杭を選別します。
+            </p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">前後方杭入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>X(m)</td>
+                        <td>杭中心のX座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>Y(m)</td>
+                        <td>杭中心のY座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>方向1</td>
+                        <td>荷重ケース1-1、2-1の場合</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>方向2</td>
+                        <td>荷重ケース1-2、2-2の場合</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>方向3</td>
+                        <td>荷重ケース1-3、2-3の場合</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>方向4</td>
+                        <td>荷重ケース1-4、2-4の場合</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+
+                </tbody>
+            </table>
+
+            <h4 style="font-weight: bold;">「根入部」</h4>
 
             <p>
+                地下室の土圧合力ばねを作成するための情報を入力します。
+                土圧合力ばねに適用する地盤番号を選定します。
+                根入部は、多くの場合もっとも低い杭頭レベルである根入部下端レベルを基準として手動で入力します。
+                根入部の形状は、X軸、Y軸に平行な直方体として入力します。
+                区分数コンボボックスから0～5を指定することで、最大5段階の平面形状の変化を表現できます。
+                なお、土圧合力ばねは、荷重方向の前面と背面の土圧で定義され、側面摩擦抵抗などは考慮されません。
+                これに従えば、荷重方向の投影面の形状がなるべく再現できればよいことになります。
+            </p>
 
-                <h3 style="font-weight: bold;">「基本設定」入力</h3>
-            <p>メニューバー直下の「基本設定」ボタンをクリックして開くウィンドウで、内容を入力します。</p>
+            <p>
+                本プログラムでは、根入部の土圧合力ばねの相対変位に関するパラメータは、入力した
+                「Δp/根入れ深さ（係数）」から自動設定されます。<br>
+                Δp = （Δp/根入れ深さ）×（根入れ深さ） ,  ysp = 0.1 × Δp
+            </p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">根入部区間入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>厚さ(m)</td>
+                        <td>根入れ区間の厚さ</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>上端Z(m)</td>
+                        <td>根入れ区間上端のZ座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>下端Z(m)</td>
+                        <td>根入れ区間下端のZ座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>X1(m)</td>
+                        <td>根入れ区間X方向最小値の座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>X2(m)</td>
+                        <td>根入れ区間X方向最大値の座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>Y1(m)</td>
+                        <td>根入れ区間Y方向最小値の座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>Y2(m)</td>
+                        <td>根入れ区間Y方向最大値の座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>dx(m)</td>
+                        <td>根入れ区間X方向寸法。|X2-X1|</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>dY(m)</td>
+                        <td>根入れ区間Y方向寸法。|Y2-Y1|</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 style="font-weight: bold;">「要素」</h4>
+
+            <p>
+                要素をまだ機能は実装されていません。
+                以下は将来想定
+                基礎梁要素の入力
+                要素を入力した杭頭同志は沈下傾斜角検討を検討する
+            </p>
+
+            <h4 style="font-weight: bold;">「通り心」</h4>
+            <p>
+                Ｘ軸、Ｙ軸に平行な通り心を定義します。
+                通り心断面は、沈下解析結果で沈下形状を確認することができます。
+            </p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">通り心入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>通り名</td>
+                        <td>通り名</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>dX(m)</td>
+                        <td>間隔</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>X(m)</td>
+                        <td>座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+
+                </tbody>
+            </table>
+
+            <h4 style="font-weight: bold;">「群杭荷重」</h4>
+            <p>
+                基礎指針'19、5.3節　沈下、1.沈下量の検討、(3)即時沈下量の算定、(ⅲ)多層地盤の場合　に従い、スタインブレナー近似式による沈下計算のための条件を入力します。
+            </p>
+
+            <h5>荷重</h5>
+
+            <p>矩形荷重を定義します。</p>
+            <p>荷重タイプコンボボックスで、「任意矩形」または「個別十字」を定義します。</p>
+            <h6>任意矩形</h6>
+            <p>「任意矩形」タイプでは、任意の矩形荷重を定義できます。
+            <p>
+                基礎指針'19、6.3節　沈下、2　群杭の沈下、a)群杭の即時沈下、(ⅰ)等価荷重面法に従い、
+                建物範囲に矩形分布荷重を適用する場合は、「任意矩形」として、入力します。
+            </p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">矩形荷重面入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>X1(m)</td>
+                        <td>X座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>Y1(m)</td>
+                        <td>Y座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>X2(m)</td>
+                        <td>座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>Y2(m)</td>
+                        <td>座標</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>荷重(kN)</td>
+                        <td>矩形荷重</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>DX(m)</td>
+                        <td>矩形荷重X方向寸法</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>DY(m)</td>
+                        <td>矩形荷重Y方向寸法</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>面積(m2)</td>
+                        <td>矩形荷重面面積</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>単位面積荷重(kN/m2)</td>
+                        <td>矩形荷重単位面積荷重</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                </tbody>
+            </table>
+
+
+
+            <h6>個別十字</h6>
+            <p>
+                「個別十字」タイプでは、杭形状ごとに、任意の直径の円形の荷重面を想定し、面積が等価な5つの矩形荷重面として自動入力します。
+            </p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">個別十字荷重面入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>地盤・杭・レベルセット番号</td>
+                        <td>X座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>地盤番号</td>
+                        <td>Y座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>杭体番号</td>
+                        <td>座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>杭頭Z(m)</td>
+                        <td>座標</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>杭先端Z(m)</td>
+                        <td>矩形荷重</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>荷重面等価径</td>
+                        <td>円形荷重面の等価直径</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                </tbody>
+            </table>
+
+
+
+
+            <h5>グリッド</h5>
+            <p>
+                沈下量を計算する点を定義します。
+                杭配置のうち最小、最大のX座標およびY座標で囲まれる長方形範囲を、それぞれX方向、Y方向に外側に指定した距離オフセットした範囲を対象とし、
+                およそ指定した間隔でグリッドを作成します。間隔は、通り心がある場合は、自動的に通り心を含むように調整されます。
+            </p>
+
+            <h5>土層</h5>
+            <p>
+                沈下検討用の成層地盤を定義します。群杭検討では、深い範囲の土層データが必要です。
+                基礎指針'19、5.3節　沈下、2.沈下計算の対象となる地盤の範囲では、「深部に軟弱な地層がなければ、
+                沈下計算の対象深度は、採荷面から下方に概ね$\sqrt{A}$の2倍の範囲とすればよい」とあります。
+            </p>
+
+            <table class="table-doc">
+                <caption style="text-align: center">群杭荷重用土層入力データグリッド</caption>
+                <thead>
+                    <tr>
+                        <th style="text-align: center">項目</th>
+                        <th style="text-align: center">説明</th>
+                        <th style="text-align: center">編集可否</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>下端Z(m)</td>
+                        <td>土層下端レベル</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>厚さ(m)</td>
+                        <td>土層厚さ</td>
+                        <td style="text-align: center">✗</td>
+                    </tr>
+                    <tr>
+                        <td>変形係数(kN/m2)</td>
+                        <td>土層の変形係数</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+                    <tr>
+                        <td>ポアソン比</td>
+                        <td>土層のポアソン比</td>
+                        <th style="text-align: center">✓</th>
+                    </tr>
+
+                </tbody>
+            </table>
+
+            <h5>沈下量</h5>
+            <p>計算結果を表形式で表示します。</p>
+
+            <h3>メニュー下ボタンアイテム</h3>
+
+            <h4 style="font-weight: bold;">「基本設定」入力</h4>
+            <p>メニューバー直下の「基本設定」ボタンをクリックして開くウィンドウで、以下の内容を入力します。</p>
             <ol type="a">
-                <li>参照レベル名</li>
-                <li>荷重組み合わせ</li>
+                <li>プロジェクト番号</li>
+                <li>プロジェクト名</li>
+                <li>Z軸符号</li>
+                <li>性能グレード</li>
             </ol>
 
-            <h3 style="font-weight: bold;">「荷重条件」入力</h3>
+            <h4 style="font-weight: bold;">「荷重条件」入力</h4>
             <p>
                 メニューバー直下の「荷重条件」ボタンをクリックして開く「荷重条件ウィンドウ」で、内容を入力します。
                 「荷重条件ウィンドウ」には「上部構造・基礎部、地盤の作用の重ね合わせ」タブと「荷重ケース」タブがあります。
@@ -597,137 +1491,243 @@
                 <li>レベル2荷重の定義</li>
             </ol>
 
-            <h3 style="font-weight: bold;">「地盤」入力</h3>
+            <section>
+                <h4>荷重・解析条件</h4>
+
+                <ul>
+                    <li>デフォルトの解析ケースに対する荷重組み合わせ（荷重係数）</li>
+                </ul>
+
+                <table style="border-collapse: collapse; width: 100%; background-color: #62B0E2; color: white; border: 1px solid white;">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 10%; border-right: 1px solid white;">解析ケース</th>
+                            <th colspan="12">解析荷重ケース</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">VL0</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">VLadd</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-1</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-2</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-3</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-4</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-1</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-2</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-3</th>
+                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-4</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid white;">VL</td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">1-1</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">1-2</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">1-3</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">1-4</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">2-1</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">2-2</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">2-3</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                            <td style="border: 1px solid white;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid white;">2-4</td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="border: 1px solid white;"></td>
+                            <td style="text-align: right; border: 1px solid white;">1.0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+
+            <h4 style="font-weight: bold;">「地盤」入力</h4>
             <p>
                 メニューバー直下の「地盤」ボタンをクリックして開く「地盤入力ウィンドウ」で、内容を入力します。
                 地盤番号コンボボックスは、初期値が1で、地盤番号が増やすと
             </p>
+
+            <h5>地盤の液状化危険度</h5>
+            <h5>地盤変位</h5>
+
+
             <ol type="a">
                 <li>レベル1荷重の定義</li>
                 <li>レベル2荷重の定義</li>
             </ol>
 
-            <h3 style="font-weight: bold;">「杭体」入力</h3>
+            <h4 style="font-weight: bold;">「杭体」入力</h4>
             <p>メニューバー直下の「杭体」ボタンをクリックして開くウィンドウで、内容を入力します。</p>
             <ol type="a">
-                <li>杭体の定義</li>
-                <li>杭頭の定義</li>
-                <li>杭中間区間の定義</li>
-                <li>杭先端の定義</li>
+                <li>
+                    杭体の定義
+                    <ol type="b">
+                        <li>杭頭の定義</li>
+                        <li>杭中間区間の定義</li>
+                        <li>杭先端の定義</li>
+                    </ol>
+                </li>
             </ol>
 
-            <h3 style="font-weight: bold;">「軸力確認」</h3>
+
+            <h4 style="font-weight: bold;">「軸力確認」</h4>
             <p>
                 メニューバー直下の「軸力確認」ボタンをクリックして開くウィンドウで、内容を入力します。
                 各杭配置について、それぞれの杭体が入力された軸力に対して
                 「基礎部材の強度と変形性能」で定義された軸力の適用範囲に納まっているかを確認します。
             </p>
 
-            <h3 style="font-weight: bold;">「要素分割」</h3>
-            <p>要素分割ウィンドウが開きます。</p>
+            <h4 style="font-weight: bold;">「要素分割」</h4>
+            <p>要素分割ウィンドウが開きます。要素分割ウィンドウをひらくには、以下の条件を満たす必要があります。</p>
+            <p>すべての杭配置について、「杭頭Z(m)」と適用する「杭体番号」によって定義される杭下端が、適用する「地盤番号」の土層の最下層下端、土質点の最下点よりも高い。</p>
+            <p>すべての杭配置について、「杭頭Z(m)」と適用する「杭体番号」によって定義される杭上端が、適用する「地盤番号」の土層の最上層上端、土質点の最上点よりも低い。</p>
 
-            <h3 style="font-weight: bold;">「水平解析」</h3>
+            <h5> 「土層-杭セット」タブ</h5>
+            <p>「土層-杭セットNo.」コンボボックスで、対象の「土層-杭セットNo.」を選択します。</p>
+            <p>初期状態：杭区間境界レベル、土層境界レベルに変更不可の分割節点が設定されます。</p>
+            <p>「自動要素分割実行」：設定した「杭頭～第二節点最大距離」、「最大節点間距離」に従った自動分割を実行します。</p>
+            <p>「杭頭～第二節点最大距離」：初期値0.10m,十分に小さい値にします。</p>
+            <p>
+                「最大節点間距離」：初期値1.00m
+
+                <h5> 「土層-根入部セット」タブ</h5>
+            <p>根入れ部が存在する場合、「土層-根入部セット」タブが現れます。</p>
+            <p>初期状態：根入れ区間境界レベル、土層境界レベルに変更不可の分割節点が設定されます。</p>
+            <p>「自動要素分割実行」：設定した「最大節点間距離」に従った自動分割を実行します。</p>
+            <p>「最大節点間距離」：初期値5.00m
+
+            <p>「要素分割」済みとならなければ、「水平解析ウィンドウ」を開くことはできません。</p>
+            <p>「要素分割」済みとならなければ、「単杭沈下解析ウィンドウ」を開くことはできません。</p>
+
+            <h4 style="font-weight: bold;">「水平解析」</h4>
             <p>「要素分割」済みの場合、「水平解析ウィンドウ」を開くことができます。</p>
 
 
-            <h3 style="font-weight: bold;">「単杭沈下解析」</h3>
+            <h4 style="font-weight: bold;">「単杭沈下解析」</h4>
             <p>「要素分割」済みの場合、「単杭沈下解析ウィンドウ」を開くことができます。</p>
 
 
-            <h3 style="font-weight: bold;">「群杭沈下解析」</h3>
+            <h4 style="font-weight: bold;">「群杭沈下解析」</h4>
             <p>左ペインの「群杭荷重」タブパネルが開きます。</p>
 
-            <h3 style="font-weight: bold;">「杭」</h3>
-            <p>
-                左側ペインの「杭」タブをクリックして開くタブパネルで、内容を入力します。
-                「杭」タブの直下には、「配置」、「軸力」、「前後方杭」タブがあります。
-            </p>
-            <ol type="a">
-
-                <h4>「配置」</h4>
-                <p>「杭配置追加」ボタンをクリックすると、最も大きな杭配置番号の杭位置からX正方向7.2mの位置に新たな杭を配置します。</p>
-                <p>「杭配置追加」ボタン下のデータグリッドには、すべての杭配置のリストが表示されます。このリストの内容は書き換えることが可能です。</p>
-
-                <h4>「軸力」</h4>
-                <p>データグリッドで、配置済みの杭配置に、軸力を入力します。</p>
-
-                <h4>前後方杭</h4>
-                <p>
-                    データグリッドで、配置済みの杭配置の方向別の前方杭/後方杭を指定します。「方向1」は荷重ケース「1-1」、「2-1]に
-                    、「方向2」は荷重ケース「1-2」、「2-2」に、以下同様に対応します。
-                </p>
-                「自動選別」ボタンをクリックすると、方向別にそれぞれの杭について指定した角度の範囲にほかの杭の有無を調べ、自動的に前方杭
-                後方杭を選別します。</p>
-
-                <h3 style="font-weight: bold;">「根入部」</h3>
-
-                <p>
-                    地下室の土圧合力ばねを作成するための情報を入力します。
-                    土圧合力ばねに適用する地盤番号を選定します。
-                    根入部は、多くの場合もっとも低い杭頭レベルである根入部下端レベルを基準として手動で入力します。
-                    根入部の形状は、X軸、Y軸に平行な直方体として入力します。
-                    区分数コンボボックスから0～5を指定することで、最大5段階の平面形状の変化を表現できます。
-                    なお、土圧合力ばねは、荷重方向の前面と背面の土圧で定義され、側面摩擦抵抗などは考慮されません。
-                    これに従えば、荷重方向の投影面の形状がなるべく再現できればよいことになります。
-                </p>
-
-                <h3 style="font-weight: bold;">「要素」</h3>
-
-                <p>
-                    要素をまだ機能は実装されていません。
-                    以下は将来想定
-                    基礎梁要素の入力
-                    要素を入力した杭頭同志は沈下傾斜角検討を検討する
-                </p>
-
-                <h3 style="font-weight: bold;">「通り心」</h3>
-                <p>
-                    Ｘ軸、Ｙ軸に平行な通り心を定義します。
-                    通り心断面は、沈下解析結果で沈下形状を確認することができます。
-                </p>
-
-                <h3 style="font-weight: bold;">「群杭荷重」</h3>
-                <p>
-                    基礎指針'19、5.3節　沈下、1.沈下量の検討、(3)即時沈下量の算定、(ⅲ)多層地盤の場合　に従い、スタインブレナー近似式による沈下計算のための条件を入力します。
-                </p>
-
-                <h4>荷重</h4>
-
-                <p>矩形荷重を定義します。</p>
-                <p>荷重タイプコンボボックスで、「任意矩形」または「個別十字」を定義します。</p>
-                <h5>任意矩形</h5>
-                <p>「任意矩形」タイプでは、任意の矩形荷重を定義できます。
-                <p>
-                    基礎指針'19、6.3節　沈下、2　群杭の沈下、a)群杭の即時沈下、(ⅰ)等価荷重面法に従い、
-                    建物範囲に矩形分布荷重を適用する場合は、「任意矩形」として、入力します。
-                </p>
-                <h5>個別十字</h5>
-                <p>
-                    「個別十字」タイプでは、杭形状ごとに、任意の直径の円形の荷重面を想定し、面積が等価な5つの矩形荷重面として自動入力します。
-
-                    <h4>グリッド</h4>
-                <p>
-                    沈下量を計算する点を定義します。
-                    杭配置のうち最小、最大のX座標およびY座標で囲まれる長方形範囲を、それぞれX方向、Y方向に外側に指定した距離オフセットした範囲を対象とし、
-                    およそ指定した間隔でグリッドを作成します。間隔は、通り心がある場合は、自動的に通り心を含むように調整されます。
-                </p>
-
-                <h4>土層</h4>
-                <p>
-                    沈下検討用の成層地盤を定義します。群杭検討では、深い範囲の土層データが必要です。
-                    基礎指針'19、5.3節　沈下、2.沈下計算の対象となる地盤の範囲では、「深部に軟弱な地層がなければ、
-                    沈下計算の対象深度は、採荷面から下方に概ね$\sqrt{A}$の2倍の範囲とすればよい」とあります。
-                </p>
-
-                <h4>沈下量</h4>
-                <p>計算結果を表形式で表示します。</p>
-            </ol>
 
         </section>
         <section>
             <h1> 計算理論編</h1>
 
             <h2>地盤の液状化</h2>
+
+
+            <p>
+                基礎指針'19では、地盤の液状化に対する設計上の留意事項として、図6.1.6が示されている。
+                本プログラムでは、(a)の地盤の水平抵抗力の低下は基礎指針'19、3.2節の$\alpha_L$、$\beta_L$を自動的に考慮する。
+                (b)の浮力の増大、根入れ部の側圧の増大は、それに応じた杭軸力を指定すれば考慮することができる。
+                ただし、現状は液状化の有無により杭軸力を変化させることはできないため、液状化なしに対しても同じ値を使う。
+                (c)の側方流動のような現象は考慮できない。が懸念される場合は、別途地盤改良などの対策が必要であろう。
+            </p>
+            <figure>
+                <img src="images/Fig_6.1.6.png" alt="___" width="600">
+                <figcaption>基礎指針'19　図6.1.6</figcaption>
+            </figure>
 
             <div class="formula-block">
                 <div class="formula-left">
@@ -751,7 +1751,7 @@
             </div>
 
             <ul class="symbol-list">
-                <p class="symbol-intro">ここに、</p>
+                <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$\tau_d$</span>水平面に生じる等価な一定繰返しせん断応力振幅</li>
                 <li><span class="symbol-label">$\sigma_z'$</span>検討深さにおける有効土被り圧（鉛直有効応力）</li>
                 <li><span class="symbol-label">$r_n$</span>等価な繰返し回数に関する補正係数</li>
@@ -785,7 +1785,7 @@
             </div>
 
             <ul class="symbol-list">
-                <p class="symbol-intro">ここに、</p>
+                <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$N_1$</span>換算N値</li>
                 <li><span class="symbol-label">$C_N'$</span>拘束圧に関する換算係数</li>
                 <li><span class="symbol-label">$\Delta N_f$</span>細粒分含有率$F_L$に応じた補正N値増分で、図3.2.2による</li>
@@ -800,7 +1800,7 @@
             </div>
 
             <ul class="symbol-list">
-                <p class="symbol-intro">ここに、</p>
+                <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$\tau_L$</span>水平面における液状化抵抗</li>
             </ul>
 
@@ -820,7 +1820,7 @@
             </div>
 
             <ul class="symbol-list">
-                <p class="symbol-intro">ここに、</p>
+                <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$\gamma_{cy}$</span>i層の繰返しせん断ひずみ</li>
                 <li><span class="symbol-label">$H_i$</span>i層の層厚</li>
             </ul>
@@ -841,8 +1841,6 @@
                 z 土中の有効応力は、調査時地表以下の任意の高さに対して算定可能としています。
             </p>
 
-            <h2>地盤の変位</h2>
-
             <h2>水平抵抗および基礎部材の設計</h2>
             <h3>杭の水平地盤反力係数</h3>
             <ol type="a">
@@ -855,6 +1853,106 @@
                     </ul>
                 </li>
             </ol>
+
+
+            <h3 style="font-weight: bold;">地盤の変位</h3>
+
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$D_{max} = C_1(\alpha^2-1)f_A\sum{H_i}$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.1)</div>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$D_{max} = C_1(\alpha^2-1)f_A\sum{H_i}\left(C_2(1-\frac{1}{\alpha^2})+\frac{2R_{Z0}}{\alpha}\right)$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.2)</div>
+            </div>
+
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$C_1$</span>表層の$G-\gamma_1$関係から決まる定数(粘性土で0.0028,砂質土で0.0015)</li>
+                <li><span class="symbol-label">$C_2$</span>表層の土質の減衰特性から決まる定数(粘性土で0.53,砂質土で0.66)</li>
+                <li><span class="symbol-label">$\alpha$</span>地盤の地震時の固有周期の延び</li>
+                <li><span class="symbol-label">$f_A$</span>地震荷重の加速度一定領域の影響を考慮する補正係数</li>
+                <li><span class="symbol-label">$R_{Z0}$</span>地盤の表層と工学的基盤の初期インピーダンス比</li>
+            </ul>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$\alpha = \min(1+\frac{LZC_\alpha T_0}{\sum{H_i}},4)$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.3)</div>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$f_A = \min (1.6\alpha T_0,1)$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.4)</div>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$R_{Z0} = \frac{\sum{\gamma_i V_{S0} H_i}}{\gamma_B V_{SB}\sum{H_i}}$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.5)</div>
+            </div>
+
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$L$</span>地震荷重レベルにより決まる定数(レベル1で0.2,レベル2で1.0)</li>
+                <li><span class="symbol-label">$Z$</span>地域係数</li>
+                <li><span class="symbol-label">$C_\alpha$</span>表層の土質の動的変形特性から決まる定数(粘性土で25,砂質土で40)</li>
+                <li><span class="symbol-label">$T_0$</span>地盤の初期固有周期</li>
+            </ul>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$T_0 = 4\sum{\frac{H_i}{V_{S0i}}}$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.6)</div>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$u_{i+1} = u_i - \frac{40}{k_i (\alpha T_0)^2} \sum_{j=1}^{i} m_j u_j$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.7)</div>
+            </div>
+
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$\alpha$</span>地盤の地震時の固有周期の延び</li>
+                <li><span class="symbol-label">$T_0$</span>地盤の初期固有周期</li>
+                <li><span class="symbol-label">$k_i$</span>地表から第i番目の等価せん断ばね剛性</li>
+            </ul>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$V_{SEi} = \left( \frac{\gamma_{i} V_{S0i}}{\gamma_{B} V_{SB}} \right)^\beta V_{S0i}$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.8)</div>
+            </div>
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$\beta = \frac{3}{4} \left( 1 - \frac{1}{2^{\alpha - 1}}\right) \frac{1}{1 - R_{Z0}}$$
+
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.9)</div>
+            </div>
+
+
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$u_i^* = \frac{u_i-u_{N+1}}{1-u_{N+1}}$$
+                </div>
+                <div class="formula-right">基礎指針'19(4.5.10)</div>
+            </div>
 
             <section>
                 <h3>根入部の水平土圧合力ばね</h3>
@@ -900,7 +1998,7 @@
 
 
             <ul class="symbol-list">
-                <p class="symbol-intro">ここに、</p>
+                <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$y$</span>地下外壁と地盤の相対変位（地盤変位-地下外壁変位）</li>
                 <li><span class="symbol-label">$\Delta_p$</span>受働土圧に至る相対変位</li>
                 <li><span class="symbol-label">$y_{sp}$</span>基準相対変位</li>
@@ -912,7 +2010,7 @@
 
             <div class="formula-block">
                 <div class="formula-left">
-                    $$K_0 = 0$$
+                    $$K_0 = 0.5$$
                 </div>
                 <div class="formula-right">基礎指針'19</div>
             </div>
@@ -938,9 +2036,15 @@
                 <div class="formula-right">基礎指針'19(4.3.22)</div>
             </div>
 
-
             <section>
-                <h2 style="font-weight: bold; font-size: 1.5em;">杭の水平抵抗</h2>
+                <!--                 <h2 style="font-weight: bold; font-size: 1.5em;">杭の水平抵抗</h2> -->
+
+
+                <p>本プログラムでは、水平抵抗に対する検討では、基礎指針'19　図6.6.9(a)の示された模式図に従う。ただし、3次元のモデルとする。</p>
+                <figure>
+                    <img src="images/Fig_6.6.9(a).png" alt="___" width="600">
+                    <figcaption>基礎指針'19　図6.6.9(a)</figcaption>
+                </figure>
 
                 <div class="formula-block">
                     <div class="formula-left">
@@ -950,7 +2054,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$k_h$</span>杭水平変位$y$時の水平地盤反力係数</li>
                 </ul>
 
@@ -972,7 +2076,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$k_{h0}$</span>基準水平地盤反力係数</li>
                     <li><span class="symbol-label">$y_{0}$</span>基準水平変位</li>
                 </ul>
@@ -986,7 +2090,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$\alpha$</span>80</li>
                     <li><span class="symbol-label">$\xi$</span>水平地盤反力に群杭の影響を考慮する係数</li>
                     <li><span class="symbol-label">$B$</span>杭径</li>
@@ -1004,7 +2108,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$p_y$</span>塑性水平地盤反力度</li>
                 </ul>
 
@@ -1016,7 +2120,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$B$</span>杭径</li>
                     <li><span class="symbol-label">$R$</span>杭の中心間隔</li>
                     <li><span class="symbol-label">$N_p$</span>杭本数</li>
@@ -1038,7 +2142,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$K_P$</span>受働土圧係数$= \frac{1 + \sin\phi}{1 - \sin\phi}$</li>
                     <li><span class="symbol-label">$\phi$</span>内部摩擦角</li>
                     <li><span class="symbol-label">$\sigma_z'$</span>深さ$z$における地盤の有効上載圧</li>
@@ -1090,7 +2194,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$c_u$</span>非排水せん断強度</li>
                     <li><span class="symbol-label">$\lambda$</span>粘性土地盤の塑性水平地盤反力度に群杭の影響を考慮する係数</li>
                     <li><span class="symbol-label">$\mu$</span>粘性土地盤の塑性水平地盤反力度に群杭の影響を考慮する係数</li>
@@ -1114,7 +2218,7 @@
 
 
                 <section>
-                    <h2>場所打ち鉄筋コンクリート杭の強度と変形性能</h2>
+                    <h3>場所打ち鉄筋コンクリート杭の強度と変形性能</h3>
 
                     <h4>場所打ち鉄筋コンクリート杭のコンクリートのヤング係数</h4>
                     <div class="formula-block">
@@ -1133,7 +2237,7 @@
                     </div>
 
                     <ul class="symbol-list">
-                        <p class="symbol-intro">記号</p>
+                        <li class="symbol-intro">記号</li>
                         <li><span class="symbol-label">$\beta_1$</span>設計式の信頼性に基づく低減係数で1.0とする。</li>
                         <li><span class="symbol-label">$M_{s1}$</span>断面の圧縮縁がコンクリートの使用限界圧縮強度($(1/3) xi \cdot F_c$)に達したときの曲げモーメント</li>
                         <li><span class="symbol-label">$M_{s2}$</span>圧縮鉄筋が長期許容圧縮応力度に達したときの曲げモーメント</li>
@@ -1149,7 +2253,7 @@
                     </div>
 
                     <ul class="symbol-list">
-                        <p class="symbol-intro">記号</p>
+                        <li class="symbol-intro">記号</li>
                         <li><span class="symbol-label">$\beta_1$</span>設計式の信頼性に基づく低減係数で0.9とする。</li>
                         <li><span class="symbol-label">$k_c$</span>断面寸法による補正係数でRC基準2018による</li>
                         <li><span class="symbol-label">$\sigma_0$</span>軸応力度で軸力を杭の断面積で除した値。</li>
@@ -1211,7 +2315,7 @@
                     </div>
 
                     <ul class="symbol-list">
-                        <p class="symbol-intro">記号</p>
+                        <li class="symbol-intro">記号</li>
                         <li><span class="symbol-label">$N$</span>場所打ち鉄筋コンクリート杭の軸力</li>
                         <li><span class="symbol-label">$E_c$</span>コンクリートのヤング係数で3.1式による。</li>
                         <li><span class="symbol-label">$A_e$</span>コンクリート換算断面積$=A_c + (n-1) \cdot A_g$</li>
@@ -1225,7 +2329,7 @@
                     </ul>
 
 
-                    <h3>3-1　場所打ち鉄筋コンクリート杭の曲げモーメントと曲率の関係</h3>
+                    <h3>場所打ち鉄筋コンクリート杭の曲げモーメントと曲率の関係</h3>
                     <p>
                         断面の平面保持を仮定し、断面解析によりM-φ関係を計算する。
                         鉄筋の応力度-ひずみ度関係は規格降伏点を用いたバイリニアとする。
@@ -1246,7 +2350,7 @@
                         </div>
 
                         <ul class="symbol-list">
-                            <p class="symbol-intro">記号</p>
+                            <li class="symbol-intro">記号</li>
                             <li><span class="symbol-label">$Z_e$</span>換算断面係数$Z_e = I_e / r$</li>
                             <li><span class="symbol-label">$I_e$</span>杭主筋を考慮した換算断面２次モーメント$I_e = I+\frac{1}{2} \cdot (n-1) \cdot A_g \cdot r_s^2$</li>
                             <li><span class="symbol-label">$I$</span>杭の断面２次モーメント$I = \pi \cdot r^4 / 4$</li>
@@ -1265,7 +2369,7 @@
                         </div>
 
                         <ul class="symbol-list">
-                            <p class="symbol-intro">記号</p>
+                            <li class="symbol-intro">記号</li>
                             <li><span class="symbol-label">$\phi_{cr}$</span>曲げひび割れ発生時の曲率で(3.11)式による</li>
                             <li><span class="symbol-label">$\phi_y$</span>主筋降伏発生時の曲率</li>
                             <li><span class="symbol-label">$M_{cr}$</span>曲げひび割れモーメントで(3.11)式による</li>
@@ -1274,7 +2378,7 @@
                             <li><span class="symbol-label">$M_{u0}$</span>安全限界曲げモーメントで(3.6)式の記号説明による</li>
                         </ul>
 
-                        <h3>3-2　場所打ち鉄筋コンクリーﾄ杭の変形性能</h3>
+                        <h3>場所打ち鉄筋コンクリーﾄ杭の変形性能</h3>
                     <p>
                         杭応力度$\sigma_{0}$が$(1/4)\xi \cdot F_c$以下の場合には、杭頭接合面にM-θ回転ばねを用いる
 
@@ -1287,7 +2391,7 @@
                         </div>
 
                         <ul class="symbol-list">
-                            <p class="symbol-intro">記号</p>
+                            <li class="symbol-intro">記号</li>
                             <li><span class="symbol-label">$\alpha$</span>杭主筋比、パイルキャップの形状、軸力などによる係数で32。</li>
                             <li><span class="symbol-label">$d_b$</span>異形鉄筋の呼び径</li>
                             <li><span class="symbol-label">$\phi_y$</span>杭頭の主筋降伏時の曲率</li>
@@ -1295,7 +2399,7 @@
 
                 </section>
                 <section>
-                    <h2>場所打ち鋼管コンクリート杭の強度と変形性能</h2>
+                    <h3>場所打ち鋼管コンクリート杭の強度と変形性能</h3>
 
                     <h4>場所打ち鋼管コンクリート杭の使用限界曲げモーメント</h4>
                     <div class="formula-block">
@@ -1367,7 +2471,7 @@
                     </div>
 
                     <ul class="symbol-list">
-                        <p class="symbol-intro">記号</p>
+                        <li class="symbol-intro">記号</li>
                         <li><span class="symbol-label">$N$</span>杭主筋比、パイルキャップの形状、軸力などによる係数で32。</li>
                         <li><span class="symbol-label">$\epsilon$</span>異形鉄筋の呼び径</li>
                         <li><span class="symbol-label">$E_s$</span>鋼管のヤング率</li>
@@ -1377,22 +2481,22 @@
 
 
                     <figure>
-                        <img src="解説図1.1.png" alt="___" width="600">
+                        <img src="images/解説図1.1.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図1.1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図1.1r1.png" alt="___" width="600">
+                        <img src="images/解説図1.1r1.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図1.1r1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図2.1.jpeg" alt="___" width="600">
+                        <img src="images/解説図2.1.jpeg" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図2.1.jpg" alt="___" width="600">
+                        <img src="images/解説図2.1.jpg" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.1</figcaption>
                     </figure>
 
@@ -1402,66 +2506,95 @@
                                 </figure>	 -->
 
                     <figure>
-                        <img src="解説図2.3a.jpeg" alt="___" width="600">
+                        <img src="images/解説図2.3a.jpeg" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.3a</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図2.3b.jpeg" alt="___" width="600">
+                        <img src="images/解説図2.3b.jpeg" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.3b</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図2.4.png" alt="___" width="600">
+                        <img src="images/解説図2.4.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.4</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図2.5.png" alt="___" width="600">
+                        <img src="images/解説図2.5.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.5</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図3.21.png" alt="___" width="600">
+                        <img src="images/解説図3.21.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図3.21</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="解説図4.2.png" alt="___" width="600">
+                        <img src="images/解説図4.2.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図4.2</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="解説図4.8.png" alt="___" width="600">
+                        <img src="images/解説図4.8.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図4.8</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="解説図4.12.png" alt="___" width="600">
+                        <img src="images/解説図4.12.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図4.12</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="図2.1.jpeg" alt="___" width="600">
+                        <img src="images/図2.1.jpeg" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　図2.1</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="図3.1.png" alt="___" width="600">
+                        <img src="images/図3.1.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　図3.1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="図3.2.png" alt="___" width="600">
+                        <img src="images/図3.2.png" alt="___" width="600">
                         <figcaption>基礎地盤の強度と変形性能　図3.2</figcaption>
                     </figure>
 
-                    <h2>単杭の沈下</h2>
+                    <h2>鉛直支持力</h2>
 
+
+                    <p>
+                        本プログラムでは、ブロック破壊により沈下性状が決まる杭には対応していない。
+                    </p>
+                    <figure>
+                        <img src="images/Fig_6.2.20.png" alt="___" width="600">
+                        <figcaption>基礎指針'19　図6.2.20</figcaption>
+                    </figure>
+                    <p>
+                        単杭の即時沈下量は、本プログラムでは、荷重伝達解析（既往の載荷試験で得られた杭の先端抵抗-先端変位量関係と周面抵抗-変位量関係に基づいて単杭の荷重-沈下量関係を解析的に求める方法）によって求める。
+                        なお、杭自重も考慮する。本来杭打設時の自重は場所打ち杭、プレボーリング杭ではすべて先端で支持されるべきであるが、本プログラムでは、周面抵抗が有効としている。
+                    </p>
+                    <figure>
+                        <img src="images/Fig_6.3.2.png" alt="___" width="400">
+                        <figcaption>基礎指針'19　図6.3.2</figcaption>
+                    </figure>
+                    <p>
+                        杭周面抵抗は基礎指針'19　表6.3.2の土層の種類と計算された極限周面抵抗力によるトリリニアモデルでモデル化する。
+
+                        <figure>
+                            <img src="images/Fig_6.3.3.png" alt="___" width="400">
+                            <figcaption>基礎指針'19　図6.3.3</figcaption>
+                        </figure>
+
+                    </p>杭先端抵抗は、基礎指針'19の6.3.1式による。沈下曲線のパラメータである$\alpha$と$n$は任意の値とすることができる。
+                    <figure>
+                        <img src="images/Fig_6.3.4.png" alt="___" width="400">
+                        <figcaption>基礎指針'19　図6.3.4</figcaption>
+                    </figure>
 
                     <h3 style="font-weight: bold; font-size: 1.2em;">鉛直支持力</h3>
 
@@ -1474,7 +2607,7 @@
                     </div>
 
 
-                    <h4>極限先端支持力</h4>
+                    <h5>極限先端支持力</h5>
 
                     <div class="formula-block">
                         <div class="formula-left">
@@ -1484,7 +2617,7 @@
                     </div>
 
 
-                    <h4>極限周面抵抗力</h4>
+                    <h5>極限周面抵抗力</h5>
 
                     <div class="formula-block">
                         <div class="formula-left">
@@ -1494,7 +2627,7 @@
                     </div>
 
 
-                    <h4>砂質土部分の極限周面抵抗力</h4>
+                    <h5>砂質土部分の極限周面抵抗力</h5>
 
                     <div class="formula-block">
                         <div class="formula-left">
@@ -1504,7 +2637,7 @@
                     </div>
 
 
-                    <h4>粘性土部分の極限周面抵抗力</h4>
+                    <h5>粘性土部分の極限周面抵抗力</h5>
 
                     <div class="formula-block">
                         <div class="formula-left">
@@ -1575,7 +2708,7 @@
                 </div>
 
 
-                <h4>砂質土部分の杭引抜き時の最大周面抵抗力度</h4>
+                <h5>砂質土部分の杭引抜き時の最大周面抵抗力度</h5>
                 <div class="formula-block">
                     <div class="formula-left">
                         <p>$$\tau_{sti} = \frac{2}{3} \tau_{si}$$</p>
@@ -1584,7 +2717,7 @@
                 </div>
 
 
-                <h4>粘性土部分の杭引抜き時の最大周面抵抗力度</h4>
+                <h5>粘性土部分の杭引抜き時の最大周面抵抗力度</h5>
                 <div class="formula-block">
                     <div class="formula-left">
                         <p>$$\tau_{cti} = \frac{4}{5} \tau_{ci}$$</p>
@@ -1643,7 +2776,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$S_p$</span>杭先端沈下量</li>
                     <li><span class="symbol-label">$d_p$</span>杭先端直径</li>
                     <li><span class="symbol-label">$R_p$</span>杭先端荷重</li>
@@ -1652,7 +2785,27 @@
                     <li><span class="symbol-label">$\alpha$</span>曲線の初期接線勾配</li>
                     <li><span class="symbol-label">$n$</span>曲線形状を決定する次数</li>
                 </ul>
+
+
+
+
+                <p>引抜き荷重に対する荷重-沈下量関係は、押込み側と同様に荷重伝達法による。ただし、杭先端の抵抗力は0とし、引抜き側杭周面抵抗力は基礎指針'19　p247に従い砂質土は押込み側の2/3倍、粘性土は押込み側の4/5倍とする。</p>
+                <figure>
+                    <img src="images/Fig_6.5.11.png" alt="___" width="600">
+                    <figcaption>基礎指針'19　図6.5.11</figcaption>
+                </figure>
+                <p>ブロック破壊で決まる引抜き抵抗は本プログラムでは考慮できない。</p>
+                <figure>
+                    <img src="images/Fig_6.5.12.png" alt="___" width="400">
+                    <figcaption>基礎指針'19　図6.5.12</figcaption>
+                </figure>
+                <p>水平抵抗に対する基礎部材の設計は、基礎部材の強度と変形性能による。</p>
+                <figure>
+                    <img src="images/Fig_6.6.1.png" alt="___" width="600">
+                    <figcaption>基礎指針'19　図6.6.1</figcaption>
+                </figure>
             </section>
+
 
             <section>
                 <h2>群杭の即時沈下モデル</h2>
@@ -1675,305 +2828,44 @@
                         </ul>
                     </li>
                 </ol>
-            </section>
-            <section>
-                <h2 style="font-weight: bold; font-size: 1.5em;">荷重・解析条件</h2>
 
-                <ul>
-                    <li>デフォルトの解析ケースに対する荷重組み合わせ（荷重係数）</li>
-                </ul>
-
-                <table style="border-collapse: collapse; width: 100%; background-color: #62B0E2; color: white; border: 1px solid white;">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width: 10%; border-right: 1px solid white;">解析ケース</th>
-                            <th colspan="12">解析荷重ケース</th>
-                        </tr>
-                        <tr>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">VL0</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">VLadd</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-1</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-2</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-3</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E1-4</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-1</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-2</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-3</th>
-                            <th style="width: 9%; text-align: center; border: 1px solid white;">E2-4</th>
-                        </tr>
-                    </thead>
-
-                    <tr>
-                        <td style="border: 1px solid white;">VL</td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">1-1</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">1-2</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">1-3</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">1-4</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">2-1</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">2-2</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">2-3</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                        <td style="border: 1px solid white;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: 1px solid white;">2-4</td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="border: 1px solid white;"></td>
-                        <td style="text-align: right; border: 1px solid white;">1.0</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </section>
-
-            <h1>プログラム開発 </h1>
-            <section>
-                <ul>
-                    <li>
-                        <strong>プログラム言語</strong><br>
-                        .NET 8、C# 12
-                    </li>
-                    <li>
-                        <strong>プラットホーム</strong><br>
-                        WPF
-                    </li>
-                    <li>
-                        <strong>主要なパッケージ</strong>
-                        <table style="border-collapse: collapse; width: 100%; background-color: #62B0E2; color: white; border: 1px solid white;">
-                            <thead>
-                                <tr>
-                                    <th style="text-align: center; border: 1px solid white;">項目</th>
-                                    <th style="text-align: center; border: 1px solid white;">説明</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="border: 1px solid white;">Math.Net</td>
-                                    <td style="border: 1px solid white;">連立方程式以外の科学演算一般（MathNet.Numerics.LinearAlgebraには疎行列の連立方程式を有効に解くsolverがなく、自由度大のとき、時間がかかるまたは止まってしまう。）</td>
-                                </tr>
-                                <tr>
-                                    <td style="border: 1px solid white;">CSparse</td>
-                                    <td style="border: 1px solid white;">連立方程式の解</td>
-                                </tr>
-                                <tr>
-                                    <td style="border: 1px solid white;">Helix Toolkit</td>
-                                    <td style="border: 1px solid white;">三次元レンダリング描画</td>
-                                </tr>
-                                <tr>
-                                    <td style="border: 1px solid white;">ScottPlot</td>
-                                    <td style="border: 1px solid white;">グラフ描画</td>
-                                </tr>
-                                <tr>
-                                    <td style="border: 1px solid white;">AvalonDock</td>
-                                    <td style="border: 1px solid white;">ドッキングウィンドウシステム</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </li>
-                </ul>
-
-
-
-
-
-                <h3 style="font-weight: bold;">地盤の変位</h3>
-
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$D_{max} = C_1(\alpha^2-1)f_A\sum{H_i}$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.1)</div>
-                </div>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$D_{max} = C_1(\alpha^2-1)f_A\sum{H_i}\left(C_2(1-\frac{1}{\alpha^2})+\frac{2R_{Z0}}{\alpha}\right)$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.2)</div>
-                </div>
-
-                <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
-                    <li><span class="symbol-label">$C_1$</span>表層の$G-\gamma_1$関係から決まる定数(粘性土で0.0028,砂質土で0.0015)</li>
-                    <li><span class="symbol-label">$C_2$</span>表層の土質の減衰特性から決まる定数(粘性土で0.53,砂質土で0.66)</li>
-                    <li><span class="symbol-label">$\alpha$</span>地盤の地震時の固有周期の延び</li>
-                    <li><span class="symbol-label">$f_A$</span>地震荷重の加速度一定領域の影響を考慮する補正係数</li>
-                    <li><span class="symbol-label">$R_{Z0}$</span>地盤の表層と工学的基盤の初期インピーダンス比</li>
-                </ul>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$\alpha = \min(1+\frac{LZC_\alpha T_0}{\sum{H_i}},4)$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.3)</div>
-                </div>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$f_A = \min (1.6\alpha T_0,1)$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.4)</div>
-                </div>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$R_{Z0} = \frac{\sum{\gamma_i V_{S0} H_i}}{\gamma_B V_{SB}\sum{H_i}}$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.5)</div>
-                </div>
-
-                <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
-                    <li><span class="symbol-label">$L$</span>地震荷重レベルにより決まる定数(レベル1で0.2,レベル2で1.0)</li>
-                    <li><span class="symbol-label">$Z$</span>地域係数</li>
-                    <li><span class="symbol-label">$C_\alpha$</span>表層の土質の動的変形特性から決まる定数(粘性土で25,砂質土で40)</li>
-                    <li><span class="symbol-label">$T_0$</span>地盤の初期固有周期</li>
-                </ul>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$T_0 = 4\sum{\frac{H_i}{V_{S0i}}}$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.6)</div>
-                </div>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$u_{i+1} = u_i - \frac{40}{k_i (\alpha T_0)^2} \sum_{j=1}^{i} m_j u_j$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.7)</div>
-                </div>
-
-                <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
-                    <li><span class="symbol-label">$\alpha$</span>地盤の地震時の固有周期の延び</li>
-                    <li><span class="symbol-label">$T_0$</span>地盤の初期固有周期</li>
-                    <li><span class="symbol-label">$k_i$</span>地表から第i番目の等価せん断ばね剛性</li>
-                </ul>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$V_{SEi} = \left( \frac{\gamma_{i} V_{S0i}}{\gamma_{B} V_{SB}} \right)^\beta V_{S0i}$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.8)</div>
-                </div>
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$\beta = \frac{3}{4} \left( 1 - \frac{1}{2^{\alpha - 1}}\right) \frac{1}{1 - R_{Z0}}$$
-
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.9)</div>
-                </div>
-
-
-                <div class="formula-block">
-                    <div class="formula-left">
-                        $$u_i^* = \frac{u_i-u_{N+1}}{1-u_{N+1}}$$
-                    </div>
-                    <div class="formula-right">基礎指針'19(4.5.10)</div>
-                </div>
 
                 <h3 style="font-weight: bold;">群杭の沈下</h3>
+
+                <p>
+                    建物の杭は、杭間の相互作用（群杭効果）を無視できない場合が多く、即時沈下量の検討においてその効果を考慮する必要がある。
+                    本プログラムでは、基礎指針'19　図6.3.11のような等価荷重面法を考慮できる。
+                    ただし、等価荷重面はその形状、数は任意のものとすることができるが、任意の一つのレベルに設定する必要がある。
+                    また、地盤モデルは一つの成層多層地盤とする必要がある。
+                    なお、地震時の沈下量に対する群杭効果は基礎指針'19(p231)に考慮する必要がないことが示されており、本プログラムでも考慮しない。
+
+                </p>
+                <figure>
+                    <img src="images/Fig_6.3.7.png" alt="___" width="400">
+                    <figcaption>基礎指針'19　図6.3.7</figcaption>
+                </figure>
+
+                <figure>
+                    <img src="images/Fig_6.3.10.png" alt="___" width="600">
+                    <figcaption>基礎指針'19　図6.3.10</figcaption>
+                </figure>
+
+                <figure>
+                    <img src="images/Fig_6.3.11.png" alt="___" width="400">
+                    <figcaption>基礎指針'19　図6.3.11</figcaption>
+                </figure>
+                <p>
+                    地震時の荷重沈下関係は、基礎指針'19(p232)によると、即時沈下における荷重-沈下関係を用いることができる。本プログラムでもこれに従う。
+                </p>
+                <figure>
+                    <img src="images/Fig_6.3.12.png" alt="___" width="400">
+                    <figcaption>基礎指針'19　図6.3.12</figcaption>
+                </figure>
+
+                <figure>
+                    <img src="images/Fig_6.5.10.png" alt="___" width="600">
+                    <figcaption>基礎指針'19　図6.5.10</figcaption>
+                </figure>
 
                 <div class="formula-block">
                     <div class="formula-left">
@@ -1983,7 +2875,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$\Delta S_E$</span>ある層の載荷面隅角部の即時沈下量</li>
                     <li><span class="symbol-label">$S_E$</span>ある層上端の隅角部の弾性沈下量</li>
                     <li><span class="symbol-label">$S_E'$</span>ある層下端の隅角部の弾性沈下量</li>
@@ -2015,7 +2907,7 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$L$</span>基礎の長辺長さ</li>
                     <li><span class="symbol-label">$B$</span>基礎の短辺長さ</li>
                     <li><span class="symbol-label">$l$</span>$L/B$</li>
@@ -2034,17 +2926,216 @@
                 </div>
 
                 <ul class="symbol-list">
-                    <p class="symbol-intro">ここに、</p>
+                    <li class="symbol-intro">ここに、</li>
                     <li><span class="symbol-label">$I_S(H_1, \nu_{s1})$</span>層厚$H_k$、ポアソン比$\nu_{sk}$の地盤における沈下係数</li>
                     <li><span class="symbol-label">$H_k$</span>地表面から$k$層下端迄の距離</li>
                 </ul>
             </section>
+        </section>
 
 
+        <h1>プログラム開発編 </h1>
+        <h2>概要</h2>
+        <p>本デスクトップアプリケーションプログラムは.NET C#で開発しています。統合開発環境（IDE）は、Microsoft Visual Studio Communityです。</p>
 
+        <h2>プログラム言語等</h2>
+        <section>
+            <ul>
+                <li>
+                    <strong>プログラム言語</strong><br>
+                    .NET 8、C# 12
+                </li>
+                <li>
+                    <strong>プラットホーム</strong><br>
+                    WPF
+                </li>
+                <li>
+                    <strong>主要なパッケージ</strong>
+                    <table style="border-collapse: collapse; width: 100%; background-color: #62B0E2; color: white; border: 1px solid white;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center; border: 1px solid white;">項目</th>
+                                <th style="text-align: center; border: 1px solid white;">説明</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border: 1px solid white;">MathNet.Numerics.Signed(5.0.0)</td>
+                                <td style="border: 1px solid white;">連立方程式以外の科学演算一般</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">CSparse(4.2.0)</td>
+                                <td style="border: 1px solid white;">疎行列連立方程式のsolver</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">Helix Toolkit(2.27.3)</td>
+                                <td style="border: 1px solid white;">三次元レンダリング描画</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">ScottPlot(5.0.56)</td>
+                                <td style="border: 1px solid white;">グラフ描画</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">Dirkster.AvalonDock(4.72.1)</td>
+                                <td style="border: 1px solid white;">ドッキングウィンドウシステム</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">WpfMath(2.1.0)</td>
+                                <td style="border: 1px solid white;">数式描画</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid white;">Svg.Skia(3.2.1)</td>
+                                <td style="border: 1px solid white;">svgファイル描画</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+            </ul>
 
+            <figure class="code-figure" id="runasync">
+                <figcaption>RunAsync(CancellationToken token) の実装（C#）</figcaption>
+                <pre><code class="language-csharp">
+                    public async Task RunAsync(CancellationToken token)
+                    {
+                    CalculationLog.Clear();
+                    await AddLogAsync("計算開始");
+                    await Task.Yield();
 
+                    // 計算対象モデルを決定（編集用があればそれ、なければ本体）
+                    var targetModel = AnaModels.Count > 1 ? AnaModels[1] : AnaModels[0];
+                    if (targetModel == null)
+                    {
+                    await AddLogAsync("計算モデルが存在しません。");
+                    return;
+                    }
 
+                    targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
+                    int calcNo = 0;
+
+                    double alpha = 1.0 * Math.Pow(10, -6);
+                    var level1 = InputModel.LoadCasesInput.LoadCasesLevel1
+                    .Select((lc, idx) => (loadCase: lc, index: idx, level: 1));
+                    var level2 = InputModel.LoadCasesInput.LoadCasesLevel2
+                    .Select((lc, idx) => (loadCase: lc, index: idx, level: 2));
+                    foreach (var loadCaseitem in InputModel.LoadCasesInput.AllSeismicLoadCases)
+                    {
+                    LoadCase loadCase = loadCaseitem;
+                    int iLC = loadCaseitem.No - 1;
+                    int level = loadCaseitem.Level;
+
+                    foreach (var loadCombination in InputModel.LoadCasesInput.AllLoadCombinations)
+                    {
+                    int iLCOM = loadCombination.No - 1;
+
+                    IEnumerable<bool>
+                        liquefactionCases = LiquefactionOption switch
+                        {
+                        LiquefactionOptionType.Both => [true, false],
+                        LiquefactionOptionType.Yes => [true],
+                        LiquefactionOptionType.None => [false],
+                        _ => new[] { false }
+                        };
+
+                        foreach (bool isLiquefaction in liquefactionCases)
+                        {
+                        targetModel.InitializeStates();
+
+                        int nstep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
+                        loadCase.Level == 1 ? Level1CalculationStepsCount :
+                        loadCase.Level == 2 ? Level2CalculationStepsCount :
+                        1;
+
+                        SetVectorDF(targetModel, loadCase, loadCombination, level, iLC, nstep);
+                        targetModel.MapOnVectorDF();
+                        InitializeSoilDispIncrement(targetModel, loadCase, loadCombination, level, isLiquefaction, nstep);
+
+                        for (int step = 0; step < nstep; step++)
+                        {
+                        await Task.Yield(); // ここでUIスレッドを解放
+                        token.ThrowIfCancellationRequested();
+                        _pauseEvent.Wait(token); // ここで一時停止を考慮
+
+                        // RunAsync内
+                        //Debug.WriteLine("RunAsync: " + this.GetHashCode());
+
+                        calcNo += 1;
+                        CurrentProgress = calcNo; // 進捗を更新
+                        await AddLogAsync($"[{calcNo}/{TotalCalculationCount}]" + "荷重ケース：" + level + "-" + $"{iLC + 1}" + ", " + "液状化" + (isLiquefaction ? "考慮, " : "非考慮, ") +
+                        $"[{iLCOM + 1}]" +
+                        "αL:" + $"{loadCombination.Alpha1:N2}" +
+                        ", βU:" + $"{loadCombination.Beta1:N2}" +
+                        ", βL:" + $"{loadCombination.Beta2:N2}" +
+                        ",　荷重ステップ" + (step + 1) + "/" + nstep);
+                        targetModel.InitializeNormsqR_onNormsqFint();
+
+                        int n_iter = 1;
+                        UpdateSoilDisp();
+                        UpdateF(targetModel);
+                        targetModel.SetR();
+
+                        while (targetModel.NormsROnNormsFint >= alpha)
+                        {
+                        double diagKMin = double.NaN, diagKMax = double.NaN;
+                        double springKMin = double.NaN, springKMax = double.NaN;
+                        double dispMaxAbs = double.NaN;
+
+                        // 重い計算をバックグラウンドで実行（診断値もここで算出）
+                        await Task.Run(() =>
+                        {
+                        // Ktan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
+                        FindK(iLC, targetModel);
+
+                        // 1ステップ解く
+                        SolveDdAndUpdateX(targetModel);
+
+                        // 断面力・T更新と残差更新
+                        FindT(iLC, targetModel);
+                        targetModel.FindR();
+
+                        // 診断値: ばね剛性min/max（PrepareKmatで集計済み）
+                        springKMin = _lastSpringKMin;
+                        springKMax = _lastSpringKMax;
+
+                        // 診断値: K 対角min/max（現時点のKtanを取得）
+                        (diagKMin, diagKMax) = GetKDiagonalMinMax(targetModel, isTan: true);
+
+                        // 診断値: 代表自由度の |d| 最大値（節点の増分変位から）
+                        dispMaxAbs = GetMaxAbsIncrementalDisp(targetModel);
+                        }, token);
+
+                        // 残差ログ
+                        if (targetModel.NormsROnNormsFint < alpha)
+                        {
+                        await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged");
+                        }
+                        else
+                        {
+                        await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}");
+                        }
+
+                        // 診断ログ
+                        await AddLogAsync($"　　diag(K)[min,max]=[{diagKMin:E3}, {diagKMax:E3}], spring k[min,max]=[{springKMin:E3}, {springKMax:E3}], max|d|={dispMaxAbs:E3}");
+
+                        await Task.Yield(); // UIスレッドを解放
+                        n_iter += 1;
+                        }
+
+                        targetModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iter, targetModel.NormsROnNormsFint));
+                        foreach (var node in targetModel.Nodes)
+                        node.NodeResults.Add(new(loadCase, loadCombination, isLiquefaction, step, node));
+                        foreach (var beam in targetModel.Beams)
+                        beam.BeamResults.Add(new(loadCase, loadCombination, isLiquefaction, step, beam));
+                        foreach (var spring in targetModel.HorizontalSoilSprings)
+                        spring.HorizontalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, spring));
+                        }
+                        }
+                        }
+                        }
+                        await AddLogAsync("計算終了");
+                        MessageBox.Show("計算が終了しました。");
+                        }
+                </code></pre>
+            </figure>
 
             <p>
                 $$
@@ -2099,13 +3190,15 @@
                 x_n
                 \end{bmatrix}
                 $$
-
+            </p>
+            <p>
                 $$
                 \begin{bmatrix}
                 x_1 & \cdots & x_n
                 \end{bmatrix}
                 $$
-
+            </p>
+            <p>
                 $$
                 \begin{bmatrix}
                 x_1 &        &        \\
@@ -2114,7 +3207,195 @@
                 \end{bmatrix}
                 $$
 
+            </p>
+            <p>
+                $$
+                \begin{bmatrix}
+                x_1 　　& \cdots &        \\
+                \vdots & \ddots & \vdots \\
+                & \cdots & x_n
+                \end{bmatrix}
+                $$
+            </p>
+            <p>
+                強制変形の考慮は、式変形の方法による。i番目の自由度に、全体剛性行列および節点力ベクトルは以下のように表される。既知節点力$\overline{p_i}$、既知節点変位$\overline{u_i}$とする。
+            </p>
+            <p>
+                $$
+                \left\{ \begin{array}{c}
+                \overline{p_1} \\
+                \vdots \\
+                p_i \\
+                \vdots \\
+                \overline{p_n}
+                \end{array} \right\}
+                =
+                \begin{bmatrix}
+                K_{1,1} 　　& \cdots &  K_{1,i} &   \cdots &  K_{1,n}    \\
+                \vdots 　　& \ddots &  \vdots &   \ddots &  \vdots    \\
+                K_{i,1} 　　& \cdots &  K_{i,i} &   \cdots &  K_{i,n}    \\
+                \vdots 　　& \ddots &  \vdots &   \ddots &  \vdots    \\
+                K_{n,1} 　　& \cdots &  K_{n,i} &   \cdots &  K_{n,n}    \\
+                \end{bmatrix}
 
+                \left\{ \begin{array}{c}
+                u_1 \\
+                \vdots \\
+                \overline{u_i} \\
+                \vdots \\
+                u_n \\
+                \end{array} \right\}
+                $$
+            </p>
+
+            <p>
+                ここで、強制変形の考慮は、式変形の方法による。i番目の自由度に、既知変位$\overline{u_i}$が生じる場合、i行目以外のi列項を左辺に移行する。
+            </p>
+
+
+            <p>
+                $$
+                \left\{ \begin{array}{c}
+                \overline{p_1} \\
+                \vdots \\
+                \overline{p_{i-1}} \\
+                p_i \\
+                \overline{p_{i+1}} \\
+                \vdots \\
+                \overline{p_n}
+                \end{array} \right\}
+                =
+                \begin{bmatrix}
+                K_{1,1} 　　& \cdots &  0 &   \cdots &  K_{1,n}    \\
+                \vdots 　　& \ddots &  \vdots &   \ddots &  \vdots    \\
+                K_{i-1,1} 　　& \cdots &  0 &   \cdots &  K_{i-1,n}    \\
+                K_{i,1} 　　& \cdots &  K_{i,i} &   \cdots &  K_{i,n}    \\
+                K_{i+1,1} 　　& \cdots &  0 &   \cdots &  K_{i+1,n}    \\
+                \vdots 　　& \ddots &  \vdots &   \ddots &  \vdots    \\
+                K_{n,1} 　　& \cdots &  0 &   \cdots &  K_{n,n}    \\
+                \end{bmatrix}
+
+                \left\{ \begin{array}{c}
+                u_1 \\
+                \vdots \\
+                u_{i-1} \\
+                \overline{u_i} \\
+                u_{i+1} \\
+                \vdots \\
+                u_n
+                \end{array} \right\}
+
+                +
+
+                \left\{ \begin{array}{c}
+                K_{1,i}\overline{u_i} \\
+                \vdots \\
+                K_{i-1,i}\overline{u_i} \\
+                0 \\
+                K_{i+1,i}\overline{u_i} \\
+                \vdots \\
+                u_n
+                K_{n,i}\overline{u_i} \\
+                \end{array} \right\}
+                $$
+            </p>
+
+            <p>
+                $$
+                \left\{ \begin{array}{c}
+                \overline{p_1} \\
+                \vdots \\
+                \overline{p_{i-1}} \\
+                p_i \\
+                \overline{p_{i+1}} \\
+                \vdots \\
+                \overline{p_{ｎ}}
+                \end{array} \right\}
+
+                -
+
+                \left\{ \begin{array}{c}
+                K_{1,i}\overline{u_i} \\
+                \vdots \\
+                K_{i-1,i}\overline{u_i} \\
+                0 \\
+                K_{i+1,i}\overline{u_i} \\
+                \vdots \\
+                u_n
+                K_{n,i}\overline{u_i} \\
+                \end{array} \right\}
+                =
+                \begin{bmatrix}
+                K_{1,1} 　　& \cdots &  0 &   \cdots &  K_{1,n}    \\
+                \vdots 　　& \ddots &  \vdots &   \ddots &  \vdots    \\
+                K_{i-1,1} 　　& \cdots &  0 &   \cdots &  K_{i-1,n}    \\
+                K_{i,1} 　　& \cdots &  K_{i,i} &   \cdots &  K_{i,n}    \\
+                K_{i+1,1} 　　& \cdots &  0 &   \cdots &  K_{i+1,n}    \\
+                \vdots 　　& \ddots &  \vdots &   \ddots &  \vdots    \\
+                K_{n,1} 　　& \cdots &  0 &   \cdots &  K_{n,n}    \\
+                \end{bmatrix}
+
+                \left\{ \begin{array}{c}
+                u_1 \\
+                \vdots \\
+                u_{i-1} \\
+                \overline{u_i} \\
+                u_{i+1} \\
+                \vdots \\
+                u_n
+                \end{array} \right\}
+                $$
+            </p>
+
+            <p>
+                i行目のみに既知変位の値に対応するように修正することで、未知変数と既知変数を分離できる。
+            </p>
+
+            <p>
+                $$
+                \left\{ \begin{array}{c}
+                \overline{p_1} \\
+                \vdots \\
+                \overline{p_{i-1}} \\
+                K_{i,i}\overline{u_i} \\
+                \overline{p_{i+1}} \\
+                \vdots \\
+                \overline{p_{ｎ}}
+                \end{array} \right\}
+
+                -
+
+                \left\{ \begin{array}{c}
+                K_{1,i}\overline{u_i} \\
+                \vdots \\
+                K_{i-1,i}\overline{u_i} \\
+                0 \\
+                K_{i+1,i}\overline{u_i} \\
+                \vdots \\
+                u_n
+                K_{n,i}\overline{u_i} \\
+                \end{array} \right\}
+                =
+                \begin{bmatrix}
+                K_{1,1} 　　& \cdots & K_{1,i-1} & 0 & K_{1,i+1} & \cdots &  K_{1,n}    \\
+                \vdots 　　& \ddots &  \vdots &\vdots &\vdots &   \ddots &  \vdots    \\
+                K_{i-1,1} 　　& \cdots &  K_{i-1,i-1} &  0 &  K_{i-1,i+1} &   \cdots &  K_{i-1,n}    \\
+                0 　　& \cdots &  0&  K_{i,i}&  0 &   \cdots &  0    \\
+                K_{i+1,1} 　　& \cdots &  K_{i+1,i-1} &  0 &  K_{i+1,i+1} &   \cdots &  K_{i+1,n}    \\
+                \vdots 　　& \ddots &  \vdots &\vdots &\vdots &   \ddots &  \vdots    \\
+                K_{n,1} 　　& \cdots & K_{n,i-1} & 0 & K_{n,i+1} &   \cdots &  K_{n,n}    \\
+                \end{bmatrix}
+
+                \left\{ \begin{array}{c}
+                u_1 \\
+                \vdots \\
+                u_{i-1} \\
+                \overline{u_i} \\
+                u_{i+1} \\
+                \vdots \\
+                u_n
+                \end{array} \right\}
+                $$
             </p>
 
         </section>
@@ -2126,10 +3407,10 @@
     <script>
 
         function showTab(tabId) {
-          document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-          document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-          document.getElementById(tabId).style.display = 'block';
-          document.querySelector(`.tab[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            document.getElementById(tabId).style.display = 'block';
+            document.querySelector(`.tab[onclick="showTab('${tabId}')"]`).classList.add('active');
         }
 
         let matches = [];
@@ -2138,120 +3419,273 @@
         let originalHtml = '';
 
         function highlightMatches(query) {
-          const main = document.getElementById('mainText');
-          if (!originalHtml) originalHtml = main.innerHTML;
+            const main = document.getElementById('mainText');
+            if (!originalHtml) originalHtml = main.innerHTML;
 
-          const regex = new RegExp(`(${query})`, 'gi');
-          const newHtml = originalHtml.replace(/<mark.*?>|<\/mark>/g, '')
-                                      .replace(regex, '<mark>$1</mark>');
-          main.innerHTML = newHtml;
+            const regex = new RegExp(`(${query})`, 'gi');
+            const newHtml = originalHtml.replace(/<mark.*?>|<\/mark>/g, '')
+                .replace(regex, '<mark>$1</mark>');
+            main.innerHTML = newHtml;
 
-          matches = Array.from(main.querySelectorAll('mark'));
-          document.getElementById('matchCount').textContent = `一致数: ${matches.length}`;
-          currentMatchIndex = -1;
+            matches = Array.from(main.querySelectorAll('mark'));
+            document.getElementById('matchCount').textContent = `一致数: ${matches.length}`;
+            currentMatchIndex = -1;
         }
 
         function clearSearch() {
-          const main = document.getElementById('mainText');
-          if (originalHtml) {
-            main.innerHTML = originalHtml;
-            originalHtml = '';
-          }
-          matches = [];
-          currentMatchIndex = -1;
-          document.getElementById('searchInput').value = '';
-          document.getElementById('matchCount').textContent = '一致数: 0';
-          document.getElementById('searchResults').innerHTML = '';
+            const main = document.getElementById('mainText');
+            if (originalHtml) {
+                main.innerHTML = originalHtml;
+                originalHtml = '';
+            }
+            matches = [];
+            currentMatchIndex = -1;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('matchCount').textContent = '一致数: 0';
+            document.getElementById('searchResults').innerHTML = '';
         }
 
         function nextMatch() {
-          if (matches.length === 0) return;
-          if (currentMatchIndex >= 0) matches[currentMatchIndex].classList.remove('active');
-          currentMatchIndex = (currentMatchIndex + 1) % matches.length;
-          matches[currentMatchIndex].classList.add('active');
-          matches[currentMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (matches.length === 0) return;
+            if (currentMatchIndex >= 0) matches[currentMatchIndex].classList.remove('active');
+            currentMatchIndex = (currentMatchIndex + 1) % matches.length;
+            matches[currentMatchIndex].classList.add('active');
+            matches[currentMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function prevMatch() {
-          if (matches.length === 0) return;
-          if (currentMatchIndex >= 0) matches[currentMatchIndex].classList.remove('active');
-          currentMatchIndex = (currentMatchIndex - 1 + matches.length) % matches.length;
-          matches[currentMatchIndex].classList.add('active');
-          matches[currentMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (matches.length === 0) return;
+            if (currentMatchIndex >= 0) matches[currentMatchIndex].classList.remove('active');
+            currentMatchIndex = (currentMatchIndex - 1 + matches.length) % matches.length;
+            matches[currentMatchIndex].classList.add('active');
+            matches[currentMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         document.getElementById('searchInput').addEventListener('input', function () {
-          const query = this.value.trim();
-          const results = document.getElementById('searchResults');
-          results.innerHTML = '';
+            const query = this.value.trim();
+            const results = document.getElementById('searchResults');
+            results.innerHTML = '';
 
-          if (query.length > 1) {
-            highlightMatches(query);
-            if (matches.length > 0) {
-              results.innerHTML = `<p>「${query}」が本文に見つかりました。</p>`;
+            if (query.length > 1) {
+                highlightMatches(query);
+                if (matches.length > 0) {
+                    results.innerHTML = `<p>「${query}」が本文に見つかりました。</p>`;
+                } else {
+                    results.innerHTML = `<p>「${query}」は見つかりませんでした。</p>`;
+                }
             } else {
-              results.innerHTML = `<p>「${query}」は見つかりませんでした。</p>`;
+                highlightMatches(''); // ハイライト解除
+                document.getElementById('matchCount').textContent = '一致数: 0';
             }
-          } else {
-            highlightMatches(''); // ハイライト解除
-            document.getElementById('matchCount').textContent = '一致数: 0';
-          }
         });
 
         // 自動章・節番号付与関数の定義
         function numberHeadings() {
-          const main = document.getElementById('mainText');
-          const headings = main.querySelectorAll('h1, h2, h3');
+            const main = document.getElementById('mainText');
+            const headings = main.querySelectorAll('h1, h2, h3, h4, h5');
 
-          let partCount = 0;
-          let chapterCount = 0;
-          let sectionCount = 0;
+            let partCount = 0;
+            let chapterCount = 0;
+            let sectionCount = 0;
+            let subSectionCount = 0;
+            let subSubSectionCount = 0;
 
-          headings.forEach(heading => {
-            if (heading.tagName === 'H1') {
-              partCount++;
-              chapterCount = 0;
-              sectionCount = 0;
-              heading.textContent = `第${partCount}部 ${heading.textContent}`;
-            } else if (heading.tagName === 'H2') {
-              chapterCount++;
-              sectionCount = 0;
-              heading.textContent = `第${chapterCount}章 ${heading.textContent}`;
-            } else if (heading.tagName === 'H3') {
-              sectionCount++;
-              heading.textContent = `${chapterCount}.${sectionCount} ${heading.textContent}`;
-            }
-          });
+            headings.forEach(heading => {
+                switch (heading.tagName) {
+                    case 'H1':
+                        partCount++;
+                        chapterCount = 0;
+                        sectionCount = 0;
+                        subSectionCount = 0;
+                        subSubSectionCount = 0;
+                        heading.textContent = `第${partCount}部 ${heading.textContent}`;
+                        break;
+
+                    case 'H2':
+                        chapterCount++;
+                        sectionCount = 0;
+                        subSectionCount = 0;
+                        subSubSectionCount = 0;
+                        heading.textContent = `第${chapterCount}章 ${heading.textContent}`;
+                        break;
+
+                    case 'H3':
+                        sectionCount++;
+                        subSectionCount = 0;
+                        subSubSectionCount = 0;
+                        heading.textContent = `${chapterCount}.${sectionCount} ${heading.textContent}`;
+                        break;
+
+                    case 'H4':
+                        subSectionCount++;
+                        subSubSectionCount = 0;
+                        heading.textContent = `${chapterCount}.${sectionCount}.${subSectionCount} ${heading.textContent}`;
+                        break;
+
+                    case 'H5':
+                        subSubSectionCount++;
+                        heading.textContent = `${chapterCount}.${sectionCount}.${subSectionCount}.${subSubSectionCount} ${heading.textContent}`;
+                        break;
+                }
+            });
         }
 
-        // 自動章・節番号付与
-        document.addEventListener('DOMContentLoaded', numberHeadings);
+        document.addEventListener('DOMContentLoaded', () => {
+            numberHeadings();
+            generateAutoTOC();
+        });
 
-        // 目次自動生成関数の定義
+        function indentHeadingsAndParagraphs() {
+            const main = document.getElementById('mainText');
+            const children = Array.from(main.children);
+
+            let currentLevel = 0;
+
+            children.forEach(el => {
+                if (/^H[1-5]$/.test(el.tagName)) {
+                    currentLevel = parseInt(el.tagName[1]);
+                    el.classList.add(`indent-level-${currentLevel}`);
+                } else if (el.tagName === 'P') {
+                    el.classList.add(`indent-level-${currentLevel}`);
+                }
+            });
+        }
+
+
+
         function generateAutoTOC() {
-          const toc = document.getElementById('toc');
-          toc.innerHTML = ''; // 既存の目次をクリア
+            const tocContainer = document.getElementById('toc');
+            tocContainer.innerHTML = '';
 
-          const headings = document.querySelectorAll('#mainText h1, #mainText h2, #mainText h3');
-          headings.forEach((heading, index) => {
-            const level = heading.tagName.toLowerCase();
-            const id = `auto-section-${index}`;
-            heading.id = id;
+            const nav = document.createElement('nav');
+            nav.setAttribute('aria-label', '目次');
+            tocContainer.appendChild(nav);
 
-            const link = document.createElement('a');
-            link.href = `#${id}`;
-            link.textContent = heading.textContent;
+            const headings = document.querySelectorAll('#mainText h1, h2, h3');
+            let currentPart = null;
+            let currentChapter = null;
 
-            // インデント調整（h2は1em、h3は2emなど）
-            if (level === 'h2') link.style.marginLeft = '1em';
-            else if (level === 'h3') link.style.marginLeft = '2em';
+            headings.forEach((heading, index) => {
+                const level = heading.tagName.toLowerCase();
+                const id = `auto-section-${index}`;
+                heading.id = id;
 
-            toc.appendChild(link);
-          });
+                const navLink = document.createElement('a');
+                navLink.href = `#${id}`;
+                navLink.textContent = heading.textContent;
+                navLink.classList.add('toc-link', level);
+
+                if (level === 'h1') {
+                    currentPart = document.createElement('details');
+                    currentPart.open = true;
+
+                    const summary = document.createElement('summary');
+                    summary.classList.add('toc-summary', 'h1');
+
+                    // 見出しタイトルをリンクとして表示
+                    summary.appendChild(navLink);
+
+                    currentPart.appendChild(summary);
+                    nav.appendChild(currentPart);
+                    currentChapter = null;
+
+                } else if (level === 'h2') {
+                    currentChapter = document.createElement('details');
+
+                    const summary = document.createElement('summary');
+                    summary.classList.add('toc-summary', 'h2');
+
+                    summary.appendChild(navLink);
+
+                    currentChapter.appendChild(summary);
+                    currentPart?.appendChild(currentChapter);
+
+                } else if (level === 'h3') {
+                    const wrapper = document.createElement('div');
+                    wrapper.classList.add('toc-subsection');
+                    wrapper.appendChild(navLink);
+                    currentChapter?.appendChild(wrapper);
+                }
+            });
         }
 
-        // 目次自動生成
-        document.addEventListener('DOMContentLoaded', generateAutoTOC);
+        // 追記: サイドバー開閉（モバイル）
+        (function () {
+            const toggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (!toggle || !sidebar || !overlay) return;
+
+            function openSidebar() {
+                sidebar.classList.add('sidebar--open');
+                overlay.classList.add('visible');
+                toggle.setAttribute('aria-expanded', 'true');
+            }
+            function closeSidebar() {
+                sidebar.classList.remove('sidebar--open');
+                overlay.classList.remove('visible');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+            function isMobile() {
+                return window.matchMedia('(max-width: 900px)').matches;
+            }
+
+            toggle.addEventListener('click', () => {
+                if (!isMobile()) return;
+                if (sidebar.classList.contains('sidebar--open')) closeSidebar();
+                else openSidebar();
+            });
+            overlay.addEventListener('click', closeSidebar);
+
+            // 目次クリック時は自動で閉じる（モバイル）
+            document.getElementById('toc')?.addEventListener('click', e => {
+                if (!isMobile()) return;
+                const a = e.target.closest('a');
+                if (a) closeSidebar();
+            });
+
+            // リサイズでPC幅に戻ったら強制クローズ
+            window.addEventListener('resize', () => {
+                if (!isMobile()) closeSidebar();
+            });
+        })();
+
+        // 追加: .code-figure 内の <pre><code> の共通先頭空白を削る
+        (function () {
+            function dedent(text) {
+                const lines = text.replace(/\r\n?/g, '\n').split('\n');
+                // 先頭・末尾の空行を取り除く
+                while (lines.length && lines[0].trim() === '') lines.shift();
+                while (lines.length && lines[lines.length - 1].trim() === '') lines.pop();
+                // 空行以外の最小インデントを取得（タブは8スペース換算で揃える）
+                const indents = lines
+                    .filter(l => l.trim().length > 0)
+                    .map(l => l.match(/^[ \t]*/)[0]
+                        .replace(/\t/g, '        ').length);
+                const min = indents.length ? Math.min(...indents) : 0;
+                if (min > 0) {
+                    return lines.map(l => {
+                        let keep = l;
+                        let cut = min;
+                        // タブとスペース混在に耐えるように1文字ずつ消す
+                        while (cut > 0 && (/^[ \t]/).test(keep)) {
+                            keep = keep.slice(1);
+                            cut--;
+                        }
+                        return keep;
+                    }).join('\n');
+                }
+                return lines.join('\n');
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('.code-figure pre code').forEach(code => {
+                    code.textContent = dedent(code.textContent);
+                });
+            });
+        })();
+
 
     </script>
 </body>

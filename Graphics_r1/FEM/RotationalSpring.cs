@@ -11,6 +11,7 @@ namespace PileDesign.FEM
     // M-θ曲線（タプル名の有無に依存しない実装）
     public sealed class MomentRotationCurve
     {
+
         public List<(double Theta, double Moment)> Points { get; } = [];
 
         public MomentRotationCurve() { }
@@ -81,6 +82,23 @@ namespace PileDesign.FEM
                 if (t <= Points[mid].Theta) hi = mid; else lo = mid + 1;
             }
             return lo;
+        }
+
+        // グラフ用に配列へ展開（θ>=0 の定義点のみ）
+        public (double[] thetas, double[] moments) ToArrays()
+        {
+            if (Points.Count == 0) return (Array.Empty<double>(), Array.Empty<double>());
+            var listTheta = new List<double>(Points.Count);
+            var listMoment = new List<double>(Points.Count);
+            foreach (var (t, m) in Points)
+            {
+                if (double.IsFinite(t) && double.IsFinite(m) && t >= 0.0)
+                {
+                    listTheta.Add(t);
+                    listMoment.Add(m);
+                }
+            }
+            return (listTheta.ToArray(), listMoment.ToArray());
         }
     }
 
@@ -162,9 +180,6 @@ namespace PileDesign.FEM
         {
             base.SetBeamDispAndForce(isTan, CumulativeDisp, CumulativeForce);
         }
-
-
-
         public RotationalSpring DeepCopy()
         {
             var nodeICopy = NodeI?.DeepCopy();

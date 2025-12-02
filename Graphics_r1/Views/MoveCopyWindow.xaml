@@ -7,7 +7,8 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MoveCopyViewModel}"
-        Title="MoveCopyWindow" Height="150" Width="350">
+        Title="MoveCopyWindow" Height="150" Width="350"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -25,6 +26,13 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
+
+    <!--<Window.InputBindings>
+        --><!-- 追加: Ctrl+Enter で OkCommand を実行 --><!--
+        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
+        --><!-- 追加: Esc で CancelCommand を実行 --><!--
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </Window.InputBindings>-->
     
     <Grid>
         <Grid.RowDefinitions>
@@ -35,8 +43,6 @@
         <StackPanel  Grid.Row="0">
             <GroupBox Header="コピー/移動" HorizontalAlignment="Left" VerticalAlignment="Top">
                 <StackPanel Orientation="Horizontal">
-                    <!--<RadioButton Content="コピー" HorizontalAlignment="Left" Width="50" GroupName="Operation" IsChecked="{Binding IsCopySelected}"/>
-                    <RadioButton Content="移動" HorizontalAlignment="Left" Width="50" GroupName="Operation" IsChecked="{Binding IsMoveSelected}"/>-->
                     <RadioButton Content="コピー" HorizontalAlignment="Left" Width="50" GroupName="Operation" 
                         IsChecked="{Binding IsCopySelected}" Checked="RadioButton_Checked" Style="{StaticResource EmphasizedRadioButtonStyle}"/>
                     <RadioButton Content="移動" HorizontalAlignment="Left" Width="50" GroupName="Operation" 
@@ -53,12 +59,13 @@
 
                 <StackPanel Orientation="Horizontal" Visibility="{Binding IsCopySelected, 
                     Converter={StaticResource BooleanToVisibilityConverter}, UpdateSourceTrigger=PropertyChanged}">
-                    <!--<StackPanel Orientation="Horizontal">-->
-                        <Label Content="回数" Width="50" HorizontalContentAlignment="Right" />
+                    <Label Content="回数" Width="50" HorizontalContentAlignment="Right" />
                     <TextBox x:Name="TextBoxRepetitionNumber" Text="{Binding RepetitionNumber}"
                              Width="50" HorizontalContentAlignment="Right" TextChanged="TextBoxRepetitionNumber_TextChanged"
                              GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                 </StackPanel>
+                
+                
             </StackPanel>
             
         <!--<Button Content="2節点差分取得モード開始"
@@ -76,12 +83,10 @@
            Visibility="{Binding IsNodePairSelectionMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>-->
         </StackPanel>
 
-        
-
         <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right" Grid.Row="1">
 
-            <Button Content="Ok" Width="60" Click="OkButton_Click"/>
-            <Button Content="Cancel" Width="60" Click="CancelButton_Click"/>
+            <Button Content="保存して閉じる(Ctrl+Enter)" Width="150" Click="OkButton_Click"/>
+            <Button Content="破棄して閉じる(Esc)" Width="150" Click="CancelButton_Click"/>
 
         </StackPanel>
     </Grid>

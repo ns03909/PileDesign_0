@@ -15,7 +15,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-
+using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
@@ -643,7 +643,7 @@ namespace PileDesign.ViewModels
         }
 
         // 変位結果倍率適用
-        private bool _isDispDiagramMultiplierApplicable = false;
+        private bool _isDispDiagramMultiplierApplicable = true; // trueにしっぱなし
         public bool IsDispDiagramMultiplierApplicable
         {
             get => _isDispDiagramMultiplierApplicable;
@@ -2100,27 +2100,24 @@ namespace PileDesign.ViewModels
 
             // ここで各アイテムのPropertyChangedを購読
             foreach (var item in CurrentInputModel.PileLayoutItems)
-            {
                 item.PropertyChanged += PileLayoutItem_PropertyChanged;
-            }
             CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+
+            // LoadCase.IsApplicable の変更監視を追加
+            SubscribeLoadCaseApplicabilityChanged();
 
             CanvasGeometry = new MainCanvasGeometry(this);
 
             UpdateLoadCaseOption();
             //SelectedLoadCaseName = CurrentInputModel.LoadCasesInput.LoadCasesLevel1[0].LoadName;
             if (CurrentInputModel.LoadCasesInput.LoadCasesLevel1?.Count > 0)
-            {
                 SelectedLoadCaseName = CurrentInputModel.LoadCasesInput.LoadCasesLevel1[0].LoadName;
-            }
 
             // LoadCombinationOptionの初期化
             UpdateLoadCombinationOption();
             //SelectedLoadCombinationName = LoadCombinationNameOption[0];
             if (LoadCombinationNameOption != null && LoadCombinationNameOption.Count > 0)
-            {
                 SelectedLoadCombinationName = LoadCombinationNameOption[0];
-            }
 
             // 初期データのロードや、必要に応じて初期化処理を行う
             LoadInitialData();
@@ -2151,6 +2148,11 @@ namespace PileDesign.ViewModels
                     IsSettlementGridCacheValid = false;
                 }
             };
+
+            // コンストラクタ内の適当な位置
+            OpenTableWindowCommand = new ToolkitRelayCommand(
+                OpenTableWindow,
+                () => LatestResultTables != null && LatestResultTables.Count > 0);
         }
 
         private void PileLayoutItem_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -2217,17 +2219,17 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(GroupPileSettlementYmax));
         }
 
-        // LoadCaseOptionの更新メソッド
-        private void UpdateLoadCaseOption()
-        {
-            var loadCaseNames = new ObservableCollection<string>();
-            ObservableCollection<LoadCase> allLoadCases = CurrentInputModel.LoadCasesInput.AllLoadCases;
-            foreach (var loadCase in allLoadCases)
-            {
-                loadCaseNames.Add(loadCase.GetLoadName());
-            }
-            LoadCaseNameOption = loadCaseNames;
-        }
+        //// LoadCaseOptionの更新メソッド
+        //private void UpdateLoadCaseOption()
+        //{
+        //    var loadCaseNames = new ObservableCollection<string>();
+        //    ObservableCollection<LoadCase> allLoadCases = CurrentInputModel.LoadCasesInput.AllLoadCases;
+        //    foreach (var loadCase in allLoadCases)
+        //    {
+        //        loadCaseNames.Add(loadCase.GetLoadName());
+        //    }
+        //    LoadCaseNameOption = loadCaseNames;
+        //}
 
 
         // LoadCombinationOptionの更新メソッド
@@ -2331,6 +2333,81 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(GroupPileSettlementXmax));
             OnPropertyChanged(nameof(GroupPileSettlementYmin));
             OnPropertyChanged(nameof(GroupPileSettlementYmax));
+        }
+
+
+        // 追加: IsApplicable 変更監視の購読セットアップ
+        private void SubscribeLoadCaseApplicabilityChanged()
+        {
+            var lci = CurrentInputModel.LoadCasesInput;
+            if (lci == null) return;
+
+            void attach(IEnumerable<LoadCase> cases)
+            {
+                if (cases == null) return;
+                foreach (var lc in cases)
+                    lc.PropertyChanged += LoadCase_PropertyChanged_ForOption;
+            }
+
+            attach(lci.LoadCasesLevel1);
+            attach(lci.LoadCasesLevel2);
+            // attach(lci.AllLoadCombinations); // ← これが型不一致。不要なので削除
+
+            // コレクションへの追加にも追随
+            lci.LoadCasesLevel1.CollectionChanged += (s, e) =>
+            {
+                if (e.NewItems != null)
+                    foreach (LoadCase lc in e.NewItems)
+                        lc.PropertyChanged += LoadCase_PropertyChanged_ForOption;
+                if (e.OldItems != null)
+                    foreach (LoadCase lc in e.OldItems)
+                        lc.PropertyChanged -= LoadCase_PropertyChanged_ForOption;
+                UpdateLoadCaseOption();
+            };
+            lci.LoadCasesLevel2.CollectionChanged += (s, e) =>
+            {
+                if (e.NewItems != null)
+                    foreach (LoadCase lc in e.NewItems)
+                        lc.PropertyChanged += LoadCase_PropertyChanged_ForOption;
+                if (e.OldItems != null)
+                    foreach (LoadCase lc in e.OldItems)
+                        lc.PropertyChanged -= LoadCase_PropertyChanged_ForOption;
+                UpdateLoadCaseOption();
+            };
+            lci.LoadCombinations.CollectionChanged += (s, e) =>
+            {
+                // 組合せが UI に影響する場合に再構築
+                UpdateLoadCombinationOption();
+            };
+        }
+
+        // 追加: IsApplicable 変更時にオプション更新
+        private void LoadCase_PropertyChanged_ForOption(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(LoadCase.IsApplicable))
+            {
+                UpdateLoadCaseOption();
+                // 現在選択が非適用になったときのフォールバック
+                if (!LoadCaseNameOption.Contains(SelectedLoadCaseName))
+                {
+                    SelectedLoadCaseName = LoadCaseNameOption.FirstOrDefault() ?? "VL";
+                }
+            }
+        }
+
+        // 既存: LoadCaseOptionの更新
+        private void UpdateLoadCaseOption()
+        {
+            var loadCaseNames = new ObservableCollection<string>();
+            var allLoadCases = CurrentInputModel.LoadCasesInput.AllLoadCases;
+
+            // IsApplicable=true のみ表示したい場合は以下のフィルタを有効化
+            foreach (var loadCase in allLoadCases.Where(lc => lc.IsApplicable))
+                loadCaseNames.Add(loadCase.GetLoadName());
+
+            // IsApplicable 無視して全件表示したいなら上の Where を外す
+
+            LoadCaseNameOption = loadCaseNames;
         }
     }
 }

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
+using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
@@ -78,13 +79,14 @@ namespace PileDesign.ViewModels
         {
             _mainWindowViewModel = mainWindowViewModel;
 
-            CloseCommand = new RelayCommand(OnClose);
+            CloseCommand = new ToolkitRelayCommand(OnClose);
 
-            ApplyModelsPileNumberCommand = new RelayCommand(OnApplyModelsPileNumber);
-            ApplyPileDistanceFactorToModelsAllPilesCommand
-                = new RelayCommand(OnApplyPileDistanceFactorToModelsAllPiles);
-            ApplyPileGroupFactorToModelsAllPilesCommand
-                = new RelayCommand(OnApplyPileGroupFactorToModelsAllPiles);
+            ApplyModelsPileNumberCommand =
+                new ToolkitRelayCommand(OnApplyModelsPileNumber);
+            ApplyPileDistanceFactorToModelsAllPilesCommand =
+                new ToolkitRelayCommand(OnApplyPileDistanceFactorToModelsAllPiles);
+            ApplyPileGroupFactorToModelsAllPilesCommand =
+                new ToolkitRelayCommand(OnApplyPileGroupFactorToModelsAllPiles);
 
             //チャート初期化
             UpdateGraph();

@@ -12,8 +12,9 @@
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="False"
         KeyDown="Window_KeyDown"
-        
         Deactivated="Window_Deactivated">
+
+    
     <Border Padding="16">
         <Grid>
             <Grid.RowDefinitions>
@@ -34,6 +35,8 @@
                       CanUserResizeColumns="False"
                       CanUserSortColumns="False"
                       IsReadOnly="True"
+                      SelectionMode="Single"
+                      SelectionUnit="FullRow"
                       Margin="0,0,0,8"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
@@ -43,6 +46,18 @@
                     <Style TargetType="TextBlock">
                         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                         <Setter Property="TextWrapping" Value="NoWrap"/>
+                    </Style>
+                    <!-- 行を選択不可 (クリックしても選択状態にならない) -->
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="IsHitTestVisible" Value="False"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="Background" Value="Transparent"/>
+                    </Style>
+                    <!-- セル編集・フォーカス不可 -->
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="IsHitTestVisible" Value="False"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="BorderThickness" Value="0"/>
                     </Style>
                 </DataGrid.Resources>
                 <DataGrid.Columns>
