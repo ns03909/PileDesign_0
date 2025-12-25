@@ -505,6 +505,14 @@ namespace PileDesign.Models.InputData
                     (Nnext1, _) = GetCompressiveFailureForceAndMoment(curvature + deltaCurvature);
                 }
 
+                // 非有限値は安全に小さい前進で回避
+                if (!double.IsFinite(Nnext) || !double.IsFinite(Mnext) || !double.IsFinite(Nnext1))
+                {
+                    curvature = Math.Max(curvature * 0.5, 1e-6);
+                    deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
+                    continue;
+                }
+
                 double diff = Math.Abs(Ntarget - Nnext);
                 if (diff < bestDiff)
                 {
@@ -527,10 +535,22 @@ namespace PileDesign.Models.InputData
                 {
                     // 少し大きめの差分で再試行する
                     deltaCurvature = Math.Min(Math.Max(deltaCurvature * 10.0, 1e-12), Math.Max(Math.Abs(curvature) * 0.5, 1e-6));
-                    // 小さな確実な前進を試みる
-                    double fallbackStep = Math.Sign(Ntarget - Nnext) * Math.Max(Math.Abs(curvature) * 1e-3, 1e-6);
+
+                    // 安全な符号判定（NaN を直接 Math.Sign に渡さない）
+                    double d = Ntarget - Nnext;
+                    double sign = 1.0;
+                    if (double.IsFinite(d) && d != 0.0)
+                        sign = Math.Sign(d);
+                    else if (double.IsFinite(Ntarget) && double.IsFinite(bestN))
+                        sign = Math.Sign(Ntarget - bestN);
+                    else
+                        sign = 1.0;
+
+                    double fallbackStep = sign * Math.Max(Math.Abs(curvature) * 1e-3, 1e-6);
                     curvature += fallbackStep;
                     curvature = Math.Max(curvature, 0.0);
+                    // 発散防止の上限
+                    curvature = Math.Min(curvature, 1e-1);
                     continue;
                 }
 

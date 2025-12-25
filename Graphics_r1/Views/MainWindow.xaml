@@ -257,6 +257,191 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
+
+        <!-- リボン全体：小アイコン優先 ToolTip（暗黙スタイル）--><!--
+        <Style TargetType="ribbon:RibbonButton">
+            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+            --><!-- デフォルト: Small を優先して表示 --><!--
+            <Setter Property="ToolTip">
+                <Setter.Value>
+                    <ToolTip Placement="Mouse" HasDropShadow="True">
+                        <StackPanel Orientation="Horizontal" Margin="6">
+                            <Image Width="32" Height="32" Stretch="Uniform">
+                                <Image.Source>
+                                    <PriorityBinding>
+                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                    </PriorityBinding>
+                                </Image.Source>
+                            </Image>
+                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
+                     Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ToolTip>
+                </Setter.Value>
+            </Setter>
+
+            --><!-- SmallImageSource が null のときは LargeImageSource を優先する大アイコン版に差し替え --><!--
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Path=SmallImageSource, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                    <Setter Property="ToolTip">
+                        <Setter.Value>
+                            <ToolTip Placement="Mouse" HasDropShadow="True">
+                                <StackPanel Orientation="Horizontal" Margin="6">
+                                    <Image Width="48" Height="48" Stretch="Uniform">
+                                        <Image.Source>
+                                            <PriorityBinding>
+                                                <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                                <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                            </PriorityBinding>
+                                        </Image.Source>
+                                    </Image>
+                                    <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
+                         Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </ToolTip>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        --><!-- ToggleButton 用も同様に追加 --><!--
+        <Style TargetType="ribbon:RibbonToggleButton">
+            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+            <Setter Property="ToolTip">
+                <Setter.Value>
+                    <ToolTip Placement="Mouse" HasDropShadow="True">
+                        <StackPanel Orientation="Horizontal" Margin="6">
+                            <Image Width="32" Height="32" Stretch="Uniform">
+                                <Image.Source>
+                                    <PriorityBinding>
+                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                    </PriorityBinding>
+                                </Image.Source>
+                            </Image>
+                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
+                     Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ToolTip>
+                </Setter.Value>
+            </Setter>
+
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Path=SmallImageSource, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                    <Setter Property="ToolTip">
+                        <Setter.Value>
+                            <ToolTip Placement="Mouse" HasDropShadow="True">
+                                <StackPanel Orientation="Horizontal" Margin="6">
+                                    <Image Width="48" Height="48" Stretch="Uniform">
+                                        <Image.Source>
+                                            <PriorityBinding>
+                                                <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                                <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                            </PriorityBinding>
+                                        </Image.Source>
+                                    </Image>
+                                    <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
+                         Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </ToolTip>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>-->
+
+
+         <!--RibbonToggleButton 用: 大アイコン ToolTip スタイル--> 
+        <Style x:Key="LargeIconToolTipRibbonToggleButtonStyle" TargetType="ribbon:RibbonToggleButton">
+            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+            <Setter Property="ToolTip">
+                <Setter.Value>
+                    <ToolTip Placement="Mouse" HasDropShadow="True">
+                        <StackPanel Orientation="Horizontal" Margin="6">
+                             <!--LargeImageSource -> SmallImageSource を優先--> 
+                            <Image Width="48" Height="48" Stretch="Uniform">
+                                <Image.Source>
+                                    <PriorityBinding>
+                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                    </PriorityBinding>
+                                </Image.Source>
+                            </Image>
+
+                             <!--フォールバック: PlacementTarget.Content が SvgViewbox / Image のとき複製して表示--> 
+                            <ContentPresenter Content="{Binding PlacementTarget.Content, RelativeSource={RelativeSource AncestorType=ToolTip}}">
+                                <ContentPresenter.ContentTemplate>
+                                    <DataTemplate>
+                                        <ContentControl>
+                                            <ContentControl.Resources>
+                                                <DataTemplate DataType="{x:Type svgc:SvgViewbox}">
+                                                    <svgc:SvgViewbox Source="{Binding Source}" Width="48" Height="48" Stretch="Uniform"/>
+                                                </DataTemplate>
+                                                <DataTemplate DataType="{x:Type Image}">
+                                                    <Image Source="{Binding Source}" Width="48" Height="48" Stretch="Uniform"/>
+                                                </DataTemplate>
+                                                <DataTemplate DataType="{x:Type sys:String}">
+                                                    <TextBlock Text="{Binding}" FontSize="14" VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </ContentControl.Resources>
+                                            <ContentControl Content="{Binding}"/>
+                                        </ContentControl>
+                                    </DataTemplate>
+                                </ContentPresenter.ContentTemplate>
+                            </ContentPresenter>
+
+                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
+                     Margin="12,0,0,0"
+                     VerticalAlignment="Center"
+                     TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ToolTip>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+         <!--RibbonButton 用: 大アイコンToolTip スタイル（LargeImageSource を優先し、なければ SmallImageSource。さらに Content が Svg の場合も対応）--> 
+        <Style x:Key="LargeIconToolTipRibbonButtonStyle" TargetType="ribbon:RibbonButton">
+            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+            <Setter Property="ToolTip">
+                <Setter.Value>
+                    <ToolTip Placement="Mouse" HasDropShadow="True">
+                        <StackPanel Orientation="Horizontal" Margin="6">
+                             <!--まずは Ribbon の Large/SmallImageSource を優先--> 
+                            <Image Width="48" Height="48" Stretch="Uniform">
+                                <Image.Source>
+                                    <PriorityBinding>
+                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
+                                         <!--最後に PlacementTarget.Content が Svg/Image の場合をフォールバックで試す--> 
+                                    </PriorityBinding>
+                                </Image.Source>
+                            </Image>
+
+                             <!--フォールバック：もし PlacementTarget.Content が SvgViewbox の場合は再描画--> 
+                            <ContentControl Visibility="Collapsed" x:Name="__SvgFallback">
+                                <ContentControl.Content>
+                                    <Binding RelativeSource="{RelativeSource AncestorType=ToolTip}" Path="PlacementTarget.Content"/>
+                                </ContentControl.Content>
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate>
+                                        <svgc:SvgViewbox Source="{Binding Path=Source}" Width="48" Height="48" Stretch="Uniform"/>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+
+                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
+                     Margin="12,0,0,0"
+                     VerticalAlignment="Center"
+                     TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </ToolTip>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 大アイコンToolTip汎用スタイル -->
         <Style x:Key="LargeIconToolTipButtonStyle" TargetType="Button">
             <!-- 追加 -->
@@ -377,6 +562,7 @@
             <ribbon:RibbonButton ToolTip="元に戻す (Ctrl+Z)"
                            Command="{Binding UndoCommand}"
             SmallImageSource="pack://application:,,,/Icons/Undo.png"/>
+
             <ribbon:RibbonButton ToolTip="やり直し (Ctrl+Y)"
                            Command="{Binding RedoCommand}"
             SmallImageSource="pack://application:,,,/Icons/Redo.png"/>
@@ -470,14 +656,27 @@
                     <ribbon:RibbonApplicationMenu.AuxiliaryPaneContent>
                         <StackPanel Margin="12" Width="260">
                             <TextBlock Text="計算例" FontWeight="Bold" Margin="0,0,0,8"/>
-                            <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例5"
+                            <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例5 直接基礎の即時沈下量"
                                               KeyTip="5"
                                               Command="{Binding Example5Command}"
-                                              ToolTip="基礎指針'19 計算例5を実行"/>
+                                              ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"/>
                             <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例9"
                                               KeyTip="9"
                                               Command="{Binding Example9Command}"
                                               ToolTip="基礎指針'19 計算例9を実行"/>
+                            <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 7. 直接基礎の設計例"
+                                              KeyTip="9"
+                                              Command="{Binding ExampleK7Command}"
+                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例7を実行"/>
+                            <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 8. 杭基礎の設計例"
+                                              KeyTip="9"
+                                              Command="{Binding ExampleK8Command}"
+                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"/>
+                            <ribbon:RibbonApplicationMenuItem Header="設計例集3.1"
+                                              KeyTip="9"
+                                              Command="{Binding Example3_1Command}"
+                                              ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"/>
+
                             <!-- 追加計算例が増える場合はここに同様に列挙 -->
                         </StackPanel>
                     </ribbon:RibbonApplicationMenu.AuxiliaryPaneContent>
@@ -851,38 +1050,41 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="全長" VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <Slider Width="70" Minimum="0" Maximum="200"
-                    Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}"/>
+                                Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBox Width="40" HorizontalContentAlignment="Right"
-                     Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                     KeyDown="TextBox_KeyDown"/>
+                                 Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 KeyDown="TextBox_KeyDown"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="頭長" VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <Slider Width="70" Minimum="0" Maximum="50"
-                    Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}"/>
+                                Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBox Width="40" HorizontalContentAlignment="Right"
-                     Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                     KeyDown="TextBox_KeyDown"/>
+                                 Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 KeyDown="TextBox_KeyDown"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="頭径" VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <Slider Width="70" Minimum="0" Maximum="20"
-                    Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}"/>
+                                Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}"/>
                             <TextBox Width="40" HorizontalContentAlignment="Right"
-                     Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                     KeyDown="TextBox_KeyDown"/>
+                                 Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 KeyDown="TextBox_KeyDown"/>
                         </StackPanel>
-
-                        <ribbon:RibbonToggleButton Label="変形後要素"
-                                   IsChecked="{Binding IsDeformedElementVisible}"
-                                   SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="変形後">
+                                        <ribbon:RibbonToggleButton Label="変形後要素"
+                                   IsChecked="{Binding IsDeformedElementVisible}"
+                                   SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"/>
+                </ribbon:RibbonGroup>
+
             </ribbon:RibbonTab>
             
             <!-- 頻用操作を QuickAccessToolBar に（隙間削減＋操作性向上） -->
@@ -899,44 +1101,54 @@
             <ribbon:RibbonTab Header="表示(V)" KeyTip="V">
 
                 <ribbon:RibbonGroup Header="形状関連">
-                    <ribbon:RibbonToggleButton Label="慣性力作用点" ToolTip="慣性力作用点を表示します。"
+                    <ribbon:RibbonToggleButton Label="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsActionPointVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"/>
+
+                    <ribbon:RibbonToggleButton
+                        Style="{StaticResource LargeIconToolTipRibbonToggleButtonStyle}"
+                        Label="慣性力作用点"
+                        IsChecked="{Binding IsActionPointVisible}"
+                        LargeImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"
+                        SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"
+                        Tag="慣性力作用点の表示／非表示を切り替えます。"/>
+
+
                     <ribbon:RibbonToggleButton Label="節点" IsChecked="{Binding IsNodeVisible}" SmallImageSource="pack://application:,,,/Icons/NodeVisible.png"/>
                     <ribbon:RibbonToggleButton Label="要素" IsChecked="{Binding IsElementVisible}" SmallImageSource="pack://application:,,,/Icons/ElementVisible.png"/>
 
-                    <ribbon:RibbonToggleButton Label="要素縮小表示" ToolTip="要素を縮小表示を表示します。（未）"
+                    <ribbon:RibbonToggleButton Label="要素縮小表示" ToolTip="要素の縮小表示／通常表示を切り替えます。（未）"
                                                IsChecked="{Binding IsShrinkElementMode}" SmallImageSource="pack://application:,,,/Icons/ShrinkElementMode.png"/>
 
-                    <ribbon:RibbonToggleButton Label="杭体形状" ToolTip="杭体形状表示"
+                    <ribbon:RibbonToggleButton Label="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsPileSectionVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="梁要素軸" ToolTip="梁要素座標軸表示"
+                    <ribbon:RibbonToggleButton Label="梁要素軸" ToolTip="梁要素座標軸の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsBeamLocalAxesVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
 
-                    <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状表示"
+                    <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsEmbedmentBoxVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="剛体連結" ToolTip="剛体連結表示"
+                    <ribbon:RibbonToggleButton Label="剛体連結" ToolTip="剛体連結の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsRigidFloorVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsRigidConnectionVisible.png"/>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="通り心関連">
                     <ribbon:RibbonToggleButton Label="通り心" IsChecked="{Binding IsGridLineVisible}" SmallImageSource="pack://application:,,,/Icons/GridVisible.png"
-                                               ToolTip="定義した通り心を表示します。"/>
+                                               ToolTip="定義した通り心の表示／非表示を切り替えます。"/>
                     <ribbon:RibbonToggleButton Label="目盛" IsChecked="{Binding IsTickMarkVisible}" SmallImageSource="pack://application:,,,/Icons/TickMarkVisible.png"
-                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときに5m間隔の目盛を表示します。"/>
+                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。"/>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="荷重関連">
                     <ribbon:RibbonToggleButton Label="慣性力"
-                                               ToolTip="慣性力表示"
+                                               ToolTip="慣性力の表示／非表示を切り替えます。"
                                                IsChecked="{Binding IsMassLoadingVisible}"
                                                SmallImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭軸力"
-                                               ToolTip="杭軸力表示"
+                                               ToolTip="杭軸力の表示／非表示を切り替えます。"
                                                IsChecked="{Binding IsAxialLoadingVisible}"
                                                SmallImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"/>
                 </ribbon:RibbonGroup>
@@ -953,16 +1165,16 @@
                     <ribbon:RibbonToggleButton Label="要素番号" IsChecked="{Binding IsElementNoVisible}" SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
                     <ribbon:RibbonToggleButton Label="杭番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭頭Z" IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベル表示"
+                    <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsPileDiaSpacingRatioVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="前後方杭" ToolTip="前後方杭ラベル表示"
+                    <ribbon:RibbonToggleButton Label="前後方杭" ToolTip="前後方杭ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsFrontPileLabelVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsFrontPileVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="地盤番号" ToolTip="地盤番号ラベル表示"
+                    <ribbon:RibbonToggleButton Label="地盤番号" ToolTip="地盤番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilRefVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsSoilRefVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="群杭係数" ToolTip="群杭係数ラベル表示"
+                    <ribbon:RibbonToggleButton Label="群杭係数" ToolTip="群杭係数ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGroupPileFactorLabelVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsGroupPileFactorVisible.png"/>
                 </ribbon:RibbonGroup>
@@ -970,11 +1182,11 @@
 
                 <!-- 土層物理量表示グループ内: 置換前 RibbonComboBox を削除し ComboBox へ変更 -->
                 <ribbon:RibbonGroup Header="土層・土質点関連">
-                    <ribbon:RibbonToggleButton Label="杭周辺土層" ToolTip="杭周土層表示"
+                    <ribbon:RibbonToggleButton Label="杭周辺土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsGroundVisible}"
                                                    SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"/>
                     <ribbon:RibbonToggleButton Label="土層パラメータ"
-                               ToolTip="土層の密度(kN/m3)、粘着力(kN/m2)、せん断波速度Vs(m/s)、または変形係数Es(kN/m2)の表示"
+                               ToolTip="土層の密度(kN/m3)、粘着力(kN/m2)、せん断波速度Vs(m/s)、または変形係数Es(kN/m2)の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
                                SmallImageSource="pack://application:,,,/Icons/GroundLayerParametersVisible.png"/>
 
@@ -987,7 +1199,7 @@
                           ribbon:RibbonControlService.Label="土層項目"/>
 
                     <ribbon:RibbonToggleButton Label="土質点パラメータ表示"
-                               ToolTip="N値、せん断波速度Vs0(m/s)、または細粒分含有率Fc(%)の表示"
+                               ToolTip="N値、せん断波速度Vs0(m/s)、または細粒分含有率Fc(%)の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilMassParamDisplayEnabled}"
                                SmallImageSource="pack://application:,,,/Icons/GroundPointParametersVisible.png"/>
 
@@ -998,7 +1210,7 @@
                           IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
                           Visibility="{Binding IsSoilMassParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
                           ribbon:RibbonControlService.Label="土質点項目"/>
-                    <ribbon:RibbonToggleButton Label="地盤変位" ToolTip="地盤変位表示"
+                    <ribbon:RibbonToggleButton Label="地盤変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
                                                    SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
                     <!--<CheckBox Content="変位スケール適用" IsChecked="{Binding IsDispDiagramMultiplierApplicable}"/>-->
@@ -1027,7 +1239,7 @@
                     </StackPanel>
 
                     <ribbon:RibbonToggleButton Label="パラメータ値表示"
-                               ToolTip="土層・土質点のパラメータの値を表示します。"
+                               ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilValueVisible}"
                                SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png"/>
                 </ribbon:RibbonGroup>
@@ -1036,7 +1248,7 @@
                 <!-- ビュータブ内（「ラベル」グループの次、あるいは末尾） -->
                 <ribbon:RibbonGroup Header="テキスト">
                     <ribbon:RibbonButton SmallImageSource="pack://application:,,,/Icons/LabelSize.png"
-                     ToolTip="テキストサイズ"
+                     ToolTip="テキストサイズを変更します。"
                      IsHitTestVisible="False" Focusable="False"/>
                     <ComboBox Width="50"
                       ItemsSource="{Binding LabelSizeOption}"
@@ -1273,6 +1485,16 @@
                              />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>-->
+
+            <ribbon:RibbonTab Header="ツール(T)" KeyTip="T">
+                <ribbon:RibbonGroup Header="ミニプログラム">
+                    <ribbon:RibbonButton Label="Chang" ToolTip="Chang"
+                        Command="{Binding OpenChangWindowCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/Help.png"
+                        SmallImageSource="pack://application:,,,/Icons/Help.png"/>
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
 
             <ribbon:RibbonTab Header="ヘルプ(H)" KeyTip="H">
                 <ribbon:RibbonGroup Header="ヘルプ">

@@ -200,11 +200,30 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 代表変位閾値で解析を強制終了する機能
+        // Unit: 同プロジェクトの他ロジックに合わせて m 単位想定（必要ならUIで説明を）
+        private bool _stopOnMaxDisplacement = true;
+        public bool StopOnMaxDisplacement
+        {
+            get => _stopOnMaxDisplacement;
+            set => SetProperty(ref _stopOnMaxDisplacement, value);
+        }
+
+        private double _maxAllowedDisplacement = 1.0; // デフォルト: 1.0 (m)
+        public double MaxAllowedDisplacement
+        {
+            get => _maxAllowedDisplacement;
+            set => SetProperty(ref _maxAllowedDisplacement, value);
+        }
+
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
 
         // 追加: View側へ「プログレスクリアアニメーション開始」を要求するためのイベント
         public event Action? RequestClearProgressAnimation;
+
+        // 追加: Viewに警告表示を依頼するイベント（MessageBoxを直接呼ばない）
+        public event Action<string>? RequestShowWarning;
 
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ManualResetEventSlim _pauseEvent = new(true); // trueで初期状態は「進行」
@@ -286,7 +305,6 @@ namespace PileDesign.ViewModels
 
         private void OnPauseAnalysis() => _pauseEvent.Reset();
         private void OnResumeAnalysis() => _pauseEvent.Set();
-        
         private void OnCancelAnalysis()
         {
             _cancellationTokenSource?.Cancel();
@@ -812,6 +830,8 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
+
+
         // 直近のばね剛性最小/最大を保持（PrepareKmatで更新）
         private double _lastSpringKMin = double.NaN;
         private double _lastSpringKMax = double.NaN;
@@ -862,7 +882,6 @@ namespace PileDesign.ViewModels
 
                         // 荷重ケース固有の剛体スレーブ割当を適用（回転ばねの有効/無効を切替）
                         ApplyPileHeadRigidBindingForLoadCase(targetModel, loadCase);
-
 
                         // 杭非線形ONのときだけ M–φ/M–θ をセット
                         if (loadCase.IsPileNonLinear)
@@ -918,7 +937,7 @@ namespace PileDesign.ViewModels
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
                                 await Task.Run(() =>
                                 {
-                                    // ここでトークンを投げて途中キャンセルを可能にする
+                                    // トークンを投げて途中キャンセルを可能にする
                                     token.ThrowIfCancellationRequested();
 
                                     // N は荷重ケース一定だが、簡便に毎回解決しても可（コストは小）
@@ -926,9 +945,7 @@ namespace PileDesign.ViewModels
 
                                     // 接線剛性更新は杭非線形ONのときのみ
                                     if (loadCase.IsPileNonLinear)
-                                    {
                                         UpdateBeamMPhiTangent(targetModel);
-                                    }
 
                                     // Ktan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
                                     FindK(iLC, targetModel);
@@ -941,9 +958,7 @@ namespace PileDesign.ViewModels
 
                                     // 割線剛性更新も杭非線形ONのときのみ
                                     if (loadCase.IsPileNonLinear)
-                                    {
                                         UpdateBeamMPhiSecant(targetModel);
-                                    }
 
                                     targetModel.FindR();
 
@@ -961,6 +976,22 @@ namespace PileDesign.ViewModels
                                     //token.ThrowIfCancellationRequested();
 
                                 }, token);
+
+                                if (StopOnMaxDisplacement && !double.IsNaN(dispMaxAbs) && Math.Abs(dispMaxAbs) > MaxAllowedDisplacement)
+                                {
+                                    // ログに残す
+                                    await AddLogAsync($"解析中止: 代表変位が閾値を超えました max|d|={dispMaxAbs:E3} > threshold={MaxAllowedDisplacement:E3}");
+
+                                    // View に警告表示を依頼（UI スレッドでイベントを発火）
+                                    string warnMsg = $"解析を中止しました。\n代表変位が閾値 {MaxAllowedDisplacement} m を超えました（{dispMaxAbs:E3}）。";
+                                    Application.Current?.Dispatcher.Invoke(() => RequestShowWarning?.Invoke(warnMsg));
+
+                                    // キャンセルを発行して呼び出し側で OperationCanceledException を処理させる
+                                    _cancellationTokenSource?.Cancel();
+                                    RequestClearProgressAnimation?.Invoke();
+                                    throw new OperationCanceledException(token);
+                                }
+
 
                                 // 残差ログ
                                 if (targetModel.NormsROnNormsFint < alpha)
@@ -1284,6 +1315,7 @@ namespace PileDesign.ViewModels
         //        }
         //    }
         //}
+
 
         // UIスレッドでログを追加
         private Task AddLogAsync(string message)

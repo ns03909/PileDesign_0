@@ -7,9 +7,9 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="pack://application:,,,/PileDesign;component/Styles.xaml"/>
+                <!--<ResourceDictionary Source="pack://application:,,,/PileDesign;component/Graphics_r1/Resources/CommonResources.xaml"/>-->
             </ResourceDictionary.MergedDictionaries>
-            
-            
+
             <!-- 全 FrameworkElement の ToolTip 設定 -->
             <Style TargetType="FrameworkElement">
                 <Setter Property="ToolTipService.InitialShowDelay" Value="0"/>

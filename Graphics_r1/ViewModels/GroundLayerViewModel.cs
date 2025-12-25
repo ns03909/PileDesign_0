@@ -60,8 +60,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-
-
         // コンストラクタ内: 末尾の Update() 呼び出し前に購読済みになるように GroundInput の代入経路を通っていればOK
         public GroundLayerViewModel(MainWindowViewModel mainWindowViewModel)
         {
@@ -363,7 +361,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _dataContextFundamental, value);
         }
 
-        public ObservableCollection<ExampleItem> ExampleItems { get; } = new();
+        public ObservableCollection<ExampleItem> ExampleItems { get; } = [];
 
         private ExampleItem? _selectedExampleItem;
         public ExampleItem? SelectedExampleItem
@@ -866,6 +864,7 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
+            wpf.Plot.Legend.IsVisible = true;
 
             string title = "地盤変位";
             wpf.Plot.Axes.Title.Label.Text = title;
@@ -2997,7 +2996,6 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-
         private void DataGridGroundMass_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
@@ -3118,7 +3116,6 @@ namespace PileDesign.ViewModels
                 Update();
             }
         }
-
 
         public void DataGridGroundLayer_RowEditEnding(/*string newText*/)
         {

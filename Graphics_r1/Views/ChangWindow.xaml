@@ -1,0 +1,1574 @@
+﻿<Window x:Class="PileDesign.Views.ChangWindow"
+        x:Name="RootWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:app="clr-namespace:PileDesign"
+        xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        mc:Ignorable="d"
+        xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
+        d:DataContext="{d:DesignInstance Type=local:ChangViewModel}"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
+        xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
+        xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Title="杭頭水平力を受ける一様地盤中の長い杭の状態計算" Height="450" Width="800">
+
+    <!-- 右寄せ表示・編集中用の共通スタイルを追加 -->
+    <Window.Resources>
+        <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">
+            <Setter Property="Scale" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- 表示用: TextBlock を右寄せ -->
+        <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <!-- 編集用: TextBox を右寄せ -->
+        <Style x:Key="RightAlignedEditingTextBoxStyle" TargetType="TextBox">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <conv:MultiplyConverter x:Key="Multiply1000Converter" />
+
+        <ContextMenu x:Key="CommonDataGridContextMenu">
+            <MenuItem Header="CSVエクスポート" Click="ExportCsvFromContextMenu_Click"/>
+            <MenuItem Header="選択セルをコピー" Click="CopyDataGridSelection_Click"/>
+        </ContextMenu>
+
+        <!-- SvgViewboxコントロール用のスタイルを定義 -->
+        <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="StretchDirection" Value="DownOnly"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+        
+    </Window.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Text="杭頭水平力を受ける一様地盤中の長い杭の状態計算"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Margin="10"/>
+            <Button x:Name="HelpButton"
+                ToolTip="このウィンドウでできることの説明を表示します"
+                Click="HelpButton_Click"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Grid.Column="1">
+                <svgc:SvgViewbox Source="/Icons/Help.svg" Style="{StaticResource SvgIconStyle16}"/>
+            </Button>
+        </Grid>
+
+
+        <StackPanel Grid.Row="1"  Orientation="Horizontal" HorizontalAlignment="Left">
+            <TextBlock Text="全体水平力(kN)"/>
+            <TextBox Width="45" HorizontalContentAlignment="Right"
+            Text="{Binding TotalHorizontalLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" />
+
+            <Button Content="全体水平力による解析実行" Command="{Binding AnalysisCommand}"/>
+            <GroupBox Header="全体モデルからの読み込み">
+                <Grid Margin="6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <!-- 左カラム：ラベル -->
+                    <StackPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center">
+                        <TextBlock Text="荷重条件" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock Text="地震荷重ケース" Margin="0,0,0,6"/>
+                        <TextBlock Text="荷重組合せ" Margin="0,4,0,6"/>
+                        <TextBlock Text="液状化" Margin="0,4,0,6"/>
+                    </StackPanel>
+
+                    <!-- 右カラム：コントロール群 -->
+                    <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Vertical">
+                        <!-- LoadCase: ItemsSource は App.InputModel.LoadCasesInput.AllSeismicLoadCases を参照 -->
+                        <!--<ComboBox Margin="0,0,0,4" MinWidth="220"
+                      DisplayMemberPath="LoadName"
+                      SelectedItem="{Binding SelectedLoadCase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding Source={x:Static app:App.InputModel}, Path=LoadCasesInput.AllSeismicLoadCases}"
+                      ToolTip="地震荷重ケースを選択してください"/>
+                        --><!-- LoadCombination --><!--
+                        <ComboBox Margin="0,0,0,4" MinWidth="220"
+                      DisplayMemberPath="Name"
+                      SelectedItem="{Binding SelectedLoadCombination, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      ItemsSource="{Binding Source={x:Static app:App.InputModel}, Path=LoadCasesInput.AllLoadCombinations}"
+                      ToolTip="荷重組合せを選択してください"/>-->
+                        <!-- ComboBox の ItemsSource を ViewModel のプロパティに変更 -->
+                        <ComboBox Margin="0,0,0,4" MinWidth="220"
+                              DisplayMemberPath="LoadName"
+                              SelectedItem="{Binding SelectedLoadCase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ItemsSource="{Binding AllSeismicLoadCases}"
+                              ToolTip="地震荷重ケースを選択してください"/>
+                        <!-- LoadCombination -->
+                        <ComboBox Margin="0,0,0,4" MinWidth="220"
+                              DisplayMemberPath="Name"
+                              SelectedItem="{Binding SelectedLoadCombination, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ItemsSource="{Binding AllLoadCombinations}"
+                              ToolTip="荷重組合せを選択してください"/>
+                        <!-- Liquefaction -->
+                        <CheckBox Content="液状化あり" IsChecked="{Binding IsLiquefaction, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <!-- 右上：既存ボタンを残す -->
+                    <StackPanel Grid.Column="2" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,8,0,0">
+                        <Button Content="全読み込み" Command="{Binding ApplyInputModelCommand}" />
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+            
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+ 
+            <!-- 追加: 保存 / 読み込み -->
+            <Button Click="SaveChangData_Click"
+                    ToolTip="Chang 入力をファイルに保存します (JSON)" HorizontalAlignment="Right">
+                <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle16}"/>
+            </Button>
+            <Button Click="LoadChangData_Click"
+                    ToolTip="Chang 入力をファイルから読み込みます (JSON)" HorizontalAlignment="Right">
+                <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle16}"/>
+            </Button>
+
+        </StackPanel>
+        
+        <!-- AvalonDock レイアウト（行 1） -->
+        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="2">
+            <avalonDock:LayoutRoot>
+                <!-- 横方向: 左 75% に上/下（定義/配置）、右 25% にグラフ -->
+                <avalonDock:LayoutPanel Orientation="Horizontal">
+                    <!-- 左側: 上下に分割 -->
+                    <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.75*">
+                        <avalonDock:LayoutDocumentPane >
+
+                            <!-- 上: 杭地盤セット定義 -->
+                            <avalonDock:LayoutAnchorable Title="杭地盤セット定義" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="0.45*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="0.55*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 左: 数式説明 -->
+                                    <ScrollViewer Grid.Column="0" Padding="8" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel>
+                                            <TextBlock Text="杭地盤セット（EIとKH0の計算）" FontWeight="Bold" Margin="0,0,0,6"/>
+                                            <controls:FormulaControl Formula="EI = [E_s (B^4-(B-2t_s)^4)+E_c((B-2t_s)^4-(B-2t)^4]\pi/64" Style="{StaticResource FormulaControlStyle}" />
+                                            <controls:FormulaControl Formula="E_c=if(F_c \ge 85, 40000, 33500 (\frac{\gamma_c}{24})^2(\frac{F_c}{60})^{-1/3})" Style="{StaticResource FormulaControlStyle}" />
+                                            <controls:FormulaControl Formula="k_{h0} = \alpha \xi E_0 (\frac{B}{B_0})^{-3/4}" Style="{StaticResource FormulaControlStyle}" />
+                                        </StackPanel>
+                                    </ScrollViewer>
+
+                                    <!-- 可動式の区切り -->
+                                    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
+
+                                    <!-- 右: DataGrid -->
+                                    <Grid Grid.Column="2">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Button Content="杭地盤セット追加" Command="{Binding AddChangSoilPileCommand}" 
+                                                HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
+
+                                        <common:EnhancedDataGrid x:Name="DataGridSoilPile"
+                                                                 ItemsSource="{Binding ChangSoilPiles, UpdateSourceTrigger=LostFocus}"
+                                                                 AutoGenerateColumns="False"
+                                                                 CanUserAddRows="False"
+                                                                 CanUserDeleteRows="False"
+                                                                 CanUserSortColumns="False"
+                                                                 FrozenColumnCount="1"
+                                                                 LoadingRow="DataGrid_LoadingRow"
+                                                                 Grid.Row="1"
+                                                                 PreparingCellForEdit="DataGrid_PreparingCellForEdit"
+                                                                    CellEditEnding="DataGrid_CellEditEnding">
+                                            <DataGrid.AlternatingRowBackground>
+                                                <ImageBrush/>
+                                            </DataGrid.AlternatingRowBackground>
+                                            <DataGrid.Style>
+                                                <Style/>
+                                            </DataGrid.Style>
+
+                                            
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+
+                                            <!--CSVファイル出力等-->
+                                            <DataGrid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="CSVエクスポート"
+                                                          Click="ExportCsvFromContextMenu_Click"
+                                                          CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="選択セルをコピー"
+                                                          Click="CopyDataGridSelection_Click"
+                                                          CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </DataGrid.ContextMenu>
+
+                                            <DataGrid.Columns>
+                                                <!-- 先頭: 行削除ボタン -->
+                                                <DataGridTemplateColumn Width="30" Header="">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="削除"
+                                                                Command="{Binding DataContext.DeleteChangSoilPileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+
+                                                <DataGridTextColumn Binding="{Binding OuterDiameter, UpdateSourceTrigger=LostFocus, Mode=TwoWay, StringFormat=N0}" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="外径" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="B" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTemplateColumn Header="中空部" Width="60">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsHollow, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Margin="2" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Thickness, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                                      ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                      EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="総肉厚" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="t" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding SteelThickness, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                                      ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                      EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="鋼板厚" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="t_s" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn  Binding="{Binding Es, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="鋼板" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="E_s" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Fc, UpdateSourceTrigger=LostFocus, StringFormat=N0, Mode=TwoWay}" Width="60"
+                                                      ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                      EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="基準強度" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="F_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Gamma, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="密度" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\gamma_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(N/mm3)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Ec, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="E_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <!-- DataGridSoilPile 内の EI 列を編集可能に変更 -->
+                                                <DataGridTextColumn Binding="{Binding EI, UpdateSourceTrigger=LostFocus, StringFormat=N0, Mode=TwoWay}" Width="60"
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+
+                                                <!-- DataGridSoilPile の Columns 内に下記の列を追加してください（適切な場所、たとえば外径やコンクリート列の後） -->
+                                                <DataGridTemplateColumn Width="100">
+                                                    <DataGridTemplateColumn.Header>
+                                                        <TextBlock Text="杭頭タイプ" TextAlignment="Center"/>
+                                                    </DataGridTemplateColumn.Header>
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding PileTopType, Mode=OneWay}" HorizontalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ComboBox SelectedItem="{Binding PileTopType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    HorizontalAlignment="Stretch" MinWidth="80">
+                                                                <ComboBoxItem Content="キャプテンパイル工法"/>
+                                                                <ComboBoxItem Content="FT-Pile構法"/>
+                                                                <ComboBoxItem Content="杭頭固定"/>
+                                                            </ComboBox>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- PCリング -->
+                                                <DataGridTemplateColumn Header="PCリング" Width="120">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <ComboBox Width="100"
+                                                                    HorizontalContentAlignment="Right"
+                                                                    ItemsSource="{Binding DataContext.PileTop.CaptainPile.PCRingOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    SelectedItem="{Binding DataContext.PileTop.CaptainPile.SelectedPCRingName, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectionChanged="ComboBoxPCRingChanged"
+                                                                    DropDownOpened="ComboBox_DropDownOpened"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <ComboBox Width="100"
+                                                                      HorizontalContentAlignment="Right"
+                                                                      ItemsSource="{Binding DataContext.PileTop.CaptainPile.PCRingOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                      SelectedItem="{Binding DataContext.PileTop.CaptainPile.SelectedPCRingName, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      SelectionChanged="ComboBoxPCRingChanged"
+                                                                      DropDownOpened="ComboBox_DropDownOpened"/>                                        
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- 絞り率ν -->
+                                                <DataGridTemplateColumn Header="絞り率ν" Width="100">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.CaptainPile.Nu, RelativeSource={RelativeSource AncestorType=Window}, StringFormat={}{0:F2}}"
+                                                                    HorizontalAlignment="Right" />
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <ComboBox Width="80"
+                                                                      ItemsSource="{Binding DataContext.PileTop.CaptainPile.ContractionRatioOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                      SelectedItem="{Binding DataContext.PileTop.CaptainPile.Nu, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      SelectionChanged="ComboBoxContractionRatioSelectionChanged"
+                                                                      DropDownOpened="ComboBox_DropDownOpened"
+                                                                      HorizontalContentAlignment="Right">
+                                                                    <ComboBox.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <TextBlock Text="{Binding StringFormat={}{0:F2}}" />
+                                                                        </DataTemplate>
+                                                                    </ComboBox.ItemTemplate>
+                                                                </ComboBox>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- 引張定着筋 有無 -->
+                                                <DataGridTemplateColumn Header="引張定着筋" Width="120">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <CheckBox IsChecked="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.HasTensionRebars, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      Checked="CheckBoxHasTensionAnchorsChecked"
+                                                                      Unchecked="CheckBoxHasTensionAnchorsUnchecked"
+                                                                      HorizontalAlignment="Center"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <CheckBox IsChecked="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.HasTensionRebars, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      Checked="CheckBoxHasTensionAnchorsChecked"
+                                                                      Unchecked="CheckBoxHasTensionAnchorsUnchecked"
+                                                                      HorizontalAlignment="Center"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- 引張定着筋 詳細 -->
+                                                <DataGridTemplateColumn Header="引張定着筋 詳細" Width="180">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.TensionSummary, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    TextWrapping="Wrap" Foreground="Gray" />
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.TensionSummary, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                    TextWrapping="Wrap" Foreground="Gray" />
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+                                                <!-- FTキャップ -->
+                                                <DataGridTemplateColumn Header="FTキャップ" Width="100">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.SelectedFTCap, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Center"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
+                                                                <ComboBox Width="100"
+                                                                      ItemsSource="{Binding DataContext.PileTop.FTPile.FTCapOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                      SelectedItem="{Binding DataContext.PileTop.SelectedFTCap, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      SelectionChanged="ComboBoxFTCapChanged"
+                                                                      HorizontalContentAlignment="Right"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- FT: 引張定着筋 有無 -->
+                                                <DataGridTemplateColumn Header="FT:引張定着筋" Width="120">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.FTPile.FTPileTensionBars.IsTensionType, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Center"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
+                                                                <CheckBox IsChecked="{Binding DataContext.PileTop.FTPile.FTPileTensionBars.IsTensionType, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      Checked="CheckBoxHasFTTensionAnchorsChecked"
+                                                                      Unchecked="CheckBoxHasFTTensionAnchorsUnchecked"
+                                                                      HorizontalAlignment="Center"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <!-- FT: 引張定着筋 本数-等 -->
+                                                <DataGridTemplateColumn Header="FT:本数-等" Width="160">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
+                                                                <TextBlock Text="{Binding DataContext.PileTop.FTPile.FTPileTensionBars.TensionAnchorSummary, RelativeSource={RelativeSource AncestorType=Window}}" TextWrapping="Wrap" Foreground="Gray"/>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='FT-Pile構法'}">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBox Width="50"
+                                                                       Text="{Binding DataContext.PileTop.FTPile.FTPileTensionBars.TensionAnchorNum, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                       TextChanged="TextBoxFTTensionNumChanged"
+                                                                       HorizontalContentAlignment="Right"/>
+                                                                    <TextBlock Text=" - " VerticalAlignment="Center"/>
+                                                                    <ComboBox Width="90"
+                                                                        ItemsSource="{Binding DataContext.PileTop.FTPile.FTPileTensionBars.TensionAnchorGradeOption, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        SelectedItem="{Binding DataContext.PileTop.FTPile.FTPileTensionBars.SelectedTensionAnchorGrade, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                                                                </StackPanel>
+                                                            </ContentControl>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Alpha, StringFormat=N0, Mode=TwoWay}" Foreground="Gray" Width="60"
+                                                      ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                      EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\alpha" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(m-1)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Xi, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                                      ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                      EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="群杭影響" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\xi" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding E0, UpdateSourceTrigger=LostFocus, StringFormat=N0, Mode=TwoWay}" Width="60"
+                                                      ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                      EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="地盤変形" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="E_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m2)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="基準水平" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                            </DataGrid.Columns>
+                                        </common:EnhancedDataGrid>
+                                    </Grid>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+
+                            <!-- 下: 杭地盤セット配置 -->
+                            <avalonDock:LayoutAnchorable Title="杭地盤セット配置" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="0.45*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="0.55*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 左: 数式説明（配置用） -->
+                                    <ScrollViewer Grid.Column="0" Padding="8" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel>
+                                            <TextBlock Text="杭地盤セット配置" FontWeight="Bold" Margin="0,0,0,6"/>
+                                            <controls:FormulaControl Formula="y = \frac{H}{4 E I \beta} e^{-\beta x}\left((2-\alpha_r)\cos(\beta x) + \alpha_r\sin(\beta x)\right)" Style="{StaticResource FormulaControlStyle}" />
+                                            <controls:FormulaControl Formula="\delta = \frac{H}{4EI\beta^3} (2-\alpha_r)" Style="{StaticResource FormulaControlStyle}" />
+                                            <controls:FormulaControl Formula="M_0=\frac{H}{2\beta}\alpha_r" Style="{StaticResource FormulaControlStyle}" />
+                                            <controls:FormulaControl Formula="M_m=-\frac{H}{2\beta}\sqrt{(1-\alpha_r)^2+1}\,exp(-\tan^{-1}(\frac{1}{1-\alpha_r}))" Style="{StaticResource FormulaControlStyle}" />
+                                            <controls:FormulaControl Formula="S=-H e^{-\beta x}(\cos\beta x - (1-\alpha_r)\sin\beta x)" Style="{StaticResource FormulaControlStyle}" />
+                                        </StackPanel>
+                                    </ScrollViewer>
+
+                                    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="Transparent" ShowsPreview="True"/>
+
+                                    <!-- 右: DataGridChang -->
+                                    <Grid Grid.Column="2">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <Button Content="杭地盤セット配置追加" Command="{Binding AddChangCommand}" 
+                                                HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
+
+
+                                        <common:EnhancedDataGrid x:Name="DataGridChang"
+                                                                 ItemsSource="{Binding Changs, UpdateSourceTrigger=LostFocus}"
+                                                                 AutoGenerateColumns="False"
+                                                                 CanUserAddRows="False"
+                                                                 CanUserDeleteRows="False"
+                                                                 CanUserSortColumns="False"
+                                                                 LoadingRow="DataGrid_LoadingRow"
+                                                                 Grid.Row="1"
+                                                                 PreparingCellForEdit="DataGrid_PreparingCellForEdit"
+                                                                CellEditEnding="DataGrid_CellEditEnding">
+                                            <DataGrid.AlternatingRowBackground>
+                                                <ImageBrush/>
+                                            </DataGrid.AlternatingRowBackground>
+                                            <DataGrid.Style>
+                                                <Style/>
+                                            </DataGrid.Style>
+
+                                            <!--CSVファイル出力等-->
+                                            <DataGrid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="CSVエクスポート"
+                                                          Click="ExportCsvFromContextMenu_Click"
+                                                          CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="選択セルをコピー"
+                                                          Click="CopyDataGridSelection_Click"
+                                                          CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </DataGrid.ContextMenu>
+
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+
+                                            <DataGrid.Columns>
+                                                <!-- 先頭: 行削除ボタン -->
+                                                <DataGridTemplateColumn Width="30" Header="">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="削除"
+                                                                Command="{Binding DataContext.DeleteChangCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                                <!-- DataGridChang: ChangSoilPile 選択列（1..N を表示） -->
+                                                <DataGridTemplateColumn Width="60">
+                                                    <DataGridTemplateColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="杭地盤" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="セット" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="番号" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTemplateColumn.Header>
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <ComboBox
+                                                                ItemsSource="{Binding DataContext.ChangSoilPileIndices, ElementName=RootWindow}"
+                                                                SelectedValue="{Binding SelectedSoilPileIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                HorizontalAlignment="Stretch"
+                                                                VerticalAlignment="Center"
+                                                                Margin="2" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                                        <DataTemplate>
+                                                            <ComboBox
+                                                                ItemsSource="{Binding DataContext.ChangSoilPileIndices, ElementName=RootWindow}"
+                                                                SelectedValue="{Binding SelectedSoilPileIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                HorizontalAlignment="Stretch"
+                                                                VerticalAlignment="Center"
+                                                                Margin="2" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTextColumn Binding="{Binding EI, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Kh0, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="基準水平" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Beta0, UpdateSourceTrigger=PropertyChanged, StringFormat=N3, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="基準" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="特性値" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\beta_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(m-1)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <!--<DataGridTextColumn Binding="{Binding H, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                <DataGridTextColumn.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="突出長" HorizontalAlignment="Center"/>
+                                        <controls:FormulaControl Formula="\h" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>-->
+
+                                                <DataGridTextColumn Binding="{Binding Number, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="セット数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\N" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding AxialForce, StringFormat=N1, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="軸力" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="N" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+                                                
+                                                <DataGridTextColumn Binding="{Binding Ar, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="固定度" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\alpha_r" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding HorizontalLoad, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="水平力" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="H" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding PileHeadMoment, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="モーメント" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="M_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <!-- 読み取り専用の計算結果 -->
+                                                <DataGridTextColumn
+                                                    Binding="{Binding PileHeadDisplacement, Converter={StaticResource Multiply1000Converter}, ConverterParameter=1000, 
+                                                    Mode=OneWay, StringFormat=N3}"
+                                                    IsReadOnly="True" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="変位" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\delta" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+
+                                                <!-- 読み取り専用の計算結果 -->
+
+                                                <DataGridTextColumn Binding="{Binding Kh, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="水平" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="kh" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <!-- 読み取り専用の計算結果 -->
+                                                <DataGridTextColumn
+                                                    Binding="{Binding Beta, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}" Foreground="Gray" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="特性値" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="\beta" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(m-1)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+
+                                                <DataGridTextColumn
+                                                    Binding="{Binding MaxBendingMoment, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
+                                                    IsReadOnly="True" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="地中部" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="最大曲げ" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="モーメント" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="M_{m}" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(kNm)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn
+                                                    Binding="{Binding DepthOfMaxBendingMoment, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
+                                                    IsReadOnly="True" Width="60"
+                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="地中部" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="最大曲げ" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="モーメント" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="発生深さ" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="l_{m}" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+                                            </DataGrid.Columns>
+                                        </common:EnhancedDataGrid>
+                                    </Grid>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
+
+                    <!-- 右側: Graph パネル（幅 25%） -->
+                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.25*">
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="曲げモーメント" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid Grid.Row="0" Margin="4">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <ScottPlot:WpfPlot x:Name="wpfPlotM" Margin="0,6,0,0" Grid.Row="0"/>
+                                        <TextBlock Text="{Binding CrosshairPositionText_M}" Margin="4" FontSize="12" Grid.Row="1"/>
+                                    </Grid>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                            <avalonDock:LayoutAnchorable Title="せん断力" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid Grid.Row="0" Margin="4">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <ScottPlot:WpfPlot x:Name="wpfPlotQ" Margin="0,6,0,0" Grid.Row="0"/>
+                                        <TextBlock Text="{Binding CrosshairPositionText_Q}" Margin="4" FontSize="12" Grid.Row="1"/>
+                                    </Grid>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                            <avalonDock:LayoutAnchorable Title="変位" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid Grid.Row="0" Margin="4">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <ScottPlot:WpfPlot x:Name="wpfPlotD" Margin="0,6,0,0" Grid.Row="0"/>
+                                        <TextBlock Text="{Binding CrosshairPositionText_D}" Margin="4" FontSize="12" Grid.Row="1"/>
+                                    </Grid>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
+                </avalonDock:LayoutPanel>
+            </avalonDock:LayoutRoot>
+        </avalonDock:DockingManager>
+
+
+        <!--<TabControl x:Name="MainTab" Grid.Row="1">
+            <TabItem Header="Input">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0">
+                        <TextBlock Text="杭地盤セット（EIとKH0の計算）"/>
+                        <controls:FormulaControl Formula="EI = [E_s (B^4-(B-2t_s)^4)+E_c((B-2t_s)^4-(B-2t)^4]\pi/64" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+                        <controls:FormulaControl Formula="E_c=if(F_c >= 85, 40,000, else 33,500 (\frac{\gamma_c}{24})^2(\frac{F_c}{60})^{-1/3}" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+                        <controls:FormulaControl Formula="k_{h0} = \alpha \xi E_0 (\frac{B}{B_0})^{-3/4}" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <Grid Grid.Row="0" Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Button Content="杭地盤セット追加" Command="{Binding AddChangSoilPileCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
+
+                        <common:EnhancedDataGrid x:Name="DataGridSoilPile"
+                            ItemsSource="{Binding ChangSoilPiles, UpdateSourceTrigger=LostFocus}"
+                            Grid.Row="2"
+                            AutoGenerateColumns="False"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            CanUserSortColumns="False"
+                            FrozenColumnCount="1"
+                            Grid.ColumnSpan="2"
+                            LoadingRow="DataGrid_LoadingRow">
+                            <DataGrid.AlternatingRowBackground>
+                                <ImageBrush/>
+                            </DataGrid.AlternatingRowBackground>
+                            <DataGrid.Style>
+                                <Style/>
+                            </DataGrid.Style>
+
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+
+                            <DataGrid.Columns>
+                                --><!-- 先頭: 行削除ボタン --><!--
+                                <DataGridTemplateColumn Width="30" Header="">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="削除"
+                                            Command="{Binding DataContext.DeleteChangSoilPileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+
+                                <DataGridTextColumn Binding="{Binding OuterDiameter, UpdateSourceTrigger=LostFocus, Mode=TwoWay, StringFormat=N0}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="外径" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="B" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTemplateColumn Header="中空部" Width="60">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsHollow, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="2" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Binding="{Binding Thickness, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                  ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                  EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="総肉厚" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="t" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding SteelThickness, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                  ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                  EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="鋼板厚" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="t_s" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn  Binding="{Binding Es, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="鋼板" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="E_s" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Fc, UpdateSourceTrigger=LostFocus, StringFormat=N0, Mode=TwoWay}" Width="60"
+                                  ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                  EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="基準強度" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="F_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Gamma, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="密度" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\gamma_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(N/mm3)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Ec, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="E_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding EI, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Alpha, StringFormat=N0, Mode=TwoWay}" Foreground="Gray" Width="60"
+                              ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                              EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\alpha" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(m-1)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Xi, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                  ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                  EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="群杭影響" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\xi" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding E0, UpdateSourceTrigger=LostFocus, StringFormat=N0, Mode=TwoWay}" Width="60"
+                              ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                              EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="地盤変形" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="E_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kN/m2)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="基準水平" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </common:EnhancedDataGrid>
+                    </Grid>
+
+                    <StackPanel Grid.Row="1" Grid.Column="0">
+                        <TextBlock Text="杭地盤セット配置"/>
+                        <controls:FormulaControl Formula="y = \frac{H}{4 E I \beta} e^{-\beta x}\left((2-\alpha_r)\cos(\beta x) + \alpha_r\sin(\beta x)\right)" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+
+                        <controls:FormulaControl Formula="\delta = \frac{H}{4EI\beta^3} (2-\alpha_r)" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+
+                        <controls:FormulaControl Formula="M_0=\frac{H}{2\beta}\alpha_r" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+
+                        <controls:FormulaControl Formula="M_m=-\frac{H}{2\beta}\sqrt{(1-\alpha_r)^2+1}\,exp(-tan^{-1}(\frac{1}{1-\alpha_r}))" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+
+                        <controls:FormulaControl Formula="l_m=-\frac{1}{\beta}tan^{-1}(\frac{1}{1-\alpha_r})" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+
+                        <controls:FormulaControl Formula="S=-He^{-\beta x}(cos\beta x - (1-\alpha_r)sin\beta x)" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+
+                        <controls:FormulaControl Formula="M=-\frac{H}{2\beta}e^{-\beta x} ((2-\alpha_r)sin\beta x - \alpha_r cos\beta x)" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Button Content="杭地盤セット配置追加" Command="{Binding AddChangCommand}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Grid.Row="0"/>
+
+                        <common:EnhancedDataGrid x:Name="DataGridChang"
+                            ItemsSource="{Binding Changs, UpdateSourceTrigger=LostFocus}"
+                            Grid.Row="1"
+                            AutoGenerateColumns="False"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            CanUserSortColumns="False"
+                            FrozenColumnCount="0"
+                            LoadingRow="DataGrid_LoadingRow">
+                            <DataGrid.AlternatingRowBackground>
+                                <ImageBrush/>
+                            </DataGrid.AlternatingRowBackground>
+                            <DataGrid.Style>
+                                <Style/>
+                            </DataGrid.Style>
+
+                            --><!--CSVファイル出力等-->
+                            <!--<DataGrid.ContextMenu>
+                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+            </DataGrid.ContextMenu>--><!--
+
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+
+                            <DataGrid.Columns>
+                                --><!-- 先頭: 行削除ボタン --><!--
+                                <DataGridTemplateColumn Width="30" Header="">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="削除"
+                                            Command="{Binding DataContext.DeleteChangCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                --><!-- DataGridChang: ChangSoilPile 選択列（1..N を表示） --><!--
+                                <DataGridTemplateColumn Width="60">
+                                    <DataGridTemplateColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭地盤" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="セット" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="番号" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ComboBox
+                                            ItemsSource="{Binding DataContext.ChangSoilPileIndices, ElementName=RootWindow}"
+                                            SelectedValue="{Binding SelectedSoilPileIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            Margin="2" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <ComboBox
+                                            ItemsSource="{Binding DataContext.ChangSoilPileIndices, ElementName=RootWindow}"
+                                            SelectedValue="{Binding SelectedSoilPileIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            Margin="2" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Binding="{Binding EI, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Kh0, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="基準水平" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Beta0, UpdateSourceTrigger=PropertyChanged, StringFormat=N3, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="基準" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="特性値" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\beta_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(m-1)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                --><!--<DataGridTextColumn Binding="{Binding H, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                <DataGridTextColumn.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="突出長" HorizontalAlignment="Center"/>
+                                        <controls:FormulaControl Formula="\h" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>--><!--
+
+                                <DataGridTextColumn Binding="{Binding Number, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="セット数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\N" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding Ar, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="固定度" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\alpha_r" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding HorizontalLoad, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=TwoWay}" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="水平力" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="H" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kN)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn Binding="{Binding PileHeadMoment, UpdateSourceTrigger=LostFocus, StringFormat=N1, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="モーメント" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="M_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kN)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                --><!-- 読み取り専用の計算結果 --><!--
+                                <DataGridTextColumn
+                                Binding="{Binding PileHeadDisplacement, Converter={StaticResource Multiply1000Converter}, ConverterParameter=1000, 
+                                Mode=OneWay, StringFormat=N3}"
+                                IsReadOnly="True" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="杭頭" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="変位" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\delta" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(mm)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+
+                                --><!-- 読み取り専用の計算結果 -->
+                                <!--<DataGridTextColumn
+                                Binding="{Binding GroundSurfaceDisplacement, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N6}"
+                                IsReadOnly="True" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                <DataGridTextColumn.Header>
+                                    <StackPanel>
+                                        <TextBlock Text="地表面" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="変位" HorizontalAlignment="Center"/>
+                                        <controls:FormulaControl Formula="\delta_G" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataGridTextColumn.Header>
+                            </DataGridTextColumn>--><!--
+
+                                <DataGridTextColumn Binding="{Binding Kh, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="水平" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="係数" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="kh" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                --><!-- 読み取り専用の計算結果 --><!--
+                                <DataGridTextColumn
+                                Binding="{Binding Beta, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="特性値" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="\beta" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(m-1)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+
+                                <DataGridTextColumn
+                                Binding="{Binding MaxBendingMoment, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
+                                IsReadOnly="True" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="地中部" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="最大曲げ" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="モーメント" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="M_{m}" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(kNm)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+
+                                <DataGridTextColumn
+                                Binding="{Binding DepthOfMaxBendingMoment, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
+                                IsReadOnly="True" Width="60"
+                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}" Foreground="Gray">
+                                    <DataGridTextColumn.Header>
+                                        <StackPanel>
+                                            <TextBlock Text="地中部" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="最大曲げ" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="モーメント" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="発生深さ" HorizontalAlignment="Center"/>
+                                            <controls:FormulaControl Formula="l_{m}" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="(m)" HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+
+                        </common:EnhancedDataGrid>
+                    </Grid>
+
+
+                    <StackPanel Grid.Row="5" Grid.Column="1"  Orientation="Horizontal">
+                        <TextBlock Text="全体水平力(kN)"/>
+                        <TextBox Width="45" HorizontalContentAlignment="Right"
+            Text="{Binding TotalHorizontalLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <Button Content="全体水平力による解析実行" Command="{Binding AnalysisCommand}"/>
+                    </StackPanel>
+
+                    --><!--<ScottPlot:WpfPlot x:Name="wpfPlotM" Grid.Row="6" Grid.Column="0"/>
+                <TextBlock Text="{Binding CrosshairPositionText_M}" Margin="10" FontSize="14" Grid.Row="7" Grid.Column="0"/>--><!--
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Graph">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="100"/>
+                        <RowDefinition Height="100"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+
+                    <ScottPlot:WpfPlot x:Name="wpfPlotM" Grid.Row="0" Grid.Column="0"/>
+                    <TextBlock Text="{Binding CrosshairPositionText_M}" Margin="10" FontSize="14" Grid.Row="1" Grid.Column="0"/>
+
+                    <ScottPlot:WpfPlot x:Name="wpfPlotQ" Grid.Row="0" Grid.Column="1"/>
+                    <TextBlock Text="{Binding CrosshairPositionText_Q}" Margin="10" FontSize="14" Grid.Row="1" Grid.Column="1"/>
+
+                    <ScottPlot:WpfPlot x:Name="wpfPlotD" Grid.Row="0" Grid.Column="2"/>
+                    <TextBlock Text="{Binding CrosshairPositionText_D}" Margin="10" FontSize="14" Grid.Row="1" Grid.Column="2"/>
+                </Grid>
+
+
+            </TabItem>
+        </TabControl>-->
+    </Grid>
+</Window>

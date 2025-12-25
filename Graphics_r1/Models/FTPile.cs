@@ -167,7 +167,7 @@ namespace PileDesign.Models
         }
 
         // ある軸力に対するθ, M関係を返すメソッド
-        (ObservableCollection<double>, ObservableCollection<double>) GetMThetaRelationship(double N)
+        internal (ObservableCollection<double>, ObservableCollection<double>) GetMThetaRelationship(double N)
         {
             ObservableCollection<double> thetas = [0];
             ObservableCollection<double> Ms = [0];

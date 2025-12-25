@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -21,6 +22,23 @@ namespace PileDesign.Views
         public HorizontalCalculationWindow()
         {
             InitializeComponent();
+
+            // DataContext が既に HorizontalCalculationViewModel の場合は購読
+            if (this.DataContext is HorizontalCalculationViewModel vm)
+            {
+                vm.RequestShowWarning += OnRequestShowWarning;
+            }
+
+            // DataContext が後でセットされる可能性がある場合は、Loaded で確認してもよい
+            this.Loaded += (_, __) =>
+            {
+                if (this.DataContext is HorizontalCalculationViewModel vm2)
+                {
+                    vm2.RequestShowWarning -= OnRequestShowWarning;
+                    vm2.RequestShowWarning += OnRequestShowWarning;
+                }
+            };
+
             this.Loaded += HorizontalCalculationWindow_Loaded;
             this.Unloaded += HorizontalCalculationWindow_Unloaded;
 
@@ -131,6 +149,10 @@ namespace PileDesign.Views
             if (this.DataContext is HorizontalCalculationViewModel vm)
             {
                 vm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
+                vm.RequestShowWarning -= OnRequestShowWarning;                // 追加
+                vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged; // 追加
+                                                                                         // RequestClose は匿名ラムダで登録されているため参照が無いと解除できません。
+                                                                                         // もし RequestClose を解除したいなら登録時にハンドラを変数に保持しておくことを検討してください。
             }
             this.Loaded -= HorizontalCalculationWindow_Loaded;
             this.Unloaded -= HorizontalCalculationWindow_Unloaded;
@@ -142,10 +164,14 @@ namespace PileDesign.Views
             if (e.OldValue is HorizontalCalculationViewModel oldVm)
             {
                 oldVm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
+                oldVm.RequestShowWarning -= OnRequestShowWarning;                 // 追加
+                oldVm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged; // 追加
             }
             if (e.NewValue is HorizontalCalculationViewModel newVm)
             {
                 newVm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
+                newVm.RequestShowWarning += OnRequestShowWarning;                 // 追加
+                newVm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged; // 追加
             }
         }
 
@@ -320,6 +346,40 @@ namespace PileDesign.Views
             var text = string.Join(Environment.NewLine, source.Select(x => x?.ToString() ?? string.Empty));
             Clipboard.SetText(text);
             e.Handled = true;
+        }
+
+
+        // View がメッセージ表示を担当
+        private void OnRequestShowWarning(string message)
+        {
+            // UI スレッドで確実に表示
+            MessageBox.Show(message, "解析中止", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        // TextBox の数値入力制限（小数点と数字のみ許可）
+        private static readonly Regex _numericRegex = new(@"^[0-9]*(\.[0-9]*)?$", RegexOptions.Compiled);
+
+        private void NumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            // 既存テキストに追加したときに有効な数値かをチェック
+            if (sender is TextBox tb)
+            {
+                string prospective = tb.Text.Remove(tb.SelectionStart, tb.SelectionLength)
+                                     .Insert(tb.SelectionStart, e.Text);
+                e.Handled = !_numericRegex.IsMatch(prospective);
+            }
+        }
+
+        private void NumericOnly_Pasting(object sender, DataObjectPastingEventArgs e)
+        {
+            if (!e.SourceDataObject.GetDataPresent(DataFormats.Text, true))
+            {
+                e.CancelCommand();
+                return;
+            }
+            var text = e.SourceDataObject.GetData(DataFormats.Text) as string ?? string.Empty;
+            if (!_numericRegex.IsMatch(text))
+                e.CancelCommand();
         }
     }
 }

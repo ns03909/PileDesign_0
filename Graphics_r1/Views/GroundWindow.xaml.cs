@@ -128,7 +128,6 @@ namespace PileDesign.Views
             }
         }
 
-
         private void HandleTextBoxValueConfirmed(TextBox textBox)
         {
             var binding = BindingOperations.GetBindingExpression(textBox, TextBox.TextProperty);

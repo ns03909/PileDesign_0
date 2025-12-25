@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Models.InputData;
+using PileDesign.Views;
 using static PileDesign.ViewModels.MainWindowViewModel;
 
 namespace PileDesign.ViewModels
@@ -8,6 +9,8 @@ namespace PileDesign.ViewModels
     public partial class GroundLayerViewModel : ObservableObject, ICloseable
 
     {
+        public ChangWindow ChangWindowInstance { get; internal set; }
+
         private void InitializeExampleItems()
         {
             ExampleItems.Clear();
@@ -20,7 +23,7 @@ namespace PileDesign.ViewModels
             ExampleItems.Add(new ExampleItem("設計例集3.2", Example3_2Command));
             ExampleItems.Add(new ExampleItem("設計例集3.3", Example3_3Command));
             ExampleItems.Add(new ExampleItem("設計例集3.4", Example3_4Command));
-            ExampleItems.Add(new ExampleItem("関東支部8章", Example8Command));
+            ExampleItems.Add(new ExampleItem("関東支部8章", ExampleK8Command));
             ExampleItems.Add(new ExampleItem("八重洲二丁目No.1", ExampleYeasu2Command));
         }
 
@@ -3609,9 +3612,9 @@ namespace PileDesign.ViewModels
         }
 
 
-        // 設計例集3.4
+        // 関東支部8
         [RelayCommand]
-        private void Example8()
+        private void ExampleK8()
         {
             GroundInput.GroundRef = "関東支部8";
             GroundInput.GroundTopAltitude = 0;

@@ -223,6 +223,18 @@
             <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
             <Button Content="キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
 
+            <!-- ここを既存レイアウトの設定パネル等に挿入 -->
+            <StackPanel Orientation="Horizontal" Margin="8" VerticalAlignment="Center" x:Name="DisplacementThresholdPanel">
+                <CheckBox Content="変位閾値で解析中止" 
+              IsChecked="{Binding StopOnMaxDisplacement, Mode=TwoWay}" 
+              VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="閾値 (m):" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Width="60" VerticalAlignment="Center"
+             Text="{Binding MaxAllowedDisplacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N3, ValidatesOnExceptions=True, ValidatesOnDataErrors=True}"
+             PreviewTextInput="NumericOnly_PreviewTextInput"
+             DataObject.Pasting="NumericOnly_Pasting"
+             ToolTip="最大許容代表変位（m）。この値を超えると解析が停止します。"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- メイン表示部: TabControlでタブ切替 -->

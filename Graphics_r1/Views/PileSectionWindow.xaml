@@ -20,6 +20,10 @@
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <!-- 追加: Ctrl+Enter で OkCommand を実行 -->
+        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
+        <!-- 追加: Esc で CancelCommand を実行 -->
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
     </Window.InputBindings>
 
     <Window.Resources>
@@ -861,8 +865,18 @@
         </avalonDock:DockingManager>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="1">
-            <Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding CancelCommand}"/>
+            <!--<Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding OkCommand}"/>
+            <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding CancelCommand}"/>-->
+            <Button x:Name="ButtonOk"
+            Content="保存して閉じる(Ctrl+Enter)"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center" Height="30" Width="150"
+            Command="{Binding OkCommand}" />
+            <Button x:Name="ButtonCancel"
+            Content="破棄して閉じる(Esc)"
+            HorizontalAlignment="Center"
+VerticalAlignment="Center" Height="30" Width="150"
+            Command="{Binding CancelCommand}" />
         </StackPanel>
     </Grid>
 </Window>
