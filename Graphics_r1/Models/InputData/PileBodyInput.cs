@@ -6,16 +6,55 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Collections.Specialized;
 
 namespace PileDesign.Models.InputData
 {
     public class PileBodyInput : BaseModel
     {
+        //private ObservableCollection<PileBodySegment> _pileBodySegments;
+        //public ObservableCollection<PileBodySegment> PileBodySegments
+        //{
+        //    get => _pileBodySegments;
+        //    set => SetProperty(ref _pileBodySegments, value);
+        //}
+
+        // 追加: セクション既定値リセット抑止フラグ
+        private bool _suppressSectionReset = false;
+
         private ObservableCollection<PileBodySegment> _pileBodySegments;
         public ObservableCollection<PileBodySegment> PileBodySegments
         {
             get => _pileBodySegments;
-            set => SetProperty(ref _pileBodySegments, value);
+            set
+            {
+                if (_pileBodySegments == value) return;
+
+                // 既存の購読解除
+                if (_pileBodySegments != null)
+                    _pileBodySegments.CollectionChanged -= PileBodySegments_CollectionChanged;
+
+                // 値を設定（SetProperty を使って通知）
+                SetProperty(ref _pileBodySegments, value);
+
+                // 新しいコレクションに購読を追加し、既存アイテムに親タイプを反映
+                if (_pileBodySegments != null)
+                {
+                    _pileBodySegments.CollectionChanged += PileBodySegments_CollectionChanged;
+                    foreach (var seg in _pileBodySegments)
+                    {
+                        if (seg?.PileSection != null)
+                        {
+                            seg.PileSection.PileBodyType = this.PileBodyType;
+                            // セクションの既定値を再設定するかは抑止フラグで制御
+                            if (!_suppressSectionReset)
+                            {
+                                seg.PileSection.ResetSectionProperties();
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // 杭区間の更新メソッド
@@ -270,7 +309,30 @@ namespace PileDesign.Models.InputData
 
         public PileTop PileTop = new();
 
-        public string PileBodyType { get; set; }
+        //public string PileBodyType { get; set; }
+        private string _pileBodyType;
+        public string PileBodyType
+        {
+            get => _pileBodyType;
+            set
+            {
+                if (SetProperty(ref _pileBodyType, value))
+                {
+                    // 既存の区間セクションへ自動的に反映
+                    if (PileBodySegments != null)
+                    {
+                        foreach (var seg in PileBodySegments)
+                        {
+                            if (seg?.PileSection != null)
+                                seg.PileSection.PileBodyType = value;
+                        }
+                    }
+
+                    // 必要なら既存のリセット処理を呼ぶ
+                    // ResetSectionProperties();
+                }
+            }
+        }
 
         // コンストラクタ
         public PileBodyInput()
@@ -291,11 +353,45 @@ namespace PileDesign.Models.InputData
             SettleAlpha = 0.3;
             SettleN = 2;
 
-            PileBodySegments = [new PileBodySegment() { No = 1, }];
+            //Pil/*eBodySegments = [new PileBodySegment() { No = 1, }];*/
+
+            //// コンストラクタ内で PileBodySegments 初期化直後に追加
+            //PileBodySegments = new ObservableCollection<PileBodySegment> { new PileBodySegment() { No = 1 } };
+            //PileBodySegments.CollectionChanged += PileBodySegments_CollectionChanged;
+            // コンストラクタの該当部分を以下のようにして一度だけ初期化してください
+            PileBodySegments = [new() { No = 1 }];
 
             // データを読み込む
             PileTipSettlementPresetParameterNames = [];
+            PileTipSettlementPresetParameters = [];
             LoadPresetSettlementParameters();
+        }
+
+        private void PileBodySegments_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        //{
+        //    if (e.NewItems == null) return;
+        //    foreach (var item in e.NewItems)
+        //    {
+        //        if (item is PileBodySegment seg && seg.PileSection != null)
+        //        {
+        //            seg.PileSection.PileBodyType = this.PileBodyType;
+        //            seg.PileSection.ResetSectionProperties();
+        //        }
+        //    }
+        //}
+        {
+            if (e.NewItems == null) return;
+            foreach (var item in e.NewItems)
+            {
+                if (item is PileBodySegment seg && seg.PileSection != null)
+                {
+                    seg.PileSection.PileBodyType = this.PileBodyType;
+                    if (!_suppressSectionReset)
+                    {
+                        seg.PileSection.ResetSectionProperties();
+                    }
+                }
+            }
         }
 
         // CSVからデータを読み込む
@@ -663,10 +759,58 @@ namespace PileDesign.Models.InputData
 
         // 深いコピーを作成するメソッド
         public PileBodyInput DeepCopy()
+        //{
+        //    //var copy = (PileBodyInput)this.MemberwiseClone();
+        //    //copy.PileBodySegments = new ObservableCollection<PileBodySegment>(this.PileBodySegments.Select(segment => segment.DeepCopy()));
+        //    //copy.PileTop = this.PileTop.DeepCopy();
+        //    //return copy;
+
+        //    // shallow copy
+        //    var copy = (PileBodyInput)this.MemberwiseClone();
+
+        //    // まず PileBodyType を明示的に反映（プロパティ経由で）
+        //    // これにより後続の PileBodySegments セッターが正しい親タイプを参照できます
+        //    copy.PileBodyType = this.PileBodyType;
+
+        //    // 深いコピー：セグメント／杭頭を新しいコレクション／インスタンスで作成
+        //    copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
+        //        this.PileBodySegments.Select(segment => segment.DeepCopy())
+        //    );
+
+        //    copy.PileTop = this.PileTop?.DeepCopy();
+
+        //    // 必要ならプリセット名コレクションもコピー（安全措置）
+        //    if (this.PileTipSettlementPresetParameterNames != null)
+        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
+        //    else
+        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
+
+        //    // 他の参照型フィールドも必要に応じてコピーしてください
+
+        //    return copy;
+        //}
         {
+            // shallow copy
             var copy = (PileBodyInput)this.MemberwiseClone();
-            copy.PileBodySegments = new ObservableCollection<PileBodySegment>(this.PileBodySegments.Select(segment => segment.DeepCopy()));
-            copy.PileTop = this.PileTop.DeepCopy();
+
+            // まず PileBodyType を明示的に反映（プロパティ経由で）
+            copy.PileBodyType = this.PileBodyType;
+
+            // 深いコピー：セグメント／杭頭を新しいコレクション／インスタンスで作成
+            // セグションの ResetSectionProperties 呼び出しを抑止して割り当てる
+            copy._suppressSectionReset = true;
+            copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
+                this.PileBodySegments.Select(segment => segment.DeepCopy())
+            );
+            copy._suppressSectionReset = false;
+
+            copy.PileTop = this.PileTop?.DeepCopy();
+
+            if (this.PileTipSettlementPresetParameterNames != null)
+                copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
+            else
+                copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
+
             return copy;
         }
     }

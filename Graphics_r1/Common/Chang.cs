@@ -8,14 +8,14 @@ namespace PileDesign.Common
     {
 
         // 派生フィールド（中間値をキャッシュ）
-        private double _denom4;            // 4 * EI * beta^2
-        private double _denom12;           // 12 * EI * beta^2
-        private double _onePlusBetaH;      // 1 + beta * h
-        private double _onePlusBetaH3;     // (1 + beta * h)^3
-        private double _expNegBetaH;       // exp(-beta * h)
-        private double _twoBetaH;          // 2 * beta * h
-        private double _A_for_max;         // (1 + 2*beta*h) - (1 + beta*h) * ar
-        private double _B_for_deflection;  // helper for deflection expressions
+        //private double _denom4;            // 4 * EI * beta^2
+        //private double _denom12;           // 12 * EI * beta^2
+        //private double _onePlusBetaH;      // 1 + beta * h
+        //private double _onePlusBetaH3;     // (1 + beta * h)^3
+        //private double _expNegBetaH;       // exp(-beta * h)
+        //private double _twoBetaH;          // 2 * beta * h
+        //private double _A_for_max;         // (1 + 2*beta*h) - (1 + beta*h) * ar
+        //private double _B_for_deflection;  // helper for deflection expressions
 
         // キャッシュされた計算結果
         private double _pileHeadDisplacement;

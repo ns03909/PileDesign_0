@@ -242,56 +242,56 @@ namespace PileDesign.Views
 
             UpdateCanvasRightBlankClip(); // 初期適用
 
-            //// --- ここから追加: 起動時に QuickHintPopup を一度だけ表示して自動閉じ ---
-            //if (!_startupQuickHintShown)
-            //{
-            //    _startupQuickHintShown = true;
-            //    _ = Task.Run(async () =>
-            //    {
-            //        // レイアウト確定のための短い遅延
-            //        await Task.Delay(300);
+            // --- ここから追加: 起動時に QuickHintPopup を一度だけ表示する---
+            if (!_startupQuickHintShown)
+            {
+                _startupQuickHintShown = true;
+                _ = Task.Run(async () =>
+                {
+                    // レイアウト確定のための短い遅延
+                    await Task.Delay(300);
 
-            //        // 表示（UI スレッド）
-            //        Dispatcher.Invoke(() =>
-            //        {
-            //            try
-            //            {
-            //                if (DataContext is MainWindowViewModel vm)
-            //                {
-            //                    if (!vm.IsQuickHintVisible)
-            //                        vm.IsQuickHintVisible = true;
-            //                }
-            //                else if (this.FindName("QuickHintPopup1") is System.Windows.Controls.Primitives.Popup popup)
-            //                {
-            //                    popup.IsOpen = true;
-            //                }
-            //            }
-            //            catch { /* 無害に握りつぶす */ }
-            //        });
+                    // 表示（UI スレッド）
+                    Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            if (DataContext is MainWindowViewModel vm)
+                            {
+                                if (!vm.IsQuickHintVisible)
+                                    vm.IsQuickHintVisible = true;
+                            }
+                            else if (this.FindName("QuickHintPopup1") is System.Windows.Controls.Primitives.Popup popup)
+                            {
+                                popup.IsOpen = true;
+                            }
+                        }
+                        catch { /* 無害に握りつぶす */ }
+                    });
 
-            //        // 表示時間（ミリ秒） — 好きな値（例: 5000 = 5秒）に変更可
-            //        await Task.Delay(5000);
+                    // 表示時間（ミリ秒） — 好きな値（例: 5000 = 5秒）に変更可
+                    await Task.Delay(5000);
 
-            //        // 自動で閉じる（UI スレッド）
-            //        Dispatcher.Invoke(() =>
-            //        {
-            //            try
-            //            {
-            //                if (DataContext is MainWindowViewModel vm)
-            //                {
-            //                    if (vm.IsQuickHintVisible)
-            //                        vm.IsQuickHintVisible = false;
-            //                }
-            //                else if (this.FindName("QuickHintPopup1") is System.Windows.Controls.Primitives.Popup popup)
-            //                {
-            //                    popup.IsOpen = false;
-            //                }
-            //            }
-            //            catch { }
-            //        });
-            //    });
-            //}
-            //// --- 追加ここまで ---
+                    // 自動で閉じる（UI スレッド）
+                    Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            if (DataContext is MainWindowViewModel vm)
+                            {
+                                if (vm.IsQuickHintVisible)
+                                    vm.IsQuickHintVisible = false;
+                            }
+                            else if (this.FindName("QuickHintPopup1") is System.Windows.Controls.Primitives.Popup popup)
+                            {
+                                popup.IsOpen = false;
+                            }
+                        }
+                        catch { }
+                    });
+                });
+            }
+            // --- 追加ここまで ---
         }
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {

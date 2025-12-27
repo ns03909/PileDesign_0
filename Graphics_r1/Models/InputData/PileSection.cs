@@ -340,7 +340,8 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _pileBodyType, value))
                 {
-                    ResetSectionProperties();
+                    //ResetSectionProperties();
+                    RecalculatePileDia(); 
                     InvalidateNMCache();
                     InvalidateSteelYieldCache(); // 追加
                     InvalidateCrackCache();
@@ -490,11 +491,15 @@ namespace PileDesign.Models.InputData
             {
                 PileDiameter = PipeDia;
             }
+            System.Diagnostics.Debug.WriteLine($"RecalculatePileDia finished. after: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
         }
 
         //杭断面変更時（デフォルト）のメソッド
         public void ResetSectionProperties()
         {
+            System.Diagnostics.Debug.WriteLine($"ResetSectionProperties called. PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, Hash={this.GetHashCode()}");
+
+
             // 表示の即時更新用にクリア（後で GetNMRaw が再計算して再設定）
             UltimateLimitAxialForceThresholds = [];
 
@@ -544,6 +549,7 @@ namespace PileDesign.Models.InputData
                 RecalculateSelectedSteelPipePipe();
                 RecalculatePileDia();
             }
+            System.Diagnostics.Debug.WriteLine($"After ResetSectionProperties: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
         }
 
         // コンクリート肉厚
@@ -622,7 +628,7 @@ namespace PileDesign.Models.InputData
         }
 
         // コンクリートのヤング係数の計算メソッド
-        private void RecalculateConcreteE()
+        public void RecalculateConcreteE()
         {
             ConcreteE = 3.35 * Math.Pow(10, 4) * Math.Pow(ConcreteGamma / 24.0, 2.0) * Math.Pow(ConcreteGsi * ConcreteFc / 60.0, 1.0 / 3.0);
         }
@@ -647,6 +653,34 @@ namespace PileDesign.Models.InputData
 
         readonly List<SteelPipePile> steelPipePiles;
         readonly PrecastPileLoader precastPileLoader = new();
+
+        // クラス PileSection 内に追加するメソッド
+        public void SetSelectedPrecastPileByName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            // 既に同じ選択なら何もしない
+            if (SelectedPrecastPile?.Name == name) return;
+
+            // 名前をセットして再計算
+            SelectedPrecastPile = new PrecastPile { Name = name };
+            RecalculateSelectedPrecastPile();
+
+            // 再計算結果に基づき関連値を更新して表示を整える
+            RecalculatePileDia();
+            RecalculateConcreteE();
+            SetSpecs();
+
+            // キャッシュ無効化（必要に応じて）
+            InvalidateNMCache();
+            InvalidateSteelYieldCache();
+            InvalidateCrackCache();
+
+            // 通知（SelectedPrecastPile と他プロパティの変更を View に反映）
+            OnPropertyChanged(nameof(SelectedPrecastPile));
+            OnPropertyChanged(nameof(PileDiameter));
+            OnPropertyChanged(nameof(ConcreteOutDia));
+        }
 
         public void RecalculateSelectedPrecastPile()
         {
@@ -1578,18 +1612,78 @@ namespace PileDesign.Models.InputData
         // 深いコピーを作成するメソッド
         public PileSection DeepCopy()
         {
-            return (PileSection)this.MemberwiseClone();
-
+            // 浅いコピーを作成してから、参照型フィールドを個別に複製する
             var copy = (PileSection)this.MemberwiseClone();
-            copy.SelectedPrecastPile = this.SelectedPrecastPile;
+
+            // SelectedPrecastPile をコピー (null 安全)
+            if (this.SelectedPrecastPile != null)
+            {
+                copy.SelectedPrecastPile = new PrecastPile
+                {
+                    No = this.SelectedPrecastPile.No,
+                    ThicknessType = this.SelectedPrecastPile.ThicknessType,
+                    PrestressType = this.SelectedPrecastPile.PrestressType,
+                    Name = this.SelectedPrecastPile.Name,
+                    PileType = this.SelectedPrecastPile.PileType,
+                    PileDiameter = this.SelectedPrecastPile.PileDiameter,
+                    PileThickness = this.SelectedPrecastPile.PileThickness,
+                    Fc = this.SelectedPrecastPile.Fc,
+                    SFc = this.SelectedPrecastPile.SFc,
+                    Fbc = this.SelectedPrecastPile.Fbc,
+                    SigmaE = this.SelectedPrecastPile.SigmaE,
+                    Ec = this.SelectedPrecastPile.Ec,
+                    Ap = this.SelectedPrecastPile.Ap,
+                    Dp = this.SelectedPrecastPile.Dp,
+                    Ftp = this.SelectedPrecastPile.Ftp,
+                    SigmaPu = this.SelectedPrecastPile.SigmaPu,
+                    Ep = this.SelectedPrecastPile.Ep,
+                    HasReinf = this.SelectedPrecastPile.HasReinf,
+                    Nr = this.SelectedPrecastPile.Nr,
+                    RDesignation = this.SelectedPrecastPile.RDesignation,
+                    Ag = this.SelectedPrecastPile.Ag,
+                    Dr = this.SelectedPrecastPile.Dr,
+                    Ftr = this.SelectedPrecastPile.Ftr,
+                    Er = this.SelectedPrecastPile.Er,
+                    Ts = this.SelectedPrecastPile.Ts,
+                    Fts = this.SelectedPrecastPile.Fts,
+                    Es = this.SelectedPrecastPile.Es,
+                    PsSigmaY = this.SelectedPrecastPile.PsSigmaY
+                };
+            }
+            else
+            {
+                copy.SelectedPrecastPile = new PrecastPile();
+            }
+
+            // SelectedSteelPipePile をコピー
             copy.SelectedSteelPipePile = new SteelPipePile
             {
-                Diameter = this.SelectedSteelPipePile.Diameter,
-                Thickness = this.SelectedSteelPipePile.Thickness
+                Diameter = this.SelectedSteelPipePile?.Diameter ?? 0.0,
+                Thickness = this.SelectedSteelPipePile?.Thickness ?? 0.0
             };
-            copy.SelectedPileSectionSpecification = new ObservableCollection<Spec>(
-                this.SelectedPileSectionSpecification
-                    .Select(spec => new Spec(spec.Item, spec.Mark, spec.Value, spec.Unit, spec.Note)));
+
+            // SelectedPileSectionSpecification の複製（仕様表示のコレクション）
+            if (this.SelectedPileSectionSpecification != null)
+            {
+                copy.SelectedPileSectionSpecification = new ObservableCollection<Spec>(
+                    this.SelectedPileSectionSpecification.Select(s => new Spec(s.Item, s.Mark, s.Value, s.Unit, s.Note))
+                );
+            }
+            else
+            {
+                copy.SelectedPileSectionSpecification = new ObservableCollection<Spec>();
+            }
+
+            // キャッシュ系はコピーせず再計算させる（安全のため null にしておく）
+            copy._unfactoredServiceNMCache = null;
+            copy._unfactoredDamageNMCache = null;
+            copy._unfactoredUltimateNMCache = null;
+            copy._factoredServiceNMCache = null;
+            copy._factoredDamageNMCache = null;
+            copy._factoredUltimateNMCache = null;
+            copy._steelYieldNMRawCache = null;
+            copy._crackNMRawCache = null;
+
             return copy;
         }
     }

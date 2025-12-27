@@ -38,7 +38,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _spacing, value);
         }
 
-        private Brush _spacingForeground;
+        private Brush _spacingForeground = Brushes.Black; // 初期値を設定
         [JsonIgnore]
         public Brush SpacingForeground
         {
@@ -46,7 +46,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _spacingForeground, value);
         }
 
-        private Brush _coordForeground;
+        private Brush _coordForeground = Brushes.Black; // 初期値を設定
         [JsonIgnore]
         public Brush CoordForeground
         {

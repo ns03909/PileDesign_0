@@ -44,6 +44,20 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _elementType, value);
         }
 
+        // 無引数コンストラクタ（デシリアライズで使用される）
+        public Element()
+        {
+            if (_availableIds.Count > 0)
+            {
+                Id = _availableIds[0];
+                _availableIds.RemoveAt(0);
+            }
+            else
+            {
+                Id = _nextId++;
+            }
+        }
+
         // コンストラクタ
         public Element(string elementType, params PileLayoutDataItem[] nodes)
         {

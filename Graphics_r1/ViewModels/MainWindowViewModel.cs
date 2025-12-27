@@ -11,6 +11,7 @@ using PileDesign.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -1080,443 +1081,6 @@ namespace PileDesign.ViewModels
             UpdateTreeView();
         }
 
-        // 関東支部　設計例7
-        [RelayCommand]
-        private void OnExampleK7Command()
-        {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            CurrentInputModel.PileGroupSettlement.RectLoads = [
-                new RectLoad(){
-                    X1 = -2.10,
-                    X2 = 2.10,
-                    Y1 = -2.10,
-                    Y2 = 2.10,
-                    QA = 115.1927,
-                },
-                new RectLoad(){
-                    X1 = 5.70,
-                    X2 = 9.50,
-                    Y1 = -1.90,
-                    Y2 = 1.90,
-                    QA = 145.2909,
-                },
-                new RectLoad(){
-                    X1 = 12.10,
-                    X2 = 15.90,
-                    Y1 = -1.90,
-                    Y2 = 1.90,
-                    QA = 127.8393,
-                },
-                new RectLoad(){
-                    X1 = 18.30,
-                    X2 = 22.50,
-                    Y1 = -2.10,
-                    Y2 = 2.10,
-                    QA = 145.6916,
-                },
-                new RectLoad(){
-                    X1 = 24.10,
-                    X2 = 27.90,
-                    Y1 = -2.50,
-                    Y2 = 2.50,
-                    QA = 115.0277,
-                },
-                new RectLoad(){
-                    X1 = -2.5,
-                    X2 = 2.50,
-                    Y1 = 6.0,
-                    Y2 = 11.0,
-                    QA = 119.08,
-                },
-                new RectLoad(){
-                    X1 = 5.1,
-                    X2 = 10.1,
-                    Y1 = 6.0,
-                    Y2 = 11.0,
-                    QA = 154.76,
-                },
-                new RectLoad(){
-                    X1 = 11.5,
-                    X2 = 16.5,
-                    Y1 = 6.0,
-                    Y2 = 11.0,
-                    QA = 139.36,
-                },
-                new RectLoad(){
-                    X1 = 17.9,
-                    X2 = 22.9,
-                    Y1 = 6.0,
-                    Y2 = 11.0,
-                    QA = 153.04,
-                },
-                new RectLoad(){
-                    X1 = 23.9,
-                    X2 = 28.1,
-                    Y1 = 6.4,
-                    Y2 = 10.6,
-                    QA = 154.8753,
-                },
-                new RectLoad(){
-                    X1 = -2.1,
-                    X2 = 2.1,
-                    Y1 = 16.9,
-                    Y2 = 21.1,
-                    QA = 124.1497,
-                },
-                new RectLoad(){
-                    X1 = 5.5,
-                    X2 =9.7,
-                    Y1 = 16.9,
-                    Y2 = 21.1,
-                    QA = 140.0227,
-                },
-                new RectLoad(){
-                    X1 = 11.9,
-                    X2 =16.1,
-                    Y1 = 16.9,
-                    Y2 = 21.1,
-                    QA = 129.3084,
-                },
-                new RectLoad(){
-                    X1 = 18.3,
-                    X2 =22.5,
-                    Y1 = 16.9,
-                    Y2 = 21.1,
-                    QA = 141.8934,
-                },
-                new RectLoad(){
-                    X1 = 24.4,
-                    X2 =27.6,
-                    Y1 = 17.4,
-                    Y2 = 20.6,
-                    QA = 139.7461,
-                }];
-
-            CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = -2.0;
-
-            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers = [
-                new(){
-                    BottomAltitude = -9.5,
-                    Ek = 28_000,
-                    PoissonsRatio = 0.33,
-                    Thickness = 9.5,
-                    },
-                ];
-            CurrentInputModel.PileLayoutItems = [
-                new(){ X = 0.0, Y = 0.0 },
-                new(){ X = 7.6, Y = 0.0 },
-                new(){ X = 14.0, Y = 0.0 },
-                new(){ X = 20.4, Y = 0.0 },
-                new(){ X = 26.0, Y = 0.0 },
-                new(){ X = 0.0, Y = 8.5 },
-                new(){ X = 7.6, Y = 8.5 },
-                new(){ X = 14.0, Y = 8.5 },
-                new(){ X = 20.4, Y = 8.5 },
-                new(){ X = 26.0, Y = 8.5 },
-                new(){ X = 0.0, Y = 19.0 },
-                new(){ X = 7.6, Y = 19.0 },
-                new(){ X = 14.0, Y = 19.0 },
-                new(){ X = 20.4, Y = 19.0 },
-                new(){ X = 26.0, Y = 19.0 },
-    ];
-
-            foreach (var pileLayoutItem in CurrentInputModel.PileLayoutItems)
-            {
-                pileLayoutItem.SetMainWindowViewModel(this);
-            }
-
-            ObservableCollection<PileLayoutDataItem> pileLayouts = CurrentInputModel.PileLayoutItems;
-
-            CurrentInputModel.Elements = [
-                new("ダミー", pileLayouts[0], pileLayouts[1]),
-                new("ダミー", pileLayouts[1], pileLayouts[2]),
-                new("ダミー", pileLayouts[2], pileLayouts[3]),
-                new("ダミー", pileLayouts[3], pileLayouts[4]),
-                new("ダミー", pileLayouts[4], pileLayouts[5]),
-
-                new("ダミー", pileLayouts[6], pileLayouts[7]),
-                new("ダミー", pileLayouts[7], pileLayouts[8]),
-                new("ダミー", pileLayouts[8], pileLayouts[9]),
-                new("ダミー", pileLayouts[9], pileLayouts[10]),
-                new("ダミー", pileLayouts[10], pileLayouts[11]),
-
-                new("ダミー", pileLayouts[12], pileLayouts[13]),
-                new("ダミー", pileLayouts[13], pileLayouts[14]),
-                new("ダミー", pileLayouts[14], pileLayouts[15]),
-                new("ダミー", pileLayouts[15], pileLayouts[16]),
-                new("ダミー", pileLayouts[16], pileLayouts[17]),
-
-                new("ダミー", pileLayouts[0], pileLayouts[6]),
-                new("ダミー", pileLayouts[1], pileLayouts[7]),
-                new("ダミー", pileLayouts[2], pileLayouts[8]),
-                new("ダミー", pileLayouts[3], pileLayouts[9]),
-                new("ダミー", pileLayouts[4], pileLayouts[10]),
-
-                new("ダミー", pileLayouts[6], pileLayouts[12]),
-                new("ダミー", pileLayouts[7], pileLayouts[13]),
-                new("ダミー", pileLayouts[8], pileLayouts[14]),
-                new("ダミー", pileLayouts[9], pileLayouts[15]),
-                new("ダミー", pileLayouts[10], pileLayouts[16]),
-
-                ];
-
-            CurrentInputModel.GridYItems.Clear();
-            CurrentInputModel.GridYItems.Add(new() { Coord = 0, Spacing = 0, Name = "X1" });
-            CurrentInputModel.GridYItems.Add(new() { Coord = 8.5, Spacing = 8.5, Name = "X2" });
-            CurrentInputModel.GridYItems.Add(new() { Coord = 19, Spacing = 10.5, Name = "X3" });
-
-            CurrentInputModel.GridXItems.Clear();
-            CurrentInputModel.GridXItems.Add(new() { Coord = 0, Spacing = 0, Name = "Y1" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 7.6, Spacing = 7.6, Name = "Y2" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 14, Spacing = 6.4, Name = "Y3" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 20.4, Spacing = 6.4, Name = "Y4" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 6, Spacing = 5.6, Name = "Y5" });
-
-            GroupPileSettlementXOffset = 7.0;
-            GroupPileSettlementYOffset = 9.0;
-
-            GroupPileSettlementXSpacing = 1.4;
-            GroupPileSettlementYSpacing = 1.8;
-
-
-            UpdatePileLayoutNo();
-
-            IsGroupPileSettlementAnalysisDone = false;
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-            UpdateTreeView();
-
-        }
-
-        // 設計例5
-        [RelayCommand]
-        private void OnExample5()
-        {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            CurrentInputModel.PileGroupSettlement.RectLoads = [
-                new RectLoad(){
-                    X1 = -1.25,
-                    X2 = 1.25,
-                    Y1 = -1.25,
-                    Y2 = 1.25,
-                    QA = 500.0,
-                },
-                new RectLoad(){
-                    X1 = 7.0 - 1.70,
-                    X2 = 7.0 + 1.70,
-                    Y1 = -1.50,
-                    Y2 = 1.50,
-                    QA = 816.0,
-                },
-                new RectLoad(){
-                    X1 = 14.0 - 1.70,
-                    X2 = 14.0 + 1.70,
-                    Y1 = -1.50,
-                    Y2 = 1.50,
-                    QA = 816.0,
-                },
-                new RectLoad(){
-                    X1 = 21.0 - 1.25,
-                    X2 = 21.0 + 1.25,
-                    Y1 = -1.25,
-                    Y2 = 1.25,
-                    QA = 500.0,
-                },
-                new RectLoad(){
-                    X1 = -1.5,
-                    X2 = 1.5,
-                    Y1 = 9.0 - 1.7,
-                    Y2 = 9.0 + 1.7,
-                    QA = 816.0,
-                },
-                new RectLoad(){
-                    X1 = 7.0 - 2.0,
-                    X2 = 7.0 + 2.0,
-                    Y1 = 9.0 - 2.0,
-                    Y2 = 9.0 + 2.0,
-                    QA = 1280.0,
-                },
-                new RectLoad(){
-                    X1 = 14.0 - 2.0,
-                    X2 = 14.0 + 2.0,
-                    Y1 = 9.0 - 2.0,
-                    Y2 = 9.0 + 2.0,
-                    QA = 1280.0,
-                },
-                new RectLoad(){
-                    X1 = 21.0 - 1.5,
-                    X2 = 21.0 + 1.5,
-                    Y1 = 9.0 - 1.7,
-                    Y2 = 9.0 + 1.7,
-                    QA = 816.0,
-                },
-                new RectLoad(){
-                    X1 = -1.25,
-                    X2 = 1.25,
-                    Y1 = 18.0 - 1.25,
-                    Y2 = 18.0 + 1.25,
-                    QA = 500.0,
-                },
-                new RectLoad(){
-                    X1 = 7.0 - 1.70,
-                    X2 = 7.0 + 1.70,
-                    Y1 = 18.0 - 1.50,
-                    Y2 = 18.0 + 1.50,
-                    QA = 816.0,
-                },
-                new RectLoad(){
-                    X1 = 14.0 - 1.70,
-                    X2 = 14.0 + 1.70,
-                    Y1 = 18.0 - 1.50,
-                    Y2 = 18.0 + 1.50,
-                    QA = 816.0,
-                },
-                new RectLoad(){
-                    X1 = 21.0 - 1.25,
-                    X2 = 21.0 + 1.25,
-                    Y1 = 18.0 - 1.25,
-                    Y2 = 18.0 + 1.25,
-                    QA = 500.0,
-                }];
-
-            CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = -3.0;
-
-            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers = [
-                new(){
-                    BottomAltitude = -12.0,
-                    Ek = 28_000,
-                    PoissonsRatio = 0.33,
-                    Thickness = 9.0,
-                    },
-                new(){
-                    BottomAltitude = -14.0,
-                    Ek = 8_400,
-                    PoissonsRatio = 0.45,
-                    Thickness = 2.0,
-                    },
-                new(){
-                    BottomAltitude = -17.0,
-                    Ek = 28_000,
-                    PoissonsRatio = 0.33,
-                    Thickness = 3.0,
-                    },
-                ];
-
-            CurrentInputModel.PileLayoutItems = [
-                new(){ X = 0.0, Y = 0.0 },
-                new(){ X = 7.0, Y = 0.0 },
-                new(){ X = 14.0, Y = 0.0 },
-                new(){ X = 21.0, Y = 0.0 },
-                new(){ X = 0.0, Y = 9.0 },
-                new(){ X = 7.0, Y = 9.0 },
-                new(){ X = 14.0, Y = 9.0 },
-                new(){ X = 21.0, Y = 9.0 },
-                new(){ X = 0.0, Y = 18.0 },
-                new(){ X = 7.0, Y = 18.0 },
-                new(){ X = 14.0, Y = 18.0 },
-                new(){ X = 21.0, Y = 18.0 }
-                ];
-
-            foreach (var pileLayoutItem in CurrentInputModel.PileLayoutItems)
-            {
-                pileLayoutItem.SetMainWindowViewModel(this);
-            }
-
-            ObservableCollection<PileLayoutDataItem> pileLayouts = CurrentInputModel.PileLayoutItems;
-
-            CurrentInputModel.Elements = [
-                new("ダミー", pileLayouts[0], pileLayouts[1]),
-                new("ダミー", pileLayouts[1], pileLayouts[2]),
-                new("ダミー", pileLayouts[2], pileLayouts[3]),
-                new("ダミー", pileLayouts[4], pileLayouts[5]),
-                new("ダミー", pileLayouts[5], pileLayouts[6]),
-                new("ダミー", pileLayouts[6], pileLayouts[7]),
-                new("ダミー", pileLayouts[8], pileLayouts[9]),
-                new("ダミー", pileLayouts[9], pileLayouts[10]),
-                new("ダミー", pileLayouts[10], pileLayouts[11]),
-                new("ダミー", pileLayouts[0], pileLayouts[4]),
-                new("ダミー", pileLayouts[4], pileLayouts[8]),
-                new("ダミー", pileLayouts[1], pileLayouts[5]),
-                new("ダミー", pileLayouts[5], pileLayouts[9]),
-                new("ダミー", pileLayouts[2], pileLayouts[6]),
-                new("ダミー", pileLayouts[6], pileLayouts[10]),
-                new("ダミー", pileLayouts[3], pileLayouts[7]),
-                new("ダミー", pileLayouts[7], pileLayouts[11]),
-                ];
-
-            CurrentInputModel.GridYItems.Clear();
-            CurrentInputModel.GridYItems.Add(new() { Coord = 0, Spacing = 0, Name = "X1" });
-            CurrentInputModel.GridYItems.Add(new() { Coord = 9, Spacing = 9, Name = "X2" });
-            CurrentInputModel.GridYItems.Add(new() { Coord = 18, Spacing = 9, Name = "X3" });
-
-            CurrentInputModel.GridXItems.Clear();
-            CurrentInputModel.GridXItems.Add(new() { Coord = 0, Spacing = 0, Name = "Y1" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 7, Spacing = 7, Name = "Y2" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 14, Spacing = 7, Name = "Y3" });
-            CurrentInputModel.GridXItems.Add(new() { Coord = 21, Spacing = 7, Name = "Y4" });
-
-            GroupPileSettlementXOffset = 7.0;
-            GroupPileSettlementYOffset = 9.0;
-
-            GroupPileSettlementXSpacing = 1.4;
-            GroupPileSettlementYSpacing = 1.8;
-
-
-            UpdatePileLayoutNo();
-
-            IsGroupPileSettlementAnalysisDone = false;
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-            UpdateTreeView();
-
-        }
-
-        // 設計例集2.1
-        [RelayCommand]
-        private void OnExample2_1()
-        {
-            CurrentInputModel.PileGroupSettlement.RectLoads = [
-                new RectLoad(){
-                    X1 = -1.1,
-                    X2 = 1.1,
-                    Y1 = -1.1,
-                    Y2 = 1.1,
-                    QA = 947.0 / (2.2 * 2.2),
-                },
-                new RectLoad(){
-                    X1 = 7.8 - 1.3,
-                    X2 = 7.8 + 1.3,
-                    Y1 = -1.3,
-                    Y2 = 1.3,
-                    QA = 1453.0 / (2.2 * 2.2),
-                },
-                ];
-
-            CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = -2.4;
-
-            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers = [
-                new(){
-                    BottomAltitude = -5.9,
-                    Ek = 72_800,
-                    PoissonsRatio = 0.3,
-                    Thickness = 3.5,
-                    },
-                new(){
-                    BottomAltitude = -6.9,
-                    Ek = 8_400,
-                    PoissonsRatio = 0.45,
-                    Thickness = 1.0,
-                    },
-                new(){
-                    BottomAltitude = -12.0,
-                    Ek = 84_000,
-                    PoissonsRatio = 0.30,
-                    Thickness = 5.1,
-                    },
-                    ];
-        }
 
 
 
@@ -2229,14 +1793,66 @@ namespace PileDesign.ViewModels
             IsQuickHintVisible = true;
         }
 
+        // 再入防止フラグ（原子的に扱う）
+        private int _isChangWindowOpeningFlag = 0;
+
         [RelayCommand]
         public void OpenChangWindow()
         {
             // ChangViewModel に現在の InputModel を注入して作成
-            var vm = new ChangViewModel(this.CurrentInputModel);
+            var vm = new ChangViewModel(CurrentInputModel);
+            //var win = new ChangWindow();
             var win = new ChangWindow { DataContext = vm };
             win.ShowDialog();
         }
+        //{
+        //    // 0 -> 1 にできなければ既に実行中とみなす
+        //    if (System.Threading.Interlocked.CompareExchange(ref _isChangWindowOpeningFlag, 1, 0) != 0)
+        //    {
+        //        Debug.WriteLine("OpenChangWindow: already opening, ignored.");
+        //        return;
+        //    }
+
+        //    try
+        //    {
+        //        Debug.WriteLine("OpenChangWindow: start");
+
+        //        // ChangViewModel に現在の InputModel を注入してウィンドウを生成・表示
+        //        var vm = new ChangViewModel(this.CurrentInputModel);
+        //        var win = new ChangWindow
+        //        {
+        //            DataContext = vm,
+        //            Owner = Application.Current.MainWindow,
+        //            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        //            ShowInTaskbar = false
+        //        };
+
+        //        // ViewModel から閉じる要求を受け取る場合があるなら購読（インターフェイス名は環境に合わせて）
+        //        if (vm is ICloseable closeableVm)
+        //        {
+        //            closeableVm.RequestClose += (s, e) =>
+        //            {
+        //                if (win.IsVisible) win.Close();
+        //            };
+        //        }
+
+        //        // モーダル表示（既存コードに合わせる）
+        //        try
+        //        {
+        //            win.ShowDialog();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            MessageBox.Show($"Changウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        //            Debug.WriteLine(ex);
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        System.Threading.Interlocked.Exchange(ref _isChangWindowOpeningFlag, 0);
+        //        Debug.WriteLine("OpenChangWindow: end");
+        //    }
+        //}
         //{
         //    var vm = new ChangViewModel();
         //    //vm.LoadSample();

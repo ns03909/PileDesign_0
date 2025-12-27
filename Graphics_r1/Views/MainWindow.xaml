@@ -44,7 +44,6 @@
         <conv:ResultValueAndMidSpanAndPileTopVisibilityConverter x:Key="ResultValueAndMidSpanAndPileTopVisibilityConverter"/>
         <conv:LogSliderConverter x:Key="LogSliderConverter" LogMin="0.1" LogMax="1000"/>
         <conv:OutOfRangeToBoolConverter x:Key="OutOfRangeToBoolConverter"/>
-        <!--<FrameworkElement x:Key="ProxyElement" DataContext="{Binding ElementName=MainWin, Path=DataContext}"/>-->
 
         <ContextMenu x:Key="NodeContextMenu">
             <MenuItem Header="コピー／平面移動" Command="{Binding MoveCopyPilesCommand}"/>
@@ -66,18 +65,6 @@
             <MenuItem Header="コピー" Command="{Binding CopyDataGridSelectionCommand}"
                       CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
         </ContextMenu>
-        <!-- DataGridCellのスタイルを定義 -->
-        <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="BorderBrush" Value="White"/>
-                    <Setter Property="BorderThickness" Value="0.75"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>-->
-
 
         <!-- 共通のスタイルを定義 -->
         <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
@@ -234,7 +221,6 @@
             <!-- フォントの色を赤に設定 -->
         </Style>
 
-
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="#238966"/>
@@ -257,103 +243,7 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
-
-        <!-- リボン全体：小アイコン優先 ToolTip（暗黙スタイル）--><!--
-        <Style TargetType="ribbon:RibbonButton">
-            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
-            --><!-- デフォルト: Small を優先して表示 --><!--
-            <Setter Property="ToolTip">
-                <Setter.Value>
-                    <ToolTip Placement="Mouse" HasDropShadow="True">
-                        <StackPanel Orientation="Horizontal" Margin="6">
-                            <Image Width="32" Height="32" Stretch="Uniform">
-                                <Image.Source>
-                                    <PriorityBinding>
-                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                    </PriorityBinding>
-                                </Image.Source>
-                            </Image>
-                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                     Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </ToolTip>
-                </Setter.Value>
-            </Setter>
-
-            --><!-- SmallImageSource が null のときは LargeImageSource を優先する大アイコン版に差し替え --><!--
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Path=SmallImageSource, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
-                    <Setter Property="ToolTip">
-                        <Setter.Value>
-                            <ToolTip Placement="Mouse" HasDropShadow="True">
-                                <StackPanel Orientation="Horizontal" Margin="6">
-                                    <Image Width="48" Height="48" Stretch="Uniform">
-                                        <Image.Source>
-                                            <PriorityBinding>
-                                                <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                                <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                            </PriorityBinding>
-                                        </Image.Source>
-                                    </Image>
-                                    <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                         Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </ToolTip>
-                        </Setter.Value>
-                    </Setter>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        --><!-- ToggleButton 用も同様に追加 --><!--
-        <Style TargetType="ribbon:RibbonToggleButton">
-            <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
-            <Setter Property="ToolTip">
-                <Setter.Value>
-                    <ToolTip Placement="Mouse" HasDropShadow="True">
-                        <StackPanel Orientation="Horizontal" Margin="6">
-                            <Image Width="32" Height="32" Stretch="Uniform">
-                                <Image.Source>
-                                    <PriorityBinding>
-                                        <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                        <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                    </PriorityBinding>
-                                </Image.Source>
-                            </Image>
-                            <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                     Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </ToolTip>
-                </Setter.Value>
-            </Setter>
-
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding Path=SmallImageSource, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
-                    <Setter Property="ToolTip">
-                        <Setter.Value>
-                            <ToolTip Placement="Mouse" HasDropShadow="True">
-                                <StackPanel Orientation="Horizontal" Margin="6">
-                                    <Image Width="48" Height="48" Stretch="Uniform">
-                                        <Image.Source>
-                                            <PriorityBinding>
-                                                <Binding Path="PlacementTarget.LargeImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                                <Binding Path="PlacementTarget.SmallImageSource" RelativeSource="{RelativeSource AncestorType=ToolTip}"/>
-                                            </PriorityBinding>
-                                        </Image.Source>
-                                    </Image>
-                                    <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                         Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </ToolTip>
-                        </Setter.Value>
-                    </Setter>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>-->
-
-
-         <!--RibbonToggleButton 用: 大アイコン ToolTip スタイル--> 
+        <!--RibbonToggleButton 用: 大アイコン ToolTip スタイル--> 
         <Style x:Key="LargeIconToolTipRibbonToggleButtonStyle" TargetType="ribbon:RibbonToggleButton">
             <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
             <Setter Property="ToolTip">
@@ -393,9 +283,9 @@
                             </ContentPresenter>
 
                             <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                     Margin="12,0,0,0"
-                     VerticalAlignment="Center"
-                     TextWrapping="Wrap"/>
+                                 Margin="12,0,0,0"
+                                 VerticalAlignment="Center"
+                                 TextWrapping="Wrap"/>
                         </StackPanel>
                     </ToolTip>
                 </Setter.Value>
@@ -433,9 +323,9 @@
                             </ContentControl>
 
                             <TextBlock Text="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource AncestorType=ToolTip}}"
-                     Margin="12,0,0,0"
-                     VerticalAlignment="Center"
-                     TextWrapping="Wrap"/>
+                                 Margin="12,0,0,0"
+                                 VerticalAlignment="Center"
+                                 TextWrapping="Wrap"/>
                         </StackPanel>
                     </ToolTip>
                 </Setter.Value>
@@ -544,21 +434,6 @@
         </Style>
 
         <ribbon:RibbonQuickAccessToolBar x:Key="MainQAT" x:Shared="False">
-
-            <!--<ribbon:RibbonToggleButton ToolTip="リボン非表示"
-                                 IsChecked="{Binding IsRibbonVisible, Converter={StaticResource BooleanNegationConverter}}"
-            SmallImageSource="pack://application:,,,/Icons/RibbonVisible.png"/>
-
-            <ribbon:RibbonToggleButton ToolTip="リボン最小化 (タブのみ表示)"
-                                 IsChecked="{Binding IsRibbonMinimized}"
-                                 Visibility="{Binding IsRibbonVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                 SmallImageSource="pack://application:,,,/Icons/RibbonMinimize.png"/>-->
-            <!--<ribbon:RibbonButton ToolTip="保存 (Ctrl+S)"
-                           Command="{Binding SaveInputModelFileCommand}"
-            SmallImageSource="pack://application:,,,/Icons/SaveFile.png"/>
-            <ribbon:RibbonButton ToolTip="名前を付けて保存 (Ctrl+Shift+S)"
-                           Command="{Binding SaveInputModelFileAsCommand}"
-            SmallImageSource="pack://application:,,,/Icons/SaveFileAs.png"/>-->
             <ribbon:RibbonButton ToolTip="元に戻す (Ctrl+Z)"
                            Command="{Binding UndoCommand}"
             SmallImageSource="pack://application:,,,/Icons/Undo.png"/>
@@ -566,10 +441,8 @@
             <ribbon:RibbonButton ToolTip="やり直し (Ctrl+Y)"
                            Command="{Binding RedoCommand}"
             SmallImageSource="pack://application:,,,/Icons/Redo.png"/>
-            <!--<ribbon:RibbonButton ToolTip="ズームフィット (Ctrl+0)"
-                           Command="{Binding ZoomFitCommand}"/>-->
-            <!--SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"/>-->
         </ribbon:RibbonQuickAccessToolBar>
+
     </Window.Resources>
 
     <Grid>
@@ -652,38 +525,84 @@
                         </ribbon:RibbonApplicationMenuItem.Header>
                     </ribbon:RibbonApplicationMenuItem>
 
-                    <!-- 計算例: 右側補助ペイン -->
-                    <ribbon:RibbonApplicationMenu.AuxiliaryPaneContent>
-                        <StackPanel Margin="12" Width="260">
-                            <TextBlock Text="計算例" FontWeight="Bold" Margin="0,0,0,8"/>
-                            <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例5 直接基礎の即時沈下量"
-                                              KeyTip="5"
-                                              Command="{Binding Example5Command}"
-                                              ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"/>
-                            <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例9"
-                                              KeyTip="9"
-                                              Command="{Binding Example9Command}"
-                                              ToolTip="基礎指針'19 計算例9を実行"/>
-                            <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 7. 直接基礎の設計例"
-                                              KeyTip="9"
-                                              Command="{Binding ExampleK7Command}"
-                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例7を実行"/>
-                            <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 8. 杭基礎の設計例"
-                                              KeyTip="9"
-                                              Command="{Binding ExampleK8Command}"
-                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"/>
-                            <ribbon:RibbonApplicationMenuItem Header="設計例集3.1"
-                                              KeyTip="9"
-                                              Command="{Binding Example3_1Command}"
-                                              ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"/>
+                    <!-- ダミー項目（メニューの高さ確保用） -->
+                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
+                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
+                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
+                    </ribbon:RibbonApplicationMenuItem>
 
-                            <!-- 追加計算例が増える場合はここに同様に列挙 -->
-                        </StackPanel>
+                    <!-- ダミー項目（メニューの高さ確保用） -->
+                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
+                        
+                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
+                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
+                    </ribbon:RibbonApplicationMenuItem>
+                    
+                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
+                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
+                    <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
+                    </ribbon:RibbonApplicationMenuItem>
+                
+                
+                
+
+                    <!-- 計算例: 右側補助ペイン -->
+                    <ribbon:RibbonApplicationMenu.AuxiliaryPaneContent >
+                        <Border BorderBrush="Gray" BorderThickness="0" Background="White" MinWidth="320" MaxHeight="900" Padding="6" ClipToBounds="True">
+                            <ScrollViewer Height="900"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False"
+                                  PanningMode="VerticalOnly"
+                                  Focusable="False">
+                                <!-- StackPanel は必ず ScrollViewer の単一子として入れる -->
+                                <StackPanel Margin="0" VerticalAlignment="Top">
+                                    <TextBlock Text="計算例" FontWeight="Bold" Margin="0,0,0,0"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例5 直接基礎の即時沈下量"
+                                              KeyTip="1"
+                                              Command="{Binding Example5Command}"
+                                              ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
+                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例9 地下室下の杭"
+                                              KeyTip="2"
+                                              Command="{Binding Example9Command}"
+                                              ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
+                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
+                                    
+                                    <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 7. 直接基礎の設計例"
+                                              KeyTip="3"
+                                              Command="{Binding ExampleK7Command}"
+                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例7を実行"
+                                              ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 8. 杭基礎の設計例"
+                                              KeyTip="4"
+                                              Command="{Binding ExampleK8Command}"
+                                              ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"
+                                              ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.1　PHC杭"
+                                              KeyTip="5"
+                                              Command="{Binding Example3_1Command}"
+                                              ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"
+                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.2　PHC杭"
+                                              KeyTip="6"
+                                              Command="{Binding Example3_2Command}"
+                                              ToolTip="日本建築学会　建築基礎構造設計例集3.2　砂地盤に建つ建物のPHC節杭基礎"
+                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.3　場所打ち杭"
+                                              KeyTip="7"
+                                              Command="{Binding Example3_3Command}"
+                                              ToolTip="日本建築学会　建築基礎構造設計例集3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎"
+                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
+                                    <!-- 追加計算例が増える場合はここに同様に列挙 -->
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
                     </ribbon:RibbonApplicationMenu.AuxiliaryPaneContent>
 
                     <!-- 任意: 下端フッター -->
                     <ribbon:RibbonApplicationMenu.FooterPaneContent>
-                        <TextBlock Text="Version α-0.1" Foreground="Gray" Margin="8,0,8,4"/>
+                        <TextBlock Text="Version α-0.1 2025/12/27" Foreground="Gray" Margin="8,0,8,4"/>
                     </ribbon:RibbonApplicationMenu.FooterPaneContent>
                 </ribbon:RibbonApplicationMenu>
             </ribbon:Ribbon.ApplicationMenu>
@@ -744,8 +663,6 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="解析">
-
-
                     <ribbon:RibbonButton x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          Label="{Binding IsHorizontalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='水平解析(済),水平解析(未)'}"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
@@ -760,9 +677,7 @@
                          IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}"
                          LargeImageSource="pack://application:,,,/Icons/SettlementWindow.png"
                          SmallImageSource="pack://application:,,,/Icons/SettlementWindow.png"/>
-                <!--</ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="群杭">-->
                     <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
                      Label="{Binding IsGroupPileSettlementAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='群杭沈下解析(済),群杭沈下解析(未)'}"
                      Click="ButtonGroupPileSettlement_Click"
@@ -1487,7 +1402,7 @@
             </ribbon:RibbonTab>-->
 
             <ribbon:RibbonTab Header="ツール(T)" KeyTip="T">
-                <ribbon:RibbonGroup Header="ミニプログラム">
+                <ribbon:RibbonGroup Header="サブプログラム">
                     <ribbon:RibbonButton Label="Chang" ToolTip="Chang"
                         Command="{Binding OpenChangWindowCommand}"
                         LargeImageSource="pack://application:,,,/Icons/Help.png"
@@ -1884,7 +1799,9 @@
                                                         PlacementTarget="{Binding ElementName=ButtonAddPile}"
                                                         Placement="Bottom"
                                                         IsOpen="{Binding IsQuickHintVisible}"
-                                                        StaysOpen="False">
+                                                        StaysOpen="False"
+                                                       AllowsTransparency="True"
+                                                       PopupAnimation="Fade">
                                                     <views:QuickHintBubble HintText="①[杭配置追加」ボタンで杭を追加" />
                                                 </Popup>
                                                 
@@ -1892,24 +1809,31 @@
                                                         PlacementTarget="{Binding ElementName=Canvas3DLayout}"
                                                         Placement="Center"
                                                         IsOpen="{Binding IsQuickHintVisible}"
-                                                        StaysOpen="False">
-                                                    <views:QuickHintBubble HintText="②右クリックメニューから「コピー/移動」で杭位置を移動" />
+                                                        StaysOpen="False"
+                                                       AllowsTransparency="True"
+                                                       PopupAnimation="Fade">
+                                                    <views:QuickHintBubble HintText="②右クリックメニューから「コピー/移動」で杭位置を移動"/>
                                                 </Popup>
 
                                                 <Popup x:Name="QuickHintPopup0"
                                                         PlacementTarget="{Binding ElementName=Canvas3DLayout}"
                                                         Placement="Top"
                                                         IsOpen="{Binding IsQuickHintVisible}"
-                                                        StaysOpen="False">
-                                                    <views:QuickHintBubble HintText="最短の実行手順" FontSize="20"/>
+                                                        StaysOpen="False"
+                                                        AllowsTransparency="True"
+                                                       PopupAnimation="Fade"
+                                                       >
+                                                    <views:QuickHintBubble HintText="クイックヒント(Shift+F1)　最短の実行手順" FontSize="20"
+                                                    FontWeight="Bold"/>
                                                 </Popup>
-
 
                                                 <Popup x:Name="QuickHintPopup4"
                                                         PlacementTarget="{Binding ElementName=TabItemAxialForce}"
                                                         Placement="Right"
                                                         IsOpen="{Binding IsQuickHintVisible}"
-                                                        StaysOpen="False">
+                                                        StaysOpen="False"
+                                                        AllowsTransparency="True"
+                                                       PopupAnimation="Fade">
                                                     <views:QuickHintBubble HintText="③「軸力」タブのテーブルで各荷重時の杭軸力を入力" />
                                                 </Popup>
 
@@ -1917,7 +1841,9 @@
                                                         PlacementTarget="{Binding ElementName=ButtonFundamentalWindow0}"
                                                         Placement="Left"
                                                         IsOpen="{Binding IsQuickHintVisible}"
-                                                        StaysOpen="False">
+                                                        StaysOpen="False"
+                                                        AllowsTransparency="True"
+                                                       PopupAnimation="Fade">
                                                     <views:QuickHintBubble HintText="④基本情報；⑤慣性力設定；⑥地盤設定；⑦杭体設定；⑧軸力チェック；⑨杭要素分割&#x0A;⑩水平解析；⑪単杭沈下解析；⑫群杭沈下解析" />
                                                 </Popup>
 
@@ -1925,7 +1851,9 @@
                                                         PlacementTarget="{Binding ElementName=ButtonAnalysisResult}"
                                                         Placement="Bottom"
                                                         IsOpen="{Binding IsQuickHintVisible}"
-                                                        StaysOpen="False">
+                                                        StaysOpen="False"
+                                                       AllowsTransparency="True"
+                                                       PopupAnimation="Fade">
                                                     <views:QuickHintBubble HintText="⑩結果確認" />
                                                 </Popup>
 

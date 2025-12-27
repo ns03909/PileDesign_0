@@ -7,6 +7,7 @@ using PileDesign.Models.InputData;
 using PileDesign.Views;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -299,6 +300,45 @@ namespace PileDesign.ViewModels
             TextBoxSettleN = new();
 
             SetPileTopTypeAndConstruction();
+
+
+            // 例: PileBodyViewModel コンストラクタ末尾など
+            Debug.WriteLine($"PileBody.PileBodyType='{PileBody.PileBodyType}'");
+            Debug.WriteLine("PileBodyTypeOption:");
+            foreach (var s in PileBodyInput.PileBodyTypeOption) Debug.WriteLine("  >" + s);
+
+            // デバッグ：InputModel と ViewModel の PileBodyType を確認
+            Debug.WriteLine($"InputModel.PileBodies.Count={(InputModel?.PileBodies?.Count ?? -1)}");
+            if (InputModel?.PileBodies != null)
+            {
+                for (int i = 0; i < InputModel.PileBodies.Count; i++)
+                {
+                    Debug.WriteLine($"InputModel.PileBodies[{i}].PileBodyType='{InputModel.PileBodies[i].PileBodyType}'");
+                }
+            }
+
+            Debug.WriteLine($"PileBodies (VM) Count={(PileBodies?.Count ?? -1)}");
+            if (PileBodies != null)
+            {
+                for (int i = 0; i < PileBodies.Count; i++)
+                {
+                    Debug.WriteLine($"PileBodies[{i}].PileBodyType='{PileBodies[i].PileBodyType}'");
+                }
+
+                // 安全措置：もし null/空 の要素があれば既定値で埋める（UIが空になるのを防ぐ）
+                var defaultType = PileBodyInput.PileBodyTypeOption != null && PileBodyInput.PileBodyTypeOption.Count > 0
+                    ? PileBodyInput.PileBodyTypeOption[0]
+                    : "場所打ち鉄筋コンクリート杭";
+
+                foreach (var pb in PileBodies)
+                {
+                    if (string.IsNullOrWhiteSpace(pb.PileBodyType))
+                    {
+                        Debug.WriteLine("Warning: PileBodyType is empty — filling default.");
+                        pb.PileBodyType = defaultType;
+                    }
+                }
+            }
         }
 
         [RelayCommand]

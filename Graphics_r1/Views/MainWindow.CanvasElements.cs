@@ -147,7 +147,13 @@ namespace PileDesign.Views
 
             if (viewModel.CurrentInputModel.PileBodies.Count == 0) return;
 
-            ObservableCollection<PileBodySegment> pileBodySegments;
+            if (pilelocation.PileBodyNo <= 0 ||
+            pilelocation.PileBodyNo > viewModel.CurrentInputModel.PileBodies.Count)
+            {
+                return;
+            }
+            
+            ObservableCollection < PileBodySegment > pileBodySegments;
             PileBodyInput pileBody = viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1];
             var zs = new ObservableCollection<double>();
 
@@ -163,6 +169,11 @@ namespace PileDesign.Views
 
             else // 要素分割済の場合
             {
+                if (pilelocation.SoilPileAltNo <= 0 ||
+                pilelocation.SoilPileAltNo > viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
+                {
+                    return;
+                }
                 var soilPile = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pilelocation.SoilPileAltNo - 1];
                 pileBodySegments = soilPile.PileBodySegments;
                 zs = new ObservableCollection<double>(soilPile.ZDataItems.Select(zDataItem => zDataItem.Z));

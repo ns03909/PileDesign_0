@@ -74,6 +74,8 @@
     <None Remove="Help\images\解説図4.12.png" />
     <None Remove="Help\images\解説図4.2.png" />
     <None Remove="Help\images\解説図4.8.png" />
+    <None Remove="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg" />
+    <None Remove="Icons\332-8002.jpg" />
     <None Remove="Icons\ActiveAll.png" />
     <None Remove="Icons\ActiveAll.svg" />
     <None Remove="Icons\AddElementMode.png" />
@@ -115,6 +117,7 @@
     <None Remove="Icons\CollapseRibbon.svg" />
     <None Remove="Icons\CopySoilLayer.png" />
     <None Remove="Icons\CopySoilLayer.svg" />
+    <None Remove="Icons\cover.png" />
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.png" />
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.svg" />
     <None Remove="Icons\CrossFormPressure.png" />
@@ -513,6 +516,12 @@
     <Content Include="Help\images\解説図2.3b_original.jpeg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Resource Include="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\332-8002.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ActiveAll.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
@@ -635,6 +644,9 @@
     </Resource>
     <Resource Include="Icons\CopySoilLayer.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\cover.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CreateAutoUniformlyDistributedLoad.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

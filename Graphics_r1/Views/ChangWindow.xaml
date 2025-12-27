@@ -38,6 +38,7 @@
         </Style>
 
         <conv:MultiplyConverter x:Key="Multiply1000Converter" />
+        <conv:VisibilityConverter x:Key="VisibilityConverter" />
 
         <ContextMenu x:Key="CommonDataGridContextMenu">
             <MenuItem Header="CSVエクスポート" Click="ExportCsvFromContextMenu_Click"/>
@@ -53,7 +54,7 @@
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
         </Style>
-        
+
     </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
@@ -64,7 +65,7 @@
             <RowDefinition Height="auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        
+
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -78,7 +79,7 @@
                        VerticalAlignment="Center"
                        Margin="10"/>
             <Button x:Name="HelpButton"
-                ToolTip="このウィンドウでできることの説明を表示します"
+                ToolTip="ヘルプ"
                 Click="HelpButton_Click"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
@@ -89,71 +90,119 @@
 
 
         <StackPanel Grid.Row="1"  Orientation="Horizontal" HorizontalAlignment="Left">
-            <TextBlock Text="全体水平力(kN)"/>
-            <TextBox Width="45" HorizontalContentAlignment="Right"
-            Text="{Binding TotalHorizontalLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" />
+            <GroupBox Header="説明">
+                <StackPanel>
+                    <BulletDecorator Margin="0,0,0,6">
+                        <BulletDecorator.Bullet>
+                            <!-- 丸いバレット。色/サイズは好みで調整 -->
+                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
+                        </BulletDecorator.Bullet>
 
-            <Button Content="全体水平力による解析実行" Command="{Binding AnalysisCommand}"/>
+                        <TextBlock Text="Changの式による一様地盤中の長い杭の計算を行います。"
+                         FontWeight="Normal"
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap"
+                         Margin="8,0,0,0"/>
+                    </BulletDecorator>
+
+                    <BulletDecorator Margin="0,0,0,6">
+                        <BulletDecorator.Bullet>
+                            <!-- 丸いバレット。色/サイズは好みで調整 -->
+                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
+                        </BulletDecorator.Bullet>
+
+                        <TextBlock Text="杭の非線形性は考慮しません。"
+                         FontWeight="Normal"
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap"
+                         Margin="8,0,0,0"/>
+                    </BulletDecorator>
+
+                    <BulletDecorator Margin="0,0,0,6">
+                        <BulletDecorator.Bullet>
+                            <!-- 丸いバレット。色/サイズは好みで調整 -->
+                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
+                        </BulletDecorator.Bullet>
+
+                        <TextBlock Text="地盤は1mm以上の変形では非線形性Hを考慮します。ただし、塑性地盤反力pyは考慮しません。"
+                         FontWeight="Normal"
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap"
+                         Margin="8,0,0,0"/>
+                    </BulletDecorator>
+
+                    <BulletDecorator Margin="0,0,0,6">
+                        <BulletDecorator.Bullet>
+                            <!-- 丸いバレット。色/サイズは好みで調整 -->
+                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
+                        </BulletDecorator.Bullet>
+
+                        <TextBlock Text="「杭地盤セット定義」でkh0、EIを定義し、これを「区地盤セット配置」で配置します。"
+                         FontWeight="Normal"
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap"
+                         Margin="8,0,0,0"/>
+                    </BulletDecorator>
+
+                </StackPanel>
+            </GroupBox>
+            <GroupBox Header="全体水平力による解析" VerticalAlignment="Top">
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="全体水平力(kN)"/>
+                        <TextBox Width="45" HorizontalContentAlignment="Right"
+                        Text="{Binding TotalHorizontalLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <Button Content="解析実行" Command="{Binding AnalysisCommand}" HorizontalAlignment="Right"/>
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="全体モデルからの読み込み">
-                <Grid Margin="6">
+                <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <!-- 左カラム：ラベル -->
-                    <StackPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" VerticalAlignment="Center">
-                        <TextBlock Text="荷重条件" FontWeight="Bold" Margin="0,0,0,6"/>
-                        <TextBlock Text="地震荷重ケース" Margin="0,0,0,6"/>
-                        <TextBlock Text="荷重組合せ" Margin="0,4,0,6"/>
-                        <TextBlock Text="液状化" Margin="0,4,0,6"/>
-                    </StackPanel>
-
+                    
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="荷重条件" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="上部・基礎組合せ" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="液状化" />
+                    
                     <!-- 右カラム：コントロール群 -->
-                    <StackPanel Grid.Column="2" Grid.Row="0" Orientation="Vertical">
-                        <!-- LoadCase: ItemsSource は App.InputModel.LoadCasesInput.AllSeismicLoadCases を参照 -->
-                        <!--<ComboBox Margin="0,0,0,4" MinWidth="220"
-                      DisplayMemberPath="LoadName"
-                      SelectedItem="{Binding SelectedLoadCase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                      ItemsSource="{Binding Source={x:Static app:App.InputModel}, Path=LoadCasesInput.AllSeismicLoadCases}"
-                      ToolTip="地震荷重ケースを選択してください"/>
-                        --><!-- LoadCombination --><!--
-                        <ComboBox Margin="0,0,0,4" MinWidth="220"
-                      DisplayMemberPath="Name"
-                      SelectedItem="{Binding SelectedLoadCombination, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                      ItemsSource="{Binding Source={x:Static app:App.InputModel}, Path=LoadCasesInput.AllLoadCombinations}"
-                      ToolTip="荷重組合せを選択してください"/>-->
                         <!-- ComboBox の ItemsSource を ViewModel のプロパティに変更 -->
-                        <ComboBox Margin="0,0,0,4" MinWidth="220"
+                    <ComboBox Grid.Row="0" Grid.Column="1" MinWidth="220"
                               DisplayMemberPath="LoadName"
                               SelectedItem="{Binding SelectedLoadCase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                               ItemsSource="{Binding AllSeismicLoadCases}"
                               ToolTip="地震荷重ケースを選択してください"/>
                         <!-- LoadCombination -->
-                        <ComboBox Margin="0,0,0,4" MinWidth="220"
+                    <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="220"
                               DisplayMemberPath="Name"
                               SelectedItem="{Binding SelectedLoadCombination, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                               ItemsSource="{Binding AllLoadCombinations}"
                               ToolTip="荷重組合せを選択してください"/>
                         <!-- Liquefaction -->
-                        <CheckBox Content="液状化あり" IsChecked="{Binding IsLiquefaction, Mode=TwoWay}" />
-                    </StackPanel>
+                    <CheckBox Grid.Row="2" Grid.Column="1" Content="液状化あり" IsChecked="{Binding IsLiquefaction, Mode=TwoWay}" />
 
                     <!-- 右上：既存ボタンを残す -->
-                    <StackPanel Grid.Column="2" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,8,0,0">
-                        <Button Content="全読み込み" Command="{Binding ApplyInputModelCommand}" />
+                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="読み込み" Command="{Binding ApplyInputModelCommand}" />
                     </StackPanel>
                 </Grid>
             </GroupBox>
-            
+
         </StackPanel>
 
-        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
- 
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+
             <!-- 追加: 保存 / 読み込み -->
             <Button Click="SaveChangData_Click"
                     ToolTip="Chang 入力をファイルに保存します (JSON)" HorizontalAlignment="Right">
@@ -163,9 +212,8 @@
                     ToolTip="Chang 入力をファイルから読み込みます (JSON)" HorizontalAlignment="Right">
                 <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle16}"/>
             </Button>
-
         </StackPanel>
-        
+
         <!-- AvalonDock レイアウト（行 1） -->
         <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="2">
             <avalonDock:LayoutRoot>
@@ -225,7 +273,7 @@
                                                 <Style/>
                                             </DataGrid.Style>
 
-                                            
+
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -415,7 +463,7 @@
                                                                       ItemsSource="{Binding DataContext.PileTop.CaptainPile.PCRingOption, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                       SelectedItem="{Binding DataContext.PileTop.CaptainPile.SelectedPCRingName, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                       SelectionChanged="ComboBoxPCRingChanged"
-                                                                      DropDownOpened="ComboBox_DropDownOpened"/>                                        
+                                                                      DropDownOpened="ComboBox_DropDownOpened"/>
                                                             </ContentControl>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellEditingTemplate>
@@ -791,7 +839,7 @@
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="セット数" HorizontalAlignment="Center"/>
-                                                            <controls:FormulaControl Formula="\N" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
+                                                            <controls:FormulaControl Formula="N" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -806,7 +854,7 @@
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
-                                                
+
                                                 <DataGridTextColumn Binding="{Binding Ar, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
                                                     ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                     EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
@@ -1058,7 +1106,9 @@
                             </DataGrid.ColumnHeaderStyle>
 
                             <DataGrid.Columns>
-                                --><!-- 先頭: 行削除ボタン --><!--
+                                -->
+        <!-- 先頭: 行削除ボタン -->
+        <!--
                                 <DataGridTemplateColumn Width="30" Header="">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -1274,10 +1324,12 @@
                                 <Style/>
                             </DataGrid.Style>
 
-                            --><!--CSVファイル出力等-->
-                            <!--<DataGrid.ContextMenu>
+                            -->
+        <!--CSVファイル出力等-->
+        <!--<DataGrid.ContextMenu>
                 <StaticResource ResourceKey="CommonDataGridContextMenu"/>
-            </DataGrid.ContextMenu>--><!--
+            </DataGrid.ContextMenu>-->
+        <!--
 
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
@@ -1287,7 +1339,9 @@
                             </DataGrid.ColumnHeaderStyle>
 
                             <DataGrid.Columns>
-                                --><!-- 先頭: 行削除ボタン --><!--
+                                -->
+        <!-- 先頭: 行削除ボタン -->
+        <!--
                                 <DataGridTemplateColumn Width="30" Header="">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -1299,7 +1353,9 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                --><!-- DataGridChang: ChangSoilPile 選択列（1..N を表示） --><!--
+                                -->
+        <!-- DataGridChang: ChangSoilPile 選択列（1..N を表示） -->
+        <!--
                                 <DataGridTemplateColumn Width="60">
                                     <DataGridTemplateColumn.Header>
                                         <StackPanel>
@@ -1369,7 +1425,8 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                --><!--<DataGridTextColumn Binding="{Binding H, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
+                                -->
+        <!--<DataGridTextColumn Binding="{Binding H, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                 EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
                                 <DataGridTextColumn.Header>
@@ -1379,7 +1436,8 @@
                                         <TextBlock Text="(m)" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </DataGridTextColumn.Header>
-                            </DataGridTextColumn>--><!--
+                            </DataGridTextColumn>-->
+        <!--
 
                                 <DataGridTextColumn Binding="{Binding Number, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" Width="60"
                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -1430,7 +1488,9 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                --><!-- 読み取り専用の計算結果 --><!--
+                                -->
+        <!-- 読み取り専用の計算結果 -->
+        <!--
                                 <DataGridTextColumn
                                 Binding="{Binding PileHeadDisplacement, Converter={StaticResource Multiply1000Converter}, ConverterParameter=1000, 
                                 Mode=OneWay, StringFormat=N3}"
@@ -1448,8 +1508,9 @@
                                 </DataGridTextColumn>
 
 
-                                --><!-- 読み取り専用の計算結果 -->
-                                <!--<DataGridTextColumn
+                                -->
+        <!-- 読み取り専用の計算結果 -->
+        <!--<DataGridTextColumn
                                 Binding="{Binding GroundSurfaceDisplacement, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N6}"
                                 IsReadOnly="True" Width="60"
                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -1462,7 +1523,8 @@
                                         <TextBlock Text="(m)" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </DataGridTextColumn.Header>
-                            </DataGridTextColumn>--><!--
+                            </DataGridTextColumn>-->
+        <!--
 
                                 <DataGridTextColumn Binding="{Binding Kh, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -1478,7 +1540,9 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                --><!-- 読み取り専用の計算結果 --><!--
+                                -->
+        <!-- 読み取り専用の計算結果 -->
+        <!--
                                 <DataGridTextColumn
                                 Binding="{Binding Beta, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -1539,8 +1603,10 @@
                         <Button Content="全体水平力による解析実行" Command="{Binding AnalysisCommand}"/>
                     </StackPanel>
 
-                    --><!--<ScottPlot:WpfPlot x:Name="wpfPlotM" Grid.Row="6" Grid.Column="0"/>
-                <TextBlock Text="{Binding CrosshairPositionText_M}" Margin="10" FontSize="14" Grid.Row="7" Grid.Column="0"/>--><!--
+                    -->
+        <!--<ScottPlot:WpfPlot x:Name="wpfPlotM" Grid.Row="6" Grid.Column="0"/>
+                <TextBlock Text="{Binding CrosshairPositionText_M}" Margin="10" FontSize="14" Grid.Row="7" Grid.Column="0"/>-->
+        <!--
                 </Grid>
             </TabItem>
 

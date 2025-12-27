@@ -6,6 +6,7 @@ using ScottPlot.Colormaps;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -35,23 +36,58 @@ namespace PileDesign.Views
         private bool _mouseMoveDRegistered = false;
 
         // コンストラクタ
+        //public ChangWindow()
+        //{
+        //    InitializeComponent();
+
+        //    Loaded += ChangWindow_Loaded;
+        //    DataContextChanged += ChangWindow_DataContextChanged;
+        //    //MainTab.SelectionChanged += MainTab_SelectionChanged;
+
+        //}
         public ChangWindow()
         {
             InitializeComponent();
-
             Loaded += ChangWindow_Loaded;
             DataContextChanged += ChangWindow_DataContextChanged;
-            //MainTab.SelectionChanged += MainTab_SelectionChanged;
         }
 
 
+        //private void ChangWindow_Loaded(object? sender, RoutedEventArgs e)
+        //{
+        //    // Loaded 時にも DataContext が既にあるなら登録を行う
+        //    if (DataContext is ChangViewModel vm)
+        //        InitializePlotsForViewModel(vm);
 
-        private void ChangWindow_Loaded(object? sender, RoutedEventArgs e)
+        //}
+
+
+        private async void ChangWindow_Loaded(object? sender, RoutedEventArgs e)
         {
-            // Loaded 時にも DataContext が既にあるなら登録を行う
-            if (DataContext is ChangViewModel vm)
-                InitializePlotsForViewModel(vm);
+            this.Loaded -= ChangWindow_Loaded;
+
+            // UI メッセージ処理を一回はさむ（重い初期化のブロックを避ける）
+            await System.Threading.Tasks.Task.Yield();
+
+            try
+            {
+                InitChartsSafe(); // 既存の初期化処理をここへ移してください（最初は空にして確認）
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Chang 初期化中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine(ex);
+            }
         }
+
+        // ここに既存の ScottPlot/Skia 初期化を移動
+        private void InitChartsSafe()
+        {
+            // 例: コメントアウトしてから段階的に戻してください
+            //InitializeScottPlot();
+            // InitializeOtherControls();
+        }
+
 
         private void ChangWindow_DataContextChanged(object? sender, DependencyPropertyChangedEventArgs e)
         {

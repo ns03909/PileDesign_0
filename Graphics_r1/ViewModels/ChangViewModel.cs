@@ -15,6 +15,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace PileDesign.ViewModels
 {
@@ -871,22 +873,38 @@ namespace PileDesign.ViewModels
         {
             try
             {
-                // UI スレッドに描画処理を委譲（AvalonDock 下でも安全）
-                var disp = System.Windows.Application.Current?.Dispatcher;
-                if (disp != null && !disp.CheckAccess())
+                var dispatcher = Application.Current?.Dispatcher;
+                if (dispatcher != null && !dispatcher.CheckAccess())
                 {
-                    disp.BeginInvoke(new Action(() => DrawGraph()), System.Windows.Threading.DispatcherPriority.Background);
+                    dispatcher.BeginInvoke(new Action(DrawGraph), DispatcherPriority.Background);
                 }
                 else
                 {
                     DrawGraph();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // 何らかの理由で Dispatcher が使えない場合は直接呼ぶ（保険）
-                DrawGraph();
+                Debug.WriteLine($"RefreshPlots failed: {ex}");
             }
+            //try
+            //{
+            //    // UI スレッドに描画処理を委譲（AvalonDock 下でも安全）
+            //    var disp = System.Windows.Application.Current?.Dispatcher;
+            //    if (disp != null && !disp.CheckAccess())
+            //    {
+            //        disp.BeginInvoke(new Action(() => DrawGraph()), System.Windows.Threading.DispatcherPriority.Background);
+            //    }
+            //    else
+            //    {
+            //        DrawGraph();
+            //    }
+            //}
+            //catch
+            //{
+            //    // 何らかの理由で Dispatcher が使えない場合は直接呼ぶ（保険）
+            //    DrawGraph();
+            //}
         }
 
         // 既存 DrawGraph を統一版に差し替え
