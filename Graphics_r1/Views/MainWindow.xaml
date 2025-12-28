@@ -542,10 +542,17 @@
                         <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
                     <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
                     </ribbon:RibbonApplicationMenuItem>
-                
-                
-                
 
+                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
+                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
+                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
+                    </ribbon:RibbonApplicationMenuItem>
+
+                    <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
+                        <!-- 中身は透明なボーダー。Height を変更して高さを調整 -->
+                        <Border Height="120" Background="Transparent" IsHitTestVisible="False"/>
+                    </ribbon:RibbonApplicationMenuItem>
+                    
                     <!-- 計算例: 右側補助ペイン -->
                     <ribbon:RibbonApplicationMenu.AuxiliaryPaneContent >
                         <Border BorderBrush="Gray" BorderThickness="0" Background="White" MinWidth="320" MaxHeight="900" Padding="6" ClipToBounds="True">
@@ -594,6 +601,13 @@
                                               Command="{Binding Example3_3Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.4　SC杭"
+                                              KeyTip="7"
+                                              Command="{Binding Example3_4Command}"
+                                              ToolTip="日本建築学会　建築基礎構造設計例集3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎"
+                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
+                                    
+                                    
                                     <!-- 追加計算例が増える場合はここに同様に列挙 -->
                                 </StackPanel>
                             </ScrollViewer>
@@ -1405,10 +1419,20 @@
                 <ribbon:RibbonGroup Header="サブプログラム">
                     <ribbon:RibbonButton Label="Chang" ToolTip="Chang"
                         Command="{Binding OpenChangWindowCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/Help.png"
-                        SmallImageSource="pack://application:,,,/Icons/Help.png"/>
+                        LargeImageSource="pack://application:,,,/Icons/ChangPile.png"
+                        SmallImageSource="pack://application:,,,/Icons/ChangPile.png"/>
                 </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="ライブラリ">
+                    <ribbon:RibbonButton Label="杭断面ライブラリ" ToolTip="杭ライブラリを確認"
+                        Command="{Binding OpenPileSectionLibraryWindowCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"
+                        SmallImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"/>
+                </ribbon:RibbonGroup>
+
             </ribbon:RibbonTab>
+
+
 
 
             <ribbon:RibbonTab Header="ヘルプ(H)" KeyTip="H">

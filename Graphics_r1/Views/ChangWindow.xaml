@@ -31,10 +31,22 @@
             <Setter Property="TextAlignment" Value="Right"/>
         </Style>
 
+
         <!-- 編集用: TextBox を右寄せ -->
         <Style x:Key="RightAlignedEditingTextBoxStyle" TargetType="TextBox">
             <Setter Property="HorizontalContentAlignment" Value="Right"/>
             <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+
+        <!-- 編集用: TextBox を右寄せ + Bold (RightAlignedEditingTextBoxStyle に基づく) -->
+        <Style x:Key="BoldRightAlignedEditingTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource RightAlignedEditingTextBoxStyle}">
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- 表示用: TextBlock を右寄せ + Bold -->
+        <Style x:Key="BoldRightAlignedTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource RightAlignedTextBlockStyle}">
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
 
         <conv:MultiplyConverter x:Key="Multiply1000Converter" />
@@ -53,6 +65,28 @@
             <Setter Property="StretchDirection" Value="DownOnly"/>
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <!-- 特定の列ヘッダーの色を変更するスタイル -->
+        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#238966"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#F7B515"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#3271AD"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#E95541"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#D82531"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
     </Window.Resources>
@@ -407,8 +441,8 @@
 
                                                 <!-- DataGridSoilPile 内の EI 列を編集可能に変更 -->
                                                 <DataGridTextColumn Binding="{Binding EI, UpdateSourceTrigger=LostFocus, StringFormat=N0, Mode=TwoWay}" Width="60"
-                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                    EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
+                                                        ElementStyle="{StaticResource BoldRightAlignedTextBlockStyle}"
+                                                        EditingElementStyle="{StaticResource BoldRightAlignedEditingTextBoxStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
@@ -500,7 +534,7 @@
                                                 </DataGridTemplateColumn>
 
                                                 <!-- 引張定着筋 有無 -->
-                                                <DataGridTemplateColumn Header="引張定着筋" Width="120">
+                                                <!--<DataGridTemplateColumn Header="引張定着筋" Width="120">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
@@ -521,10 +555,10 @@
                                                             </ContentControl>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellEditingTemplate>
-                                                </DataGridTemplateColumn>
+                                                </DataGridTemplateColumn>-->
 
                                                 <!-- 引張定着筋 詳細 -->
-                                                <DataGridTemplateColumn Header="引張定着筋 詳細" Width="180">
+                                                <!--<DataGridTemplateColumn Header="引張定着筋 詳細" Width="180">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
@@ -541,7 +575,7 @@
                                                             </ContentControl>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellEditingTemplate>
-                                                </DataGridTemplateColumn>
+                                                </DataGridTemplateColumn>-->
                                                 <!-- FTキャップ -->
                                                 <DataGridTemplateColumn Header="FTキャップ" Width="100">
                                                     <DataGridTemplateColumn.CellTemplate>
@@ -564,7 +598,7 @@
                                                     </DataGridTemplateColumn.CellEditingTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <!-- FT: 引張定着筋 有無 -->
+                                                <!-- FT: 引張定着筋 有無 --><!--
                                                 <DataGridTemplateColumn Header="FT:引張定着筋" Width="120">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
@@ -585,7 +619,7 @@
                                                     </DataGridTemplateColumn.CellEditingTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <!-- FT: 引張定着筋 本数-等 -->
+                                                --><!-- FT: 引張定着筋 本数-等 --><!--
                                                 <DataGridTemplateColumn Header="FT:本数-等" Width="160">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
@@ -610,7 +644,7 @@
                                                             </ContentControl>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellEditingTemplate>
-                                                </DataGridTemplateColumn>
+                                                </DataGridTemplateColumn>-->
 
                                                 <DataGridTextColumn Binding="{Binding Alpha, StringFormat=N0, Mode=TwoWay}" Foreground="Gray" Width="60"
                                                       ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -650,7 +684,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
-                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                    ElementStyle="{StaticResource BoldRightAlignedTextBlockStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="基準水平" HorizontalAlignment="Center"/>
@@ -895,6 +929,7 @@
 
                                                 <!-- 読み取り専用の計算結果 -->
                                                 <DataGridTextColumn
+                                                    HeaderStyle="{StaticResource DeepBlueHeaderStyle}"
                                                     Binding="{Binding PileHeadDisplacement, Converter={StaticResource Multiply1000Converter}, ConverterParameter=1000, 
                                                     Mode=OneWay, StringFormat=N3}"
                                                     IsReadOnly="True" Width="60"
@@ -914,7 +949,8 @@
                                                 <!-- 読み取り専用の計算結果 -->
 
                                                 <DataGridTextColumn Binding="{Binding Kh, UpdateSourceTrigger=PropertyChanged, StringFormat=N0, Mode=OneWay}" Foreground="Gray" Width="60"
-                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                    HeaderStyle="{StaticResource DeepBlueHeaderStyle}"
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                     EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
@@ -929,6 +965,7 @@
 
                                                 <!-- 読み取り専用の計算結果 -->
                                                 <DataGridTextColumn
+                                                    HeaderStyle="{StaticResource DeepBlueHeaderStyle}"
                                                     Binding="{Binding Beta, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}" Foreground="Gray" Width="60"
                                                     ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                     EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
@@ -943,6 +980,7 @@
 
 
                                                 <DataGridTextColumn
+                                                    HeaderStyle="{StaticResource DeepBlueHeaderStyle}"
                                                     Binding="{Binding MaxBendingMoment, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
                                                     IsReadOnly="True" Width="60"
                                                     ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
@@ -959,6 +997,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn
+                                                    HeaderStyle="{StaticResource DeepBlueHeaderStyle}"
                                                     Binding="{Binding DepthOfMaxBendingMoment, UpdateSourceTrigger=PropertyChanged, Mode=OneWay, StringFormat=N3}"
                                                     IsReadOnly="True" Width="60"
                                                     ElementStyle="{StaticResource RightAlignedTextBlockStyle}"

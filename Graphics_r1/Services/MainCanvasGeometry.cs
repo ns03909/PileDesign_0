@@ -193,6 +193,10 @@ namespace PileDesign.Services
         {
             if (canvas == null)
             { return; }
+
+            // 重要: 描画前に Canvas.Children をクリアして重複追加を防ぐ
+            canvas.Children.Clear();
+
             // 代表節点
             canvas.Children.Add(new Path()
             {

@@ -41,6 +41,10 @@ namespace PileDesign.ViewModels
             InitializeCommon();
         }
 
+        // 追加: View から参照される PileTop プロパティ（XAML が DataContext.PileTop を参照しているため提供）
+        public PileTop PileTop => _inputModel?.PileBodies?.FirstOrDefault()?.PileTop ?? new PileTop();
+
+
         // 互換用：既存コードが無引数で作っている場合のフォールバック（可能なら呼び出し元を修正してください）
         public ChangViewModel() : this(App.InputModel) { }
 
@@ -691,7 +695,12 @@ namespace PileDesign.ViewModels
                 cs.ApplyPileTop(pileTop);
 
                 ChangSoilPiles.Add(cs);
+
+                
             }
+
+            // ApplyInputModel の末尾付近（最後に状態通知）に以下を追加して、PileTop バインディングを更新させる
+            OnPropertyChanged(nameof(PileTop));
 
             // インデックスを更新して、既存の Chang があれば割当処理を実行
             UpdateChangSoilPileIndices();

@@ -5,6 +5,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media.Media3D;
+using System.Windows.Input;
+using System.Threading.Tasks; // 先頭の using に追加すること
 
 namespace PileDesign.ViewModels
 {
@@ -38,11 +40,16 @@ namespace PileDesign.ViewModels
 
         // 設計例集3.1
         [RelayCommand]
-        private void Example3_1()
+        private async Task Example3_1()
         {
             if (!TryStartExample(nameof(Example3_1))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
                 // Undoポイントを追加
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
@@ -105,20 +112,6 @@ namespace PileDesign.ViewModels
                 var section00 = CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection;
                 section00.PileSectionType = "SC杭";
                 section00.SetSelectedPrecastPileByName("SC-700-標準-105-12");
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PileSectionType = "SC杭";
-
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.SelectedPrecastPile.Name = "SC-700-標準-105-12";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteOutDia = 700.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteThickness = 100;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.MainBarDr = 600;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PipeTs = 12.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PipeDia = 700.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.MainBarNum = 0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.MainBarSize = "D29";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteFc = 105.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteGsi = 1.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteGamma = 23.0;
-                
 
                 CurrentInputModel.PileBodies[0].PileBodySegments.Add(new PileBodySegment());
 
@@ -128,22 +121,6 @@ namespace PileDesign.ViewModels
                 var section01 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
                 section01.PileSectionType = "PRC杭";
                 section01.SetSelectedPrecastPileByName("SCPRC-700-105-Ⅲ");
-
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.PileDiameter = 700.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.PileSectionType = "PRC杭";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.SelectedPrecastPile.Name = "CPRC-700-105-Ⅲ";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteOutDia = 700.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteThickness = 100;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.MainBarDr = 600;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.PipeTs = 0.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.PipeDia = 700.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.MainBarNum = 16;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.MainBarSize = "D19";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteFc = 85.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteGsi = 1.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteGamma = 23.0;
-                
-
 
                 CurrentInputModel.PileBodies.Add(new());
 
@@ -167,21 +144,6 @@ namespace PileDesign.ViewModels
                 section10.PileSectionType = "SC杭";
                 section10.SetSelectedPrecastPileByName("SC-800-標準-105-12");
 
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.PileDiameter = 800.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.PileSectionType = "SC杭";
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.SelectedPrecastPile.Name = "SC-800-標準-105-12";
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteOutDia = 800.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteThickness = 110;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.MainBarDr = 700;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.PipeTs = 12.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.PipeDia = 800.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.MainBarNum = 0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.MainBarSize = "D29";
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteFc = 85.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteGsi = 1.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteGamma = 23.0;
-
-
                 CurrentInputModel.PileBodies[1].PileBodySegments.Add(new PileBodySegment());
 
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].No = 1;
@@ -190,20 +152,6 @@ namespace PileDesign.ViewModels
                 var section11 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
                 section11.PileSectionType = "PRC杭";
                 section11.SetSelectedPrecastPileByName("CPRC-800-105-Ⅲ");
-
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.PileDiameter = 800.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.PileSectionType = "PRC杭";
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.SelectedPrecastPile.Name = "CPRC-800-105-Ⅲ";
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteOutDia = 800.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteThickness = 110;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.MainBarDr = 700;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.PipeTs = 0.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.PipeDia = 800.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.MainBarNum = 20;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.MainBarSize = "D19";
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteFc = 85.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteGsi = 1.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteGamma = 23.0;
 
                 CurrentInputModel.PileLayoutItems =
                 [
@@ -410,6 +358,26 @@ namespace PileDesign.ViewModels
                     pileLayoutItem.SetMainWindowViewModel(this);
                 }
 
+
+                // Elements を「なし」に、PileGroupSettlement を「なし」にする処理
+                // Elements を安全に空にする
+                if (CurrentInputModel.Elements != null)
+                {
+                    CurrentInputModel.Elements.Clear();
+                }
+                else
+                {
+                    CurrentInputModel.Elements = new System.Collections.ObjectModel.ObservableCollection<Element>();
+                }
+
+                // PileGroupSettlement の中身を安全にクリア（null にすると他コードで NRE になる恐れがあるため中身を削る）
+                if (CurrentInputModel.PileGroupSettlement != null)
+                {
+                    CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
+                    CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                }
+
                 // 根入れ
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
 
@@ -420,18 +388,25 @@ namespace PileDesign.ViewModels
                 MessageBox.Show("設計例3.1を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             finally
-            {
+            {   
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(Example3_1));
             }
         }
 
         // 設計例集3.2
         [RelayCommand]
-        private void Example3_2()
+        private async Task Example3_2()
         {
             if (!TryStartExample(nameof(Example3_2))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
                 // Undoポイントを追加
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
@@ -960,6 +935,26 @@ namespace PileDesign.ViewModels
                     pileLayoutItem.SetMainWindowViewModel(this);
                 }
 
+
+                // Elements を「なし」に、PileGroupSettlement を「なし」にする処理
+                // Elements を安全に空にする
+                if (CurrentInputModel.Elements != null)
+                {
+                    CurrentInputModel.Elements.Clear();
+                }
+                else
+                {
+                    CurrentInputModel.Elements = new System.Collections.ObjectModel.ObservableCollection<Element>();
+                }
+
+                // PileGroupSettlement の中身を安全にクリア（null にすると他コードで NRE になる恐れがあるため中身を削る）
+                if (CurrentInputModel.PileGroupSettlement != null)
+                {
+                    CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
+                    CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                }
+
                 // 根入れ
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
 
@@ -971,6 +966,8 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(Example3_2));
             }
         }
@@ -978,11 +975,16 @@ namespace PileDesign.ViewModels
 
         // 設計例集3.3
         [RelayCommand]
-        private void Example3_3()
+        private async Task Example3_3()
         {
             if (!TryStartExample(nameof(Example3_3))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
                 // Undoポイントを追加
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
@@ -1906,6 +1908,26 @@ namespace PileDesign.ViewModels
                     pileLayoutItem.SetMainWindowViewModel(this);
                 }
 
+
+                // Elements を「なし」に、PileGroupSettlement を「なし」にする処理
+                // Elements を安全に空にする
+                if (CurrentInputModel.Elements != null)
+                {
+                    CurrentInputModel.Elements.Clear();
+                }
+                else
+                {
+                    CurrentInputModel.Elements = new System.Collections.ObjectModel.ObservableCollection<Element>();
+                }
+
+                // PileGroupSettlement の中身を安全にクリア（null にすると他コードで NRE になる恐れがあるため中身を削る）
+                if (CurrentInputModel.PileGroupSettlement != null)
+                {
+                    CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
+                    CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                }
+
                 // 根入れ
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
 
@@ -1938,19 +1960,530 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(Example3_3));
             }
         }
 
 
+        // 設計例集3.4
+        [RelayCommand]
+        private async Task Example3_4()
+        {
+            if (!TryStartExample(nameof(Example3_4))) return;
+            try
+            {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
+                // Undoポイントを追加
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+                // 新規作成
+                CurrentFilePath = null;
+                UpdateWindowAction?.Invoke();
+                UpdateTreeView();
+
+                var groundLayerViewModel = new GroundLayerViewModel(this);
+                groundLayerViewModel.Example3_4Command.Execute(null);
+
+                // ここでCurrentInputModelに反映
+                CurrentInputModel.GroundsInput[0] = groundLayerViewModel.GroundInput.DeepCopy();
+
+                for (int i = 0; i < CurrentInputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
+                {
+                    CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].ForceActionPoint = new Point3D(8, 12.8, -2.0);
+                    CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].IsApplicable = true;
+                    CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].UpperMassForce = 7559;
+                    CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].FoundationMassForce = 1005;
+                }
+                for (int i = 0; i < CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
+                {
+                    CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i].ForceActionPoint = new Point3D(8, 12.8, -2.0);
+                    CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i].IsApplicable = true;
+                    if(i==0 || i == 2)
+                    {
+                        CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i].UpperMassForce = 13706;
+                        CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i].FoundationMassForce = 4018;
+                    }
+                    else
+                    {
+                        CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i].UpperMassForce = 17322;
+                        CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i].FoundationMassForce = 4018;
+                    }
+
+                }
+
+
+                CurrentInputModel.PileBodies.Clear();
+
+                CurrentInputModel.PileBodies.Add(new());
+
+                CurrentInputModel.PileBodies[0].PileBodyRef = "(P1)";
+                CurrentInputModel.PileBodies[0].PileBodyType = "既製コンクリート杭";
+                CurrentInputModel.PileBodies[0].PileTopType = "鉄筋定着工法";
+                CurrentInputModel.PileBodies[0].PileConstructionType = "埋込み杭（プレボーリング杭）";
+                CurrentInputModel.PileBodies[0].PileToeDia = 900;
+                CurrentInputModel.PileBodies[0].TipNonPermability = 0.0;
+                CurrentInputModel.PileBodies[0].EmbedmentIntoBearingSoil = 1.0;
+                CurrentInputModel.PileBodies[0].PileInnerDia = 0.0;
+                CurrentInputModel.PileBodies[0].PileTipStyle = "閉端杭";
+                CurrentInputModel.PileBodies[0].SettlePileToeDia = 900;
+                CurrentInputModel.PileBodies[0].SettleAlpha = 0.3;
+                CurrentInputModel.PileBodies[0].SettleN = 2;
+
+
+                CurrentInputModel.PileBodies[0].PileBodySegments[0].No = 1;
+                CurrentInputModel.PileBodies[0].PileBodySegments[0].SegmentLength = 7;
+                CurrentInputModel.PileBodies[0].PileBodySegments[0].SegmentDepth = 7;
+                var section00 = CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection;
+                section00.PileSectionType = "SC杭";
+                section00.SetSelectedPrecastPileByName("SC-900-標準-105-19");
+
+                CurrentInputModel.PileBodies[0].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[0].PileBodySegments[1].No = 1;
+                CurrentInputModel.PileBodies[0].PileBodySegments[1].SegmentLength = 13;
+                CurrentInputModel.PileBodies[0].PileBodySegments[1].SegmentDepth = 20;
+                var section01 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
+                section01.PileSectionType = "SC杭";
+                section01.SetSelectedPrecastPileByName("標準,,SC-900-標準-105-9");
+
+                CurrentInputModel.PileBodies[0].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[0].PileBodySegments[2].No = 1;
+                CurrentInputModel.PileBodies[0].PileBodySegments[2].SegmentLength = 12;
+                CurrentInputModel.PileBodies[0].PileBodySegments[2].SegmentDepth = 32;
+                var section02 = CurrentInputModel.PileBodies[0].PileBodySegments[2].PileSection;
+                section02.PileSectionType = "SC杭";
+                section02.SetSelectedPrecastPileByName("標準,,SC-900-標準-105-9");
+
+                CurrentInputModel.PileBodies[0].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[0].PileBodySegments[3].No = 1;
+                CurrentInputModel.PileBodies[0].PileBodySegments[3].SegmentLength = 12;
+                CurrentInputModel.PileBodies[0].PileBodySegments[3].SegmentDepth = 44;
+                var section03 = CurrentInputModel.PileBodies[0].PileBodySegments[3].PileSection;
+                section03.PileSectionType = "SC杭";
+                section03.SetSelectedPrecastPileByName("標準,,SC-900-標準-105-9");
+
+
+                CurrentInputModel.PileBodies.Add(new());
+
+                CurrentInputModel.PileBodies[1].PileBodyRef = "(P2)";
+                CurrentInputModel.PileBodies[1].PileBodyType = "既製コンクリート杭";
+                CurrentInputModel.PileBodies[1].PileTopType = "鉄筋定着工法";
+                CurrentInputModel.PileBodies[1].PileConstructionType = "埋込み杭（プレボーリング杭）";
+                CurrentInputModel.PileBodies[1].PileToeDia = 1000;
+                CurrentInputModel.PileBodies[1].TipNonPermability = 0.0;
+                CurrentInputModel.PileBodies[1].EmbedmentIntoBearingSoil = 1.0;
+                CurrentInputModel.PileBodies[1].PileInnerDia = 0.0;
+                CurrentInputModel.PileBodies[1].PileTipStyle = "閉端杭";
+                CurrentInputModel.PileBodies[1].SettlePileToeDia = 1000;
+                CurrentInputModel.PileBodies[1].SettleAlpha = 0.3;
+                CurrentInputModel.PileBodies[1].SettleN = 2;
+
+                CurrentInputModel.PileBodies[1].PileBodySegments[0].No = 1;
+                CurrentInputModel.PileBodies[1].PileBodySegments[0].SegmentLength = 7;
+                CurrentInputModel.PileBodies[1].PileBodySegments[0].SegmentDepth = 7;
+                var section10 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
+                section10.PileSectionType = "SC杭";
+                section10.SetSelectedPrecastPileByName("SC-1000-標準-105-19");
+
+                CurrentInputModel.PileBodies[1].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[1].PileBodySegments[1].No = 1;
+                CurrentInputModel.PileBodies[1].PileBodySegments[1].SegmentLength = 13;
+                CurrentInputModel.PileBodies[1].PileBodySegments[1].SegmentDepth = 20;
+                var section11 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
+                section11.PileSectionType = "PHC杭";
+                section11.SetSelectedPrecastPileByName("標準,B,PHC-1000-標準-105-B");
+
+                CurrentInputModel.PileBodies[1].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[1].PileBodySegments[2].No = 1;
+                CurrentInputModel.PileBodies[1].PileBodySegments[2].SegmentLength = 12;
+                CurrentInputModel.PileBodies[1].PileBodySegments[2].SegmentDepth = 32;
+                var section12 = CurrentInputModel.PileBodies[0].PileBodySegments[2].PileSection;
+                section12.PileSectionType = "PHC杭";
+                section12.SetSelectedPrecastPileByName("標準,B,PHC-1000-標準-105-B");
+
+                CurrentInputModel.PileBodies[1].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[1].PileBodySegments[3].No = 1;
+                CurrentInputModel.PileBodies[1].PileBodySegments[3].SegmentLength = 12;
+                CurrentInputModel.PileBodies[1].PileBodySegments[3].SegmentDepth = 44;
+                var section13 = CurrentInputModel.PileBodies[0].PileBodySegments[3].PileSection;
+                section13.PileSectionType = "SC杭";
+                section13.SetSelectedPrecastPileByName("SC-1000-標準-105-9");
+
+                CurrentInputModel.PileBodies.Add(new());
+
+                CurrentInputModel.PileBodies[2].PileBodyRef = "(P2A)";
+                CurrentInputModel.PileBodies[2].PileBodyType = "既製コンクリート杭";
+                CurrentInputModel.PileBodies[2].PileTopType = "鉄筋定着工法";
+                CurrentInputModel.PileBodies[2].PileConstructionType = "埋込み杭（プレボーリング杭）";
+                CurrentInputModel.PileBodies[2].PileToeDia = 700;
+                CurrentInputModel.PileBodies[2].TipNonPermability = 0.0;
+                CurrentInputModel.PileBodies[2].EmbedmentIntoBearingSoil = 1.0;
+                CurrentInputModel.PileBodies[2].PileInnerDia = 0.0;
+                CurrentInputModel.PileBodies[2].PileTipStyle = "閉端杭";
+                CurrentInputModel.PileBodies[2].SettlePileToeDia = 700;
+                CurrentInputModel.PileBodies[2].SettleAlpha = 0.3;
+                CurrentInputModel.PileBodies[2].SettleN = 2;
+
+                CurrentInputModel.PileBodies[2].PileBodySegments[0].No = 1;
+                CurrentInputModel.PileBodies[2].PileBodySegments[0].SegmentLength = 7;
+                CurrentInputModel.PileBodies[2].PileBodySegments[0].SegmentDepth = 7;
+                var section20 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
+                section20.PileSectionType = "SC杭";
+                section20.SetSelectedPrecastPileByName("SC-1000-標準-105-19");
+
+                CurrentInputModel.PileBodies[2].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[2].PileBodySegments[1].No = 1;
+                CurrentInputModel.PileBodies[2].PileBodySegments[1].SegmentLength = 13;
+                CurrentInputModel.PileBodies[2].PileBodySegments[1].SegmentDepth = 20;
+                var section21 = CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection;
+                section21.PileSectionType = "SC杭";
+                section21.SetSelectedPrecastPileByName("SC-1000-標準-105-9");
+
+                CurrentInputModel.PileBodies[2].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[2].PileBodySegments[2].No = 1;
+                CurrentInputModel.PileBodies[2].PileBodySegments[2].SegmentLength = 12;
+                CurrentInputModel.PileBodies[2].PileBodySegments[2].SegmentDepth = 32;
+                var section22 = CurrentInputModel.PileBodies[0].PileBodySegments[2].PileSection;
+                section22.PileSectionType = "SC杭";
+                section22.SetSelectedPrecastPileByName("SC-1000-標準-105-9");
+
+                CurrentInputModel.PileBodies[2].PileBodySegments.Add(new PileBodySegment());
+
+                CurrentInputModel.PileBodies[2].PileBodySegments[3].No = 1;
+                CurrentInputModel.PileBodies[2].PileBodySegments[3].SegmentLength = 12;
+                CurrentInputModel.PileBodies[2].PileBodySegments[3].SegmentDepth = 44;
+                var section23 = CurrentInputModel.PileBodies[0].PileBodySegments[3].PileSection;
+                section23.PileSectionType = "SC杭";
+                section23.SetSelectedPrecastPileByName("SC-1000-標準-105-9");
+
+                CurrentInputModel.PileLayoutItems =
+                [
+                    new()
+                {
+                    PileNo = 1,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 1,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 0.0,
+                    Y = 0.0,
+                    Z = -1.4,
+                    AxialForceVL0 = 2794,
+                    AxialForceLevel1s = [1604, 1103, 3924, 4485],
+                    AxialForceLevel2s = [-722, -722, 4922, 6410],
+
+
+                },
+                new()
+                {
+                    PileNo = 2,
+                    PileBodyNo = 3,
+                    GroundNo = 1,
+                    SoilPileAltNo = 1,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 9.6,
+                    Y = 0.0,
+                    Z = -1.4,
+                    AxialForceVL0 = 3555,
+                    AxialForceLevel1s = [2425, 2064, 4685, 5047],
+                    AxialForceLevel2s = [1908, 100, 5018, 6998],
+
+                },
+                new()
+                {
+                    PileNo = 3,
+                    PileBodyNo = 3,
+                    GroundNo = 1,
+                    SoilPileAltNo = 1,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 16.0,
+                    Y = 0.0,
+                    Z = -1.4,
+                    AxialForceVL0 = 2269,
+                    AxialForceLevel1s = [4627, 633, 1, 3905],
+                    AxialForceLevel2s = [5980, -1704, -1339, 6245],
+
+                },
+                new()
+                {
+                    PileNo = 4,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 1,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 0.0,
+                    Y = 6.4,
+                    Z = -1.4,
+                    AxialForceVL0 = 3767,
+                    AxialForceLevel1s = [2576, 3996, 4959, 3539],
+                    AxialForceLevel2s = [1567, 5959, 4156, 3274],
+
+                },
+                new()
+                {
+                    PileNo = 5,
+                    PileBodyNo = 2,
+                    GroundNo = 1,
+                    SoilPileAltNo = 21,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 9.6,
+                    Y = 6.4,
+                    Z = -1.4,
+                    AxialForceVL0 = 4399,
+                    AxialForceLevel1s = [3718, 4605, 5081, 4194],
+                    AxialForceLevel2s = [3073, 4906, 5693, 3887],
+
+                },
+                new()
+                {
+                    PileNo = 6,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 1,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 16.0,
+                    Y = 6.4,
+                    Z = -1.4,
+                    AxialForceVL0 = 3009,
+                    AxialForceLevel1s = [4884, 3162, 1134, 2856],
+                    AxialForceLevel2s = [6543, 3239, -478, 2666],
+
+                },
+                new()
+                {
+                    PileNo = 7,
+                    PileBodyNo = 2,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 0.0,
+                    Y = 12.8,
+                    Z = -1.4,
+                    AxialForceVL0 = 3680,
+                    AxialForceLevel1s = [2487, 3630, 4873, 3730],
+                    AxialForceLevel2s = [1473, 3700, 5869, 3843],
+
+                },
+
+                new()
+                {
+                    PileNo = 8,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 9.6,
+                    Y = 12.80,
+                    Z = -1.4,
+                    AxialForceVL0 = 4258,
+                    AxialForceLevel1s = [3612, 4212, 4905, 4304],
+                    AxialForceLevel2s = [2966, 4275, 5526, 4443],
+
+                },
+                new()
+                {
+                    PileNo = 9,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 16.0,
+                    Y = 12.8,
+                    Z = -1.4,
+                    AxialForceVL0 = 2756,
+                    AxialForceLevel1s = [4595, 2722, 916, 2789],
+                    AxialForceLevel2s = [6263, 2773, -704, 2900],
+
+                },
+                new()
+                {
+                    PileNo = 10,
+                    PileBodyNo = 2,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 0.0,
+                    Y = 19.2,
+                    Z = -1.4,
+                    AxialForceVL0 = 4074,
+                    AxialForceLevel1s = [2887, 3928, 5260, 4219],
+                    AxialForceLevel2s = [1876, 3644, 6254, 4327],
+
+                },
+                new()
+                {
+                    PileNo = 11,
+                    PileBodyNo = 2,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 9.6,
+                    Y = 19.2,
+                    Z = -1.4,
+                    AxialForceVL0 = 4431,
+                    AxialForceLevel1s = [3752, 4280, 5110, 4582],
+                    AxialForceLevel2s = [3108, 3977, 5727, 4759],
+
+                },
+                new()
+                {
+                    PileNo = 12,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 16.0,
+                    Y = 19.2,
+                    Z = -1.4,
+                    AxialForceVL0 = 2976,
+                    AxialForceLevel1s = [4842, 2867, 1109, 3085],
+                    AxialForceLevel2s = [6502, 2680, -498, 3066],
+
+                },
+                new()
+                {
+                    PileNo = 13,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 0,
+                    Y = 25.6,
+                    Z = -1.4,
+                    AxialForceVL0 = 2931,
+                    AxialForceLevel1s = [1800, 4590, 4062, 1272],
+                    AxialForceLevel2s = [844, 6502, 5074, -618],
+
+                },
+                new()
+                {
+                    PileNo = 14,
+                    PileBodyNo = 3,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 9.60,
+                    Y = 25.6,
+                    Z = -1.4,
+                    AxialForceVL0 = 3318,
+                    AxialForceLevel1s = [2198, 4801, 4438, 1835],
+                    AxialForceLevel2s = [1605, 6751, 4806, -95],
+
+                },
+                new()
+                {
+                    PileNo = 15,
+                    PileBodyNo = 3,
+                    GroundNo = 1,
+                    SoilPileAltNo = 2,
+                    GroupPileFactor = 1.0,
+                    PileSpacingFactor = 10,
+                    X = 16.0,
+                    Y = 25.6,
+                    Z = -1.4,
+                    AxialForceVL0 = 2039,
+                    AxialForceLevel1s = [4290, 3665, -212, 414],
+                    AxialForceLevel2s = [5742, 6034, -1592, -1844],
+
+                },
+            ];
+
+                // グリッド
+                CurrentInputModel.GridYItems.Clear();
+                CurrentInputModel.GridYItems.Add(new() { Coord = 0, Spacing = 0, Name = "Y1" });
+                CurrentInputModel.GridYItems.Add(new() { Coord = 6.4, Spacing = 6.4, Name = "Y2" });
+                CurrentInputModel.GridYItems.Add(new() { Coord = 12.8, Spacing = 6.4, Name = "Y3" });
+                CurrentInputModel.GridYItems.Add(new() { Coord = 19.2, Spacing = 6.4, Name = "Y4" });
+                CurrentInputModel.GridYItems.Add(new() { Coord = 25.6, Spacing = 6.4, Name = "Y5" });
+
+                CurrentInputModel.GridXItems.Clear();
+                CurrentInputModel.GridXItems.Add(new() { Coord = 0.0, Spacing = 0.0, Name = "X1" });
+                CurrentInputModel.GridXItems.Add(new() { Coord = 9.6, Spacing = 9.6, Name = "X2" });
+                CurrentInputModel.GridXItems.Add(new() { Coord = 16.0, Spacing = 6.4, Name = "X3" });
+
+
+                foreach (var pileLayoutItem in CurrentInputModel.PileLayoutItems)
+                {
+                    pileLayoutItem.SetMainWindowViewModel(this);
+                }
+
+                // 根入れ
+                CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
+
+                // 各 PileSection を再計算してプロパティ反映（Example3_3 の該当位置に挿入）
+                foreach (var pb in CurrentInputModel.PileBodies)
+                {
+                    foreach (var seg in pb.PileBodySegments)
+                    {
+                        var sec = seg.PileSection;
+                        // 既製杭を名前で指定しているケースがあれば確実に反映させる
+                        if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
+                        {
+                            sec.RecalculateSelectedPrecastPile();
+                        }
+
+                        // 断面直設定の場合は直後に再計算して直す
+                        sec.RecalculatePileDia();
+                        sec.RecalculateConcreteE();
+                        sec.SetSpecs();
+
+                        Debug.WriteLine($"Example3_4: PileBodyRef={pb.PileBodyRef}, PileSectionType={sec.PileSectionType}, PileDiameter={sec.PileDiameter}, ConcreteOutDia={sec.ConcreteOutDia}");
+                    }
+                }
+
+                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateTreeView();
+
+                // 読み込み完了メッセージ
+                MessageBox.Show("設計例3.4を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            finally
+            {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null; 
+                EndExample(nameof(Example3_4));
+            }
+        }
 
         // 関東支部 計算例8
         [RelayCommand]
-        private void ExampleK8()
+        private async Task ExampleK8()
         {
             if (!TryStartExample(nameof(ExampleK8))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
                 // Undoポイントを追加
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
@@ -2440,21 +2973,33 @@ namespace PileDesign.ViewModels
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
-                MessageBox.Show("設計例3.2を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("設計例8を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             finally
             {
-                EndExample(nameof(Example3_1));
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(ExampleK8));
             }
         }
 
+
+
+
         // 基礎指針'19 計算例9
         [RelayCommand]
-        private void Example9()
+        private async Task Example9()
         {
             if (!TryStartExample(nameof(Example9))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
+                // Undoポイントを追加
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
                 // 新規作成
                 CurrentFilePath = null;
@@ -2842,6 +3387,8 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(Example9));
             }
         }
@@ -2849,11 +3396,16 @@ namespace PileDesign.ViewModels
 
         // 関東支部　設計例7
         [RelayCommand]
-        private void ExampleK7()
+        private async Task ExampleK7()
         {
             if (!TryStartExample(nameof(ExampleK7))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
                 // Undoポイントを追加
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
@@ -3076,20 +3628,26 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(ExampleK7));
             }
         }
 
         // 設計例5
         [RelayCommand]
-        private void OnExample5()
+        private async Task OnExample5()
         {
             if (!TryStartExample(nameof(OnExample5))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
                 // Undoポイントを追加
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
 
                 // 慣性力中心点
                 Point3D inertiaPoint = new(10.5, 9.0, -1.00);
@@ -3286,17 +3844,28 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(OnExample5));
             }
         }
 
         // 設計例集2.1
         [RelayCommand]
-        private void OnExample2_1()
+        private async Task OnExample2_1()
         {
             if (!TryStartExample(nameof(OnExample2_1))) return;
             try
             {
+                // 砂時計にする（UI スレッドで設定）
+                Mouse.OverrideCursor = Cursors.Wait;
+                // UI を一度描画させる（カーソル表示のために短時間yield）
+                await Task.Delay(50);
+
+                // Undoポイントを追加
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+
                 CurrentInputModel.PileGroupSettlement.RectLoads = [
                     new RectLoad(){
                     X1 = -1.1,
@@ -3342,6 +3911,8 @@ namespace PileDesign.ViewModels
             }
             finally
             {
+                // 砂時計を戻す
+                Mouse.OverrideCursor = null;
                 EndExample(nameof(OnExample2_1));
             }
         }

@@ -1805,6 +1805,24 @@ namespace PileDesign.ViewModels
             var win = new ChangWindow { DataContext = vm };
             win.ShowDialog();
         }
+
+        [RelayCommand]
+        public void OpenPileSectionLibraryWindow()
+        {
+            try
+            {
+                var win = new PileDesign.Views.PileLibraryWindow
+                {
+                    Owner = System.Windows.Application.Current?.MainWindow
+                };
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"杭ライブラリ表示に失敗しました: {ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
         //{
         //    // 0 -> 1 にできなければ既に実行中とみなす
         //    if (System.Threading.Interlocked.CompareExchange(ref _isChangWindowOpeningFlag, 1, 0) != 0)
