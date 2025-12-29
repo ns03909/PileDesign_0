@@ -20,12 +20,46 @@ namespace PileDesign.ViewModels
     public partial class HorizontalCalculationViewModel : ObservableObject
     {
         static HorizontalCalculationViewModel()
+        //{
+        //    try { Control.UseNativeMKL(); }          // MathNet.Numerics.MKL パッケージ導入時に有効
+        //    catch { Control.UseBestProviders(); }    // 利用可能な最適プロバイダを選択
+        //    Control.MaxDegreeOfParallelism = Environment.ProcessorCount;
+        //}
         {
-            try { Control.UseNativeMKL(); }          // MathNet.Numerics.MKL パッケージ導入時に有効
-            catch { Control.UseBestProviders(); }    // 利用可能な最適プロバイダを選択
+            try
+            {
+                // 利用可能なら最適プロバイダを自動選択（安全な通常ルート）
+                Control.UseBestProviders();
+            }
+            catch (NotSupportedException nse)
+            {
+                System.Diagnostics.Debug.WriteLine($"MathNet provider selection failed (NotSupported): {nse}");
+                try
+                {
+                    Control.UseManaged();
+                }
+                catch (Exception inner)
+                {
+                    System.Diagnostics.Debug.WriteLine($"MathNet fallback to managed failed: {inner}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // 想定外の例外も捕捉して管理実装にフォールバック
+                System.Diagnostics.Debug.WriteLine($"MathNet provider selection unexpected error: {ex}");
+                try
+                {
+                    Control.UseManaged();
+                }
+                catch (Exception inner)
+                {
+                    System.Diagnostics.Debug.WriteLine($"MathNet fallback to managed failed: {inner}");
+                }
+            }
+
+            // スレッドプール並列度はプロセッサ数に合わせる
             Control.MaxDegreeOfParallelism = Environment.ProcessorCount;
         }
-
         // ログのバッファリング用（UIポストを間引く）
         private readonly ConcurrentQueue<string> _logQueue = new();
         private readonly System.Timers.Timer _logFlushTimer = new(200) { AutoReset = true };

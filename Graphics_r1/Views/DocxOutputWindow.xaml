@@ -117,48 +117,48 @@ Title="DocxOutputWindow" Height="600" Width="400">
             <StackPanel Grid.Row="1">
                 <CheckBox Grid.Row="2" Grid.Column="0" 
                   Content="地盤情報" 
-                  IsChecked="{Binding IncludeHeader, Mode=TwoWay}" 
+                  IsChecked="{Binding IncludeGroundInformation, Mode=TwoWay}" 
                   />
                 <CheckBox Grid.Row="3" Grid.Column="0" 
                   Content="液状化検討" 
-                  IsChecked="{Binding IncludeHeader, Mode=TwoWay}" 
+                  IsChecked="{Binding IncludeLiquefaction, Mode=TwoWay}" 
                   />
 
                 <CheckBox Grid.Row="5" Grid.Column="0" 
                       Content="支持力検討" 
-                      IsChecked="{Binding IncludeHeader, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeVertical, Mode=TwoWay}" 
                       />
                 <CheckBox Grid.Row="6" Grid.Column="0" 
                       Content="水平検討" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeHorizontal, Mode=TwoWay}" 
                       />
                 <CheckBox Grid.Row="6" Grid.Column="0" 
                       Content="曲げモーメント検討" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeHorizontal_Bending, Mode=TwoWay}" 
                       Margin="15,0,0,0"/>
                 <CheckBox Grid.Row="6" Grid.Column="0" 
                       Content="せん断力検討" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeHorizontal_Shear, Mode=TwoWay}" 
                       Margin="15,0,0,0"/>
                 <CheckBox Grid.Row="6" Grid.Column="0" 
                       Content="NMINT" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeHorizontal_NMINT, Mode=TwoWay}" 
                       Margin="15,0,0,0"/>
                 <CheckBox Grid.Row="6" Grid.Column="0" 
                       Content="杭頭曲げモーメントマップ" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" 
                       Margin="15,0,0,0"/>
                 <CheckBox Grid.Row="6" Grid.Column="0" 
                       Content="杭頭せん断力マップ" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludePileHeadShearMap, Mode=TwoWay}" 
                       Margin="15,0,0,0"/>
                 <CheckBox Grid.Row="7" Grid.Column="0" 
                       Content="沈下検討" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" 
                       />
                 <CheckBox Grid.Row="7" Grid.Column="0" 
                       Content="荷重沈下曲線" 
-                      IsChecked="{Binding IncludeFooter, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludeLoadSettlementCurve, Mode=TwoWay}" 
                       />
 
             </StackPanel>

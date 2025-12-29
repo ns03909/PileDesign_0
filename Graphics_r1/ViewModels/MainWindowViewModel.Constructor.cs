@@ -2092,6 +2092,19 @@ namespace PileDesign.ViewModels
 
         public MainCanvasGeometry CanvasGeometry { get; }
 
+        // MainWindowViewModel の partial 部分に追加
+        [ObservableProperty] private bool includeGroundInformation = true;
+        [ObservableProperty] private bool includeLiquefaction = false;
+        [ObservableProperty] private bool includeHorizontal = true;
+        [ObservableProperty] private bool includeVertical = true;
+        [ObservableProperty] private bool includeHorizontal_Bending = true;
+        [ObservableProperty] private bool includeHorizontal_Shear = true;
+        [ObservableProperty] private bool includeHorizontal_NMINT = true;
+        [ObservableProperty] private bool includePileHeadMomentMap = false;
+        [ObservableProperty] private bool includePileHeadShearMap = false;
+        [ObservableProperty] private bool includeSettlement = true;
+        [ObservableProperty] private bool includeLoadSettlementCurve = false;
+
         // コンストラクタ //
         public MainWindowViewModel()
         {

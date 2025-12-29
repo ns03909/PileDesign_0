@@ -1570,25 +1570,66 @@ namespace PileDesign.ViewModels
 
         public void DrawSoilEmbedment()
         {
-            GroundInput groundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1];
+            //GroundInput groundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1];
 
+            //if (DoatsuGoryokuBane == null) return;
+
+            //List<double> zs = [];
+            //foreach (var embedmentZsCollection in EmbedmentZsCollection)
+            //{
+            //    zs.Add(embedmentZsCollection.Z);
+            //}
+
+            //double? selectedZ = SelectedEmbedmentZ?.Z; // 選択節点
+
+            //ShapeDrawer.DrawEmbedmentElevation(
+            //CanvasEmbedment,
+            //DoatsuGoryokuBane,
+            //groundInput,
+            //SelectedDirection,
+            //zs,
+            //selectedZ);
+
+            // 前提チェック（ヌル安全）
+            if (SoilEmbedment == null) return;
+            if (InputModel?.GroundsInput == null) return;
+            if (SoilEmbedment.GroundNo <= 0 || SoilEmbedment.GroundNo > InputModel.GroundsInput.Count) return;
             if (DoatsuGoryokuBane == null) return;
+            if (EmbedmentZsCollection == null || EmbedmentZsCollection.Count == 0) return;
+            if (CanvasEmbedment == null) return;
 
-            List<double> zs = [];
-            foreach (var embedmentZsCollection in EmbedmentZsCollection)
+            // 安全に GroundInput を取得
+            GroundInput groundInput;
+            try
             {
-                zs.Add(embedmentZsCollection.Z);
+                groundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1];
             }
+            catch
+            {
+                // 範囲外や別の問題があれば描画中止
+                return;
+            }
+
+            // Z 座標列を安全に作成
+            var zs = EmbedmentZsCollection
+                .Where(e => e != null)
+                .Select(e => e.Z)
+                .ToList();
+
+            if (zs.Count == 0) return;
 
             double? selectedZ = SelectedEmbedmentZ?.Z; // 選択節点
 
+            // SelectedDirection のフォールバック
+            var direction = string.IsNullOrEmpty(SelectedDirection) ? "X" : SelectedDirection;
+
             ShapeDrawer.DrawEmbedmentElevation(
-            CanvasEmbedment,
-            DoatsuGoryokuBane,
-            groundInput,
-            SelectedDirection,
-            zs,
-            selectedZ);
+                CanvasEmbedment,
+                DoatsuGoryokuBane,
+                groundInput,
+                direction,
+                zs,
+                selectedZ);
         }
     }
 }

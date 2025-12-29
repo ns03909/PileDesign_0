@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using LiveChartsCore.Measure;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
@@ -65,7 +66,7 @@ namespace PileDesign.Output
             public const double DefaultFontSizePt = 10.5;
         }
 
-        private readonly MainWindowViewModel _mainWindowViewModel; // 追加
+        private readonly MainWindowViewModel mainWindowViewModel; // 追加
 
         private readonly InputModel inputModel;
         private readonly AnaModel anaModel;
@@ -128,11 +129,11 @@ namespace PileDesign.Output
         private const bool RunTexParserSelfTest = false;
 
         // コンストラクタ
-        public WordDocument(InputModel inputModel, AnaModel anaModel, MainWindowViewModel mainWindowViewModel)
+        public WordDocument(InputModel _inputModel, AnaModel _anaModel, MainWindowViewModel _mainWindowViewModel)
         {
-            this.inputModel = inputModel;
-            this.anaModel = anaModel;
-            _mainWindowViewModel = mainWindowViewModel;
+            this.inputModel = _inputModel;
+            this.anaModel = _anaModel;
+            mainWindowViewModel = _mainWindowViewModel;
         }
 
         // Word文書作成メソッド
@@ -154,6 +155,34 @@ namespace PileDesign.Output
 
                 AddFrontMatter(mainPart, body, inputModel);
                 AddInputDataSection(body, inputModel);
+
+                if (mainWindowViewModel.IncludeGroundInformation)
+                { }
+                if (mainWindowViewModel.IncludeLiquefaction)
+                { }
+                if (mainWindowViewModel.IncludeVertical)
+                { }
+                if (mainWindowViewModel.IncludeHorizontal)
+                { }
+                if (mainWindowViewModel.IncludeHorizontal_Bending)
+                { }
+                if (mainWindowViewModel.IncludeHorizontal_Shear)
+                { }
+                if (mainWindowViewModel.IncludeHorizontal_NMINT)
+                { }
+                if(mainWindowViewModel.IncludePileHeadMomentMap)
+                { }
+                if (mainWindowViewModel.IncludePileHeadMomentMap)
+                { }
+                if (mainWindowViewModel.IncludePileHeadShearMap)
+                { }
+                if (mainWindowViewModel.IncludeSettlement)
+                { }
+                if (mainWindowViewModel.IncludeLoadSettlementCurve)
+                { }
+
+
+
                 AddLoadCombinationAndFigureSection(mainPart, body, inputModel);
 
                 // まとめて追加
@@ -1154,7 +1183,7 @@ namespace PileDesign.Output
                     List<double> momentResultsLevel2 = [];
 
                     // 解析済みの場合のみ散布点を作成
-                    if (_mainWindowViewModel?.IsHorizontalAnalysisDone == true &&
+                    if (mainWindowViewModel?.IsHorizontalAnalysisDone == true &&
                         inputModel.PileLayoutItems != null &&
                         inputModel.LoadCasesInput != null)
                     {
@@ -1266,7 +1295,7 @@ namespace PileDesign.Output
                 }
 
                 // 縦断図（各レベルで最大曲げモーメントのケースを可視化）
-                if (_mainWindowViewModel?.IsHorizontalAnalysisDone == true)
+                if (mainWindowViewModel?.IsHorizontalAnalysisDone == true)
                 {
                     for (int k = 0; k < 2; k++)
                     {

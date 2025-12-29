@@ -2437,7 +2437,7 @@ namespace PileDesign.ViewModels
                 // 根入れ
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
 
-                // 各 PileSection を再計算してプロパティ反映（Example3_3 の該当位置に挿入）
+                // 各 PileSection を再計算してプロパティ反映
                 foreach (var pb in CurrentInputModel.PileBodies)
                 {
                     foreach (var seg in pb.PileBodySegments)
@@ -3322,6 +3322,7 @@ namespace PileDesign.ViewModels
                     pileLayoutItem.SetMainWindowViewModel(this);
                 }
 
+                // 根入れ部
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Add(new EmbedmentDataItem
                 {
@@ -3335,6 +3336,9 @@ namespace PileDesign.ViewModels
                     BottomAltitude = -6.5
                 });
                 CurrentInputModel.EmbedmentInput.BottomAltitude = -6.5;
+
+                CurrentInputModel.EmbedmentInput.GroundNo = 1;
+
 
                 // グリッド
                 CurrentInputModel.GridYItems.Clear();
