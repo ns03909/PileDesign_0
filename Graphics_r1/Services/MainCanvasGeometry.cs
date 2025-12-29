@@ -194,8 +194,16 @@ namespace PileDesign.Services
             if (canvas == null)
             { return; }
 
-            // 重要: 描画前に Canvas.Children をクリアして重複追加を防ぐ
-            canvas.Children.Clear();
+            //// 重要: 描画前に Canvas.Children をクリアして重複追加を防ぐ
+            //canvas.Children.Clear();
+            // ★ Path だけを削除し、Rectangle などオーバーレイは残す
+            for (int i = canvas.Children.Count - 1; i >= 0; i--)
+            {
+                if (canvas.Children[i] is Path)
+                {
+                    canvas.Children.RemoveAt(i);
+                }
+            }
 
             // 代表節点
             canvas.Children.Add(new Path()

@@ -330,45 +330,6 @@ namespace PileDesign.Models.InputData
 
         const double epsilon = 1e-5; // 許容誤差（必要に応じて調整）
 
-
-        // コンストラクタ
-        //public SoilPile(
-        //    int groundNo,
-        //    GroundInput groundInput,
-        //    int pileBodyNo,
-        //    PileBodyInput pileBodyInput,
-        //    double z,
-        //    ObservableCollection<PileZDataItem> zDataItems)
-        //{
-        //    GroundNo = groundNo;
-        //    PileBodyNo = pileBodyNo;
-        //    GroundInput = groundInput;
-        //    PileBodyInput = pileBodyInput;
-        //    Z = z;
-        //    ZDataItems = zDataItems;
-
-        //    // SoilPileのZDataItems生成時
-        //    foreach (var zDataItem in zDataItems)
-        //    {
-        //        zDataItem.GroundInput = groundInput; // 必ずセット
-        //    }
-
-        //    foreach (var zDataItem in ZDataItems)
-        //    {
-        //        zDataItem.SetSoilDisplacement();
-        //    }
-
-        //    GroundLayers = [];
-        //    PileBodySegments = [];
-        //    PileBodySegments.CollectionChanged += (s, e) => UpdatePileBottomAltitude(); // PileBottomAltitude更新メソッド
-        //    PileCircumVerticals = [];
-        //    UpdateProperties();
-
-        //    InputModel inputModel = InputModel.Instance;
-        //    Dp = inputModel.PileBodies[PileBodyNo - 1].SettlePileToeDia;
-        //    Dp = PileBodyInput.SettlePileToeDia;
-        //}
-
         // コンストラクタ
         public SoilPile()
         {
@@ -745,12 +706,7 @@ namespace PileDesign.Models.InputData
                 double e0 = 0;
                 string name = string.Empty;
                 double xi = 1;
-                double rOnB = 10000;
-
-                //if (i == ZDataItems.Count - 2)
-                //{
-                //    int a = 0;
-                //}
+                double rOnB = 10_000;
 
                 foreach (PileBodySegment pileBodySegment in PileBodyInput.PileBodySegments)
                 {
@@ -841,15 +797,6 @@ namespace PileDesign.Models.InputData
         // DeepCopy メソッド
         public SoilPile DeepCopy()
         {
-            // 新しい SoilPile オブジェクトを作成し、プロパティをコピー
-            //var copy = new SoilPile(
-            //    this.GroundNo,
-            //    this.GroundInput,
-            //    this.PileBodyNo,
-            //    this.PileBodyInput,
-            //    this.Z,
-            //    new ObservableCollection<PileZDataItem>(this.ZDataItems.Select(item => item.DeepCopy()))
-            //)
             var copy = new SoilPile();
             copy.Initialize(
                 this.No,
@@ -891,8 +838,7 @@ namespace PileDesign.Models.InputData
                     (this.PileCircumVerticals.Select(pileCircumVertical => pileCircumVertical.DeepCopy()));
                 copy.HorizontalSoilReactions = new ObservableCollection<HorizontalSoilReactionItem>
                     (this.HorizontalSoilReactions.Select(horizontalSoilReaction => horizontalSoilReaction.DeepCopy()));
-            }
-            ;
+            };
             return copy;
         }
     }

@@ -1032,12 +1032,33 @@ namespace PileDesign.Views
             // Canvas にキーボードフォーカスを設定
             Canvas3DLayout.Focus();
 
+            //// Shiftキーが押されている場合の処理
+            //if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            //{
+            //    // クリック位置の周辺に節点があるかチェック
+            //    if (SelectNode3DIfNearby(startPoint, true))
+            //    { return; }
+            //}
+            //// Shiftキーが押されていない場合の処理
+            //else
+            //{
+            //    ClearCanvasSelection();
+
+            //    // クリック位置の周辺に節点があるかチェック
+            //    if (SelectNode3DIfNearby(startPoint, false))
+            //    { return; }
+
+            //    var elementToRemove = Canvas3DLayout.Children.OfType<Path>().FirstOrDefault(p => p.Name == "Selection");
+            //    if (elementToRemove != null)
+            //    {
+            //        Canvas3DLayout.Children.Remove(elementToRemove);
+            //    }
+            //}
             // Shiftキーが押されている場合の処理
             if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
                 // クリック位置の周辺に節点があるかチェック
-                if (SelectNode3DIfNearby(startPoint, true))
-                { return; }
+                SelectNode3DIfNearby(startPoint, true);
             }
             // Shiftキーが押されていない場合の処理
             else
@@ -1045,8 +1066,7 @@ namespace PileDesign.Views
                 ClearCanvasSelection();
 
                 // クリック位置の周辺に節点があるかチェック
-                if (SelectNode3DIfNearby(startPoint, false))
-                { return; }
+                SelectNode3DIfNearby(startPoint, false);
 
                 var elementToRemove = Canvas3DLayout.Children.OfType<Path>().FirstOrDefault(p => p.Name == "Selection");
                 if (elementToRemove != null)
@@ -1072,6 +1092,10 @@ namespace PileDesign.Views
 
                 Canvas.SetLeft(selectionRectangle, startPoint.X);
                 Canvas.SetTop(selectionRectangle, startPoint.Y);
+
+                // ★常に最前面にする
+                Panel.SetZIndex(selectionRectangle, 10000);
+
                 Canvas3DLayout.Children.Add(selectionRectangle);
             }
         }
