@@ -54,6 +54,7 @@ namespace PileDesign.Views
 
         private int _renderBatchDepth = 0;
         private bool _renderPending = false;
+        private bool _isRendering = false;
         private System.Windows.Threading.DispatcherTimer? _renderTimer;
 
         private bool isLightweightDrawing = false;
@@ -160,149 +161,166 @@ namespace PileDesign.Views
 
         public void UpdateCanvas3D()
         {
-            // バッチ中は保留…
-            if (_renderBatchDepth > 0) { _renderPending = true; return; }
-
-            ClearCanvasDrawingLayerPathsOnly();
-
-            // 操作中/軽量描画中はテキストを消しておく（前フレームの残骸防止）
-            if (_isViewInteracting || isLightweightDrawing)
+            // すでに描画中なら、終了後に1回だけ描画するようフラグを立てて戻る
+            if (_isRendering)
             {
-                if (_textLayerImage != null) _textLayerImage.Source = null;
-                TextBlockInfos.Clear();
-            }
-
-            if (DataContext is not MainWindowViewModel viewModel) return;
-
-            viewModel.CanvasGeometry.Clear();
-            TextBlockInfos.Clear();
-
-            if (isLightweightDrawing)
-            {
-                // 軽量描画（ラベルなし）
-                UpdateNodes3D();
-                if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
-                UpdateCanvasCube();
-                viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
+                _renderPending = true;
                 return;
             }
-
-            ColorBarCanvas?.Children.Clear();
-
-            UpdateNodes3D(); // 節点描画の更新
-
-            UpdateCanvasCube(); // XYZキューブの更新
-
-            UpdateSelectedNodesAndElements3D(); // 選択節点描画の更新
-
-            if (viewModel.IsEmbedmentBoxVisible) UpdateEmbedment3D(); // 根入部描画の更新
-
-            if (viewModel.IsXYZAxesVisible) UpdateAxes3D(); // XYZ軸の更新
-
-            if (viewModel.IsGroundVisible) UpdateGround3D(); // 杭周地盤描画の更新
-
-            if (viewModel.IsNValueVisible) UpdateGroundMassValue3D("NValue", 10, 60); // N値描画の更新
-
-            if (viewModel.IsVS0Visible) UpdateGroundMassValue3D("VS0", 100, 400); // VS0描画の更新
-
-            if (viewModel.IsFcVisible) UpdateGroundMassValue3D("Fc", 20, 100); // Fc描画の更新
-
-            if (viewModel.IsDensityVisible) UpdateGroundLayerValue3D("density", 5, 25); // 密度描画の更新
-
-            if (viewModel.IsCohesiveVisible) UpdateGroundLayerValue3D("cohesive", 50, 200); // 粘着力描画の更新
-
-            if (viewModel.IsVsVisible) UpdateGroundLayerValue3D("Vs", 100, 500); // Vs描画の更新
-
-            if (viewModel.IsEsVisible) UpdateGroundLayerValue3D("Es", 10000, 50000); // Es描画の更新
-
-            if (viewModel.IsSettlementLoadVisible) UpdateSettlementLoad3D(); // 荷重面描画の更新
-
-            if (viewModel.IsElementVisible) UpdateGeneralElement3D(); // 要素描画の更新
-
-            if ((MainWindowViewModel)DataContext == null) return;
-
-            // 平面図の場合
-            if (Math.Abs(viewModel.CanvasThreeDView.Phi - 90.0) < 0.5 && !viewModel.CanvasThreeDView.IsPerspective)
+            _isRendering = true;
+            try
             {
-                if (viewModel.IsTickMarkVisible) UpdateTickMarks3DPlan();  // 目盛りの更新
-                if (viewModel.IsGridLineVisible) UpdateGridLines3DPlan(); // 通り心の更新
+                // バッチ中は保留…
+                if (_renderBatchDepth > 0) { _renderPending = true; return; }
 
-                if (Math.Abs(viewModel.CanvasThreeDView.Tht + 90) < 0.5) // XY（平面）の場合
+                ClearCanvasDrawingLayerPathsOnly();
+
+                // 操作中/軽量描画中はテキストを消しておく（前フレームの残骸防止）
+                if (_isViewInteracting || isLightweightDrawing)
                 {
-                    if (viewModel.IsGridLineVisible) UpdateDimensionLines3DPlan();
-                }
-            }
-
-            // 側面図の場合
-            else if (Math.Abs(viewModel.CanvasThreeDView.Phi) < 0.5 && viewModel.CanvasThreeDView.IsPerspective == false)
-            {
-
-                if (viewModel.IsSettlementGroundVisible) UpdateSettlementGround3D(); // 側面図用沈下描画の更新
-                UpdateTickMarks3DElevation(); // 目盛りの更新
-
-                if (Math.Abs(viewModel.CanvasThreeDView.Tht) < 0.5) // YZ（右側面）の場合
-                {
-                    if (viewModel.IsTickMarkVisible) UpdateTickMarks3DYofYZ();
-                    if (viewModel.IsGridLineVisible) UpdateGridLinesAndDimensionsYforYZ(); // 通り心の更新
+                    if (_textLayerImage != null) _textLayerImage.Source = null;
+                    TextBlockInfos.Clear();
                 }
 
-                if (Math.Abs(viewModel.CanvasThreeDView.Tht + 90) < 0.5) // XZ（正面）の場合
+                if (DataContext is not MainWindowViewModel viewModel) return;
+
+                viewModel.CanvasGeometry.Clear();
+                TextBlockInfos.Clear();
+
+                if (isLightweightDrawing)
                 {
-                    if (viewModel.IsTickMarkVisible) UpdateTickMarks3DXofXZ();
-                    if (viewModel.IsGridLineVisible) UpdateGridLinesAndDimensionsXforXZ(); // 通り心の更新
+                    // 軽量描画（ラベルなし）
+                    UpdateNodes3D();
+                    if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
+                    UpdateCanvasCube();
+                    viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
+                    return;
+                }
+
+                ColorBarCanvas?.Children.Clear();
+
+                UpdateNodes3D(); // 節点描画の更新
+
+                UpdateCanvasCube(); // XYZキューブの更新
+
+                UpdateSelectedNodesAndElements3D(); // 選択節点描画の更新
+
+                if (viewModel.IsEmbedmentBoxVisible) UpdateEmbedment3D(); // 根入部描画の更新
+
+                if (viewModel.IsXYZAxesVisible) UpdateAxes3D(); // XYZ軸の更新
+
+                if (viewModel.IsGroundVisible) UpdateGround3D(); // 杭周地盤描画の更新
+
+                if (viewModel.IsNValueVisible) UpdateGroundMassValue3D("NValue", 10, 60); // N値描画の更新
+
+                if (viewModel.IsVS0Visible) UpdateGroundMassValue3D("VS0", 100, 400); // VS0描画の更新
+
+                if (viewModel.IsFcVisible) UpdateGroundMassValue3D("Fc", 20, 100); // Fc描画の更新
+
+                if (viewModel.IsDensityVisible) UpdateGroundLayerValue3D("density", 5, 25); // 密度描画の更新
+
+                if (viewModel.IsCohesiveVisible) UpdateGroundLayerValue3D("cohesive", 50, 200); // 粘着力描画の更新
+
+                if (viewModel.IsVsVisible) UpdateGroundLayerValue3D("Vs", 100, 500); // Vs描画の更新
+
+                if (viewModel.IsEsVisible) UpdateGroundLayerValue3D("Es", 10000, 50000); // Es描画の更新
+
+                if (viewModel.IsSettlementLoadVisible) UpdateSettlementLoad3D(); // 荷重面描画の更新
+
+                if (viewModel.IsElementVisible) UpdateGeneralElement3D(); // 要素描画の更新
+
+                if ((MainWindowViewModel)DataContext == null) return;
+
+                // 平面図の場合
+                if (Math.Abs(viewModel.CanvasThreeDView.Phi - 90.0) < 0.5 && !viewModel.CanvasThreeDView.IsPerspective)
+                {
+                    if (viewModel.IsTickMarkVisible) UpdateTickMarks3DPlan();  // 目盛りの更新
+                    if (viewModel.IsGridLineVisible) UpdateGridLines3DPlan(); // 通り心の更新
+
+                    if (Math.Abs(viewModel.CanvasThreeDView.Tht + 90) < 0.5) // XY（平面）の場合
+                    {
+                        if (viewModel.IsGridLineVisible) UpdateDimensionLines3DPlan();
+                    }
+                }
+
+                // 側面図の場合
+                else if (Math.Abs(viewModel.CanvasThreeDView.Phi) < 0.5 && viewModel.CanvasThreeDView.IsPerspective == false)
+                {
+
+                    if (viewModel.IsSettlementGroundVisible) UpdateSettlementGround3D(); // 側面図用沈下描画の更新
+                    UpdateTickMarks3DElevation(); // 目盛りの更新
+
+                    if (Math.Abs(viewModel.CanvasThreeDView.Tht) < 0.5) // YZ（右側面）の場合
+                    {
+                        if (viewModel.IsTickMarkVisible) UpdateTickMarks3DYofYZ();
+                        if (viewModel.IsGridLineVisible) UpdateGridLinesAndDimensionsYforYZ(); // 通り心の更新
+                    }
+
+                    if (Math.Abs(viewModel.CanvasThreeDView.Tht + 90) < 0.5) // XZ（正面）の場合
+                    {
+                        if (viewModel.IsTickMarkVisible) UpdateTickMarks3DXofXZ();
+                        if (viewModel.IsGridLineVisible) UpdateGridLinesAndDimensionsXforXZ(); // 通り心の更新
+                    }
+                }
+
+                else
+                {
+                    if (viewModel.IsGridLineVisible) UpdateGridLines3D(); // 通り心の更新
+                }
+
+                if (viewModel.IsForcedDisplacementVisible) UpdateForcedDisplacement3D(); // 3D地盤変位更新メソッド
+
+                // 剛床の描画
+                if (viewModel.IsRigidFloorVisible) UpdateRigidFloor3D();
+
+                // 群杭沈下グリッドの描画
+                if (viewModel.IsGroupPileGridVisible) UpdateGroupPileGrid3D();
+
+                // 変形後沈下グリッドの描画
+                if (viewModel.IsGroupPileGridDeformationVisible) UpdateSettlementGridDeformation(); // 群杭沈下地盤変位の描画
+
+                // 全てのパスを描画（MainCanvasGeometryのPathGeometryをCanvasに追加）
+                viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
+
+                // === 以下はDrawAllPathsの後に実行（ColorBaredGeometryのPathが削除されないようにする） ===
+
+                // 軸力・慣性力の描画
+                if (viewModel.IsMassLoadingVisible || viewModel.IsAxialLoadingVisible) UpdateLoading3D();
+
+                // 解析結果の描画
+                if (viewModel.IsAnalysisResultVisible) UpdateAnalysisResult3D();
+
+                // 追加: 「沈下」のバブル/矢印は最後に描いて最前面に
+                if (_pendingSettlementPoints != null &&
+                    _pendingSettlementValues != null &&
+                    viewModel.AnalysisResultContent == "沈下")
+                {
+                    DrawBubbleAndArrow(
+                        _pendingSettlementPoints,
+                        _pendingSettlementValues,
+                        _pendingSettlementTitle ?? "沈下",
+                        _pendingSettlementUnit ?? "mm");
+
+                    _pendingSettlementPoints = null;
+                    _pendingSettlementValues = null;
+                    _pendingSettlementTitle = null;
+                    _pendingSettlementUnit = null;
+                }
+                // 最後のテキストレンダリングは、操作中はスキップ
+                if (!_isViewInteracting)
+                {
+                    RenderTextBlocksWithDrawingVisual();
                 }
             }
-
-            else
+            finally
             {
-                if (viewModel.IsGridLineVisible) UpdateGridLines3D(); // 通り心の更新
-            }
-
-            //if (viewModel.IsLoadingVisible) UpdateLoading3D(); // 軸力・慣性力の描画
-            if (viewModel.IsMassLoadingVisible || viewModel.IsAxialLoadingVisible) UpdateLoading3D(); // 軸力・慣性力の描画
-            //if (viewModel.IsAxialForceLabelVisible) UpdateAxialForceLabel3D(); // 杭軸力の描画
-
-            if (viewModel.IsForcedDisplacementVisible) UpdateForcedDisplacement3D(); // 3D地盤変位更新メソッド
-
-            if (viewModel.IsAnalysisResultVisible) UpdateAnalysisResult3D(); // 解析結果の描画
-            //else
-            //{
-            //    // ColorBarCanvasの内容をクリア
-            //    //ColorBarCanvas?.Children.Clear();
-            //}
-
-            // 剛床の描画
-            if (viewModel.IsRigidFloorVisible) UpdateRigidFloor3D();
-
-            // 群杭沈下グリッドの描画
-            if (viewModel.IsGroupPileGridVisible) UpdateGroupPileGrid3D();
-
-            // 変形後沈下グリッドの描画
-            if (viewModel.IsGroupPileGridDeformationVisible) UpdateSettlementGridDeformation(); // 群杭沈下地盤変位の描画
-
-            // 全てのパスを描画
-            viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
-
-            // 追加: 「沈下」のバブル/矢印は最後に描いて最前面に
-            if (_pendingSettlementPoints != null &&
-                _pendingSettlementValues != null &&
-                viewModel.AnalysisResultContent == "沈下")
-            {
-                DrawBubbleAndArrow(
-                    _pendingSettlementPoints,
-                    _pendingSettlementValues,
-                    _pendingSettlementTitle ?? "沈下",
-                    _pendingSettlementUnit ?? "mm");
-
-                _pendingSettlementPoints = null;
-                _pendingSettlementValues = null;
-                _pendingSettlementTitle = null;
-                _pendingSettlementUnit = null;
-            }
-            // 最後のテキストレンダリングは、操作中はスキップ
-            if (!_isViewInteracting)
-            {
-                RenderTextBlocksWithDrawingVisual();
+                _isRendering = false;
+                // 途中で保留されたリクエストがあれば1回だけ再描画を予約
+                if (_renderPending && _renderBatchDepth == 0)
+                {
+                    _renderPending = false;
+                    RequestUpdateCanvas3D();
+                }
             }
         }
     }

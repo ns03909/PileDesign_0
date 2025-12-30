@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 
 namespace PileDesign.Converters
@@ -11,11 +12,22 @@ namespace PileDesign.Converters
         {
             if (values == null || values.Length < 3) return false;
 
+            // DependencyProperty.UnsetValue のチェック（SoilPileがnullの場合など）
+            if (values[1] == DependencyProperty.UnsetValue || values[2] == DependencyProperty.UnsetValue)
+                return false;
+
             if (TryToDouble(values[0], out var v)
                 && TryToDouble(values[1], out var lower)
                 && TryToDouble(values[2], out var upper))
             {
-                // SoilPile未設定などは赤にしない（falseを返す）
+                // 許容値が両方0の場合は未設定とみなし、赤にしない
+                if (lower == 0 && upper == 0)
+                    return false;
+
+                // 許容範囲が無効（lower >= upper）の場合も赤にしない
+                if (lower >= upper)
+                    return false;
+
                 return v > upper || v < lower;
             }
 

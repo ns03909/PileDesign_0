@@ -608,6 +608,11 @@ namespace PileDesign.ViewModels
             {
                 GraphOptions.Add("単杭+群杭沈下");
             }
+
+            if (GraphOptions.Count > 0 && string.IsNullOrEmpty(SelectedGraphOption))
+            {
+                SelectedGraphOption = GraphOptions[0];
+            }
         }
 
         [RelayCommand]
@@ -814,7 +819,8 @@ namespace PileDesign.ViewModels
 
                 foreach (LoadCase loadCase in GetSelectedLoadCases())
                 {
-                    foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
+                    foreach (LoadCombination loadCombination in GetSelectedLoadCombinations()
+                    )
                     {
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {

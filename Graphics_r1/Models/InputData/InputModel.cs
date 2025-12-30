@@ -1,9 +1,9 @@
-ï»¿using PileDesign.ViewModels;
+using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel; // è¿½åŠ 
+using System.ComponentModel; // ’Ç‰Á
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -17,10 +17,10 @@ namespace PileDesign.Models.InputData
     {
         private MainWindowViewModel _mainWindowViewModel;
 
-        // è¨±å®¹å·®ï¼ˆZä¸€è‡´åˆ¤å®šç”¨ï¼‰
+        // ‹–—e·iZˆê’v”»’è—pj
         private const double ZMatchTolerance = 1e-6;
 
-        // åŸºæœ¬è¨­å®š
+        // Šî–{İ’è
         private FundamentalInput _foundationInput;
         public FundamentalInput FundamentalInput
         {
@@ -28,7 +28,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _foundationInput, value);
         }
 
-        // è·é‡ã‚±ãƒ¼ã‚¹
+        // ‰×dƒP[ƒX
         private LoadCasesInput _loadCasesInput;
         public LoadCasesInput LoadCasesInput
         {
@@ -36,7 +36,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _loadCasesInput, value);
         }
 
-        // åœ°ç›¤æ¡ä»¶
+        // ’n”ÕğŒ
         private ObservableCollection<GroundInput> _groundsInput;
         public ObservableCollection<GroundInput> GroundsInput
         {
@@ -50,7 +50,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // åœ°ç›¤æ•°ãƒªã‚¹ãƒˆï¼ˆå†…éƒ¨ backing field ã‚’æŒã¡ã€ã‚¯ãƒ©ã‚¹å†…éƒ¨ã§æ›´æ–°å¯èƒ½ã«ã™ã‚‹ï¼‰
+        // ’n”Õ”ƒŠƒXƒgi“à•” backing field ‚ğ‚¿AƒNƒ‰ƒX“à•”‚ÅXV‰Â”\‚É‚·‚éj
         private ObservableCollection<int> _groundsInputCountList = new();
         public ObservableCollection<int> GroundsInputCountList
         {
@@ -58,7 +58,7 @@ namespace PileDesign.Models.InputData
             private set => SetProperty(ref _groundsInputCountList, value);
         }
 
-        // æ­ä½“
+        // Y‘Ì
         private ObservableCollection<PileBodyInput> _pileBodies;
         public ObservableCollection<PileBodyInput> PileBodies
         {
@@ -72,7 +72,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // æ­ä½“æ•°ãƒªã‚¹ãƒˆï¼ˆå†…éƒ¨ backing field ã‚’æŒã¡ã€ã‚¯ãƒ©ã‚¹å†…éƒ¨ã§æ›´æ–°å¯èƒ½ã«ã™ã‚‹ï¼‰
+        // Y‘Ì”ƒŠƒXƒgi“à•” backing field ‚ğ‚¿AƒNƒ‰ƒX“à•”‚ÅXV‰Â”\‚É‚·‚éj
         private ObservableCollection<int> _pileBodiesCountList = new();
         public ObservableCollection<int> PileBodiesCountList
         {
@@ -80,7 +80,7 @@ namespace PileDesign.Models.InputData
             private set => SetProperty(ref _pileBodiesCountList, value);
         }
 
-        // æ­é…ç½®
+        // Y”z’u
         private ObservableCollection<PileLayoutDataItem> _pileLayoutItems;
         public ObservableCollection<PileLayoutDataItem> PileLayoutItems
         {
@@ -90,11 +90,11 @@ namespace PileDesign.Models.InputData
                 if (_pileLayoutItems == value) return;
                 _pileLayoutItems = value;
                 OnPropertyChanged(nameof(PileLayoutItems));
-                WirePileLayoutItemsHandlers(); // è¿½åŠ : ãƒãƒ³ãƒ‰ãƒ©å†é…ç·š
+                WirePileLayoutItemsHandlers(); // ’Ç‰Á: ƒnƒ“ƒhƒ‰Ä”zü
             }
         }
 
-        // æ ¹å…¥
+        // ª“ü
         private EmbedmentInput _embedmentInput;
         public EmbedmentInput EmbedmentInput
         {
@@ -102,10 +102,28 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _embedmentInput, value);
         }
 
-        // ã‚¯ãƒ©ã‚¹å†…ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã«è¿½åŠ 
+        // ƒNƒ‰ƒX“àƒtƒB[ƒ‹ƒh‚É’Ç‰Á
         private bool _suppressSoilPileNotify;
 
-        // è¦ç´ åˆ†å‰²
+        /// <summary>
+        /// ‘å—Ê‚Ì•ÏX‚ğs‚¤‘O‚É’Ê’m‚ğˆê—}§‚·‚éB
+        /// I—¹Œã‚Í•K‚¸ ResumeAndNotify() ‚ğŒÄ‚Ô‚±‚ÆB
+        /// </summary>
+        public void SuppressNotifications()
+        {
+            _suppressSoilPileNotify = true;
+        }
+
+        /// <summary>
+        /// ’Ê’m‚ğÄŠJ‚µASoilPiles ‚ğÄ¶¬‚µ‚ÄˆêŠ‡’Ê’m‚ğs‚¤B
+        /// </summary>
+        public void ResumeAndNotify()
+        {
+            _suppressSoilPileNotify = false;
+            RegenerateSoilPilesAndNotify();
+        }
+
+        // —v‘f•ªŠ„
         private ElementDivision _elementDivision;
         public ElementDivision ElementDivision
         {
@@ -119,7 +137,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // SoilPiles ã®å¤‰æ›´ã‚’è³¼èª­
+        // SoilPiles ‚Ì•ÏX‚ğw“Ç
         private void AttachElementDivisionHandlers()
         {
             if (ElementDivision?.SoilPiles == null) return;
@@ -141,7 +159,7 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // ---- PileLayoutItems ã®è¿½åŠ /å‰Šé™¤/ç·¨é›† ç›£è¦– ----
+        // ---- PileLayoutItems ‚Ì’Ç‰Á/íœ/•ÒW ŠÄ‹ ----
 
         private void WirePileLayoutItemsHandlers()
         {
@@ -176,13 +194,13 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            // è¿½åŠ /å‰Šé™¤ã§ã‚‚ã‚»ãƒƒãƒˆå…¨ä½“ã‚’å†è¨ˆç®—
+            // ’Ç‰Á/íœ‚Å‚àƒZƒbƒg‘S‘Ì‚ğÄŒvZ
             RegenerateSoilPilesAndNotify();
         }
 
         private void OnPileLayoutItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            // SoilPile å†ç”ŸæˆãŒå¿…è¦ãªå¤‰æ›´ã®ã¿
+            // SoilPile Ä¶¬‚ª•K—v‚È•ÏX‚Ì‚İ
             if (e.PropertyName is nameof(PileLayoutDataItem.GroundNo)
                 || e.PropertyName is nameof(PileLayoutDataItem.PileBodyNo)
                 || e.PropertyName == "Z")
@@ -192,7 +210,7 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // ---- Ground ã®å¤‰æ›´ç›£è¦–ï¼ˆåœŸå±¤å¢ƒç•Œã‚„å±¤æ•°ãŒå¤‰ã‚ã£ãŸã‚‰å†ç”Ÿæˆï¼‰ ----
+        // ---- Ground ‚Ì•ÏXŠÄ‹i“y‘w‹«ŠE‚â‘w”‚ª•Ï‚í‚Á‚½‚çÄ¶¬j ----
 
         private void AttachGroundsHandlers()
         {
@@ -215,7 +233,7 @@ namespace PileDesign.Models.InputData
                 foreach (var g in e.OldItems.OfType<GroundInput>())
                     UnhookGround(g);
 
-            // è¿½åŠ : ä»¶æ•°ãƒªã‚¹ãƒˆã®å†é€šçŸ¥ï¼ˆComboBox ItemsSource ã‚’æ›´æ–°ã•ã›ã‚‹ï¼‰
+            // ’Ç‰Á: Œ”ƒŠƒXƒg‚ÌÄ’Ê’miComboBox ItemsSource ‚ğXV‚³‚¹‚éj
             OnPropertyChanged(nameof(GroundsInputCountList));
 
             RegenerateSoilPilesAndNotify();
@@ -255,9 +273,9 @@ namespace PileDesign.Models.InputData
 
         private void OnGroundChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_suppressSoilPileNotify) return; // å†å…¥æŠ‘æ­¢ã‚’è¿½åŠ 
+            if (_suppressSoilPileNotify) return; // Ä“ü—}~‚ğ’Ç‰Á
 
-            // åœ°ç›¤ä¸Šç«¯/æ°´ä½/æ¶²çŠ¶åŒ–è¨­å®šãƒ»å±¤æ›´æ–°ãªã©ã€åŸºæœ¬çš„ã«å…¨ã¦å†ç”Ÿæˆã§å®‰å…¨
+            // ’n”Õã’[/…ˆÊ/‰tó‰»İ’èE‘wXV‚È‚ÇAŠî–{“I‚É‘S‚ÄÄ¶¬‚ÅˆÀ‘S
             RegenerateSoilPilesAndNotify();
         }
 
@@ -278,12 +296,12 @@ namespace PileDesign.Models.InputData
 
         private void OnGroundLayerChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_suppressSoilPileNotify) return; // å†å…¥æŠ‘æ­¢ã‚’è¿½åŠ 
+            if (_suppressSoilPileNotify) return; // Ä“ü—}~‚ğ’Ç‰Á
 
             RegenerateSoilPilesAndNotify();
         }
 
-        // ---- PileBody ã®å¤‰æ›´ç›£è¦–ï¼ˆã‚»ã‚°ãƒ¡ãƒ³ãƒˆé•·ãªã©ãŒå¤‰ã‚ã£ãŸã‚‰å†ç”Ÿæˆï¼‰ ----
+        // ---- PileBody ‚Ì•ÏXŠÄ‹iƒZƒOƒƒ“ƒg’·‚È‚Ç‚ª•Ï‚í‚Á‚½‚çÄ¶¬j ----
 
         private void AttachPileBodiesHandlers()
         {
@@ -306,7 +324,7 @@ namespace PileDesign.Models.InputData
                 foreach (var pb in e.OldItems.OfType<PileBodyInput>())
                     UnhookPileBody(pb);
 
-            // è¿½åŠ : ä»¶æ•°ãƒªã‚¹ãƒˆã®å†é€šçŸ¥ï¼ˆComboBox ItemsSource ã‚’æ›´æ–°ã•ã›ã‚‹ï¼‰
+            // ’Ç‰Á: Œ”ƒŠƒXƒg‚ÌÄ’Ê’miComboBox ItemsSource ‚ğXV‚³‚¹‚éj
             OnPropertyChanged(nameof(PileBodiesCountList));
 
             RegenerateSoilPilesAndNotify();
@@ -346,13 +364,13 @@ namespace PileDesign.Models.InputData
 
         private void OnPileBodyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_suppressSoilPileNotify) return; // å†å…¥æŠ‘æ­¢ã‚’è¿½åŠ 
+            if (_suppressSoilPileNotify) return; // Ä“ü—}~‚ğ’Ç‰Á
             RegenerateSoilPilesAndNotify();
         }
 
         private void PileBodySegments_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            if (_suppressSoilPileNotify) return; // å†å…¥æŠ‘æ­¢ã‚’è¿½åŠ 
+            if (_suppressSoilPileNotify) return; // Ä“ü—}~‚ğ’Ç‰Á
 
             if (e.NewItems != null)
                 foreach (var seg in e.NewItems.OfType<PileBodySegment>())
@@ -369,29 +387,29 @@ namespace PileDesign.Models.InputData
 
         private void OnPileBodySegmentChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_suppressSoilPileNotify) return; // å†å…¥æŠ‘æ­¢ã‚’è¿½åŠ 
+            if (_suppressSoilPileNotify) return; // Ä“ü—}~‚ğ’Ç‰Á
 
             RegenerateSoilPilesAndNotify();
         }
 
-        // ---- å†ç”Ÿæˆï¼‹é€šçŸ¥ã®å…±é€šãƒãƒ– ----
+        // ---- Ä¶¬{’Ê’m‚Ì‹¤’Êƒnƒu ----
 
         private void RegenerateSoilPilesAndNotify()
         {
             try
             {
                 _suppressSoilPileNotify = true;
-                GenerateSoilPiles(); // SoilPileAltNo ã‚‚å†ä»˜ä¸
+                GenerateSoilPiles(); // SoilPileAltNo ‚àÄ•t—^
             }
             finally
             {
                 _suppressSoilPileNotify = false;
             }
 
-            // DataGrid åˆ—ã® SoilPile.* ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚’å³æ™‚æ›´æ–°
+            // DataGrid —ñ‚Ì SoilPile.* ƒoƒCƒ“ƒfƒBƒ“ƒO‚ğ‘¦XV
             NotifySoilPileChangedForAll();
 
-            // 3D/ãƒ“ãƒ¥ãƒ¼æ›´æ–°ãŒå¿…è¦ãªã‚‰å®Ÿè¡Œ
+            // 3D/ƒrƒ…[XV‚ª•K—v‚È‚çÀs
             _mainWindowViewModel?.UpdateViewCommand?.Execute(null);
         }
 
@@ -400,7 +418,7 @@ namespace PileDesign.Models.InputData
 
 
 
-        // Reset/Set/Attach ã®æœ€å¾Œã§ãƒãƒ³ãƒ‰ãƒ©å¼µã‚Šç›´ã—
+        // Reset/Set/Attach ‚ÌÅŒã‚Åƒnƒ“ƒhƒ‰’£‚è’¼‚µ
         public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -427,16 +445,16 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            Reset(); // ElementDivisionç­‰ã‚’åˆæœŸåŒ–
+            Reset(); // ElementDivision“™‚ğ‰Šú‰»
 
-            // åˆæœŸåŒ–å¾Œã«å„ç¨®è³¼èª­ã‚’å¼µã‚‹
+            // ‰Šú‰»Œã‚ÉŠeíw“Ç‚ğ’£‚é
             AttachElementDivisionHandlers();
             WirePileLayoutItemsHandlers();
             AttachGroundsHandlers();
             AttachPileBodiesHandlers();
         }
 
-        // è»½é‡ç‰ˆ
+        // Œy—Ê”Å
         public void AttachViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -462,18 +480,18 @@ namespace PileDesign.Models.InputData
                     }
                 }
             }
-            // é‡è¦: DeepCopy å¾Œã« null ã«ãªã‚Šå¾—ã‚‹ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‚’è£œæ­£
+            // d—v: DeepCopy Œã‚É null ‚É‚È‚è“¾‚éƒRƒŒƒNƒVƒ‡ƒ“‚ğ•â³
             GridXItems ??= [];
             GridYItems ??= [];
 
-            // å„ç¨®è³¼èª­
+            // Šeíw“Ç
             AttachElementDivisionHandlers();
             WirePileLayoutItemsHandlers();
             AttachGroundsHandlers();
             AttachPileBodiesHandlers();
         }
 
-        // Reset å†…ã® ElementDivision ç”Ÿæˆå¾Œã«è³¼èª­ã‚’ã‚»ãƒƒãƒˆ
+        // Reset “à‚Ì ElementDivision ¶¬Œã‚Éw“Ç‚ğƒZƒbƒg
         public void Reset()
         {
             FundamentalInput = new FundamentalInput();
@@ -493,7 +511,7 @@ namespace PileDesign.Models.InputData
             GridXItems = [];
             GridYItems = [];
 
-            // åˆæœŸã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã«ã‚‚è³¼èª­ã‚’å¼µã‚‹
+            // ‰ŠúƒRƒŒƒNƒVƒ‡ƒ“‚É‚àw“Ç‚ğ’£‚é
             AttachElementDivisionHandlers();
             WirePileLayoutItemsHandlers();
             AttachGroundsHandlers();
@@ -508,7 +526,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pileGroupSettlement, value);
         }
 
-        // è¦ç´ 
+        // —v‘f
         private ObservableCollection<Element> _elements;
         public ObservableCollection<Element> Elements
         {
@@ -516,7 +534,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _elements, value);
         }
 
-        // ã‚°ãƒªãƒƒãƒ‰
+        // ƒOƒŠƒbƒh
         private ObservableCollection<GridDataItem> _gridXItems;
         //[JsonIgnore]
         public ObservableCollection<GridDataItem> GridXItems
@@ -533,7 +551,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _gridYItems, value);
         }
 
-        // ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
+        // ƒRƒ“ƒXƒgƒ‰ƒNƒ^
         public InputModel()
         { 
             UpdateCountLists();
@@ -552,7 +570,7 @@ namespace PileDesign.Models.InputData
         //        }
         //    }
 
-        //    // Elementså†…ã®Nodesã«ã‚‚ViewModelã‚’å†ã‚»ãƒƒãƒˆ
+        //    // Elements“à‚ÌNodes‚É‚àViewModel‚ğÄƒZƒbƒg
         //    if (Elements != null)
         //    {
         //        foreach (var element in Elements)
@@ -570,7 +588,7 @@ namespace PileDesign.Models.InputData
         //    Reset();
         //}
 
-        //// è¿½åŠ : å¾©å…ƒãƒ»èª­è¾¼æ™‚ãªã©ã«ä½¿ã†ã€ŒReset ã—ãªã„ã€è»½é‡ç‰ˆ
+        //// ’Ç‰Á: •œŒ³E“Ç‚È‚Ç‚Ég‚¤uReset ‚µ‚È‚¢vŒy—Ê”Å
         //public void AttachViewModel(MainWindowViewModel mainWindowViewModel)
         //{
         //    _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -596,7 +614,7 @@ namespace PileDesign.Models.InputData
         //            }
         //        }
         //    }
-        //    // é‡è¦: DeepCopy å¾Œã« null ã«ãªã‚Šå¾—ã‚‹ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‚’è£œæ­£
+        //    // d—v: DeepCopy Œã‚É null ‚É‚È‚è“¾‚éƒRƒŒƒNƒVƒ‡ƒ“‚ğ•â³
         //    GridXItems ??= [];
         //    GridYItems ??= [];
         //}
@@ -639,7 +657,7 @@ namespace PileDesign.Models.InputData
 
 
 
-        // VLaddé‡å¿ƒã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // VLadddS‚ğ•Ô‚·ƒƒ\ƒbƒh
         public Point3D GetVLaddGravityCenter()
         {
             double sumW = 0;
@@ -653,13 +671,13 @@ namespace PileDesign.Models.InputData
             }
             if (PileLayoutItems.Count == 0 || sumW == 0)
             {
-                // è¦ç´ ãŒç„¡ã„ã€ã¾ãŸã¯åˆè¨ˆè·é‡ãŒ0ã®å ´åˆã¯åŸç‚¹ã‚’è¿”ã™
+                // —v‘f‚ª–³‚¢A‚Ü‚½‚Í‡Œv‰×d‚ª0‚Ìê‡‚ÍŒ´“_‚ğ•Ô‚·
                 return new Point3D(0, 0, 0);
             }
             return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
         }
 
-        // VLé‡å¿ƒã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // VLdS‚ğ•Ô‚·ƒƒ\ƒbƒh
         public Point3D GetVLGravityCenter()
         {
             double sumW = 0;
@@ -678,7 +696,7 @@ namespace PileDesign.Models.InputData
             }
             if (PileLayoutItems.Count == 0 || sumW == 0)
             {
-                // è¦ç´ ãŒç„¡ã„ã€ã¾ãŸã¯åˆè¨ˆè·é‡ãŒ0ã®å ´åˆã¯åŸç‚¹ã‚’è¿”ã™
+                // —v‘f‚ª–³‚¢A‚Ü‚½‚Í‡Œv‰×d‚ª0‚Ìê‡‚ÍŒ´“_‚ğ•Ô‚·
                 return new Point3D(0, 0, 0);
             }
             return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
@@ -702,13 +720,13 @@ namespace PileDesign.Models.InputData
             }
             if (PileLayoutItems.Count == 0 || sumW == 0)
             {
-                // è¦ç´ ãŒç„¡ã„ã€ã¾ãŸã¯åˆè¨ˆè·é‡ãŒ0ã®å ´åˆã¯åŸç‚¹ã‚’è¿”ã™
+                // —v‘f‚ª–³‚¢A‚Ü‚½‚Í‡Œv‰×d‚ª0‚Ìê‡‚ÍŒ´“_‚ğ•Ô‚·
                 return new Point3D(0, 0, 0);
             }
             return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
         }
 
-        // å›³å¿ƒã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // }S‚ğ•Ô‚·ƒƒ\ƒbƒh
         public Point3D GetCentroid()
         {
             double sumX = 0;
@@ -723,7 +741,7 @@ namespace PileDesign.Models.InputData
             return new Point3D(sumX / PileLayoutItems.Count, sumY / PileLayoutItems.Count, sumZ / PileLayoutItems.Count);
         }
 
-        // è»¸åŠ›ã®åˆè¨ˆã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // ²—Í‚Ì‡Œv‚ğ•Ô‚·ƒƒ\ƒbƒh
         public double GetSum(int level, int index)
         {
             double sumLoads = 0;
@@ -740,7 +758,7 @@ namespace PileDesign.Models.InputData
             return sumLoads;
         }
 
-        // è»¢å€’ãƒ¢ãƒ¼ãƒ¡ãƒ³ãƒˆ(MNm)ã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // “]“|ƒ‚[ƒƒ“ƒg(MNm)‚ğ•Ô‚·ƒƒ\ƒbƒh
         public (double, double) GetOverturningMoment(int level, int index) // degree
         {
             double otmX = 0;
@@ -769,7 +787,7 @@ namespace PileDesign.Models.InputData
             return (otmX, otmY);
         }
 
-        // å˜ä½è»¢å€’ãƒ¢ãƒ¼ãƒ¡ãƒ³ãƒˆã«å¯¾ã™ã‚‹ååŠ›ã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // ’PˆÊ“]“|ƒ‚[ƒƒ“ƒg‚É‘Î‚·‚é”½—Í‚ğ•Ô‚·ƒƒ\ƒbƒh
         public List<double> GetReactionForUnitMoment(double angle) // degree
         {
             double radian = angle * Math.PI / 180;
@@ -786,7 +804,7 @@ namespace PileDesign.Models.InputData
                 otm += arm * arm;
             }
 
-            if (otm <= 1e-12) // ã»ã¼ã‚¼ãƒ­
+            if (otm <= 1e-12) // ‚Ù‚Úƒ[ƒ
                 return [.. raw.Select(_ => 0.0)];
 
             return [.. raw.Select(r => r / otm)];
@@ -804,15 +822,15 @@ namespace PileDesign.Models.InputData
             //return reactions;
         }
 
-        // JsonSerializerOptionsã‚’ã‚­ãƒ£ãƒƒã‚·ãƒ¥
+        // JsonSerializerOptions‚ğƒLƒƒƒbƒVƒ…
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            ReferenceHandler = ReferenceHandler.Preserve, // å¾ªç’°å‚ç…§å¯¾å¿œã‚’è¿½åŠ 
+            ReferenceHandler = ReferenceHandler.Preserve, // zŠÂQÆ‘Î‰‚ğ’Ç‰Á
             NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals // 
         };
 
-        // ãƒ‡ãƒ¼ã‚¿ã®ä¿å­˜
+        // ƒf[ƒ^‚Ì•Û‘¶
         public void SaveToFile(string filePath)
         {
             string jsonString = JsonSerializer.Serialize(this, _jsonOptions);
@@ -820,25 +838,25 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // ãƒ‡ãƒ¼ã‚¿ã®èª­ã¿è¾¼ã¿
+        // ƒf[ƒ^‚Ì“Ç‚İ‚İ
         public static InputModel LoadFromFile(string filePath, MainWindowViewModel mainWindowViewModel)
         {
             if (!File.Exists(filePath))
-                throw new FileNotFoundException("æŒ‡å®šã•ã‚ŒãŸãƒ•ã‚¡ã‚¤ãƒ«ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚", filePath);
+                throw new FileNotFoundException("w’è‚³‚ê‚½ƒtƒ@ƒCƒ‹‚ª‘¶İ‚µ‚Ü‚¹‚ñB", filePath);
 
             string json = File.ReadAllText(filePath);
             var loaded = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
-                ?? throw new InvalidOperationException("ãƒ•ã‚¡ã‚¤ãƒ«ã®å†…å®¹ã‚’ãƒ‡ã‚·ãƒªã‚¢ãƒ©ã‚¤ã‚ºã§ãã¾ã›ã‚“ã§ã—ãŸã€‚");
+                ?? throw new InvalidOperationException("ƒtƒ@ƒCƒ‹‚Ì“à—e‚ğƒfƒVƒŠƒAƒ‰ƒCƒY‚Å‚«‚Ü‚¹‚ñ‚Å‚µ‚½B");
 
 
-            // MainWindowViewModelã‚’ã‚»ãƒƒãƒˆ
+            // MainWindowViewModel‚ğƒZƒbƒg
             loaded.SetMainWindowViewModel(mainWindowViewModel);
 
             return loaded;
         }
 
 
-        // æŒ‡å®šã®åç§°ã®PileBodyã‚’è¿”ã™ãƒ¡ã‚½ãƒƒãƒ‰
+        // w’è‚Ì–¼Ì‚ÌPileBody‚ğ•Ô‚·ƒƒ\ƒbƒh
         public PileBodyInput? GetPileBodyByPileBodyRef(string pileBodyRef)
         {
             foreach (var pileBody in this.PileBodies)
@@ -849,12 +867,12 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            // è¦‹ã¤ã‹ã‚‰ãªã‹ã£ãŸå ´åˆã¯nullã‚’è¿”ã™
+            // Œ©‚Â‚©‚ç‚È‚©‚Á‚½ê‡‚Ínull‚ğ•Ô‚·
             return null;
         }
 
-        //ã€€SoilPilesç”Ÿæˆãƒ¡ã‚½ãƒƒãƒ‰
-        // GenerateSoilPiles å®Œäº†å¾Œã«ä¸€æ‹¬é€šçŸ¥ï¼ˆã‚¤ãƒ™ãƒ³ãƒˆå¤šç™ºã‚’æŠ‘åˆ¶ï¼‰
+        //@SoilPiles¶¬ƒƒ\ƒbƒh
+        // GenerateSoilPiles Š®—¹Œã‚ÉˆêŠ‡’Ê’miƒCƒxƒ“ƒg‘½”­‚ğ—}§j
         public void GenerateSoilPiles()
         {
             _suppressSoilPileNotify = true;
@@ -878,7 +896,7 @@ namespace PileDesign.Models.InputData
                     pileBodySegments = PileBodies[pileBodyNo - 1].PileBodySegments;
                     var groundLayerDataItems = GroundsInput[groundNo - 1].GroundLayers;
 
-                    // è¨±å®¹å·®ä»˜ãã§é‡è¤‡ãƒã‚§ãƒƒã‚¯
+                    // ‹–—e·•t‚«‚Åd•¡ƒ`ƒFƒbƒN
                     bool exists = usedGroundNosPileBodyNosPileTopAltitudes.Any(t =>
                         t.Item1 == groundNo &&
                         t.Item2 == pileBodyNo &&
@@ -934,7 +952,7 @@ namespace PileDesign.Models.InputData
                             ZDataItems = pilezDataItems
                         };
 
-                        // è¿½åŠ : R_* ç­‰ã®ç‰¹æ€§ã‚’å†è¨ˆç®—
+                        // ’Ç‰Á: R_* “™‚Ì“Á«‚ğÄŒvZ
                         sp.UpdateProperties();
 
                         ElementDivision.SoilPiles.Add(sp);
@@ -943,7 +961,7 @@ namespace PileDesign.Models.InputData
 
                 ElementDivision.UpdateSoilPileNumberOption();
 
-                // è¨±å®¹å·®ä»˜ãã§ SoilPileAltNo ã‚’ä»˜ä¸
+                // ‹–—e·•t‚«‚Å SoilPileAltNo ‚ğ•t—^
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
                     for (int i = 0; i < ElementDivision.SoilPiles.Count; i++)
@@ -954,7 +972,7 @@ namespace PileDesign.Models.InputData
                             && Math.Abs(pileLayoutDataItem.Point3D.Z - sp.Z) <= ZMatchTolerance)
                         {
                             pileLayoutDataItem.SoilPileAltNo = i + 1;
-                            break; // è¦‹ã¤ã‹ã£ãŸã‚‰æŠœã‘ã‚‹
+                            break; // Œ©‚Â‚©‚Á‚½‚ç”²‚¯‚é
                         }
                     }
                 }
@@ -964,11 +982,11 @@ namespace PileDesign.Models.InputData
                 _suppressSoilPileNotify = false;
             }
 
-            // ä¸€æ‹¬é€šçŸ¥ã¯ RegenerateSoilPilesAndNotify å´ã§å®Ÿæ–½
+            // ˆêŠ‡’Ê’m‚Í RegenerateSoilPilesAndNotify ‘¤‚ÅÀ{
             // NotifySoilPileChangedForAll();
         }
 
-        // åœ°ç›¤æ ¹å…¥ã‚Œç”Ÿæˆãƒ¡ã‚½ãƒƒãƒ‰
+        // ’n”Õª“ü‚ê¶¬ƒƒ\ƒbƒh
         public void GenerateSoilEmbedment()
         {
             if (ElementDivision.SoilEmbedment == null) { return; }
@@ -981,7 +999,7 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                embedmentTopAltitude = EmbedmentInput.BottomAltitude; // Bottom Altitudeã¨ã™ã‚‹ã€‚
+                embedmentTopAltitude = EmbedmentInput.BottomAltitude; // Bottom Altitude‚Æ‚·‚éB
             }
 
             ObservableCollection<double> zs = [embedmentTopAltitude];
@@ -1004,14 +1022,14 @@ namespace PileDesign.Models.InputData
             {
                 if (embedmentTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > embedmentBottomAltitude)
                 {
-                    // zsãŒé™é †ã«ä¸¦ã‚“ã§ã„ã‚‹ãŸã‚ã€é€†é †ã§åå¾©å‡¦ç†ã‚’è¡Œã„ã¾ã™ã€‚
+                    // zs‚ª~‡‚É•À‚ñ‚Å‚¢‚é‚½‚ßA‹t‡‚Å”½•œˆ—‚ğs‚¢‚Ü‚·B
                     for (int i = zs.Count - 1; i >= 0; i--)
                     {
                         double z = zs[i];
-                        // zãŒgroundLayerDataItem.BottomAltitudeã‚ˆã‚Šã‚‚å°ã•ããªã£ãŸå ´åˆ
+                        // z‚ªgroundLayerDataItem.BottomAltitude‚æ‚è‚à¬‚³‚­‚È‚Á‚½ê‡
                         if (z < groundLayerDataItem.BottomAltitude)
                         {
-                            // zã®æ‰‹å‰ã«groundLayerDataItem.BottomAltitudeã‚’æŒ¿å…¥
+                            // z‚Ìè‘O‚ÉgroundLayerDataItem.BottomAltitude‚ğ‘}“ü
                             zs.Insert(i, groundLayerDataItem.BottomAltitude);
                             break;
                         }
@@ -1019,7 +1037,7 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            // zsã‚’é™é †ã«ä¸¦ã³æ›¿ãˆ
+            // zs‚ğ~‡‚É•À‚Ñ‘Ö‚¦
             List<double> sortedZs = [.. zs.Distinct().OrderByDescending(z => z)];
             ObservableCollection<EmbedmentZDataItem> zDataItems = [];
             foreach (double sortedZ in sortedZs)
@@ -1045,30 +1063,30 @@ namespace PileDesign.Models.InputData
         //    string json = JsonSerializer.Serialize(this, options);
         //    return JsonSerializer.Deserialize<InputModel>(json, options);
         //}
-        // æ—¢å­˜: private static readonly JsonSerializerOptions _jsonOptions = new() { ... AllowNamedFloatingPointLiterals };
-        // DeepCopy ä¿®æ­£ + ç‰¹æ®Šå€¤ã‚¯ãƒªãƒ¼ãƒ³å‡¦ç†ã‚’è¿½åŠ 
+        // Šù‘¶: private static readonly JsonSerializerOptions _jsonOptions = new() { ... AllowNamedFloatingPointLiterals };
+        // DeepCopy C³ + “Áê’lƒNƒŠ[ƒ“ˆ—‚ğ’Ç‰Á
         public InputModel DeepCopy()
         {
-            // ç‰¹æ®Šå€¤ã‚’ä¸€æ™‚ã‚³ãƒ”ãƒ¼ä¸Šã§æ­£è¦åŒ–ã—ãŸããªã„å ´åˆã¯ this ã‚’ç›´æ¥æ¸¡ã•ãš CloneWorking ã‚’ä½œã‚‹
-            // ã“ã“ã§ã¯ç°¡æ˜“ã« this ã‚’ã‚¯ãƒªãƒ¼ãƒ³ã—ã¦ã‹ã‚‰ã‚·ãƒªã‚¢ãƒ©ã‚¤ã‚ºï¼ˆUndo å‰ãªã©ã§å‘¼ã¶ãªã‚‰å‘¼ã³å‡ºã—å´ã§ Clone ã‚’å–ã‚‹é‹ç”¨ã§ã‚‚å¯ï¼‰
+            // “Áê’l‚ğˆêƒRƒs[ã‚Å³‹K‰»‚µ‚½‚­‚È‚¢ê‡‚Í this ‚ğ’¼Ú“n‚³‚¸ CloneWorking ‚ğì‚é
+            // ‚±‚±‚Å‚ÍŠÈˆÕ‚É this ‚ğƒNƒŠ[ƒ“‚µ‚Ä‚©‚çƒVƒŠƒAƒ‰ƒCƒYiUndo ‘O‚È‚Ç‚ÅŒÄ‚Ô‚È‚çŒÄ‚Ño‚µ‘¤‚Å Clone ‚ğæ‚é‰^—p‚Å‚à‰Âj
             CleanFloatingPointSpecials(this);
 
-            string json = JsonSerializer.Serialize(this, _jsonOptions); // _jsonOptions ã‚’ä½¿ã†
+            string json = JsonSerializer.Serialize(this, _jsonOptions); // _jsonOptions ‚ğg‚¤
             var clone = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
-                        ?? throw new InvalidOperationException("DeepCopy å¤±æ•—");
-            // ViewModel å†æ¥ç¶š
+                        ?? throw new InvalidOperationException("DeepCopy ¸”s");
+            // ViewModel ÄÚ‘±
             clone.AttachViewModel(_mainWindowViewModel);
             return clone;
         }
 
-        // Infinity / NaN ã‚’ 0 (ã¾ãŸã¯ä»»æ„ã®ä»£æ›¿å€¤) ã«ç½®æ›
+        // Infinity / NaN ‚ğ 0 (‚Ü‚½‚Í”CˆÓ‚Ì‘ã‘Ö’l) ‚É’uŠ·
         private static void CleanFloatingPointSpecials(object obj, int depth = 0, int maxDepth = 4)
         {
             if (obj == null || depth > maxDepth) return;
 
             var type = obj.GetType();
 
-            // IEnumerable (string é™¤å¤–) ã®å ´åˆã¯åˆ—æŒ™
+            // IEnumerable (string œŠO) ‚Ìê‡‚Í—ñ‹“
             if (obj is System.Collections.IEnumerable en && obj is not string)
             {
                 foreach (var item in en)
@@ -1081,6 +1099,8 @@ namespace PileDesign.Models.InputData
 
             foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
             {
+                // ƒCƒ“ƒfƒNƒT“™ƒpƒ‰ƒ[ƒ^•t‚«ƒvƒƒpƒeƒB‚ÍƒXƒLƒbƒv
+                if (prop.GetIndexParameters().Length > 0) continue;
                 if (!prop.CanRead) continue;
 
                 var pt = prop.PropertyType;
@@ -1092,7 +1112,7 @@ namespace PileDesign.Models.InputData
                         double v = (double)(prop.GetValue(obj) ?? 0d);
                         if (double.IsNaN(v) || double.IsInfinity(v))
                         {
-                            prop.SetValue(obj, 0d); // å¿…è¦ãªã‚‰ä»–ã®æ—¢å®šå€¤ã¸
+                            prop.SetValue(obj, 0d); // •K—v‚È‚ç‘¼‚ÌŠù’è’l‚Ö
                         }
                     }
                     else if (pt == typeof(float) && prop.CanWrite)
@@ -1103,7 +1123,7 @@ namespace PileDesign.Models.InputData
                             prop.SetValue(obj, 0f);
                         }
                     }
-                    // å†å¸° (ã‚¯ãƒ©ã‚¹/ãƒ¬ã‚³ãƒ¼ãƒ‰/ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³)
+                    // Ä‹A (ƒNƒ‰ƒX/ƒŒƒR[ƒh/ƒRƒŒƒNƒVƒ‡ƒ“)
                     else if (!pt.IsPrimitive && pt != typeof(string))
                     {
                         var child = prop.GetValue(obj);
@@ -1113,12 +1133,12 @@ namespace PileDesign.Models.InputData
                 }
                 catch
                 {
-                    // å¤±æ•—ã¯ç„¡è¦–ï¼ˆèª­ã¿è¾¼ã¿å°‚ç”¨/ã‚¤ãƒ³ãƒ‡ã‚¯ã‚µç­‰ï¼‰
+                    // ¸”s‚Í–³‹i“Ç‚İ‚İê—p/ƒCƒ“ƒfƒNƒT“™j
                 }
             }
         }
 
-        // ãƒ‡ãƒãƒƒã‚°ç”¨: ã©ã“ã«ç‰¹æ®Šå€¤ãŒã‚ã‚‹ã‹åˆ—æŒ™ (å¿…è¦æ™‚ã®ã¿å‘¼ã¶)
+        // ƒfƒoƒbƒO—p: ‚Ç‚±‚É“Áê’l‚ª‚ ‚é‚©—ñ‹“ (•K—v‚Ì‚İŒÄ‚Ô)
         public IEnumerable<string> FindSpecialNumberLocations()
         {
             var list = new List<string>();
@@ -1140,6 +1160,8 @@ namespace PileDesign.Models.InputData
 
                 foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
+                    // ƒCƒ“ƒfƒNƒT“™ƒpƒ‰ƒ[ƒ^•t‚«ƒvƒƒpƒeƒB‚ÍƒXƒLƒbƒv
+                    if (p.GetIndexParameters().Length > 0) continue;
                     if (!p.CanRead) continue;
                     object val;
                     try { val = p.GetValue(target); } catch { continue; }
@@ -1164,13 +1186,13 @@ namespace PileDesign.Models.InputData
             return list;
         }
 
-        // è¿½åŠ : Ground / PileBody ã®ç•ªå·ãƒªã‚¹ãƒˆã‚’æ›´æ–°ã™ã‚‹ãƒ¦ãƒ¼ãƒ†ã‚£ãƒªãƒ†ã‚£
+        // ’Ç‰Á: Ground / PileBody ‚Ì”Ô†ƒŠƒXƒg‚ğXV‚·‚éƒ†[ƒeƒBƒŠƒeƒB
         public void UpdateCountLists()
         {
             GroundsInputCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
             GroundsInputCountList.Clear();
             int gcount = GroundsInput?.Count ?? 0;
-            for (int i = 1; i <= Math.Max(1, gcount); i++) // åœ°ç›¤ãŒ0ä»¶ã§ã‚‚1ã‚’ç”¨æ„ï¼ˆUIãŒç©ºç™½ã«ãªã‚‰ãªã„ã‚ˆã†ã«ï¼‰
+            for (int i = 1; i <= Math.Max(1, gcount); i++) // ’n”Õ‚ª0Œ‚Å‚à1‚ğ—pˆÓiUI‚ª‹ó”’‚É‚È‚ç‚È‚¢‚æ‚¤‚Éj
                 GroundsInputCountList.Add(i);
 
             PileBodiesCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();

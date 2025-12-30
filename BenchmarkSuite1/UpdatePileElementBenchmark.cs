@@ -15,7 +15,6 @@ namespace PileDesign.Benchmarks
 {
     [SimpleJob(RuntimeMoniker.Net80, baseline: true)]
     [CPUUsageDiagnoser]
-    [StaThread]
     public class UpdatePileElementBenchmark
     {
         private MainWindowViewModel _vm = null!;

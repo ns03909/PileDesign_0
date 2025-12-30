@@ -205,6 +205,15 @@ namespace PileDesign.Services
                 }
             }
 
+            // 杭頭節点
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Black,
+                StrokeThickness = 0.5,
+                Data = PathGeoPileTopNodes,
+                Name = "Node"
+            });
+
             // 代表節点
             canvas.Children.Add(new Path()
             {
@@ -252,24 +261,44 @@ namespace PileDesign.Services
                 Data = PathGeoPileDividedNonTopNodes,
                 Name = "Node"
             });
-            //// 杭要素
-            //canvas.Children.Add(new Path()
-            //{
-            //    Stroke = NikkenBrush.Yellow,
-            //    StrokeThickness = 1,
-            //    Data = PathGeoPileElems,
-            //    Name = "Node"
-            //});
 
-            //// 分割後杭要素
-            //canvas.Children.Add(new Path()
-            //{
-            //    Stroke = NikkenBrush.SkyBlue,
-            //    StrokeThickness = 1,
-            //    Data = PathGeoPileDividedElems,
-            //    Name = "Node"
-            //});
+            // 杭要素
+            canvas.Children.Add(new Path()
+            {
+                Stroke = NikkenBrush.Yellow,
+                StrokeThickness = 0.5,
+                Data = PathGeoPileElems,
+                Name = "Node"
+            });
 
+            // 分割後杭要素
+            canvas.Children.Add(new Path()
+            {
+                Stroke = NikkenBrush.SkyBlue,
+                StrokeThickness = 0.5,
+                Data = PathGeoPileDividedElems,
+                Name = "Node"
+            });
+
+            // 根入部の対角線
+            canvas.Children.Add(new Path()
+            {
+                Stroke = NikkenBrush.Yellow,
+                StrokeThickness = 0.5,
+                Data = PathGeoEmbedmentDiagonals,
+                Name = "EmbedmentDiagonal",
+                StrokeDashArray = [4, 2] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
+            });
+
+            // 分割後根入部の対角線
+            canvas.Children.Add(new Path()
+            {
+                Stroke = NikkenBrush.SkyBlue,
+                StrokeThickness = 0.5,
+                Data = PathGeoDividedEmbedmentDiagonals,
+                Name = "EmbedmentDiagonal",
+                StrokeDashArray = [4, 2] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
+            });
 
             // 杭径
             canvas.Children.Add(new Path()
@@ -534,6 +563,9 @@ namespace PileDesign.Services
         public double ScaleY { get; set; }
     }
 }
+
+
+
 
 
 
