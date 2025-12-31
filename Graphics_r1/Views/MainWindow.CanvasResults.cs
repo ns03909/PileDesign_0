@@ -1266,7 +1266,8 @@ namespace PileDesign.Views
                 {
                     case "Fx":
                         indices = [0, 6];
-                        forceDirection = Vector<double>.Build.DenseOfArray([1, 0, 0]);
+                        //forceDirection = Vector<double>.Build.DenseOfArray([1, 0, 0]);
+                        forceDirection = Vector<double>.Build.DenseOfArray([0, 0, 1]);
                         unit = "kN";
                         break;
                     case "Fy":
@@ -1281,7 +1282,8 @@ namespace PileDesign.Views
                         break;
                     case "Mx":
                         indices = [3, 9];
-                        forceDirection = Vector<double>.Build.DenseOfArray([1, 0, 0]);
+                        //forceDirection = Vector<double>.Build.DenseOfArray([1, 0, 0]);
+                        forceDirection = Vector<double>.Build.DenseOfArray([0, 0, 1]);
                         unit = "kNm";
                         break;
                     case "My":
@@ -1439,13 +1441,21 @@ namespace PileDesign.Views
 
                     // 正規化（ゼロ長は既定方向を使う）
                     Vector<double> dirI;
-                    if (rawI.L2Norm() > 1e-12)
+                    if(viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
+                    {
+                        dirI = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
+                    }
+                    else if (rawI.L2Norm() > 1e-12)
                         dirI = rawI / rawI.L2Norm();
                     else
                         dirI = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
 
                     Vector<double> dirJ;
-                    if (rawJ.L2Norm() > 1e-12)
+                    if (viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
+                    {
+                        dirJ = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
+                    }
+                    else if (rawJ.L2Norm() > 1e-12)
                         dirJ = rawJ / rawJ.L2Norm();
                     else
                         dirJ = forceDirection;
@@ -1455,16 +1465,27 @@ namespace PileDesign.Views
                     {
                         dirI = -dirI;
                     }
+                    else if (viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
+                    {
+                        dirI = -dirI;
+                    }
 
-                    // 表示座標系に変換
-                    var transformedForceDirectionI = t.Transpose() * dirI;
+                        // 表示座標系に変換
+                        var transformedForceDirectionI = t.Transpose() * dirI;
                     var transformedForceDirectionJ = t.Transpose() * dirJ;
 
                     // 元のスケーリング処理（maxAbsValue 等に応じたスケールは既存ロジックを使う）
                     double forceI = maxAbsValue == 0 ? 0 : originalForceI / maxAbsValue * viewModel.ForceDiagramMultiplier;
                     double forceJ = maxAbsValue == 0 ? 0 : originalForceJ / maxAbsValue * viewModel.ForceDiagramMultiplier;
 
-
+                    if (originalForceI <0)
+                    {
+                        transformedForceDirectionI *= -1;
+                    }
+                    if (-originalForceJ <0)
+                    {
+                        transformedForceDirectionJ *= -1;
+                    }
 
                     Point3D nodeI3D = beam.NodeI.Coord;
                     Point3D nodeIForce3D = new(
