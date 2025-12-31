@@ -4036,7 +4036,7 @@
                                             </Grid>
                                         </TabItem>
 
-                                        <TabItem Header="グリッド">
+                                        <TabItem Header="グリッド" ToolTip = "沈下量コンター図の精度を決めるグリッド">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>

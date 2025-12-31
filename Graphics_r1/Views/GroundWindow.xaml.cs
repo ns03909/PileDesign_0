@@ -1,6 +1,7 @@
 ﻿using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
+using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
@@ -8,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace PileDesign.Views
 {
@@ -19,12 +21,17 @@ namespace PileDesign.Views
     {
         private readonly GroundLayerViewModel _viewModel;
         private bool _isClosingHandled = false;
+        
+        // 再入防止フラグ
+        private bool _isCellEditEndingInProgress = false;
 
         // コンストラクタ
         public GroundWindow()
         {
             InitializeComponent();
             Loaded += GroundWindow_Loaded;
+            // ★ ContentRendered で Initialize() を呼ぶように変更
+            ContentRendered += GroundWindow_ContentRendered;
         }
 
         private void GroundWindow_Loaded(object sender, RoutedEventArgs e)
@@ -34,7 +41,7 @@ namespace PileDesign.Views
                 var _viewModel = viewModel;
                 _viewModel.GroundWindowInstance = this; // MainWindow のインスタンスを渡す
 
-                //_viewModel.RequestClose += (s, e) =>
+                //_viewModel.RequestClose += (s, e)
                 _viewModel.RequestClose += (s, e2) =>
                 {
                     {
@@ -59,7 +66,43 @@ namespace PileDesign.Views
                 //DataGridGroundLayer.RowEditEnding += DataGrid_Common_RowEditEnding;
                 //DataGridGroundMass.RowEditEnding += DataGrid_Common_RowEditEnding;
 
-                _viewModel.Initialize();
+                // ★ Initialize() は ContentRendered で呼び出すため、ここでは呼ばない
+                // _viewModel.Initialize();
+            }
+        }
+
+        /// <summary>
+        /// ウィンドウが完全にレンダリングされた後に呼ばれる
+        /// ScottPlot などのコントロールが完全に初期化された状態で Initialize() を呼ぶ
+        /// </summary>
+        private async void GroundWindow_ContentRendered(object? sender, EventArgs e)
+        {
+            // イベントを解除（1回だけ実行）
+            ContentRendered -= GroundWindow_ContentRendered;
+
+            // さらに少し待って、すべてのコントロールが完全に初期化されるのを待つ
+            await System.Threading.Tasks.Task.Delay(50);
+
+            if (DataContext is GroundLayerViewModel viewModel)
+            {
+                try
+                {
+                    viewModel.Initialize();
+                }
+                catch (System.Runtime.InteropServices.COMException comEx) when (comEx.HResult == unchecked((int)0x80040206))
+                {
+                    // 初期化時の COMException は無視して再試行
+                    System.Diagnostics.Debug.WriteLine($"COMException during Initialize: {comEx.Message}");
+                    await System.Threading.Tasks.Task.Delay(100);
+                    try
+                    {
+                        viewModel.Initialize();
+                    }
+                    catch
+                    {
+                        // 最終的に失敗しても続行
+                    }
+                }
             }
         }
 
@@ -96,12 +139,10 @@ namespace PileDesign.Views
             if (e.EditAction != DataGridEditAction.Commit) return;
 
             var grid = (DataGrid)sender;
-            grid.Dispatcher.InvokeAsync(() =>
-            {
-                grid.CommitEdit(DataGridEditingUnit.Row, true);
-                if (DataContext is GroundLayerViewModel vm)
-                    vm.Update();
-            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            // ★ 修正: 行編集終了時に保留中の更新を処理
+            // 行編集が終わった時点で IME/TextStore は解放されているはず
+            _pendingUpdate = true;
+            SchedulePendingUpdate();
         }
 
         private void DataGridGroundMass_RowEditEnding(object sender, DataGridRowEditEndingEventArgs e)
@@ -109,12 +150,96 @@ namespace PileDesign.Views
             if (e.EditAction != DataGridEditAction.Commit) return;
 
             var grid = (DataGrid)sender;
-            grid.Dispatcher.InvokeAsync(() =>
+            // ★ 修正: 行編集終了時に保留中の更新を処理
+            _pendingUpdate = true;
+            SchedulePendingUpdate();
+        }
+
+        /// <summary>
+        /// 保留中の更新をスケジュールする
+        /// タイマーを使って IME/TextStore が完全に解放された後に実行
+        /// </summary>
+        private DispatcherTimer? _pendingUpdateTimer;
+        
+        private void SchedulePendingUpdate()
+        {
+            if (!_pendingUpdate) return;
+
+            // 既存のタイマーがあれば停止（連続編集時の重複防止）
+            _pendingUpdateTimer?.Stop();
+
+            // ★ 重要: 現在フォーカスがある TextBox からフォーカスを外す
+            // これにより IME/TextStore が解放される
+            if (Keyboard.FocusedElement is TextBox focusedTextBox)
             {
-                grid.CommitEdit(DataGridEditingUnit.Row, true);
+                // DataGrid 自体にフォーカスを移動
+                var parent = focusedTextBox.Parent;
+                while (parent != null && parent is not DataGrid)
+                {
+                    parent = (parent as FrameworkElement)?.Parent;
+                }
+                if (parent is DataGrid dg)
+                {
+                    dg.Focus();
+                }
+            }
+
+            // 十分な遅延を設けて IME/TextStore の解放を待つ（200ms に増加）
+            _pendingUpdateTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
+            {
+                Interval = TimeSpan.FromMilliseconds(200)
+            };
+            _pendingUpdateTimer.Tick += (s, e) =>
+            {
+                _pendingUpdateTimer?.Stop();
+                _pendingUpdateTimer = null;
+                if (_pendingUpdate)
+                {
+                    _pendingUpdate = false;
+                    SafeUpdate();
+                }
+            };
+            _pendingUpdateTimer.Start();
+        }
+        
+        /// <summary>
+        /// COMException をキャッチしながら Update() を安全に実行
+        /// </summary>
+        private void SafeUpdate()
+        {
+            try
+            {
                 if (DataContext is GroundLayerViewModel vm)
+                {
                     vm.Update();
-            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                }
+            }
+            catch (System.Runtime.InteropServices.COMException comEx) when (comEx.HResult == unchecked((int)0x80040206))
+            {
+                // IME/TextStore の競合による COMException を無視
+                // 200ms 後に再試行
+                System.Diagnostics.Debug.WriteLine($"COMException caught, will retry: {comEx.Message}");
+                var retryTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
+                {
+                    Interval = TimeSpan.FromMilliseconds(200)
+                };
+                retryTimer.Tick += (s, e) =>
+                {
+                    retryTimer.Stop();
+                    try
+                    {
+                        if (DataContext is GroundLayerViewModel vm2)
+                        {
+                            vm2.Update();
+                        }
+                    }
+                    catch
+                    {
+                        // 最終的に失敗しても UI は壊れないので続行
+                    }
+                };
+                retryTimer.Start();
+            }
         }
 
         private void GroundComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -219,69 +344,81 @@ namespace PileDesign.Views
     where T : class
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
+            
+            // 再入防止
+            if (_isCellEditEndingInProgress) return;
+            _isCellEditEndingInProgress = true;
 
-            // 編集中 TextBox のバインディングをソースへ確定
-            if (e.EditingElement is TextBox tb)
-                BindingOperations.GetBindingExpression(tb, TextBox.TextProperty)?.UpdateSource();
-
-            // 対象列（propertyName）編集時のみ、全行でエラーチェック
-            bool targetColumn =
-                e.Column is DataGridBoundColumn editedColumn &&
-                editedColumn.Binding is Binding binding &&
-                binding.Path?.Path == propertyName;
-
-            if (sender is DataGrid dg)
+            try
             {
-                dg.Dispatcher.InvokeAsync(() =>
+                // 編集中 TextBox のバインディングをソースへ確定
+                if (e.EditingElement is TextBox tb)
                 {
-                    // 値のコミットを先に完了させる
-                    dg.CommitEdit(DataGridEditingUnit.Cell, true);
-                    dg.CommitEdit(DataGridEditingUnit.Row, true);
+                    var be = BindingOperations.GetBindingExpression(tb, TextBox.TextProperty);
+                    be?.UpdateSource();
+                }
 
-                    if (targetColumn)
+                // 対象列（propertyName）編集時のみ、全行でエラーチェック
+                bool targetColumn =
+                    e.Column is DataGridBoundColumn editedColumn &&
+                    editedColumn.Binding is Binding binding &&
+                    binding.Path?.Path == propertyName;
+
+                if (sender is not DataGrid dg) return;
+
+                // エラーチェックは同期的に行う（Update() は呼ばない）
+                if (targetColumn)
+                {
+                    int count = dg.Items.Count;
+
+                    for (int i = 0; i < count; i++)
                     {
-                        int count = dg.Items.Count;
+                        if (dg.Items[i] is not T rowItem) continue;
 
-                        for (int i = 0; i < count; i++)
+                        double value = GetDepthValue(rowItem, propertyName);
+                        bool isError = false;
+
+                        if (double.IsNaN(value))
                         {
-                            if (dg.Items[i] is not T rowItem) continue; // 追加行プレースホルダ等はスキップ
-
-                            double value = GetDepthValue(rowItem, propertyName);
-                            bool isError = false;
-
-                            if (double.IsNaN(value))
-                            {
-                                isError = true; // 未設定/不正値はエラー
-                            }
-                            else
-                            {
-                                // 先頭行: GLは負値前提（>=0 はエラー）
-                                if (i == 0) isError |= value >= 0;
-
-                                // 一つ上: 上端の深さ > 現在の深さ（上<=現はエラー）
-                                if (i > 0)
-                                {
-                                    double above = GetDepthValue(dg.Items[i - 1] as T, propertyName);
-                                    if (!double.IsNaN(above)) isError |= above <= value;
-                                }
-
-                                // 一つ下: 現在の深さ > 下端の深さ（現<=下はエラー）
-                                if (i < count - 1)
-                                {
-                                    double below = GetDepthValue(dg.Items[i + 1] as T, propertyName);
-                                    if (!double.IsNaN(below)) isError |= value <= below;
-                                }
-                            }
-
-                            SetIsError(rowItem, isError);
+                            isError = true;
                         }
+                        else
+                        {
+                            if (i == 0) isError |= value >= 0;
+                            if (i > 0)
+                            {
+                                double above = GetDepthValue(dg.Items[i - 1] as T, propertyName);
+                                if (!double.IsNaN(above)) isError |= above <= value;
+                            }
+                            if (i < count - 1)
+                            {
+                                double below = GetDepthValue(dg.Items[i + 1] as T, propertyName);
+                                if (!double.IsNaN(below)) isError |= value <= below;
+                            }
+                        }
+
+                        SetIsError(rowItem, isError);
                     }
+                }
 
-                    if (DataContext is GroundLayerViewModel vm) vm.Update();
-
-                }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                // ★ 修正: CellEditEnding 内では Update() を呼ばない
+                // 代わりに _pendingUpdate フラグを立てて、タイマーで遅延更新する
+                _pendingUpdate = true;
+                SchedulePendingUpdate();
+            }
+            finally
+            {
+                // 遅延して再入フラグを解除
+                Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    _isCellEditEndingInProgress = false;
+                }), DispatcherPriority.Background);
             }
         }
+        
+        // 保留中の更新があるかどうか
+        private bool _pendingUpdate = false;
+
 
         // GroundLayer 用: BottomGLDepth 列
         private void DataGridGroundLayer_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)

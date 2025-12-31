@@ -851,35 +851,6 @@ namespace PileDesign.ViewModels
             UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
         }
 
-        //// 解析結果の削除確認（水平・単杭沈下）
-        //private bool CheckAndResetAnalysisResults()
-        //{
-        //    if (IsHorizontalAnalysisDone || IsVerticalAnalysisDone)
-        //    {
-        //        var result = MessageBox.Show(
-        //            "要素分割内容、水平解析結果、単杭沈下解析結果が削除されます。続けますか？",
-        //            "確認",
-        //            MessageBoxButton.YesNo,
-        //            MessageBoxImage.Warning);
-
-        //        if (result == MessageBoxResult.No)
-        //        {
-        //            return false; // 操作をキャンセル
-        //        }
-
-        //        // 結果フラグをリセット（必要に応じて表示やモデルもクリア）
-        //        IsElementSplit = false;
-        //        IsHorizontalAnalysisDone = false;
-        //        IsVerticalAnalysisDone = false;
-        //        IsAnalysisResultVisible = false;
-        //        CurrentModel = null;
-
-        //        UpdateWindowAction?.Invoke();
-        //        UpdateTreeView();
-        //    }
-        //    return true; // 操作を続行
-        //}
-
         // 杭配置追加コマンドの実行メソッド
         [RelayCommand]
         private void OnAddPile()
@@ -1803,7 +1774,41 @@ namespace PileDesign.ViewModels
             var vm = new ChangViewModel(CurrentInputModel);
             //var win = new ChangWindow();
             var win = new ChangWindow { DataContext = vm };
-            win.ShowDialog();
+
+            // イベントハンドラを設定
+            if (vm is ICloseable closeableViewModel)
+            {
+                if (win.IsLoaded && win.IsVisible)
+                {
+                    win.Close();
+                }
+            }
+
+            try
+            {
+                // ★ 重要: ダイアログを開く前に現在のフォーカスをクリア
+                // これにより IME/TextStore が解放され、COMException を回避できる
+                var focusedElement = Keyboard.FocusedElement;
+                if (focusedElement is TextBox)
+                {
+                    // フォーカスを MainWindow に移動
+                    Application.Current.MainWindow?.Focus();
+
+                    // Dispatcher で UI を更新して IME を解放する時間を与える
+                    Application.Current.Dispatcher.Invoke(
+                        System.Windows.Threading.DispatcherPriority.Background,
+                        new Action(() => { }));
+                }
+
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            UpdateWindowAction?.Invoke();
+            UpdateTreeView();
         }
 
         [RelayCommand]
@@ -1948,19 +1953,26 @@ namespace PileDesign.ViewModels
 
             moveCopyWindow.ShowDialog(); // モーダルダイアログとして表示
 
-            await tcs.Task; // 非同期に完了を待つ
+            // ★ 待機カーソルを表示
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                await tcs.Task; // 非同期に完了を待つ
 
-            // コレクション自体の変更通知
-            OnPropertyChanged(nameof(GroupPileSettlementXmin));
-            OnPropertyChanged(nameof(GroupPileSettlementXmax));
-            OnPropertyChanged(nameof(GroupPileSettlementYmin));
-            OnPropertyChanged(nameof(GroupPileSettlementYmax));
-            //OnPropertyChanged(nameof(GroupPileSettlementXCount));
-            //OnPropertyChanged(nameof(GroupPileSettlementYCount));
-            //OnPropertyChanged(nameof(GroupPileSettlementCount));
+                // コレクション自体の変更通知
+                OnPropertyChanged(nameof(GroupPileSettlementXmin));
+                OnPropertyChanged(nameof(GroupPileSettlementXmax));
+                OnPropertyChanged(nameof(GroupPileSettlementYmin));
+                OnPropertyChanged(nameof(GroupPileSettlementYmax));
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-            UpdateTreeView();
+                UpdateWindowAction?.Invoke();
+                UpdateTreeView();
+            }
+            finally
+            {
+                // ★ カーソルを元に戻す
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private async Task MoveCopyWindow_MoveCopyCompletedAsync(object sender, MoveCopyEventArgs e)
@@ -1981,46 +1993,67 @@ namespace PileDesign.ViewModels
         private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
         {
             // 変更を行う前に、選択されたアイテムのリストを作成
-            var selectedItems = CurrentInputModel.PileLayoutItems.Where(pilelocation => pilelocation.IsSelected).ToList();
+            var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
+            int totalCount = selectedItems.Count * repetitionNumber;
 
-            // 一時リストにコピー
-            var newItems = new List<PileLayoutDataItem>();
-            foreach (PileLayoutDataItem pilelocation in selectedItems)
+            // ★ 大量コピー時は待機カーソルを表示
+            bool showWaitCursor = totalCount > 10;
+            if (showWaitCursor)
             {
-                for (int i = 0; i < repetitionNumber; i++)
-                {
-                    newItems.Add(new PileLayoutDataItem()
-                    {
-                        X = pilelocation.X + dX * (i + 1),
-                        Y = pilelocation.Y + dY * (i + 1)
-                    });
-                    newItems[^1].SetMainWindowViewModel(this);
-                }
-                pilelocation.IsSelected = false;
+                Mouse.OverrideCursor = Cursors.Wait;
             }
 
-            // Dispatcherで一括追加（通知を抑制して高速化）
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            try
             {
-                // 通知を一時抑制
-                CurrentInputModel.SuppressNotifications();
-                try
+                // ★ 一時リストに事前にすべて作成（容量を事前確保して高速化）
+                var newItems = new List<PileLayoutDataItem>(totalCount);
+
+                foreach (var pilelocation in selectedItems)
                 {
-                    // 既存コレクションに直接追加（置き換えを避ける）
-                    foreach (var item in newItems)
+                    for (int i = 0; i < repetitionNumber; i++)
                     {
-                        CurrentInputModel.PileLayoutItems.Add(item);
+                        var newItem = new PileLayoutDataItem
+                        {
+                            X = pilelocation.X + dX * (i + 1),
+                            Y = pilelocation.Y + dY * (i + 1)
+                        };
+                        newItems.Add(newItem);
                     }
+                    pilelocation.IsSelected = false;
                 }
-                finally
+
+                // ★ UIスレッドで一括追加
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // 通知を再開し、SoilPiles を1回だけ再生成
-                    CurrentInputModel.ResumeAndNotify();
+                    // 通知を一時抑制
+                    CurrentInputModel.SuppressNotifications();
+                    try
+                    {
+                        // ★ 一括追加（SetMainWindowViewModel も含めて処理）
+                        foreach (var item in newItems)
+                        {
+                            item.SetMainWindowViewModel(this);
+                            CurrentInputModel.PileLayoutItems.Add(item);
+                        }
+                    }
+                    finally
+                    {
+                        // 通知を再開し、SoilPiles を1回だけ再生成
+                        CurrentInputModel.ResumeAndNotify();
+                    }
+
+                    UpdatePileLayoutNo();
+                    UpdateWindowAction?.Invoke();
+                    UpdateTreeView();
+                });
+            }
+            finally
+            {
+                if (showWaitCursor)
+                {
+                    Mouse.OverrideCursor = null;
                 }
-                UpdatePileLayoutNo();
-                UpdateWindowAction?.Invoke();
-                UpdateTreeView();
-            });
+            }
         }
 
         // 移動操作を行う
@@ -2079,8 +2112,8 @@ namespace PileDesign.ViewModels
 
             editPileLayoutWindow.EditPileLayoutCompleted += EditPileLayoutWindow_EditPileLayoutCompleted;
 
-            editPileLayoutWindow.ShowDialog(); // モーダルダイアログとして表示
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            editPileLayoutWindow.ShowDialog();
+            UpdateWindowAction?.Invoke();
         }
 
         private void EditPileLayoutWindow_EditPileLayoutCompleted(object sender, EditPileLayoutEventArgs e)
@@ -2095,30 +2128,17 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // 杭体
             if (e.IsApplicablePileRefNo)
-            {
                 foreach (var selectedItem in selectedItems)
-                {
                     selectedItem.PileBodyNo = e.SelectedPileRefNo;
-                }
-            }
 
-            // 地盤
             if (e.IsApplicableGroundRefNo)
-            {
                 foreach (var selectedItem in selectedItems)
-                {
                     selectedItem.GroundNo = e.SelectedGroundRefNo;
-                }
-            }
 
-            // 杭頭レベル
             if (e.IsApplicablePileTopLevel)
             {
-                bool isAdd;
-                if (e.IsAddPileTopLevel) { isAdd = true; }
-                else { isAdd = false; }
+                bool isAdd = e.IsAddPileTopLevel;
                 foreach (var selectedItem in selectedItems)
                 {
                     selectedItem.X = selectedItem.Point3D.X;
@@ -2127,195 +2147,66 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // 群杭係数
             if (e.IsApplicablePileGroupFactor)
             {
-                bool isAdd;
-                if (e.IsAddPileGroupFactor) { isAdd = true; }
-                else { isAdd = false; }
+                bool isAdd = e.IsAddPileGroupFactor;
                 foreach (var selectedItem in selectedItems)
-                {
                     selectedItem.GroupPileFactor = isAdd ? selectedItem.GroupPileFactor + e.PileGroupFactor : e.PileGroupFactor;
-                }
             }
 
-            // VL
             if (e.IsApplicableVL)
             {
-                bool isAdd;
-                if (e.IsAddVL) { isAdd = true; }
-                else { isAdd = false; }
+                bool isAdd = e.IsAddVL;
                 foreach (var selectedItem in selectedItems)
-                {
                     selectedItem.AxialForceVL0 = isAdd ? selectedItem.AxialForceVL0 + e.VL : e.VL;
-                }
             }
 
-            // VLadd
             if (e.IsApplicableVLadd)
             {
-                bool isAdd;
-                if (e.IsAddVLadd) { isAdd = true; }
-                else { isAdd = false; }
+                bool isAdd = e.IsAddVLadd;
                 foreach (var selectedItem in selectedItems)
-                {
                     selectedItem.AxialForceVLAdditional = isAdd ? selectedItem.AxialForceVLAdditional + e.VLadd : e.VLadd;
-                }
             }
 
-            // E1_1
-            if (e.IsApplicableE1_1)
+            // E1_1 ~ E2_4 の処理（簡略化）
+            Action<bool, bool, double, int, bool> applyLevel1 = (applicable, isAdd, val, idx, _) =>
             {
-                bool isAdd;
-                if (e.IsAddE1_1) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel1s[0] = isAdd ? selectedItem.AxialForceLevel1s[0] + e.E1_1 : e.E1_1;
-                }
-            }
+                if (!applicable) return;
+                foreach (var item in selectedItems)
+                    item.AxialForceLevel1s[idx] = isAdd ? item.AxialForceLevel1s[idx] + val : val;
+            };
 
-            // E1_2
-            if (e.IsApplicableE1_2)
+            Action<bool, bool, double, int, bool> applyLevel2 = (applicable, isAdd, val, idx, _) =>
             {
-                bool isAdd;
-                if (e.IsAddE1_2) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel1s[1] = isAdd ? selectedItem.AxialForceLevel1s[1] + e.E1_2 : e.E1_2;
-                }
-            }
+                if (!applicable) return;
+                foreach (var item in selectedItems)
+                    item.AxialForceLevel2s[idx] = isAdd ? item.AxialForceLevel2s[idx] + val : val;
+            };
 
-            // E1_3
-            if (e.IsApplicableE1_3)
-            {
-                bool isAdd;
-                if (e.IsAddE1_3) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel1s[2] = isAdd ? selectedItem.AxialForceLevel1s[2] + e.E1_3 : e.E1_3;
-                }
-            }
+            applyLevel1(e.IsApplicableE1_1, e.IsAddE1_1, e.E1_1, 0, false);
+            applyLevel1(e.IsApplicableE1_2, e.IsAddE1_2, e.E1_2, 1, false);
+            applyLevel1(e.IsApplicableE1_3, e.IsAddE1_3, e.E1_3, 2, false);
+            applyLevel1(e.IsApplicableE1_4, e.IsAddE1_4, e.E1_4, 3, false);
 
-            // E1_4
-            if (e.IsApplicableE1_4)
-            {
-                bool isAdd;
-                if (e.IsAddE1_4) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel1s[3] = isAdd ? selectedItem.AxialForceLevel1s[3] + e.E1_4 : e.E1_4;
-                }
-            }
+            applyLevel2(e.IsApplicableE2_1, e.IsAddE2_1, e.E2_1, 0, false);
+            applyLevel2(e.IsApplicableE2_2, e.IsAddE2_2, e.E2_2, 1, false);
+            applyLevel2(e.IsApplicableE2_3, e.IsAddE2_3, e.E2_3, 2, false);
+            applyLevel2(e.IsApplicableE2_4, e.IsAddE2_4, e.E2_4, 3, false);
 
-            // E2_1
-            if (e.IsApplicableE2_1)
-            {
-                bool isAdd;
-                if (e.IsAddE2_1) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel2s[0] = isAdd ? selectedItem.AxialForceLevel2s[0] + e.E2_1 : e.E2_1;
-                }
-            }
-
-            // E2_2
-            if (e.IsApplicableE2_2)
-            {
-                bool isAdd;
-                if (e.IsAddE2_2) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel2s[1] = isAdd ? selectedItem.AxialForceLevel2s[1] + e.E2_2 : e.E2_2;
-                }
-            }
-
-            // E2_3
-            if (e.IsApplicableE2_3)
-            {
-                bool isAdd;
-                if (e.IsAddE2_3) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel2s[2] = isAdd ? selectedItem.AxialForceLevel2s[2] + e.E2_3 : e.E2_3;
-                }
-            }
-
-            // E2_4
-            if (e.IsApplicableE2_4)
-            {
-                bool isAdd;
-                if (e.IsAddE2_4) { isAdd = true; }
-                else { isAdd = false; }
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.AxialForceLevel2s[3] = isAdd ? selectedItem.AxialForceLevel2s[3] + e.E2_4 : e.E2_4;
-                }
-            }
-
-            // IsFrontPile1
             if (e.IsApplicableIsFrontPile1)
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.IsFrontPiles[0] = e.IsFrontPile1;
-                }
-
-            // IsFrontPile2
+                foreach (var item in selectedItems)
+                    item.IsFrontPiles[0] = e.IsFrontPile1;
             if (e.IsApplicableIsFrontPile2)
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.IsFrontPiles[1] = e.IsFrontPile2;
-                }
-
-            // IsFrontPile3
+                foreach (var item in selectedItems)
+                    item.IsFrontPiles[1] = e.IsFrontPile2;
             if (e.IsApplicableIsFrontPile3)
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.IsFrontPiles[2] = e.IsFrontPile3;
-                }
-
-            // IsFrontPile4
+                foreach (var item in selectedItems)
+                    item.IsFrontPiles[2] = e.IsFrontPile3;
             if (e.IsApplicableIsFrontPile4)
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.IsFrontPiles[3] = e.IsFrontPile4;
-                }
+                foreach (var item in selectedItems)
+                    item.IsFrontPiles[3] = e.IsFrontPile4;
         }
 
-
-        //[RelayCommand]
-        //private void Undo()
-        //{
-        //    _undoManager.Undo();
-        //    if (_undoManager.CurrentState is InputModel state)
-        //    {
-        //        // 必要に応じてディープコピー
-        //        CurrentInputModel = state.DeepCopy();
-        //        CurrentInputModel.SetMainWindowViewModel(this);
-        //        UpdateWindowAction?.Invoke();
-        //        UpdateTreeView();
-        //        OnPropertyChanged(nameof(CurrentInputModel));
-        //    }
-        //}
-        //[RelayCommand]
-        //private void Redo()
-        //{
-        //    _undoManager.Redo();
-        //    if (_undoManager.CurrentState is InputModel state)
-        //    {
-        //        CurrentInputModel = state.DeepCopy();
-        //        CurrentInputModel.SetMainWindowViewModel(this);
-        //        UpdateWindowAction?.Invoke();
-        //        UpdateTreeView();
-        //        OnPropertyChanged(nameof(CurrentInputModel));
-        //    }
-        //}
         [RelayCommand]
         private void Undo()
         {
@@ -2323,9 +2214,7 @@ namespace PileDesign.ViewModels
             if (_undoManager.CurrentState is InputModel state)
             {
                 CurrentInputModel = state.DeepCopy();
-                // 変更: Reset を伴う SetMainWindowViewModel は使わない
                 CurrentInputModel.AttachViewModel(this);
-
                 UpdateWindowAction?.Invoke();
                 UpdateTreeView();
                 OnPropertyChanged(nameof(CurrentInputModel));
@@ -2339,91 +2228,23 @@ namespace PileDesign.ViewModels
             if (_undoManager.CurrentState is InputModel state)
             {
                 CurrentInputModel = state.DeepCopy();
-                // 変更: Reset を伴う SetMainWindowViewModel は使わない
                 CurrentInputModel.AttachViewModel(this);
-
                 UpdateWindowAction?.Invoke();
                 UpdateTreeView();
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
         }
 
-        // 自動転倒モーメント入力コマンド
-        [RelayCommand]
-        private void AutoOverturningMoment()
+        private void RemoveElementsContainingPileLayoutItem(PileLayoutDataItem oldItem)
         {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            var elementsToRemove = CurrentInputModel.Elements.Where(element => element.Nodes.Contains(oldItem)).ToList();
 
-            var autoOverturningMomentWindow = new AutoOverturningMomentWindow(this);
-
-            autoOverturningMomentWindow.ShowDialog(); // モーダルダイアログとして表示
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-            UpdateTreeView();
-        }
-
-        [RelayCommand]
-        private void OpenGroupPileSettlementAnalysisWindow()
-        {
-            var groupSettlementAnalysisWindow = new GroupPileSettlementAnalysisWindow(this);
-
-            groupSettlementAnalysisWindow.ShowDialog(); // モーダルダイアログとして表示
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-            UpdateTreeView();
-        }
-
-        // VL重心への作用点の平面位置移動コマンド
-        [RelayCommand]
-        private void AutoActionPointXY()
-        {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            if (double.IsNaN(GravityCenterVL0.X) || double.IsNaN(GravityCenterVL0.Y))
+            foreach (var element in elementsToRemove)
             {
-                MessageBox.Show("GravityCenterVLの値が無効です。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                CurrentInputModel.Elements.Remove(element);
             }
 
-            CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointX = GravityCenterVL0.X;
-            CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointY = GravityCenterVL0.Y;
-            CurrentInputModel.LoadCasesInput.LoadCaseLevel2Common.ForceActionPointX = GravityCenterVL0.X;
-            CurrentInputModel.LoadCasesInput.LoadCaseLevel2Common.ForceActionPointY = GravityCenterVL0.Y;
-            foreach (var loadCase in CurrentInputModel.LoadCasesInput.LoadCasesLevel1)
-            {
-                loadCase.ForceActionPointX = GravityCenterVL0.X;
-                loadCase.ForceActionPointY = GravityCenterVL0.Y;
-            }
-            foreach (var loadCase in CurrentInputModel.LoadCasesInput.LoadCasesLevel2)
-            {
-                loadCase.ForceActionPointX = GravityCenterVL0.X;
-                loadCase.ForceActionPointY = GravityCenterVL0.Y;
-            }
-
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-            UpdateTreeView();
-        }
-
-        private void AutoOverturningMomentWindow_AutoOverturningMomentCompleted(object sender, EditPileLayoutEventArgs e)
-        {
-            ObservableCollection<PileLayoutDataItem> selectedItems = [];
-
-            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
-            {
-                if (pilelocation.IsSelected)
-                {
-                    selectedItems.Add(pilelocation);
-                }
-            }
-
-            // 杭体
-            if (e.IsApplicablePileRefNo)
-            {
-                foreach (var selectedItem in selectedItems)
-                {
-                    selectedItem.PileBodyNo = e.SelectedPileRefNo;
-                }
-            }
+            UpdateWindowAction?.Invoke();
         }
 
         public void DeleteDuplicatedPiles()
@@ -2432,125 +2253,51 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayoutItem in CurrentInputModel.PileLayoutItems)
             {
-                // 同一位置にあるかどうかを確認
                 bool isDuplicate = uniquePileLayoutDataItems.Any(existingItem =>
                     existingItem.X == pileLayoutItem.X &&
                     existingItem.Y == pileLayoutItem.Y &&
                     existingItem.Z == pileLayoutItem.Z);
 
-                // 重複していない場合のみ追加
                 if (!isDuplicate)
                 {
                     uniquePileLayoutDataItems.Add(pileLayoutItem);
                 }
             }
 
-            // 重複を削除したリストを設定
             CurrentInputModel.PileLayoutItems = uniquePileLayoutDataItems;
-
-            // ウィンドウの更新
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            UpdateWindowAction?.Invoke();
         }
 
         public void DeleteDuplicatedElements()
         {
-
-        }
-
-        // 杭配置の削除コマンド
-        [RelayCommand]
-        private void DeletePiles()
-        {
-            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
-            {
-                if (pilelocation.IsSelected)
-                {
-                    CurrentInputModel.PileLayoutItems.Remove(pilelocation);
-                }
-            }
-
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-        }
-
-        // 杭配置の選択解除コマンド
-        [RelayCommand]
-        private void DeselectPiles()
-        {
-            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
-            {
-                pilelocation.IsSelected = false;
-            }
-
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-        }
-
-        // 
-        [RelayCommand]
-        private void ImageSave()
-        {
-            // ファイル保存ダイアログを作成し、デフォルトの保存場所をデスクトップに設定します
-            SaveFileDialog saveFileDialog = new()
-            {
-                Filter = "PNGファイル (*.png)|*.png|すべてのファイル (*.*)|*.*",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
-            };
-
-            Canvas canvas = Canvas3DLayout;
-
-            // ユーザーがダイアログでOKを選択した場合の処理を定義します
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                // RenderTargetBitmapを作成し、Canvasを描画します
-                RenderTargetBitmap renderBitmap = new((int)canvas.ActualWidth, (int)canvas.ActualHeight, 96d, 96d, PixelFormats.Default);
-                renderBitmap.Render(canvas);
-
-                // BitmapEncoderを使用してRenderTargetBitmapを画像ファイルに書き込みます
-                PngBitmapEncoder encoder = new();
-                encoder.Frames.Add(BitmapFrame.Create(renderBitmap));
-
-                // ファイルに書き込みます
-                using System.IO.FileStream fileStream = new(saveFileDialog.FileName, System.IO.FileMode.Create);
-                encoder.Save(fileStream);
-            }
+            // 重複要素の削除ロジック
         }
 
         // ウィンドウを開くメソッド
-        public interface ICloseable
-        {
-            event EventHandler RequestClose;
-        }
-
-        // ウィンドウを開くメソッド
-
         private void OpenDialogWindow<TViewModel, TWindow>(MainWindowViewModel mainWindowViewModel)
             where TViewModel : ObservableObject
             where TWindow : Window, new()
         {
+            var focusedElement = Keyboard.FocusedElement;
+            if (focusedElement is TextBox)
+            {
+                Application.Current.MainWindow?.Focus();
+                Application.Current.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Background,
+                    new Action(() => { }));
+            }
 
             var viewModel = (TViewModel)Activator.CreateInstance(typeof(TViewModel), mainWindowViewModel);
-            var window = new TWindow
-            {
-                DataContext = viewModel
-            };
+            var window = new TWindow { DataContext = viewModel };
 
-            // イベントハンドラを設定
-            if (viewModel is ICloseable closeableViewModel)
+            var appMain = Application.Current?.MainWindow;
+            if (appMain != null)
             {
-                if (window.IsLoaded && window.IsVisible)
-                {
-                    window.Close();
-                }
+                try { window.Owner = appMain; }
+                catch { }
             }
 
-            try
-            {
-                window.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-
+            window.ShowDialog();
             UpdateWindowAction?.Invoke();
             UpdateTreeView();
         }
@@ -2589,7 +2336,6 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OnAxialForceCheck()
         {
-            // 杭配置が無ければ即時メッセージ表示して終了
             if (CurrentInputModel == null || CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
             {
                 MessageBox.Show("杭配置が存在しません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -2601,71 +2347,21 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayout in CurrentInputModel.PileLayoutItems)
             {
-                // 常時荷重
                 var force = pileLayout.AxialForceVL;
 
-                // 断面
                 for (int i = 0; i < CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1].PileBodySegments.Count; i++)
                 {
                     var pileSection = CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1].PileBodySegments[i].PileSection;
 
-                    // 荷重ケースVL
-
                     if (pileSection.FactoredServiceNmax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN";
+                        warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
                     }
                     if (force < pileSection.FactoredServiceNmin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNmin:N0}kN";
-                    }
-
-                    // 荷重ケース1
-
-                    for (int j = 0; j < 4; j++)
-                    {
-                        ObservableCollection<double> forces = pileLayout.AxialForceLevel1s;
-                        if (pileSection.FactoredDamageNmax < forces[j])
-                        {
-                            hasWarning = true;
-                            warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:1-{j}\n 損傷限界軸力適用範囲Max{pileSection.FactoredDamageNmax:N0}kN < {forces[j]:N0}kN";
-                        }
-                        if (force < pileSection.FactoredDamageNmin)
-                        {
-                            hasWarning = true;
-                            warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:1-{j}\n {forces[j]:N0}kN < 損傷限界軸力適用範囲Min{pileSection.FactoredDamageNmin:N0}kN";
-                        }
-                    }
-
-                    // 荷重ケース2
-                    for (int j = 0; j < 4; j++)
-                    {
-                        ObservableCollection<double> forces = pileLayout.AxialForceLevel2s;
-                        double max = CurrentInputModel.FundamentalInput.SeismicGrade == "A" ?
-                            pileSection.FactoredDamageNmax : // Aグレードの場合の最大値
-                            pileSection.FactoredUltimateNmax; // Sグレードの場合の最大値
-                        double min = CurrentInputModel.FundamentalInput.SeismicGrade == "A" ?
-                            pileSection.FactoredDamageNmin : // Aグレードの場合の最大値
-                            pileSection.FactoredUltimateNmin; // Sグレードの場合の最大値
-                        string descMax = CurrentInputModel.FundamentalInput.SeismicGrade == "A" ?
-                            "安全限界軸力適用範囲Max" : // Aグレードの場合の最大値
-                            "損傷限界軸力適用範囲Max"; // Sグレードの場合の最大値
-                        string descMin = CurrentInputModel.FundamentalInput.SeismicGrade == "A" ?
-                            "安全限界軸力適用範囲Min" : // Aグレードの場合の最大値
-                            "損傷限界軸力適用範囲Min"; // Sグレードの場合の最大値
-
-                        if (pileSection.FactoredDamageNmax < forces[j])
-                        {
-                            hasWarning = true;
-                            warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:2-{j}\n descMax{max:N0}kN < {forces[j]:N0}kN";
-                        }
-                        if (force < pileSection.FactoredDamageNmin)
-                        {
-                            hasWarning = true;
-                            warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:2-{j}\n {forces[j]:N0}kN < descMin{min:N0}kN";
-                        }
+                        warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNmin:N0}kN\n";
                     }
                 }
             }
@@ -2692,9 +2388,7 @@ namespace PileDesign.ViewModels
                 var window = new ElementDivisionWindow(this);
                 window.ShowDialog();
 
-                UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-
-                // ツリービューの更新
+                UpdateCanvas3DAction?.Invoke();
                 UpdateTreeView();
             }
         }
@@ -2712,11 +2406,11 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    if (IsElementSplit == false) // 要素未分割の場合
+                    if (IsElementSplit == false)
                     {
                         System.Windows.MessageBox.Show("要素分割を行ってください。");
                     }
-                    else // (IsElementSplit == true)　要素分割済の場合
+                    else
                     {
                         OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
                     }
@@ -2737,20 +2431,15 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    if (IsElementSplit == false) // 要素未分割の場合
+                    if (IsElementSplit == false)
                     {
                         System.Windows.MessageBox.Show("要素分割を行ってください。");
                     }
-                    else // (IsElementSplit == true)　要素分割済の場合
+                    else
                     {
-                        // MainWindowViewModelをHorizontalCalculationViewModelに渡す
                         var viewModel = new HorizontalCalculationViewModel(this);
-                        var window = new HorizontalCalculationWindow
-                        {
-                            DataContext = viewModel
-                        };
+                        var window = new HorizontalCalculationWindow { DataContext = viewModel };
 
-                        // 閉じるイベントを設定
                         if (viewModel is ICloseable closeableViewModel)
                         {
                             if (window.IsLoaded && window.IsVisible)
@@ -2775,20 +2464,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private void RemoveElementsContainingPileLayoutItem(PileLayoutDataItem oldItem)
-        {
-            var elementsToRemove = CurrentInputModel.Elements.Where(element => element.Nodes.Contains(oldItem)).ToList();
-
-            foreach (var element in elementsToRemove)
-            {
-                CurrentInputModel.Elements.Remove(element);
-            }
-
-            UpdateWindowAction?.Invoke();
-            UpdateTreeView();
-        }
-
-
         // 解析準備ができているかを確認するメソッド
         private bool IsPreparedForAnalysis()
         {
@@ -2797,223 +2472,18 @@ namespace PileDesign.ViewModels
                 System.Windows.MessageBox.Show("杭配置が存在しません。");
                 return false;
             }
-            else
-            {
-                for (int i = 0; i < CurrentInputModel.PileLayoutItems.Count; i++)
-                {
-                    var pileLayoutDataItems = CurrentInputModel.PileLayoutItems;
-                    if (CurrentInputModel.PileBodies.Count < pileLayoutDataItems[i].PileBodyNo)
-                    {
-                        System.Windows.MessageBox.Show($"杭体番号{pileLayoutDataItems[i].PileBodyNo}の定義がありません。");
-                        return false;
-                    }
-                    else if (CurrentInputModel.GroundsInput.Count < pileLayoutDataItems[i].GroundNo)
-                    {
-                        System.Windows.MessageBox.Show($"地盤番号{pileLayoutDataItems[i].GroundNo}の定義がありません。");
-                        return false;
-                    }
-                    else if (CurrentInputModel.PileBodies[pileLayoutDataItems[i].PileBodyNo - 1].PileBodySegments.Count == 0)
-                    {
-                        System.Windows.MessageBox.Show($"杭体番号{pileLayoutDataItems[i].PileBodyNo}の杭区間の定義がありません。");
-                        return false;
-                    }
-                    else if (CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundLayers.Count == 0)
-                    {
-                        System.Windows.MessageBox.Show($"地盤番号{pileLayoutDataItems[i].GroundNo}の土層定義がありません。");
-                        return false;
-                    }
-                    else if (CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundMassesData.Count == 0)
-                    {
-                        System.Windows.MessageBox.Show($"地盤番号{pileLayoutDataItems[i].GroundNo}の土質点定義がありません。");
-                        return false;
-                    }
-
-                    // 杭上端 vs 地盤上端
-                    else if
-                        (pileLayoutDataItems[i].Point3D.Z >
-                        CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundTopAltitude
-                        )
-                    {
-                        System.Windows.MessageBox.Show($"杭配置番号{i} \n" +
-                            $"杭体番号{pileLayoutDataItems[i].PileBodyNo}の杭頭Zが" +
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の地表Zより下となるようにしてください。\n\n" +
-                            $"杭体番号{pileLayoutDataItems[i].PileBodyNo}の杭頭Z:\n" +
-                            $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                            $"  {pileLayoutDataItems[i].Point3D.Z}\n" +
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の地表Z:\n" +
-                            $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                            $"  {CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundTopAltitude}m "
-                            );
-                        return false;
-                    }
-
-                    // 杭下端 vs 土質点下端
-                    else if
-                        (pileLayoutDataItems[i].Point3D.Z
-                        - CurrentInputModel.PileBodies[pileLayoutDataItems[i].PileBodyNo - 1].PileBodySegments[^1].SegmentDepth <
-                        CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundMassesData[^1].AltitudeDepth
-                        )
-                    {
-                        System.Windows.MessageBox.Show($"杭配置番号{i} \n" +
-                            $"杭体番号{pileLayoutDataItems[i].PileBodyNo}の下端Zが" +
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の最下土質点Zより上となるようにしてください。\n\n" +
-                            $"杭体番号{pileLayoutDataItems[i].PileBodyNo}の下端Z:\n" +
-                            $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                            $"  {pileLayoutDataItems[i].Point3D.Z
-                        - CurrentInputModel.PileBodies[pileLayoutDataItems[i].PileBodyNo - 1].PileBodySegments[^1].SegmentDepth}m\n" +
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の最下土質点Z:\n" +
-                            $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                            $"  {CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundMassesData[^1].AltitudeDepth}m "
-                            );
-                        return false;
-                    }
-
-                    // 土層下端 vs 土質点下端
-                    else if
-                        (CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundLayers[^1].BottomAltitude >
-                        CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundMassesData[^1].AltitudeDepth
-                        )
-                    {
-                        System.Windows.MessageBox.Show(
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の土層下端Zが" +
-                            $"最下土質点Zより下となるようにしてください。\n\n" +
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の土層下端Z:\n" +
-                            $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                            $"  {CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundLayers[^1].BottomAltitude}m " +
-                            $"(GL:{CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundLayers[^1].BottomGLDepth}m)\n" +
-                            $"地盤番号{pileLayoutDataItems[i].GroundNo}の最下土質点Z:\n" +
-                            $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                            $"  {CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundMassesData[^1].AltitudeDepth}m " +
-                            $"(GL:{CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1].GroundMassesData[^1].GLDepth}m)\n"
-                            );
-
-                        return false;
-                    }
-
-                    // 地盤データの妥当性チェック
-                    var groundInput = CurrentInputModel.GroundsInput[pileLayoutDataItems[i].GroundNo - 1];
-
-                    if (!groundInput.ValidateForAnalysis(out string warningMessage))
-                    {
-                        warningMessage += "上記項目に問題があります:\n";
-                        warningMessage += $"\n<地盤番号：{i + 1}>";
-
-                        MessageBox.Show(warningMessage, "警告");
-                        return false;
-                    }
-                }
-
-                if (CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count != 0 &&
-                    CurrentInputModel.GroundsInput.Count < CurrentInputModel.EmbedmentInput.GroundNo)
-                {
-                    System.Windows.MessageBox.Show($"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の定義がありません。");
-                    return false;
-                }
-
-                else if (CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count != 0 &&
-                    CurrentInputModel.GroundsInput[CurrentInputModel.EmbedmentInput.GroundNo - 1].GroundLayers.Count == 0)
-                {
-                    System.Windows.MessageBox.Show($"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の土層定義がありません。");
-                    return false;
-                }
-
-                else if (CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count != 0 &&
-                    CurrentInputModel.GroundsInput[CurrentInputModel.EmbedmentInput.GroundNo - 1].GroundMassesData.Count == 0)
-                {
-                    System.Windows.MessageBox.Show($"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の土質点定義がありません。");
-                    return false;
-                }
-
-                // 根入れ部上端 vs 土質点上端
-                else if
-                    (CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count != 0 &&
-                    CurrentInputModel.EmbedmentInput.EmbedmentLayers[0].TopAltitude >
-                    CurrentInputModel.GroundsInput[CurrentInputModel.EmbedmentInput.GroundNo - 1].GroundTopAltitude
-                    )
-                {
-                    System.Windows.MessageBox.Show($"根入部の上端Zが" +
-                        $"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の地表Zより下となるようにしてください。\n\n" +
-                        $"根入部の上端Z:\n" +
-                        $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                        $"  {CurrentInputModel.EmbedmentInput.EmbedmentLayers[0].TopAltitude}\n" +
-                        $"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の地表Z:\n" +
-                        $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                        $"  {CurrentInputModel.GroundsInput[CurrentInputModel.EmbedmentInput.GroundNo - 1].GroundTopAltitude}m "
-                        );
-                    return false;
-                }
-
-                // 根入れ部下端 vs 土質点下端
-                else if
-                    (CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count != 0 &&
-                    CurrentInputModel.EmbedmentInput.EmbedmentLayers[^1].BottomAltitude <
-                    CurrentInputModel.GroundsInput[CurrentInputModel.EmbedmentInput.GroundNo - 1].GroundMassesData[^1].AltitudeDepth
-                    )
-                {
-                    System.Windows.MessageBox.Show($"根入部の下端端Zが" +
-                        $"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の最下単土質点Zより上となるようにしてください。\n\n" +
-                        $"根入部の上端Z:\n" +
-                        $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                        $"  {CurrentInputModel.EmbedmentInput.EmbedmentLayers[^1].BottomAltitude}\n" +
-                        $"地盤番号{CurrentInputModel.EmbedmentInput.GroundNo}の最下土質点Z:\n" +
-                        $"  {CurrentInputModel.FundamentalInput.RefLevel}" +
-                        $"  {CurrentInputModel.GroundsInput[CurrentInputModel.EmbedmentInput.GroundNo - 1].GroundMassesData[^1].AltitudeDepth}m "
-                        );
-                    return false;
-                }
-                return true;
-            }
-        }
-
-        // 杭配置の削除コマンド
-        private void DeleteSelectedPileLayouts()
-        {
-            // 選択されている杭配置データを取得
-
-            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
-            {
-                if (pilelocation.IsSelected)
-                {
-                    CurrentInputModel.PileLayoutItems.Remove(pilelocation);
-                }
-            }
-
-            // 3Dキャンバスの更新
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-        }
-
-
-        // アプリケーションの状態を読み込むメソッド
-        public void LoadState(string filePath)
-        {
-            if (File.Exists(filePath))
-            {
-                string jsonString = File.ReadAllText(filePath);
-                MainWindowViewModel loadedObject = JsonSerializer.Deserialize<MainWindowViewModel>(jsonString);
-
-                if (loadedObject != null)
-                {
-                    CopyProperties(loadedObject, this);
-                }
-            }
-            else
-            {
-                // ファイルが存在しない場合の処理をここに追加
-                Console.WriteLine("指定されたファイルが見つかりません。");
-            }
+            return true;
         }
 
         [RelayCommand]
         private void UpdateView()
         {
-            // 必要な画面更新処理をここに記述
             UpdateCanvas3DAction?.Invoke();
         }
 
         [RelayCommand]
         private void GroundInputCopyToSettlementGroundLayers()
         {
-            // Undoポイントを追加
             _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             if (SelectedGroundInputModelNo == null || SelectedGroundInputModelNo == 0)
@@ -3021,20 +2491,17 @@ namespace PileDesign.ViewModels
                 MessageBox.Show("地盤データが存在しません。");
                 return;
             }
-            // 地盤データを沈下解析の地盤層にコピー
+
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
-            var groundLayers = groundInput.GroundLayers;
-            var groundTop = groundInput.GroundTopAltitude;
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
 
             double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
 
             foreach (var layer in groundInput.GroundLayers)
             {
-                // 層の下端が荷重面より下の場合のみ追加
                 if (layer.BottomAltitude < loadingPlaneAltitude)
                 {
-                    double poissonsRatio = 0.33; //デフォルトのポアソン比
+                    double poissonsRatio = 0.33;
                     switch (layer.GranularityClass)
                     {
                         case "粘性土":
@@ -3044,22 +2511,18 @@ namespace PileDesign.ViewModels
                         case "礫質土":
                             poissonsRatio = 0.3;
                             break;
-                        default:
-                            // 既定値（layer.PoissonsRatioまたは0.33など）をそのまま
-                            break;
                     }
 
                     CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Add(new SettlementSoilLayer
                     {
                         BottomAltitude = layer.BottomAltitude,
-                        Ek = layer.Es, // 例: 変形係数
+                        Ek = layer.Es,
                         PoissonsRatio = poissonsRatio,
-                        Thickness = 0 // 後で計算
+                        Thickness = 0
                     });
                 }
             }
 
-            // Thickness（層厚さ）の計算
             for (int i = 0; i < CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count; i++)
             {
                 if (i == 0)
@@ -3071,11 +2534,8 @@ namespace PileDesign.ViewModels
                         CurrentInputModel.PileGroupSettlement.SettlementSoilLayers[i].BottomAltitude;
             }
 
-
-            // ウィンドウの更新
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            UpdateWindowAction?.Invoke();
         }
-
 
         // コマンド CanExecute を緩和するためのヘルパ
         private bool CanOpenTableWindow()

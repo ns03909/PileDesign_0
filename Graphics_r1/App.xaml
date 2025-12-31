@@ -27,6 +27,12 @@
                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
             </Style>
+
+            <!-- Ribbon のバインディングエラー回避用スタイル -->
+            <!-- RibbonWindow の祖先が見つからない問題を解消 -->
+            <Style TargetType="{x:Type ribbon:Ribbon}">
+                <Setter Property="WindowIconVisibility" Value="Collapsed"/>
+            </Style>
             
         </ResourceDictionary>
 

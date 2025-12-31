@@ -79,6 +79,16 @@ namespace PileDesign
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
+            // ★ IME/TextStore 関連の COMException は無視して続行
+            // HResult 0x80040206 = "現在、レイアウトは使用できません"
+            if (e.Exception is System.Runtime.InteropServices.COMException comEx 
+                && comEx.HResult == unchecked((int)0x80040206))
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] IME/TextStore COMException ignored: {comEx.Message}");
+                e.Handled = true;
+                return; // アプリを終了せずに続行
+            }
+
             ShowAndLogException(e.Exception);
             e.Handled = true;
             Environment.Exit(1);

@@ -1474,7 +1474,7 @@
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
-                                                <DataGridTextColumn Binding="{Binding BottomGLDepth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                                <DataGridTextColumn Binding="{Binding BottomGLDepth, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                                                     CellStyle="{StaticResource ErrorCellStyle}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                     <DataGridTextColumn.Header>

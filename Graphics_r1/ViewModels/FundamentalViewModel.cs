@@ -1,11 +1,11 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using System;
 using System.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
-using static PileDesign.ViewModels.MainWindowViewModel;
 using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels

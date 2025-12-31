@@ -47,14 +47,14 @@
             <wv2:WebView2 Name="HelpWebView" />
         </TabItem>
 
-        <TabItem Header="Original">
+        <!--<TabItem Header="Original">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="200"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- 章と節タイトルを表示するTreeView -->
+                --><!-- 章と節タイトルを表示するTreeView --><!--
                 <TreeView x:Name="ChapterTreeView" Grid.Column="0"
                   SelectedItemChanged="ChapterTreeView_SelectedItemChanged">
                     <TreeViewItem Header="準拠指針・参考文献"/>
@@ -192,7 +192,7 @@
                             一般的な杭基礎検討項目
                         </Paragraph>
 
-                        <!-- 表を追加 -->
+                        --><!-- 表を追加 --><!--
                         <Paragraph>Table 一般的な杭基礎検討項目（杭基礎の設計フロー（基礎指針'19図 6.1.1））と本プログラムにおける適用範囲</Paragraph>
                         <Table >
                             <Table.Columns>
@@ -202,7 +202,7 @@
                                 <TableColumn Width="100" />
                             </Table.Columns>
                             <TableRowGroup>
-                                <!-- 表のヘッダー -->
+                                --><!-- 表のヘッダー --><!--
                                 <TableRow>
                                     <TableCell>
                                         <Paragraph TextAlignment="Center" Foreground="White">
@@ -227,7 +227,7 @@
                                     </TableCell>
 
                                 </TableRow>
-                                <!-- 表の内容 -->
+                                --><!-- 表の内容 --><!--
                                 <TableRow>
                                     <TableCell>
                                         <Paragraph Foreground="White">杭基礎の基本設定</Paragraph>
@@ -564,7 +564,7 @@
                                     </ListItem>
                                 </List>
                             </ListItem>
-                            <!-- 他の項目も同様に追加 -->
+                            --><!-- 他の項目も同様に追加 --><!--
                         </List>
 
                         <Paragraph x:Name="Section6" Style="{StaticResource BoldLargeParagraphStyle}">
@@ -582,7 +582,7 @@
                                     </ListItem>
                                 </List>
                             </ListItem>
-                            <!-- 他の項目も同様に追加 -->
+                            --><!-- 他の項目も同様に追加 --><!--
                         </List>
 
                         <Paragraph x:Name="Section7" Style="{StaticResource BoldLargeParagraphStyle}">
@@ -600,7 +600,7 @@
                                     </ListItem>
                                 </List>
                             </ListItem>
-                            <!-- 他の項目も同様に追加 -->
+                            --><!-- 他の項目も同様に追加 --><!--
                         </List>
 
                         <Paragraph x:Name="Section8" Style="{StaticResource BoldLargeParagraphStyle}">
@@ -1658,7 +1658,7 @@
                 </FlowDocumentScrollViewer>
 
             </Grid>
-        </TabItem>
+        </TabItem>-->
     </TabControl>
 
 </Window>

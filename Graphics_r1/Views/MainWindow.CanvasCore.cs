@@ -276,13 +276,13 @@ namespace PileDesign.Views
                 // 群杭沈下グリッドの描画
                 if (viewModel.IsGroupPileGridVisible) UpdateGroupPileGrid3D();
 
-                // 変形後沈下グリッドの描画
-                if (viewModel.IsGroupPileGridDeformationVisible) UpdateSettlementGridDeformation(); // 群杭沈下地盤変位の描画
-
                 // 全てのパスを描画（MainCanvasGeometryのPathGeometryをCanvasに追加）
                 viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
 
                 // === 以下はDrawAllPathsの後に実行（ColorBaredGeometryのPathが削除されないようにする） ===
+
+                // 変形後沈下グリッドの描画（コンター図）
+                if (viewModel.IsGroupPileGridDeformationVisible) UpdateSettlementGridDeformation();
 
                 // 軸力・慣性力の描画
                 if (viewModel.IsMassLoadingVisible || viewModel.IsAxialLoadingVisible) UpdateLoading3D();

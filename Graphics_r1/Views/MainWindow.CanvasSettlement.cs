@@ -271,10 +271,9 @@ namespace PileDesign.Views
                 // 再構築
                 var cache = new PileDesign.ViewModels.SettlementGridRenderCache();
 
-                // カラーバー帯（色と範囲）
+                // カラーバー帯（色と範囲）- レインボーカラースケールを使用
                 var allValues = new ObservableCollection<double>(items.Select(x => x.Settlement));
-                //var colorBarGeometries = GetColorBarGeometries(allValues);
-                var colorBarGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+                var colorBarGeometries = ColorBarUtils.GetColorBarGeometries(allValues, steps: 12, mode: ColorBarUtils.ColorBarMode.Rainbow);
                 // 要素名を明示：Bottom/Top/Color
                 var colorBands = colorBarGeometries
                     .Select(g => (Bottom: g.BottomRange, Top: g.TopRange, g.Color))
@@ -476,11 +475,14 @@ namespace PileDesign.Views
                 var geom = kv.Value;
                 if (geom.CanFreeze) geom.Freeze();
 
+                // 半透明の色を作成（アルファ値を180に設定、約70%の不透明度）
+                var semiTransparentColor = Color.FromArgb(180, color.R, color.G, color.B);
+
                 if (!_settlementBandPaths.TryGetValue(color, out var path))
                 {
                     path = new Path
                     {
-                        Fill = new SolidColorBrush(color),
+                        Fill = new SolidColorBrush(semiTransparentColor),
                         Stroke = Brushes.Transparent,
                         StrokeThickness = 0,
                         IsHitTestVisible = false,
@@ -495,6 +497,8 @@ namespace PileDesign.Views
                 }
 
                 path.Data = geom;
+                // 半透明のブラシを設定
+                path.Fill = new SolidColorBrush(semiTransparentColor);
                 if (path.Fill is SolidColorBrush sb && sb.CanFreeze) sb.Freeze();
             }
 
