@@ -1154,7 +1154,9 @@ namespace PileDesign.ViewModels
                     return;
                 }
                 if (SetProperty(ref _isAnalysisResultVisible, value))
+                {
                     UpdateWindowAction?.Invoke();
+                }
             }
         }
 

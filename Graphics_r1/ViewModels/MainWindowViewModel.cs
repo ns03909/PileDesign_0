@@ -1728,8 +1728,11 @@ namespace PileDesign.ViewModels
         // 解析結果テーブル再生成
         public void RefreshResultTablesFromLastStep()
         {
-            //if (CurrentModel == null || CurrentModel.AnalysisStepResults == null || CurrentModel.AnalysisStepResults.Count == 0)
-            if (!HasAnyAnalysisResult())
+            // AnaModel または AnalysisStepResults が null/空の場合は早期リターン
+            if (CurrentModel == null || 
+                CurrentModel.AnalysisStepResults == null || 
+                CurrentModel.AnalysisStepResults.Count == 0 ||
+                !HasAnyAnalysisResult())
             {
                 LatestResultTables = [];
                 OnPropertyChanged(nameof(LatestResultTables));
@@ -1738,7 +1741,15 @@ namespace PileDesign.ViewModels
             }
 
             // 最終ステップ結果を取得
-            var last = CurrentModel.AnalysisStepResults.Last();
+            var last = CurrentModel.AnalysisStepResults.LastOrDefault();
+            if (last == null)
+            {
+                LatestResultTables = [];
+                OnPropertyChanged(nameof(LatestResultTables));
+                RaiseResultCommandsCanExecute();
+                return;
+            }
+
             LatestResultTables = _tableService.BuildTables(
                 CurrentModel,
                 last.LoadCase,
@@ -2536,10 +2547,5 @@ namespace PileDesign.ViewModels
 
             UpdateWindowAction?.Invoke();
         }
-
-        // コマンド CanExecute を緩和するためのヘルパ
-        private bool CanOpenTableWindow()
-            => (CurrentModel?.AnalysisStepResults?.Count ?? 0) > 0
-               && (LatestResultTables?.Count ?? 0) > 0;
     }
 }

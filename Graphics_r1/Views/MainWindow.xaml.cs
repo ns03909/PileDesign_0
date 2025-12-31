@@ -215,6 +215,15 @@ namespace PileDesign.Views
         {
             if (e.PropertyName == nameof(MainWindowViewModel.RightBlankWidthPx))
                 UpdateCanvasRightBlankClip();
+
+            // IsAnalysisResultVisible が true になったとき、解析結果タブを選択
+            if (e.PropertyName == nameof(MainWindowViewModel.IsAnalysisResultVisible))
+            {
+                if (DataContext is MainWindowViewModel vm && vm.IsAnalysisResultVisible)
+                {
+                    AnalysisResultRibbonTab.IsSelected = true;
+                }
+            }
         }
 
         private void Window_Closed(object sender, EventArgs e)

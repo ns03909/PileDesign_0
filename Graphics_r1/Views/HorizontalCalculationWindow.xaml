@@ -216,8 +216,18 @@
             <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16"/>
             <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Margin="0,10,0,0"/>
 
-            <!-- ...（省略: 節点数・要素数などのStackPanel）... -->
-            <Button Content="水平解析" Command="{Binding ExecuteAnalysisCommand}"/>
+            <!-- ...existing code... -->
+            <Button Content="水平解析" Command="{Binding ExecuteAnalysisCommand}">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding TotalCalculationCount}" Value="0">
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
 
             <!--<Button Content="一時停止" Command="{Binding PauseAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
             <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->

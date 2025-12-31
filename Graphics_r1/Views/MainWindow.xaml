@@ -702,7 +702,7 @@
 
             </ribbon:RibbonTab>
 
-            <ribbon:RibbonTab Header="解析結果(R)" KeyTip="R">
+            <ribbon:RibbonTab x:Name="AnalysisResultRibbonTab" Header="解析結果(R)" KeyTip="R">
                 <ribbon:RibbonGroup Header="ウィンドウ表示">
                     <ribbon:RibbonButton x:Name="RibbonButtonGraph"
                              Label="グラフ出力"
