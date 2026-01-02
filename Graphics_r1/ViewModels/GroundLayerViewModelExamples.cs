@@ -884,11 +884,11 @@ namespace PileDesign.ViewModels
                 //LayerThickness = 0.8,
                 BottomGLDepth = -0.8,
                 Name = "ñÑìy",
-                GranularityClass = "çªéøìy",
+                GranularityClass = "îSê´ìy",
                 Density = 14.7,
                 AgeCategory = "â´êœëw",
                 NValue = 2.0,
-                Cohesive = 0.0,
+                Cohesive = 28.4,
                 Vs = 90.0,
                 Es = 1400
 
@@ -904,7 +904,7 @@ namespace PileDesign.ViewModels
                 Density = 14.7,
                 AgeCategory = "â´êœëw",
                 NValue = 6.0,
-                Cohesive = 20.0,
+                Cohesive = 28.4,
                 Vs = 90.0,
                 Es = 1400
 
@@ -952,7 +952,7 @@ namespace PileDesign.ViewModels
                 Density = 15.7,
                 AgeCategory = "â´êœëw",
                 NValue = 1.1,
-                Cohesive = 48.0,
+                Cohesive = 28.4,
                 Vs = 120.0,
                 Es = 1140
             });
@@ -967,7 +967,7 @@ namespace PileDesign.ViewModels
                 Density = 14.7,
                 AgeCategory = "â´êœëw",
                 NValue = 2.5,
-                Cohesive = 19.0,
+                Cohesive = 28.4,
                 Vs = 120.0,
                 Es = 5630
             });
@@ -983,7 +983,7 @@ namespace PileDesign.ViewModels
                 Density = 14.7,
                 AgeCategory = "â´êœëw",
                 NValue = 5.2,
-                Cohesive = 55.0,
+                Cohesive = 52.0,
                 Vs = 160.0,
                 Es = 5280
             });
@@ -998,7 +998,7 @@ namespace PileDesign.ViewModels
                 Density = 14.7,
                 AgeCategory = "â´êœëw",
                 NValue = 9.0,
-                Cohesive = 55.0,
+                Cohesive = 137.5,
                 Vs = 200.0,
                 Es = 14700
             });
@@ -1010,10 +1010,10 @@ namespace PileDesign.ViewModels
                 BottomGLDepth = -29.3,
                 Name = "çdéøÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
-                Density = 16.0,
+                Density = 14.7,
                 AgeCategory = "ç^êœëw",
                 NValue = 9.5,
-                Cohesive = 70.0,
+                Cohesive = 137.5,
                 Vs = 200.0,
                 Es = 58700
             });
@@ -1028,7 +1028,7 @@ namespace PileDesign.ViewModels
                 Density = 14.7,
                 AgeCategory = "ç^êœëw",
                 NValue = 60.0,
-                Cohesive = 70.0,
+                Cohesive = 137.5,
                 Vs = 400.0,
                 Es = 70200
             });
@@ -1076,10 +1076,10 @@ namespace PileDesign.ViewModels
             {
                 //Spacing = 1.0,
                 GLDepth = -1.5,
-                NValue = 6.0,
+                NValue = 2.0,
                 //Fc = 31.0,
-                VS0 = 120.0,
-                Density = 15.7,
+                VS0 = 90.0,
+                Density = 14.7,
                 Fc = 80.0,
             });
             //4
@@ -1087,10 +1087,11 @@ namespace PileDesign.ViewModels
             {
                 //Spacing = 1.0,
                 GLDepth = -2.5,
-                NValue = 21.0,
-                //Fc = 5.0,
-                VS0 = 170.0,
-                Density = 17.7,
+                NValue = 6.0,
+                //Fc = 31.0,
+                VS0 = 120.0,
+                Density = 15.7,
+                Fc = 80.0,
             });
             //5
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
@@ -1167,9 +1168,8 @@ namespace PileDesign.ViewModels
                 GLDepth = -9.6,
                 NValue = 1.0,
                 //Fc = 5.0,
-                Density = 15.7,
+                Density = 17.7,
                 VS0 = 120.0,
-                Fc = 80.0,
             });
             //12
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
@@ -1245,9 +1245,9 @@ namespace PileDesign.ViewModels
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
             {
                 GLDepth = -17.5,
-                NValue = 2.0,
+                NValue = 1.0,
                 //Fc = 5.0,
-                Density = 14.7,
+                Density = 15.7,
                 VS0 = 120.0,
                 Fc = 80.0,
             });
@@ -1285,10 +1285,10 @@ namespace PileDesign.ViewModels
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
             {
                 GLDepth = -21.65,
-                NValue = 4.0,
+                NValue = 2.0,
                 //Fc = 5.0,
                 Density = 14.7,
-                VS0 = 160.0,
+                VS0 = 120.0,
                 Fc = 80.0,
             });
             //24
@@ -1305,10 +1305,11 @@ namespace PileDesign.ViewModels
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
             {
                 GLDepth = -23.6,
-                NValue = 5.0,
+                NValue = 4.0,
                 //Fc = 5.0,
                 Density = 14.7,
                 VS0 = 160.0,
+                Fc = 80.0,
             });
             //26
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
@@ -1324,10 +1325,10 @@ namespace PileDesign.ViewModels
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
             {
                 GLDepth = -25.6,
-                NValue = 7.0,
+                NValue = 5.0,
                 //Fc = 5.0,
                 Density = 14.7,
-                VS0 = 200.0,
+                VS0 = 160.0,
                 Fc = 80.0,
             });
             //28
@@ -1364,10 +1365,10 @@ namespace PileDesign.ViewModels
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
             {
                 GLDepth = -30.4,
-                NValue = 60.0,
+                NValue = 22.0,
                 //Fc = 5.0,
                 Density = 14.7,
-                VS0 = 400.0,
+                VS0 = 200.0,
                 Fc = 80.0,
             });
             //32
@@ -1427,14 +1428,14 @@ namespace PileDesign.ViewModels
             GroundInput.GroundAcceleration1 = 2.0;
             GroundInput.GroundLayers = [];
             // 1 ñÑìy
-            double layerthickness;
+            double layerThickness;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
                 BottomGLDepth = -2.0,
                 LayerThickness = 2.0,
                 BottomAltitude = 0.4,
-                Name = "As1",
+                Name = "ñÑìy",
                 GranularityClass = "çªéøìy",
                 Density = 15.0,
                 AgeCategory = "â´êœëw",
@@ -1448,14 +1449,14 @@ namespace PileDesign.ViewModels
             });
 
             // 2 ÉVÉãÉgç¨Ç∂ÇËç◊çª
-            layerthickness = 0.6;
+            layerThickness = 0.6;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
-                Name = "As2",
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
+                Name = "ÉVÉãÉgç¨Ç∂ÇËç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
                 AgeCategory = "â´êœëw",
@@ -1463,20 +1464,20 @@ namespace PileDesign.ViewModels
                 NValue = 7.0,
                 Cohesive = 0.0,
                 Vs = 120.0,
-                Es = 7700.0,
+                Es = 4000.0,
                 IsPositiveCircumResistance = true,
                 IsNegativeCircumResistance = true
             });
 
             // 3 çªéøÉVÉãÉg
-            layerthickness = 1.0;
+            layerThickness = 1.0;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
-                Name = "Ac1",
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
+                Name = "çªéøÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
                 Density = 16.0,
                 AgeCategory = "â´êœëw",
@@ -1490,14 +1491,14 @@ namespace PileDesign.ViewModels
             });
 
             // 4 ÉVÉãÉgç¨Ç∂ÇËç◊çª
-            layerthickness = 2.4;
+            layerThickness = 2.4;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
-                Name = "As3",
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
+                Name = "ÉVÉãÉgç¨Ç∂ÇËç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
                 AgeCategory = "â´êœëw",
@@ -1511,14 +1512,14 @@ namespace PileDesign.ViewModels
             });
 
             // 5 çªç¨Ç∂ÇËÉVÉãÉg
-            layerthickness = 1.80;
+            layerThickness = 1.80;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
-                Name = "Ac2",
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
+                Name = "çªç¨Ç∂ÇËÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
                 Density = 16.0,
                 AgeCategory = "â´êœëw",
@@ -1532,16 +1533,16 @@ namespace PileDesign.ViewModels
             });
 
             // 6 çªéøÉVÉãÉg
-            layerthickness = 1.70;
+            layerThickness = 1.70;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
-                Name = "Ac3",
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
+                Name = "çªéøÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
-                Density = 20.0,
+                Density = 16.0,
                 AgeCategory = "â´êœëw",
                 IsEngineeringBedrock = false,
                 NValue = 3.0,
@@ -1553,14 +1554,14 @@ namespace PileDesign.ViewModels
             });
 
             // 7 îSìyç¨Ç∂ÇËç◊çª
-            layerthickness = 7.80;
+            layerThickness = 7.80;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
-                Name = "Ds1",
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
+                Name = "îSìyç¨Ç∂ÇËç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
@@ -1578,7 +1579,7 @@ namespace PileDesign.ViewModels
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
             {
                 //Spacing = 1.0,
-                GLDepth = -1.5,
+                GLDepth = -1.3,
                 NValue = 2.0,
                 Fc = 25.0,
                 VS0 = 90.0,
@@ -1590,7 +1591,7 @@ namespace PileDesign.ViewModels
                 GLDepth = GroundInput.GroundMassesData[^1].GLDepth - 1.0,
                 NValue = 7.0,
                 Fc = 31.0,
-                VS0 = 90.0,
+                VS0 = 120.0,
             });
             //3
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
@@ -1599,7 +1600,7 @@ namespace PileDesign.ViewModels
                 GLDepth = GroundInput.GroundMassesData[^1].GLDepth - 1.0,
                 NValue = 1.0,
                 Fc = 70.0,
-                VS0 = 120.0,
+                VS0 = 90.0,
             });
             //4
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
@@ -1608,7 +1609,7 @@ namespace PileDesign.ViewModels
                 GLDepth = GroundInput.GroundMassesData[^1].GLDepth - 1.0,
                 NValue = 13.0,
                 Fc = 10.0,
-                VS0 = 90.0,
+                VS0 = 180.0,
             });
             //5
             GroundInput.GroundMassesData.Add(new GroundMassDataInput
@@ -1626,7 +1627,7 @@ namespace PileDesign.ViewModels
                 GLDepth = GroundInput.GroundMassesData[^1].GLDepth - 1.0,
                 NValue = 2.0,
                 Fc = 70.0,
-                VS0 = 180.0,
+                VS0 = 160.0,
             });
             //7
             GroundInput.GroundMassesData.Add(new GroundMassDataInput

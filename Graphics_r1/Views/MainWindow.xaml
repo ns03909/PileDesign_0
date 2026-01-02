@@ -846,7 +846,7 @@
                     <CheckBox Content="杭頭のみ" IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
                         Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal"  Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Text="位置" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <Slider Width="50" Minimum="0" Maximum="20"
                             Value="{Binding TextPosiitonAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
@@ -855,7 +855,7 @@
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                              KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0"  Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Text="小数" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <Slider Width="50" Minimum="0" Maximum="5"
                             Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
