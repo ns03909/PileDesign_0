@@ -797,7 +797,7 @@ namespace PileDesign.ViewModels
                     Z = -1.4,
                     AxialForceVL0 = 1692,
                     AxialForceLevel1s = [-215, 158, 215, -158],
-                    AxialForceLevel2s = [-323, 257, 323, -257],
+                    AxialForceLevel2s = [-323, 237, 323, -237],
 
                 },
                 new()

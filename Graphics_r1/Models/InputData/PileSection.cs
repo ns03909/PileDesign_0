@@ -199,8 +199,25 @@ namespace PileDesign.Models.InputData
         public double FactoredDamageNmin => GetFilteredNMin(FactoredDamageNM);
         public double FactoredUltimateNmin => GetFilteredNMin(FactoredUltimateNM);
 
-        // PileSection に各断面型の GetMPhiRelationship を仲介するメソッドを追加
-        // 戻り値の単位は ViewModel 側の期待に合わせて変換します（φ: 1/mm->1/m、M: Nmm->kNm）
+        /// <summary>
+        /// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。
+        /// 
+        /// 単位系変換の説明:
+        /// - 呼び出し側（FEM解析）の入力:
+        ///   axialN (軸力): [kN]
+        /// - 断面計算側（InsituReinforcedConcreteSection等）の期待入力/出力:
+        ///   axialN: [N]
+        ///   φ (曲率): [1/mm] - 内部で PileDia [mm] を使った断面計算のため
+        ///   M (曲げモーメント): [N·mm]
+        /// - FEM解析側（MomentCurvatureCurve）の期待値:
+        ///   φ: [1/m] = [rad/m]
+        ///   M: [kNm]
+        /// 
+        /// 変換係数:
+        /// - axialN: ×1000 (kN → N) [入力時]
+        /// - φ: ×1000 (1/mm → 1/m) [出力時]
+        /// - M: ×10⁻⁶ (N·mm → kNm) [出力時]
+        /// </summary>
         public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN)
             => GetMphiRelationship(axialN, 1.0);
 
@@ -208,6 +225,9 @@ namespace PileDesign.Models.InputData
         {
             try
             {
+                // 単位変換: 軸力 kN → N
+                double axialN_inN = axialN * 1000.0;
+
                 // 各ケースで内部の断面クラスを生成して GetMPhiRelationship を呼ぶ（GetNMRaw と同様の分岐）
                 List<double> phisRaw = new();
                 List<double> msRaw = new();
@@ -217,7 +237,7 @@ namespace PileDesign.Models.InputData
                     var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
                     var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
                     var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-                    (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN);
+                    (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
                 }
                 else if (PileBodyType == "場所打ち鋼管コンクリート杭")
                 {
@@ -226,7 +246,7 @@ namespace PileDesign.Models.InputData
                         var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
                         var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
                         var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN);
+                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
                     }
                     else // 鋼管コンクリート部
                     {
@@ -234,7 +254,7 @@ namespace PileDesign.Models.InputData
                         var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
                         var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
                         var sect = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN);
+                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
                     }
                 }
                 else if (PileBodyType == "既製コンクリート杭")
@@ -244,7 +264,7 @@ namespace PileDesign.Models.InputData
                         var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
                         var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
                         var sect = new PHCSection(precastConcrete, tendons, Prestress);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN);
+                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
                     }
                     else if (PileSectionType == "PRC杭")
                     {
@@ -252,14 +272,14 @@ namespace PileDesign.Models.InputData
                         var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
                         var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
                         var sect = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN);
+                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
                     }
                     else if (PileSectionType == "SC杭")
                     {
                         var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
                         var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
                         var sect = new SCSection(precastConcrete, steelPipe);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN);
+                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
                     }
                 }
                 else if (PileBodyType == "鋼管杭")
@@ -269,28 +289,30 @@ namespace PileDesign.Models.InputData
                 }
 
                 // 取得できなければフォールバック（線形近似: EI を使う）
+                // フォールバック時は既に FEM 単位系 (phi:[1/m], M:[kNm]) で返す
                 if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
                 {
-                    const double phiSample = 1e-6;
+                    const double phiSample = 1e-6; // [1/m]
                     var phs = new List<double> { 0.0, phiSample };
                     var m0 = 0.0;
-                    var m1 = this.EI * phiSample; // EI は kNm^2, phi は 1/m -> M は kNm
+                    var m1 = this.EI * phiSample; // EI [kNm²] × phi [1/m] = M [kNm]
                     return (phs, new List<double> { m0, m1 });
                 }
 
                 // 単位変換:
-                // - 断面側の φ は内部で [1/mm] の可能性が高い → 1/mm → 1/m に変換（*1000）
-                // - 断面側の M は [N·mm] の可能性が高い → kN·m に変換（*1e-6）
-                var phis = phisRaw.Select(p => p * 1000.0).ToList();
-                var ms = msRaw.Select(m => m * 1e-6).ToList();
+                // 断面計算側: φ [1/mm], M [N·mm]
+                // FEM解析側:  φ [1/m],  M [kNm]
+                // 変換: φ ×1000, M ×10⁻⁶
+                var phis = phisRaw.Select(p => p * 1000.0).ToList();  // 1/mm → 1/m
+                var ms = msRaw.Select(m => m * 1e-6).ToList();        // N·mm → kNm
 
                 return (phis, ms);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"GetMphiRelationship dispatch failed: {ex}");
-                // 最低限の線形フォールバック
-                const double phiSample = 1e-6;
+                // 最低限の線形フォールバック（FEM単位系で返す）
+                const double phiSample = 1e-6; // [1/m]
                 var phs = new List<double> { 0.0, phiSample };
                 var m0 = 0.0;
                 var m1 = this.EI * phiSample;
@@ -887,9 +909,9 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _mainBarNum, value))
                 {
                     MainBarAg = MainBarNum * GetBarArea(MainBarSize);
-                    //InvalidateNMCache();
-                    //InvalidateSteelYieldCache();
-                    //InvalidateCrackCache();
+                    InvalidateNMCache();
+                    InvalidateSteelYieldCache();
+                    InvalidateCrackCache();
                 }
             }
         }
@@ -1152,36 +1174,6 @@ namespace PileDesign.Models.InputData
                 }
             }
         }
-
-        //public double PiPeFts => int(PipeSpec);
-        //public double PiPeFts
-        //{
-        //    get
-        //    {
-        //        var match = Regex.Match(PipeSpec, @"\d+(\.\d+)?");
-        //        return match.Success ? double.Parse(match.Value) : 0.0;
-        //    }
-        //}
-
-        // 鋼管規格
-        //private string _pipeSpec;
-        //public string PipeSpec
-        //{
-        //    get => _pipeSpec;
-        //    set => SetProperty(ref _pipeSpec, value);
-        //}
-
-        //// 鋼管規格選択肢
-        //public ObservableCollection<string> PipeSpecOption { get; } =
-        //[
-        //    "JIS A 5525:2019（鋼管ぐい）","JIS G 3444（一般構造用炭素鋼鋼管）"
-        //];
-
-        //// 鋼管規格選択肢
-        public ObservableCollection<string> PipeGradeOption { get; } =
-        [
-            "SKK400","SKK490"
-        ];
 
         // 鋼管規格
         private string _pipeGrade = "SKK490";

@@ -1167,8 +1167,8 @@ namespace PileDesign.ViewModels
 
                 var (EIy_eff, EIz_eff) = beam.EvaluateEIeff(phiY, phiZ);
 
-                double EI0y = beam.Section.Material.E * beam.Section.IY;
-                double EI0z = beam.Section.Material.E * beam.Section.IZ;
+                double EI0y = beam.Section.Material.E * beam.Section.IZ;
+                double EI0z = beam.Section.Material.E * beam.Section.IY;
 
                 double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 1e-4, 1.0);
                 double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 1e-4, 1.0);

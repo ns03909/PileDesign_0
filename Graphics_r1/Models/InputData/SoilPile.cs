@@ -718,14 +718,14 @@ namespace PileDesign.Models.InputData
 
                     if (segmentBtm - epsilon <= lower && upper <= segmentTop + epsilon)
                     {
-                        if (pileBodySegment.PileSection == null)
-                        {
-                            System.Diagnostics.Debug.WriteLine("PileSection is null");
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"B={pileBodySegment.PileSection.PileDiameter}");
-                        }
+                        //if (pileBodySegment.PileSection == null)
+                        //{
+                        //    System.Diagnostics.Debug.WriteLine("PileSection is null");
+                        //}
+                        //else
+                        //{
+                        //    System.Diagnostics.Debug.WriteLine($"B={pileBodySegment.PileSection.PileDiameter}");
+                        //}
                         b = pileBodySegment.PileSection?.PileDiameter / 1000.0 ?? 0;
                         break;
                     }

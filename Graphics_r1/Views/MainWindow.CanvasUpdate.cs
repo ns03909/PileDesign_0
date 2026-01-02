@@ -520,16 +520,21 @@ namespace PileDesign.Views
 
             if (viewModel.IsElementSplit)
             {
-                var doatsuGoryokuBane = viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane;
-                foreach (var item in doatsuGoryokuBane.Items)
+                // null チェックを追加
+                var doatsuGoryokuBane = viewModel.CurrentInputModel.ElementDivision?.DoatsuGoryokuBane;
+                if (doatsuGoryokuBane?.Items != null)
                 {
-                    double x1 = item.X1;
-                    double x2 = item.X2;
-                    double y1 = item.Y1;
-                    double y2 = item.Y2;
-                    double z1 = item.ZBtm;
-                    double z2 = item.ZTop;
-                    CreateBoxGeometry(x1, x2, y1, y2, z1, z2);
+                    for (int i = 0; i < doatsuGoryokuBane.Items.Count; i++)
+                    {
+                        var item = doatsuGoryokuBane.Items[i];
+                        double x1 = item.X1;
+                        double x2 = item.X2;
+                        double y1 = item.Y1;
+                        double y2 = item.Y2;
+                        double z1 = item.ZBtm;
+                        double z2 = item.ZTop;
+                        CreateBoxGeometry(x1, x2, y1, y2, z1, z2);
+                    }
                 }
             }
             else
@@ -932,16 +937,21 @@ namespace PileDesign.Views
             // 根入れ部
             if (viewModel.IsElementSplit)
             {
-                for (int i = 0; i < viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane.Items.Count; i++)
+                // null チェックを追加
+                var doatsuGoryokuBane = viewModel.CurrentInputModel.ElementDivision?.DoatsuGoryokuBane;
+                if (doatsuGoryokuBane?.Items != null)
                 {
-                    var item = viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane.Items[i];
-                    double x1 = item.X1;
-                    double x2 = item.X2;
-                    double y1 = item.Y1;
-                    double y2 = item.Y2;
-                    double z1 = item.ZBtm;
-                    double z2 = item.ZTop;
-                    CreateNeireNodesAndConnectingRod(i, x1, x2, y1, y2, z1, z2);
+                    for (int i = 0; i < doatsuGoryokuBane.Items.Count; i++)
+                    {
+                        var item = doatsuGoryokuBane.Items[i];
+                        double x1 = item.X1;
+                        double x2 = item.X2;
+                        double y1 = item.Y1;
+                        double y2 = item.Y2;
+                        double z1 = item.ZBtm;
+                        double z2 = item.ZTop;
+                        CreateBoxGeometry(x1, x2, y1, y2, z1, z2);
+                    }
                 }
             }
             else
@@ -955,12 +965,12 @@ namespace PileDesign.Views
                     double y2 = embedmentDataItem.Y2;
                     double z1 = embedmentDataItem.BottomAltitude;
                     double z2 = embedmentDataItem.TopAltitude;
-                    CreateNeireNodesAndConnectingRod(i, x1, x2, y1, y2, z1, z2);
+                    CreateBoxGeometry(x1, x2, y1, y2, z1, z2);
                 }
             }
         }
 
-        //
+        // 節点と接続ロッドを作成するメソッド
         private void CreateNeireNodesAndConnectingRod(int i, double x1, double x2, double y1, double y2, double z1, double z2)
         {
             if (DataContext is not MainWindowViewModel viewModel) return;

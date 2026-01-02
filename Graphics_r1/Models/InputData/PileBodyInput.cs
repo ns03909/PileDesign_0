@@ -429,6 +429,15 @@ namespace PileDesign.Models.InputData
 
         public virtual PileHeadRotationDef GetMThetaRelationship(double axialN)
         {
+            // 単位系の説明:
+            // - 断面計算側（InsituReinforcedConcreteSection等）の出力:
+            //   θ: [rad] (無次元)
+            //   M: [N·mm]
+            // - FEM解析側（MomentRotationCurve）の期待値:
+            //   θ: [rad]
+            //   M: [kNm]
+            // よって、M のみ ×10⁻⁶ の変換が必要
+
             // まず杭頭タイプ/杭体タイプで優先分岐
             string pileTopType = PileTopType ?? string.Empty;
             string pileBodyType = PileBodyType ?? string.Empty;
@@ -444,11 +453,13 @@ namespace PileDesign.Models.InputData
                     {
                         var (thetasObs, msObs) = cp.GetMThetaRelationship(axialN);
                         var thetas = thetasObs?.Cast<double>().ToList();
-                        var ms = msObs?.Cast<double>().ToList();
-                        if (thetas != null && ms != null && thetas.Count >= 2 && thetas.Count == ms.Count)
+                        var msRaw = msObs?.Cast<double>().ToList();
+                        if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
                         {
+                            // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                             var pts = new List<(double theta, double moment)>(thetas.Count);
-                            for (int i = 0; i < thetas.Count; i++) pts.Add((thetas[i], ms[i]));
+                            for (int i = 0; i < thetas.Count; i++) 
+                                pts.Add((thetas[i], msRaw[i] * 1e-6));
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
                     }
@@ -473,11 +484,13 @@ namespace PileDesign.Models.InputData
                     {
                         var (thetasObs, msObs) = ft.GetMThetaRelationship(axialN);
                         var thetas = thetasObs?.Cast<double>().ToList();
-                        var ms = msObs?.Cast<double>().ToList();
-                        if (thetas != null && ms != null && thetas.Count >= 2 && thetas.Count == ms.Count)
+                        var msRaw = msObs?.Cast<double>().ToList();
+                        if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
                         {
+                            // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                             var pts = new List<(double theta, double moment)>(thetas.Count);
-                            for (int i = 0; i < thetas.Count; i++) pts.Add((thetas[i], ms[i]));
+                            for (int i = 0; i < thetas.Count; i++) 
+                                pts.Add((thetas[i], msRaw[i] * 1e-6));
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
                     }
@@ -523,11 +536,13 @@ namespace PileDesign.Models.InputData
                             {
                                 var tup = ircSection.GetMThetaRelationship(axialN);
                                 var thetas = tup.Item1;
-                                var ms = tup.Item2;
-                                if (thetas != null && ms != null && thetas.Count >= 2 && thetas.Count == ms.Count)
+                                var msRaw = tup.Item2;
+                                if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
                                 {
+                                    // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                                     var pts = new List<(double theta, double moment)>(thetas.Count);
-                                    for (int i = 0; i < thetas.Count; i++) pts.Add((thetas[i], ms[i]));
+                                    for (int i = 0; i < thetas.Count; i++) 
+                                        pts.Add((thetas[i], msRaw[i] * 1e-6));
                                     return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                                 }
                             }
@@ -553,11 +568,13 @@ namespace PileDesign.Models.InputData
                                         if (item1 != null && item2 != null)
                                         {
                                             var th = item1.Cast<object>().Select(Convert.ToDouble).ToList();
-                                            var mm = item2.Cast<object>().Select(Convert.ToDouble).ToList();
-                                            if (th.Count >= 2 && th.Count == mm.Count)
+                                            var mmRaw = item2.Cast<object>().Select(Convert.ToDouble).ToList();
+                                            if (th.Count >= 2 && th.Count == mmRaw.Count)
                                             {
+                                                // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                                                 var pts = new List<(double theta, double moment)>(th.Count);
-                                                for (int i = 0; i < th.Count; i++) pts.Add((th[i], mm[i]));
+                                                for (int i = 0; i < th.Count; i++) 
+                                                    pts.Add((th[i], mmRaw[i] * 1e-6));
                                                 return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                                             }
                                         }
@@ -569,13 +586,16 @@ namespace PileDesign.Models.InputData
                             // (B) なければ既存の M–φ を取り、φ -> θ に変換して曲線を作る
                             try
                             {
-                                var mphi = ps.GetMphiRelationship(axialN); // phis: [1/m], moments: [kNm]（PileSection 実装に合わせる）
+                                // PileSection.GetMphiRelationship は既に単位変換済み:
+                                // phis: [1/m], moments: [kNm]
+                                var mphi = ps.GetMphiRelationship(axialN);
                                 var phis = mphi.Phis?.ToList();
-                                var ms = mphi.Moments?.ToList();
+                                var ms = mphi.Moments?.ToList(); // 既に kNm
                                 if (phis != null && ms != null && phis.Count >= 2 && phis.Count == ms.Count)
                                 {
-                                    // InsituReinforcedConcreteSection の式に合わせて変換
-                                    // Insitu 側で phi は 1/mm 相当で内部計算している可能性があるため、PileSection の phis(1/m) を 1/mm に変換
+                                    // φ → θ 変換（定着筋方式の経験式）
+                                    // θ = 0.5 * α * barNum * φ
+                                    // ここで φ は 1/mm 単位で使われるため、1/m を 1/mm に変換
                                     double alpha = 32.0;
                                     // MainBarSize 情報を PileSection から取得（存在すれば活用）
                                     double barNum = 0.0;
@@ -590,6 +610,7 @@ namespace PileDesign.Models.InputData
                                         thetas.Add(theta);
                                     }
 
+                                    // M は既に kNm なのでそのまま使用
                                     var pts = new List<(double theta, double moment)>(thetas.Count);
                                     for (int i = 0; i < thetas.Count; i++) pts.Add((thetas[i], ms[i]));
                                     return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
@@ -646,6 +667,8 @@ namespace PileDesign.Models.InputData
         }
 
         // 反射で obj の GetMThetaRelationship を呼び、(theta[], M[]) から曲線を生成する（寛容検索版）
+        // 注意: 反射で取得したデータは断面計算クラスの生データ（θ:[rad], M:[N·mm]）のため、
+        //       M を kNm に変換（×10⁻⁶）する必要がある
         private static MomentRotationCurve? TryCallMThetaRelationship(object obj, double axialN)
         {
             if (obj == null) return null;
@@ -718,7 +741,7 @@ namespace PileDesign.Models.InputData
 
             if (result == null) return null;
 
-            // 直接 MomentRotationCurve を返す実装に対応
+            // 直接 MomentRotationCurve を返す実装に対応（既に変換済みと仮定）
             if (result is MomentRotationCurve direct) return direct;
 
             var t = result.GetType();
@@ -738,11 +761,13 @@ namespace PileDesign.Models.InputData
             if (item1 == null || item2 == null) return null;
 
             var th = item1.Cast<object>().Select(Convert.ToDouble).ToList();
-            var mm = item2.Cast<object>().Select(Convert.ToDouble).ToList();
-            if (th.Count < 2 || th.Count != mm.Count) return null;
+            var mmRaw = item2.Cast<object>().Select(Convert.ToDouble).ToList();
+            if (th.Count < 2 || th.Count != mmRaw.Count) return null;
 
+            // 単位変換: 断面計算から取得したデータは M:[N·mm] → [kNm] (×10⁻⁶)
             var pts = new List<(double theta, double moment)>(th.Count);
-            for (int i = 0; i < th.Count; i++) pts.Add((th[i], mm[i]));
+            for (int i = 0; i < th.Count; i++) 
+                pts.Add((th[i], mmRaw[i] * 1e-6));
             return new MomentRotationCurve(pts);
         }
 
