@@ -55,7 +55,7 @@ namespace PileDesign.ViewModels
 
                 // 新規作成
                 CurrentFilePath = null;
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
 
                 var groundLayerViewModel = new GroundLayerViewModel(this);
@@ -381,7 +381,7 @@ namespace PileDesign.ViewModels
                 // 根入れ
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
@@ -412,7 +412,7 @@ namespace PileDesign.ViewModels
 
                 // 新規作成
                 CurrentFilePath = null;
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
 
                 var groundLayerViewModel = new GroundLayerViewModel(this);
@@ -958,7 +958,7 @@ namespace PileDesign.ViewModels
                 // 根入れ
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers.Clear();
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
@@ -990,7 +990,7 @@ namespace PileDesign.ViewModels
 
                 // 新規作成
                 CurrentFilePath = null;
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
 
                 var groundLayerViewModel = new GroundLayerViewModel(this);
@@ -1952,7 +1952,7 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
@@ -1984,7 +1984,7 @@ namespace PileDesign.ViewModels
 
                 // 新規作成
                 CurrentFilePath = null;
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
 
                 var groundLayerViewModel = new GroundLayerViewModel(this);
@@ -2458,7 +2458,7 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
@@ -2489,7 +2489,7 @@ namespace PileDesign.ViewModels
 
                 // 新規作成
                 CurrentFilePath = null;
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
 
                 var groundLayerViewModel = new GroundLayerViewModel(this);
@@ -2969,7 +2969,7 @@ namespace PileDesign.ViewModels
                 // CurrentInputModel.PileGroupSettlement = null;
 
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
@@ -3003,7 +3003,7 @@ namespace PileDesign.ViewModels
 
                 // 新規作成
                 CurrentFilePath = null;
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
 
                 var groundLayerViewModel = new GroundLayerViewModel(this);
@@ -3380,7 +3380,7 @@ namespace PileDesign.ViewModels
                 // CurrentInputModel.PileGroupSettlement = null;
 
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
 
@@ -3624,7 +3624,7 @@ namespace PileDesign.ViewModels
                 UpdatePileLayoutNo();
 
                 IsGroupPileSettlementAnalysisDone = false;
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ
@@ -3840,7 +3840,7 @@ namespace PileDesign.ViewModels
                 UpdatePileLayoutNo();
 
                 IsGroupPileSettlementAnalysisDone = false;
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 UpdateTreeView();
 
                 // 読み込み完了メッセージ

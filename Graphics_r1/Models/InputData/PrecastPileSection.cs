@@ -80,9 +80,9 @@ namespace PileDesign.Models.InputData
         }
 
         // 安全限界MNインタラクション取得メソッド
-        internal override (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInterection()
+        internal override (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInteraction()
         {
-            return GetAllowableMNInterection(CurvatureMaxUltimateLimit, 2);
+            return GetAllowableMNInteraction(CurvatureMaxUltimateLimit, 2);
         }
 
         // 安全限界曲げモーメント閾値を返すメソッド
@@ -170,7 +170,7 @@ namespace PileDesign.Models.InputData
             UnfactoredDamageNM = GetDamageLimitMNInteraction();
 
             // 低減前安全限界NMインタラクション
-            UnfactoredUltimateNM = GetUltimateMNInterection();
+            UnfactoredUltimateNM = GetUltimateMNInteraction();
 
 
             // 使用限界最大曲率時の軸力
@@ -204,7 +204,7 @@ namespace PileDesign.Models.InputData
             UltimateLimitBeta = [0.0, 0.80 * 0.75, 0.80 * 0.65, 0.0];
 
             // 低減後安全限界NMインタラクション
-            FactoredUltimateNM = GetFactoredMNInterection(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
 
             // 低減前使用限界NQインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction(3.0, false);
@@ -856,7 +856,7 @@ namespace PileDesign.Models.InputData
             UnfactoredDamageNM = GetDamageLimitMNInteraction();
 
             // 低減前安全限界NMインタラクション
-            UnfactoredUltimateNM = GetUltimateMNInterection();
+            UnfactoredUltimateNM = GetUltimateMNInteraction();
 
             // 使用限界最大曲率時の軸力
             AxialForceCurvatureMaxServiceLimit = GetAllowableForceAndMoment(0, true, CurvatureMaxServiceLimit).Item1;
@@ -871,7 +871,7 @@ namespace PileDesign.Models.InputData
             FactoredServiceNM = GetFactoredServiceLimitMNInteraction();
 
             // 損傷限界軸力閾値
-            DamagaLimitAxialForceThresholds =
+            DamageLimitAxialForceThresholds =
             [
                 (4.0 - SigmaE) * Ae,
                 (10.0 - SigmaE) * Ae,
@@ -879,13 +879,13 @@ namespace PileDesign.Models.InputData
             ];
 
             // 損傷限界閾値
-            DamagaLimitBendingMomentThresholds = GetDamagaLimitBendingMomentThresholds();
+            DamageLimitBendingMomentThresholds = GetDamageLimitBendingMomentThresholds();
 
             // 損傷限界曲げモーメント低減率
             DamageLimitBeta = [0.0, 0.8 * 0.65, 0.80 * 0.75, 0.0];
 
             // 低減後損傷限界NMインタラクション
-            FactoredDamageNM = GetFactoredMNInterection(UnfactoredDamageNM, (DamagaLimitAxialForceThresholds, DamagaLimitBendingMomentThresholds), DamageLimitBeta);
+            FactoredDamageNM = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBeta);
 
             // 安全限界軸力低減率
             UltimateLimitAxialForceThresholds =
@@ -902,7 +902,7 @@ namespace PileDesign.Models.InputData
             UltimateLimitBeta = [0.0, 0.80 * 0.75, 0.80 * 0.65, 0.0];
 
             // 低減後安全限界NMインタラクション
-            FactoredUltimateNM = GetFactoredMNInterection(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
 
 
             // 低減前使用限界NQインタラクション
@@ -1659,7 +1659,7 @@ namespace PileDesign.Models.InputData
             UnfactoredDamageNM = GetDamageLimitMNInteraction();
 
             // 低減前安全限界NMインタラクション
-            UnfactoredUltimateNM = GetUltimateMNInterection();
+            UnfactoredUltimateNM = GetUltimateMNInteraction();
 
             //// 使用限界最大曲率時の軸力
             //AxialForceCurvatureMaxServiceLimit = GetAllowableForceAndMoment(0, true, CurvatureMaxServiceLimit).Item1;
@@ -2272,7 +2272,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 安全限界MN インタラクション取得メソッド
-        internal override (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInterection()
+        internal override (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInteraction()
         {
             List<double> axialForces = [];
             List<double> bendingMoments = [];

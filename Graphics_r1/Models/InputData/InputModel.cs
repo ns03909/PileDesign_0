@@ -89,7 +89,7 @@ namespace PileDesign.Models.InputData
             {
                 if (_pileLayoutItems == value) return;
                 _pileLayoutItems = value;
-                OnPropertyChanged(nameof(PileLayoutItems));
+                OnPropertyChanged(nameof(PileLayoutItems));  // ← PropertyChanged が発火する
                 WirePileLayoutItemsHandlers(); // 追加: ハンドラ再配線
             }
         }
@@ -929,7 +929,7 @@ namespace PileDesign.Models.InputData
                         }
 
                         List<double> sortedZs = [.. zs.Distinct().OrderByDescending(z => z)];
-                        ObservableCollection<PileZDataItem> pilezDataItems = [];
+                        ObservableCollection<PileZDataItem> pileZDataItems = [];
                         foreach (double sortedZ in sortedZs)
                         {
                             PileZDataItem pileZDataItem = new()
@@ -938,7 +938,7 @@ namespace PileDesign.Models.InputData
                                 GroundInput = GroundsInput[pileLayoutDataItem.GroundNo - 1],
                             };
                             pileZDataItem.SetSoilDisplacement();
-                            pilezDataItems.Add(pileZDataItem);
+                            pileZDataItems.Add(pileZDataItem);
                         }
 
                         var sp = new SoilPile()
@@ -949,7 +949,7 @@ namespace PileDesign.Models.InputData
                             PileBodyNo = pileBodyNo,
                             PileBodyInput = PileBodies[pileBodyNo - 1],
                             Z = pileTopAltitude,
-                            ZDataItems = pilezDataItems
+                            ZDataItems = pileZDataItems
                         };
 
                         // 追加: R_* 等の特性を再計算
@@ -1191,14 +1191,14 @@ namespace PileDesign.Models.InputData
         {
             GroundsInputCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
             GroundsInputCountList.Clear();
-            int gcount = GroundsInput?.Count ?? 0;
-            for (int i = 1; i <= Math.Max(1, gcount); i++) // 地盤が0件でも1を用意（UIが空白にならないように）
+            int gCount = GroundsInput?.Count ?? 0;
+            for (int i = 1; i <= Math.Max(1, gCount); i++) // 地盤が0件でも1を用意（UIが空白にならないように）
                 GroundsInputCountList.Add(i);
 
             PileBodiesCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
             PileBodiesCountList.Clear();
-            int pbcount = PileBodies?.Count ?? 0;
-            for (int i = 1; i <= Math.Max(1, pbcount); i++)
+            int pbCount = PileBodies?.Count ?? 0;
+            for (int i = 1; i <= Math.Max(1, pbCount); i++)
                 PileBodiesCountList.Add(i);
         }
     }

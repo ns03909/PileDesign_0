@@ -71,7 +71,7 @@ namespace PileDesign.Models.InputData
             ServiceLimitBeta = [1.0];
 
             // 損傷限界軸力閾値
-            DamagaLimitAxialForceThresholds =
+            DamageLimitAxialForceThresholds =
             [
                 -0.05 * insituConcrete.Gsi * insituConcrete.Fc * Math.PI * Math.Pow(PileDia, 2) / 4.0,
                 1.0 / 3.0 * insituConcrete.Gsi * insituConcrete.Fc * Math.PI * Math.Pow(PileDia, 2) / 4.0,
@@ -100,25 +100,25 @@ namespace PileDesign.Models.InputData
             UnfactoredDamageNM = GetDamageLimitMNInteraction();
 
             // 低減前安全限界NMインタラクション
-            UnfactoredUltimateNM = GetUltimateMNInterection();
+            UnfactoredUltimateNM = GetUltimateMNInteraction();
 
             // 損傷限界閾値
             ServiceLimitBendingMomentThresholds = [];
 
             // 損傷限界閾値
-            DamagaLimitBendingMomentThresholds = GetDamagaLimitBendingMomentThresholds();
+            DamageLimitBendingMomentThresholds = GetDamageLimitBendingMomentThresholds();
 
             // 安全限界閾値
             UltimateLimitBendingMomentThresholds = GetUltimateLimitBendingMomentThresholds();
 
             // 低減後使用限界NMインタラクション
-            FactoredServiceNM = GetFactoredMNInterection(UnfactoredServiceNM, (ServiceLimitAxialForceThresholds, ServiceLimitBendingMomentThresholds), ServiceLimitBeta);
+            FactoredServiceNM = GetFactoredMNInteraction(UnfactoredServiceNM, (ServiceLimitAxialForceThresholds, ServiceLimitBendingMomentThresholds), ServiceLimitBeta);
 
             // 低減後損傷限界NMインタラクション
-            FactoredDamageNM = GetFactoredMNInterection(UnfactoredDamageNM, (DamagaLimitAxialForceThresholds, DamagaLimitBendingMomentThresholds), DamageLimitBeta);
+            FactoredDamageNM = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBeta);
 
             // 低減後安全限界NMインタラクション
-            FactoredUltimateNM = GetFactoredMNInterection(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
 
             // 低減前使用限界NQインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction(3.0, false);

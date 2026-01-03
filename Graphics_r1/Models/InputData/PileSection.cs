@@ -32,6 +32,15 @@ namespace PileDesign.Models.InputData
         private (List<double> N, List<double> M)? _factoredDamageNMCache;
         private (List<double> N, List<double> M)? _factoredUltimateNMCache;
 
+        /// <summary>
+        /// 断面パラメータ変更時にすべてのキャッシュを一括で無効化します。
+        /// </summary>
+        private void InvalidateAllCaches()
+        {
+            InvalidateNMCache();
+            InvalidateSteelYieldCache();
+            InvalidateCrackCache();
+        }
         private void InvalidateNMCache()
         {
             _unfactoredServiceNMCache = null;
@@ -131,37 +140,66 @@ namespace PileDesign.Models.InputData
 
         private (List<double> N, List<double> M) ComputeSteelYieldNMRaw()
         {
-            bool isTargetRC =
-                PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                (PileBodyType == "場所打ち鋼管コンクリート杭" && PileSectionType == "鉄筋コンクリート部");
+            // CreateSectionCalculator() を使って断面を取得
+            var section = CreateSectionCalculator();
 
-            if (!isTargetRC)
-                return (new List<double>(), new List<double>());
+            // InsituReinforcedConcreteSection の場合のみ有効
+            if (section is InsituReinforcedConcreteSection rcSection)
+            {
+                var (ns, ms, _, _) = rcSection.GetSteelYieldMNInteraction();
+                return (ns, ms);
+            }
 
-            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-            var (ns, ms, _, _) = section.GetSteelYieldMNInteraction();
-            return (ns, ms);
+            return (new List<double>(), new List<double>());
         }
 
         private (List<double> N, List<double> M) ComputeCrackNMRaw()
         {
-            bool isTargetRC =
-                PileBodyType == "場所打ち鉄筋コンクリート杭" ||
-                (PileBodyType == "場所打ち鋼管コンクリート杭" && PileSectionType == "鉄筋コンクリート部");
+            // CreateSectionCalculator() を使って断面を取得
+            var section = CreateSectionCalculator();
 
-            if (!isTargetRC)
-                return (new List<double>(), new List<double>());
+            // InsituReinforcedConcreteSection の場合のみ有効
+            if (section is InsituReinforcedConcreteSection rcSection)
+            {
+                var (ns, ms, _, _) = rcSection.GetCrackMNInteraction(false);
+                return (ns, ms);
+            }
 
-            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-            var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-            var (ns, ms, _, _) = section.GetCrackMNInteraction(false); // 非線形
-            return (ns, ms);
+            return (new List<double>(), new List<double>());
         }
+        //private (List<double> N, List<double> M) ComputeSteelYieldNMRaw()
+        //{
+        //    bool isTargetRC =
+        //        PileBodyType == "場所打ち鉄筋コンクリート杭" ||
+        //        (PileBodyType == "場所打ち鋼管コンクリート杭" && PileSectionType == "鉄筋コンクリート部");
+
+        //    if (!isTargetRC)
+        //        return (new List<double>(), new List<double>());
+
+        //    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //    var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+
+        //    var (ns, ms, _, _) = section.GetSteelYieldMNInteraction();
+        //    return (ns, ms);
+        //}
+
+        //private (List<double> N, List<double> M) ComputeCrackNMRaw()
+        //{
+        //    bool isTargetRC =
+        //        PileBodyType == "場所打ち鉄筋コンクリート杭" ||
+        //        (PileBodyType == "場所打ち鋼管コンクリート杭" && PileSectionType == "鉄筋コンクリート部");
+
+        //    if (!isTargetRC)
+        //        return (new List<double>(), new List<double>());
+
+        //    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //    var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+
+        //    var (ns, ms, _, _) = section.GetCrackMNInteraction(false); // 非線形
+        //    return (ns, ms);
+        //}
 
         private static double GetFilteredNMax((List<double> N, List<double> M) nmData)
         {
@@ -207,16 +245,11 @@ namespace PileDesign.Models.InputData
         ///   axialN (軸力): [kN]
         /// - 断面計算側（InsituReinforcedConcreteSection等）の期待入力/出力:
         ///   axialN: [N]
-        ///   φ (曲率): [1/mm] - 内部で PileDia [mm] を使った断面計算のため
+        ///   φ (曲率): [1/mm]
         ///   M (曲げモーメント): [N·mm]
         /// - FEM解析側（MomentCurvatureCurve）の期待値:
         ///   φ: [1/m] = [rad/m]
         ///   M: [kNm]
-        /// 
-        /// 変換係数:
-        /// - axialN: ×1000 (kN → N) [入力時]
-        /// - φ: ×1000 (1/mm → 1/m) [出力時]
-        /// - M: ×10⁻⁶ (N·mm → kNm) [出力時]
         /// </summary>
         public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN)
             => GetMphiRelationship(axialN, 1.0);
@@ -225,100 +258,167 @@ namespace PileDesign.Models.InputData
         {
             try
             {
+                var section = CreateSectionCalculator();
+
+                // 断面が生成できない場合はフォールバック
+                if (section == null)
+                    return CreateLinearFallback();
+
                 // 単位変換: 軸力 kN → N
                 double axialN_inN = axialN * 1000.0;
 
-                // 各ケースで内部の断面クラスを生成して GetMPhiRelationship を呼ぶ（GetNMRaw と同様の分岐）
-                List<double> phisRaw = new();
-                List<double> msRaw = new();
+                var (phisRaw, msRaw) = section.GetMPhiRelationship(axialN_inN);
 
-                if (PileBodyType == "場所打ち鉄筋コンクリート杭")
-                {
-                    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-                    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                    var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-                    (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-                }
-                else if (PileBodyType == "場所打ち鋼管コンクリート杭")
-                {
-                    if (PileSectionType == "鉄筋コンクリート部")
-                    {
-                        var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-                        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                        var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-                    }
-                    else // 鋼管コンクリート部
-                    {
-                        var insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-                        var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-                        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                        var sect = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-                    }
-                }
-                else if (PileBodyType == "既製コンクリート杭")
-                {
-                    if (PileSectionType == "PHC杭")
-                    {
-                        var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-                        var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-                        var sect = new PHCSection(precastConcrete, tendons, Prestress);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-                    }
-                    else if (PileSectionType == "PRC杭")
-                    {
-                        var precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-                        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                        var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-                        var sect = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-                    }
-                    else if (PileSectionType == "SC杭")
-                    {
-                        var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
-                        var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-                        var sect = new SCSection(precastConcrete, steelPipe);
-                        (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-                    }
-                }
-                else if (PileBodyType == "鋼管杭")
-                {
-                    // もし鋼管杭向けの断面クラスがあれば同様に呼ぶ（なければフォールバック）
-                    // ここではフォールバックを利用
-                }
-
-                // 取得できなければフォールバック（線形近似: EI を使う）
-                // フォールバック時は既に FEM 単位系 (phi:[1/m], M:[kNm]) で返す
+                // 結果が不正な場合もフォールバック
                 if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
-                {
-                    const double phiSample = 1e-6; // [1/m]
-                    var phs = new List<double> { 0.0, phiSample };
-                    var m0 = 0.0;
-                    var m1 = this.EI * phiSample; // EI [kNm²] × phi [1/m] = M [kNm]
-                    return (phs, new List<double> { m0, m1 });
-                }
+                    return CreateLinearFallback();
 
-                // 単位変換:
-                // 断面計算側: φ [1/mm], M [N·mm]
-                // FEM解析側:  φ [1/m],  M [kNm]
-                // 変換: φ ×1000, M ×10⁻⁶
-                var phis = phisRaw.Select(p => p * 1000.0).ToList();  // 1/mm → 1/m
-                var ms = msRaw.Select(m => m * 1e-6).ToList();        // N·mm → kNm
+                // 単位変換: φ [1/mm] → [1/m], M [N·mm] → [kNm]
+                var phis = phisRaw.Select(p => p * 1000.0).ToList();
+                var ms = msRaw.Select(m => m * 1e-6).ToList();
 
                 return (phis, ms);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetMphiRelationship dispatch failed: {ex}");
-                // 最低限の線形フォールバック（FEM単位系で返す）
-                const double phiSample = 1e-6; // [1/m]
-                var phs = new List<double> { 0.0, phiSample };
-                var m0 = 0.0;
-                var m1 = this.EI * phiSample;
-                return (phs, new List<double> { m0, m1 });
+                System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship failed: {ex}");
+                return CreateLinearFallback();
             }
         }
+
+        /// <summary>
+        /// M-φ 関係のフォールバック（線形近似）
+        /// </summary>
+        private (IList<double> Phis, IList<double> Moments) CreateLinearFallback()
+        {
+            const double phiSample = 1e-6; // [1/m]
+            return (
+                new List<double> { 0.0, phiSample },
+                new List<double> { 0.0, EI * phiSample }  // EI [kNm²] × phi [1/m] = M [kNm]
+            );
+        }
+
+
+        ///// <summary>
+        ///// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。
+        ///// 
+        ///// 単位系変換の説明:
+        ///// - 呼び出し側（FEM解析）の入力:
+        /////   axialN (軸力): [kN]
+        ///// - 断面計算側（InsituReinforcedConcreteSection等）の期待入力/出力:
+        /////   axialN: [N]
+        /////   φ (曲率): [1/mm] - 内部で PileDia [mm] を使った断面計算のため
+        /////   M (曲げモーメント): [N·mm]
+        ///// - FEM解析側（MomentCurvatureCurve）の期待値:
+        /////   φ: [1/m] = [rad/m]
+        /////   M: [kNm]
+        ///// 
+        ///// 変換係数:
+        ///// - axialN: ×1000 (kN → N) [入力時]
+        ///// - φ: ×1000 (1/mm → 1/m) [出力時]
+        ///// - M: ×10⁻⁶ (N·mm → kNm) [出力時]
+        ///// </summary>
+        //public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN)
+        //    => GetMphiRelationship(axialN, 1.0);
+
+        //public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN, double _)
+        //{
+        //    try
+        //    {
+        //        // 単位変換: 軸力 kN → N
+        //        double axialN_inN = axialN * 1000.0;
+
+        //        // 各ケースで内部の断面クラスを生成して GetMPhiRelationship を呼ぶ（GetNMRaw と同様の分岐）
+        //        List<double> phisRaw = new();
+        //        List<double> msRaw = new();
+
+        //        if (PileBodyType == "場所打ち鉄筋コンクリート杭")
+        //        {
+        //            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //            var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+        //            (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
+        //        }
+        //        else if (PileBodyType == "場所打ち鋼管コンクリート杭")
+        //        {
+        //            if (PileSectionType == "鉄筋コンクリート部")
+        //            {
+        //                var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //                var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
+        //            }
+        //            else // 鋼管コンクリート部
+        //            {
+        //                var insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
+        //                var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //                var sect = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
+        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
+        //            }
+        //        }
+        //        else if (PileBodyType == "既製コンクリート杭")
+        //        {
+        //            if (PileSectionType == "PHC杭")
+        //            {
+        //                var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
+        //                var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
+        //                var sect = new PHCSection(precastConcrete, tendons, Prestress);
+        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
+        //            }
+        //            else if (PileSectionType == "PRC杭")
+        //            {
+        //                var precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
+        //                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //                var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
+        //                var sect = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
+        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
+        //            }
+        //            else if (PileSectionType == "SC杭")
+        //            {
+        //                var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
+        //                var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
+        //                var sect = new SCSection(precastConcrete, steelPipe);
+        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
+        //            }
+        //        }
+        //        else if (PileBodyType == "鋼管杭")
+        //        {
+        //            // もし鋼管杭向けの断面クラスがあれば同様に呼ぶ（なければフォールバック）
+        //            // ここではフォールバックを利用
+        //        }
+
+        //        // 取得できなければフォールバック（線形近似: EI を使う）
+        //        // フォールバック時は既に FEM 単位系 (phi:[1/m], M:[kNm]) で返す
+        //        if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
+        //        {
+        //            const double phiSample = 1e-6; // [1/m]
+        //            var phs = new List<double> { 0.0, phiSample };
+        //            var m0 = 0.0;
+        //            var m1 = this.EI * phiSample; // EI [kNm²] × phi [1/m] = M [kNm]
+        //            return (phs, new List<double> { m0, m1 });
+        //        }
+
+        //        // 単位変換:
+        //        // 断面計算側: φ [1/mm], M [N·mm]
+        //        // FEM解析側:  φ [1/m],  M [kNm]
+        //        // 変換: φ ×1000, M ×10⁻⁶
+        //        var phis = phisRaw.Select(p => p * 1000.0).ToList();  // 1/mm → 1/m
+        //        var ms = msRaw.Select(m => m * 1e-6).ToList();        // N·mm → kNm
+
+        //        return (phis, ms);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        System.Diagnostics.Debug.WriteLine($"GetMphiRelationship dispatch failed: {ex}");
+        //        // 最低限の線形フォールバック（FEM単位系で返す）
+        //        const double phiSample = 1e-6; // [1/m]
+        //        var phs = new List<double> { 0.0, phiSample };
+        //        var m0 = 0.0;
+        //        var m1 = this.EI * phiSample;
+        //        return (phs, new List<double> { m0, m1 });
+        //    }
+        //}
 
 
         public string PileDescription
@@ -362,11 +462,8 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _pileBodyType, value))
                 {
-                    //ResetSectionProperties();
-                    RecalculatePileDia(); 
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    RecalculatePileDia();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -380,9 +477,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _pileSectionType, value))
                 {
                     RecalculatePileDia();
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -443,9 +538,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _concreteOutDia, value))
                 {
                     RecalculatePileDia();
-                    InvalidateNMCache();
-                    InvalidateNMCache();
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -460,9 +553,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _corrosionDepth, value))
                 {
                     RecalculatePileDia();
-                    InvalidateNMCache();
-                    InvalidateNMCache();
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -592,9 +683,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _concreteFc, value))
                 {
                     RecalculateConcreteE();
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -617,9 +706,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _concreteGamma, value))
                 {
                     RecalculateConcreteE();
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -634,9 +721,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _concreteGsi, value))
                 {
                     RecalculateConcreteE();
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -694,9 +779,7 @@ namespace PileDesign.Models.InputData
             SetSpecs();
 
             // キャッシュ無効化（必要に応じて）
-            InvalidateNMCache();
-            InvalidateSteelYieldCache();
-            InvalidateCrackCache();
+            InvalidateAllCaches();
 
             // 通知（SelectedPrecastPile と他プロパティの変更を View に反映）
             OnPropertyChanged(nameof(SelectedPrecastPile));
@@ -866,6 +949,14 @@ namespace PileDesign.Models.InputData
             "SD295", "SD345", "SD390", "SD490"
         ];
 
+
+        // 鋼管規格オプション
+        public string[] PipeGradeOption { get; } =
+        [
+            "SKK400",
+            "SKK490"
+        ];
+
         // PHC
         public ObservableCollection<string> PHCOption { get; } = [];
         public List<PrecastPile> PHCs { get; } = [];
@@ -892,9 +983,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _mainBarSize, value))
                 {
                     MainBarAg = MainBarNum * GetBarArea(MainBarSize);
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache();
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -909,32 +998,30 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _mainBarNum, value))
                 {
                     MainBarAg = MainBarNum * GetBarArea(MainBarSize);
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache();
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
 
-        internal static double GetBarArea(string barSize)
+        private static readonly Dictionary<string, double> BarAreas = new()
         {
-            return barSize switch
-            {
-                "D10" => 71.3,
-                "D13" => 127.0,
-                "D16" => 199.0,
-                "D19" => 287.0,
-                "D22" => 387.0,
-                "D25" => 507.0,
-                "D29" => 642.0,
-                "D32" => 794.0,
-                "D35" => 957.0,
-                "D38" => 1140.0,
-                "D41" => 1340.0,
-                "D51" => 2027.0,
-                _ => 0.0
-            };
-        }
+            ["D10"] = 71.3,
+            ["D13"] = 127.0,
+            ["D16"] = 199.0,
+            ["D19"] = 287.0,
+            ["D22"] = 387.0,
+            ["D25"] = 507.0,
+            ["D29"] = 642.0,
+            ["D32"] = 794.0,
+            ["D35"] = 957.0,
+            ["D38"] = 1140.0,
+            ["D41"] = 1340.0,
+            ["D51"] = 2027.0
+        };
+
+        internal static double GetBarArea(string barSize)
+            => BarAreas.TryGetValue(barSize, out var area) ? area : 0.0;
+
 
         // 鉄筋断面積 mm2
         private double _mainBarAg;
@@ -945,9 +1032,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarAg, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache();
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -961,9 +1046,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarSpec, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache();
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -977,9 +1060,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainBarDr, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1002,9 +1083,7 @@ namespace PileDesign.Models.InputData
                 if (SetProperty(ref _mainbarCenterCover, value))
                 {
                     MainBarDr = ConcreteOutDia - 2.0 * MainBarCenterCover;
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1018,9 +1097,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _mainbarEr, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1034,9 +1111,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _hoopSize, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1050,9 +1125,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _hoopSpacing, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1066,9 +1139,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _hoopSpec, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1082,9 +1153,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _hoopCenterCover, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1127,10 +1196,7 @@ namespace PileDesign.Models.InputData
                     _pipeDia = value;
                     OnPropertyChanged(nameof(PipeDia));
                     RecalculatePileDia();
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
-
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1148,9 +1214,7 @@ namespace PileDesign.Models.InputData
                     _pipeTs = value;
                     OnPropertyChanged(nameof(PipeTs));
                     RecalculatePileDia();
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1168,9 +1232,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _pipeFts, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1184,9 +1246,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _pipeGrade, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1200,9 +1260,7 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _pipeEs, value))
                 {
-                    InvalidateNMCache();
-                    InvalidateSteelYieldCache(); // 追加
-                    InvalidateCrackCache();
+                    InvalidateAllCaches();
                 }
             }
         }
@@ -1453,147 +1511,171 @@ namespace PileDesign.Models.InputData
 
         private (List<double> N, List<double> M) GetNMRaw(string propertyName)
         {
-            if (PileBodyType == "場所打ち鉄筋コンクリート杭")
+            var section = CreateSectionCalculator();
+            if (section == null)
+                return ([], []);
+
+            // 軸力閾値を更新
+            UltimateLimitAxialForceThresholds = [.. section.UltimateLimitAxialForceThresholds];
+
+            // プロパティ名に応じた NM を取得
+            var (n, m, _, _) = propertyName switch
             {
-                var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+                nameof(UnfactoredServiceNM) => section.UnfactoredServiceNM,
+                nameof(UnfactoredDamageNM) => section.UnfactoredDamageNM,
+                nameof(UnfactoredUltimateNM) => section.UnfactoredUltimateNM,
+                nameof(FactoredServiceNM) => section.FactoredServiceNM,
+                nameof(FactoredDamageNM) => section.FactoredDamageNM,
+                nameof(FactoredUltimateNM) => section.FactoredUltimateNM,
+                _ => (new List<double>(), new List<double>(), new List<double>(), new List<double>())
+            };
 
-                //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-                UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-
-                (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-                {
-                    "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-                    "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-                    "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-                    "FactoredServiceNM" => pileSection.FactoredServiceNM,
-                    "FactoredDamageNM" => pileSection.FactoredDamageNM,
-                    "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-                    _ => ([], [], [], [])
-                };
-
-                return (n, m);
-            }
-            else if (PileBodyType == "場所打ち鋼管コンクリート杭")
-            {
-                if (PileSectionType == "鉄筋コンクリート部")
-                {
-                    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-                    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                    var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-                    //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-                    UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-                    (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-                    {
-                        "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-                        "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-                        "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-                        "FactoredServiceNM" => pileSection.FactoredServiceNM,
-                        "FactoredDamageNM" => pileSection.FactoredDamageNM,
-                        "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-                        _ => ([], [], [], [])
-                    };
-
-                    return (n, m);
-                }
-                else if (PileSectionType == "鋼管コンクリート部")
-                {
-                    var insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-                    var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-                    var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                    var pileSection = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-
-                    //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-                    UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-                    (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-                    {
-                        "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-                        "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-                        "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-                        "FactoredServiceNM" => pileSection.FactoredServiceNM,
-                        "FactoredDamageNM" => pileSection.FactoredDamageNM,
-                        "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-                        _ => ([], [], [], [])
-                    };
-
-                    return (n, m);
-                }
-            }
-            else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "PHC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
-            {
-                var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-                var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-                var pileSection = new PHCSection(precastConcrete, tendons, Prestress);
-
-                //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-                UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-                (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-                {
-                    "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-                    "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-                    "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-                    "FactoredServiceNM" => pileSection.FactoredServiceNM,
-                    "FactoredDamageNM" => pileSection.FactoredDamageNM,
-                    "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-                    _ => ([], [], [], [])
-                };
-
-                return (n, m);
-            }
-            else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "PRC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
-            {
-                var precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-                var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-                var pileSection = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
-
-                //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-                UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-                (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-                {
-                    "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-                    "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-                    "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-                    "FactoredServiceNM" => pileSection.FactoredServiceNM,
-                    "FactoredDamageNM" => pileSection.FactoredDamageNM,
-                    "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-                    _ => ([], [], [], [])
-                };
-
-                return (n, m);
-            }
-            else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "SC杭" && PileDiameter != 2 * ConcreteThickness)
-            {
-                var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
-                var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-                var pileSection = new SCSection(precastConcrete, steelPipe);
-
-                //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
-                UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
-
-                (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
-                {
-                    "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
-                    "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
-                    "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
-                    "FactoredServiceNM" => pileSection.FactoredServiceNM,
-                    "FactoredDamageNM" => pileSection.FactoredDamageNM,
-                    "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
-                    _ => ([], [], [], [])
-                };
-
-                return (n, m);
-            }
-
-            return ([], []);
+            return (n, m);
         }
+
+        //private (List<double> N, List<double> M) GetNMRaw(string propertyName)
+        //{
+        //    if (PileBodyType == "場所打ち鉄筋コンクリート杭")
+        //    {
+        //        var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //        var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+
+        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
+        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
+
+
+        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
+        //        {
+        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
+        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
+        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
+        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
+        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
+        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
+        //            _ => ([], [], [], [])
+        //        };
+
+        //        return (n, m);
+        //    }
+        //    else if (PileBodyType == "場所打ち鋼管コンクリート杭")
+        //    {
+        //        if (PileSectionType == "鉄筋コンクリート部")
+        //        {
+        //            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //            var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
+
+        //            //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
+        //            UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
+
+        //            (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
+        //            {
+        //                "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
+        //                "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
+        //                "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
+        //                "FactoredServiceNM" => pileSection.FactoredServiceNM,
+        //                "FactoredDamageNM" => pileSection.FactoredDamageNM,
+        //                "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
+        //                _ => ([], [], [], [])
+        //            };
+
+        //            return (n, m);
+        //        }
+        //        else if (PileSectionType == "鋼管コンクリート部")
+        //        {
+        //            var insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
+        //            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
+        //            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //            var pileSection = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
+
+        //            //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
+        //            UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
+
+        //            (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
+        //            {
+        //                "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
+        //                "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
+        //                "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
+        //                "FactoredServiceNM" => pileSection.FactoredServiceNM,
+        //                "FactoredDamageNM" => pileSection.FactoredDamageNM,
+        //                "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
+        //                _ => ([], [], [], [])
+        //            };
+
+        //            return (n, m);
+        //        }
+        //    }
+        //    else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "PHC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
+        //    {
+        //        var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
+        //        var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
+        //        var pileSection = new PHCSection(precastConcrete, tendons, Prestress);
+
+        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
+        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
+
+        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
+        //        {
+        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
+        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
+        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
+        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
+        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
+        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
+        //            _ => ([], [], [], [])
+        //        };
+
+        //        return (n, m);
+        //    }
+        //    else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "PRC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
+        //    {
+        //        var precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
+        //        var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
+        //        var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
+        //        var pileSection = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
+
+        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
+        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
+
+        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
+        //        {
+        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
+        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
+        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
+        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
+        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
+        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
+        //            _ => ([], [], [], [])
+        //        };
+
+        //        return (n, m);
+        //    }
+        //    else if (PileBodyType == "既製コンクリート杭" && PileSectionType == "SC杭" && PileDiameter != 2 * ConcreteThickness)
+        //    {
+        //        var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
+        //        var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
+        //        var pileSection = new SCSection(precastConcrete, steelPipe);
+
+        //        //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
+        //        UltimateLimitAxialForceThresholds = [.. pileSection.UltimateLimitAxialForceThresholds];
+
+        //        (List<double> n, List<double> m, List<double> _3, List<double> _4) = propertyName switch
+        //        {
+        //            "UnfactoredServiceNM" => pileSection.UnfactoredServiceNM,
+        //            "UnfactoredDamageNM" => pileSection.UnfactoredDamageNM,
+        //            "UnfactoredUltimateNM" => pileSection.UnfactoredUltimateNM,
+        //            "FactoredServiceNM" => pileSection.FactoredServiceNM,
+        //            "FactoredDamageNM" => pileSection.FactoredDamageNM,
+        //            "FactoredUltimateNM" => pileSection.FactoredUltimateNM,
+        //            _ => ([], [], [], [])
+        //        };
+
+        //        return (n, m);
+        //    }
+
+        //    return ([], []);
+        //}
 
         // 浅いコピーを作成するメソッド
         public PileSection ShallowCopy()
@@ -1677,6 +1759,61 @@ namespace PileDesign.Models.InputData
             copy._crackNMRawCache = null;
 
             return copy;
+        }
+
+        /// <summary>
+        /// 現在の断面パラメータに基づいて断面計算オブジェクトを生成します。
+        /// </summary>
+        /// <returns>断面計算オブジェクト。生成できない場合は null。</returns>
+        private IPileSectionCalculation? CreateSectionCalculator()
+        {
+            return (PileBodyType, PileSectionType) switch
+            {
+                // 場所打ちRC杭
+                ("場所打ち鉄筋コンクリート杭", _) =>
+                    new InsituReinforcedConcreteSection(
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
+
+                // 場所打ち鋼管RC杭 - RC部
+                ("場所打ち鋼管コンクリート杭", "鉄筋コンクリート部") =>
+                    new InsituReinforcedConcreteSection(
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
+
+                // 場所打ち鋼管RC杭 - 鋼管RC部
+                ("場所打ち鋼管コンクリート杭", "鋼管コンクリート部") =>
+                    new InsituSteelPipeReinforcedConcreteSection(
+                        new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth),
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize)),
+
+                // PHC杭
+                ("既製コンクリート杭", "PHC杭") when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
+                    new PHCSection(
+                        new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
+                        Prestress),
+
+                // PRC杭
+                ("既製コンクリート杭", "PRC杭") when TendonAp > 0 && PileDiameter != 2 * ConcreteThickness =>
+                    new PRCSection(
+                        new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc),
+                        new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize),
+                        new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu),
+                        Prestress),
+
+                // SC杭
+                ("既製コンクリート杭", "SC杭") when PileDiameter != 2 * ConcreteThickness =>
+                    new SCSection(
+                        new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc),
+                        new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth)),
+
+                // 鋼管杭（未実装の場合は null）
+                ("鋼管杭", _) => null,
+
+                _ => null
+            };
         }
     }
 }

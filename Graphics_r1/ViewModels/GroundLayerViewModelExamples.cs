@@ -1750,7 +1750,7 @@ namespace PileDesign.ViewModels
             GroundInput.GroundLayers = [];
 
             // 1 ê∑ìy
-            double layerthickness;
+            double layerThickness;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
@@ -1771,13 +1771,13 @@ namespace PileDesign.ViewModels
             });
 
             // 2 ç◊çª
-            layerthickness = 11.75;
+            layerThickness = 11.75;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -1792,13 +1792,13 @@ namespace PileDesign.ViewModels
             });
 
             // 3 ÉVÉãÉg
-            layerthickness = 13.15;
+            layerThickness = 13.15;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
                 Density = 16.0,
@@ -1813,13 +1813,13 @@ namespace PileDesign.ViewModels
             });
 
             // 4 ÉVÉãÉgç¨Ç∂ÇËçª
-            layerthickness = 2.60;
+            layerThickness = 2.60;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ÉVÉãÉgç¨Ç∂ÇËçª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -1834,13 +1834,13 @@ namespace PileDesign.ViewModels
             });
 
             // 4 ç◊çª
-            layerthickness = 4.65;
+            layerThickness = 4.65;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -1855,13 +1855,13 @@ namespace PileDesign.ViewModels
             });
 
             // 5 çª‚I
-            layerthickness = 4.03;
+            layerThickness = 4.03;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "çª‚I",
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
@@ -2250,7 +2250,7 @@ namespace PileDesign.ViewModels
             GroundInput.GroundAcceleration1 = 2.0;
             GroundInput.GroundLayers = [];
             // 1 ‚Iç¨Ç∂ÇËçª
-            double layerthickness;
+            double layerThickness;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
@@ -2271,13 +2271,13 @@ namespace PileDesign.ViewModels
             });
 
             // 2 çªéøîSìy
-            layerthickness = 1.75;
+            layerThickness = 1.75;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ac1",
                 GranularityClass = "îSê´ìy",
                 Density = 18.6,
@@ -2292,13 +2292,13 @@ namespace PileDesign.ViewModels
             });
 
             // 3 ÉVÉãÉgç¨Ç∂ÇËçª
-            layerthickness = 1.55;
+            layerThickness = 1.55;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "As2",
                 GranularityClass = "çªéøìy",
                 Density = 18.6,
@@ -2313,13 +2313,13 @@ namespace PileDesign.ViewModels
             });
 
             // 4 çªéøîSìy
-            layerthickness = 1.6;
+            layerThickness = 1.6;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ac2",
                 GranularityClass = "îSê´ìy",
                 Density = 18.6,
@@ -2334,13 +2334,13 @@ namespace PileDesign.ViewModels
             });
 
             // 5 ÉVÉãÉgéøîSìy
-            layerthickness = 3.30;
+            layerThickness = 3.30;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ac3",
                 GranularityClass = "îSê´ìy",
                 Density = 18.6,
@@ -2355,13 +2355,13 @@ namespace PileDesign.ViewModels
             });
 
             // 6 çª‚I
-            layerthickness = 5.00;
+            layerThickness = 5.00;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ag1",
                 GranularityClass = "‚Iéøìy",
                 Density = 20.6,
@@ -2376,13 +2376,13 @@ namespace PileDesign.ViewModels
             });
 
             // 7 ÉVÉãÉgéøîSìy
-            layerthickness = 8.00;
+            layerThickness = 8.00;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc1",
                 GranularityClass = "îSê´ìy",
                 Density = 16.7,
@@ -2397,13 +2397,13 @@ namespace PileDesign.ViewModels
             });
 
             // 8 çªç¨Ç∂ÇËîSìyéøÉVÉãÉg
-            layerthickness = 0.90;
+            layerThickness = 0.90;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc2",
                 GranularityClass = "îSê´ìy",
                 Density = 20.6,
@@ -2418,13 +2418,13 @@ namespace PileDesign.ViewModels
             });
 
             // 8 çªéøÉVÉãÉg
-            layerthickness = 1.00;
+            layerThickness = 1.00;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc3",
                 GranularityClass = "îSê´ìy",
                 Density = 16.7,
@@ -2440,13 +2440,13 @@ namespace PileDesign.ViewModels
 
 
             // 8 ‚Iç¨Ç∂ÇËçª
-            layerthickness = 0.90;
+            layerThickness = 0.90;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ds1",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -2461,13 +2461,13 @@ namespace PileDesign.ViewModels
             });
 
             // 9 çª‚I
-            layerthickness = 1.65;
+            layerThickness = 1.65;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dg1",
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
@@ -2482,13 +2482,13 @@ namespace PileDesign.ViewModels
             });
 
             // 10 çª
-            layerthickness = 0.15;
+            layerThickness = 0.15;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ds2",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -2504,13 +2504,13 @@ namespace PileDesign.ViewModels
 
 
             // 11 çª‚I
-            layerthickness = 3.90;
+            layerThickness = 3.90;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dg2",
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
@@ -2525,13 +2525,13 @@ namespace PileDesign.ViewModels
             });
 
             // 12 ÉVÉãÉgéøîSìy
-            layerthickness = 6.40;
+            layerThickness = 6.40;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc4",
                 GranularityClass = "îSê´ìy",
                 Density = 18.0,
@@ -2547,13 +2547,13 @@ namespace PileDesign.ViewModels
 
 
             // 13 çªéøÉVÉãÉg
-            layerthickness = 0.55;
+            layerThickness = 0.55;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc5",
                 GranularityClass = "îSê´ìy",
                 Density = 18.0,
@@ -2568,13 +2568,13 @@ namespace PileDesign.ViewModels
             });
 
             // 14 ÉVÉãÉgç¨Ç∂ÇËçª
-            layerthickness = 1.30;
+            layerThickness = 1.30;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ds3",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -2590,13 +2590,13 @@ namespace PileDesign.ViewModels
             });
 
             // 14 çªç¨Ç∂ÇËîSìy
-            layerthickness = 0.35;
+            layerThickness = 0.35;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc6",
                 GranularityClass = "îSê´ìy",
                 Density = 18.0,
@@ -2613,13 +2613,13 @@ namespace PileDesign.ViewModels
 
 
             // 15 çª‚I
-            layerthickness = 1.10;
+            layerThickness = 1.10;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dg3",
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
@@ -2634,13 +2634,13 @@ namespace PileDesign.ViewModels
             });
 
             // 14 çªç¨Ç∂ÇËîSìy
-            layerthickness = 0.80;
+            layerThickness = 0.80;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc2",
                 GranularityClass = "îSê´ìy",
                 Density = 18.0,
@@ -2656,13 +2656,13 @@ namespace PileDesign.ViewModels
             });
 
             // 15 íÜçª
-            layerthickness = 1.10;
+            layerThickness = 1.10;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ds4",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -3013,7 +3013,7 @@ namespace PileDesign.ViewModels
             GroundInput.GroundAcceleration1 = 2.0;
             GroundInput.GroundLayers = [];
             // 1 ñÑìy
-            double layerthickness;
+            double layerThickness;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
@@ -3034,13 +3034,13 @@ namespace PileDesign.ViewModels
             });
 
             // 2 îSìyéøÉVÉãÉg
-            layerthickness = 0.65;
+            layerThickness = 0.65;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ac1",
                 GranularityClass = "îSê´ìy",
                 Density = 18.6,
@@ -3055,13 +3055,13 @@ namespace PileDesign.ViewModels
             });
 
             // 3 çª
-            layerthickness = 6.10;
+            layerThickness = 6.10;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "As2",
                 GranularityClass = "çªéøìy",
                 Density = 18.6,
@@ -3076,13 +3076,13 @@ namespace PileDesign.ViewModels
             });
 
             // 4 ÉVÉãÉg
-            layerthickness = 29.60;
+            layerThickness = 29.60;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ac2",
                 GranularityClass = "îSê´ìy",
                 Density = 18.6,
@@ -3097,13 +3097,13 @@ namespace PileDesign.ViewModels
             });
 
             // 5 çª
-            layerthickness = 1.20;
+            layerThickness = 1.20;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "As2",
                 GranularityClass = "çªéøìy",
                 Density = 18.6,
@@ -3118,13 +3118,13 @@ namespace PileDesign.ViewModels
             });
 
             // 6 îSìy
-            layerthickness = 1.65;
+            layerThickness = 1.65;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ac1",
                 GranularityClass = "îSê´ìy",
                 Density = 20.6,
@@ -3139,13 +3139,13 @@ namespace PileDesign.ViewModels
             });
 
             // 7 ÉVÉãÉgç¨Ç∂ÇËçª
-            layerthickness = 1.25;
+            layerThickness = 1.25;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ds1",
                 GranularityClass = "çªéøìy",
                 Density = 16.7,
@@ -3160,13 +3160,13 @@ namespace PileDesign.ViewModels
             });
 
             // 8 îSìy
-            layerthickness = 0.80;
+            layerThickness = 0.80;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Dc1",
                 GranularityClass = "îSê´ìy",
                 Density = 20.6,
@@ -3181,13 +3181,13 @@ namespace PileDesign.ViewModels
             });
 
             // 9 çª
-            layerthickness = 6.60;
+            layerThickness = 6.60;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "Ds1",
                 GranularityClass = "çªéøìy",
                 Density = 16.7,
@@ -3631,7 +3631,7 @@ namespace PileDesign.ViewModels
             GroundInput.GroundLayers = [];
 
             // 0 ñÑìy
-            double layerthickness;
+            double layerThickness;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
@@ -3652,13 +3652,13 @@ namespace PileDesign.ViewModels
             });
 
             // 1 îSìyéø
-            layerthickness = 2.9;
+            layerThickness = 2.9;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "è„ïîóLäyí¨ëwçªéøÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
                 Density = 17.6,
@@ -3673,13 +3673,13 @@ namespace PileDesign.ViewModels
             });
 
             // 2 îSìyéø
-            layerthickness = 5.25;
+            layerThickness = 5.25;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "â∫ïîóLäyí¨ëwÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
                 Density = 16.3,
@@ -3694,13 +3694,13 @@ namespace PileDesign.ViewModels
             });
 
             // 3 îSìyéø
-            layerthickness = 15.95;
+            layerThickness = 15.95;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "â∫ïîóLäyí¨ëwçªéøÉVÉãÉg",
                 GranularityClass = "îSê´ìy",
                 Density = 16.6,
@@ -3715,13 +3715,13 @@ namespace PileDesign.ViewModels
             });
 
             // 4 îSìyéø
-            layerthickness = 2.1;
+            layerThickness = 2.1;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ñÑê›ÉçÅ[ÉÄëwÉVÉãÉgéøîSìy",
                 GranularityClass = "îSê´ìy",
                 Density = 16.5,
@@ -3736,13 +3736,13 @@ namespace PileDesign.ViewModels
             });
 
             // 5 çªéøéø
-            layerthickness = 0.9;
+            layerThickness = 0.9;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ñÑê›íiãu‚Iëwç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
@@ -3757,13 +3757,13 @@ namespace PileDesign.ViewModels
             });
 
             // 6 çª‚I
-            layerthickness = 5.3;
+            layerThickness = 5.3;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ñÑê›íiãu‚Iëw",
                 GranularityClass = "‚Iéøìy",
                 Density = 21.0,
@@ -3778,13 +3778,13 @@ namespace PileDesign.ViewModels
             });
 
             // 7 ç◊çª
-            layerthickness = 2.6;
+            layerThickness = 2.6;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ìåãûëwç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 19.0,
@@ -3799,13 +3799,13 @@ namespace PileDesign.ViewModels
             });
 
             // 8 ÉVÉãÉgéøç◊çª
-            layerthickness = 3.6;
+            layerThickness = 3.6;
             GroundInput.GroundLayers.Add(new GroundLayerInput
             {
                 No = GroundInput.GroundLayers.Count + 1,
-                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerthickness,
-                LayerThickness = layerthickness,
-                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerthickness,
+                BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - layerThickness,
+                LayerThickness = layerThickness,
+                BottomAltitude = GroundInput.GroundLayers[^1].BottomAltitude - layerThickness,
                 Name = "ìåãûëäÉVÉãÉgéøç◊çª",
                 GranularityClass = "çªéøìy",
                 Density = 19.0,

@@ -1111,6 +1111,7 @@ namespace PileDesign.Views
 
         private const double DragThreshold = 5.0; // ドラッグとみなす移動距離の閾値
 
+
         // マウス左ボタンが離された時のメソッド
         private void Canvas3DLayout_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
@@ -1199,9 +1200,16 @@ namespace PileDesign.Views
         private bool _isRotatingView = false;
         private bool _isRenderingHooked = false;
         private Point _latestMousePos;
+
+        // ★ 追加: レンダリングキャッシュ用フィールド
+        private double _lastRenderedTht = double.NaN;
+        private double _lastRenderedPhi = double.NaN;
+
         // 回転感度（px -> degree）
-        private const double RotateDegPerPixelX = 0.50; // 横移動: θ
-        private const double RotateDegPerPixelY = 0.50; // 縦移動: φ
+        //private const double RotateDegPerPixelX = 0.50; // 横移動: θ
+        //private const double RotateDegPerPixelY = 0.50; // 縦移動: φ
+        private const double RotateDegPerPixelX = 0.35; // より細かい制御
+        private const double RotateDegPerPixelY = 0.35;
 
         // 追加ヘルパー（クラス内に追加）
         private void HookRendering()
@@ -1221,21 +1229,30 @@ namespace PileDesign.Views
         private void CompositionTarget_Rendering(object? sender, EventArgs e)
         {
             if (!_isRotatingView) return;
-            var viewModel = (MainWindowViewModel)DataContext;
 
+            var viewModel = (MainWindowViewModel)DataContext;
             var delta = _latestMousePos - _rightDragAnchorPoint;
 
             double newTht = _anchorTht - delta.X * RotateDegPerPixelX;
             double newPhi = _anchorPhi + delta.Y * RotateDegPerPixelY;
 
-            // φの過回転を軽く制限（必要に応じて調整）
-            newPhi = Math.Max(-89.9, Math.Min(89.9, newPhi));
+            // φの範囲制限
+            newPhi = Math.Clamp(newPhi, -89.9, 89.9);
 
-            // 右ドラッグ中は軽量描画
+            // 角度が変わっていない場合はスキップ（無駄な再描画を防止）
+            if (Math.Abs(newTht - _lastRenderedTht) < 0.01 &&
+                Math.Abs(newPhi - _lastRenderedPhi) < 0.01)
+            {
+                return;
+            }
+
+            _lastRenderedTht = newTht;
+            _lastRenderedPhi = newPhi;
+
+            // 軽量描画モードで更新
             isLightweightDrawing = true;
             try
             {
-                // セッター側で再描画が走らない場合も明示更新
                 viewModel.CanvasThreeDView.Tht = newTht;
                 viewModel.CanvasThreeDView.Phi = newPhi;
                 UpdateCanvas3D();
@@ -1245,6 +1262,23 @@ namespace PileDesign.Views
                 isLightweightDrawing = false;
             }
         }
+        //// φの過回転を軽く制限（必要に応じて調整）
+        //newPhi = Math.Max(-89.9, Math.Min(89.9, newPhi));
+
+        //    // 右ドラッグ中は軽量描画
+        //    isLightweightDrawing = true;
+        //    try
+        //    {
+        //        // セッター側で再描画が走らない場合も明示更新
+        //        viewModel.CanvasThreeDView.Tht = newTht;
+        //        viewModel.CanvasThreeDView.Phi = newPhi;
+        //        UpdateCanvas3D();
+        //    }
+        //    finally
+        //    {
+        //        isLightweightDrawing = false;
+        //    }
+        //}
 
         private const double RotationThreshold = 0.5; //1ピクセルごとに回転
         private const double RotationAngle = 5.0; // 1度回転
@@ -1254,7 +1288,8 @@ namespace PileDesign.Views
 
         private bool _rightDragged = false;
         private Point _rightDownPoint;
-        private const double RightClickDragThreshold = 6.0; // px: 右クリックとドラッグの判定閾値
+        //private const double RightClickDragThreshold = 6.0; // px: 右クリックとドラッグの判定閾値
+        private const double RightClickDragThreshold = 3.0; // より反応を良くする
 
         // マウス移動
         private void Canvas3DLayout_MouseMove(object sender, MouseEventArgs e)
@@ -1292,11 +1327,28 @@ namespace PileDesign.Views
                         _rightDragged = true;
                         _isRotatingView = true;
 
-                        // 回転開始時にフック・軽量描画ON
+                        // ★ 重要: 閾値を超えた位置を新しいアンカーにする
+                        _rightDragAnchorPoint = pos;
+                        _anchorTht = viewModel.CanvasThreeDView.Tht;
+                        _anchorPhi = viewModel.CanvasThreeDView.Phi;
+
+                        // レンダリングフック開始
                         HookRendering();
                         isLightweightDrawing = true;
                     }
                 }
+                //if (!_isRotatingView)
+                //{
+                //    if ((_rightDownPoint - pos).Length > RightClickDragThreshold)
+                //    {
+                //        _rightDragged = true;
+                //        _isRotatingView = true;
+
+                //        // 回転開始時にフック・軽量描画ON
+                //        HookRendering();
+                //        isLightweightDrawing = true;
+                //    }
+                //}
                 //{
                 //    var viewModel = (MainWindowViewModel)DataContext;
 
@@ -1720,6 +1772,10 @@ namespace PileDesign.Views
                 _rightDragged = false;
 
                 Canvas3DLayout.ReleaseMouseCapture();
+
+                // レンダリングキャッシュをリセット
+                _lastRenderedTht = double.NaN;
+                _lastRenderedPhi = double.NaN;
             }
         }
         //{

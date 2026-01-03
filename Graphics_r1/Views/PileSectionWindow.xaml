@@ -131,6 +131,11 @@
                                         </StackPanel>
                                     </StackPanel>
 
+                                    <TextBlock Text="※SC杭の安全限界曲線は、未だ基礎部材の強度と変形性能の定義通りではありません。" Foreground="Red"
+                                               Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='SC杭'}"/>
+
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileBodyType,
                                         Converter={StaticResource VisibilityConverter},
                                         ConverterParameter='鋼管杭'}">

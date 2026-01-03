@@ -28,7 +28,7 @@ namespace PileDesign.ViewModels
                 CurrentModel = null;
 
                 // 表示の更新
-                UpdateWindowAction?.Invoke();
+                UpdateWindowImmediate();
                 UpdateTreeView();
             }
 

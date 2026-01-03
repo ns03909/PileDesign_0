@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.FEM;
 using PileDesign.Models;
 using PileDesign.Models.InputData;
@@ -34,6 +35,111 @@ namespace PileDesign.ViewModels
     public partial class MainWindowViewModel : ObservableObject
     {
         private readonly UndoManager _undoManager = new();
+
+        // クラスの先頭付近のフィールドに追加
+        private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
+        private bool _soilPilesGenerationPending = false;
+
+
+        /// <summary>
+        /// SoilPiles の生成をデバウンス付きでリクエストします。
+        /// 短時間に複数回呼ばれても、最後の呼び出しから一定時間後に1回だけ実行されます。
+        /// </summary>
+        public void RequestGenerateSoilPiles()
+        {
+            // 要素分割済みの場合は再生成しない
+            if (IsElementSplit) return;
+
+            _soilPilesGenerationPending = true;
+
+            // 既存のタイマーを停止
+            _generateSoilPilesDebounceTimer?.Stop();
+
+            // 新しいタイマーを作成（50ms 後に実行）
+            _generateSoilPilesDebounceTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(50)
+            };
+            _generateSoilPilesDebounceTimer.Tick += (s, e) =>
+            {
+                _generateSoilPilesDebounceTimer?.Stop();
+                _generateSoilPilesDebounceTimer = null;
+
+                if (_soilPilesGenerationPending)
+                {
+                    _soilPilesGenerationPending = false;
+                    CurrentInputModel?.GenerateSoilPiles();
+                }
+            };
+            _generateSoilPilesDebounceTimer.Start();
+        }
+
+        /// <summary>
+        /// SoilPiles の生成を即座に実行します（デバウンスをスキップ）。
+        /// 明示的に即時実行が必要な場合に使用します。
+        /// </summary>
+        public void GenerateSoilPilesImmediate()
+        {
+            // 保留中のデバウンスをキャンセル
+            _generateSoilPilesDebounceTimer?.Stop();
+            _generateSoilPilesDebounceTimer = null;
+            _soilPilesGenerationPending = false;
+
+            if (!IsElementSplit)
+            {
+                CurrentInputModel?.GenerateSoilPiles();
+            }
+        }
+
+        // クラスの先頭付近のフィールドに追加（既存のフィールドの近くに）
+        private System.Windows.Threading.DispatcherTimer? _updateWindowDebounceTimer;
+        private bool _updateWindowPending = false;
+
+        /// <summary>
+        /// ウィンドウ更新をデバウンス付きでリクエストします。
+        /// 短時間に複数回呼ばれても、最後の呼び出しから一定時間後に1回だけ実行されます。
+        /// </summary>
+        public void RequestUpdateWindow()
+        {
+            _updateWindowPending = true;
+
+            // 既存のタイマーを停止
+            _updateWindowDebounceTimer?.Stop();
+
+            // 新しいタイマーを作成（30ms 後に実行）
+            _updateWindowDebounceTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(30)
+            };
+            _updateWindowDebounceTimer.Tick += (s, e) =>
+            {
+                _updateWindowDebounceTimer?.Stop();
+                _updateWindowDebounceTimer = null;
+
+                if (_updateWindowPending)
+                {
+                    _updateWindowPending = false;
+                    UpdateWindowAction?.Invoke();
+                }
+            };
+            _updateWindowDebounceTimer.Start();
+        }
+
+        /// <summary>
+        /// ウィンドウ更新を即座に実行します（デバウンスをスキップ）。
+        /// ダイアログを閉じた後など、即時更新が必要な場合に使用します。
+        /// </summary>
+        public void UpdateWindowImmediate()
+        {
+            // 保留中のデバウンスをキャンセル
+            _updateWindowDebounceTimer?.Stop();
+            _updateWindowDebounceTimer = null;
+            _updateWindowPending = false;
+
+            UpdateWindowAction?.Invoke();
+        }
+
+
         // JsonSerializerOptions をキャッシュ
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -200,11 +306,10 @@ namespace PileDesign.ViewModels
                 binding?.UpdateSource();
 
                 IsElementSplit = false;
+                RequestGenerateSoilPiles();
 
-                CurrentInputModel.GenerateSoilPiles(); ////////////////////////
-
-                // ウィンドウの更新
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更: デバウンス付きで更新
+                RequestUpdateWindow();
                 UpdateTreeView();
 
                 // コレクション自体の変更通知
@@ -212,9 +317,6 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(GroupPileSettlementXmax));
                 OnPropertyChanged(nameof(GroupPileSettlementYmin));
                 OnPropertyChanged(nameof(GroupPileSettlementYmax));
-                //OnPropertyChanged(nameof(GroupPileSettlementXCount));
-                //OnPropertyChanged(nameof(GroupPileSettlementYCount));
-                //OnPropertyChanged(nameof(GroupPileSettlementCount));
             }
         }
 
@@ -228,8 +330,8 @@ namespace PileDesign.ViewModels
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                // ウィンドウの更新
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
                 UpdateTreeView();
 
             }
@@ -245,8 +347,8 @@ namespace PileDesign.ViewModels
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                // ウィンドウの更新
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
                 UpdateTreeView();
 
             }
@@ -284,7 +386,8 @@ namespace PileDesign.ViewModels
                     IsElementSplit = false;
                     IsVerticalAnalysisDone = false;
                     IsHorizontalAnalysisDone = false;
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    // 変更後（以下の箇所で適用）
+                    RequestUpdateWindow();
                 }
             }
             return true;
@@ -389,7 +492,8 @@ namespace PileDesign.ViewModels
                 }
 
                 UpdateEmbedment();
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
                 UpdateTreeView();
             }
         }
@@ -397,7 +501,8 @@ namespace PileDesign.ViewModels
         private void TextBoxAltitude_OnTextChanged(TextChangedEventArgs e)
         {
             UpdateEmbedment();
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
 
@@ -446,7 +551,8 @@ namespace PileDesign.ViewModels
 
                 UpdateEmbedment();
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
             }
         }
         [RelayCommand]
@@ -458,7 +564,8 @@ namespace PileDesign.ViewModels
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
             }
         }
 
@@ -491,7 +598,8 @@ namespace PileDesign.ViewModels
 
                 IsGroupPileSettlementAnalysisDone = false;
 
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
             }
         }
 
@@ -523,7 +631,8 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
             }
         }
 
@@ -536,7 +645,7 @@ namespace PileDesign.ViewModels
 
             // 防波堤: null の場合はここで生成
             CurrentInputModel.GridXItems ??= [];
-            AddGrid(CurrentInputModel.GridXItems, "Y1", 7.2);
+            AddGrid(CurrentInputModel.GridXItems, "X1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridXItems));
         }
 
@@ -549,7 +658,7 @@ namespace PileDesign.ViewModels
 
             // 防波堤: null の場合はここで生成
             CurrentInputModel.GridYItems ??= [];
-            AddGrid(CurrentInputModel.GridYItems, "X1", 7.2);
+            AddGrid(CurrentInputModel.GridYItems, "Y1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridYItems));
         }
 
@@ -573,7 +682,8 @@ namespace PileDesign.ViewModels
                 collection[^1].Name = StringTransformer.TransformLastCharacter(collection[^2].Name);
             }
             RecalculateGrid(collection);
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         private void RecalculateGrid(Collection<GridDataItem> collection)
@@ -593,7 +703,8 @@ namespace PileDesign.ViewModels
                     collection[i].CoordForeground = Brushes.Gray;
                 }
             }
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更: デバウンス付きで更新
+            RequestUpdateWindow();
         }
 
         // 矩形荷重追加メソッド
@@ -609,7 +720,8 @@ namespace PileDesign.ViewModels
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad());
 
             IsGroupPileSettlementAnalysisDone = false;
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         // 解析後処理モードの場合の確認
@@ -665,7 +777,8 @@ namespace PileDesign.ViewModels
 
             UpdateSettlementSoilLayer(); // 更新
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         // 全土層削除メソッド
@@ -715,8 +828,8 @@ namespace PileDesign.ViewModels
             // 必要ならプロパティ更新通知
             OnPropertyChanged(nameof(CurrentInputModel));
 
-            // ウィンドウ更新
-            UpdateWindowAction?.Invoke();
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
             UpdateTreeView();
         }
 
@@ -732,7 +845,8 @@ namespace PileDesign.ViewModels
 
             UpdateSettlementSoilLayer(); // 更新
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         // 群杭沈下検討用検討用土層データグリッド更新メソッド
@@ -754,13 +868,15 @@ namespace PileDesign.ViewModels
         public void DataGridGridX_CurrentCellChanged()
         {
             RecalculateGrid(CurrentInputModel.GridXItems);
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         public void DataGridGridY_CurrentCellChanged()
         {
             RecalculateGrid(CurrentInputModel.GridYItems);
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         [RelayCommand]
@@ -788,7 +904,8 @@ namespace PileDesign.ViewModels
 
             DeleteGridItem(sender, CurrentInputModel.GridXItems);
             RecalculateGrid(CurrentInputModel.GridXItems);
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
         [RelayCommand]
         private void DeleteGridY(object sender)
@@ -798,7 +915,8 @@ namespace PileDesign.ViewModels
 
             DeleteGridItem(sender, CurrentInputModel.GridYItems);
             RecalculateGrid(CurrentInputModel.GridYItems);
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
         [RelayCommand]
         private void DeleteElement(object sender)
@@ -809,7 +927,8 @@ namespace PileDesign.ViewModels
             // コレクションから削除
             CurrentInputModel.Elements.Remove(itemToDelete);
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         private static void DeleteGridItem(object sender, ObservableCollection<GridDataItem> collection)
@@ -830,7 +949,8 @@ namespace PileDesign.ViewModels
             // コレクションから削除
             CurrentInputModel.PileGroupSettlement.RectLoads.Remove(itemToDelete);
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            UpdateWindowImmediate();
         }
 
         //[RelayCommand]
@@ -842,7 +962,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void ComboBox3DAnalysisResultContent_OnSelectionChanged(SelectionChangedEventArgs e)
         {
-            UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
         }
 
         [RelayCommand]
@@ -876,11 +996,11 @@ namespace PileDesign.ViewModels
                 // 要素未分割の場合は自動で SoiPile を再生成
                 if (!IsElementSplit)
                 {
-                    CurrentInputModel.GenerateSoilPiles();//////////////////////////////////////////
+                    RequestGenerateSoilPiles();
                 }
 
-                // 画面更新と通し番号のふり直し
-                UpdateWindowAction?.Invoke();
+                // 変更後（以下の箇所で適用）
+                RequestUpdateWindow();
                 UpdatePileLayoutNo();
                 UpdateTreeView();
             });
@@ -909,7 +1029,8 @@ namespace PileDesign.ViewModels
             var uniqueElements = new HashSet<Element>(CurrentInputModel.Elements);
             CurrentInputModel.Elements = new ObservableCollection<Element>(uniqueElements);
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         // 要素の節点位置での分割
@@ -938,7 +1059,8 @@ namespace PileDesign.ViewModels
             }
 
             CurrentInputModel.Elements = newElements;
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         // 要素を分割するメソッド
@@ -1048,7 +1170,8 @@ namespace PileDesign.ViewModels
 
             IsGroupPileSettlementAnalysisDone = false;
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            UpdateWindowImmediate();
             UpdateTreeView();
         }
 
@@ -1092,7 +1215,8 @@ namespace PileDesign.ViewModels
                 embedmentDataItem.Y2 = adjustedMaxY;
             }
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
             UpdateTreeView();
         }
 
@@ -1136,7 +1260,8 @@ namespace PileDesign.ViewModels
                 loadCase.ForceActionPointY = ys.Average();
             }
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
         }
 
         [RelayCommand]
@@ -1156,7 +1281,8 @@ namespace PileDesign.ViewModels
 
             IsFrontPileLabelVisible = true;
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
             UpdateTreeView();
         }
 
@@ -1169,7 +1295,8 @@ namespace PileDesign.ViewModels
 
             groupPileFactorWindow.ShowDialog(); // モーダルダイアログとして表示
 
-            UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+            // 変更: ダイアログ後は即時実行
+            UpdateWindowImmediate();
             UpdateTreeView();
         }
 
@@ -1398,7 +1525,8 @@ namespace PileDesign.ViewModels
             CurrentInputModel.Reset();
             this.CurrentModel = null; // AnaModelもリセット
             CurrentFilePath = null;
-            UpdateWindowAction?.Invoke();
+            // 
+            UpdateWindowImmediate();
             UpdateTreeView();
         }
 
@@ -1585,7 +1713,8 @@ namespace PileDesign.ViewModels
                     // VM 再アタッチ
                     CurrentInputModel.AttachViewModel(this);
 
-                    UpdateWindowAction?.Invoke();
+                    // 
+                    UpdateWindowImmediate();
                     MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
@@ -1818,7 +1947,8 @@ namespace PileDesign.ViewModels
                 MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
-            UpdateWindowAction?.Invoke();
+            // 変更後（以下の箇所で適用）
+            UpdateWindowImmediate();
             UpdateTreeView();
         }
 
@@ -1976,7 +2106,8 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(GroupPileSettlementYmin));
                 OnPropertyChanged(nameof(GroupPileSettlementYmax));
 
-                UpdateWindowAction?.Invoke();
+                // 変更: デバウンス付きで更新
+                RequestUpdateWindow();
                 UpdateTreeView();
             }
             finally
@@ -2001,6 +2132,72 @@ namespace PileDesign.ViewModels
             }
         }
 
+        //private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
+        //{
+        //    // 変更を行う前に、選択されたアイテムのリストを作成
+        //    var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
+        //    int totalCount = selectedItems.Count * repetitionNumber;
+
+        //    // ★ 大量コピー時は待機カーソルを表示
+        //    bool showWaitCursor = totalCount > 10;
+        //    if (showWaitCursor)
+        //    {
+        //        Mouse.OverrideCursor = Cursors.Wait;
+        //    }
+
+        //    try
+        //    {
+        //        // ★ 一時リストに事前にすべて作成（容量を事前確保して高速化）
+        //        var newItems = new List<PileLayoutDataItem>(totalCount);
+
+        //        foreach (var pilelocation in selectedItems)
+        //        {
+        //            for (int i = 0; i < repetitionNumber; i++)
+        //            {
+        //                var newItem = new PileLayoutDataItem
+        //                {
+        //                    X = pilelocation.X + dX * (i + 1),
+        //                    Y = pilelocation.Y + dY * (i + 1)
+        //                };
+        //                newItems.Add(newItem);
+        //            }
+        //            pilelocation.IsSelected = false;
+        //        }
+
+        //        // ★ UIスレッドで一括追加
+        //        await Application.Current.Dispatcher.InvokeAsync(() =>
+        //        {
+        //            // 通知を一時抑制
+        //            CurrentInputModel.SuppressNotifications();
+        //            try
+        //            {
+        //                // ★ 一括追加（SetMainWindowViewModel も含めて処理）
+        //                foreach (var item in newItems)
+        //                {
+        //                    item.SetMainWindowViewModel(this);
+        //                    CurrentInputModel.PileLayoutItems.Add(item);
+        //                }
+        //            }
+        //            finally
+        //            {
+        //                // 通知を再開し、SoilPiles を1回だけ再生成
+        //                CurrentInputModel.ResumeAndNotify();
+        //            }
+
+        //            UpdatePileLayoutNo();
+        //            // 変更: デバウンス付きで更新
+        //            RequestUpdateWindow();
+        //            UpdateTreeView();
+        //        });
+        //    }
+        //    finally
+        //    {
+        //        if (showWaitCursor)
+        //        {
+        //            Mouse.OverrideCursor = null;
+        //        }
+        //    }
+        //}
         private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
         {
             // 変更を行う前に、選択されたアイテムのリストを作成
@@ -2028,33 +2225,30 @@ namespace PileDesign.ViewModels
                             X = pilelocation.X + dX * (i + 1),
                             Y = pilelocation.Y + dY * (i + 1)
                         };
+                        newItem.SetMainWindowViewModel(this);
                         newItems.Add(newItem);
                     }
                     pilelocation.IsSelected = false;
                 }
 
-                // ★ UIスレッドで一括追加
+                // ★ UIスレッドで一括置換（CollectionChangedを1回だけ発火）
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // 通知を一時抑制
-                    CurrentInputModel.SuppressNotifications();
-                    try
+                    // 既存アイテムと新規アイテムを結合した新しいコレクションを作成
+                    var combined = new ObservableCollection<PileLayoutDataItem>(
+                        CurrentInputModel.PileLayoutItems.Concat(newItems));
+
+                    // コレクション全体を置換（CollectionChangedは1回のみ）
+                    CurrentInputModel.PileLayoutItems = combined;
+
+                    // SoilPiles を1回だけ再生成
+                    if (!IsElementSplit)
                     {
-                        // ★ 一括追加（SetMainWindowViewModel も含めて処理）
-                        foreach (var item in newItems)
-                        {
-                            item.SetMainWindowViewModel(this);
-                            CurrentInputModel.PileLayoutItems.Add(item);
-                        }
-                    }
-                    finally
-                    {
-                        // 通知を再開し、SoilPiles を1回だけ再生成
-                        CurrentInputModel.ResumeAndNotify();
+                        RequestGenerateSoilPiles();
                     }
 
                     UpdatePileLayoutNo();
-                    UpdateWindowAction?.Invoke();
+                    RequestUpdateWindow();
                     UpdateTreeView();
                 });
             }
@@ -2082,38 +2276,69 @@ namespace PileDesign.ViewModels
         }
 
         // コピーを作成して操作を行う
+        // コピーを作成して操作を行う
         private void CopyNodes(double dX, double dY, int repetitionNumber)
         {
-            // 変更を行う前に、選択されたアイテムのリストを作成
-            var selectedItems = CurrentInputModel.PileLayoutItems.Where(pilelocation => pilelocation.IsSelected).ToList();
+            var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
+            int totalCount = selectedItems.Count * repetitionNumber;
 
-            // 通知を一時抑制して高速化
-            CurrentInputModel.SuppressNotifications();
-            try
+            // ★ 一時リストに事前にすべて作成
+            var newItems = new List<PileLayoutDataItem>(totalCount);
+
+            foreach (var pilelocation in selectedItems)
             {
-                foreach (PileLayoutDataItem pilelocation in selectedItems)
+                for (int i = 0; i < repetitionNumber; i++)
                 {
-                    for (int i = 0; i < repetitionNumber; i++)
+                    var newItem = new PileLayoutDataItem
                     {
-                        // コピーしたコレクションに新しい要素を追加
-                        CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem()
-                        {
-                            X = pilelocation.X + dX * (i + 1),
-                            Y = pilelocation.Y + dY * (i + 1)
-                        });
-                        CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
-                    }
-                    pilelocation.IsSelected = false;
+                        X = pilelocation.X + dX * (i + 1),
+                        Y = pilelocation.Y + dY * (i + 1)
+                    };
+                    newItem.SetMainWindowViewModel(this);
+                    newItems.Add(newItem);
                 }
+                pilelocation.IsSelected = false;
             }
-            finally
-            {
-                // 通知を再開し、SoilPiles を1回だけ再生成
-                CurrentInputModel.ResumeAndNotify();
-            }
+
+            // ★ 一括置換
+            var combined = new ObservableCollection<PileLayoutDataItem>(
+                CurrentInputModel.PileLayoutItems.Concat(newItems));
+            CurrentInputModel.PileLayoutItems = combined;
 
             UpdatePileLayoutNo();
         }
+        //private void CopyNodes(double dX, double dY, int repetitionNumber)
+        //{
+        //    // 変更を行う前に、選択されたアイテムのリストを作成
+        //    var selectedItems = CurrentInputModel.PileLayoutItems.Where(pilelocation => pilelocation.IsSelected).ToList();
+
+        //    // 通知を一時抑制して高速化
+        //    CurrentInputModel.SuppressNotifications();
+        //    try
+        //    {
+        //        foreach (PileLayoutDataItem pilelocation in selectedItems)
+        //        {
+        //            for (int i = 0; i < repetitionNumber; i++)
+        //            {
+        //                // コピーしたコレクションに新しい要素を追加
+        //                CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem()
+        //                {
+        //                    X = pilelocation.X + dX * (i + 1),
+        //                    Y = pilelocation.Y + dY * (i + 1)
+        //                });
+        //                CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
+        //            }
+        //            pilelocation.IsSelected = false;
+        //        }
+        //    }
+        //    finally
+        //    {
+        //        // 通知を再開し、SoilPiles を1回だけ再生成
+        //        CurrentInputModel.ResumeAndNotify();
+        //    }
+
+        //    UpdatePileLayoutNo();
+        //}
 
         // 杭配置の編集・追加コマンド
         [RelayCommand]
@@ -2124,7 +2349,8 @@ namespace PileDesign.ViewModels
             editPileLayoutWindow.EditPileLayoutCompleted += EditPileLayoutWindow_EditPileLayoutCompleted;
 
             editPileLayoutWindow.ShowDialog();
-            UpdateWindowAction?.Invoke();
+            // 変更: ダイアログ後は即時実行
+            UpdateWindowImmediate();
         }
 
         private void EditPileLayoutWindow_EditPileLayoutCompleted(object sender, EditPileLayoutEventArgs e)
@@ -2226,7 +2452,9 @@ namespace PileDesign.ViewModels
             {
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
-                UpdateWindowAction?.Invoke();
+
+                // 変更: 即時実行
+                UpdateWindowImmediate();
                 UpdateTreeView();
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
@@ -2240,7 +2468,9 @@ namespace PileDesign.ViewModels
             {
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
-                UpdateWindowAction?.Invoke();
+
+                // 変更: 即時実行
+                UpdateWindowImmediate();
                 UpdateTreeView();
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
@@ -2255,7 +2485,8 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.Elements.Remove(element);
             }
 
-            UpdateWindowAction?.Invoke();
+            // 変更: デバウンス付きで更新
+            RequestUpdateWindow();
         }
 
         public void DeleteDuplicatedPiles()
@@ -2276,7 +2507,8 @@ namespace PileDesign.ViewModels
             }
 
             CurrentInputModel.PileLayoutItems = uniquePileLayoutDataItems;
-            UpdateWindowAction?.Invoke();
+            // 変更: ダイアログ後は即時実行
+            UpdateWindowImmediate();
         }
 
         public void DeleteDuplicatedElements()
@@ -2309,7 +2541,9 @@ namespace PileDesign.ViewModels
             }
 
             window.ShowDialog();
-            UpdateWindowAction?.Invoke();
+
+            // 変更: ダイアログ後は即時実行
+            UpdateWindowImmediate();
             UpdateTreeView();
         }
 
@@ -2393,7 +2627,7 @@ namespace PileDesign.ViewModels
         {
             if (IsPreparedForAnalysis())
             {
-                CurrentInputModel.GenerateSoilPiles();
+                GenerateSoilPilesImmediate();  // 即時実行に変更
                 CurrentInputModel.GenerateSoilEmbedment();
 
                 var window = new ElementDivisionWindow(this);
@@ -2468,7 +2702,8 @@ namespace PileDesign.ViewModels
                             MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
 
-                        UpdateWindowAction?.Invoke();
+                        // 変更: 即時実行
+                        UpdateWindowImmediate();
                         UpdateTreeView();
                     }
                 }
@@ -2545,7 +2780,139 @@ namespace PileDesign.ViewModels
                         CurrentInputModel.PileGroupSettlement.SettlementSoilLayers[i].BottomAltitude;
             }
 
-            UpdateWindowAction?.Invoke();
+            // 変更: 即時実行
+            UpdateWindowImmediate();
+        }
+
+        // AutoOverturningMomentCommand - 転倒モーメント自動計算
+        [RelayCommand]
+        private void AutoOverturningMoment()
+        {
+            // Window のコンストラクタ内で ViewModel を作成するため、ここでは作成しない
+            var window = new AutoOverturningMomentWindow(this);
+
+            var appMain = Application.Current?.MainWindow;
+            if (appMain != null)
+            {
+                try { window.Owner = appMain; }
+                catch { }
+            }
+
+            window.ShowDialog();
+
+            UpdateSumAndOTM();
+            // 変更: 即時実行
+            UpdateWindowImmediate();
+            UpdateTreeView();
+        }
+
+        // AutoActionPointXYCommand - 作用点XY自動設定
+        [RelayCommand]
+        private void AutoActionPointXY()
+        {
+            // 作用点を杭配置の重心に移動
+            OnMoveForceActionPointToAverageCenter();
+        }
+
+        /// <summary>
+        /// 選択された杭を削除するコマンド
+        /// </summary>
+        [RelayCommand]
+        private void DeletePiles()
+        {
+            var col = CurrentInputModel.PileLayoutItems;
+            var itemsToRemove = col.Where(x => x.IsSelected).ToList();
+            if (itemsToRemove.Count == 0) return;
+
+            // Undo用にまとめる
+            var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
+            foreach (var item in itemsToRemove)
+            {
+                int index = col.IndexOf(item);
+                if (index < 0) continue;
+                scope.Add(
+                    PileDesign.Common.Undo.CollectionChangeAction<PileLayoutDataItem>
+                        .ForRemove(col, item, index)
+                );
+            }
+            UndoService.Instance.Push(scope);
+
+            // 実削除
+            foreach (var item in itemsToRemove)
+                col.Remove(item);
+
+            UpdatePileLayoutNo();
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// すべての杭の選択を解除するコマンド
+        /// </summary>
+        [RelayCommand]
+        private void DeselectPiles()
+        {
+            foreach (var item in CurrentInputModel.PileLayoutItems)
+            {
+                item.IsSelected = false;
+            }
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// Canvas3D の画像を保存するコマンド
+        /// </summary>
+        [RelayCommand]
+        private void ImageSave()
+        {
+            if (Canvas3DLayout == null) return;
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "PNG Image|*.png|JPEG Image|*.jpg|Bitmap Image|*.bmp",
+                DefaultExt = ".png",
+                FileName = "Canvas3D_" + DateTime.Now.ToString("yyyyMMdd_HHmmss")
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                try
+                {
+                    // Canvas を RenderTargetBitmap でキャプチャ
+                    var bounds = VisualTreeHelper.GetDescendantBounds(Canvas3DLayout);
+                    var rtb = new RenderTargetBitmap(
+                        (int)Canvas3DLayout.ActualWidth,
+                        (int)Canvas3DLayout.ActualHeight,
+                        96, 96,
+                        PixelFormats.Pbgra32);
+
+                    var dv = new DrawingVisual();
+                    using (var dc = dv.RenderOpen())
+                    {
+                        var vb = new VisualBrush(Canvas3DLayout);
+                        dc.DrawRectangle(vb, null, new Rect(new Point(), new Size(Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight)));
+                    }
+                    rtb.Render(dv);
+
+                    // エンコーダーを選択
+                    BitmapEncoder encoder = System.IO.Path.GetExtension(dialog.FileName).ToLower() switch
+                    {
+                        ".jpg" or ".jpeg" => new JpegBitmapEncoder(),
+                        ".bmp" => new BmpBitmapEncoder(),
+                        _ => new PngBitmapEncoder()
+                    };
+
+                    encoder.Frames.Add(BitmapFrame.Create(rtb));
+
+                    using var fs = new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Create);
+                    encoder.Save(fs);
+
+                    StatusMessage = $"画像を保存しました: {dialog.FileName}";
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"画像の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
     }
 }

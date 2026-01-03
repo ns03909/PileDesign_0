@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore.Defaults;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using ScottPlot;
 using ScottPlot.Plottables;
@@ -15,9 +16,11 @@ namespace PileDesign.ViewModels
 {
     public class GroupPileFactorViewModel : BaseViewModel
     {
-        //public static InputModel InputModel => InputModel.Instance;
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+
+        // Undo/Redo 用の UndoManager（Common.Undo 名前空間のもの）
+        private readonly PileDesign.Common.Undo.UndoManager _undoManager = new();
 
         private int? _totalPileCount;
         public int? TotalPileCount
@@ -66,6 +69,8 @@ namespace PileDesign.ViewModels
         }
 
         public IRelayCommand CloseCommand { get; }
+        public IRelayCommand UndoCommand { get; }
+        public IRelayCommand RedoCommand { get; }
 
         public ICommand ApplyModelsPileNumberCommand { get; }
         public ICommand ApplyPileDistanceFactorToModelsAllPilesCommand { get; }
@@ -90,6 +95,33 @@ namespace PileDesign.ViewModels
 
             //チャート初期化
             UpdateGraph();
+        }
+
+        // Undo 実行
+        private void OnUndo()
+        {
+            _undoManager.Undo();
+            NotifyUndoRedoChanged();
+        }
+
+        // Redo 実行
+        private void OnRedo()
+        {
+            _undoManager.Redo();
+            NotifyUndoRedoChanged();
+        }
+
+        // Undo 可能かどうか
+        private bool CanUndo() => _undoManager.CanUndo;
+
+        // Redo 可能かどうか
+        private bool CanRedo() => _undoManager.CanRedo;
+
+        // Undo/Redo ボタンの有効状態を更新
+        private void NotifyUndoRedoChanged()
+        {
+            (UndoCommand as ToolkitRelayCommand)?.NotifyCanExecuteChanged();
+            (RedoCommand as ToolkitRelayCommand)?.NotifyCanExecuteChanged();
         }
 
         // ダイアログを閉じる
@@ -126,16 +158,10 @@ namespace PileDesign.ViewModels
                 scatter.LegendText = $"N={totalPileCounts[i]}";
                 scatter.MarkerSize = 0;
             }
-            // 更新用Scatterを1つだけ作成
-            //MyScatter = WpfPlot.Plot.Add.Scatter(new double[] { }, new double[] { });
-            //MyScatter.MarkerSize = 8;
-            ////MyScatter.Color = System.Drawing.Color.Red;
-            //MyScatter.LegendText = "Update";
 
             string title = "杭間隔比R/Bと群杭係数ξの関係（基礎指針'19　図6.6.16）";
             string xLabel = "杭間隔比R/B";
             string yLabel = "群杭係数ξ";
-            //WpfPlot.Plot.Axes.Left.Label.Text = "群杭係数ξ";
             WpfPlot.Plot.Axes.Title.Label.Text = title;
             WpfPlot.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
             WpfPlot.Plot.Axes.Bottom.Label.Text = xLabel;
@@ -193,29 +219,129 @@ namespace PileDesign.ViewModels
 
         public void OnApplyModelsPileNumber()
         {
-            TotalPileCount = InputModel.PileLayoutItems.Count;
+            //TotalPileCount = InputModel.PileLayoutItems.Count;
+            // Undo 用に変更前の値を保存
+            int? oldValue = TotalPileCount;
+            int newValue = InputModel.PileLayoutItems.Count;
+
+            // 値が同じ場合は何もしない
+            if (oldValue == newValue) return;
+
+            // 変更を適用
+            TotalPileCount = newValue;
+
+            // Undo アクションを登録
+            var undoAction = new DelegateUndoAction(
+                "モデルの杭総本数を適用",
+                () => TotalPileCount = oldValue,
+                () => TotalPileCount = newValue);
+
+            _undoManager.Push(undoAction);
+            NotifyUndoRedoChanged();
         }
 
         public void OnApplyPileDistanceFactorToModelsAllPiles()
         {
             if (PileSpacingDiaRatio.HasValue)
             {
+                // Undo 用に変更前の値を保存
+                var oldValues = InputModel.PileLayoutItems
+                    .Select(item => (item, item.PileSpacingFactor))
+                    .ToList();
+
+                double newValue = PileSpacingDiaRatio.Value;
+
+                // 変更を適用
                 foreach (var item in InputModel.PileLayoutItems)
                 {
-                    item.PileSpacingFactor = PileSpacingDiaRatio.Value;
+                    item.PileSpacingFactor = newValue;
                 }
+
+                // Undo アクションを登録
+                var undoAction = new DelegateUndoAction(
+                    "杭間隔比を全杭に適用",
+                    () =>
+                    {
+                        foreach (var (item, oldVal) in oldValues)
+                            item.PileSpacingFactor = oldVal;
+                    },
+                    () =>
+                    {
+                        foreach (var item in InputModel.PileLayoutItems)
+                            item.PileSpacingFactor = newValue;
+                    });
+
+                _undoManager.Push(undoAction);
+                NotifyUndoRedoChanged();
             }
         }
 
+        //public void OnApplyPileGroupFactorToModelsAllPiles()
+        //{
+        //    if (PileGroupFactor.HasValue)
+        //    {
+        //        foreach (var item in InputModel.PileLayoutItems)
+        //        {
+        //            item.GroupPileFactor = PileGroupFactor.Value;
+        //        }
+        //    }
+        //}
         public void OnApplyPileGroupFactorToModelsAllPiles()
         {
             if (PileGroupFactor.HasValue)
             {
+                // Undo 用に変更前の値を保存
+                var oldValues = InputModel.PileLayoutItems
+                    .Select(item => (item, item.GroupPileFactor))
+                    .ToList();
+
+                double newValue = PileGroupFactor.Value;
+
+                // 変更を適用
                 foreach (var item in InputModel.PileLayoutItems)
                 {
-                    item.GroupPileFactor = PileGroupFactor.Value;
+                    item.GroupPileFactor = newValue;
                 }
+
+                // Undo アクションを登録
+                var undoAction = new DelegateUndoAction(
+                    "群杭係数を全杭に適用",
+                    () =>
+                    {
+                        foreach (var (item, oldVal) in oldValues)
+                            item.GroupPileFactor = oldVal;
+                    },
+                    () =>
+                    {
+                        foreach (var item in InputModel.PileLayoutItems)
+                            item.GroupPileFactor = newValue;
+                    });
+
+                _undoManager.Push(undoAction);
+                NotifyUndoRedoChanged();
             }
         }
     }
+
+    /// <summary>
+    /// デリゲートベースの Undo アクション
+    /// </summary>
+    public class DelegateUndoAction : IUndoAction
+    {
+        private readonly Action _undoAction;
+        private readonly Action _redoAction;
+
+        public string Description { get; }
+
+        public DelegateUndoAction(string description, Action undoAction, Action redoAction)
+        {
+            Description = description;
+            _undoAction = undoAction ?? throw new ArgumentNullException(nameof(undoAction));
+            _redoAction = redoAction ?? throw new ArgumentNullException(nameof(redoAction));
+        }
+
+        public void Undo() => _undoAction();
+        public void Redo() => _redoAction();
+    }
 }
+

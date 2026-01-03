@@ -11,6 +11,12 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:GroupPileFactorViewModel}"
         Title="基礎指針'19　群杭係数" Height="700" Width="500">
+    
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+    
     <Window.Resources>
         <!-- FormulaControlに適用するスタイルを定義 -->
         <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">

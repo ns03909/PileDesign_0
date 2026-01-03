@@ -4,12 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
-        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime" d:DataContext="{d:DesignInstance Type=local:AutoOverturningMomentViewModel}"
         mc:Ignorable="d"
         Title="剛盤を仮定した転倒モーメントによる変動軸力の自動入力" Height="450" Width="600">
-    <!--<Window.DataContext>
-        <local:AutoOverturningMomentViewModel/>
-    </Window.DataContext>-->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -24,24 +21,24 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <GroupBox Header="VL, VLadd"  Grid.Row="0" Grid.Column="1">
+        <GroupBox Header="既入力のVL, VLaddの合計(参考)"  Grid.Row="0" Grid.Column="1">
             <StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="ΣVL0 (kN)" Width="150" Foreground="Gray"/>
-                    <TextBox Text="{Binding SumVL0, StringFormat=N0}" Width="100"
+                    <TextBox Text="{Binding SumVL0, StringFormat=N0, Mode=OneWay}" Width="100"
                              IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="ΣVLadd (kN)" Width="150" Foreground="Gray"/>
-                    <TextBox Text="{Binding SumVLadd, StringFormat=N0}" Width="100" 
+                    <TextBox Text="{Binding SumVLadd, StringFormat=N0, Mode=OneWay}" Width="100" 
                              IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="ΣVL (kN)" Width="150" Foreground="Gray"/>
-                    <TextBox Text="{Binding SumVL, StringFormat=N0}" Width="100"
+                    <TextBox Text="{Binding SumVL, StringFormat=N0, Mode=OneWay}" Width="100"
                              IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
                 </StackPanel>
             </StackPanel>
@@ -51,12 +48,12 @@
         <StackPanel Grid.Row="0" Grid.Column="0">
             <StackPanel Orientation="Horizontal">
                 <Label Content="OTM計算用建物重量 (kN)" Width="150"/>
-                <TextBox Text="{Binding BuildingWeight, StringFormat=N0, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalContentAlignment="Right"/>
+                <TextBox Text="{Binding BuildingWeight, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100" HorizontalContentAlignment="Right"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
                 <Label Content="OTM計算用有効高さ (m)" Width="150"/>
-                <TextBox Text="{Binding EffectiveHeight, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalContentAlignment="Right"/>
+                <TextBox Text="{Binding EffectiveHeight, StringFormat=N1, UpdateSourceTrigger=LostFocus}" Width="100" HorizontalContentAlignment="Right"/>
             </StackPanel>
         </StackPanel>
 
@@ -65,12 +62,12 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Label Content="OTM計算用層せん断力係数" Width="150"/>
-                    <TextBox Text="{Binding ShearCoefficient1, StringFormat=N3, UpdateSourceTrigger=PropertyChanged}" Width="100"  HorizontalContentAlignment="Right" />
+                    <TextBox Text="{Binding ShearCoefficient1, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100"  HorizontalContentAlignment="Right" />
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="転倒モーメント(MNm)" Width="150"/>
-                    <TextBox Text="{Binding OverturningMoment1, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100"
+                    <TextBox Text="{Binding OverturningMoment1, StringFormat=N0, Mode=OneWay}" Width="100"
                              IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
                 </StackPanel>
             </StackPanel>
@@ -81,12 +78,12 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Label Content="OTM計算用層せん断力係数" Width="150"/>
-                    <TextBox Text="{Binding ShearCoefficient2, StringFormat=N3, UpdateSourceTrigger=PropertyChanged}" Width="100" HorizontalContentAlignment="Right" />
+                    <TextBox Text="{Binding ShearCoefficient2, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100" HorizontalContentAlignment="Right" />
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="転倒モーメント(MNm)" Width="150"/>
-                    <TextBox Text="{Binding OverturningMoment2, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100"
+                    <TextBox Text="{Binding OverturningMoment2, StringFormat=N0, Mode=OneWay}" Width="100"
                              IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
                 </StackPanel>
             </StackPanel>

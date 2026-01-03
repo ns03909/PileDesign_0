@@ -61,7 +61,7 @@ namespace PileDesign.ViewModels
                     CurrentInputModel.PileGroupSettlement.RectLoads = value ?? [];
                     //OnPropertyChanged();            // nameof(RectLoads)
                     OnPropertyChanged(nameof(RectLoads));
-                    UpdateWindowAction?.Invoke();   // 画面更新が必要なら
+                    RequestUpdateWindow();   // 画面更新が必要なら
                 }
             }
         }
@@ -996,7 +996,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isActionPointVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1010,7 +1010,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isSettlementLoadVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1024,7 +1024,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isLiquefaction, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1038,7 +1038,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isRigidFloorVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1052,7 +1052,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isLabelVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1066,7 +1066,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isPileRefVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1080,7 +1080,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isSoilRefVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1094,7 +1094,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isPileTopLevelVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1108,7 +1108,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGroupPileFactorLabelVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1121,7 +1121,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isPileDiaSpacingRatioLabelVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1135,7 +1135,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isFrontPileLabelVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1155,7 +1155,7 @@ namespace PileDesign.ViewModels
                 }
                 if (SetProperty(ref _isAnalysisResultVisible, value))
                 {
-                    UpdateWindowAction?.Invoke();
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -1169,7 +1169,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isPileSectionVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1183,7 +1183,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isEmbedmentBoxVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1197,7 +1197,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isXYZAxesVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1211,7 +1211,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isBeamLocalAxesVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1225,7 +1225,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isTickMarkVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1239,7 +1239,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGridLineVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1253,7 +1253,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGroundVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1267,7 +1267,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isNValueVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1281,7 +1281,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isVS0Visible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1295,7 +1295,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isFcVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1464,7 +1464,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isDensityVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1478,7 +1478,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isCohesiveVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1492,7 +1492,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isVsVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1506,7 +1506,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isEsVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1521,7 +1521,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isSettlementGroundVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1535,7 +1535,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isNodeVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1549,7 +1549,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isElementVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1563,7 +1563,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isNodeNoVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1577,7 +1577,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isElementNoVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1592,7 +1592,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isDeformedElementVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1620,7 +1620,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isElementShownAtSettlementPlane, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1853,7 +1853,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isShrinkElementMode, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1898,7 +1898,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _soilStrokeThickness, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1912,7 +1912,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _pileStrokeThickness, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1926,7 +1926,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGroupPileGridVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1940,7 +1940,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGroupPileGridDeformationVisible, value))
                 {
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1958,7 +1958,7 @@ namespace PileDesign.ViewModels
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -1974,7 +1974,7 @@ namespace PileDesign.ViewModels
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -2042,7 +2042,7 @@ namespace PileDesign.ViewModels
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }
@@ -2058,7 +2058,7 @@ namespace PileDesign.ViewModels
                     IsGroupPileSettlementAnalysisDone = false;
                     IsGroupPileGridDeformationVisible = false;
                     CurrentInputModel.PileGroupSettlement.RemoveGridDataSettlement();
-                    UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PileDesign.Models.PileLibrary;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -64,26 +65,25 @@ namespace PileDesign.Models.InputData
         }
 
         // 密度を計算するメソッド
-        internal static double GetDensity(double _Fc = 27, string type = "普通")
+        internal static double GetDensity(double fc = 27, string type = "普通")
         {
-            if (type == "軽量1種")
+            return type switch
             {
-                if (_Fc <= 27) { return 20.0 - 1.0; }
-                else if (_Fc <= 36) { return 22.0 - 1.0; }
-                else { return 25.5 - 1.0; }
-            }
-            else if (type == "軽量2種")
-            {
-                if (_Fc <= 27) { return 18.0 - 1.0; }
-                else { return 25.5 - 1.0; }
-            }
-            else // (type == "普通")
-            {
-                if (_Fc <= 36) { return 24.0 - 1.0; }
-                else if (_Fc <= 48) { return 24.5 - 1.0; }
-                else if (_Fc <= 60) { return 25.0 - 1.0; }
-                else { return 25.5 - 1.0; }
-            }
+                "軽量1種" => fc switch
+                {
+                    <= 27 => 19.0,
+                    <= 36 => 21.0,
+                    _ => 24.5
+                },
+                "軽量2種" => fc <= 27 ? 17.0 : 24.5,
+                _ => fc switch  // 普通
+                {
+                    <= 36 => 23.0,
+                    <= 48 => 23.5,
+                    <= 60 => 24.0,
+                    _ => 24.5
+                }
+            };
         }
 
         // 弾性係数を計算するメソッド
@@ -195,16 +195,12 @@ namespace PileDesign.Models.InputData
         public double EpsilonSi { get; set; }
 
         // コンストラクタ
-        internal MainBars(double _PCD, int _Number, string _Grade, string _BarSize)
+        internal MainBars(double pcd, int number, string grade, string barSize)
         {
-            PCD = Math.Max(_PCD, 100); ///////////
-            Number = Math.Max(_Number, 4); ///////////
-            if (_Grade != "") { Grade = _Grade; } else { Grade = "SD345"; }
-            ;
-            PCD = Math.Max(_PCD, 100);
-            Number = Math.Max(_Number, 4);
-            Grade = !string.IsNullOrEmpty(_Grade) ? _Grade : "SD345";
-            BarSize = !string.IsNullOrEmpty(_BarSize) ? _BarSize : "D25";
+            PCD = Math.Max(pcd, 100);
+            Number = Math.Max(number, 4);
+            Grade = string.IsNullOrEmpty(grade) ? "SD345" : grade;
+            BarSize = string.IsNullOrEmpty(barSize) ? "D25" : barSize;
 
             SetRSigmaY();
             SetAg();
@@ -231,33 +227,38 @@ namespace PileDesign.Models.InputData
         }
 
         // 降伏応力度を設定するメソッド
+        private static readonly Dictionary<string, double> GradeYieldStrengths = new()
+        {
+            ["SD295"] = 295.0,
+            ["SD345"] = 345.0,
+            ["SD390"] = 390.0,
+            ["SD490"] = 490.0,
+            ["SD685"] = 685.0
+        };
+
         internal void SetRSigmaY()
         {
-            if (Grade == "SD295") { RSigmaY = 295.0; }
-            else if (Grade == "SD345") { RSigmaY = 345.0; }
-            else if (Grade == "SD390") { RSigmaY = 390.0; }
-            else if (Grade == "SD490") { RSigmaY = 490.0; }
-            else if (Grade == "SD685") { RSigmaY = 685.0; }
-            else { RSigmaY = 295.0; }
+            RSigmaY = GradeYieldStrengths.GetValueOrDefault(Grade, 295.0);
         }
+        private static readonly Dictionary<string, double> BarAreas = new()
+        {
+            ["D10"] = 71.3,
+            ["D13"] = 127.0,
+            ["D16"] = 199.0,
+            ["D19"] = 287.0,
+            ["D22"] = 387.0,
+            ["D25"] = 507.0,
+            ["D29"] = 642.0,
+            ["D32"] = 794.0,
+            ["D35"] = 957.0,
+            ["D38"] = 1140.0,
+            ["D41"] = 1340.0,
+            ["D51"] = 2027.0
+        };
 
-        // 断面積を返すメソッド
         internal void SetAg()
         {
-            double area;
-            if (BarSize == "D10") { area = 71.3; }
-            else if (BarSize == "D13") { area = 127.0; }
-            else if (BarSize == "D16") { area = 199.0; }
-            else if (BarSize == "D19") { area = 287.0; }
-            else if (BarSize == "D22") { area = 387.0; }
-            else if (BarSize == "D25") { area = 507.0; }
-            else if (BarSize == "D29") { area = 642.0; }
-            else if (BarSize == "D32") { area = 794.0; }
-            else if (BarSize == "D35") { area = 957.0; }
-            else if (BarSize == "D38") { area = 1140.0; }
-            else if (BarSize == "D41") { area = 1340.0; }
-            else if (BarSize == "D51") { area = 2027.0; }
-            else
+            if (!BarAreas.TryGetValue(BarSize, out double area))
             {
                 area = 0.0;
                 Console.WriteLine($"Warning: Invalid BarSize '{BarSize}' detected.");
@@ -272,6 +273,21 @@ namespace PileDesign.Models.InputData
             else if (epsilon + EpsilonSi < -RSigmaY / Er) { return -RSigmaY; }
             else { return Er * (epsilon + EpsilonSi); }
         }
+    }
+
+    /// <summary>
+    /// 鋼管規格の材料特性を管理する静的クラス
+    /// </summary>
+    internal static class SteelPipeGrades
+    {
+        private static readonly Dictionary<string, (double SigmaU, double F)> Properties = new()
+        {
+            ["SKK400"] = (400.0, 235.0),
+            ["SKK490"] = (490.0, 325.0)
+        };
+
+        public static (double SigmaU, double F) GetProperties(string grade)
+            => Properties.GetValueOrDefault(grade, (400.0, 235.0));
     }
 
     // 現場打ち鋼管クラス
@@ -305,12 +321,12 @@ namespace PileDesign.Models.InputData
 
         private void SetMaterialProperties()
         {
-            if (Grade == "SKK400") { SSigmaU = 400.0; F = 235; }
-            else if (Grade == "SKK490") { SSigmaU = 490.0; F = 325; }
+            var (sigmaU, f) = SteelPipeGrades.GetProperties(Grade);
+            SSigmaU = sigmaU;
+            F = f;
             SSigmaY = 1.1 * F;
             SEpsilonY = SSigmaY / SE1;
             SEpsilonU = (SSigmaU - SSigmaY) / SE2 + SEpsilonY;
-
             SetAllowableStrain(F);
         }
 
@@ -356,6 +372,26 @@ namespace PileDesign.Models.InputData
 
         }
 
+        /// <summary>
+        /// PHC/PRC共通の初期化処理
+        /// </summary>
+        protected void InitializeForPHCPRC(double _DO, double _DI, double _Fc)
+        {
+            DO = _DO;
+            DI = _DI;
+            Fc = _Fc;
+            if (Fc < 105)
+            {
+                EpsilonCu = 0.0025;
+                EpsilonCy = Fc / Ec;
+            }
+            else
+            {
+                EpsilonCu = Fc / Ec;
+                EpsilonCy = Fc / Ec;
+            }
+        }
+
         // ひずみ度から応力を計算するメソッド
         internal override double GetStress(string type, double epsilon)
         {
@@ -380,20 +416,7 @@ namespace PileDesign.Models.InputData
         // コンストラクタ
         public PrecastPHCConcrete(double _DO, double _DI, double _Fc)
         {
-            DO = _DO;
-            DI = _DI;
-            Fc = _Fc;
-            if (Fc < 105) // FC = 85
-            {
-                EpsilonCu = 0.0025;
-                EpsilonCy = Fc / Ec;
-            }
-            else // FC = 105
-            {
-                EpsilonCu = Fc / Ec;
-                EpsilonCy = Fc / Ec;
-            }
-
+            InitializeForPHCPRC(_DO, _DI, _Fc);
             SetAllowableStrain();
         }
 
@@ -420,22 +443,7 @@ namespace PileDesign.Models.InputData
         // コンストラクタ
         public PrecastPRCConcrete(double _DO, double _DI, double _Fc)
         {
-            DO = _DO;
-            DI = _DI;
-            Fc = _Fc;
-            if (Fc < 105) // FC = 85
-            {
-                EpsilonCu = 0.0025;
-                EpsilonCy = Fc / Ec;
-            }
-            else // FC = 105
-            {
-                EpsilonCu = Fc / Ec;
-                EpsilonCy = Fc / Ec;
-            }
-
-            //DO = _DO;
-            //DI = _DI;
+            InitializeForPHCPRC(_DO, _DI, _Fc);
             SetAllowableStrain();
         }
 
@@ -592,15 +600,9 @@ namespace PileDesign.Models.InputData
         //プロパティをセットするメソッド
         private void SetMaterialProperties()
         {
-            // 鋼管の設計基準強度
-            if (Grade == "SKK400")
-            {
-                F = 235.0;
-            }
-            else if (Grade == "SKK490")
-            {
-                F = 325.0;
-            }
+            //// 鋼管の設計基準強度
+            var (_, f) = SteelPipeGrades.GetProperties(Grade);
+            F = f;
             As = (OutDia - T) * Math.PI * T;
             Ftsp = -F / 1.5; //鋼管の使用限界引張応力度
             Fcsp = F / 1.5; //鋼管の使用限界圧縮応力度
@@ -637,7 +639,7 @@ namespace PileDesign.Models.InputData
     /// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// </summary>
     // 杭断面抽象クラス
-    internal abstract class AbstractPileSection
+    internal abstract class AbstractPileSection : IPileSectionCalculation
     {
         public double CurvatureMaxServiceLimit { get; protected set; }
         public double CurvatureMaxDamageLimit { get; protected set; }
@@ -665,8 +667,8 @@ namespace PileDesign.Models.InputData
         public List<double> ServiceLimitBendingMomentThresholds { get; protected set; }
         public List<double> ServiceLimitBeta { get; protected set; }
 
-        public List<double> DamagaLimitAxialForceThresholds { get; protected set; }
-        public List<double> DamagaLimitBendingMomentThresholds { get; protected set; }
+        public List<double> DamageLimitAxialForceThresholds { get; protected set; }
+        public List<double> DamageLimitBendingMomentThresholds { get; protected set; }
         public List<double> DamageLimitBeta { get; protected set; }
 
         public List<double> UltimateLimitAxialForceThresholds { get; protected set; }
@@ -700,12 +702,12 @@ namespace PileDesign.Models.InputData
         }
 
         // 損傷限界曲げモーメント閾値を返すメソッド
-        internal List<double> GetDamagaLimitBendingMomentThresholds()
+        internal List<double> GetDamageLimitBendingMomentThresholds()
         {
             List<double> Ms = [];
-            foreach (double Ntarget in DamagaLimitAxialForceThresholds)
+            foreach (double NTarget in DamageLimitAxialForceThresholds)
             {
-                double targetM = GetAllowableMomentForSpecificN(1, Ntarget);
+                double targetM = GetAllowableMomentForSpecificN(1, NTarget);
                 Ms.Add(targetM);
             }
             return Ms;
@@ -715,16 +717,16 @@ namespace PileDesign.Models.InputData
         internal virtual List<double> GetUltimateLimitBendingMomentThresholds()
         {
             List<double> Ms = [];
-            foreach (double Ntarget in UltimateLimitAxialForceThresholds)
+            foreach (double NTarget in UltimateLimitAxialForceThresholds)
             {
-                (double targetM, double _) = GetUltimateMomentForSpecificN(Ntarget);
+                (double targetM, double _) = GetUltimateMomentForSpecificN(NTarget);
                 Ms.Add(targetM);
             }
             return Ms;
         }
 
         // 特定の軸力時の使用、損傷限界曲げモーメントを返すメソッド
-        internal double GetAllowableMomentForSpecificN(int limitStateNo, double Ntarget)
+        internal double GetAllowableMomentForSpecificN(int limitStateNo, double NTarget)
         {
             double N = 0.0;
             double N1;
@@ -760,7 +762,7 @@ namespace PileDesign.Models.InputData
 
             for (int i = 0; i < Ns.Count; i++)
             {
-                if (Ntarget < Ns[i])
+                if (NTarget < Ns[i])
                 {
                     if (i == 0) { return 0.0; }
                     N = (Ns[i - 1] + Ns[i]) / 2.0;
@@ -773,12 +775,12 @@ namespace PileDesign.Models.InputData
                 { return 0.0; }
             }
 
-            if (axialForceCurvatureMax < Ntarget) { isCompressionSide = true; } else { isCompressionSide = false; }
+            if (axialForceCurvatureMax < NTarget) { isCompressionSide = true; } else { isCompressionSide = false; }
 
-            while (Math.Abs(N - Ntarget) > 0.1) // 0.1N 以上の差がある場合
+            while (Math.Abs(N - NTarget) > 0.1) // 0.1N 以上の差がある場合
             {
                 N1 = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature + deltaCurvature).Item1;
-                curvature = deltaCurvature / (N1 - N) * (Ntarget - N) + curvature;
+                curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
                 (double, double, double) forceAndMoment = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature);
                 N = forceAndMoment.Item1;
                 M = forceAndMoment.Item2;
@@ -787,7 +789,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 特定の軸力時の安全限界曲げモーメントを返すメソッド
-        internal (double, double) GetUltimateMomentForSpecificN(double Ntarget)
+        internal (double, double) GetUltimateMomentForSpecificN(double NTarget)
         {
             double N = 0.0; double N1;
             double M = 0.0;
@@ -803,7 +805,7 @@ namespace PileDesign.Models.InputData
             // 初期値の設定
             for (int i = 0; i < Ns.Count; i++)
             {
-                if (Ntarget < Ns[i])
+                if (NTarget < Ns[i])
                 {
                     if (i == 0) { return (0.0, 0.0); }
                     N = (Ns[i - 1] + Ns[i]) * 0.5;
@@ -818,14 +820,14 @@ namespace PileDesign.Models.InputData
 
             int maxIter = 50;
             int iter = 0;
-            while (Math.Abs(N - Ntarget) > 0.1 && iter < maxIter)
+            while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter)
             {
                 N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
                 double deltaN = N1 - N;
                 if (Math.Abs(deltaN) < 1e-8)
                     break; // 収束不能
 
-                double step = deltaCurvature / deltaN * (Ntarget - N);
+                double step = deltaCurvature / deltaN * (NTarget - N);
 
                 // ステップ幅制限
                 if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
@@ -844,10 +846,10 @@ namespace PileDesign.Models.InputData
             }
 
             return (M, curvature);
-            //while (Math.Abs(N - Ntarget) > 0.1) // 0.1N以上の場合
+            //while (Math.Abs(N - NTarget) > 0.1) // 0.1N以上の場合
             //{
             //    N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
-            //    curvature = deltaCurvature / (N1 - N) * (Ntarget - N) + curvature;
+            //    curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
             //    (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
             //}
             //return M;
@@ -920,17 +922,17 @@ namespace PileDesign.Models.InputData
         // 使用限界MNインタラクション取得メソッド
         internal virtual (List<double>, List<double>, List<double>, List<double>) GetServiceLimitMNInteraction()
         {
-            return GetAllowableMNInterection(CurvatureMaxServiceLimit, 0);
+            return GetAllowableMNInteraction(CurvatureMaxServiceLimit, 0);
         }
 
         // 損傷限界MNインタラクション取得メソッド
         internal virtual (List<double>, List<double>, List<double>, List<double>) GetDamageLimitMNInteraction()
         {
-            return GetAllowableMNInterection(CurvatureMaxDamageLimit, 1);
+            return GetAllowableMNInteraction(CurvatureMaxDamageLimit, 1);
         }
 
         // 使用損傷限界MNインタラクション取得メソッド
-        internal (List<double>, List<double>, List<double>, List<double>) GetAllowableMNInterection(double maxCurvature, int LimitStateNo)
+        internal (List<double>, List<double>, List<double>, List<double>) GetAllowableMNInteraction(double maxCurvature, int LimitStateNo)
         {
             List<double> axialForces = [];
             List<double> bendingMoments = [];
@@ -960,7 +962,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 安全限界MN インタラクション取得メソッド
-        internal virtual (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInterection()
+        internal virtual (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInteraction()
         {
             List<double> axialForces = [];
             List<double> bendingMoments = [];
@@ -996,7 +998,7 @@ namespace PileDesign.Models.InputData
 
         // 軸力制限の組み込みメソッド
         internal static (List<double>, List<double>, List<double>, List<double>)
-            GetFactoredMNInterection(
+            GetFactoredMNInteraction(
             (List<double>, List<double>, List<double>, List<double>) unfactoredNM,
             (List<double>, List<double>) additionalNM, List<double> factor)
         {
@@ -1031,6 +1033,19 @@ namespace PileDesign.Models.InputData
                 factoredMs.Add(unfactoredMs[i] * factor[j]);
             }
             return (factoredNs, factoredMs, epsilonCs, curvatures);
+        }
+
+        /// <summary>
+        /// M-φ 関係を取得します（IPileSectionCalculation インターフェース実装）
+        /// 派生クラスでオーバーライドして具体的な実装を提供します。
+        /// </summary>
+        /// <param name="axialN">軸力 [N]</param>
+        /// <returns>(曲率リスト [1/mm], モーメントリスト [N·mm])</returns>
+        public virtual (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+        {
+            // デフォルト実装: 空リストを返す
+            // 派生クラス（InsituReinforcedConcreteSection 等）で適切にオーバーライドされる
+            return (new List<double>(), new List<double>());
         }
     }
 
