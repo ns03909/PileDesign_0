@@ -506,6 +506,17 @@ namespace PileDesign.ViewModels
                 // UI にアニメーションでクリアするよう要求
                 RequestClearProgressAnimation?.Invoke();
             }
+            catch (Exception ex)
+            {
+                // ログ出力
+                System.Diagnostics.Debug.WriteLine($"解析中に例外: {ex}");
+                // ユーザー通知
+                Application.Current?.Dispatcher.Invoke(() =>
+                    MessageBox.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                // 必要なら状態リセット
+                IsAnalysisExecuted = false;
+                RequestClearProgressAnimation?.Invoke();
+            }
             finally
             {
                 IsAnalysisRunning = false;

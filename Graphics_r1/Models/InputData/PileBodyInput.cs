@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Collections.Specialized;
+using System.Windows;
 
 namespace PileDesign.Models.InputData
 {
@@ -43,10 +44,23 @@ namespace PileDesign.Models.InputData
                     _pileBodySegments.CollectionChanged += PileBodySegments_CollectionChanged;
                     foreach (var seg in _pileBodySegments)
                     {
+                        //if (seg?.PileSection != null)
+                        //{
+                        //    seg.PileSection.PileBodyType = this.PileBodyType;
+                        //    // セクションの既定値を再設定するかは抑止フラグで制御
+                        //    if (!_suppressSectionReset)
+                        //    {
+                        //        seg.PileSection.ResetSectionProperties();
+                        //    }
+                        //}
                         if (seg?.PileSection != null)
                         {
-                            seg.PileSection.PileBodyType = this.PileBodyType;
-                            // セクションの既定値を再設定するかは抑止フラグで制御
+                            // PileBodyTypeがnullや空文字の場合は既定値をセット
+                            var safeType = string.IsNullOrWhiteSpace(this.PileBodyType)
+                                ? PileBodyTypeOption.FirstOrDefault() ?? "場所打ち鉄筋コンクリート杭"
+                                : this.PileBodyType;
+                            seg.PileSection.PileBodyType = safeType;
+
                             if (!_suppressSectionReset)
                             {
                                 seg.PileSection.ResetSectionProperties();
@@ -60,15 +74,27 @@ namespace PileDesign.Models.InputData
         // 杭区間の更新メソッド
         public void PileBodySegmentsUpdate()
         {
-            for (int i = 0; i < PileBodySegments.Count; ++i)
+            try
             {
-                PileBodySegments[i].SegmentDepth = 0.0;
-                PileBodySegments[i].No = i + 1; // セグメント番号を更新
+                if (PileBodySegments == null || PileBodySegments.Count == 0)
+                    return;
 
-                for (int j = 0; j <= i; ++j)
+                for (int i = 0; i < PileBodySegments.Count; ++i)
                 {
-                    PileBodySegments[i].SegmentDepth += PileBodySegments[j].SegmentLength;
+                    PileBodySegments[i].SegmentDepth = 0.0;
+                    PileBodySegments[i].No = i + 1; // セグメント番号を更新
+
+                    for (int j = 0; j <= i; ++j)
+                    {
+                        PileBodySegments[i].SegmentDepth += PileBodySegments[j].SegmentLength;
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PileBodySegmentsUpdate エラー: {ex}");
+                Application.Current?.Dispatcher.Invoke(() =>
+                    MessageBox.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 
@@ -316,20 +342,25 @@ namespace PileDesign.Models.InputData
             get => _pileBodyType;
             set
             {
-                if (SetProperty(ref _pileBodyType, value))
+                try
                 {
-                    // 既存の区間セクションへ自動的に反映
-                    if (PileBodySegments != null)
+                    if (SetProperty(ref _pileBodyType, value))
                     {
-                        foreach (var seg in PileBodySegments)
+                        if (PileBodySegments != null)
                         {
-                            if (seg?.PileSection != null)
-                                seg.PileSection.PileBodyType = value;
+                            foreach (var seg in PileBodySegments)
+                            {
+                                if (seg?.PileSection != null)
+                                    seg.PileSection.PileBodyType = value;
+                            }
                         }
                     }
-
-                    // 必要なら既存のリセット処理を呼ぶ
-                    // ResetSectionProperties();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"PileBodyType セッター エラー: {ex}");
+                    Application.Current?.Dispatcher.Invoke(() =>
+                        MessageBox.Show($"杭体タイプ設定中にエラーが発生しました。\n{ex.Message}", "プロパティエラー", MessageBoxButton.OK, MessageBoxImage.Error));
                 }
             }
         }
@@ -368,62 +399,106 @@ namespace PileDesign.Models.InputData
         }
 
         private void PileBodySegments_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        //{
-        //    if (e.NewItems == null) return;
-        //    foreach (var item in e.NewItems)
-        //    {
-        //        if (item is PileBodySegment seg && seg.PileSection != null)
-        //        {
-        //            seg.PileSection.PileBodyType = this.PileBodyType;
-        //            seg.PileSection.ResetSectionProperties();
-        //        }
-        //    }
-        //}
         {
-            if (e.NewItems == null) return;
-            foreach (var item in e.NewItems)
+            try
             {
-                if (item is PileBodySegment seg && seg.PileSection != null)
+                if (e.NewItems == null) return;
+                foreach (var item in e.NewItems)
                 {
-                    seg.PileSection.PileBodyType = this.PileBodyType;
-                    if (!_suppressSectionReset)
+                    if (item is PileBodySegment seg && seg.PileSection != null)
                     {
-                        seg.PileSection.ResetSectionProperties();
+                        seg.PileSection.PileBodyType = this.PileBodyType;
+                        if (!_suppressSectionReset)
+                        {
+                            seg.PileSection.ResetSectionProperties();
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PileBodySegments_CollectionChanged エラー: {ex}");
+                Application.Current?.Dispatcher.Invoke(() =>
+                    MessageBox.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 
         // CSVからデータを読み込む
         private void LoadPresetSettlementParameters()
-        {
-            // アプリケーションの実行ディレクトリを取得
-            //string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        //{
+        //    // アプリケーションの実行ディレクトリを取得
+        //    //string basePath = AppDomain.CurrentDomain.BaseDirectory;
 
-            //string relativePath = "../../PileLibrary/PresetSettlementParameterSet.csv";
-            //string csvFilePath = @"C:/Users/keisu/source/repos/PileDesign/PileDesign/PileLibrary/PresetSettlementParameterSet.csv";
-            // 絶対パスを生成
-            //string csvFilePath = Path.GetFullPath(Path.Combine(basePath, relativePath));
-            // 実行ファイルのディレクトリを基準にパスを組み立てる
+        //    //string relativePath = "../../PileLibrary/PresetSettlementParameterSet.csv";
+        //    //string csvFilePath = @"C:/Users/keisu/source/repos/PileDesign/PileDesign/PileLibrary/PresetSettlementParameterSet.csv";
+        //    // 絶対パスを生成
+        //    //string csvFilePath = Path.GetFullPath(Path.Combine(basePath, relativePath));
+        //    // 実行ファイルのディレクトリを基準にパスを組み立てる
+        //    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        //    string csvFilePath = Path.Combine(baseDir, "Models", "PileLibrary", "PresetSettlementParameterSet.csv");
+
+
+        //    using StreamReader reader = new(csvFilePath, Encoding.UTF8);
+        //    string line;
+        //    while ((line = reader.ReadLine()) != null)
+        //    {
+        //        string[] parts = line.Split(',');
+        //        if (parts.Length == 4)
+        //        {
+        //            string name = parts[0].Trim();
+        //            string soilType = parts[1].Trim();
+        //            double alpha = double.Parse(parts[2].Trim());
+        //            double n = double.Parse(parts[3].Trim());
+
+        //            PileTipSettlementPresetParameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
+        //            PileTipSettlementPresetParameterNames.Add(name + "-" + soilType + " ,α=" + $"{alpha:N2}" + " ,n=" + $"{n:N2}");
+        //        }
+        //    }
+        //}
+        {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string csvFilePath = Path.Combine(baseDir, "Models", "PileLibrary", "PresetSettlementParameterSet.csv");
 
-
-            using StreamReader reader = new(csvFilePath, Encoding.UTF8);
-            string line;
-            while ((line = reader.ReadLine()) != null)
+            try
             {
-                string[] parts = line.Split(',');
-                if (parts.Length == 4)
-                {
-                    string name = parts[0].Trim();
-                    string soilType = parts[1].Trim();
-                    double alpha = double.Parse(parts[2].Trim());
-                    double n = double.Parse(parts[3].Trim());
+                // null防止
+                PileTipSettlementPresetParameterNames ??= new ObservableCollection<string>();
+                PileTipSettlementPresetParameters ??= new List<PileTipSettlementPresetParameter>();
 
-                    PileTipSettlementPresetParameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
-                    PileTipSettlementPresetParameterNames.Add(name + "-" + soilType + " ,α=" + $"{alpha:N2}" + " ,n=" + $"{n:N2}");
+                if (!File.Exists(csvFilePath))
+                {
+                    System.Diagnostics.Debug.WriteLine($"プリセットCSVが見つかりません: {csvFilePath}");
+                    Application.Current?.Dispatcher.Invoke(() =>
+                        MessageBox.Show($"プリセットCSVが見つかりません。\n{csvFilePath}", "ファイルエラー", MessageBoxButton.OK, MessageBoxImage.Warning));
+                    return;
                 }
+
+                using StreamReader reader = new(csvFilePath, Encoding.UTF8);
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string[] parts = line.Split(',');
+                    if (parts.Length == 4)
+                    {
+                        string name = parts[0].Trim();
+                        string soilType = parts[1].Trim();
+                        if (!double.TryParse(parts[2].Trim(), out double alpha) ||
+                            !double.TryParse(parts[3].Trim(), out double n))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"CSVパースエラー: {line}");
+                            continue;
+                        }
+
+                        PileTipSettlementPresetParameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
+                        PileTipSettlementPresetParameterNames.Add($"{name}-{soilType} ,α={alpha:N2} ,n={n:N2}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadPresetSettlementParameters エラー: {ex}");
+                Application.Current?.Dispatcher.Invoke(() =>
+                    MessageBox.Show($"プリセットCSV読込中にエラーが発生しました。\n{ex.Message}", "CSV読込エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 
@@ -814,29 +889,54 @@ namespace PileDesign.Models.InputData
 
         //    return copy;
         //}
+        //{
+        //    // shallow copy
+        //    var copy = (PileBodyInput)this.MemberwiseClone();
+
+        //    // まず PileBodyType を明示的に反映（プロパティ経由で）
+        //    copy.PileBodyType = this.PileBodyType;
+
+        //    // 深いコピー：セグメント／杭頭を新しいコレクション／インスタンスで作成
+        //    // セグションの ResetSectionProperties 呼び出しを抑止して割り当てる
+        //    copy._suppressSectionReset = true;
+        //    copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
+        //        this.PileBodySegments.Select(segment => segment.DeepCopy())
+        //    );
+        //    copy._suppressSectionReset = false;
+
+        //    copy.PileTop = this.PileTop?.DeepCopy();
+
+        //    if (this.PileTipSettlementPresetParameterNames != null)
+        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
+        //    else
+        //        copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
+
+        //    return copy;
+        //}
         {
-            // shallow copy
-            var copy = (PileBodyInput)this.MemberwiseClone();
-
-            // まず PileBodyType を明示的に反映（プロパティ経由で）
-            copy.PileBodyType = this.PileBodyType;
-
-            // 深いコピー：セグメント／杭頭を新しいコレクション／インスタンスで作成
-            // セグションの ResetSectionProperties 呼び出しを抑止して割り当てる
-            copy._suppressSectionReset = true;
-            copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
-                this.PileBodySegments.Select(segment => segment.DeepCopy())
-            );
-            copy._suppressSectionReset = false;
-
-            copy.PileTop = this.PileTop?.DeepCopy();
-
-            if (this.PileTipSettlementPresetParameterNames != null)
-                copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
-            else
-                copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
-
-            return copy;
+            try
+            {
+                var copy = (PileBodyInput)this.MemberwiseClone();
+                copy.PileBodyType = this.PileBodyType;
+                copy._suppressSectionReset = true;
+                copy.PileBodySegments = new ObservableCollection<PileBodySegment>(
+                    this.PileBodySegments.Select(segment => segment.DeepCopy())
+                );
+                copy._suppressSectionReset = false;
+                copy.PileTop = this.PileTop?.DeepCopy();
+                if (this.PileTipSettlementPresetParameterNames != null)
+                    copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>(this.PileTipSettlementPresetParameterNames);
+                else
+                    copy.PileTipSettlementPresetParameterNames = new ObservableCollection<string>();
+                return copy;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PileBodyInput.DeepCopy エラー: {ex}");
+                Application.Current?.Dispatcher.Invoke(() =>
+                    MessageBox.Show($"杭体データのDeepCopy中にエラーが発生しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                return null;
+            }
         }
     }
 }

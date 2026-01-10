@@ -1,6 +1,7 @@
 ﻿using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LiveChartsCore.Measure;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
@@ -2095,6 +2096,8 @@ namespace PileDesign.ViewModels
         public MainCanvasGeometry CanvasGeometry { get; }
 
         // MainWindowViewModel の partial 部分に追加
+
+        [ObservableProperty] private int calculationReportLevel = 1;
         [ObservableProperty] private bool includeGroundInformation = true;
         [ObservableProperty] private bool includeLiquefaction = false;
         [ObservableProperty] private bool includeHorizontal = true;
@@ -2102,10 +2105,16 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeHorizontal_Bending = true;
         [ObservableProperty] private bool includeHorizontal_Shear = true;
         [ObservableProperty] private bool includeHorizontal_NMINT = true;
+
+        [ObservableProperty] private bool includePileLocationMap = false;
+        [ObservableProperty] private bool includePileAxialLoadMap = false;
+        [ObservableProperty] private bool includeIsFrontMap = false;
         [ObservableProperty] private bool includePileHeadMomentMap = false;
         [ObservableProperty] private bool includePileHeadShearMap = false;
         [ObservableProperty] private bool includeSettlement = true;
         [ObservableProperty] private bool includeLoadSettlementCurve = false;
+
+        [ObservableProperty] private bool includeGroupPileSettlement = false;
 
         // コンストラクタ //
         public MainWindowViewModel()

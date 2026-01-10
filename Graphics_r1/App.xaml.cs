@@ -61,7 +61,8 @@ namespace PileDesign
             catch (Exception ex)
             {
                 File.AppendAllText("startup_error.log", $"[{DateTime.Now}] 例外: {ex}\n");
-                throw;
+                MessageBox.Show($"アプリ起動時に致命的なエラーが発生しました。\n{ex.Message}", "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Environment.Exit(1);
             }
         }
         protected override void OnStartup(StartupEventArgs e)

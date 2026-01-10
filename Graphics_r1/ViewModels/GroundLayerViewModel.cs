@@ -28,7 +28,7 @@ namespace PileDesign.ViewModels
     /// </summary>
     public partial class GroundLayerViewModel : ObservableObject, ICloseable
     {
-        public readonly GroundUndoManager _undoManager = new();
+        public readonly UndoManager _undoManager = new();
 
         public GroundWindow GroundWindowInstance { get; set; } // GroundWindow のインスタンスを保持するプロパティを追加
         private readonly MainWindowViewModel _mainWindowViewModel;
@@ -76,7 +76,7 @@ namespace PileDesign.ViewModels
             if (GroundsInput.Count == 0)
                 GroundsInput.Add(new GroundInput());
 
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             UpdateGroundsCountPlusOneList();
 
@@ -174,7 +174,7 @@ namespace PileDesign.ViewModels
         // GroundNo 変更時も GroundInput セッターで購読が付け替えられる
         public void ComboBoxGroundNo_SelectionChanged(int selectedIndex/*, int previousSelectedIndex*/)
         {
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             if (selectedIndex == GroundCountPlusOneList.Count - 1)
             {
@@ -195,17 +195,15 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-
-        // Undo
         [RelayCommand]
         public void Undo()
         {
             _undoManager.Undo();
-            if (_undoManager.CurrentState != null)
+            if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
-                GroundsInput = new ObservableCollection<GroundInput>(_undoManager.CurrentState.Select(x => x.DeepCopy()));
+                GroundsInput = new ObservableCollection<GroundInput>(state.Select(x => x.DeepCopy()));
                 if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
-                    GroundInput = GroundsInput[GroundNo - 1];   // セッター経由で購読
+                    GroundInput = GroundsInput[GroundNo - 1];
                 else if (GroundsInput.Count > 0)
                     GroundInput = GroundsInput[0];
                 else
@@ -215,16 +213,15 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // Redo
         [RelayCommand]
         public void Redo()
         {
             _undoManager.Redo();
-            if (_undoManager.CurrentState != null)
+            if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
-                GroundsInput = new ObservableCollection<GroundInput>(_undoManager.CurrentState.Select(x => x.DeepCopy()));
+                GroundsInput = new ObservableCollection<GroundInput>(state.Select(x => x.DeepCopy()));
                 if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
-                    GroundInput = GroundsInput[GroundNo - 1];   // セッター経由で購読
+                    GroundInput = GroundsInput[GroundNo - 1];
                 else if (GroundsInput.Count > 0)
                     GroundInput = GroundsInput[0];
                 else
@@ -233,6 +230,43 @@ namespace PileDesign.ViewModels
                 Update();
             }
         }
+        // Undo
+        //[RelayCommand]
+        //public void Undo()
+        //{
+        //    _undoManager.Undo();
+        //    if (_undoManager.CurrentState != null)
+        //    {
+        //        GroundsInput = new ObservableCollection<GroundInput>(_undoManager.CurrentState.Select(x => x.DeepCopy()));
+        //        if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
+        //            GroundInput = GroundsInput[GroundNo - 1];   // セッター経由で購読
+        //        else if (GroundsInput.Count > 0)
+        //            GroundInput = GroundsInput[0];
+        //        else
+        //            GroundInput = null;
+
+        //        Update();
+        //    }
+        //}
+
+        //// Redo
+        //[RelayCommand]
+        //public void Redo()
+        //{
+        //    _undoManager.Redo();
+        //    if (_undoManager.CurrentState != null)
+        //    {
+        //        GroundsInput = new ObservableCollection<GroundInput>(_undoManager.CurrentState.Select(x => x.DeepCopy()));
+        //        if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
+        //            GroundInput = GroundsInput[GroundNo - 1];   // セッター経由で購読
+        //        else if (GroundsInput.Count > 0)
+        //            GroundInput = GroundsInput[0];
+        //        else
+        //            GroundInput = null;
+
+        //        Update();
+        //    }
+        //}
         //// GroundInput
         //private GroundInput _groundInput;
         //public GroundInput GroundInput
@@ -376,7 +410,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // 選択されたら、まず現在状態を undo スタックへ保存
-                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 // 実行（ExampleItem が ICommand を保持している前提）
                 value.Command?.Execute(null);
@@ -468,7 +502,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void DeleteGroundLayer(object sender)
         {
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
             if (sender is not GroundLayerInput itemToDelete) return;
             GroundInput.GroundLayers.Remove(itemToDelete);
 
@@ -500,7 +534,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void DeleteGroundMass(object sender)
         {
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
             if (sender is not GroundMassDataInput itemToDelete) return;
             GroundInput.GroundMassesData.Remove(itemToDelete);
 
@@ -646,7 +680,7 @@ namespace PileDesign.ViewModels
             if (result == MessageBoxResult.Yes)
             {
                 // 変更前の状態を保存
-                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 GroundsInput.RemoveAt(index);
                 UpdateGroundsCountPlusOneList();
@@ -1372,7 +1406,7 @@ namespace PileDesign.ViewModels
         private void OnCalculateOtaVs()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
             {
@@ -1403,7 +1437,7 @@ namespace PileDesign.ViewModels
         private void OnCalculateImaiVs()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             double a;
             double b;
@@ -1462,7 +1496,7 @@ namespace PileDesign.ViewModels
         private void OnAddGroundLayer()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var layers = GroundInput?.GroundLayers;
             if (layers == null) return;
@@ -1567,7 +1601,7 @@ namespace PileDesign.ViewModels
         private void OnDeleteAllGroundLayers()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
             GroundInput.GroundLayers.Clear();
             UpdateBedrockChecks();
             UpdateGroundLayerNo();
@@ -1588,7 +1622,7 @@ namespace PileDesign.ViewModels
         private void OnAddGroundMass()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var masses = GroundInput?.GroundMassesData;
             if (masses == null) return;
@@ -1685,7 +1719,7 @@ namespace PileDesign.ViewModels
         private void OnDeleteAllGroundMasses()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             GroundInput.GroundMassesData.Clear();
             UpdateGroundMassDataLayer();
@@ -1697,7 +1731,7 @@ namespace PileDesign.ViewModels
         private void OnMake1mSpacing()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var masses = GroundInput?.GroundMassesData;
             if (masses == null || masses.Count == 0) return;
@@ -1887,7 +1921,7 @@ namespace PileDesign.ViewModels
         private void OnInputAverageNValue()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
@@ -1913,7 +1947,7 @@ namespace PileDesign.ViewModels
         private void InputModelAverageVs()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
@@ -1939,7 +1973,7 @@ namespace PileDesign.ViewModels
         private void OnInput700N()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
@@ -1956,7 +1990,7 @@ namespace PileDesign.ViewModels
         private void OnInputC()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
@@ -1976,7 +2010,7 @@ namespace PileDesign.ViewModels
         private void OnApplyTypicalFc()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (var groundMassDataItem in GroundInput.GroundMassesData)
             {
@@ -1997,7 +2031,7 @@ namespace PileDesign.ViewModels
         private void OnApplyGroundLayerNValue()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
         }
 
@@ -2990,7 +3024,7 @@ namespace PileDesign.ViewModels
         public void DataGridGroundLayer_CellEditEnding()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             Update();
         }
@@ -3002,7 +3036,7 @@ namespace PileDesign.ViewModels
             if (!double.TryParse(editedTextBox.Text, out double doubleValue)) return;
             if (e.Column is not DataGridBoundColumn boundColumn || boundColumn.Binding is not Binding binding) return;
 
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var targetData = e.Row?.Item as GroundMassDataInput;
             if (targetData == null) return;
@@ -3059,7 +3093,7 @@ namespace PileDesign.ViewModels
             if (_isUpdatingValues)
             {
                 // 変更前の状態を保存
-                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.GroundWaterGLDepth = GroundInput.GroundWaterTableAltitude - GroundInput.GroundTopAltitude;
@@ -3075,7 +3109,7 @@ namespace PileDesign.ViewModels
             if (_isUpdatingValues)
             {
                 // 変更前の状態を保存
-                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.StressGLDepth = GroundInput.StressAltitude - GroundInput.GroundTopAltitude;
@@ -3091,7 +3125,7 @@ namespace PileDesign.ViewModels
             if (_isUpdatingValues)
             {
                 // 変更前の状態を保存
-                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.StressAltitude = GroundInput.StressGLDepth + GroundInput.GroundTopAltitude;
@@ -3107,7 +3141,7 @@ namespace PileDesign.ViewModels
             if (_isUpdatingValues)
             {
                 // 変更前の状態を保存
-                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+                _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.GroundWaterTableAltitude = GroundInput.GroundWaterGLDepth + GroundInput.GroundTopAltitude;
@@ -3119,7 +3153,7 @@ namespace PileDesign.ViewModels
         public void DataGridGroundLayer_RowEditEnding(/*string newText*/)
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             Update();
         }
@@ -3127,7 +3161,7 @@ namespace PileDesign.ViewModels
         public void GroundTopAltitudeTextBox_LostFocus()
         {
             // 変更前の状態を保存
-            _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
+            _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             GroundInput.GroundWaterTableAltitude = GroundInput.GroundWaterGLDepth + GroundInput.GroundTopAltitude;
             GroundInput.StressAltitude = GroundInput.StressGLDepth + GroundInput.GroundTopAltitude;

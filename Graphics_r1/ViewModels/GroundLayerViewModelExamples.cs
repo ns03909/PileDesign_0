@@ -468,7 +468,8 @@ namespace PileDesign.ViewModels
                 NValue = 22.0,
                 Cohesive = 200.0,
                 Vs = 400.0,
-                Es = 58700
+                Es = 58700,
+                IsEngineeringBedrock = true
             });
             //10
             GroundInput.GroundLayers.Add(new GroundLayerInput
@@ -483,7 +484,8 @@ namespace PileDesign.ViewModels
                 NValue = 60.0,
                 Cohesive = 0.0,
                 Vs = 400.0,
-                Es = 42000
+                Es = 42000,
+                IsEngineeringBedrock = true
             });
 
             GroundInput.GroundMassesData = [];
@@ -1030,7 +1032,8 @@ namespace PileDesign.ViewModels
                 NValue = 60.0,
                 Cohesive = 137.5,
                 Vs = 400.0,
-                Es = 70200
+                Es = 70200,
+                IsEngineeringBedrock = true
             });
             //10
             GroundInput.GroundLayers.Add(new GroundLayerInput
@@ -1045,7 +1048,8 @@ namespace PileDesign.ViewModels
                 NValue = 60.0,
                 Cohesive = 0.0,
                 Vs = 400.0,
-                Es = 70200
+                Es = 70200,
+                IsEngineeringBedrock=true
             });
 
             GroundInput.GroundMassesData = [];
@@ -1565,13 +1569,14 @@ namespace PileDesign.ViewModels
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 0.0,
                 Vs = 380.0,
                 Es = 30800.0,
                 IsPositiveCircumResistance = true,
-                IsNegativeCircumResistance = true
+                IsNegativeCircumResistance = true,
+
             });
 
             GroundInput.GroundMassesData = [];
@@ -1866,7 +1871,7 @@ namespace PileDesign.ViewModels
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 20.0,
                 Vs = 460.0,
@@ -2451,7 +2456,7 @@ namespace PileDesign.ViewModels
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 0.0,
                 Vs = 380.0,
@@ -2472,7 +2477,7 @@ namespace PileDesign.ViewModels
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 0.0,
                 Vs = 380.0,
@@ -2493,7 +2498,7 @@ namespace PileDesign.ViewModels
                 GranularityClass = "çªéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 0.0,
                 Vs = 380.0,
@@ -2515,7 +2520,7 @@ namespace PileDesign.ViewModels
                 GranularityClass = "‚Iéøìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 0.0,
                 Vs = 380.0,
@@ -2536,7 +2541,7 @@ namespace PileDesign.ViewModels
                 GranularityClass = "îSê´ìy",
                 Density = 18.0,
                 AgeCategory = "ç^êœëw",
-                IsEngineeringBedrock = false,
+                IsEngineeringBedrock = true,
                 NValue = 100.0,
                 Cohesive = 500.0,
                 Vs = 380.0,
@@ -4340,7 +4345,8 @@ namespace PileDesign.ViewModels
                 AgeCategory = "ç^êœëw",
                 NValue = 68.0,
                 Cohesive = 0.0,
-                Vs = 410.0
+                Vs = 410.0,
+                IsEngineeringBedrock=true
             });
             //10
             GroundInput.GroundLayers.Add(new GroundLayerInput
@@ -4353,7 +4359,8 @@ namespace PileDesign.ViewModels
                 AgeCategory = "ç^êœëw",
                 NValue = 62.0,
                 Cohesive = 200.0,
-                Vs = 420.0
+                Vs = 420.0,
+                IsEngineeringBedrock = true
             });
             //11
             GroundInput.GroundLayers.Add(new GroundLayerInput
@@ -4366,7 +4373,8 @@ namespace PileDesign.ViewModels
                 AgeCategory = "ç^êœëw",
                 NValue = 51.0,
                 Cohesive = 0.0,
-                Vs = 390.0
+                Vs = 390.0,
+                IsEngineeringBedrock = true
             });
             //12
             GroundInput.GroundLayers.Add(new GroundLayerInput
@@ -5068,6 +5076,5 @@ namespace PileDesign.ViewModels
             });
             Update();
         }
-
     }
 }

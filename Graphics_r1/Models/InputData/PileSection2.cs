@@ -40,28 +40,51 @@ namespace PileDesign.Models.InputData
         // コンストラクタ
         public InsituConcrete(double _DO, double gsi, double _Fc, string type = "普通", double epsilonM = 0.002, double epsilonCu = 0.003)
         {
-            DO = _DO;
-            Gsi = gsi;
-            Fc = _Fc;
-            EpsilonM = epsilonM;
-            EpsilonCu = epsilonCu;
-            Type = type;
-            Ec = GetEc();
-            Ac = Math.PI * Math.Pow(DO, 2) / 4.0;
-            SigmaCr = 0.56 * Math.Sqrt(Gsi * Fc);
-            SetEpsilonCr();
-            SetAllowableStrain();
+            try
+            {
+                DO = _DO;
+                Gsi = gsi;
+                Fc = _Fc;
+                EpsilonM = epsilonM;
+                EpsilonCu = epsilonCu;
+                Type = type;
+                Ec = GetEc();
+                Ac = Math.PI * Math.Pow(DO, 2) / 4.0;
+                SigmaCr = 0.56 * Math.Sqrt(Gsi * Fc);
+                SetEpsilonCr();
+                SetAllowableStrain();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"InsituConcrete初期化エラー: {ex}");
+                Ec = 0.0;
+                Ac = 0.0;
+                SigmaCr = 0.0;
+            }
         }
 
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            double serviceLimitStressC = 1.0 / 3.0 * Gsi * Fc; // 使用限界圧縮応力度
-            double damageLimitStressC = 2.0 / 3.0 * Gsi * Fc;// 損傷限界圧縮応力度
-            ServiceLimitStrainC = serviceLimitStressC / Ec; // 使用限界圧縮ひずみ度
-            DamageLimitStrainC = damageLimitStressC / Ec; // 損傷限界圧縮ひずみ度
-            ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度
-            DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
+            try
+            {
+                double serviceLimitStressC = 1.0 / 3.0 * Gsi * Fc; // 使用限界圧縮応力度
+                double damageLimitStressC = 2.0 / 3.0 * Gsi * Fc;// 損傷限界圧縮応力度
+                ServiceLimitStrainC = serviceLimitStressC / Ec; // 使用限界圧縮ひずみ度
+                DamageLimitStrainC = damageLimitStressC / Ec; // 損傷限界圧縮ひずみ度
+                ServiceLimitStrainT = double.MinValue; // 使用限界引張ひずみ度
+                DamageLimitStrainT = double.MinValue; // 損傷限界引張ひずみ度
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PrecastPRCConcrete.SetAllowableStrain計算エラー: {ex}");
+                ServiceLimitStrainC = 0.0;
+                DamageLimitStrainC = 0.0;
+                UltimateLimitStrainC = 0.0;
+                ServiceLimitStrainT = 0.0;
+                DamageLimitStrainT = 0.0;
+                UltimateLimitStrainT = 0.0;
+            }
         }
 
         // 密度を計算するメソッド
@@ -146,37 +169,41 @@ namespace PileDesign.Models.InputData
 
         internal double GetEFuncEpsilon(double sigma)
         {
-            // 初期値（線形近似）
-            double epsilon = Math.Max(0.0, Math.Min(sigma / Ec, EpsilonCu));
-            const int maxIter = 30;
-            const double tol = 1e-6;
-
-            for (int i = 0; i < maxIter; i++)
+            try
             {
-                double f = GetEFuncSigma(epsilon) - sigma;
-                if (Math.Abs(f) < tol)
-                    return epsilon;
+                double epsilon = Math.Max(0.0, Math.Min(sigma / Ec, EpsilonCu));
+                const int maxIter = 30;
+                const double tol = 1e-6;
 
-                double df = GetEFuncDSonDEpsilon(epsilon);
-                if (Math.Abs(df) < 1e-12)
-                    break;
+                for (int i = 0; i < maxIter; i++)
+                {
+                    double f = GetEFuncSigma(epsilon) - sigma;
+                    if (Math.Abs(f) < tol)
+                        return epsilon;
 
-                // Newtonステップ
-                double step = f / df;
-                // ステップ幅制限
-                if (Math.Abs(step) > Math.Abs(epsilon) * 0.5)
-                    step = Math.Sign(step) * Math.Abs(epsilon) * 0.5;
+                    double df = GetEFuncDSonDEpsilon(epsilon);
+                    if (Math.Abs(df) < 1e-12)
+                        break;
 
-                double epsilonNext = epsilon - step;
-                epsilonNext = Math.Max(0.0, Math.Min(epsilonNext, EpsilonCu));
+                    double step = f / df;
+                    if (Math.Abs(step) > Math.Abs(epsilon) * 0.5)
+                        step = Math.Sign(step) * Math.Abs(epsilon) * 0.5;
 
-                if (Math.Abs(epsilonNext - epsilon) < tol)
-                    return epsilonNext;
+                    double epsilonNext = epsilon - step;
+                    epsilonNext = Math.Max(0.0, Math.Min(epsilonNext, EpsilonCu));
 
-                epsilon = epsilonNext;
+                    if (Math.Abs(epsilonNext - epsilon) < tol)
+                        return epsilonNext;
+
+                    epsilon = epsilonNext;
+                }
+                return Math.Max(0.0, Math.Min(epsilon, EpsilonCu));
             }
-            // 収束しない場合は端点
-            return Math.Max(0.0, Math.Min(epsilon, EpsilonCu));
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetEFuncEpsilon計算エラー: {ex}");
+                return 0.0;
+            }
         }
     }
 
@@ -258,12 +285,20 @@ namespace PileDesign.Models.InputData
 
         internal void SetAg()
         {
-            if (!BarAreas.TryGetValue(BarSize, out double area))
+            try
             {
-                area = 0.0;
-                Console.WriteLine($"Warning: Invalid BarSize '{BarSize}' detected.");
+                if (!BarAreas.TryGetValue(BarSize, out double area))
+                {
+                    area = 0.0;
+                    Console.WriteLine($"Warning: Invalid BarSize '{BarSize}' detected.");
+                }
+                Ag = Number * area;
             }
-            Ag = Number * area;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SetAg計算エラー: {ex}");
+                Ag = 0.0;
+            }
         }
 
         // ひずみ度から応力を計算するメソッド
@@ -360,7 +395,7 @@ namespace PileDesign.Models.InputData
         public double Fc { get; protected set; }
         public double EpsilonCu { get; protected set; }
         public double EpsilonCy { get; protected set; }
-        public double Ec { get; protected set; } = 40000.0;
+        public double Ec { get; protected set; } = 40_000.0;
 
         public double DO { get; protected set; }
         public double DI { get; protected set; }
@@ -395,16 +430,24 @@ namespace PileDesign.Models.InputData
         // ひずみ度から応力を計算するメソッド
         internal override double GetStress(string type, double epsilon)
         {
-            if (EpsilonCy <= EpsilonE + epsilon) // && (EpsilonE + epsilon) <= EpsilonCu) // 降伏域
+            try
             {
-                return Fc;
+                if (EpsilonCy <= EpsilonE + epsilon) // && (EpsilonE + epsilon) <= EpsilonCu) // 降伏域
+                {
+                    return Fc;
+                }
+                else if (0 < EpsilonE + epsilon && EpsilonE + epsilon < EpsilonCy)
+                {
+                    return Ec * (EpsilonE + epsilon); // 弾性範囲
+                }
+                else
+                {
+                    return 0.0;
+                }
             }
-            else if (0 < EpsilonE + epsilon && EpsilonE + epsilon < EpsilonCy)
+            catch (Exception ex)
             {
-                return Ec * (EpsilonE + epsilon); // 弾性範囲
-            }
-            else
-            {
+                System.Diagnostics.Debug.WriteLine($"PrecastPRCConcrete.GetStress計算エラー: {ex}");
                 return 0.0;
             }
         }
@@ -423,18 +466,31 @@ namespace PileDesign.Models.InputData
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            double serviceLimitStressC = Fc / 3.5;
-            double damageLimitStressC = Fc * 2.0 / 3.5;
-            double serviceLimitStressT = -0.56 * Math.Sqrt(Fc) / 2.0;
-            double damageLimitStressT = -0.56 * Math.Sqrt(Fc);
+            try
+            {
+                double serviceLimitStressC = Fc / 3.5;
+                double damageLimitStressC = Fc * 2.0 / 3.5;
+                double serviceLimitStressT = -0.56 * Math.Sqrt(Fc) / 2.0;
+                double damageLimitStressT = -0.56 * Math.Sqrt(Fc);
 
-            ServiceLimitStrainC = serviceLimitStressC / Ec;
-            DamageLimitStrainC = damageLimitStressC / Ec;
-            UltimateLimitStrainC = EpsilonCu;
+                ServiceLimitStrainC = serviceLimitStressC / Ec;
+                DamageLimitStrainC = damageLimitStressC / Ec;
+                UltimateLimitStrainC = EpsilonCu;
 
-            ServiceLimitStrainT = serviceLimitStressT / Ec;
-            DamageLimitStrainT = damageLimitStressT / Ec;
-            UltimateLimitStrainT = double.MinValue;
+                ServiceLimitStrainT = serviceLimitStressT / Ec;
+                DamageLimitStrainT = damageLimitStressT / Ec;
+                UltimateLimitStrainT = double.MinValue;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SetAllowableStrain計算エラー: {ex}");
+                ServiceLimitStrainC = 0.0;
+                DamageLimitStrainC = 0.0;
+                UltimateLimitStrainC = 0.0;
+                ServiceLimitStrainT = 0.0;
+                DamageLimitStrainT = 0.0;
+                UltimateLimitStrainT = 0.0;
+            }
         }
     }
 
@@ -450,19 +506,32 @@ namespace PileDesign.Models.InputData
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            double serviceLimitStressC = Fc / 3.5;
-            double damageLimitStressC = Fc * 2.0 / 3.5;
+            try
+            {
+                double serviceLimitStressC = Fc / 3.5;
+                double damageLimitStressC = Fc * 2.0 / 3.5;
 
-            double serviceLimitStressT = -0.56 * Math.Sqrt(Fc) / 2.0;
-            double damageLimitStressT = double.MinValue; // <<<<<
+                double serviceLimitStressT = -0.56 * Math.Sqrt(Fc) / 2.0;
+                double damageLimitStressT = double.MinValue; // <<<<<
 
-            ServiceLimitStrainC = serviceLimitStressC / Ec;
-            DamageLimitStrainC = damageLimitStressC / Ec; // <<<<<
-            UltimateLimitStrainC = EpsilonCu;
+                ServiceLimitStrainC = serviceLimitStressC / Ec;
+                DamageLimitStrainC = damageLimitStressC / Ec; // <<<<<
+                UltimateLimitStrainC = EpsilonCu;
 
-            ServiceLimitStrainT = serviceLimitStressT / Ec;
-            DamageLimitStrainT = damageLimitStressT / Ec;
-            UltimateLimitStrainT = double.MinValue;
+                ServiceLimitStrainT = serviceLimitStressT / Ec;
+                DamageLimitStrainT = damageLimitStressT / Ec;
+                UltimateLimitStrainT = double.MinValue;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PrecastPRCConcrete.SetAllowableStrain計算エラー: {ex}");
+                ServiceLimitStrainC = 0.0;
+                DamageLimitStrainC = 0.0;
+                UltimateLimitStrainC = 0.0;
+                ServiceLimitStrainT = 0.0;
+                DamageLimitStrainT = 0.0;
+                UltimateLimitStrainT = 0.0;
+            }
         }
     }
 
@@ -493,19 +562,32 @@ namespace PileDesign.Models.InputData
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            double serviceLimitStressC = Fc / 3.5;
-            double damageLimitStressC = Fc * 2.0 / 3.5;
+            try
+            {
+                double serviceLimitStressC = Fc / 3.5;
+                double damageLimitStressC = Fc * 2.0 / 3.5;
 
-            //double serviceLimitStressT = -0.56 * Math.Sqrt(Fc) / 2.0;
-            /* double damageLimitStressT = Double.MinValue;*/ // <<<<<
+                //double serviceLimitStressT = -0.56 * Math.Sqrt(Fc) / 2.0;
+                /* double damageLimitStressT = Double.MinValue;*/ // <<<<<
 
-            ServiceLimitStrainC = serviceLimitStressC / Ec;
-            DamageLimitStrainC = damageLimitStressC / Ec; // <<<<<
-            //UltimateLimitStrainC = EpsilonCu;
+                ServiceLimitStrainC = serviceLimitStressC / Ec;
+                DamageLimitStrainC = damageLimitStressC / Ec; // <<<<<
+                                                              //UltimateLimitStrainC = EpsilonCu;
 
-            ServiceLimitStrainT = double.MinValue;
-            DamageLimitStrainT = double.MinValue;
-            UltimateLimitStrainT = double.MinValue;
+                ServiceLimitStrainT = double.MinValue;
+                DamageLimitStrainT = double.MinValue;
+                UltimateLimitStrainT = double.MinValue;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PrecastSCConcrete.SetAllowableStrain計算エラー: {ex}");
+                ServiceLimitStrainC = 0.0;
+                DamageLimitStrainC = 0.0;
+                UltimateLimitStrainC = 0.0;
+                ServiceLimitStrainT = 0.0;
+                DamageLimitStrainT = 0.0;
+                UltimateLimitStrainT = 0.0;
+            }
         }
     }
 
@@ -600,30 +682,58 @@ namespace PileDesign.Models.InputData
         //プロパティをセットするメソッド
         private void SetMaterialProperties()
         {
-            //// 鋼管の設計基準強度
-            var (_, f) = SteelPipeGrades.GetProperties(Grade);
-            F = f;
-            As = (OutDia - T) * Math.PI * T;
-            Ftsp = -F / 1.5; //鋼管の使用限界引張応力度
-            Fcsp = F / 1.5; //鋼管の使用限界圧縮応力度
-            Ftdp = -F; //鋼管の使用限界引張応力度
-            Fcdp = F; //鋼管の使用限界圧縮応力度
-            Fys = 1.1 * F; // 鋼管の降伏強度
-            EpsilonY = Fys / SE1; // 降伏ひずみ
+            try
+            {
+                //// 鋼管の設計基準強度
+                var (_, f) = SteelPipeGrades.GetProperties(Grade);
+                F = f;
+                As = (OutDia - T) * Math.PI * T;
+                Ftsp = -F / 1.5; //鋼管の使用限界引張応力度
+                Fcsp = F / 1.5; //鋼管の使用限界圧縮応力度
+                Ftdp = -F; //鋼管の使用限界引張応力度
+                Fcdp = F; //鋼管の使用限界圧縮応力度
+                Fys = 1.1 * F; // 鋼管の降伏強度
+                EpsilonY = Fys / SE1; // 降伏ひずみ
 
-            SetAllowableStrain();
+                SetAllowableStrain();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PrecastSteelPipe.SetMaterialProperties計算エラー: {ex}");
+                F = 0.0;
+                As = 0.0;
+                Ftsp = 0.0;
+                Fcsp = 0.0;
+                Ftdp = 0.0;
+                Fcdp = 0.0;
+                Fys = 0.0;
+                EpsilonY = 0.0;
+            }
         }
 
         // 限界ひずみ度を計算するメソッド
         internal void SetAllowableStrain()
         {
-            ServiceLimitStrainC = Fcsp / SE1; // 使用限界圧縮ひずみ度
-            DamageLimitStrainC = Fcdp / SE1; // 損傷限界圧縮ひずみ度
-            UltimateLimitStrainC = double.MaxValue; // 安全限界圧縮ひずみ度
+            try
+            {
+                ServiceLimitStrainC = Fcsp / SE1; // 使用限界圧縮ひずみ度
+                DamageLimitStrainC = Fcdp / SE1; // 損傷限界圧縮ひずみ度
+                UltimateLimitStrainC = double.MaxValue; // 安全限界圧縮ひずみ度
 
-            ServiceLimitStrainT = Ftsp / SE1; // 使用限界引張ひずみ度
-            DamageLimitStrainT = Ftdp / SE1; // 損傷限界引張ひずみ度
-            UltimateLimitStrainT = double.MinValue; // 安全限界引張ひずみ度
+                ServiceLimitStrainT = Ftsp / SE1; // 使用限界引張ひずみ度
+                DamageLimitStrainT = Ftdp / SE1; // 損傷限界引張ひずみ度
+                UltimateLimitStrainT = double.MinValue; // 安全限界引張ひずみ度
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PrecastSteelPipe.SetAllowableStrain計算エラー: {ex}");
+                ServiceLimitStrainC = 0.0;
+                DamageLimitStrainC = 0.0;
+                UltimateLimitStrainC = 0.0;
+                ServiceLimitStrainT = 0.0;
+                DamageLimitStrainT = 0.0;
+                UltimateLimitStrainT = 0.0;
+            }
         }
 
         // ひずみ度から応力を計算するメソッド
@@ -728,147 +838,166 @@ namespace PileDesign.Models.InputData
         // 特定の軸力時の使用、損傷限界曲げモーメントを返すメソッド
         internal double GetAllowableMomentForSpecificN(int limitStateNo, double NTarget)
         {
-            double N = 0.0;
-            double N1;
-            double M = 0.0;
-            bool isCompressionSide;
-            double curvature = Math.Pow(10, -4);
-            double deltaCurvature = curvature / 100;
-            List<double> Ns, Ms;
-            List<double> curvatures;
-            double axialForceCurvatureMax;
+            try
+            {
+                double N = 0.0;
+                double N1;
+                double M = 0.0;
+                bool isCompressionSide;
+                double curvature = Math.Pow(10, -4);
+                double deltaCurvature = curvature / 100;
+                List<double> Ns, Ms;
+                List<double> curvatures;
+                double axialForceCurvatureMax;
 
-            if (limitStateNo == 0)
-            {
-                Ns = UnfactoredServiceNM.Item1;
-                Ms = UnfactoredServiceNM.Item2;
-                curvatures = UnfactoredServiceNM.Item4;
-                axialForceCurvatureMax = AxialForceCurvatureMaxServiceLimit;
-            }
-            else if (limitStateNo == 1)
-            {
-                Ns = UnfactoredDamageNM.Item1;
-                Ms = UnfactoredDamageNM.Item2;
-                curvatures = UnfactoredDamageNM.Item4;
-                axialForceCurvatureMax = AxialForceCurvatureMaxDamageLimit;
-            }
-            else // (limitStateNo == 2)
-            {
-                Ns = UnfactoredUltimateNM.Item1;
-                Ms = UnfactoredUltimateNM.Item2;
-                curvatures = UnfactoredUltimateNM.Item4;
-                axialForceCurvatureMax = AxialForceCurvatureMaxUltimateLimit;
-            }
-
-            for (int i = 0; i < Ns.Count; i++)
-            {
-                if (NTarget < Ns[i])
+                if (limitStateNo == 0)
                 {
-                    if (i == 0) { return 0.0; }
-                    N = (Ns[i - 1] + Ns[i]) / 2.0;
-                    M = (Ms[i - 1] + Ms[i]) / 2.0;
-                    curvature = (curvatures[i - 1] + curvatures[i]) / 2.0;
-                    deltaCurvature = (curvatures[i] - curvatures[i - 1]) / 100;
-                    break;
+                    Ns = UnfactoredServiceNM.Item1;
+                    Ms = UnfactoredServiceNM.Item2;
+                    curvatures = UnfactoredServiceNM.Item4;
+                    axialForceCurvatureMax = AxialForceCurvatureMaxServiceLimit;
                 }
-                else if (i == Ns.Count - 1)
-                { return 0.0; }
+                else if (limitStateNo == 1)
+                {
+                    Ns = UnfactoredDamageNM.Item1;
+                    Ms = UnfactoredDamageNM.Item2;
+                    curvatures = UnfactoredDamageNM.Item4;
+                    axialForceCurvatureMax = AxialForceCurvatureMaxDamageLimit;
+                }
+                else // (limitStateNo == 2)
+                {
+                    Ns = UnfactoredUltimateNM.Item1;
+                    Ms = UnfactoredUltimateNM.Item2;
+                    curvatures = UnfactoredUltimateNM.Item4;
+                    axialForceCurvatureMax = AxialForceCurvatureMaxUltimateLimit;
+                }
+
+                for (int i = 0; i < Ns.Count; i++)
+                {
+                    if (NTarget < Ns[i])
+                    {
+                        if (i == 0) { return 0.0; }
+                        N = (Ns[i - 1] + Ns[i]) / 2.0;
+                        M = (Ms[i - 1] + Ms[i]) / 2.0;
+                        curvature = (curvatures[i - 1] + curvatures[i]) / 2.0;
+                        deltaCurvature = (curvatures[i] - curvatures[i - 1]) / 100;
+                        break;
+                    }
+                    else if (i == Ns.Count - 1)
+                    { return 0.0; }
+                }
+
+                if (axialForceCurvatureMax < NTarget) { isCompressionSide = true; } else { isCompressionSide = false; }
+
+                while (Math.Abs(N - NTarget) > 0.1) // 0.1N 以上の差がある場合
+                {
+                    N1 = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature + deltaCurvature).Item1;
+                    curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
+                    (double, double, double) forceAndMoment = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature);
+                    N = forceAndMoment.Item1;
+                    M = forceAndMoment.Item2;
+                }
+                return M;
             }
-
-            if (axialForceCurvatureMax < NTarget) { isCompressionSide = true; } else { isCompressionSide = false; }
-
-            while (Math.Abs(N - NTarget) > 0.1) // 0.1N 以上の差がある場合
+            catch (Exception ex)
             {
-                N1 = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature + deltaCurvature).Item1;
-                curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
-                (double, double, double) forceAndMoment = GetAllowableForceAndMoment(limitStateNo, isCompressionSide, curvature);
-                N = forceAndMoment.Item1;
-                M = forceAndMoment.Item2;
+                System.Diagnostics.Debug.WriteLine($"GetAllowableMomentForSpecificN計算エラー: {ex}");
+                return 0.0;
             }
-            return M;
         }
 
         // 特定の軸力時の安全限界曲げモーメントを返すメソッド
         internal (double, double) GetUltimateMomentForSpecificN(double NTarget)
         {
-            double N = 0.0; double N1;
-            double M = 0.0;
-            double epsilonC = 0.003;
-            //bool isCompressionSide;
-            double curvature = 1.0 * Math.Pow(10, -6);
-            double deltaCurvature = curvature / 500.0;
-
-            List<double> Ns = UnfactoredUltimateNM.Item1;
-            List<double> Ms = UnfactoredUltimateNM.Item2;
-            List<double> curvatures = UnfactoredUltimateNM.Item4;
-
-            // 初期値の設定
-            for (int i = 0; i < Ns.Count; i++)
+            try
             {
-                if (NTarget < Ns[i])
+                double N = 0.0; double N1;
+                double M = 0.0;
+                double epsilonC = 0.003;
+                //bool isCompressionSide;
+                double curvature = 1.0 * Math.Pow(10, -6);
+                double deltaCurvature = curvature / 500.0;
+
+                List<double> Ns = UnfactoredUltimateNM.Item1;
+                List<double> Ms = UnfactoredUltimateNM.Item2;
+                List<double> curvatures = UnfactoredUltimateNM.Item4;
+
+                // 初期値の設定
+                for (int i = 0; i < Ns.Count; i++)
                 {
-                    if (i == 0) { return (0.0, 0.0); }
-                    N = (Ns[i - 1] + Ns[i]) * 0.5;
-                    M = (Ms[i - 1] + Ms[i]) * 0.5;
-                    curvature = (curvatures[i - 1] + curvatures[i]) * 0.5;
-                    deltaCurvature = (curvatures[i] - curvatures[i - 1]) / 100;
-                    break;
+                    if (NTarget < Ns[i])
+                    {
+                        if (i == 0) { return (0.0, 0.0); }
+                        N = (Ns[i - 1] + Ns[i]) * 0.5;
+                        M = (Ms[i - 1] + Ms[i]) * 0.5;
+                        curvature = (curvatures[i - 1] + curvatures[i]) * 0.5;
+                        deltaCurvature = (curvatures[i] - curvatures[i - 1]) / 100;
+                        break;
+                    }
+                    else if (i == Ns.Count - 1)
+                    { return (0.0, 0.0); }
                 }
-                else if (i == Ns.Count - 1)
-                { return (0.0, 0.0); }
-            }
 
-            int maxIter = 50;
-            int iter = 0;
-            while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter)
+                int maxIter = 50;
+                int iter = 0;
+                while (Math.Abs(N - NTarget) > 0.1 && iter < maxIter)
+                {
+                    N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
+                    double deltaN = N1 - N;
+                    if (Math.Abs(deltaN) < 1e-8)
+                        break; // 収束不能
+
+                    double step = deltaCurvature / deltaN * (NTarget - N);
+
+                    // ステップ幅制限
+                    if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
+                        step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
+
+                    curvature += step;
+                    (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
+                    iter++;
+                }
+
+                // 収束しなかった場合の対策
+                if (iter >= maxIter)
+                {
+                    System.Diagnostics.Debug.WriteLine("Newton-Raphson法が収束しませんでした。");
+                    // 必要に応じて例外通知やデフォルト値
+                }
+
+                return (M, curvature);
+            }
+            catch (Exception ex)
             {
-                N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
-                double deltaN = N1 - N;
-                if (Math.Abs(deltaN) < 1e-8)
-                    break; // 収束不能
-
-                double step = deltaCurvature / deltaN * (NTarget - N);
-
-                // ステップ幅制限
-                if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
-                    step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
-
-                curvature += step;
-                (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
-                iter++;
+                System.Diagnostics.Debug.WriteLine($"GetUltimateMomentForSpecificN計算エラー: {ex}");
+                return (0.0, 0.0);
             }
-
-            // 収束しなかった場合の対策
-            if (iter >= maxIter)
-            {
-                // 必要なら例外や警告
-                // throw new InvalidOperationException("Newton-Raphson法が収束しませんでした。");
-            }
-
-            return (M, curvature);
-            //while (Math.Abs(N - NTarget) > 0.1) // 0.1N以上の場合
-            //{
-            //    N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
-            //    curvature = deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
-            //    (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
-            //}
-            //return M;
         }
 
         // 限界ひずみ状態を超えない最大曲率取得メソッド 
         internal static double GetAllowableMaxCurvature(
             List<double> allowableStrainCs, List<double> positionCs, List<double> allowableStrainTs, List<double> positionTs)
         {
-            double maxCurvature = double.MaxValue;
-            for (int i = 0; i < allowableStrainCs.Count; i++)
+            try
             {
-                for (int j = 0; j < allowableStrainTs.Count; j++)
+                double maxCurvature = double.MaxValue;
+                for (int i = 0; i < allowableStrainCs.Count; i++)
                 {
-                    double curvature = -(allowableStrainTs[j] - allowableStrainCs[i]) / (positionTs[j] - positionCs[i]);
-                    if (curvature < maxCurvature) { maxCurvature = curvature; }
+                    for (int j = 0; j < allowableStrainTs.Count; j++)
+                    {
+                        double denominator = positionTs[j] - positionCs[i];
+                        if (Math.Abs(denominator) < 1e-12) continue; // 0除算防止
+                        double curvature = -(allowableStrainTs[j] - allowableStrainCs[i]) / denominator;
+                        if (curvature < maxCurvature) { maxCurvature = curvature; }
+                    }
                 }
+                return maxCurvature;
             }
-            return maxCurvature;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetAllowableMaxCurvature計算エラー: {ex}");
+                return 0.0;
+            }
         }
 
         // <抽象> 軸力、曲げモーメント取得メソッド
@@ -882,24 +1011,32 @@ namespace PileDesign.Models.InputData
         internal double GetAllowableCompressionEdgeStrain(
            int limitStateNo, bool isCompressionSide, double curvature)
         {
-            var allowablesSrains = GetAllowableStrains(limitStateNo);
-            List<double> allowableStrainCs = allowablesSrains.Item1;
-            List<double> allowableStrainTs = allowablesSrains.Item2;
+            try
+            {
+                var allowablesStrains = GetAllowableStrains(limitStateNo);
+                List<double> allowableStrainCs = allowablesStrains.Item1;
+                List<double> allowableStrainTs = allowablesStrains.Item2;
 
-            double epsilonC;
-            if (isCompressionSide)
-            {
-                epsilonC = double.MaxValue;
-                foreach (var pair in allowableStrainCs.Zip(PositionCs, (allowableStrainC, positionC) => (allowableStrainC, positionC)))
-                    epsilonC = Math.Min(epsilonC, -curvature * (-PileDia / 2 - pair.positionC) + pair.allowableStrainC);
+                double epsilonC;
+                if (isCompressionSide)
+                {
+                    epsilonC = double.MaxValue;
+                    foreach (var pair in allowableStrainCs.Zip(PositionCs, (allowableStrainC, positionC) => (allowableStrainC, positionC)))
+                        epsilonC = Math.Min(epsilonC, -curvature * (-PileDia / 2 - pair.positionC) + pair.allowableStrainC);
+                }
+                else // (isCompressionSide == false)
+                {
+                    epsilonC = double.MinValue;
+                    foreach (var pair in allowableStrainTs.Zip(PositionTs, (allowableStrainT, positionT) => (allowableStrainT, positionT)))
+                        epsilonC = Math.Max(epsilonC, -curvature * (-PileDia / 2 - pair.positionT) + pair.allowableStrainT);
+                }
+                return epsilonC;
             }
-            else // (isCompressionSide == false)
+            catch (Exception ex)
             {
-                epsilonC = double.MinValue;
-                foreach (var pair in allowableStrainTs.Zip(PositionTs, (allowableStrainT, positionT) => (allowableStrainT, positionT)))
-                    epsilonC = Math.Max(epsilonC, -curvature * (-PileDia / 2 - pair.positionT) + pair.allowableStrainT);
+                System.Diagnostics.Debug.WriteLine($"GetAllowableCompressionEdgeStrain計算エラー: {ex}");
+                return 0.0;
             }
-            return epsilonC;
         }
 
         // 使用損傷限界ひずみ度取得メソッド
@@ -1063,28 +1200,33 @@ namespace PileDesign.Models.InputData
         // 軸力、曲げモーメント取得メソッド
         internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 100)
         {
-            double z;
-            double dz = Dia / division;
-            double epsilon;
-            double sigma;
-            double width;
-
-            double axialForce = 0.0;
-            double bendingMoment = 0.0;
-
-            // 圧縮縁ひずみ度 epsilonC
-            // 中心ひずみ度 epsilon0
-            for (int i = 0; i < division; i++)
+            try
             {
-                z = -Dia * 0.5 + (0.5 + i) * dz;
-                width = 2.0 * Math.Sqrt(Math.Pow(Dia * 0.5, 2) - Math.Pow(z, 2));
-                //epsilon = epsilonC - curvature * (z + Dia / 2.0);
-                epsilon = epsilon0 - curvature * z;
-                sigma = material.GetStress(type, epsilon);
-                axialForce += width * sigma * dz;
-                bendingMoment += width * sigma * dz * -z;
+                double z;
+                double dz = Dia / division;
+                double epsilon;
+                double sigma;
+                double width;
+
+                double axialForce = 0.0;
+                double bendingMoment = 0.0;
+
+                for (int i = 0; i < division; i++)
+                {
+                    z = -Dia * 0.5 + (0.5 + i) * dz;
+                    width = 2.0 * Math.Sqrt(Math.Pow(Dia * 0.5, 2) - Math.Pow(z, 2));
+                    epsilon = epsilon0 - curvature * z;
+                    sigma = material.GetStress(type, epsilon);
+                    axialForce += width * sigma * dz;
+                    bendingMoment += width * sigma * dz * -z;
+                }
+                return (axialForce, bendingMoment);
             }
-            return (axialForce, bendingMoment);
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetForceAndMoment計算エラー: {ex}");
+                return (0.0, 0.0);
+            }
         }
     }
 
@@ -1097,25 +1239,31 @@ namespace PileDesign.Models.InputData
         // 軸力、曲げモーメント取得メソッド
         internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 100)
         {
-            double z;
-            double dCirc = Math.PI * Dia / division;
-            double epsilon;
-            double sigma;
-
-            double axialForce = 0.0;
-            double bendingMoment = 0.0;
-
-            // 圧縮縁ひずみ度 epsilonC
-            // 中心ひずみ度 epsilon0
-            for (int i = 0; i < division; i++)
+            try
             {
-                z = Dia * 0.5 * Math.Cos(2.0 * Math.PI * i / division);
-                epsilon = epsilon0 - curvature * z;
-                sigma = material.GetStress(type, epsilon);
-                axialForce += T * sigma * dCirc;
-                bendingMoment += T * sigma * dCirc * -z;
+                double z;
+                double dCirc = Math.PI * Dia / division;
+                double epsilon;
+                double sigma;
+
+                double axialForce = 0.0;
+                double bendingMoment = 0.0;
+
+                for (int i = 0; i < division; i++)
+                {
+                    z = Dia * 0.5 * Math.Cos(2.0 * Math.PI * i / division);
+                    epsilon = epsilon0 - curvature * z;
+                    sigma = material.GetStress(type, epsilon);
+                    axialForce += T * sigma * dCirc;
+                    bendingMoment += T * sigma * dCirc * -z;
+                }
+                return (axialForce, bendingMoment);
             }
-            return (axialForce, bendingMoment);
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"CircularPipeSection.GetForceAndMoment計算エラー: {ex}");
+                return (0.0, 0.0);
+            }
         }
     }
 }

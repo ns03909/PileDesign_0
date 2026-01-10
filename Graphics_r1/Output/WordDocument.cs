@@ -1,4 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.EMMA;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using LiveChartsCore.Measure;
@@ -7,6 +8,7 @@ using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using ScottPlot;
+using ScottPlot.Colormaps;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -139,6 +141,7 @@ namespace PileDesign.Output
         // Word文書作成メソッド
         public void CreateWordDocument(InputModel inputModel, string fileName)
         {
+
             ArgumentNullException.ThrowIfNull(inputModel);
             if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("fileName is empty.", nameof(fileName));
             if (inputModel.ElementDivision == null)
@@ -154,33 +157,7 @@ namespace PileDesign.Output
                 Body body = new();
 
                 AddFrontMatter(mainPart, body, inputModel);
-                AddInputDataSection(body, inputModel);
-
-                if (mainWindowViewModel.IncludeGroundInformation)
-                { }
-                if (mainWindowViewModel.IncludeLiquefaction)
-                { }
-                if (mainWindowViewModel.IncludeVertical)
-                { }
-                if (mainWindowViewModel.IncludeHorizontal)
-                { }
-                if (mainWindowViewModel.IncludeHorizontal_Bending)
-                { }
-                if (mainWindowViewModel.IncludeHorizontal_Shear)
-                { }
-                if (mainWindowViewModel.IncludeHorizontal_NMINT)
-                { }
-                if(mainWindowViewModel.IncludePileHeadMomentMap)
-                { }
-                if (mainWindowViewModel.IncludePileHeadMomentMap)
-                { }
-                if (mainWindowViewModel.IncludePileHeadShearMap)
-                { }
-                if (mainWindowViewModel.IncludeSettlement)
-                { }
-                if (mainWindowViewModel.IncludeLoadSettlementCurve)
-                { }
-
+                AddInputDataSection(mainPart, body, inputModel);
 
 
                 AddLoadCombinationAndFigureSection(mainPart, body, inputModel);
@@ -206,133 +183,235 @@ namespace PileDesign.Output
             AddText(body, "杭検討プログラム ver プレプロト", "center");
             AddTitle(body, "基礎ぐいの検討書");
 
+            // 目次
             AddTableOfContents(body, 3);
             AddPageBreak(body);
 
-            AddHeader1(body, "検討方針", 1);
-            AddLineBreak(body);
-
-            AddSectionVerticalResistance(body);
-            AddLineBreak(body);
-
-            AddSectionSettlement(body);
-            AddLineBreak(body);
-
-            AddSectionHorizontalResistance(body);
-            AddLineBreak(body);
-
-            AddSectionMemberCapacities(body);
-            AddLineBreak(body);
-
-            AddLiquefactionSection(body);
-            AddLineBreak(body);
-
-            AddGroundDisplacementSection(body);
-
-            AddPageBreak(body);
         }
 
         // 入力情報・表類
-        private void AddInputDataSection(Body body, InputModel model)
+        private void AddInputDataSection(MainDocumentPart mainPart, Body body, InputModel inputModel)
         {
             AddText(body, "杭検討プログラム ver プレプロト", "center");
             AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
 
             AddHeader1(body, "基本設定", 1);
-            AddFundamentalTable(body, model.FundamentalInput);
+           
+            AddFundamentalTable(body, inputModel.FundamentalInput); // 基本設定テーブル
             AddLineBreak(body);
 
             AddHeader1(body, "荷重条件", 1);
             AddText(body, "レベル1荷重");
-            AddLoadCaseTable(body, model.LoadCasesInput.LoadCasesLevel1);
+            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1);
             AddText(body, "レベル2荷重");
-            AddLoadCaseTable(body, model.LoadCasesInput.LoadCasesLevel2);
-            AddLineBreak(body);
-
-            AddHeader1(body, "地盤", 1);
-            AddGroundInfo(body, model.GroundsInput);
+            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2);
             AddLineBreak(body);
 
             AddHeader1(body, "杭体", 1);
-            AddPileBodiesTables(body, model.PileBodies);
+            AddPileBodiesTables(body, inputModel.PileBodies);
             AddLineBreak(body);
 
             AddHeader1(body, "杭配置", 1);
-            AddPileLayoutTables(body, model.PileLayoutItems);
+            AddPileLayoutTables(body, inputModel.PileLayoutItems);
             AddLineBreak(body);
 
             AddHeader1(body, "杭軸力", 1);
-            AddPileAxialLoadTables(body, model.PileLayoutItems);
+            AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
             AddLineBreak(body);
 
             AddHeader1(body, "前後方杭", 1);
-            AddIsFrontPileTables(body, model.PileLayoutItems);
+            AddIsFrontPileTables(body, inputModel.PileLayoutItems);
             AddLineBreak(body);
 
-            if (model.EmbedmentInput is { EmbedmentLayersCount: > 0 })
+            AddHeader1(body, "検討方針", 1);
+            AddLineBreak(body);
+
+
+            if (mainWindowViewModel.IncludeGroundInformation) // 地盤
             {
-                AddHeader1(body, "根入部", 1);
-                AddEmbedment(body, model.EmbedmentInput);
+                AddHeader1(body, "地盤", 1);
+                AddGroundInfo(body, inputModel.GroundsInput);
                 AddLineBreak(body);
             }
 
-            AddHeader1(body, "杭の支持力", 1);
-            AddPileResistanceDescription(body, model.ElementDivision.SoilPiles);
-            AddVerticalResistance(body, model.ElementDivision.SoilPiles);
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludeLiquefaction) // 液状化
+            {
+                // 液状化の検討
+                AddLiquefactionSection(body);
+                AddLineBreak(body);
+            }
 
+            if (mainWindowViewModel.IncludeVertical) // 鉛直解析
+            {
+                AddHeader1(body, "杭の支持力", 1);
+                AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles);
+                AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles);
+                AddLineBreak(body);
+
+                // 杭の支持力検討
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddSectionVerticalResistance(body);
+                    AddLineBreak(body);
+                }
+
+                // 杭の沈下検討
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddSectionSettlement(body);
+                    AddLineBreak(body);
+                }
+                var soilPiles = inputModel.ElementDivision.SoilPiles;
+                if (soilPiles is { Count: > 0 })
+                {
+                    var soilPile = soilPiles[0];
+                    const double pileElevationW = 150;
+                    const double pileElevationH = 100;
+
+                    AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
+                    AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
+
+                    AddSettlementGraph(mainPart, body);
+                }
+            }
+
+            if (mainWindowViewModel.IncludeHorizontal) // 水平解析
+            {
+                // 根入部
+                if (inputModel.EmbedmentInput is { EmbedmentLayersCount: > 0 })
+                {
+                    AddHeader1(body, "根入部", 1);
+                    if (mainWindowViewModel.CalculationReportLevel >= 2)
+                    {
+                        AddEmbedment(body, inputModel.EmbedmentInput);
+                        AddLineBreak(body);
+                    }
+                }
+                // 地盤の水平変位
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddGroundDisplacementSection(body);
+                    AddPageBreak(body);
+                }
+                // 杭の水平抵抗
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddSectionHorizontalResistance(body);
+                    AddLineBreak(body);
+                }
+                AddPageBreak(body);
+                AddHeader1(body, "上部構造、基礎部への作用の組み合わせ", 2);
+                AddLoadCombinationTable(mainPart, body);
+                var soilPiles = inputModel.ElementDivision.SoilPiles;
+                if (soilPiles is { Count: > 0 })
+                {
+                    var soilPile = soilPiles[0];
+                    const double pileElevationW = 150;
+                    const double pileElevationH = 100;
+
+                    AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
+                    AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
+
+                    AddPileForceSummaryTable(mainPart, body);
+                    AddNMINT(mainPart, body);
+                }
+
+                // 基礎部材の強度と変形性能
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddSectionMemberCapacities(body);
+                    AddLineBreak(body);
+                }
+
+            }
+            if (mainWindowViewModel.IncludeHorizontal_Bending) // 曲げモーメント
+            { }
+            if (mainWindowViewModel.IncludeHorizontal_Shear) // せん断力
+            { }
+            if (mainWindowViewModel.IncludeHorizontal_NMINT) // NMINT
+            { }
+            if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
+            {
+                double layoutW = 150; double layoutH = 200;
+                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileBasicMark);
+                AddAutoFigureCaption(body, "杭配置マップ", "図");
+            }
+            if (mainWindowViewModel.IncludePileAxialLoadMap) // 杭軸力マップ
+            {
+                double layoutW = 150; double layoutH = 200;
+                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileAxialForceMark);
+                AddAutoFigureCaption(body, "杭軸力マップ", "図");
+            }
+            if (mainWindowViewModel.IncludeIsFrontMap)  // 杭前後方杭マップ
+            {
+                double layoutW = 150; double layoutH = 200;
+                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileIsFront);
+                AddAutoFigureCaption(body, "杭前後方杭マップ", "図");
+            }
+            if (mainWindowViewModel.IncludePileHeadMomentMap)  // 杭頭モーメントマップ
+            {
+                double layoutW = 150; double layoutH = 200;
+                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileTopBendingMomentMark);
+                AddAutoFigureCaption(body, "杭頭モーメントマップ", "図");
+            }
+            if (mainWindowViewModel.IncludePileHeadShearMap)  // 杭頭せん断力マップ
+            { 
+                double layoutW = 150; double layoutH = 200;
+                AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileTopShearForceMark);
+                AddAutoFigureCaption(body, "杭頭せん断力マップ", "図");
+            }
+            if (mainWindowViewModel.IncludeSettlement) // 沈下
+            { }
+            if (mainWindowViewModel.IncludeLoadSettlementCurve) // 沈下曲線
+            { }
+
+            if (mainWindowViewModel.IncludeGroupPileSettlement) // 群杭沈下
+            { }
+
+            // FT-Pile構法
             if (HasFTPile())
             {
-                AddDescriptionFTPile(body);
-                AddLineBreak(body);
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddDescriptionFTPile(body);
+                    AddLineBreak(body);
+                }
             }
 
+            // キャプテンパイル工法
             if (HasCaptainPile())
             {
-                AddDescriptionCaptainPile(body);
-                AddLineBreak(body);
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddDescriptionCaptainPile(body);
+                    AddLineBreak(body);
+                }
             }
         }
 
         // 荷重組合せ + 図・グラフ類
         private void AddLoadCombinationAndFigureSection(MainDocumentPart mainPart, Body body, InputModel model)
         {
-            AddPageBreak(body);
-            AddHeader1(body, "上部構造、基礎部への作用の組み合わせ", 2);
-
-            AddLoadCombinationTable(mainPart, body);
-
-            double layoutW = 150;
-            double layoutH = 200;
-
-            AddPilingLayoutDiagramByMm(mainPart, body, layoutW, layoutH, GetPileBasicMark);
-            AddAutoFigureCaption(body, "杭配置図", "図");
-
-            AddPilingLayoutDiagramByMm(mainPart, body, layoutW, layoutH, GetPileAxialForceMark);
-            AddAutoFigureCaption(body, "杭軸力図", "図");
-
-            AddPilingLayoutDiagramByMm(mainPart, body, layoutW, layoutH, GetPileIsFront);
-            AddAutoFigureCaption(body, "杭前方杭・後方杭設定図", "図");
 
             AddPileDescription(mainPart, body);
 
-            var soilPiles = model.ElementDivision.SoilPiles;
-            if (soilPiles is { Count: > 0 })
-            {
-                var soilPile = soilPiles[0];
-                const double pileElevationW = 150;
-                const double pileElevationH = 100;
+            //var soilPiles = model.ElementDivision.SoilPiles;
+            //if (soilPiles is { Count: > 0 })
+            //{
+            //    var soilPile = soilPiles[0];
+            //    const double pileElevationW = 150;
+            //    const double pileElevationH = 100;
 
-                AddPileForceDiagramByMm(mainPart, body, pileElevationW, pileElevationH, soilPile, "horizontal");
-                AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
+            //    AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
+            //    AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
 
-                AddPileForceDiagramByMm(mainPart, body, pileElevationW, pileElevationH, soilPile, "vertical");
-                AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
+            //    AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
+            //    AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
 
-                AddSettlementGraph(mainPart, body);
-                AddPileForceSummaryTable(mainPart, body);
-                AddNMINT(mainPart, body);
-            }
+            //    AddSettlementGraph(mainPart, body);
+            //    AddPileForceSummaryTable(mainPart, body);
+            //    AddNMINT(mainPart, body);
+            //}
         }
 
         // 目次を挿入するヘルパ（OpenXML のフィールドで TOC を作る）
@@ -3936,6 +4015,199 @@ namespace PileDesign.Output
                         $"ξ:{pileLayoutItem.GroupPileFactor:N2}";
             return mark;
         }
+
+
+        // 杭伏図への曲げモーメント情報の追加メソッド
+        private string GetPileTopBendingMomentMark(PileLayoutDataItem pileLayoutItem)
+        {
+            string mark = $"{pileLayoutItem.No}";
+
+            if (pileLayoutItem?.Beams == null || pileLayoutItem.Beams.Count == 0)
+                return mark;
+
+            var beam = pileLayoutItem.Beams[0];
+            if (beam == null)
+                return mark;
+
+            var loadCasesInput = inputModel?.LoadCasesInput;
+            if (loadCasesInput == null)
+                return mark;
+
+            var level1 = loadCasesInput.LoadCasesLevel1 ?? [];
+            var level2 = loadCasesInput.LoadCasesLevel2 ?? [];
+            var allCombinations = loadCasesInput.AllLoadCombinations;
+
+            var combos = (allCombinations != null && allCombinations.Count > 0)
+                ? new List<LoadCombination?>(allCombinations.Cast<LoadCombination?>())
+                : new List<LoadCombination?>() { null };
+
+            // 各レベルについて先頭4ケース（存在する分）を列挙し、各ケースで Mhi を求める。
+            // 各ケースは全 LoadCombination, 液状化フラグ(true/false) を走査して最大値を採用。
+            void AppendLevelCases(IEnumerable<LoadCase> loadCases, string levelLabel)
+            {
+                mark += $"\n{levelLabel}";
+                var lcList = loadCases?.ToList() ?? new List<LoadCase>();
+                int casesToShow = Math.Min(4, lcList.Count);
+
+                for (int idx = 0; idx < casesToShow; idx++)
+                {
+                    var lc = lcList[idx];
+                    if (lc == null || !lc.IsApplicable)
+                    {
+                        mark += $"\nケース{idx + 1}: -";
+                        continue;
+                    }
+
+                    double maxLiq = double.NegativeInfinity;
+                    double maxNonLiq = double.NegativeInfinity;
+
+                    foreach (var comb in combos)
+                    {
+                        // 液状化あり / なし 両方チェックし、それぞれで最大を取る
+                        try
+                        {
+                            var resL = beam.GetBeamResult(anaModel, lc, comb, true)?.CumulativeForce;
+                            if (resL != null && !double.IsNaN(resL.Mi))
+                                maxLiq = Math.Max(maxLiq, resL.Mi);
+                        }
+                        catch { /* 念のため無視 */ }
+
+                        try
+                        {
+                            var resN = beam.GetBeamResult(anaModel, lc, comb, false)?.CumulativeForce;
+                            if (resN != null && !double.IsNaN(resN.Mi))
+                                maxNonLiq = Math.Max(maxNonLiq, resN.Mi);
+                        }
+                        catch { /* 念のため無視 */ }
+                    }
+
+                    // 表示値決定ルール：
+                    // - 両方存在すれば大きい方を表示
+                    // - 片方だけあればその値を表示
+                    // - 無ければ "-" を表示
+                    double? chosen = null;
+                    if (!double.IsNegativeInfinity(maxLiq) && !double.IsNegativeInfinity(maxNonLiq))
+                        chosen = Math.Max(maxLiq, maxNonLiq);
+                    else if (!double.IsNegativeInfinity(maxLiq))
+                        chosen = maxLiq;
+                    else if (!double.IsNegativeInfinity(maxNonLiq))
+                        chosen = maxNonLiq;
+
+                    if (chosen.HasValue)
+                        mark += $"\nケース{idx + 1}: {chosen.Value:N1}"; // 単位（kNm 等）は必要なら付与
+                    else
+                        mark += $"\nケース{idx + 1}: -";
+                }
+
+                // 足りないケースがあれば "-" で埋める（常に4行表示したい場合）
+                for (int idx = lcList.Count; idx < 4; idx++)
+                {
+                    mark += $"\nケース{idx + 1}: -";
+                }
+            }
+
+            AppendLevelCases(level1, "レベル1");
+            AppendLevelCases(level2, "レベル2");
+
+            return mark;
+        }
+
+
+        // 杭伏図への線打力情報の追加メソッド
+        private string GetPileTopShearForceMark(PileLayoutDataItem pileLayoutItem)
+        {
+            string mark = $"{pileLayoutItem.No}";
+
+            if (pileLayoutItem?.Beams == null || pileLayoutItem.Beams.Count == 0)
+                return mark;
+
+            var beam = pileLayoutItem.Beams[0];
+            if (beam == null)
+                return mark;
+
+            var loadCasesInput = inputModel?.LoadCasesInput;
+            if (loadCasesInput == null)
+                return mark;
+
+            var level1 = loadCasesInput.LoadCasesLevel1 ?? new System.Collections.ObjectModel.ObservableCollection<LoadCase>();
+            var level2 = loadCasesInput.LoadCasesLevel2 ?? new System.Collections.ObjectModel.ObservableCollection<LoadCase>();
+            var allCombinations = loadCasesInput.AllLoadCombinations;
+
+            var combos = (allCombinations != null && allCombinations.Count > 0)
+                ? new List<LoadCombination?>(allCombinations.Cast<LoadCombination?>())
+                : new List<LoadCombination?>() { null };
+
+            // 各レベルについて先頭4ケース（存在する分）を列挙し、各ケースで Mhi を求める。
+            // 各ケースは全 LoadCombination, 液状化フラグ(true/false) を走査して最大値を採用。
+            void AppendLevelCases(IEnumerable<LoadCase> loadCases, string levelLabel)
+            {
+                mark += $"\n{levelLabel}";
+                var lcList = loadCases?.ToList() ?? new List<LoadCase>();
+                int casesToShow = Math.Min(4, lcList.Count);
+
+                for (int idx = 0; idx < casesToShow; idx++)
+                {
+                    var lc = lcList[idx];
+                    if (lc == null || !lc.IsApplicable)
+                    {
+                        mark += $"\nケース{idx + 1}: -";
+                        continue;
+                    }
+
+                    double maxLiq = double.NegativeInfinity;
+                    double maxNonLiq = double.NegativeInfinity;
+
+                    foreach (var comb in combos)
+                    {
+                        // 液状化あり / なし 両方チェックし、それぞれで最大を取る
+                        try
+                        {
+                            var resL = beam.GetBeamResult(anaModel, lc, comb, true)?.CumulativeForce;
+                            if (resL != null && !double.IsNaN(resL.Fi))
+                                maxLiq = Math.Max(maxLiq, resL.Fi);
+                        }
+                        catch { /* 念のため無視 */ }
+
+                        try
+                        {
+                            var resN = beam.GetBeamResult(anaModel, lc, comb, false)?.CumulativeForce;
+                            if (resN != null && !double.IsNaN(resN.Fi))
+                                maxNonLiq = Math.Max(maxNonLiq, resN.Fi);
+                        }
+                        catch { /* 念のため無視 */ }
+                    }
+
+                    // 表示値決定ルール：
+                    // - 両方存在すれば大きい方を表示
+                    // - 片方だけあればその値を表示
+                    // - 無ければ "-" を表示
+                    double? chosen = null;
+                    if (!double.IsNegativeInfinity(maxLiq) && !double.IsNegativeInfinity(maxNonLiq))
+                        chosen = Math.Max(maxLiq, maxNonLiq);
+                    else if (!double.IsNegativeInfinity(maxLiq))
+                        chosen = maxLiq;
+                    else if (!double.IsNegativeInfinity(maxNonLiq))
+                        chosen = maxNonLiq;
+
+                    if (chosen.HasValue)
+                        mark += $"\nケース{idx + 1}: {chosen.Value:N1}"; // 単位（kN 等）は必要なら付与
+                    else
+                        mark += $"\nケース{idx + 1}: -";
+                }
+
+                // 足りないケースがあれば "-" で埋める（常に4行表示したい場合）
+                for (int idx = lcList.Count; idx < 4; idx++)
+                {
+                    mark += $"\nケース{idx + 1}: -";
+                }
+            }
+
+            AppendLevelCases(level1, "レベル1");
+            AppendLevelCases(level2, "レベル2");
+
+            return mark;
+        }
+
 
         // 杭伏図への軸力情報の追加メソッド
         private string GetPileAxialForceMark(PileLayoutDataItem pileLayoutItem)

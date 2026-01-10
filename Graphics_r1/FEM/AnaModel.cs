@@ -153,12 +153,20 @@ namespace PileDesign.FEM
             CountFree = countFree; // 自由度数
             CountFix = countFix; // 固定度数
 
+            // ガード: 異常に大きな自由度を検出して早期にエラーを出す（リリース版での OOM 回避）
+            const int MaxReasonableDofs = 200000; // 必要に応じで調整
             if (CountFree < 0)
                 throw new InvalidOperationException("CountFree must be non-negative.");
+            if (CountFree > MaxReasonableDofs)
+            {
+                // 重大な入力/設定ミスの可能性。詳細を出力して例外にする。
+                Console.WriteLine($"[ERROR] CountFree is very large: {CountFree}. Aborting to avoid OOM.");
+                throw new InvalidOperationException($"自由度が大きすぎます: {CountFree}. 入力データ／境界条件を確認してください。");
+            }
 
-            VectorF = Vector<double>.Build.Dense(countFree, 0.0); // 荷重ベクトル
-            VectorDF = Vector<double>.Build.Dense(countFree, 0.0); // 荷重増分ベクトル
-            VectorD = Vector<double>.Build.Dense(countFree, 0.0); // 変位ベクトル
+            VectorF = Vector<double>.Build.Sparse(countFree, 0.0); // 荷重ベクトル
+            VectorDF = Vector<double>.Build.Sparse(countFree, 0.0); // 荷重増分ベクトル
+            VectorD = Vector<double>.Build.Sparse(countFree, 0.0); // 変位ベクトル
         }
 
         // コンストラクタ
@@ -190,10 +198,11 @@ namespace PileDesign.FEM
         //  全体剛性マトリクスの作成
         private void MapOnKmat(bool isTan)
         {
-            Matrix<double> matrixKAA = Matrix<double>.Build.Dense(CountFree, CountFree, 0.0);
-            Matrix<double> matrixKBA = Matrix<double>.Build.Dense(CountFree, -CountFix, 0.0);
-            Matrix<double> matrixKAB = Matrix<double>.Build.Dense(-CountFix, CountFree, 0.0);
-            Matrix<double> matrixKBB = Matrix<double>.Build.Dense(-CountFix, -CountFix, 0.0);
+            // 大規模解析では行列は疎であることが多いため Sparse を利用してメモリ消費を抑える
+            Matrix<double> matrixKAA = Matrix<double>.Build.Sparse(CountFree, CountFree);
+            Matrix<double> matrixKBA = Matrix<double>.Build.Sparse(CountFree, -CountFix);
+            Matrix<double> matrixKAB = Matrix<double>.Build.Sparse(-CountFix, CountFree);
+            Matrix<double> matrixKBB = Matrix<double>.Build.Sparse(-CountFix, -CountFix);
 
             foreach (var beam in Beams)
             {
@@ -258,7 +267,7 @@ namespace PileDesign.FEM
             int countFree = CountFree;
             if (isVectorDF == false) //"F"
             {
-                VectorF = Vector<double>.Build.Dense(countFree, 0.0); // 初期化
+                VectorF = Vector<double>.Build.Sparse(countFree, 0.0); // 初期化
                 foreach (var node in Nodes)
                 {
                     if (node.IsLoaded == true)
@@ -269,7 +278,7 @@ namespace PileDesign.FEM
             }
             else  //"dF"
             {
-                VectorDF = Vector<double>.Build.Dense(countFree, 0.0); // 初期化
+                VectorDF = Vector<double>.Build.Sparse(countFree, 0.0); // 初期化
                 foreach (var node in Nodes)
                 {
                     if (node.IsLoaded == true)
@@ -283,13 +292,35 @@ namespace PileDesign.FEM
         // 強制変位のマップオン
         public (Matrix<double>, Vector<double>) GetForcedDispOnLoadVectorAndStiffnessMatrix(bool Istan)
         {
-            var matrix = Istan ? KAA_tan : KAA_sec;
-            var vector = VectorR;
-            if (matrix == null) throw new InvalidOperationException("Stiffness matrix is not initialized.");
-            if (vector == null) throw new InvalidOperationException("VectorR is not initialized.");
+            //var matrix = Istan ? KAA_tan : KAA_sec;
+            //var vector = VectorR;
+            //if (matrix == null) throw new InvalidOperationException("Stiffness matrix is not initialized.");
+            //if (vector == null) throw new InvalidOperationException("VectorR is not initialized.");
 
-            Matrix<double> matrixK = (Istan ? KAA_tan : KAA_sec).Clone(); // ハードコピー
-            Vector<double> vectorR = (Istan ? VectorR : VectorR).Clone(); // ハードコピー
+            //Matrix<double> matrixK = (Istan ? KAA_tan : KAA_sec).Clone(); // ハードコピー
+            //Vector<double> vectorR = (Istan ? VectorR : VectorR).Clone(); // ハードコピー
+            var orig = Istan ? KAA_tan : KAA_sec;
+            var vecOrig = VectorR ?? throw new InvalidOperationException("VectorR is null");
+
+            // orig が null またはサイズ不正のガード
+            if (orig == null) throw new InvalidOperationException("Stiffness matrix is not initialized.");
+            if (orig.RowCount != CountFree) throw new InvalidOperationException("Matrix size mismatch.");
+
+            // orig が Sparse であれば clone（Sparse clone はメモリ効率良い）
+            Matrix<double> matrixK;
+            if (orig.GetType().Name.Contains("Sparse"))
+                matrixK = orig.Clone(); // Sparse clone -> OK
+            else
+            {
+                // fallback: 明示的に sparse を作って非ゼロだけコピー（Dense 全複製を避ける）
+                var sparse = Matrix<double>.Build.Sparse(CountFree, CountFree);
+                // 非ゼロ要素だけをコピー（API に応じて EnumerateIndexed を使う）
+                foreach (var (i, j, val) in orig.EnumerateIndexed(Zeros.AllowSkip))
+                    sparse[i, j] = val;
+                matrixK = sparse;
+            }
+
+            var vectorR = vecOrig.Clone();
 
             // 荷重ベクトルへの操作
             foreach (var node in Nodes)
@@ -356,7 +387,7 @@ namespace PileDesign.FEM
         // 残余力の初期値を得るメソッド
         public void InitializeVectorR()
         {
-            VectorR = Vector<double>.Build.Dense(CountFree, 0.0);
+            VectorR = Vector<double>.Build.Sparse(CountFree, 0.0);
         }
 
         // ||R||**2/||Fint||**2の初期値を得るメソッド
@@ -432,14 +463,14 @@ namespace PileDesign.FEM
 
         public void InitializeVectorF()
         {
-            VectorF = Vector<double>.Build.Dense(CountFree, 0.0); // 荷重ベクトル
-            VectorDF = Vector<double>.Build.Dense(CountFree, 0.0); // 内力ベクトル
+            VectorF = Vector<double>.Build.Sparse(CountFree, 0.0); // 荷重ベクトル
+            VectorDF = Vector<double>.Build.Sparse(CountFree, 0.0); // 内力ベクトル
         }
 
         public void InitializeVectorD()
         {
-            VectorD = Vector<double>.Build.Dense(CountFree, 0.0); // 変位ベクトル
-            VectorDD = Vector<double>.Build.Dense(CountFree, 0.0); // 変位ベクトル
+            VectorD = Vector<double>.Build.Sparse(CountFree, 0.0); // 変位ベクトル
+            VectorDD = Vector<double>.Build.Sparse(CountFree, 0.0); // 変位ベクトル
         }
 
         // 常時荷重のセット

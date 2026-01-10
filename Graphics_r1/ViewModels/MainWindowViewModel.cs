@@ -12,7 +12,6 @@ using PileDesign.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -36,9 +35,24 @@ namespace PileDesign.ViewModels
     {
         private readonly UndoManager _undoManager = new();
 
-        // クラスの先頭付近のフィールドに追加
         private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
         private bool _soilPilesGenerationPending = false;
+
+        private void Debounce(ref System.Windows.Threading.DispatcherTimer? timer, int milliseconds, Action action)
+        {
+            timer?.Stop();
+            var localTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(milliseconds)
+            };
+            timer = localTimer;
+            localTimer.Tick += (s, e) =>
+            {
+                localTimer.Stop();
+                action();
+            };
+            localTimer.Start();
+        }
 
 
         /// <summary>
@@ -47,31 +61,16 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void RequestGenerateSoilPiles()
         {
-            // 要素分割済みの場合は再生成しない
             if (IsElementSplit) return;
-
             _soilPilesGenerationPending = true;
-
-            // 既存のタイマーを停止
-            _generateSoilPilesDebounceTimer?.Stop();
-
-            // 新しいタイマーを作成（50ms 後に実行）
-            _generateSoilPilesDebounceTimer = new System.Windows.Threading.DispatcherTimer
+            Debounce(ref _generateSoilPilesDebounceTimer, 50, () =>
             {
-                Interval = TimeSpan.FromMilliseconds(50)
-            };
-            _generateSoilPilesDebounceTimer.Tick += (s, e) =>
-            {
-                _generateSoilPilesDebounceTimer?.Stop();
-                _generateSoilPilesDebounceTimer = null;
-
                 if (_soilPilesGenerationPending)
                 {
                     _soilPilesGenerationPending = false;
                     CurrentInputModel?.GenerateSoilPiles();
                 }
-            };
-            _generateSoilPilesDebounceTimer.Start();
+            });
         }
 
         /// <summary>
@@ -86,9 +85,7 @@ namespace PileDesign.ViewModels
             _soilPilesGenerationPending = false;
 
             if (!IsElementSplit)
-            {
                 CurrentInputModel?.GenerateSoilPiles();
-            }
         }
 
         // クラスの先頭付近のフィールドに追加（既存のフィールドの近くに）
@@ -99,30 +96,18 @@ namespace PileDesign.ViewModels
         /// ウィンドウ更新をデバウンス付きでリクエストします。
         /// 短時間に複数回呼ばれても、最後の呼び出しから一定時間後に1回だけ実行されます。
         /// </summary>
+       
         public void RequestUpdateWindow()
         {
             _updateWindowPending = true;
-
-            // 既存のタイマーを停止
-            _updateWindowDebounceTimer?.Stop();
-
-            // 新しいタイマーを作成（30ms 後に実行）
-            _updateWindowDebounceTimer = new System.Windows.Threading.DispatcherTimer
+            Debounce(ref _updateWindowDebounceTimer, 30, () =>
             {
-                Interval = TimeSpan.FromMilliseconds(30)
-            };
-            _updateWindowDebounceTimer.Tick += (s, e) =>
-            {
-                _updateWindowDebounceTimer?.Stop();
-                _updateWindowDebounceTimer = null;
-
                 if (_updateWindowPending)
                 {
                     _updateWindowPending = false;
                     UpdateWindowAction?.Invoke();
                 }
-            };
-            _updateWindowDebounceTimer.Start();
+            });
         }
 
         /// <summary>
@@ -138,7 +123,6 @@ namespace PileDesign.ViewModels
 
             UpdateWindowAction?.Invoke();
         }
-
 
         // JsonSerializerOptions をキャッシュ
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -161,18 +145,112 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public InputModel CurrentInputModel { get; set; }
+        // 追加: コマンド更新一括ヘルパ
+        private void RaiseAllCommandsCanExecute()
+        {
+            // リフレクションで "Command" で終わるすべてのコマンドプロパティを列挙し、
+            // CommunityToolkit の IRelayCommand は NotifyCanExecuteChanged() を呼び、
+            // 自前 RelayCommand 等は RaiseCanExecuteChanged() を呼び出す。
+            var props = this.GetType()
+                .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                .Where(p => p.Name.EndsWith("Command", StringComparison.Ordinal))
+                .Where(p => typeof(ICommand).IsAssignableFrom(p.PropertyType));
 
-        public Canvas Canvas3DLayout { get; set; }
+            foreach (var p in props)
+            {
+                try
+                {
+                    var cmdObj = p.GetValue(this) as ICommand;
+                    if (cmdObj == null) continue;
 
-        // アクション
-        public Action UpdateWindowAction { get; set; }
-        public Action UpdateCanvas3DAction { get; set; }
+                    // CommunityToolkit の IRelayCommand を優先して扱う
+                    if (cmdObj is CommunityToolkit.Mvvm.Input.IRelayCommand toolkitCmd)
+                    {
+                        toolkitCmd.NotifyCanExecuteChanged();
+                        continue;
+                    }
 
-        // ファイルパス
-        public string CurrentFilePath { get; set; }
+                    // 自前 RelayCommand の RaiseCanExecuteChanged() を探して呼び出す
+                    var raiseMethod = cmdObj.GetType().GetMethod("RaiseCanExecuteChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (raiseMethod != null)
+                    {
+                        raiseMethod.Invoke(cmdObj, null);
+                        continue;
+                    }
 
-        // サブViewModelの初期化
+                    // 互換性のため NotifyCanExecuteChanged メソッドも試す（まれなケース）
+                    var notifyMethod = cmdObj.GetType().GetMethod("NotifyCanExecuteChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    notifyMethod?.Invoke(cmdObj, null);
+                }
+                catch
+                {
+                    // 個別コマンドの状態更新で例外が起きても他は続行する
+                }
+            }
+        }
+        
+        private InputModel? _currentInputModel;
+        public InputModel? CurrentInputModel
+        {
+            get => _currentInputModel;
+            set
+            {
+                // SetProperty は ObservableObject のユーティリティ（CommunityToolkit）
+                if (SetProperty(ref _currentInputModel, value))
+                {
+                    // VM 再アタッチなどはここで一度だけ行う
+                    _currentInputModel?.AttachViewModel(this);
+
+                    // 依存するUI更新・コマンド状態をまとめて行う
+                    UpdateWindowImmediate();
+                    RaiseAllCommandsCanExecute();
+
+                    // 必要なら個別プロパティ通知
+                    OnPropertyChanged(nameof(CurrentInputModel));
+                }
+            }
+        }
+
+        // 修正例: CurrentFilePath
+        private string? _currentFilePath;
+
+        public string? CurrentFilePath
+        {
+            get => _currentFilePath;
+            set
+            {
+                if (SetProperty(ref _currentFilePath, value))
+                {
+                    // ファイルパス変更に伴う処理（必要なら）
+                    RaiseAllCommandsCanExecute();
+                }
+            }
+        }
+
+        // 修正例: Canvas3DLayout
+        private Canvas? _canvas3DLayout;
+
+        public Canvas? Canvas3DLayout
+        {
+            get => _canvas3DLayout;
+            set => SetProperty(ref _canvas3DLayout, value);
+        }
+
+        private Action? _updateWindowAction;
+
+        // 修正例: アクションをプロパティ化（必要なら）
+        public Action? UpdateWindowAction
+        {
+            get => _updateWindowAction;
+            set => SetProperty(ref _updateWindowAction, value);
+        }
+
+        private Action? _updateCanvas3DAction;
+        public Action? UpdateCanvas3DAction
+        {
+            get => _updateCanvas3DAction;
+            set => SetProperty(ref _updateCanvas3DAction, value);
+        }
 
         // イベントの宣言
         public event EventHandler<DataGridCellEditEndingEventArgs> DataGridSettlementSoilLayersCellEditEnding;
@@ -290,9 +368,7 @@ namespace PileDesign.ViewModels
         private static void DataGridPileLayout_OnLoadingRow(DataGridRowEventArgs e)
         {
             if (e.Row.Item is PileLayoutDataItem)
-            {
                 e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // 行番号を設定
-            }
         }
 
         // 杭配置更新時更新メソッド
@@ -333,7 +409,6 @@ namespace PileDesign.ViewModels
                 // 変更後（以下の箇所で適用）
                 RequestUpdateWindow();
                 UpdateTreeView();
-
             }
         }
 
@@ -350,7 +425,6 @@ namespace PileDesign.ViewModels
                 // 変更後（以下の箇所で適用）
                 RequestUpdateWindow();
                 UpdateTreeView();
-
             }
         }
 
@@ -359,9 +433,7 @@ namespace PileDesign.ViewModels
         private void DataGridPileLayout_OnBeginningEdit(DataGridBeginningEditEventArgs e)
         {
             if (!CheckAndResetElementSplit("杭配置"))
-            {
                 e.Cancel = true;
-            }
         }
 
         // 要素分割解除確認メソッド
@@ -378,9 +450,7 @@ namespace PileDesign.ViewModels
                     MessageBoxImage.Warning);
 
                 if (result == MessageBoxResult.Cancel)
-                {
                     return false;
-                }
                 else
                 {
                     IsElementSplit = false;
@@ -423,33 +493,25 @@ namespace PileDesign.ViewModels
         private void ComboBoxEmbedmentNums_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             if (!CheckAndResetElementSplit("根入部"))
-            {
                 e.Handled = true;
-            }
         }
         [RelayCommand]
         private void ComboBoxEmbedmentGroundNo_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             if (!CheckAndResetElementSplit("根入部"))
-            {
                 e.Handled = true;
-            }
         }
         [RelayCommand]
         private void TextBoxBottomAltitude_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
             if (!CheckAndResetElementSplit("根入部"))
-            {
                 e.Handled = true;
-            }
         }
         [RelayCommand]
         private void DataGridEmbedment_OnBeginningEdit(DataGridBeginningEditEventArgs e)
         {
             if (!CheckAndResetElementSplit("根入部"))
-            {
                 e.Cancel = true;
-            }
         }
         [RelayCommand]
         private static void ButtonGround_OnPreviewMouseDown(MouseButtonEventArgs e)
@@ -480,9 +542,7 @@ namespace PileDesign.ViewModels
 
                 // Remove excess items if selectedValue is less than the current collection size
                 for (int i = currentCollectionSize - 1; i >= selectedValue; i--)
-                {
                     CurrentInputModel.EmbedmentInput.EmbedmentLayers.RemoveAt(i);
-                }
 
                 // Add new rows only if selectedValue is greater than the current collection size
                 for (int i = currentCollectionSize; i < selectedValue; i++)
@@ -550,8 +610,6 @@ namespace PileDesign.ViewModels
                 binding?.UpdateSource();
 
                 UpdateEmbedment();
-
-                // 変更後（以下の箇所で適用）
                 RequestUpdateWindow();
             }
         }
@@ -564,7 +622,6 @@ namespace PileDesign.ViewModels
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                // 変更後（以下の箇所で適用）
                 RequestUpdateWindow();
             }
         }
@@ -576,13 +633,9 @@ namespace PileDesign.ViewModels
             for (int i = CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count - 1; i >= 0; i--)
             {
                 if (i == CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count - 1)
-                {
                     CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].BottomAltitude = CurrentInputModel.EmbedmentInput.BottomAltitude;
-                }
                 else
-                {
                     CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].BottomAltitude = CurrentInputModel.EmbedmentInput.EmbedmentLayers[i + 1].TopAltitude;
-                }
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].TopAltitude = CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].BottomAltitude
                     + CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].LayerThickness;
             }
@@ -598,7 +651,6 @@ namespace PileDesign.ViewModels
 
                 IsGroupPileSettlementAnalysisDone = false;
 
-                // 変更後（以下の箇所で適用）
                 RequestUpdateWindow();
             }
         }
@@ -641,10 +693,10 @@ namespace PileDesign.ViewModels
         private void AddGridX()
         {
             // Undoポイントを追加（1回の追加を1ステップで戻せるようにする）
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             // 防波堤: null の場合はここで生成
-            CurrentInputModel.GridXItems ??= [];
+            CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
             AddGrid(CurrentInputModel.GridXItems, "X1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridXItems));
         }
@@ -653,11 +705,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddGridY()
         {
-            // Undoポイントを追加（1回の追加を1ステップで戻せるようにする）
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            // 防波堤: null の場合はここで生成
-            CurrentInputModel.GridYItems ??= [];
+            TrySaveUndoSnapshotSafely();
+            CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
             AddGrid(CurrentInputModel.GridYItems, "Y1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridYItems));
         }
@@ -667,9 +716,7 @@ namespace PileDesign.ViewModels
         {
             collection.Add(new GridDataItem());
             if (collection.Count == 1)
-            {
                 collection[^1].Name = name;
-            }
             // 複数のアイテムがある場合、前のアイテムの設定をコピー
             else if (collection.Count == 2)
             {
@@ -711,16 +758,15 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddRectLoad()
         {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
             if (!CheckAndResetPostAnalysisMode())
-            { return; }
+                return;
+
+            // Undoポイントを追加
+            TrySaveUndoSnapshotSafely();
 
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad());
 
             IsGroupPileSettlementAnalysisDone = false;
-            // 変更後（以下の箇所で適用）
             RequestUpdateWindow();
         }
 
@@ -731,9 +777,7 @@ namespace PileDesign.ViewModels
             {
                 var result = MessageBox.Show("解析前処理モードにしますか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result == MessageBoxResult.No)
-                {
                     return false; // 操作をキャンセル
-                }
                 IsPostAnalysisMode = false; // 解析前処理モードに変更
             }
             return true; // 操作を続行
@@ -743,16 +787,17 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddSettlementSoilLayer()
         {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            if (!CheckAndResetPostAnalysisMode())
+                return;
+
+            TrySaveUndoSnapshotSafely();
 
             double bottomAlt;
             double ek;
             double poissonsRatio;
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
 
-            if (!CheckAndResetPostAnalysisMode())
-            { return; }
+
 
             if (CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
             {
@@ -785,14 +830,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeleteAllSettlementSoilLayers()
         {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
             var settlement = CurrentInputModel?.PileGroupSettlement;
             if (settlement == null)
-            {
                 return;
-            }
+
+            TrySaveUndoSnapshotSafely();
 
             // 土層コレクションをクリア
             settlement.SettlementSoilLayers?.Clear();
@@ -838,7 +880,8 @@ namespace PileDesign.ViewModels
         private void DeleteSettlementSoilLayer(object sender)
         {
             // sender が GridDataItem であることを確認
-            if (sender is not SettlementSoilLayer itemToDelete) return;
+            if (sender is not SettlementSoilLayer itemToDelete)
+                return;
 
             // コレクションから削除
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Remove(itemToDelete);
@@ -864,7 +907,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-
         public void DataGridGridX_CurrentCellChanged()
         {
             RecalculateGrid(CurrentInputModel.GridXItems);
@@ -883,24 +925,20 @@ namespace PileDesign.ViewModels
         private void DataGridGridX_OnPreviewKeyDown(KeyEventArgs e)
         {
             if ((e.Key == Key.Tab && !e.KeyboardDevice.Modifiers.HasFlag(ModifierKeys.Shift)) || e.Key == Key.Right || e.Key == Key.Left)
-            {
                 RecalculateGrid(CurrentInputModel.GridXItems);
-            }
         }
         [RelayCommand]
         private void DataGridGridY_OnPreviewKeyDown(KeyEventArgs e)
         {
             if ((e.Key == Key.Tab && !e.KeyboardDevice.Modifiers.HasFlag(ModifierKeys.Shift)) || e.Key == Key.Right || e.Key == Key.Left)
-            {
                 RecalculateGrid(CurrentInputModel.GridYItems);
-            }
         }
 
         [RelayCommand]
         private void DeleteGridX(object sender)
         {
             // Undoポイント
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             DeleteGridItem(sender, CurrentInputModel.GridXItems);
             RecalculateGrid(CurrentInputModel.GridXItems);
@@ -911,7 +949,7 @@ namespace PileDesign.ViewModels
         private void DeleteGridY(object sender)
         {
             // Undoポイント
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             DeleteGridItem(sender, CurrentInputModel.GridYItems);
             RecalculateGrid(CurrentInputModel.GridYItems);
@@ -953,12 +991,6 @@ namespace PileDesign.ViewModels
             UpdateWindowImmediate();
         }
 
-        //[RelayCommand]
-        //private void ComboBox3DLabelContent_OnSelectionChanged(SelectionChangedEventArgs e)
-        //{
-        //    UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-        //}
-
         [RelayCommand]
         private void ComboBox3DAnalysisResultContent_OnSelectionChanged(SelectionChangedEventArgs e)
         {
@@ -978,8 +1010,14 @@ namespace PileDesign.ViewModels
             if (!CheckAndResetPostAnalysisMode()) return;
             if (!CheckAndResetAnalysisResults()) return;
 
+            // ここに追加
+            //var deepCopy = CurrentInputModel.DeepCopy();
+            //Debug.WriteLine("CurrentInputModel.PileLayoutItems Hash: " + CurrentInputModel.PileLayoutItems.GetHashCode());
+            //Debug.WriteLine("DeepCopy.PileLayoutItems Hash: " + deepCopy.PileLayoutItems.GetHashCode());
+            //_undoManager.SaveState(deepCopy);
+
             // スナップショットを保存
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             Point3D nextPoint3D = new();
             if (CurrentInputModel.PileLayoutItems.Count != 0)
@@ -995,9 +1033,7 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
                 // 要素未分割の場合は自動で SoiPile を再生成
                 if (!IsElementSplit)
-                {
                     RequestGenerateSoilPiles();
-                }
 
                 // 変更後（以下の箇所で適用）
                 RequestUpdateWindow();
@@ -1005,26 +1041,29 @@ namespace PileDesign.ViewModels
                 UpdateTreeView();
             });
         }
+
         [RelayCommand]
         private void OnComputePileGroupFactor()
         {
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
-            if (pileCount == 0) { return; }
+            if (pileCount == 0)
+                return;
         }
 
         [RelayCommand]
         private void OnComputePileSpacingFactor()
         {
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
-            if (pileCount == 0) { return; }
+            if (pileCount == 0)
+                return;
         }
 
         // 重複要素の削除
         [RelayCommand]
-        private void OnDeleteDupulicateElements()
+        private void OnDeleteDuplicateElements()
         {
             // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             var uniqueElements = new HashSet<Element>(CurrentInputModel.Elements);
             CurrentInputModel.Elements = new ObservableCollection<Element>(uniqueElements);
@@ -1038,7 +1077,7 @@ namespace PileDesign.ViewModels
         public void OnSplitElementsByNodes()
         {
             // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             var newElements = new ObservableCollection<Element>();
 
@@ -1048,14 +1087,10 @@ namespace PileDesign.ViewModels
                 {
                     var splitElements = SplitTwoNodeElementByNodes(element);
                     foreach (var splitElement in splitElements)
-                    {
                         newElements.Add(splitElement);
-                    }
                 }
                 else
-                {
                     newElements.Add(element);
-                }
             }
 
             CurrentInputModel.Elements = newElements;
@@ -1080,27 +1115,16 @@ namespace PileDesign.ViewModels
                 Point node = CanvasThreeDView.Transformation(point3D);
 
                 if (GetDistance.BetweenNodeAndLine(nodeS, nodeE, node) <= threshold && !splitNodes.Contains(pileLayout))
-                {
                     splitNodes.Add(pileLayout);
-                }
             }
 
-            // splitNodes[0] と splitNodes[^1] の間に並べ替える
-            List<double> distances = [];
+            var distances = new List<double>();
             for (int i = 0; i < splitNodes.Count; i++)
-            {
                 distances.Add(GetDistance.BetweenTwoPoint3Ds(splitNodes[0].Point3D, splitNodes[i].Point3D));
-            }
 
-            // distances の中で i 番目に小さな値のインデックスを取得
-            List<int> indeces = [];
-
+            var indeces = new List<int>();
             for (int i = 0; i < distances.Count; i++)
-            {
                 indeces.Add(GetIndexOfNthSmallestValue(distances, i));
-                // 必要な処理をここに追加
-            }
-
 
             for (int i = 0; i < splitNodes.Count - 1; i++)
             {
@@ -1108,7 +1132,6 @@ namespace PileDesign.ViewModels
                     (PileLayoutDataItem)splitNodes[indeces[i]],
                     (PileLayoutDataItem)splitNodes[indeces[i + 1]]));
             }
-
             return newElements;
         }
 
@@ -1126,9 +1149,7 @@ namespace PileDesign.ViewModels
         public void UpdatePileLayoutNo()
         {
             for (int i = 0; i < CurrentInputModel.PileLayoutItems.Count; i++)
-            {
                 CurrentInputModel.PileLayoutItems[i].No = i + 1;
-            }
         }
 
         // 荷重面の自動生成
@@ -1136,7 +1157,7 @@ namespace PileDesign.ViewModels
         private void OnAdjustRectLoadPlan()
         {
             // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
             double maxX = double.MinValue;
             double minX = double.MaxValue;
@@ -1183,9 +1204,7 @@ namespace PileDesign.ViewModels
         private void OnAdjustEmbedmentPlan()
         {
             if (CurrentInputModel.PileLayoutItems.Count == 0 || CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count == 0)
-            {
                 return;
-            }
 
             double maxX = double.MinValue;
             double minX = double.MaxValue;
@@ -1224,17 +1243,16 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnMoveForceActionPointToAverageCenter()
         {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            List<double> xs = [];
-            List<double> ys = [];
-
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
                 MessageBox.Show("杭配置データがありません。");
                 return;
             }
+
+            TrySaveUndoSnapshotSafely();
+
+            var xs = new List<double>();
+            var ys = new List<double>();
 
             foreach (PileLayoutDataItem pileLayoutInput in CurrentInputModel.PileLayoutItems)
             {
@@ -1267,21 +1285,13 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AutoIsFrontPiles()
         {
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            TrySaveUndoSnapshotSafely();
 
-            // ViewModel を作成
             var viewModel = new AutoIsFrontPileViewModel();
-
-            // Windowをインスタンス化して表示
-            AutoIsFrontPilesWindow autoIsFrontPilesWindow = new();
+            var autoIsFrontPilesWindow = new AutoIsFrontPilesWindow();
             autoIsFrontPilesWindow.AutoIsFrontPileCompleted += AutoIsFrontPilesWindow_AutoIsFrontPileCompleted;
-
-            autoIsFrontPilesWindow.ShowDialog(); // モーダルダイアログとして表示
-
+            autoIsFrontPilesWindow.ShowDialog();
             IsFrontPileLabelVisible = true;
-
-            // 変更後（以下の箇所で適用）
             RequestUpdateWindow();
             UpdateTreeView();
         }
@@ -1332,9 +1342,7 @@ namespace PileDesign.ViewModels
                         = PileGroupSettlement.GetCrossRectLoads(point, radius, qa);
 
                     foreach (var rectLoad in eachRectLoads)
-                    {
                         rectLoads.Add(rectLoad);
-                    }
                 }
             }
 
@@ -1475,9 +1483,7 @@ namespace PileDesign.ViewModels
         public void SaveInputModelFile()
         {
             if (string.IsNullOrEmpty(CurrentFilePath))
-            {
                 SaveInputModelFileAs();
-            }
             else
             {
                 try
@@ -1487,12 +1493,7 @@ namespace PileDesign.ViewModels
                         InputModel = this.CurrentInputModel,
                         AnaModel = this.CurrentModel
                     };
-                    //var options = new JsonSerializerOptions
-                    //{
-                    //    WriteIndented = true,
-                    //    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
-                    //};
-                    //string json = JsonSerializer.Serialize(projectData, options);
+
                     string json = JsonSerializer.Serialize(projectData, _jsonOptions);
                     File.WriteAllText(CurrentFilePath, json);
                     MessageBox.Show("保存が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1514,23 +1515,89 @@ namespace PileDesign.ViewModels
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Cancel)
-            {
                 return;
-            }
             else if (result == MessageBoxResult.Yes)
-            {
                 SaveInputModelFile();
-            }
 
             CurrentInputModel.Reset();
             this.CurrentModel = null; // AnaModelもリセット
             CurrentFilePath = null;
-            // 
+
+            // ここで初期状態をUndoスタックに積む
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             UpdateWindowImmediate();
             UpdateTreeView();
         }
 
-        // CurrentInputModelの読込
+        private static ObservableCollection<T> EnsureObservableCollection<T>(IEnumerable<T> source)
+        {
+            if (source is ObservableCollection<T> oc)
+                return oc;
+            return source != null ? new ObservableCollection<T>(source) : new ObservableCollection<T>();
+        }
+
+        private void TrySaveUndoSnapshotSafely()
+        {
+            try
+            {
+                var snapshot = CurrentInputModel?.DeepCopy();
+                if (snapshot != null)
+                {
+                    _undoManager.SaveState(snapshot);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafely: DeepCopy returned null, skipping undo snapshot.");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TrySaveUndoSnapshotSafely例外: {ex}");
+            }
+        }
+
+        // 修正: null チェックと空コレクション初期化の共通化
+        public bool TryLoadInputModelFileUsingInputModelLoader(string filePath)
+        {
+            try
+            {
+                var loaded = InputModel.LoadFromFile(filePath, this);
+                if (loaded == null)
+                {
+                    MessageBox.Show($"ファイルの読込に失敗しました。\n{filePath}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Diagnostics.Debug.WriteLine($"LoadFromFile returned null: {filePath}");
+                    return false;
+                }
+
+                CurrentInputModel = loaded;
+                CurrentInputModel.AttachViewModel(this);
+                CurrentFilePath = filePath;
+                CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
+                CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
+                UpdateWindowImmediate();
+                UpdateTreeView();
+                MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ファイル読込中にエラーが発生しました。\n{ex.Message}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Diagnostics.Debug.WriteLine($"TryLoadInputModelFileUsingInputModelLoader例外: {ex}");
+                return false;
+            }
+        }
+
+        [RelayCommand]
+        public void OpenInputModelFileSimple()
+        {
+            var ofd = new Microsoft.Win32.OpenFileDialog { Filter = "JSON Files (*.json)|*.json", DefaultExt = "json" };
+            if (ofd.ShowDialog() != true) return;
+            // Undo 保存は安全ヘルパを使用
+            TrySaveUndoSnapshotSafely();
+            TryLoadInputModelFileUsingInputModelLoader(ofd.FileName);
+        }
+
         [RelayCommand]
         public void OpenInputModelFile()
         {
@@ -1544,12 +1611,9 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    //var options = new JsonSerializerOptions
-                    //{
-                    //    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
-                    //};
-                    //string json = File.ReadAllText(openFileDialog.FileName);
-                    //var projectData = JsonSerializer.Deserialize<ProjectData>(json, options);
+                    // Undoポイントを追加（読込前の状態を保存）
+                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
                     string json = File.ReadAllText(openFileDialog.FileName);
                     var projectData = JsonSerializer.Deserialize<ProjectData>(json, _jsonOptions);
                     if (projectData != null)
@@ -1557,163 +1621,81 @@ namespace PileDesign.ViewModels
                         this.CurrentInputModel = projectData.InputModel;
                         this.CurrentModel = projectData.AnaModel;
 
-                        // --- ここから修正 ---
-                        // SettlementSoilLayers
-                        if (CurrentInputModel?.PileGroupSettlement?.SettlementSoilLayers != null &&
-                            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.GetType() != typeof(ObservableCollection<SettlementSoilLayer>))
+                        // --- 共通化したラップ処理 ---
+                        if (CurrentInputModel?.PileGroupSettlement != null)
                         {
                             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers =
-                                new ObservableCollection<SettlementSoilLayer>(CurrentInputModel.PileGroupSettlement.SettlementSoilLayers);
-                        }
-                        // RectLoads
-                        if (CurrentInputModel?.PileGroupSettlement?.RectLoads != null &&
-                            CurrentInputModel.PileGroupSettlement.RectLoads.GetType() != typeof(ObservableCollection<RectLoad>))
-                        {
+                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementSoilLayers);
                             CurrentInputModel.PileGroupSettlement.RectLoads =
-                                new ObservableCollection<RectLoad>(CurrentInputModel.PileGroupSettlement.RectLoads);
-                        }
-                        if (CurrentInputModel?.PileGroupSettlement?.SettlementSoilLayers != null &&
-                            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.GetType() != typeof(ObservableCollection<SettlementSoilLayer>))
-                        {
-                            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers =
-                                new ObservableCollection<SettlementSoilLayer>(CurrentInputModel.PileGroupSettlement.SettlementSoilLayers);
-                        }
-
-                        if (CurrentInputModel?.PileGroupSettlement?.RectLoads != null &&
-                            CurrentInputModel.PileGroupSettlement.RectLoads.GetType() != typeof(ObservableCollection<RectLoad>))
-                        {
-                            CurrentInputModel.PileGroupSettlement.RectLoads =
-                                new ObservableCollection<RectLoad>(CurrentInputModel.PileGroupSettlement.RectLoads);
-                        }
-
-                        if (CurrentInputModel?.PileGroupSettlement?.SettlementGridX != null &&
-                            CurrentInputModel.PileGroupSettlement.SettlementGridX.GetType() != typeof(ObservableCollection<double>))
-                        {
+                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.RectLoads);
                             CurrentInputModel.PileGroupSettlement.SettlementGridX =
-                                new ObservableCollection<double>(CurrentInputModel.PileGroupSettlement.SettlementGridX);
-                        }
-
-                        if (CurrentInputModel?.PileGroupSettlement?.SettlementGridY != null &&
-                            CurrentInputModel.PileGroupSettlement.SettlementGridY.GetType() != typeof(ObservableCollection<double>))
-                        {
+                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementGridX);
                             CurrentInputModel.PileGroupSettlement.SettlementGridY =
-                                new ObservableCollection<double>(CurrentInputModel.PileGroupSettlement.SettlementGridY);
-                        }
-
-                        if (CurrentInputModel?.PileGroupSettlement?.SettlementGridData != null &&
-                            CurrentInputModel.PileGroupSettlement.SettlementGridData.GetType() != typeof(ObservableCollection<SettlementGridDataItem>))
-                        {
+                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementGridY);
                             CurrentInputModel.PileGroupSettlement.SettlementGridData =
-                                new ObservableCollection<SettlementGridDataItem>(CurrentInputModel.PileGroupSettlement.SettlementGridData);
+                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementGridData);
                         }
+                        CurrentInputModel.PileLayoutItems =
+                            EnsureObservableCollection(CurrentInputModel.PileLayoutItems);
+                        CurrentInputModel.Elements =
+                            EnsureObservableCollection(CurrentInputModel.Elements);
+                        CurrentInputModel.GridXItems =
+                            EnsureObservableCollection(CurrentInputModel.GridXItems);
+                        CurrentInputModel.GridYItems =
+                            EnsureObservableCollection(CurrentInputModel.GridYItems);
+                        CurrentInputModel.PileBodies =
+                            EnsureObservableCollection(CurrentInputModel.PileBodies);
+                        CurrentInputModel.GroundsInput =
+                            EnsureObservableCollection(CurrentInputModel.GroundsInput);
 
-                        if (CurrentInputModel?.PileLayoutItems != null &&
-                            CurrentInputModel.PileLayoutItems.GetType() != typeof(ObservableCollection<PileLayoutDataItem>))
-                        {
-                            CurrentInputModel.PileLayoutItems =
-                                new ObservableCollection<PileLayoutDataItem>(CurrentInputModel.PileLayoutItems);
-                        }
-
-                        if (CurrentInputModel?.Elements != null &&
-                            CurrentInputModel.Elements.GetType() != typeof(ObservableCollection<Element>))
-                        {
-                            CurrentInputModel.Elements =
-                                new ObservableCollection<Element>(CurrentInputModel.Elements);
-                        }
-
-                        if (CurrentInputModel?.GridXItems != null &&
-                            CurrentInputModel.GridXItems.GetType() != typeof(ObservableCollection<GridDataItem>))
-                        {
-                            CurrentInputModel.GridXItems =
-                                new ObservableCollection<GridDataItem>(CurrentInputModel.GridXItems);
-                        }
-
-                        if (CurrentInputModel?.GridYItems != null &&
-                            CurrentInputModel.GridYItems.GetType() != typeof(ObservableCollection<GridDataItem>))
-                        {
-                            CurrentInputModel.GridYItems =
-                                new ObservableCollection<GridDataItem>(CurrentInputModel.GridYItems);
-                        }
-
-                        if (CurrentInputModel?.PileBodies != null &&
-                            CurrentInputModel.PileBodies.GetType() != typeof(ObservableCollection<PileBodyInput>))
-                        {
-                            CurrentInputModel.PileBodies =
-                                new ObservableCollection<PileBodyInput>(CurrentInputModel.PileBodies);
-                        }
-
-                        if (CurrentInputModel?.GroundsInput != null &&
-                            CurrentInputModel.GroundsInput.GetType() != typeof(ObservableCollection<GroundInput>))
-                        {
-                            CurrentInputModel.GroundsInput =
-                                new ObservableCollection<GroundInput>(CurrentInputModel.GroundsInput);
-                        }
-
-                        if (CurrentInputModel?.EmbedmentInput?.EmbedmentLayers != null &&
-                            CurrentInputModel.EmbedmentInput.EmbedmentLayers.GetType() != typeof(ObservableCollection<EmbedmentDataItem>))
+                        if (CurrentInputModel?.EmbedmentInput != null)
                         {
                             CurrentInputModel.EmbedmentInput.EmbedmentLayers =
-                                new ObservableCollection<EmbedmentDataItem>(CurrentInputModel.EmbedmentInput.EmbedmentLayers);
+                                EnsureObservableCollection(CurrentInputModel.EmbedmentInput.EmbedmentLayers);
                         }
-
-                        if (CurrentInputModel?.LoadCasesInput?.LoadCasesLevel1 != null &&
-                            CurrentInputModel.LoadCasesInput.LoadCasesLevel1.GetType() != typeof(ObservableCollection<LoadCase>))
+                        if (CurrentInputModel?.LoadCasesInput != null)
                         {
                             CurrentInputModel.LoadCasesInput.LoadCasesLevel1 =
-                                new ObservableCollection<LoadCase>(CurrentInputModel.LoadCasesInput.LoadCasesLevel1);
-                        }
-
-                        if (CurrentInputModel?.LoadCasesInput?.LoadCasesLevel2 != null &&
-                            CurrentInputModel.LoadCasesInput.LoadCasesLevel2.GetType() != typeof(ObservableCollection<LoadCase>))
-                        {
+                                EnsureObservableCollection(CurrentInputModel.LoadCasesInput.LoadCasesLevel1);
                             CurrentInputModel.LoadCasesInput.LoadCasesLevel2 =
-                                new ObservableCollection<LoadCase>(CurrentInputModel.LoadCasesInput.LoadCasesLevel2);
+                                EnsureObservableCollection(CurrentInputModel.LoadCasesInput.LoadCasesLevel2);
                         }
-
                         // ネストされたコレクション
                         if (CurrentInputModel?.GroundsInput != null)
                         {
                             foreach (var ground in CurrentInputModel.GroundsInput)
                             {
-                                if (ground.GroundLayers != null &&
-                                    ground.GroundLayers.GetType() != typeof(ObservableCollection<GroundLayerInput>))
-                                {
-                                    ground.GroundLayers = new ObservableCollection<GroundLayerInput>(ground.GroundLayers);
-                                }
-                                if (ground.GroundMassesData != null &&
-                                    ground.GroundMassesData.GetType() != typeof(ObservableCollection<GroundMassDataInput>))
-                                {
-                                    ground.GroundMassesData = new ObservableCollection<GroundMassDataInput>(ground.GroundMassesData);
-                                }
+                                ground.GroundLayers = EnsureObservableCollection(ground.GroundLayers);
+                                ground.GroundMassesData = EnsureObservableCollection(ground.GroundMassesData);
                             }
                         }
-
                         if (CurrentInputModel?.PileBodies != null)
                         {
                             foreach (var pileBody in CurrentInputModel.PileBodies)
                             {
-                                if (pileBody.PileBodySegments != null &&
-                                    pileBody.PileBodySegments.GetType() != typeof(ObservableCollection<PileBodySegment>))
-                                {
-                                    pileBody.PileBodySegments = new ObservableCollection<PileBodySegment>(pileBody.PileBodySegments);
-                                }
+                                pileBody.PileBodySegments = EnsureObservableCollection(pileBody.PileBodySegments);
                             }
                         }
-
-                        // 他にも必要なコレクションがあれば同様に包み直す
-                        // --- ここまで修正 ---
+                        // --- 共通化ここまで ---
 
                         // 必要ならプロパティ変更通知
                         OnPropertyChanged(nameof(CurrentInputModel));
                     }
+                    else
+                    {
+                        // ProjectDataでない場合を想定して InputModel 単体で読めるか試す
+                        var ok = TryLoadInputModelFileUsingInputModelLoader(openFileDialog.FileName);
+                        if (!ok)
+                            throw new InvalidOperationException("ファイル形式が不正です。ProjectData でも InputModel でもありません。");
+                        return;
+                    }
                     // フォールバック: null の場合は空コレクションで初期化
-                    CurrentInputModel.GridXItems ??= [];
-                    CurrentInputModel.GridYItems ??= [];
+                    CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
+                    CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
 
                     // VM 再アタッチ
                     CurrentInputModel.AttachViewModel(this);
 
-                    // 
                     UpdateWindowImmediate();
                     MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
@@ -1736,11 +1718,16 @@ namespace PileDesign.ViewModels
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
-
-                doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
-                //Output.WordDocument.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
-                MessageBox.Show($"docsファイルが作成されました。\n{saveFileDialog.FileName}\nMSWordでファイルを開き、ctrl + aで全選択した後, F9によりフィールドを更新してください。");
+                try
+                {
+                    var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
+                    doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
+                    MessageBox.Show($"docsファイルが作成されました。\n{saveFileDialog.FileName}\nMSWordでファイルを開き、ctrl + aで全選択した後, F9によりフィールドを更新してください。");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Word出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
@@ -1771,16 +1758,30 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OpenDocxOutputWindow()
         {
-            var dockxOutputOptionWindow = new DocxOutputWindow(this);
-            dockxOutputOptionWindow.Show();
+            try
+            {
+                var dockxOutputOptionWindow = new DocxOutputWindow(this);
+                dockxOutputOptionWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"計算書出力ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // オプション表示メソッド
         [RelayCommand]
         private static void OpenOptionWindow()
         {
-            var optionWindow = new OptionWindow();
-            optionWindow.Show();
+            try
+            {
+                var optionWindow = new OptionWindow();
+                optionWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"オプションウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // 解析結果が1つでも存在するか
@@ -1797,20 +1798,25 @@ namespace PileDesign.ViewModels
         [RelayCommand(CanExecute = nameof(CanOpenGraphWindow))]
         private void OpenGraphWindow()
         {
-            // CanExecute で制御されるため通常は不要だが保険として
-            if (!HasAnyAnalysisResult()) return;
-
-            // MainWindowViewModelのインスタンス(this)を必ず渡す
-            var viewModel = new GraphViewModel(this)
+            try
             {
-                IsHorizontalAnalysisDone = this.IsHorizontalAnalysisDone,
-                IsVerticalAnalysisDone = this.IsVerticalAnalysisDone,
-                IsGroupPileSettlementAnalysisDone = this.IsGroupPileSettlementAnalysisDone
-            };
-            viewModel.Initialize();
+                if (!HasAnyAnalysisResult()) return;
 
-            var graphWindow = new GraphWindow(viewModel);
-            graphWindow.Show();
+                var viewModel = new GraphViewModel(this)
+                {
+                    IsHorizontalAnalysisDone = this.IsHorizontalAnalysisDone,
+                    IsVerticalAnalysisDone = this.IsVerticalAnalysisDone,
+                    IsGroupPileSettlementAnalysisDone = this.IsGroupPileSettlementAnalysisDone
+                };
+                viewModel.Initialize();
+
+                var graphWindow = new GraphWindow(viewModel);
+                graphWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"グラフウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
         private bool CanOpenGraphWindow() => HasAnyAnalysisResult();
 
@@ -1819,7 +1825,7 @@ namespace PileDesign.ViewModels
         private readonly AnalysisResultTableService _tableService = new();
 
         // プロパティ
-        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = [];
+        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = Array.Empty<ResultTable>();
 
         // 解析完了後 (既存処理内末尾に追加)
         private void OnAnalysisFinished(AnalysisStepResult result)
@@ -1848,18 +1854,25 @@ namespace PileDesign.ViewModels
 
         private void OpenTableWindow()
         {
-            var vm = new TableWindowViewModel();
-            vm.LoadTables(LatestResultTables);
-            var w = new Views.TableWindow { DataContext = vm };
-            w.Show();
+            try
+            {
+                var vm = new TableWindowViewModel();
+                vm.LoadTables(LatestResultTables);
+                var w = new Views.TableWindow { DataContext = vm };
+                w.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"テーブルウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // 解析結果テーブル再生成
         public void RefreshResultTablesFromLastStep()
         {
             // AnaModel または AnalysisStepResults が null/空の場合は早期リターン
-            if (CurrentModel == null || 
-                CurrentModel.AnalysisStepResults == null || 
+            if (CurrentModel == null ||
+                CurrentModel.AnalysisStepResults == null ||
                 CurrentModel.AnalysisStepResults.Count == 0 ||
                 !HasAnyAnalysisResult())
             {
@@ -1894,8 +1907,15 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public static void OpenHelpWindow()
         {
-            var helpWindow = new HelpWindow();
-            helpWindow.Show();
+            try
+            {
+                var helpWindow = new HelpWindow();
+                helpWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ヘルプウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]
@@ -1919,9 +1939,7 @@ namespace PileDesign.ViewModels
             if (vm is ICloseable closeableViewModel)
             {
                 if (win.IsLoaded && win.IsVisible)
-                {
                     win.Close();
-                }
             }
 
             try
@@ -2054,13 +2072,20 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public static void OpenShortcutKeysWindow()
         {
-            var w = new PileDesign.Views.ShortcutKeysWindow
+            try
             {
-                Owner = Application.Current.MainWindow,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                ShowInTaskbar = false
-            };
-            w.ShowDialog();
+                var w = new PileDesign.Views.ShortcutKeysWindow
+                {
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    ShowInTaskbar = false
+                };
+                w.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ショートカット一覧ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // データ入力ウィンドウ表示メソッド
@@ -2071,49 +2096,59 @@ namespace PileDesign.ViewModels
         //}
 
         [RelayCommand]
-        private async void MoveCopyPiles()
+        private async Task MoveCopyPiles()
         {
-            // 選択節点がない場合は処理を中止してメッセージ表示
-            if (CurrentInputModel == null ||
-                CurrentInputModel.PileLayoutItems == null ||
-                !CurrentInputModel.PileLayoutItems.Any(p => p.IsSelected))
-            {
-                MessageBox.Show("杭配置が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            // MoveWindowをインスタンス化して表示
-            MoveCopyWindow moveCopyWindow = new();
-
-            var tcs = new TaskCompletionSource<bool>();
-            moveCopyWindow.MoveCopyCompleted += async (sender, e) =>
-            {
-                await MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
-                tcs.SetResult(true);
-            };
-
-            moveCopyWindow.ShowDialog(); // モーダルダイアログとして表示
-
-            // ★ 待機カーソルを表示
-            Mouse.OverrideCursor = Cursors.Wait;
             try
             {
-                await tcs.Task; // 非同期に完了を待つ
+                // 選択節点がない場合は処理を中止してメッセージ表示
+                if (CurrentInputModel == null ||
+                CurrentInputModel.PileLayoutItems == null ||
+                !CurrentInputModel.PileLayoutItems.Any(p => p.IsSelected))
+                {
+                    MessageBox.Show("杭配置が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
 
-                // コレクション自体の変更通知
-                OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                // Undoポイントを追加
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
-                // 変更: デバウンス付きで更新
-                RequestUpdateWindow();
-                UpdateTreeView();
+                // MoveWindowをインスタンス化して表示
+                MoveCopyWindow moveCopyWindow = new();
+
+                var tcs = new TaskCompletionSource<bool>();
+                moveCopyWindow.MoveCopyCompleted += async (sender, e) =>
+                {
+                    await MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
+                    tcs.SetResult(true);
+                };
+
+                moveCopyWindow.ShowDialog(); // モーダルダイアログとして表示
+
+                // ★ 待機カーソルを表示
+                Mouse.OverrideCursor = Cursors.Wait;
+                try
+                {
+                    await tcs.Task; // 非同期に完了を待つ
+
+                    // コレクション自体の変更通知
+                    OnPropertyChanged(nameof(GroupPileSettlementXmin));
+                    OnPropertyChanged(nameof(GroupPileSettlementXmax));
+                    OnPropertyChanged(nameof(GroupPileSettlementYmin));
+                    OnPropertyChanged(nameof(GroupPileSettlementYmax));
+
+                    // 変更: デバウンス付きで更新
+                    RequestUpdateWindow();
+                    UpdateTreeView();
+                }
+                finally
+                {
+                    // ★ カーソルを元に戻す
+                    Mouse.OverrideCursor = null;
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                // ★ カーソルを元に戻す
-                Mouse.OverrideCursor = null;
+                MessageBox.Show($"杭の移動・複製中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2121,83 +2156,11 @@ namespace PileDesign.ViewModels
         {
             // 新しいウィンドウでの操作の結果を処理する
             if (e.IsMove)
-            {
-                // 移動操作の処理
-                MoveNodes(e.DX, e.DY);
-            }
+                MoveNodes(e.DX, e.DY);// 移動操作の処理
             else if (e.IsCopy)
-            {
-                // 複製操作の処理
-                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber);
-            }
+                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber); // 複製操作の処理
         }
 
-        //private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
-        //{
-        //    // 変更を行う前に、選択されたアイテムのリストを作成
-        //    var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
-        //    int totalCount = selectedItems.Count * repetitionNumber;
-
-        //    // ★ 大量コピー時は待機カーソルを表示
-        //    bool showWaitCursor = totalCount > 10;
-        //    if (showWaitCursor)
-        //    {
-        //        Mouse.OverrideCursor = Cursors.Wait;
-        //    }
-
-        //    try
-        //    {
-        //        // ★ 一時リストに事前にすべて作成（容量を事前確保して高速化）
-        //        var newItems = new List<PileLayoutDataItem>(totalCount);
-
-        //        foreach (var pilelocation in selectedItems)
-        //        {
-        //            for (int i = 0; i < repetitionNumber; i++)
-        //            {
-        //                var newItem = new PileLayoutDataItem
-        //                {
-        //                    X = pilelocation.X + dX * (i + 1),
-        //                    Y = pilelocation.Y + dY * (i + 1)
-        //                };
-        //                newItems.Add(newItem);
-        //            }
-        //            pilelocation.IsSelected = false;
-        //        }
-
-        //        // ★ UIスレッドで一括追加
-        //        await Application.Current.Dispatcher.InvokeAsync(() =>
-        //        {
-        //            // 通知を一時抑制
-        //            CurrentInputModel.SuppressNotifications();
-        //            try
-        //            {
-        //                // ★ 一括追加（SetMainWindowViewModel も含めて処理）
-        //                foreach (var item in newItems)
-        //                {
-        //                    item.SetMainWindowViewModel(this);
-        //                    CurrentInputModel.PileLayoutItems.Add(item);
-        //                }
-        //            }
-        //            finally
-        //            {
-        //                // 通知を再開し、SoilPiles を1回だけ再生成
-        //                CurrentInputModel.ResumeAndNotify();
-        //            }
-
-        //            UpdatePileLayoutNo();
-        //            // 変更: デバウンス付きで更新
-        //            RequestUpdateWindow();
-        //            UpdateTreeView();
-        //        });
-        //    }
-        //    finally
-        //    {
-        //        if (showWaitCursor)
-        //        {
-        //            Mouse.OverrideCursor = null;
-        //        }
-        //    }
-        //}
         private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
         {
             // 変更を行う前に、選択されたアイテムのリストを作成
@@ -2207,28 +2170,26 @@ namespace PileDesign.ViewModels
             // ★ 大量コピー時は待機カーソルを表示
             bool showWaitCursor = totalCount > 10;
             if (showWaitCursor)
-            {
                 Mouse.OverrideCursor = Cursors.Wait;
-            }
 
             try
             {
                 // ★ 一時リストに事前にすべて作成（容量を事前確保して高速化）
                 var newItems = new List<PileLayoutDataItem>(totalCount);
 
-                foreach (var pilelocation in selectedItems)
+                foreach (var pileLocation in selectedItems)
                 {
                     for (int i = 0; i < repetitionNumber; i++)
                     {
                         var newItem = new PileLayoutDataItem
                         {
-                            X = pilelocation.X + dX * (i + 1),
-                            Y = pilelocation.Y + dY * (i + 1)
+                            X = pileLocation.X + dX * (i + 1),
+                            Y = pileLocation.Y + dY * (i + 1)
                         };
                         newItem.SetMainWindowViewModel(this);
                         newItems.Add(newItem);
                     }
-                    pilelocation.IsSelected = false;
+                    pileLocation.IsSelected = false;
                 }
 
                 // ★ UIスレッドで一括置換（CollectionChangedを1回だけ発火）
@@ -2243,9 +2204,7 @@ namespace PileDesign.ViewModels
 
                     // SoilPiles を1回だけ再生成
                     if (!IsElementSplit)
-                    {
                         RequestGenerateSoilPiles();
-                    }
 
                     UpdatePileLayoutNo();
                     RequestUpdateWindow();
@@ -2255,22 +2214,20 @@ namespace PileDesign.ViewModels
             finally
             {
                 if (showWaitCursor)
-                {
                     Mouse.OverrideCursor = null;
-                }
             }
         }
 
         // 移動操作を行う
         private void MoveNodes(double dX, double dY)
         {
-            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
+            foreach (PileLayoutDataItem pileLocation in CurrentInputModel.PileLayoutItems)
             {
-                if (pilelocation.IsSelected)
+                if (pileLocation.IsSelected)
                 {
-                    pilelocation.X += dX;
-                    pilelocation.Y += dY;
-                    pilelocation.IsSelected = false;
+                    pileLocation.X += dX;
+                    pileLocation.Y += dY;
+                    pileLocation.IsSelected = false;
                 }
             }
         }
@@ -2307,38 +2264,6 @@ namespace PileDesign.ViewModels
 
             UpdatePileLayoutNo();
         }
-        //private void CopyNodes(double dX, double dY, int repetitionNumber)
-        //{
-        //    // 変更を行う前に、選択されたアイテムのリストを作成
-        //    var selectedItems = CurrentInputModel.PileLayoutItems.Where(pilelocation => pilelocation.IsSelected).ToList();
-
-        //    // 通知を一時抑制して高速化
-        //    CurrentInputModel.SuppressNotifications();
-        //    try
-        //    {
-        //        foreach (PileLayoutDataItem pilelocation in selectedItems)
-        //        {
-        //            for (int i = 0; i < repetitionNumber; i++)
-        //            {
-        //                // コピーしたコレクションに新しい要素を追加
-        //                CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem()
-        //                {
-        //                    X = pilelocation.X + dX * (i + 1),
-        //                    Y = pilelocation.Y + dY * (i + 1)
-        //                });
-        //                CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
-        //            }
-        //            pilelocation.IsSelected = false;
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        // 通知を再開し、SoilPiles を1回だけ再生成
-        //        CurrentInputModel.ResumeAndNotify();
-        //    }
-
-        //    UpdatePileLayoutNo();
-        //}
 
         // 杭配置の編集・追加コマンド
         [RelayCommand]
@@ -2357,12 +2282,10 @@ namespace PileDesign.ViewModels
         {
             ObservableCollection<PileLayoutDataItem> selectedItems = [];
 
-            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
+            foreach (PileLayoutDataItem pileLocation in CurrentInputModel.PileLayoutItems)
             {
-                if (pilelocation.IsSelected)
-                {
-                    selectedItems.Add(pilelocation);
-                }
+                if (pileLocation.IsSelected)
+                    selectedItems.Add(pileLocation);
             }
 
             if (e.IsApplicablePileRefNo)
@@ -2481,9 +2404,8 @@ namespace PileDesign.ViewModels
             var elementsToRemove = CurrentInputModel.Elements.Where(element => element.Nodes.Contains(oldItem)).ToList();
 
             foreach (var element in elementsToRemove)
-            {
                 CurrentInputModel.Elements.Remove(element);
-            }
+
 
             // 変更: デバウンス付きで更新
             RequestUpdateWindow();
@@ -2501,9 +2423,7 @@ namespace PileDesign.ViewModels
                     existingItem.Z == pileLayoutItem.Z);
 
                 if (!isDuplicate)
-                {
                     uniquePileLayoutDataItems.Add(pileLayoutItem);
-                }
             }
 
             CurrentInputModel.PileLayoutItems = uniquePileLayoutDataItems;
@@ -2551,6 +2471,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OpenFundamentalWindow()
         {
+            // Undoポイントを追加（読込前の状態を保存）
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             OpenDialogWindow<FundamentalViewModel, FundamentalWindow>(this);
         }
 
@@ -2558,6 +2481,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenLoadCaseWindow()
         {
+            // Undoポイントを追加（読込前の状態を保存）
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             OpenDialogWindow<LoadCaseViewModel, LoadCaseWindow>(this);
             UpdateLoadCaseOption();
             UpdateLoadCombinationOption();
@@ -2567,6 +2493,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenGroundWindow()
         {
+            // Undoポイントを追加（読込前の状態を保存）
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             OpenDialogWindow<GroundLayerViewModel, GroundWindow>(this);
         }
 
@@ -2574,6 +2503,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenPileBodyWindow()
         {
+            // Undoポイントを追加（読込前の状態を保存）
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             OpenDialogWindow<PileBodyViewModel, PileBodyWindow>(this);
         }
 
@@ -2612,13 +2544,9 @@ namespace PileDesign.ViewModels
             }
 
             if (hasWarning)
-            {
                 MessageBox.Show(warningMessage, "警告", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
             else
-            {
                 MessageBox.Show("各杭配置の軸力は各断面の軸力適用範囲内です。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
         }
 
         // 要素分割ウィンドウを開くメソッド
@@ -2627,6 +2555,9 @@ namespace PileDesign.ViewModels
         {
             if (IsPreparedForAnalysis())
             {
+                // Undoポイントを追加（読込前の状態を保存）
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
                 GenerateSoilPilesImmediate();  // 即時実行に変更
                 CurrentInputModel.GenerateSoilEmbedment();
 
@@ -2652,13 +2583,9 @@ namespace PileDesign.ViewModels
                 else
                 {
                     if (IsElementSplit == false)
-                    {
                         System.Windows.MessageBox.Show("要素分割を行ってください。");
-                    }
                     else
-                    {
                         OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
-                    }
                 }
             }
         }
@@ -2682,15 +2609,16 @@ namespace PileDesign.ViewModels
                     }
                     else
                     {
+                        // Undoポイントを追加（読込前の状態を保存）
+                        _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
                         var viewModel = new HorizontalCalculationViewModel(this);
                         var window = new HorizontalCalculationWindow { DataContext = viewModel };
 
                         if (viewModel is ICloseable closeableViewModel)
                         {
                             if (window.IsLoaded && window.IsVisible)
-                            {
                                 window.Close();
-                            }
                         }
 
                         try
@@ -2730,13 +2658,13 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void GroundInputCopyToSettlementGroundLayers()
         {
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            if (SelectedGroundInputModelNo == null || SelectedGroundInputModelNo == 0)
+            if (SelectedGroundInputModelNo == 0)
             {
                 MessageBox.Show("地盤データが存在しません。");
                 return;
             }
+
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
@@ -2788,7 +2716,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AutoOverturningMoment()
         {
-            // Window のコンストラクタ内で ViewModel を作成するため、ここでは作成しない
+            // Undoポイントを追加
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             var window = new AutoOverturningMomentWindow(this);
 
             var appMain = Application.Current?.MainWindow;
@@ -2824,6 +2754,9 @@ namespace PileDesign.ViewModels
             var itemsToRemove = col.Where(x => x.IsSelected).ToList();
             if (itemsToRemove.Count == 0) return;
 
+            // Undoポイントを追加
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             // Undo用にまとめる
             var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
             foreach (var item in itemsToRemove)
@@ -2852,9 +2785,8 @@ namespace PileDesign.ViewModels
         private void DeselectPiles()
         {
             foreach (var item in CurrentInputModel.PileLayoutItems)
-            {
                 item.IsSelected = false;
-            }
+
             RequestUpdateWindow();
         }
 

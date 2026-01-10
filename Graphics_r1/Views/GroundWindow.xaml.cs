@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Common.Undo;
+using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
 using System;
@@ -327,7 +328,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is GroundLayerViewModel viewModel)
                 {
-                    viewModel._undoManager.PushState([.. viewModel.GroundsInput.Select(x => x.DeepCopy())]);
+                    viewModel._undoManager.PushState(viewModel.GroundsInput.Select(x => x.DeepCopy()).ToList());
                 }
 
                 var item = e.Row.Item;
@@ -499,23 +500,6 @@ namespace PileDesign.Views
             }
         }
 
-        // GroundNoのComboBoxの選択が変更されたときの処理
-        //private void ComboBoxGroundNo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    if (DataContext is GroundLayerViewModel viewModel)
-        //    {
-        //        if (ComboBoxGroundNo.SelectedItem != null)
-        //        {
-        //            int previousSelectedGroundNo = -1;
-        //            if (e.RemovedItems.Count > 0)
-        //            {
-        //                previousSelectedGroundNo = (int)e.RemovedItems[0];
-        //            }
-        //            int selectedGroundNo = (int)ComboBoxGroundNo.SelectedItem;
-        //            viewModel.ComboBoxGroundNo_SelectionChanged(selectedGroundNo, previousSelectedGroundNo);
-        //        }
-        //    }
-        //}
 
         private void ComboBoxGroundNo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -556,17 +540,6 @@ namespace PileDesign.Views
             var viewModel = (GroundLayerViewModel)DataContext;
             viewModel?.Update();
         }
-
-        //private void OnGroundComboBoxSelectionChanged(SelectionChangedEventArgs e)
-        //{
-        //    var viewModel = (GroundLayerViewModel)DataContext;
-        //    if (int.TryParse(ComboBoxGroundNo.SelectedItem?.ToString(), out int selectedGroundNo))
-        //    {
-
-        //    }
-        //    viewModel.Update();
-
-        //}
 
         private void ButtonDeleteGroundMass_Click(object sender, RoutedEventArgs e)
         {
@@ -730,7 +703,7 @@ namespace PileDesign.Views
                 if (e.Key == Key.Enter)
                 //if (e.Key == Key.Enter || e.Key == Key.Back || e.Key == Key.Delete || e.Key == Key.Space)
                 {
-                    viewModel._undoManager.PushState([.. viewModel.GroundsInput.Select(x => x.DeepCopy())]);
+                    viewModel._undoManager.PushState(viewModel.GroundsInput.Select(x => x.DeepCopy()).ToList());
                 }
             }
         }
@@ -742,60 +715,10 @@ namespace PileDesign.Views
             {
                 // 編集前の状態を保存（EnterキーやBackspace/文字入力時など）
                 {
-                    viewModel._undoManager.PushState([.. viewModel.GroundsInput.Select(x => x.DeepCopy())]);
+                    viewModel._undoManager.PushState(viewModel.GroundsInput.Select(x => x.DeepCopy()).ToList());
                 }
             }
         }
-
-        //private void ExampleCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    if (sender is not ComboBox cb) return;
-        //    if (cb.SelectedItem is not ComboBoxItem item) return;
-        //    string label = item.Content?.ToString() ?? string.Empty;
-
-        //    if (DataContext is not GroundLayerViewModel vm)
-        //    {
-        //        // DataContext が予想と異なる場合は何もしない
-        //        cb.SelectedIndex = -1;
-        //        return;
-        //    }
-
-        //    switch (label)
-        //    {
-        //        case "基礎指針'19計算例1":
-        //            vm.Example1Command?.Execute(null);
-        //            break;
-        //        case "基礎指針'19計算例2":
-        //            vm.Example2Command?.Execute(null);
-        //            break;
-        //        case "基礎指針'19計算例9":
-        //            vm.Example9Command?.Execute(null);
-        //            break;
-        //        case "設計例集3.1":
-        //            vm.Example3_1Command?.Execute(null);
-        //            break;
-        //        case "設計例集3.2":
-        //            vm.Example3_2Command?.Execute(null);
-        //            break;
-        //        case "設計例集3.3":
-        //            vm.Example3_3Command?.Execute(null);
-        //            break;
-        //        case "設計例集3.4":
-        //            vm.Example3_4Command?.Execute(null);
-        //            break;
-        //        case "関東支部8章":
-        //            vm.Example8Command?.Execute(null);
-        //            break;
-        //        case "八重洲二丁目No.1":
-        //            vm.ExampleYeasu2Command?.Execute(null);
-        //            break;
-        //        default:
-        //            break;
-        //    }
-
-        //    // 選択をクリアして同じ項目を再選択できるようにする
-        //    cb.SelectedIndex = -1;
-        //}
 
         // Button を押したときに ContextMenu を開く
         private void ButtonExamples_Click(object sender, RoutedEventArgs e)
@@ -826,7 +749,7 @@ namespace PileDesign.Views
             try
             {
                 // 実行前に undo スタックへ現在状態を保存（既存パターンに合わせる）
-                vm._undoManager.PushState([.. vm.GroundsInput.Select(x => x.DeepCopy())]);
+                vm._undoManager.PushState(vm.GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 // 実行
                 exampleItem.Command?.Execute(null);

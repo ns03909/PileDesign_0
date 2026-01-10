@@ -82,35 +82,53 @@ namespace PileDesign.Views
 
         private static string? FindGraphicsR1Folder(string start)
         {
-            var dir = new DirectoryInfo(start);
-            while (dir != null)
+            try
             {
-                if (string.Equals(dir.Name, "Graphics_r1", StringComparison.OrdinalIgnoreCase))
-                    return dir.FullName;
-                dir = dir.Parent;
+                var dir = new DirectoryInfo(start);
+                while (dir != null)
+                {
+                    if (string.Equals(dir.Name, "Graphics_r1", StringComparison.OrdinalIgnoreCase))
+                        return dir.FullName;
+                    dir = dir.Parent;
+                }
+                return null;
             }
-            return null;
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"FindGraphicsR1Folder 例外: {ex}");
+                MessageBox.Show($"フォルダ探索中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return null;
+            }
         }
 
         private static DataTable LoadCsvToDataTable(string path)
         {
             var dt = new DataTable();
-            using var reader = new StreamReader(path);
-            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-
-            csv.Read();
-            csv.ReadHeader();
-            foreach (var h in csv.HeaderRecord ?? Array.Empty<string>())
-                dt.Columns.Add(h);
-
-            while (csv.Read())
+            try
             {
-                var row = dt.NewRow();
-                for (int i = 0; i < dt.Columns.Count; i++)
+                using var reader = new StreamReader(path);
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+                csv.Read();
+                csv.ReadHeader();
+                foreach (var h in csv.HeaderRecord ?? Array.Empty<string>())
+                    dt.Columns.Add(h);
+
+                while (csv.Read())
                 {
-                    row[i] = csv.GetField(i) ?? string.Empty;
+                    var row = dt.NewRow();
+                    for (int i = 0; i < dt.Columns.Count; i++)
+                    {
+                        row[i] = csv.GetField(i) ?? string.Empty;
+                    }
+                    dt.Rows.Add(row);
                 }
-                dt.Rows.Add(row);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadCsvToDataTable 例外: {ex}");
+                MessageBox.Show($"CSV読込中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                // エラー時は空のDataTableを返す
             }
             return dt;
         }

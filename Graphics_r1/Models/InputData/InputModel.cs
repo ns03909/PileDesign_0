@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Media3D;
+using Newtonsoft.Json;
 
 namespace PileDesign.Models.InputData
 {
@@ -831,13 +832,33 @@ namespace PileDesign.Models.InputData
         };
 
         // データの保存
+        //public void SaveToFile(string filePath)
+        //{
+        //    string jsonString = JsonSerializer.Serialize(this, _jsonOptions);
+        //    File.WriteAllText(filePath, jsonString);
+        //}
         public void SaveToFile(string filePath)
         {
-            string jsonString = JsonSerializer.Serialize(this, _jsonOptions);
+            string jsonString = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
             File.WriteAllText(filePath, jsonString);
         }
 
+        // データの読み込み
+        //public static InputModel LoadFromFile(string filePath, MainWindowViewModel mainWindowViewModel)
+        //{
+        //    if (!File.Exists(filePath))
+        //        throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
 
+        //    string json = File.ReadAllText(filePath);
+        //    var loaded = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
+        //        ?? throw new InvalidOperationException("ファイルの内容をデシリアライズできませんでした。");
+
+
+        //    // MainWindowViewModelをセット
+        //    loaded.SetMainWindowViewModel(mainWindowViewModel);
+
+        //    return loaded;
+        //}
         // データの読み込み
         public static InputModel LoadFromFile(string filePath, MainWindowViewModel mainWindowViewModel)
         {
@@ -845,16 +866,43 @@ namespace PileDesign.Models.InputData
                 throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
 
             string json = File.ReadAllText(filePath);
-            var loaded = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
-                ?? throw new InvalidOperationException("ファイルの内容をデシリアライズできませんでした。");
 
+            // まず System.Text.Json で試行（既定設定）
+            try
+            {
+                var loaded = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
+                    ?? throw new InvalidOperationException("ファイルの内容をデシリアライズできませんでした。");
 
-            // MainWindowViewModelをセット
-            loaded.SetMainWindowViewModel(mainWindowViewModel);
+                // MainWindowViewModelをセット
+                loaded.SetMainWindowViewModel(mainWindowViewModel);
+                return loaded;
+            }
+            catch (Exception ex) when (ex is NotSupportedException || ex is System.Text.Json.JsonException || json.Contains("\"$ref\"") || json.Contains("\"$id\""))
+            {
+                // フォールバック: Newtonsoft.Json で参照メタデータを復元して読み込む
+                try
+                {
+                    var settings = new Newtonsoft.Json.JsonSerializerSettings
+                    {
+                        PreserveReferencesHandling = PreserveReferencesHandling.All,
+                        TypeNameHandling = TypeNameHandling.Auto,
+                        Formatting = Formatting.Indented,
+                    };
 
-            return loaded;
+                    var loaded = JsonConvert.DeserializeObject<InputModel>(json, settings)
+                        ?? throw new InvalidOperationException("Newtonsoft によるデシリアライズで失敗しました。");
+
+                    // MainWindowViewModelをセット
+                    loaded.SetMainWindowViewModel(mainWindowViewModel);
+                    return loaded;
+                }
+                catch (Exception ex2)
+                {
+                    // 最終的に失敗したら元の例外情報を包んで投げる
+                    throw new InvalidOperationException("ファイル読み込みに失敗しました（System.Text.Json + Newtonsoft.Json 両方で失敗）。", ex2);
+                }
+            }
         }
-
 
         // 指定の名称のPileBodyを返すメソッド
         public PileBodyInput? GetPileBodyByPileBodyRef(string pileBodyRef)
@@ -1065,17 +1113,46 @@ namespace PileDesign.Models.InputData
         //}
         // 既存: private static readonly JsonSerializerOptions _jsonOptions = new() { ... AllowNamedFloatingPointLiterals };
         // DeepCopy 修正 + 特殊値クリーン処理を追加
+        //public InputModel DeepCopy()
+        //{
+        //    // 特殊値を一時コピー上で正規化したくない場合は this を直接渡さず CloneWorking を作る
+        //    // ここでは簡易に this をクリーンしてからシリアライズ（Undo 前などで呼ぶなら呼び出し側で Clone を取る運用でも可）
+        //    CleanFloatingPointSpecials(this);
+
+        //    string json = JsonSerializer.Serialize(this, _jsonOptions); // _jsonOptions を使う
+        //    var clone = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
+        //                ?? throw new InvalidOperationException("DeepCopy 失敗");
+        //    // ViewModel 再接続
+        //    clone.AttachViewModel(_mainWindowViewModel);
+        //    return clone;
+        //}
+
+        //public InputModel DeepCopy()
+        //{
+        //    // まずシリアライズ
+        //    string json = JsonSerializer.Serialize(this, _jsonOptions);
+        //    // デシリアライズで新しいインスタンスを作成
+        //    var clone = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
+        //                ?? throw new InvalidOperationException("DeepCopy 失敗");
+        //    // クローンだけをクリーン
+        //    CleanFloatingPointSpecials(clone);
+        //    clone.AttachViewModel(_mainWindowViewModel);
+        //    return clone;
+        //}
+        //public InputModel DeepCopy()
+        //{
+        //    string json = JsonSerializer.Serialize(this, _jsonOptions);
+        //    var clone = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
+        //                ?? throw new InvalidOperationException("DeepCopy 失敗");
+        //    // CleanFloatingPointSpecials(clone); // 必要ならここで
+        //    // AttachViewModelは呼ばない
+        //    return clone;
+        //}
         public InputModel DeepCopy()
         {
-            // 特殊値を一時コピー上で正規化したくない場合は this を直接渡さず CloneWorking を作る
-            // ここでは簡易に this をクリーンしてからシリアライズ（Undo 前などで呼ぶなら呼び出し側で Clone を取る運用でも可）
-            CleanFloatingPointSpecials(this);
-
-            string json = JsonSerializer.Serialize(this, _jsonOptions); // _jsonOptions を使う
-            var clone = JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
+            string json = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
+            var clone = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
                         ?? throw new InvalidOperationException("DeepCopy 失敗");
-            // ViewModel 再接続
-            clone.AttachViewModel(_mainWindowViewModel);
             return clone;
         }
 
