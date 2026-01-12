@@ -105,6 +105,14 @@ namespace PileDesign.Models.InputData
         // クラス内フィールドに追加
         private bool _suppressSoilPileNotify;
 
+        // Phase 1: SoilPile キャッシュ最適化
+        private Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = new();
+        private bool _soilPileCacheValid = false;
+
+        // Phase 2: デバウンス
+        private System.Windows.Threading.DispatcherTimer? _regenerateDebounceTimer;
+        private bool _regeneratePending = false;
+
         /// <summary>
         /// 大量の変更を行う前に通知を一時抑制する。
         /// 終了後は必ず ResumeAndNotify() を呼ぶこと。
@@ -120,7 +128,111 @@ namespace PileDesign.Models.InputData
         public void ResumeAndNotify()
         {
             _suppressSoilPileNotify = false;
-            RegenerateSoilPilesAndNotify();
+            RegenerateSoilPilesAndNotifyImmediate(); // Phase 2: Undo/Redo は即時実行
+        }
+
+        // Phase 1: SoilPile キャッシュ管理メソッド
+
+        /// <summary>
+        /// SoilPile キャッシュを無効化します。GenerateSoilPiles 後に呼び出されます。
+        /// </summary>
+        private void InvalidateSoilPileCache()
+        {
+            _soilPileCacheValid = false;
+        }
+
+        /// <summary>
+        /// 必要に応じて SoilPile キャッシュを再構築します。
+        /// </summary>
+        private void RebuildSoilPileCacheIfNeeded()
+        {
+            if (_soilPileCacheValid) return;
+
+            _soilPileCache.Clear();
+            if (ElementDivision?.SoilPiles == null) return;
+
+            foreach (var sp in ElementDivision.SoilPiles)
+            {
+                // 許容差を考慮したキー生成
+                double zKey = Math.Round(sp.Z / NumericalConstants.COORDINATE_TOLERANCE)
+                              * NumericalConstants.COORDINATE_TOLERANCE;
+                var key = (sp.GroundNo, sp.PileBodyNo, zKey);
+                _soilPileCache[key] = sp;
+            }
+
+            _soilPileCacheValid = true;
+        }
+
+        /// <summary>
+        /// SoilPile をキャッシュから高速検索します。
+        /// </summary>
+        public SoilPile? LookupSoilPile(int groundNo, int pileBodyNo, double z)
+        {
+            RebuildSoilPileCacheIfNeeded();
+
+            double zKey = Math.Round(z / NumericalConstants.COORDINATE_TOLERANCE)
+                          * NumericalConstants.COORDINATE_TOLERANCE;
+            var key = (groundNo, pileBodyNo, zKey);
+
+            return _soilPileCache.TryGetValue(key, out var result) ? result : null;
+        }
+
+        // Phase 2: デバウンス管理メソッド
+
+        /// <summary>
+        /// デバウンスタイマーを遅延初期化します（Dispatcher コンテキスト確保のため）。
+        /// </summary>
+        private void EnsureDebounceTimerInitialized()
+        {
+            if (_regenerateDebounceTimer != null) return;
+
+            _regenerateDebounceTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(50) // 50ms デバウンス
+            };
+            _regenerateDebounceTimer.Tick += (s, e) =>
+            {
+                _regenerateDebounceTimer.Stop();
+                if (_regeneratePending && !_suppressSoilPileNotify)
+                {
+                    _regeneratePending = false;
+                    RegenerateSoilPilesAndNotifyImmediate();
+                }
+            };
+        }
+
+        /// <summary>
+        /// デバウンス付きで SoilPiles 再生成をスケジュールします。
+        /// </summary>
+        private void RegenerateSoilPilesAndNotifyDebounced()
+        {
+            if (_suppressSoilPileNotify) return;
+
+            EnsureDebounceTimerInitialized(); // 遅延初期化
+
+            _regeneratePending = true;
+            _regenerateDebounceTimer?.Stop();
+            _regenerateDebounceTimer?.Start();
+        }
+
+        /// <summary>
+        /// SoilPiles を即時再生成します（Undo/Redo用）。
+        /// </summary>
+        private void RegenerateSoilPilesAndNotifyImmediate()
+        {
+            try
+            {
+                _suppressSoilPileNotify = true;
+                GenerateSoilPiles();
+                InvalidateSoilPileCache();
+            }
+            finally
+            {
+                _suppressSoilPileNotify = false;
+            }
+
+            NotifySoilPileChangedForAll();
+            _mainWindowViewModel?.UpdateViewCommand?.Execute(null);
         }
 
         // 要素分割
@@ -394,23 +506,12 @@ namespace PileDesign.Models.InputData
 
         // ---- 再生成＋通知の共通ハブ ----
 
+        /// <summary>
+        /// SoilPiles を再生成して通知します（Phase 2: デバウンス版に置き換え）。
+        /// </summary>
         private void RegenerateSoilPilesAndNotify()
         {
-            try
-            {
-                _suppressSoilPileNotify = true;
-                GenerateSoilPiles(); // SoilPileAltNo も再付与
-            }
-            finally
-            {
-                _suppressSoilPileNotify = false;
-            }
-
-            // DataGrid 列の SoilPile.* バインディングを即時更新
-            NotifySoilPileChangedForAll();
-
-            // 3D/ビュー更新が必要なら実行
-            _mainWindowViewModel?.UpdateViewCommand?.Execute(null);
+            RegenerateSoilPilesAndNotifyDebounced();
         }
 
 
@@ -553,8 +654,9 @@ namespace PileDesign.Models.InputData
 
         // コンストラクタ
         public InputModel()
-        { 
+        {
             UpdateCountLists();
+            // Phase 2: デバウンスタイマーは遅延初期化（RegenerateSoilPilesAndNotifyDebounced() 内で）
         }
 
 

@@ -21,31 +21,11 @@ namespace PileDesign.Models.InputData
         {
             get
             {
-                var ed = InputModel?.ElementDivision;
-                var list = ed?.SoilPiles;
-                if (list == null || list.Count == 0)
-                {
-                    return CreateTemporarySoilPile();
-                }
+                // Phase 1: キャッシュ検索に置き換え
+                var inputModel = InputModel;
+                if (inputModel == null) return CreateTemporarySoilPile();
 
-                int idx = SoilPileAltNo - 1;
-                if (0 <= idx && idx < list.Count)
-                {
-                    var sp = list[idx];
-                    if (sp.GroundNo == GroundNo &&
-                        sp.PileBodyNo == PileBodyNo &&
-                        Math.Abs(sp.Z - this.Point3D.Z) <= ZMatchTolerance)
-                    {
-                        return sp;
-                    }
-                }
-
-                double z = this.Point3D.Z;
-                var found = list.FirstOrDefault(sp =>
-                    sp.GroundNo == GroundNo &&
-                    sp.PileBodyNo == PileBodyNo &&
-                    Math.Abs(sp.Z - z) <= ZMatchTolerance);
-
+                var found = inputModel.LookupSoilPile(GroundNo, PileBodyNo, this.Point3D.Z);
                 return found ?? CreateTemporarySoilPile();
             }
         }
