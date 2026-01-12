@@ -1013,6 +1013,11 @@
                              Command="{Binding OpenTableWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Table.png"
                              SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                    <ribbon:RibbonButton x:Name="RibbonButtonLog"
+                             Label="ログ表示"
+                             Command="{Binding OpenLogWindowCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/Log.png"
+                             SmallImageSource="pack://application:,,,/Icons/Log.png"/>
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 

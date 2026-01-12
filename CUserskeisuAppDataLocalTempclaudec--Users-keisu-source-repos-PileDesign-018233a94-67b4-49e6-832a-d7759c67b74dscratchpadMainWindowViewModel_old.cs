@@ -1,8 +1,7 @@
-ï»¿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
-using PileDesign.Common.Undo;
 using PileDesign.FEM;
 using PileDesign.Models;
 using PileDesign.Models.InputData;
@@ -12,6 +11,7 @@ using PileDesign.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -34,95 +34,7 @@ namespace PileDesign.ViewModels
     public partial class MainWindowViewModel : ObservableObject
     {
         private readonly UndoManager _undoManager = new();
-
-        private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
-        private bool _soilPilesGenerationPending = false;
-
-        private void Debounce(ref System.Windows.Threading.DispatcherTimer? timer, int milliseconds, Action action)
-        {
-            timer?.Stop();
-            var localTimer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(milliseconds)
-            };
-            timer = localTimer;
-            localTimer.Tick += (s, e) =>
-            {
-                localTimer.Stop();
-                action();
-            };
-            localTimer.Start();
-        }
-
-        /// <summary>
-        /// SoilPiles ã®ç”Ÿæˆã‚’ãƒ‡ãƒã‚¦ãƒ³ã‚¹ä»˜ãã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆã—ã¾ã™ã€‚
-        /// çŸ­æ™‚é–“ã«è¤‡æ•°å›å‘¼ã°ã‚Œã¦ã‚‚ã€æœ€å¾Œã®å‘¼ã³å‡ºã—ã‹ã‚‰ä¸€å®šæ™‚é–“å¾Œã«1å›ã ã‘å®Ÿè¡Œã•ã‚Œã¾ã™ã€‚
-        /// </summary>
-        public void RequestGenerateSoilPiles()
-        {
-            if (IsElementSplit) return;
-            _soilPilesGenerationPending = true;
-            Debounce(ref _generateSoilPilesDebounceTimer, 50, () =>
-            {
-                if (_soilPilesGenerationPending)
-                {
-                    _soilPilesGenerationPending = false;
-                    CurrentInputModel?.GenerateSoilPiles();
-                }
-            });
-        }
-        /// <summary>
-        /// SoilPiles ã®ç”Ÿæˆã‚’å³åº§ã«å®Ÿè¡Œã—ã¾ã™ï¼ˆãƒ‡ãƒã‚¦ãƒ³ã‚¹ã‚’ã‚¹ã‚­ãƒƒãƒ—ï¼‰ã€‚
-        /// æ˜ç¤ºçš„ã«å³æ™‚å®Ÿè¡ŒãŒå¿…è¦ãªå ´åˆã«ä½¿ç”¨ã—ã¾ã™ã€‚
-        /// </summary>
-        public void GenerateSoilPilesImmediate()
-        {
-            // ä¿ç•™ä¸­ã®ãƒ‡ãƒã‚¦ãƒ³ã‚¹ã‚’ã‚­ãƒ£ãƒ³ã‚»ãƒ«
-            _generateSoilPilesDebounceTimer?.Stop();
-            _generateSoilPilesDebounceTimer = null;
-            _soilPilesGenerationPending = false;
-
-            if (!IsElementSplit)
-                CurrentInputModel?.GenerateSoilPiles();
-        }
-
-        // ã‚¯ãƒ©ã‚¹ã®å…ˆé ­ä»˜è¿‘ã®ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã«è¿½åŠ ï¼ˆæ—¢å­˜ã®ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã®è¿‘ãã«ï¼‰
-        private System.Windows.Threading.DispatcherTimer? _updateWindowDebounceTimer;
-        private bool _updateWindowPending = false;
-        /// <summary>
-        /// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦æ›´æ–°ã‚’ãƒ‡ãƒã‚¦ãƒ³ã‚¹ä»˜ãã§ãƒªã‚¯ã‚¨ã‚¹ãƒˆã—ã¾ã™ã€‚
-        /// çŸ­æ™‚é–“ã«è¤‡æ•°å›å‘¼ã°ã‚Œã¦ã‚‚ã€æœ€å¾Œã®å‘¼ã³å‡ºã—ã‹ã‚‰ä¸€å®šæ™‚é–“å¾Œã«1å›ã ã‘å®Ÿè¡Œã•ã‚Œã¾ã™ã€‚
-        /// </summary>
-
-
-        public void RequestUpdateWindow()
-        {
-            _updateWindowPending = true;
-            Debounce(ref _updateWindowDebounceTimer, 30, () =>
-            {
-                if (_updateWindowPending)
-                {
-                    _updateWindowPending = false;
-                    UpdateWindowAction?.Invoke();
-                }
-            });
-        }
-
-        /// <summary>
-        /// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦æ›´æ–°ã‚’å³åº§ã«å®Ÿè¡Œã—ã¾ã™ï¼ˆãƒ‡ãƒã‚¦ãƒ³ã‚¹ã‚’ã‚¹ã‚­ãƒƒãƒ—ï¼‰ã€‚
-        /// ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã‚’é–‰ã˜ãŸå¾Œãªã©ã€å³æ™‚æ›´æ–°ãŒå¿…è¦ãªå ´åˆã«ä½¿ç”¨ã—ã¾ã™ã€‚
-        /// </summary>
-        public void UpdateWindowImmediate()
-        {
-            // ä¿ç•™ä¸­ã®ãƒ‡ãƒã‚¦ãƒ³ã‚¹ã‚’ã‚­ãƒ£ãƒ³ã‚»ãƒ«
-            _updateWindowDebounceTimer?.Stop();
-            _updateWindowDebounceTimer = null;
-            _updateWindowPending = false;
-
-            UpdateWindowAction?.Invoke();
-        }
-
-        // JsonSerializerOptions ã‚’ã‚­ãƒ£ãƒƒã‚·ãƒ¥
+        // JsonSerializerOptions ‚ğƒLƒƒƒbƒVƒ…
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
@@ -138,124 +50,34 @@ namespace PileDesign.ViewModels
                 if (Math.Abs(_rightBlankWidthPx - value) < double.Epsilon) return;
                 _rightBlankWidthPx = value;
                 OnPropertyChanged(nameof(RightBlankWidthPx));
-                // ã‚¹ãƒ©ã‚¤ãƒ€ãƒ¼å¤‰æ›´æ™‚ã«å†æç”»
+                // ƒXƒ‰ƒCƒ_[•ÏX‚ÉÄ•`‰æ
                 UpdateCanvas3DAction?.Invoke();
             }
         }
 
-        // è¿½åŠ : ã‚³ãƒãƒ³ãƒ‰æ›´æ–°ä¸€æ‹¬ãƒ˜ãƒ«ãƒ‘
-        private void RaiseAllCommandsCanExecute()
-        {
-            // ãƒªãƒ•ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã§ "Command" ã§çµ‚ã‚ã‚‹ã™ã¹ã¦ã®ã‚³ãƒãƒ³ãƒ‰ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã‚’åˆ—æŒ™ã—ã€
-            // CommunityToolkit ã® IRelayCommand ã¯ NotifyCanExecuteChanged() ã‚’å‘¼ã³ã€
-            // è‡ªå‰ RelayCommand ç­‰ã¯ RaiseCanExecuteChanged() ã‚’å‘¼ã³å‡ºã™ã€‚
-            var props = this.GetType()
-                .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
-                .Where(p => p.Name.EndsWith("Command", StringComparison.Ordinal))
-                .Where(p => typeof(ICommand).IsAssignableFrom(p.PropertyType));
+        public InputModel CurrentInputModel { get; set; }
 
-            foreach (var p in props)
-            {
-                try
-                {
-                    var cmdObj = p.GetValue(this) as ICommand;
-                    if (cmdObj == null) continue;
+        public Canvas Canvas3DLayout { get; set; }
 
-                    // CommunityToolkit ã® IRelayCommand ã‚’å„ªå…ˆã—ã¦æ‰±ã†
-                    if (cmdObj is CommunityToolkit.Mvvm.Input.IRelayCommand toolkitCmd)
-                    {
-                        toolkitCmd.NotifyCanExecuteChanged();
-                        continue;
-                    }
+        // ƒAƒNƒVƒ‡ƒ“
+        public Action UpdateWindowAction { get; set; }
+        public Action UpdateCanvas3DAction { get; set; }
 
-                    // è‡ªå‰ RelayCommand ã® RaiseCanExecuteChanged() ã‚’æ¢ã—ã¦å‘¼ã³å‡ºã™
-                    var raiseMethod = cmdObj.GetType().GetMethod("RaiseCanExecuteChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                    if (raiseMethod != null)
-                    {
-                        raiseMethod.Invoke(cmdObj, null);
-                        continue;
-                    }
+        // ƒtƒ@ƒCƒ‹ƒpƒX
+        public string CurrentFilePath { get; set; }
 
-                    // äº’æ›æ€§ã®ãŸã‚ NotifyCanExecuteChanged ãƒ¡ã‚½ãƒƒãƒ‰ã‚‚è©¦ã™ï¼ˆã¾ã‚Œãªã‚±ãƒ¼ã‚¹ï¼‰
-                    var notifyMethod = cmdObj.GetType().GetMethod("NotifyCanExecuteChanged", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                    notifyMethod?.Invoke(cmdObj, null);
-                }
-                catch
-                {
-                    // å€‹åˆ¥ã‚³ãƒãƒ³ãƒ‰ã®çŠ¶æ…‹æ›´æ–°ã§ä¾‹å¤–ãŒèµ·ãã¦ã‚‚ä»–ã¯ç¶šè¡Œã™ã‚‹
-                }
-            }
-        }
-        
-        private InputModel? _currentInputModel;
-        public InputModel? CurrentInputModel
-        {
-            get => _currentInputModel;
-            set
-            {
-                // SetProperty ã¯ ObservableObject ã®ãƒ¦ãƒ¼ãƒ†ã‚£ãƒªãƒ†ã‚£ï¼ˆCommunityToolkitï¼‰
-                if (SetProperty(ref _currentInputModel, value))
-                {
-                    // VM å†ã‚¢ã‚¿ãƒƒãƒãªã©ã¯ã“ã“ã§ä¸€åº¦ã ã‘è¡Œã†
-                    _currentInputModel?.AttachViewModel(this);
+        // ƒTƒuViewModel‚Ì‰Šú‰»
 
-                    UpdateWindowImmediate();
-                    RaiseAllCommandsCanExecute();
-
-                    OnPropertyChanged(nameof(CurrentInputModel));
-                }
-            }
-        }
-
-        // ä¿®æ­£ä¾‹: CurrentFilePath
-        private string? _currentFilePath;
-
-        public string? CurrentFilePath
-        {
-            get => _currentFilePath;
-            set
-            {
-                if (SetProperty(ref _currentFilePath, value))
-                {
-                    RaiseAllCommandsCanExecute();
-                }
-            }
-        }
-
-        // ä¿®æ­£ä¾‹: Canvas3DLayout
-        private Canvas? _canvas3DLayout;
-
-        public Canvas? Canvas3DLayout
-        {
-            get => _canvas3DLayout;
-            set => SetProperty(ref _canvas3DLayout, value);
-        }
-
-        private Action? _updateWindowAction;
-
-        // ä¿®æ­£ä¾‹: ã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£åŒ–ï¼ˆå¿…è¦ãªã‚‰ï¼‰
-        public Action? UpdateWindowAction
-        {
-            get => _updateWindowAction;
-            set => SetProperty(ref _updateWindowAction, value);
-        }
-
-        private Action? _updateCanvas3DAction;
-        public Action? UpdateCanvas3DAction
-        {
-            get => _updateCanvas3DAction;
-            set => SetProperty(ref _updateCanvas3DAction, value);
-        }
-
-        // ã‚¤ãƒ™ãƒ³ãƒˆã®å®£è¨€
+        // ƒCƒxƒ“ƒg‚ÌéŒ¾
         public event EventHandler<DataGridCellEditEndingEventArgs> DataGridSettlementSoilLayersCellEditEnding;
 
-        // ã‚¤ãƒ™ãƒ³ãƒˆã‚’ç™ºç«ã™ã‚‹ãƒ¡ã‚½ãƒƒãƒ‰
+        // ƒCƒxƒ“ƒg‚ğ”­‰Î‚·‚éƒƒ\ƒbƒh
         public virtual void OnDataGridSettlementSoilLayersCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
             DataGridSettlementSoilLayersCellEditEnding?.Invoke(this, e);
         }
 
+        // ƒRƒ}ƒ“ƒh‚ÌÀ‘•
         private ICommand _dataGridSettlementSoilLayersCellEditEndingCommand;
         public ICommand DataGridSettlementSoilLayersCellEditEndingCommand
         {
@@ -266,21 +88,22 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // ’Ç‰Á: ƒrƒ…[‘€ì—pƒfƒŠƒQ[ƒgiƒR[ƒhƒrƒnƒCƒ“ƒh‘¤‚ÅƒZƒbƒgj
         public Action? ZoomFitAction { get; set; }
         public Action<double, double>? AnimateViewAnglesAction { get; set; }
 
-        // ã‚ºãƒ¼ãƒ ãƒ•ã‚£ãƒƒãƒˆ
+        // ƒY[ƒ€ƒtƒBƒbƒg
         [RelayCommand]
         private void ZoomFit()
         {
             ZoomFitAction?.Invoke();
         }
 
-        // XYå¹³é¢
+        // XY•½–Ê
         [RelayCommand]
         private void ViewXYPlane()
         {
-            // Î¸=-90, Ï†=90
+            // ƒÆ=-90, ƒÓ=90
             if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 90);
             else
             {
@@ -290,7 +113,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // YZå¹³é¢
+        // YZ•½–Ê
         [RelayCommand]
         private void ViewYZPlane()
         {
@@ -303,6 +126,7 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // XZ•½–Ê
         [RelayCommand]
         private void ViewXZPlane()
         {
@@ -315,6 +139,7 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // ƒAƒCƒ\ƒ
         [RelayCommand]
         private void ViewIsometric()
         {
@@ -327,12 +152,13 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // ƒCƒxƒ“ƒgƒnƒ“ƒhƒ‰‚ÌÀ‘•
         private void HandleDataGridSettlementSoilLayersCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
-            if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("ä¸‹ç«¯Z"))
+            if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("‰º’[Z"))
             {
                 var dataGrid = sender as DataGrid;
-                var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer ã¯é©åˆ‡ãªãƒ¢ãƒ‡ãƒ«ã‚¯ãƒ©ã‚¹ã«ç½®ãæ›ãˆã¦ãã ã•ã„
+                var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer ‚Í“KØ‚Èƒ‚ƒfƒ‹ƒNƒ‰ƒX‚É’u‚«Š·‚¦‚Ä‚­‚¾‚³‚¢
                 var editedTextBox = e.EditingElement as TextBox;
 
                 if (double.TryParse(editedTextBox.Text, out double newValue))
@@ -340,10 +166,10 @@ namespace PileDesign.ViewModels
                     int rowIndex = dataGrid.Items.IndexOf(editedItem);
                     if (rowIndex > 0)
                     {
-                        var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer ã¯é©åˆ‡ãªãƒ¢ãƒ‡ãƒ«ã‚¯ãƒ©ã‚¹ã«ç½®ãæ›ãˆã¦ãã ã•ã„
+                        var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer ‚Í“KØ‚Èƒ‚ƒfƒ‹ƒNƒ‰ƒX‚É’u‚«Š·‚¦‚Ä‚­‚¾‚³‚¢
                         if (newValue >= previousItem.BottomAltitude)
                         {
-                            MessageBox.Show("ä¸‹ç«¯Zã¯ä¸€ã¤ä¸Šã®ã‚»ãƒ«ã®å€¤ã‚ˆã‚Šå°ã•ããªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“ã€‚", "å…¥åŠ›ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show("‰º’[Z‚Íˆê‚Âã‚ÌƒZƒ‹‚Ì’l‚æ‚è¬‚³‚­‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB", "“ü—ÍƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                             e.Cancel = true;
                         }
                     }
@@ -358,122 +184,133 @@ namespace PileDesign.ViewModels
         private static void DataGridPileLayout_OnLoadingRow(DataGridRowEventArgs e)
         {
             if (e.Row.Item is PileLayoutDataItem)
-                e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // è¡Œç•ªå·ã‚’è¨­å®š
+            {
+                e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // s”Ô†‚ğİ’è
+            }
         }
 
-        // æ­é…ç½®æ›´æ–°æ™‚æ›´æ–°ãƒ¡ã‚½ãƒƒãƒ‰
+        // Y”z’uXVXVƒƒ\ƒbƒh
         [RelayCommand]
         private void DataGridPileLayout_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
                 IsElementSplit = false;
-                RequestGenerateSoilPiles();
 
-                // å¤‰æ›´: ãƒ‡ãƒã‚¦ãƒ³ã‚¹ä»˜ãã§æ›´æ–°
-                RequestUpdateWindow();
+                CurrentInputModel.GenerateSoilPiles(); ////////////////////////
+
+                // ƒEƒBƒ“ƒhƒE‚ÌXV
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
                 UpdateTreeView();
 
-                // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³è‡ªä½“ã®å¤‰æ›´é€šçŸ¥
+                // ƒRƒŒƒNƒVƒ‡ƒ“©‘Ì‚Ì•ÏX’Ê’m
                 OnPropertyChanged(nameof(GroupPileSettlementXmin));
                 OnPropertyChanged(nameof(GroupPileSettlementXmax));
                 OnPropertyChanged(nameof(GroupPileSettlementYmin));
                 OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                //OnPropertyChanged(nameof(GroupPileSettlementXCount));
+                //OnPropertyChanged(nameof(GroupPileSettlementYCount));
+                //OnPropertyChanged(nameof(GroupPileSettlementCount));
             }
         }
 
-        // æ­è»¸åŠ›æ›´æ–°æ™‚æ›´æ–°ãƒ¡ã‚½ãƒƒãƒ‰
+        // Y²—ÍXVXVƒƒ\ƒbƒh
         [RelayCommand]
         private void DataGridPileAxialForce_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-                RequestUpdateWindow();
+                // ƒEƒBƒ“ƒhƒE‚ÌXV
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
                 UpdateTreeView();
+
             }
         }
 
-        // å‰å¾Œæ­æ›´æ–°ãƒ¡ã‚½ãƒƒãƒ‰
+        // ‘OŒãYXVƒƒ\ƒbƒh
         [RelayCommand]
         private void DataGridIsFrontPile_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-                RequestUpdateWindow();
+                // ƒEƒBƒ“ƒhƒE‚ÌXV
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
                 UpdateTreeView();
+
             }
         }
 
-        // æ­é…ç½®è¡¨ç·¨é›†é–‹å§‹æ™‚ãƒ¡ã‚½ãƒƒãƒ‰
+        // Y”z’u•\•ÒWŠJnƒƒ\ƒbƒh
         [RelayCommand]
         private void DataGridPileLayout_OnBeginningEdit(DataGridBeginningEditEventArgs e)
         {
-            if (!CheckAndResetElementSplit("æ­é…ç½®"))
+            if (!CheckAndResetElementSplit("Y”z’u"))
+            {
                 e.Cancel = true;
+            }
         }
 
-        // è¦ç´ åˆ†å‰²è§£é™¤ç¢ºèªãƒ¡ã‚½ãƒƒãƒ‰
+        // —v‘f•ªŠ„‰ğœŠm”Fƒƒ\ƒbƒh
         public bool CheckAndResetElementSplit(string text)
         {
             if (IsElementSplit == true)
             {
                 MessageBoxResult result = MessageBox.Show(
-                    $"{text}ã‚’ç·¨é›†ã€ç¢ºå®šã™ã‚‹ã«ã¯ã€å…¥åŠ›æ¸ˆã¿ã®è¦ç´ åˆ†å‰²ãŠã‚ˆã³ã€" +
-                    $"\nè§£æçµæœãŒå­˜åœ¨ã™ã‚‹å ´åˆã¯è§£æçµæœã‚’å‰Šé™¤ã™ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™ã€‚" +
-                    $"\nã‚ˆã‚ã—ã„ã§ã™ã‹ã€‚",
-                    "ç¢ºèª",
+                    $"{text}‚ğ•ÒWAŠm’è‚·‚é‚É‚ÍA“ü—ÍÏ‚İ‚Ì—v‘f•ªŠ„‚¨‚æ‚ÑA" +
+                    $"\n‰ğÍŒ‹‰Ê‚ª‘¶İ‚·‚éê‡‚Í‰ğÍŒ‹‰Ê‚ğíœ‚·‚é•K—v‚ª‚ ‚è‚Ü‚·B" +
+                    $"\n‚æ‚ë‚µ‚¢‚Å‚·‚©B",
+                    "Šm”F",
                     MessageBoxButton.OKCancel,
                     MessageBoxImage.Warning);
 
                 if (result == MessageBoxResult.Cancel)
+                {
                     return false;
+                }
                 else
                 {
                     IsElementSplit = false;
                     IsVerticalAnalysisDone = false;
                     IsHorizontalAnalysisDone = false;
-                    // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-                    RequestUpdateWindow();
+                    UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
                 }
             }
             return true;
         }
 
-        // æ­é…ç½®è¡¨ãƒã‚¦ã‚¹å³ãƒœã‚¿ãƒ³æŠ¼ãƒ¡ã‚½ãƒƒãƒ‰
+        // Y”z’u•\ƒ}ƒEƒX‰Eƒ{ƒ^ƒ“‰Ÿƒƒ\ƒbƒh
         [RelayCommand]
         private static void DataGridPileLayout_OnMouseRightButtonDown(MouseButtonEventArgs e)
         {
             if (e.RightButton == MouseButtonState.Pressed)
             {
-                // ãƒã‚¦ã‚¹ä½ç½®ã§ ContextMenu ã‚’è¡¨ç¤º
+                // ƒ}ƒEƒXˆÊ’u‚Å ContextMenu ‚ğ•\¦
                 //startPoint = e.GetPosition(null);
             }
         }
         [RelayCommand]
         private void DataGridPileLayout_AutoGeneratingColumn(DataGridAutoGeneratingColumnEventArgs e)
         {
-            // ã‚«ãƒ©ãƒ åã‚’ãƒã‚§ãƒƒã‚¯ã—ã€é©å®œå‡¦ç†ã‚’è¡Œã†
+            // ƒJƒ‰ƒ€–¼‚ğƒ`ƒFƒbƒN‚µA“K‹Xˆ—‚ğs‚¤
             if (e.PropertyName == "AxialForceEX" || e.PropertyName == "AxialForceEY" ||
                 e.PropertyName == "AxialForceLevel1s[0]" || e.PropertyName == "AxialForceLevel1s[1]" ||
                 e.PropertyName == "AxialForceLevel1s[2]" || e.PropertyName == "AxialForceLevel1s[3]")
             {
                 if (e.Column is DataGridTextColumn dataGridColumn)
                 {
-                    // Visibility ã‚’åˆ¶å¾¡ã™ã‚‹ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚’è¨­å®š
+                    // Visibility ‚ğ§Œä‚·‚éƒoƒCƒ“ƒfƒBƒ“ƒO‚ğİ’è
                     var isElastic = IsElastic ? Visibility.Visible : Visibility.Collapsed;
                     dataGridColumn.Visibility = isElastic;
                 }
@@ -482,31 +319,39 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void ComboBoxEmbedmentNums_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            if (!CheckAndResetElementSplit("æ ¹å…¥éƒ¨"))
+            if (!CheckAndResetElementSplit("ª“ü•”"))
+            {
                 e.Handled = true;
+            }
         }
         [RelayCommand]
         private void ComboBoxEmbedmentGroundNo_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            if (!CheckAndResetElementSplit("æ ¹å…¥éƒ¨"))
+            if (!CheckAndResetElementSplit("ª“ü•”"))
+            {
                 e.Handled = true;
+            }
         }
         [RelayCommand]
         private void TextBoxBottomAltitude_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            if (!CheckAndResetElementSplit("æ ¹å…¥éƒ¨"))
+            if (!CheckAndResetElementSplit("ª“ü•”"))
+            {
                 e.Handled = true;
+            }
         }
         [RelayCommand]
         private void DataGridEmbedment_OnBeginningEdit(DataGridBeginningEditEventArgs e)
         {
-            if (!CheckAndResetElementSplit("æ ¹å…¥éƒ¨"))
+            if (!CheckAndResetElementSplit("ª“ü•”"))
+            {
                 e.Cancel = true;
+            }
         }
         [RelayCommand]
         private static void ButtonGround_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            //if (!CheckAndResetElementSplit("åœ°ç›¤"))
+            //if (!CheckAndResetElementSplit("’n”Õ"))
             //{
             //    e.Handled = true;
             //}
@@ -514,7 +359,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private static void ButtonPileBody_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            //if (!CheckAndResetElementSplit("æ­ä½“"))
+            //if (!CheckAndResetElementSplit("Y‘Ì"))
             //{
             //    e.Handled = true;
             //}
@@ -532,7 +377,9 @@ namespace PileDesign.ViewModels
 
                 // Remove excess items if selectedValue is less than the current collection size
                 for (int i = currentCollectionSize - 1; i >= selectedValue; i--)
+                {
                     CurrentInputModel.EmbedmentInput.EmbedmentLayers.RemoveAt(i);
+                }
 
                 // Add new rows only if selectedValue is greater than the current collection size
                 for (int i = currentCollectionSize; i < selectedValue; i++)
@@ -542,8 +389,7 @@ namespace PileDesign.ViewModels
                 }
 
                 UpdateEmbedment();
-                // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-                RequestUpdateWindow();
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
                 UpdateTreeView();
             }
         }
@@ -551,8 +397,7 @@ namespace PileDesign.ViewModels
         private void TextBoxAltitude_OnTextChanged(TextChangedEventArgs e)
         {
             UpdateEmbedment();
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
 
@@ -595,12 +440,13 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
                 UpdateEmbedment();
-                RequestUpdateWindow();
+
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             }
         }
         [RelayCommand]
@@ -608,24 +454,28 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
-                RequestUpdateWindow();
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             }
         }
 
-        // æ ¹å…¥éƒ¨ãƒ‡ãƒ¼ã‚¿ã‚°ãƒªãƒƒãƒ‰æ›´æ–°ãƒ¡ã‚½ãƒƒãƒ‰
+        // ª“ü•”ƒf[ƒ^ƒOƒŠƒbƒhXVƒƒ\ƒbƒh
         public void UpdateEmbedment()
         {
-            // EmbedmentCollection ã®æ›´æ–°
+            // EmbedmentCollection ‚ÌXV
             for (int i = CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count - 1; i >= 0; i--)
             {
                 if (i == CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count - 1)
+                {
                     CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].BottomAltitude = CurrentInputModel.EmbedmentInput.BottomAltitude;
+                }
                 else
+                {
                     CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].BottomAltitude = CurrentInputModel.EmbedmentInput.EmbedmentLayers[i + 1].TopAltitude;
+                }
                 CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].TopAltitude = CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].BottomAltitude
                     + CurrentInputModel.EmbedmentInput.EmbedmentLayers[i].LayerThickness;
             }
@@ -635,13 +485,13 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
 
                 IsGroupPileSettlementAnalysisDone = false;
 
-                RequestUpdateWindow();
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             }
         }
 
@@ -650,13 +500,13 @@ namespace PileDesign.ViewModels
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
-                // ãƒã‚¤ãƒ³ãƒ‡ã‚£ãƒ³ã‚°ã‚½ãƒ¼ã‚¹ã®æ›´æ–°
+                // ƒoƒCƒ“ƒfƒBƒ“ƒOƒ\[ƒX‚ÌXV
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
-                if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("ä¸‹ç«¯Z"))
+                if (e.Column is DataGridTextColumn && e.Column.Header.ToString().Contains("‰º’[Z"))
                 {
                     var dataGrid = sender as DataGrid;
-                    var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer ã¯é©åˆ‡ãªãƒ¢ãƒ‡ãƒ«ã‚¯ãƒ©ã‚¹ã«ç½®ãæ›ãˆã¦ãã ã•ã„
+                    var editedItem = e.Row.Item as SettlementSoilLayer; // SettlementSoilLayer ‚Í“KØ‚Èƒ‚ƒfƒ‹ƒNƒ‰ƒX‚É’u‚«Š·‚¦‚Ä‚­‚¾‚³‚¢
                     var editedTextBox = e.EditingElement as TextBox;
 
                     if (double.TryParse(editedTextBox.Text, out double newValue))
@@ -664,50 +514,54 @@ namespace PileDesign.ViewModels
                         int rowIndex = dataGrid.Items.IndexOf(editedItem);
                         if (rowIndex > 0)
                         {
-                            var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer ã¯é©åˆ‡ãªãƒ¢ãƒ‡ãƒ«ã‚¯ãƒ©ã‚¹ã«ç½®ãæ›ãˆã¦ãã ã•ã„
+                            var previousItem = dataGrid.Items[rowIndex - 1] as SettlementSoilLayer; // SettlementSoilLayer ‚Í“KØ‚Èƒ‚ƒfƒ‹ƒNƒ‰ƒX‚É’u‚«Š·‚¦‚Ä‚­‚¾‚³‚¢
                             if (newValue >= previousItem.BottomAltitude)
                             {
-                                MessageBox.Show("ä¸‹ç«¯Zã¯ä¸€ã¤ä¸Šã®ã‚»ãƒ«ã®å€¤ã‚ˆã‚Šå°ã•ããªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“ã€‚", "å…¥åŠ›ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                                MessageBox.Show("‰º’[Z‚Íˆê‚Âã‚ÌƒZƒ‹‚Ì’l‚æ‚è¬‚³‚­‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB", "“ü—ÍƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                                 e.Cancel = true;
                             }
                         }
                     }
                 }
-                // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-                RequestUpdateWindow();
+                UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             }
         }
 
-        // GridXè¿½åŠ ãƒ¡ã‚½ãƒƒãƒ‰
+        // GridX’Ç‰Áƒƒ\ƒbƒh
         [RelayCommand]
         private void AddGridX()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆ1å›ã®è¿½åŠ ã‚’1ã‚¹ãƒ†ãƒƒãƒ—ã§æˆ»ã›ã‚‹ã‚ˆã†ã«ã™ã‚‹ï¼‰
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Ái1‰ñ‚Ì’Ç‰Á‚ğ1ƒXƒeƒbƒv‚Å–ß‚¹‚é‚æ‚¤‚É‚·‚éj
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
-            // é˜²æ³¢å ¤: null ã®å ´åˆã¯ã“ã“ã§ç”Ÿæˆ
-            CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
-            AddGrid(CurrentInputModel.GridXItems, "X1", 7.2);
+            // –h”g’ç: null ‚Ìê‡‚Í‚±‚±‚Å¶¬
+            CurrentInputModel.GridXItems ??= [];
+            AddGrid(CurrentInputModel.GridXItems, "Y1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridXItems));
         }
 
-        // GridYè¿½åŠ ãƒ¡ã‚½ãƒƒãƒ‰
+        // GridY’Ç‰Áƒƒ\ƒbƒh
         [RelayCommand]
         private void AddGridY()
         {
-            TrySaveUndoSnapshotSafely();
-            CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
-            AddGrid(CurrentInputModel.GridYItems, "Y1", 7.2);
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Ái1‰ñ‚Ì’Ç‰Á‚ğ1ƒXƒeƒbƒv‚Å–ß‚¹‚é‚æ‚¤‚É‚·‚éj
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+            // –h”g’ç: null ‚Ìê‡‚Í‚±‚±‚Å¶¬
+            CurrentInputModel.GridYItems ??= [];
+            AddGrid(CurrentInputModel.GridYItems, "X1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridYItems));
         }
 
-        // Gridè¿½åŠ ãƒ¡ã‚½ãƒƒãƒ‰
+        // Grid’Ç‰Áƒƒ\ƒbƒh
         private void AddGrid(ObservableCollection<GridDataItem> collection, string name, double spacing)
         {
             collection.Add(new GridDataItem());
             if (collection.Count == 1)
+            {
                 collection[^1].Name = name;
-            // è¤‡æ•°ã®ã‚¢ã‚¤ãƒ†ãƒ ãŒã‚ã‚‹å ´åˆã€å‰ã®ã‚¢ã‚¤ãƒ†ãƒ ã®è¨­å®šã‚’ã‚³ãƒ”ãƒ¼
+            }
+            // •¡”‚ÌƒAƒCƒeƒ€‚ª‚ ‚éê‡A‘O‚ÌƒAƒCƒeƒ€‚Ìİ’è‚ğƒRƒs[
             else if (collection.Count == 2)
             {
                 collection[^1].Spacing = spacing;
@@ -719,8 +573,7 @@ namespace PileDesign.ViewModels
                 collection[^1].Name = StringTransformer.TransformLastCharacter(collection[^2].Name);
             }
             RecalculateGrid(collection);
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
         private void RecalculateGrid(Collection<GridDataItem> collection)
@@ -740,54 +593,54 @@ namespace PileDesign.ViewModels
                     collection[i].CoordForeground = Brushes.Gray;
                 }
             }
-            // å¤‰æ›´: ãƒ‡ãƒã‚¦ãƒ³ã‚¹ä»˜ãã§æ›´æ–°
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // çŸ©å½¢è·é‡è¿½åŠ ãƒ¡ã‚½ãƒƒãƒ‰
+        // ‹éŒ`‰×d’Ç‰Áƒƒ\ƒbƒh
         [RelayCommand]
         private void AddRectLoad()
         {
-            if (!CheckAndResetPostAnalysisMode())
-                return;
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-            TrySaveUndoSnapshotSafely();
+            if (!CheckAndResetPostAnalysisMode())
+            { return; }
 
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad());
 
             IsGroupPileSettlementAnalysisDone = false;
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // è§£æå¾Œå‡¦ç†ãƒ¢ãƒ¼ãƒ‰ã®å ´åˆã®ç¢ºèª
+        // ‰ğÍŒãˆ—ƒ‚[ƒh‚Ìê‡‚ÌŠm”F
         private bool CheckAndResetPostAnalysisMode()
         {
             if (IsPostAnalysisMode)
             {
-                var result = MessageBox.Show("è§£æå‰å‡¦ç†ãƒ¢ãƒ¼ãƒ‰ã«ã—ã¾ã™ã‹ï¼Ÿ", "ç¢ºèª", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var result = MessageBox.Show("‰ğÍ‘Oˆ—ƒ‚[ƒh‚É‚µ‚Ü‚·‚©H", "Šm”F", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result == MessageBoxResult.No)
-                    return false; // æ“ä½œã‚’ã‚­ãƒ£ãƒ³ã‚»ãƒ«
-                IsPostAnalysisMode = false; // è§£æå‰å‡¦ç†ãƒ¢ãƒ¼ãƒ‰ã«å¤‰æ›´
+                {
+                    return false; // ‘€ì‚ğƒLƒƒƒ“ƒZƒ‹
+                }
+                IsPostAnalysisMode = false; // ‰ğÍ‘Oˆ—ƒ‚[ƒh‚É•ÏX
             }
-            return true; // æ“ä½œã‚’ç¶šè¡Œ
+            return true; // ‘€ì‚ğ‘±s
         }
 
-        // ç¾¤æ­æ²ˆä¸‹æ¤œè¨ç”¨æ¤œè¨ç”¨åœŸå±¤è¿½åŠ ãƒ¡ã‚½ãƒƒãƒ‰
+        // ŒQY’¾‰ºŒŸ“¢—pŒŸ“¢—p“y‘w’Ç‰Áƒƒ\ƒbƒh
         [RelayCommand]
         private void AddSettlementSoilLayer()
         {
-            if (!CheckAndResetPostAnalysisMode())
-                return;
-
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             double bottomAlt;
             double ek;
             double poissonsRatio;
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
 
-
+            if (!CheckAndResetPostAnalysisMode())
+            { return; }
 
             if (CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
             {
@@ -810,26 +663,28 @@ namespace PileDesign.ViewModels
                     PoissonsRatio = poissonsRatio
                 });
 
-            UpdateSettlementSoilLayer(); // æ›´æ–°
+            UpdateSettlementSoilLayer(); // XV
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // å…¨åœŸå±¤å‰Šé™¤ãƒ¡ã‚½ãƒƒãƒ‰
+        // ‘S“y‘wíœƒƒ\ƒbƒh
         [RelayCommand]
         private void DeleteAllSettlementSoilLayers()
         {
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
             var settlement = CurrentInputModel?.PileGroupSettlement;
             if (settlement == null)
+            {
                 return;
+            }
 
-            TrySaveUndoSnapshotSafely();
-
-            // åœŸå±¤ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‚’ã‚¯ãƒªã‚¢
+            // “y‘wƒRƒŒƒNƒVƒ‡ƒ“‚ğƒNƒŠƒA
             settlement.SettlementSoilLayers?.Clear();
 
-            // è§£æã«ç”¨ã„ã‚‹ã‚°ãƒªãƒƒãƒ‰ãƒ‡ãƒ¼ã‚¿ã‚’ã‚¯ãƒªã‚¢
+            // ‰ğÍ‚É—p‚¢‚éƒOƒŠƒbƒhƒf[ƒ^‚ğƒNƒŠƒA
             try
             {
                 settlement.SettlementGridData?.Clear();
@@ -838,54 +693,52 @@ namespace PileDesign.ViewModels
             }
             catch
             {
-                // å¿µã®ãŸã‚ä¾‹å¤–ã¯ç„¡è¦–ï¼ˆã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ãŒ null ã®å¯èƒ½æ€§ãªã©ï¼‰
+                // ”O‚Ì‚½‚ß—áŠO‚Í–³‹iƒRƒŒƒNƒVƒ‡ƒ“‚ª null ‚Ì‰Â”\«‚È‚Çj
             }
 
-            // ãƒ¢ãƒ‡ãƒ«å´ã®ã‚°ãƒªãƒƒãƒ‰ãƒ‡ãƒ¼ã‚¿å‰Šé™¤ç”¨ãƒ¡ã‚½ãƒƒãƒ‰ãŒã‚ã‚Œã°å‘¼ã¶
+            // ƒ‚ƒfƒ‹‘¤‚ÌƒOƒŠƒbƒhƒf[ƒ^íœ—pƒƒ\ƒbƒh‚ª‚ ‚ê‚ÎŒÄ‚Ô
             try
             {
                 settlement.RemoveGridDataSettlement();
             }
             catch
             {
-                // å®Ÿè£…ãŒãªã„å ´åˆã‚„ä¾‹å¤–ã¯ç„¡è¦–
+                // À‘•‚ª‚È‚¢ê‡‚â—áŠO‚Í–³‹
             }
 
-            // è§£æãƒ•ãƒ©ã‚°ã¨è¡¨ç¤ºãƒ•ãƒ©ã‚°ã‚’ãƒªã‚»ãƒƒãƒˆ
+            // ‰ğÍƒtƒ‰ƒO‚Æ•\¦ƒtƒ‰ƒO‚ğƒŠƒZƒbƒg
             IsGroupPileSettlementAnalysisDone = false;
             IsGroupPileGridDeformationVisible = false;
             IsBubbleVisible = false;
             IsArrowVisible = false;
 
-            // å¿…è¦ãªã‚‰ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£æ›´æ–°é€šçŸ¥
+            // •K—v‚È‚çƒvƒƒpƒeƒBXV’Ê’m
             OnPropertyChanged(nameof(CurrentInputModel));
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            // ƒEƒBƒ“ƒhƒEXV
+            UpdateWindowAction?.Invoke();
             UpdateTreeView();
         }
 
-        // ç¾¤æ­æ²ˆä¸‹æ¤œè¨ç”¨æ¤œè¨ç”¨åœŸå±¤å‰Šé™¤ãƒ¡ã‚½ãƒƒãƒ‰
+        // ŒQY’¾‰ºŒŸ“¢—pŒŸ“¢—p“y‘wíœƒƒ\ƒbƒh
         [RelayCommand]
         private void DeleteSettlementSoilLayer(object sender)
         {
-            // sender ãŒ GridDataItem ã§ã‚ã‚‹ã“ã¨ã‚’ç¢ºèª
-            if (sender is not SettlementSoilLayer itemToDelete)
-                return;
+            // sender ‚ª GridDataItem ‚Å‚ ‚é‚±‚Æ‚ğŠm”F
+            if (sender is not SettlementSoilLayer itemToDelete) return;
 
-            // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‹ã‚‰å‰Šé™¤
+            // ƒRƒŒƒNƒVƒ‡ƒ“‚©‚çíœ
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Remove(itemToDelete);
 
-            UpdateSettlementSoilLayer(); // æ›´æ–°
+            UpdateSettlementSoilLayer(); // XV
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // ç¾¤æ­æ²ˆä¸‹æ¤œè¨ç”¨æ¤œè¨ç”¨åœŸå±¤ãƒ‡ãƒ¼ã‚¿ã‚°ãƒªãƒƒãƒ‰æ›´æ–°ãƒ¡ã‚½ãƒƒãƒ‰
+        // ŒQY’¾‰ºŒŸ“¢—pŒŸ“¢—p“y‘wƒf[ƒ^ƒOƒŠƒbƒhXVƒƒ\ƒbƒh
         private void UpdateSettlementSoilLayer()
         {
-            // SettlementCollection ã®æ›´æ–°
+            // SettlementCollection ‚ÌXV
             double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
             for (int i = 0; i < settlementSoilLayers.Count; i++)
@@ -897,177 +750,174 @@ namespace PileDesign.ViewModels
             }
         }
 
+
         public void DataGridGridX_CurrentCellChanged()
         {
             RecalculateGrid(CurrentInputModel.GridXItems);
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
         public void DataGridGridY_CurrentCellChanged()
         {
             RecalculateGrid(CurrentInputModel.GridYItems);
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
         [RelayCommand]
         private void DataGridGridX_OnPreviewKeyDown(KeyEventArgs e)
         {
             if ((e.Key == Key.Tab && !e.KeyboardDevice.Modifiers.HasFlag(ModifierKeys.Shift)) || e.Key == Key.Right || e.Key == Key.Left)
+            {
                 RecalculateGrid(CurrentInputModel.GridXItems);
+            }
         }
         [RelayCommand]
         private void DataGridGridY_OnPreviewKeyDown(KeyEventArgs e)
         {
             if ((e.Key == Key.Tab && !e.KeyboardDevice.Modifiers.HasFlag(ModifierKeys.Shift)) || e.Key == Key.Right || e.Key == Key.Left)
+            {
                 RecalculateGrid(CurrentInputModel.GridYItems);
+            }
         }
 
         [RelayCommand]
         private void DeleteGridX(object sender)
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆ
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             DeleteGridItem(sender, CurrentInputModel.GridXItems);
             RecalculateGrid(CurrentInputModel.GridXItems);
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
         [RelayCommand]
         private void DeleteGridY(object sender)
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆ
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             DeleteGridItem(sender, CurrentInputModel.GridYItems);
             RecalculateGrid(CurrentInputModel.GridYItems);
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
         [RelayCommand]
         private void DeleteElement(object sender)
         {
-            // sender ãŒ GridDataItem ã§ã‚ã‚‹ã“ã¨ã‚’ç¢ºèª
+            // sender ‚ª GridDataItem ‚Å‚ ‚é‚±‚Æ‚ğŠm”F
             if (sender is not Element itemToDelete) return;
 
-            // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‹ã‚‰å‰Šé™¤
+            // ƒRƒŒƒNƒVƒ‡ƒ“‚©‚çíœ
             CurrentInputModel.Elements.Remove(itemToDelete);
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
         private static void DeleteGridItem(object sender, ObservableCollection<GridDataItem> collection)
         {
-            // sender ãŒ GridDataItem ã§ã‚ã‚‹ã“ã¨ã‚’ç¢ºèª
+            // sender ‚ª GridDataItem ‚Å‚ ‚é‚±‚Æ‚ğŠm”F
             if (sender is not GridDataItem itemToDelete) return;
 
-            // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‹ã‚‰å‰Šé™¤
+            // ƒRƒŒƒNƒVƒ‡ƒ“‚©‚çíœ
             collection.Remove(itemToDelete);
         }
 
         [RelayCommand]
         private void DeleteRectLoad(object sender)
         {
-            // sender ãŒ GridDataItem ã§ã‚ã‚‹ã“ã¨ã‚’ç¢ºèª
+            // sender ‚ª GridDataItem ‚Å‚ ‚é‚±‚Æ‚ğŠm”F
             if (sender is not RectLoad itemToDelete) return;
 
-            // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‹ã‚‰å‰Šé™¤
+            // ƒRƒŒƒNƒVƒ‡ƒ“‚©‚çíœ
             CurrentInputModel.PileGroupSettlement.RectLoads.Remove(itemToDelete);
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
+
+        //[RelayCommand]
+        //private void ComboBox3DLabelContent_OnSelectionChanged(SelectionChangedEventArgs e)
+        //{
+        //    UpdateCanvas3DAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
+        //}
 
         [RelayCommand]
         private void ComboBox3DAnalysisResultContent_OnSelectionChanged(SelectionChangedEventArgs e)
         {
-            UpdateWindowImmediate(); // ãƒ‡ãƒªã‚²ãƒ¼ãƒˆã‚’é€šã˜ã¦ã‚³ãƒ¼ãƒ‰ãƒ“ãƒã‚¤ãƒ³ãƒ‰ã®ãƒ¡ã‚½ãƒƒãƒ‰ã‚’å‘¼ã³å‡ºã™
+            UpdateCanvas3DAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
         [RelayCommand]
         private void ComboBox3DLabelSize_OnSelectionChanged(SelectionChangedEventArgs e)
         {
-            UpdateCanvas3DAction?.Invoke(); // ãƒ‡ãƒªã‚²ãƒ¼ãƒˆã‚’é€šã˜ã¦ã‚³ãƒ¼ãƒ‰ãƒ“ãƒã‚¤ãƒ³ãƒ‰ã®ãƒ¡ã‚½ãƒƒãƒ‰ã‚’å‘¼ã³å‡ºã™
+            UpdateCanvas3DAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // æ­é…ç½®è¿½åŠ ã‚³ãƒãƒ³ãƒ‰ã®å®Ÿè¡Œãƒ¡ã‚½ãƒƒãƒ‰
+        // Y”z’u’Ç‰ÁƒRƒ}ƒ“ƒh‚ÌÀsƒƒ\ƒbƒh
         [RelayCommand]
         private void OnAddPile()
         {
             if (!CheckAndResetPostAnalysisMode()) return;
             if (!CheckAndResetAnalysisResults()) return;
 
-            // ã“ã“ã«è¿½åŠ 
-            //var deepCopy = CurrentInputModel.DeepCopy();
-            //Debug.WriteLine("CurrentInputModel.PileLayoutItems Hash: " + CurrentInputModel.PileLayoutItems.GetHashCode());
-            //Debug.WriteLine("DeepCopy.PileLayoutItems Hash: " + deepCopy.PileLayoutItems.GetHashCode());
-            //_undoManager.SaveState(deepCopy);
-
-            // ã‚¹ãƒŠãƒƒãƒ—ã‚·ãƒ§ãƒƒãƒˆã‚’ä¿å­˜
-            TrySaveUndoSnapshotSafely();
+            // ƒXƒiƒbƒvƒVƒ‡ƒbƒg‚ğ•Û‘¶
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             Point3D nextPoint3D = new();
             if (CurrentInputModel.PileLayoutItems.Count != 0)
             {
-                // ç›´å‰ã®æ­ã‹ã‚‰ X æ–¹å‘ã« 7.2m ã‚ªãƒ•ã‚»ãƒƒãƒˆ
+                // ’¼‘O‚ÌY‚©‚ç X •ûŒü‚É 7.2m ƒIƒtƒZƒbƒg
                 nextPoint3D = CurrentInputModel.PileLayoutItems.Last().Point3D + new Vector3D() { X = 7.2 };
             }
 
-            // UI ã‚¹ãƒ¬ãƒƒãƒ‰ã§ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã¸è¿½åŠ 
+            // UI ƒXƒŒƒbƒh‚ÅƒRƒŒƒNƒVƒ‡ƒ“‚Ö’Ç‰Á
             Application.Current.Dispatcher.Invoke(() =>
             {
                 CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem() { X = nextPoint3D.X, Y = nextPoint3D.Y, Z = nextPoint3D.Z });
                 CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
-                // è¦ç´ æœªåˆ†å‰²ã®å ´åˆã¯è‡ªå‹•ã§ SoiPile ã‚’å†ç”Ÿæˆ
+                // —v‘f–¢•ªŠ„‚Ìê‡‚Í©“®‚Å SoiPile ‚ğÄ¶¬
                 if (!IsElementSplit)
-                    RequestGenerateSoilPiles();
+                {
+                    CurrentInputModel.GenerateSoilPiles();//////////////////////////////////////////
+                }
 
-                // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-                RequestUpdateWindow();
+                // ‰æ–ÊXV‚Æ’Ê‚µ”Ô†‚Ì‚Ó‚è’¼‚µ
+                UpdateWindowAction?.Invoke();
                 UpdatePileLayoutNo();
                 UpdateTreeView();
             });
         }
-
         [RelayCommand]
         private void OnComputePileGroupFactor()
         {
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
-            if (pileCount == 0)
-                return;
+            if (pileCount == 0) { return; }
         }
 
         [RelayCommand]
         private void OnComputePileSpacingFactor()
         {
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
-            if (pileCount == 0)
-                return;
+            if (pileCount == 0) { return; }
         }
 
-        // é‡è¤‡è¦ç´ ã®å‰Šé™¤
+        // d•¡—v‘f‚Ìíœ
         [RelayCommand]
-        private void OnDeleteDuplicateElements()
+        private void OnDeleteDupulicateElements()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             var uniqueElements = new HashSet<Element>(CurrentInputModel.Elements);
             CurrentInputModel.Elements = new ObservableCollection<Element>(uniqueElements);
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // è¦ç´ ã®ç¯€ç‚¹ä½ç½®ã§ã®åˆ†å‰²
+        // —v‘f‚Ìß“_ˆÊ’u‚Å‚Ì•ªŠ„
         [RelayCommand]
         public void OnSplitElementsByNodes()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             var newElements = new ObservableCollection<Element>();
 
@@ -1077,18 +927,21 @@ namespace PileDesign.ViewModels
                 {
                     var splitElements = SplitTwoNodeElementByNodes(element);
                     foreach (var splitElement in splitElements)
+                    {
                         newElements.Add(splitElement);
+                    }
                 }
                 else
+                {
                     newElements.Add(element);
+                }
             }
 
             CurrentInputModel.Elements = newElements;
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
-        // è¦ç´ ã‚’åˆ†å‰²ã™ã‚‹ãƒ¡ã‚½ãƒƒãƒ‰
+        // —v‘f‚ğ•ªŠ„‚·‚éƒƒ\ƒbƒh
         public ObservableCollection<Element> SplitTwoNodeElementByNodes(Element element, double threshold = 0.005)
         {
             var newElements = new ObservableCollection<Element>();
@@ -1105,16 +958,27 @@ namespace PileDesign.ViewModels
                 Point node = CanvasThreeDView.Transformation(point3D);
 
                 if (GetDistance.BetweenNodeAndLine(nodeS, nodeE, node) <= threshold && !splitNodes.Contains(pileLayout))
+                {
                     splitNodes.Add(pileLayout);
+                }
             }
 
-            var distances = new List<double>();
+            // splitNodes[0] ‚Æ splitNodes[^1] ‚ÌŠÔ‚É•À‚×‘Ö‚¦‚é
+            List<double> distances = [];
             for (int i = 0; i < splitNodes.Count; i++)
+            {
                 distances.Add(GetDistance.BetweenTwoPoint3Ds(splitNodes[0].Point3D, splitNodes[i].Point3D));
+            }
 
-            var indeces = new List<int>();
+            // distances ‚Ì’†‚Å i ”Ô–Ú‚É¬‚³‚È’l‚ÌƒCƒ“ƒfƒbƒNƒX‚ğæ“¾
+            List<int> indeces = [];
+
             for (int i = 0; i < distances.Count; i++)
+            {
                 indeces.Add(GetIndexOfNthSmallestValue(distances, i));
+                // •K—v‚Èˆ—‚ğ‚±‚±‚É’Ç‰Á
+            }
+
 
             for (int i = 0; i < splitNodes.Count - 1; i++)
             {
@@ -1122,6 +986,7 @@ namespace PileDesign.ViewModels
                     (PileLayoutDataItem)splitNodes[indeces[i]],
                     (PileLayoutDataItem)splitNodes[indeces[i + 1]]));
             }
+
             return newElements;
         }
 
@@ -1135,19 +1000,21 @@ namespace PileDesign.ViewModels
             return indexedDistances[n].Index;
         }
 
-        // æ­é…ç½®ç•ªå·ã®æ›´æ–°
+        // Y”z’u”Ô†‚ÌXV
         public void UpdatePileLayoutNo()
         {
             for (int i = 0; i < CurrentInputModel.PileLayoutItems.Count; i++)
+            {
                 CurrentInputModel.PileLayoutItems[i].No = i + 1;
+            }
         }
 
-        // è·é‡é¢ã®è‡ªå‹•ç”Ÿæˆ
+        // ‰×d–Ê‚Ì©“®¶¬
         [RelayCommand]
         private void OnAdjustRectLoadPlan()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             double maxX = double.MinValue;
             double minX = double.MaxValue;
@@ -1181,20 +1048,21 @@ namespace PileDesign.ViewModels
 
             IsGroupPileSettlementAnalysisDone = false;
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             UpdateTreeView();
         }
 
 
 
 
-        // æ ¹å…¥éƒ¨å¹³é¢ã®è‡ªå‹•èª¿æ•´
+        // ª“ü•”•½–Ê‚Ì©“®’²®
         [RelayCommand]
         private void OnAdjustEmbedmentPlan()
         {
             if (CurrentInputModel.PileLayoutItems.Count == 0 || CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count == 0)
+            {
                 return;
+            }
 
             double maxX = double.MinValue;
             double minX = double.MaxValue;
@@ -1224,25 +1092,25 @@ namespace PileDesign.ViewModels
                 embedmentDataItem.Y2 = adjustedMaxY;
             }
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             UpdateTreeView();
         }
 
-        // æ…£æ€§åŠ›ä½œç”¨ç‚¹ã‚’æ­é…ç½®ã®å›³å¿ƒã«ç§»å‹•ã™ã‚‹ãƒ¡ã‚½ãƒƒãƒ‰
+        // Šµ«—Íì—p“_‚ğY”z’u‚Ì}S‚ÉˆÚ“®‚·‚éƒƒ\ƒbƒh
         [RelayCommand]
         private void OnMoveForceActionPointToAverageCenter()
         {
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+            List<double> xs = [];
+            List<double> ys = [];
+
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageBox.Show("æ­é…ç½®ãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚Šã¾ã›ã‚“ã€‚");
+                MessageBox.Show("Y”z’uƒf[ƒ^‚ª‚ ‚è‚Ü‚¹‚ñB");
                 return;
             }
-
-            TrySaveUndoSnapshotSafely();
-
-            var xs = new List<double>();
-            var ys = new List<double>();
 
             foreach (PileLayoutDataItem pileLayoutInput in CurrentInputModel.PileLayoutItems)
             {
@@ -1268,58 +1136,63 @@ namespace PileDesign.ViewModels
                 loadCase.ForceActionPointY = ys.Average();
             }
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         }
 
         [RelayCommand]
         private void AutoIsFrontPiles()
         {
-            TrySaveUndoSnapshotSafely();
+            // Undoƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
+            // ViewModel ‚ğì¬
             var viewModel = new AutoIsFrontPileViewModel();
-            var autoIsFrontPilesWindow = new AutoIsFrontPilesWindow();
+
+            // Window‚ğƒCƒ“ƒXƒ^ƒ“ƒX‰»‚µ‚Ä•\¦
+            AutoIsFrontPilesWindow autoIsFrontPilesWindow = new();
             autoIsFrontPilesWindow.AutoIsFrontPileCompleted += AutoIsFrontPilesWindow_AutoIsFrontPileCompleted;
-            autoIsFrontPilesWindow.ShowDialog();
+
+            autoIsFrontPilesWindow.ShowDialog(); // ƒ‚[ƒ_ƒ‹ƒ_ƒCƒAƒƒO‚Æ‚µ‚Ä•\¦
+
             IsFrontPileLabelVisible = true;
-            RequestUpdateWindow();
+
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             UpdateTreeView();
         }
 
-        //ç¾¤æ­ä¿‚æ•°ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        //ŒQYŒW”ƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         private void GroupPileFactor()
         {
-            // Windowã‚’ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹åŒ–ã—ã¦è¡¨ç¤º
+            // Window‚ğƒCƒ“ƒXƒ^ƒ“ƒX‰»‚µ‚Ä•\¦
             GroupPileFactorWindow groupPileFactorWindow = new(this);
 
-            groupPileFactorWindow.ShowDialog(); // ãƒ¢ãƒ¼ãƒ€ãƒ«ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã¨ã—ã¦è¡¨ç¤º
+            groupPileFactorWindow.ShowDialog(); // ƒ‚[ƒ_ƒ‹ƒ_ƒCƒAƒƒO‚Æ‚µ‚Ä•\¦
 
-            // å¤‰æ›´: ãƒ€ã‚¤ã‚¢ãƒ­ã‚°å¾Œã¯å³æ™‚å®Ÿè¡Œ
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
             UpdateTreeView();
         }
 
 
-        // ç¾¤æ­æ²ˆä¸‹è§£æã®å®Ÿè¡Œãƒ¡ã‚½ãƒƒãƒ‰
+        // ŒQY’¾‰º‰ğÍ‚ÌÀsƒƒ\ƒbƒh
         [RelayCommand]
         private void PileGroupSettlementAnalysis()
         {
-            // åœŸå±¤ãŒ0ã®å ´åˆã¯è­¦å‘Šã‚’å‡ºã—ã¦å‡¦ç†ã‚’ä¸­æ–­
+            // “y‘w‚ª0‚Ìê‡‚ÍŒx‚ğo‚µ‚Äˆ—‚ğ’†’f
             if (CurrentInputModel.PileGroupSettlement.SettlementSoilLayers == null ||
                 CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
             {
-                MessageBox.Show("ç¾¤æ­æ²ˆä¸‹è§£æç”¨ã®åœŸå±¤ãŒ1å±¤ä»¥ä¸Šå¿…è¦ã§ã™ã€‚", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("ŒQY’¾‰º‰ğÍ—p‚Ì“y‘w‚ª1‘wˆÈã•K—v‚Å‚·B", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             ObservableCollection<RectLoad> rectLoads = [];
 
-            if (CurrentInputModel.PileGroupSettlement.LoadingType == "ä»»æ„çŸ©å½¢")
+            if (CurrentInputModel.PileGroupSettlement.LoadingType == "”CˆÓ‹éŒ`")
             {
                 rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
             }
-            else if (CurrentInputModel.PileGroupSettlement.LoadingType == "å€‹åˆ¥åå­—")
+            else if (CurrentInputModel.PileGroupSettlement.LoadingType == "ŒÂ•Ê\š")
             {
                 foreach (PileLayoutDataItem pileLayoutDataItem in CurrentInputModel.PileLayoutItems)
                 {
@@ -1332,7 +1205,9 @@ namespace PileDesign.ViewModels
                         = PileGroupSettlement.GetCrossRectLoads(point, radius, qa);
 
                     foreach (var rectLoad in eachRectLoads)
+                    {
                         rectLoads.Add(rectLoad);
+                    }
                 }
             }
 
@@ -1373,7 +1248,7 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            MessageBox.Show("ã‚¹ã‚¿ã‚¤ãƒ³ãƒ–ãƒ¬ãƒŠãƒ¼ã®è¿‘ä¼¼å¼ã«ã‚ˆã‚‹è§£æãŒçµ‚äº†ã—ã¾ã—ãŸã€‚");
+            MessageBox.Show("ƒXƒ^ƒCƒ“ƒuƒŒƒi[‚Ì‹ß—®‚É‚æ‚é‰ğÍ‚ªI—¹‚µ‚Ü‚µ‚½B");
 
             IsGroupPileGridDeformationVisible = true;
             IsGroupPileSettlementAnalysisDone = true;
@@ -1383,7 +1258,7 @@ namespace PileDesign.ViewModels
 
         }
 
-        // è‡ªå‹•å‰æ–¹æ­è¨­å®šã®å‡¦ç†ãƒ¡ã‚½ãƒƒãƒ‰
+        // ©“®‘O•ûYİ’è‚Ìˆ—ƒƒ\ƒbƒh
         private void AutoIsFrontPilesWindow_AutoIsFrontPileCompleted(object sender, AutoIsFrontEventArgs e)
         {
             double cosAlpha = Math.Cos((e.Angle * Math.PI / 180.0));
@@ -1394,7 +1269,7 @@ namespace PileDesign.ViewModels
                 {
                     foreach (PileLayoutDataItem pileLayout0 in CurrentInputModel.PileLayoutItems)
                     {
-                        pileLayout0.IsFrontPiles[i] = true; // å…¨ã¦ã®æ­ã‚’å‰æ–¹æ­ã¨ã—ã¦åˆæœŸåŒ–
+                        pileLayout0.IsFrontPiles[i] = true; // ‘S‚Ä‚ÌY‚ğ‘O•ûY‚Æ‚µ‚Ä‰Šú‰»
 
                         foreach (PileLayoutDataItem pileLayout1 in CurrentInputModel.PileLayoutItems)
                         {
@@ -1406,20 +1281,20 @@ namespace PileDesign.ViewModels
 
                             LoadCase loadCase = CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
 
-                            // è·é‡æ–¹å‘ãƒ™ã‚¯ãƒˆãƒ«ã‚’è¨ˆç®—
+                            // ‰×d•ûŒüƒxƒNƒgƒ‹‚ğŒvZ
                             Vector loadDirectionVector = PileDesign.Converters.VectorConverter.ConvertAngleToUnitVector(loadCase.LoadAngle);
 
-                            // å†…ç©ã‚’è¨ˆç®—
+                            // “àÏ‚ğŒvZ
                             double dotProduct = Vector.Multiply(directionVector, loadDirectionVector);
 
-                            // ãƒ™ã‚¯ãƒˆãƒ«ã®å¤§ãã•ã‚’è¨ˆç®—
+                            // ƒxƒNƒgƒ‹‚Ì‘å‚«‚³‚ğŒvZ
                             double magnitudeDirection = directionVector.Length;
                             double magnitudeLoadDirection = loadDirectionVector.Length;
 
-                            // ä½™å¼¦ã‚’è¨ˆç®—
+                            // —]Œ·‚ğŒvZ
                             double cosTheta = dotProduct / (magnitudeDirection * magnitudeLoadDirection);
 
-                            // ä½™å¼¦ãŒæŒ‡å®šè§’åº¦ã‚ˆã‚Šå¤§ãã„å ´åˆ 
+                            // —]Œ·‚ªw’èŠp“x‚æ‚è‘å‚«‚¢ê‡ 
                             if (cosAlpha < cosTheta)
                             {
                                 pileLayout0.IsFrontPiles[i] = false;
@@ -1432,7 +1307,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // åå‰ã‚’ã¤ã‘ã¦ä¿å­˜
+        // –¼‘O‚ğ‚Â‚¯‚Ä•Û‘¶
         [RelayCommand]
         public void SaveInputModelFileAs()
         {
@@ -1450,7 +1325,7 @@ namespace PileDesign.ViewModels
                     var projectData = new ProjectData
                     {
                         InputModel = this.CurrentInputModel,
-                        AnaModel = this.CurrentModel // MainWindowViewModelã«AnaModelãŒã‚ã‚‹å ´åˆ
+                        AnaModel = this.CurrentModel // MainWindowViewModel‚ÉAnaModel‚ª‚ ‚éê‡
                     };
                     //var options = new JsonSerializerOptions
                     //{
@@ -1460,11 +1335,11 @@ namespace PileDesign.ViewModels
                     //string json = JsonSerializer.Serialize(projectData, options);
                     string json = JsonSerializer.Serialize(projectData, _jsonOptions);
                     File.WriteAllText(CurrentFilePath, json);
-                    MessageBox.Show("ä¿å­˜ãŒå®Œäº†ã—ã¾ã—ãŸã€‚", "æƒ…å ±", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("•Û‘¶‚ªŠ®—¹‚µ‚Ü‚µ‚½B", "î•ñ", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"ä¿å­˜ã«å¤±æ•—ã—ã¾ã—ãŸã€‚\n{ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"•Û‘¶‚É¸”s‚µ‚Ü‚µ‚½B\n{ex.Message}", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -1473,7 +1348,9 @@ namespace PileDesign.ViewModels
         public void SaveInputModelFile()
         {
             if (string.IsNullOrEmpty(CurrentFilePath))
+            {
                 SaveInputModelFileAs();
+            }
             else
             {
                 try
@@ -1483,14 +1360,19 @@ namespace PileDesign.ViewModels
                         InputModel = this.CurrentInputModel,
                         AnaModel = this.CurrentModel
                     };
-
+                    //var options = new JsonSerializerOptions
+                    //{
+                    //    WriteIndented = true,
+                    //    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
+                    //};
+                    //string json = JsonSerializer.Serialize(projectData, options);
                     string json = JsonSerializer.Serialize(projectData, _jsonOptions);
                     File.WriteAllText(CurrentFilePath, json);
-                    MessageBox.Show("ä¿å­˜ãŒå®Œäº†ã—ã¾ã—ãŸã€‚", "æƒ…å ±", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("•Û‘¶‚ªŠ®—¹‚µ‚Ü‚µ‚½B", "î•ñ", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"ä¿å­˜ã«å¤±æ•—ã—ã¾ã—ãŸã€‚\n{ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"•Û‘¶‚É¸”s‚µ‚Ü‚µ‚½B\n{ex.Message}", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -1499,95 +1381,28 @@ namespace PileDesign.ViewModels
         public void NewInputModelFile()
         {
             var result = MessageBox.Show(
-                "ç¾åœ¨ã®ãƒ‡ãƒ¼ã‚¿ã‚’ä¿å­˜ã—ã¾ã™ã‹ï¼Ÿ",
-                "ç¢ºèª",
+                "Œ»İ‚Ìƒf[ƒ^‚ğ•Û‘¶‚µ‚Ü‚·‚©H",
+                "Šm”F",
                 MessageBoxButton.YesNoCancel,
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Cancel)
+            {
                 return;
+            }
             else if (result == MessageBoxResult.Yes)
+            {
                 SaveInputModelFile();
+            }
 
             CurrentInputModel.Reset();
-            this.CurrentModel = null; // AnaModelã‚‚ãƒªã‚»ãƒƒãƒˆ
+            this.CurrentModel = null; // AnaModel‚àƒŠƒZƒbƒg
             CurrentFilePath = null;
-
-            // ã“ã“ã§åˆæœŸçŠ¶æ…‹ã‚’Undoã‚¹ã‚¿ãƒƒã‚¯ã«ç©ã‚€
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke();
             UpdateTreeView();
         }
 
-        private static ObservableCollection<T> EnsureObservableCollection<T>(IEnumerable<T> source)
-        {
-            if (source is ObservableCollection<T> oc)
-                return oc;
-            return source != null ? new ObservableCollection<T>(source) : new ObservableCollection<T>();
-        }
-
-        private void TrySaveUndoSnapshotSafely()
-        {
-            try
-            {
-                var snapshot = CurrentInputModel?.DeepCopy();
-                if (snapshot != null)
-                {
-                    _undoManager.SaveState(snapshot);
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafely: DeepCopy returned null, skipping undo snapshot.");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"TrySaveUndoSnapshotSafelyä¾‹å¤–: {ex}");
-            }
-        }
-
-        // ä¿®æ­£: null ãƒã‚§ãƒƒã‚¯ã¨ç©ºã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³åˆæœŸåŒ–ã®å…±é€šåŒ–
-        public bool TryLoadInputModelFileUsingInputModelLoader(string filePath)
-        {
-            try
-            {
-                var loaded = InputModel.LoadFromFile(filePath, this);
-                if (loaded == null)
-                {
-                    MessageBox.Show($"ãƒ•ã‚¡ã‚¤ãƒ«ã®èª­è¾¼ã«å¤±æ•—ã—ã¾ã—ãŸã€‚\n{filePath}", "èª­è¾¼ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-                    System.Diagnostics.Debug.WriteLine($"LoadFromFile returned null: {filePath}");
-                    return false;
-                }
-
-                CurrentInputModel = loaded;
-                CurrentInputModel.AttachViewModel(this);
-                CurrentFilePath = filePath;
-                CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
-                CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
-                UpdateWindowImmediate();
-                UpdateTreeView();
-                MessageBox.Show("èª­è¾¼ãŒå®Œäº†ã—ã¾ã—ãŸã€‚", "æƒ…å ±", MessageBoxButton.OK, MessageBoxImage.Information);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ãƒ•ã‚¡ã‚¤ãƒ«èª­è¾¼ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸã€‚\n{ex.Message}", "èª­è¾¼ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-                System.Diagnostics.Debug.WriteLine($"TryLoadInputModelFileUsingInputModelLoaderä¾‹å¤–: {ex}");
-                return false;
-            }
-        }
-
-        [RelayCommand]
-        public void OpenInputModelFileSimple()
-        {
-            var ofd = new Microsoft.Win32.OpenFileDialog { Filter = "JSON Files (*.json)|*.json", DefaultExt = "json" };
-            if (ofd.ShowDialog() != true) return;
-            // Undo ä¿å­˜ã¯å®‰å…¨ãƒ˜ãƒ«ãƒ‘ã‚’ä½¿ç”¨
-            TrySaveUndoSnapshotSafely();
-            TryLoadInputModelFileUsingInputModelLoader(ofd.FileName);
-        }
-
+        // CurrentInputModel‚Ì“Ç
         [RelayCommand]
         public void OpenInputModelFile()
         {
@@ -1601,9 +1416,12 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
+                    //var options = new JsonSerializerOptions
+                    //{
+                    //    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
+                    //};
+                    //string json = File.ReadAllText(openFileDialog.FileName);
+                    //var projectData = JsonSerializer.Deserialize<ProjectData>(json, options);
                     string json = File.ReadAllText(openFileDialog.FileName);
                     var projectData = JsonSerializer.Deserialize<ProjectData>(json, _jsonOptions);
                     if (projectData != null)
@@ -1611,92 +1429,173 @@ namespace PileDesign.ViewModels
                         this.CurrentInputModel = projectData.InputModel;
                         this.CurrentModel = projectData.AnaModel;
 
-                        // --- å…±é€šåŒ–ã—ãŸãƒ©ãƒƒãƒ—å‡¦ç† ---
-                        if (CurrentInputModel?.PileGroupSettlement != null)
+                        // --- ‚±‚±‚©‚çC³ ---
+                        // SettlementSoilLayers
+                        if (CurrentInputModel?.PileGroupSettlement?.SettlementSoilLayers != null &&
+                            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.GetType() != typeof(ObservableCollection<SettlementSoilLayer>))
                         {
                             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers =
-                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementSoilLayers);
-                            CurrentInputModel.PileGroupSettlement.RectLoads =
-                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.RectLoads);
-                            CurrentInputModel.PileGroupSettlement.SettlementGridX =
-                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementGridX);
-                            CurrentInputModel.PileGroupSettlement.SettlementGridY =
-                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementGridY);
-                            CurrentInputModel.PileGroupSettlement.SettlementGridData =
-                                EnsureObservableCollection(CurrentInputModel.PileGroupSettlement.SettlementGridData);
+                                new ObservableCollection<SettlementSoilLayer>(CurrentInputModel.PileGroupSettlement.SettlementSoilLayers);
                         }
-                        CurrentInputModel.PileLayoutItems =
-                            EnsureObservableCollection(CurrentInputModel.PileLayoutItems);
-                        CurrentInputModel.Elements =
-                            EnsureObservableCollection(CurrentInputModel.Elements);
-                        CurrentInputModel.GridXItems =
-                            EnsureObservableCollection(CurrentInputModel.GridXItems);
-                        CurrentInputModel.GridYItems =
-                            EnsureObservableCollection(CurrentInputModel.GridYItems);
-                        CurrentInputModel.PileBodies =
-                            EnsureObservableCollection(CurrentInputModel.PileBodies);
-                        CurrentInputModel.GroundsInput =
-                            EnsureObservableCollection(CurrentInputModel.GroundsInput);
+                        // RectLoads
+                        if (CurrentInputModel?.PileGroupSettlement?.RectLoads != null &&
+                            CurrentInputModel.PileGroupSettlement.RectLoads.GetType() != typeof(ObservableCollection<RectLoad>))
+                        {
+                            CurrentInputModel.PileGroupSettlement.RectLoads =
+                                new ObservableCollection<RectLoad>(CurrentInputModel.PileGroupSettlement.RectLoads);
+                        }
+                        if (CurrentInputModel?.PileGroupSettlement?.SettlementSoilLayers != null &&
+                            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.GetType() != typeof(ObservableCollection<SettlementSoilLayer>))
+                        {
+                            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers =
+                                new ObservableCollection<SettlementSoilLayer>(CurrentInputModel.PileGroupSettlement.SettlementSoilLayers);
+                        }
 
-                        if (CurrentInputModel?.EmbedmentInput != null)
+                        if (CurrentInputModel?.PileGroupSettlement?.RectLoads != null &&
+                            CurrentInputModel.PileGroupSettlement.RectLoads.GetType() != typeof(ObservableCollection<RectLoad>))
+                        {
+                            CurrentInputModel.PileGroupSettlement.RectLoads =
+                                new ObservableCollection<RectLoad>(CurrentInputModel.PileGroupSettlement.RectLoads);
+                        }
+
+                        if (CurrentInputModel?.PileGroupSettlement?.SettlementGridX != null &&
+                            CurrentInputModel.PileGroupSettlement.SettlementGridX.GetType() != typeof(ObservableCollection<double>))
+                        {
+                            CurrentInputModel.PileGroupSettlement.SettlementGridX =
+                                new ObservableCollection<double>(CurrentInputModel.PileGroupSettlement.SettlementGridX);
+                        }
+
+                        if (CurrentInputModel?.PileGroupSettlement?.SettlementGridY != null &&
+                            CurrentInputModel.PileGroupSettlement.SettlementGridY.GetType() != typeof(ObservableCollection<double>))
+                        {
+                            CurrentInputModel.PileGroupSettlement.SettlementGridY =
+                                new ObservableCollection<double>(CurrentInputModel.PileGroupSettlement.SettlementGridY);
+                        }
+
+                        if (CurrentInputModel?.PileGroupSettlement?.SettlementGridData != null &&
+                            CurrentInputModel.PileGroupSettlement.SettlementGridData.GetType() != typeof(ObservableCollection<SettlementGridDataItem>))
+                        {
+                            CurrentInputModel.PileGroupSettlement.SettlementGridData =
+                                new ObservableCollection<SettlementGridDataItem>(CurrentInputModel.PileGroupSettlement.SettlementGridData);
+                        }
+
+                        if (CurrentInputModel?.PileLayoutItems != null &&
+                            CurrentInputModel.PileLayoutItems.GetType() != typeof(ObservableCollection<PileLayoutDataItem>))
+                        {
+                            CurrentInputModel.PileLayoutItems =
+                                new ObservableCollection<PileLayoutDataItem>(CurrentInputModel.PileLayoutItems);
+                        }
+
+                        if (CurrentInputModel?.Elements != null &&
+                            CurrentInputModel.Elements.GetType() != typeof(ObservableCollection<Element>))
+                        {
+                            CurrentInputModel.Elements =
+                                new ObservableCollection<Element>(CurrentInputModel.Elements);
+                        }
+
+                        if (CurrentInputModel?.GridXItems != null &&
+                            CurrentInputModel.GridXItems.GetType() != typeof(ObservableCollection<GridDataItem>))
+                        {
+                            CurrentInputModel.GridXItems =
+                                new ObservableCollection<GridDataItem>(CurrentInputModel.GridXItems);
+                        }
+
+                        if (CurrentInputModel?.GridYItems != null &&
+                            CurrentInputModel.GridYItems.GetType() != typeof(ObservableCollection<GridDataItem>))
+                        {
+                            CurrentInputModel.GridYItems =
+                                new ObservableCollection<GridDataItem>(CurrentInputModel.GridYItems);
+                        }
+
+                        if (CurrentInputModel?.PileBodies != null &&
+                            CurrentInputModel.PileBodies.GetType() != typeof(ObservableCollection<PileBodyInput>))
+                        {
+                            CurrentInputModel.PileBodies =
+                                new ObservableCollection<PileBodyInput>(CurrentInputModel.PileBodies);
+                        }
+
+                        if (CurrentInputModel?.GroundsInput != null &&
+                            CurrentInputModel.GroundsInput.GetType() != typeof(ObservableCollection<GroundInput>))
+                        {
+                            CurrentInputModel.GroundsInput =
+                                new ObservableCollection<GroundInput>(CurrentInputModel.GroundsInput);
+                        }
+
+                        if (CurrentInputModel?.EmbedmentInput?.EmbedmentLayers != null &&
+                            CurrentInputModel.EmbedmentInput.EmbedmentLayers.GetType() != typeof(ObservableCollection<EmbedmentDataItem>))
                         {
                             CurrentInputModel.EmbedmentInput.EmbedmentLayers =
-                                EnsureObservableCollection(CurrentInputModel.EmbedmentInput.EmbedmentLayers);
+                                new ObservableCollection<EmbedmentDataItem>(CurrentInputModel.EmbedmentInput.EmbedmentLayers);
                         }
-                        if (CurrentInputModel?.LoadCasesInput != null)
+
+                        if (CurrentInputModel?.LoadCasesInput?.LoadCasesLevel1 != null &&
+                            CurrentInputModel.LoadCasesInput.LoadCasesLevel1.GetType() != typeof(ObservableCollection<LoadCase>))
                         {
                             CurrentInputModel.LoadCasesInput.LoadCasesLevel1 =
-                                EnsureObservableCollection(CurrentInputModel.LoadCasesInput.LoadCasesLevel1);
-                            CurrentInputModel.LoadCasesInput.LoadCasesLevel2 =
-                                EnsureObservableCollection(CurrentInputModel.LoadCasesInput.LoadCasesLevel2);
+                                new ObservableCollection<LoadCase>(CurrentInputModel.LoadCasesInput.LoadCasesLevel1);
                         }
-                        // ãƒã‚¹ãƒˆã•ã‚ŒãŸã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³
+
+                        if (CurrentInputModel?.LoadCasesInput?.LoadCasesLevel2 != null &&
+                            CurrentInputModel.LoadCasesInput.LoadCasesLevel2.GetType() != typeof(ObservableCollection<LoadCase>))
+                        {
+                            CurrentInputModel.LoadCasesInput.LoadCasesLevel2 =
+                                new ObservableCollection<LoadCase>(CurrentInputModel.LoadCasesInput.LoadCasesLevel2);
+                        }
+
+                        // ƒlƒXƒg‚³‚ê‚½ƒRƒŒƒNƒVƒ‡ƒ“
                         if (CurrentInputModel?.GroundsInput != null)
                         {
                             foreach (var ground in CurrentInputModel.GroundsInput)
                             {
-                                ground.GroundLayers = EnsureObservableCollection(ground.GroundLayers);
-                                ground.GroundMassesData = EnsureObservableCollection(ground.GroundMassesData);
+                                if (ground.GroundLayers != null &&
+                                    ground.GroundLayers.GetType() != typeof(ObservableCollection<GroundLayerInput>))
+                                {
+                                    ground.GroundLayers = new ObservableCollection<GroundLayerInput>(ground.GroundLayers);
+                                }
+                                if (ground.GroundMassesData != null &&
+                                    ground.GroundMassesData.GetType() != typeof(ObservableCollection<GroundMassDataInput>))
+                                {
+                                    ground.GroundMassesData = new ObservableCollection<GroundMassDataInput>(ground.GroundMassesData);
+                                }
                             }
                         }
+
                         if (CurrentInputModel?.PileBodies != null)
                         {
                             foreach (var pileBody in CurrentInputModel.PileBodies)
                             {
-                                pileBody.PileBodySegments = EnsureObservableCollection(pileBody.PileBodySegments);
+                                if (pileBody.PileBodySegments != null &&
+                                    pileBody.PileBodySegments.GetType() != typeof(ObservableCollection<PileBodySegment>))
+                                {
+                                    pileBody.PileBodySegments = new ObservableCollection<PileBodySegment>(pileBody.PileBodySegments);
+                                }
                             }
                         }
-                        // --- å…±é€šåŒ–ã“ã“ã¾ã§ ---
 
-                        // å¿…è¦ãªã‚‰ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£å¤‰æ›´é€šçŸ¥
+                        // ‘¼‚É‚à•K—v‚ÈƒRƒŒƒNƒVƒ‡ƒ“‚ª‚ ‚ê‚Î“¯—l‚É•ï‚İ’¼‚·
+                        // --- ‚±‚±‚Ü‚ÅC³ ---
+
+                        // •K—v‚È‚çƒvƒƒpƒeƒB•ÏX’Ê’m
                         OnPropertyChanged(nameof(CurrentInputModel));
                     }
-                    else
-                    {
-                        // ProjectDataã§ãªã„å ´åˆã‚’æƒ³å®šã—ã¦ InputModel å˜ä½“ã§èª­ã‚ã‚‹ã‹è©¦ã™
-                        var ok = TryLoadInputModelFileUsingInputModelLoader(openFileDialog.FileName);
-                        if (!ok)
-                            throw new InvalidOperationException("ãƒ•ã‚¡ã‚¤ãƒ«å½¢å¼ãŒä¸æ­£ã§ã™ã€‚ProjectData ã§ã‚‚ InputModel ã§ã‚‚ã‚ã‚Šã¾ã›ã‚“ã€‚");
-                        return;
-                    }
-                    // ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯: null ã®å ´åˆã¯ç©ºã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã§åˆæœŸåŒ–
-                    CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
-                    CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
+                    // ƒtƒH[ƒ‹ƒoƒbƒN: null ‚Ìê‡‚Í‹óƒRƒŒƒNƒVƒ‡ƒ“‚Å‰Šú‰»
+                    CurrentInputModel.GridXItems ??= [];
+                    CurrentInputModel.GridYItems ??= [];
 
-                    // VM å†ã‚¢ã‚¿ãƒƒãƒ
+                    // VM ÄƒAƒ^ƒbƒ`
                     CurrentInputModel.AttachViewModel(this);
 
-                    UpdateWindowImmediate();
-                    MessageBox.Show("èª­è¾¼ãŒå®Œäº†ã—ã¾ã—ãŸã€‚", "æƒ…å ±", MessageBoxButton.OK, MessageBoxImage.Information);
+                    UpdateWindowAction?.Invoke();
+                    MessageBox.Show("“Ç‚ªŠ®—¹‚µ‚Ü‚µ‚½B", "î•ñ", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"èª­è¾¼ã«å¤±æ•—ã—ã¾ã—ãŸã€‚\n{ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"“Ç‚É¸”s‚µ‚Ü‚µ‚½B\n{ex.Message}", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        // Word ãƒ•ã‚¡ã‚¤ãƒ«ã«ä¿å­˜ã™ã‚‹ãƒ¡ã‚½ãƒƒãƒ‰
+        // Word ƒtƒ@ƒCƒ‹‚É•Û‘¶‚·‚éƒƒ\ƒbƒh
         [RelayCommand]
         public void OutputWordFile()
         {
@@ -1708,20 +1607,15 @@ namespace PileDesign.ViewModels
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                try
-                {
-                    var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
-                    doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
-                    MessageBox.Show($"docsãƒ•ã‚¡ã‚¤ãƒ«ãŒä½œæˆã•ã‚Œã¾ã—ãŸã€‚\n{saveFileDialog.FileName}\nMSWordã§ãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ãã€ctrl + aã§å…¨é¸æŠã—ãŸå¾Œ, F9ã«ã‚ˆã‚Šãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚’æ›´æ–°ã—ã¦ãã ã•ã„ã€‚");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Wordå‡ºåŠ›ã«å¤±æ•—ã—ã¾ã—ãŸã€‚\n{ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
+
+                doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
+                //Output.WordDocument.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
+                MessageBox.Show($"docsƒtƒ@ƒCƒ‹‚ªì¬‚³‚ê‚Ü‚µ‚½B\n{saveFileDialog.FileName}\nMSWord‚Åƒtƒ@ƒCƒ‹‚ğŠJ‚«Actrl + a‚Å‘S‘I‘ğ‚µ‚½Œã, F9‚É‚æ‚èƒtƒB[ƒ‹ƒh‚ğXV‚µ‚Ä‚­‚¾‚³‚¢B");
             }
         }
 
-        // ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£ã®ã‚³ãƒ”ãƒ¼
+        // ƒvƒƒpƒeƒB‚ÌƒRƒs[
         private static void CopyProperties(object source, object destination)
         {
             if (source == null || destination == null)
@@ -1744,94 +1638,64 @@ namespace PileDesign.ViewModels
                 }
             }
         }
-        // è¨ˆç®—æ›¸å‡ºåŠ›ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦è¡¨ç¤ºãƒ¡ã‚½ãƒƒãƒ‰
+        // ŒvZ‘o—ÍƒEƒBƒ“ƒhƒE•\¦ƒƒ\ƒbƒh
         [RelayCommand]
         private void OpenDocxOutputWindow()
         {
-            try
-            {
-                var dockxOutputOptionWindow = new DocxOutputWindow(this);
-                dockxOutputOptionWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"è¨ˆç®—æ›¸å‡ºåŠ›ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            var dockxOutputOptionWindow = new DocxOutputWindow(this);
+            dockxOutputOptionWindow.Show();
         }
 
-        // ã‚ªãƒ—ã‚·ãƒ§ãƒ³è¡¨ç¤ºãƒ¡ã‚½ãƒƒãƒ‰
+        // ƒIƒvƒVƒ‡ƒ“•\¦ƒƒ\ƒbƒh
         [RelayCommand]
         private static void OpenOptionWindow()
         {
-            try
-            {
-                var optionWindow = new OptionWindow();
-                optionWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ã‚ªãƒ—ã‚·ãƒ§ãƒ³ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            var optionWindow = new OptionWindow();
+            optionWindow.Show();
         }
 
-        // è§£æçµæœãŒ1ã¤ã§ã‚‚å­˜åœ¨ã™ã‚‹ã‹
+        // ‰ğÍŒ‹‰Ê‚ª1‚Â‚Å‚à‘¶İ‚·‚é‚©
         private bool HasAnyAnalysisResult()
             => IsHorizontalAnalysisDone || IsVerticalAnalysisDone || IsGroupPileSettlementAnalysisDone;
 
-        // ã‚³ãƒãƒ³ãƒ‰çŠ¶æ…‹ä¸€æ‹¬æ›´æ–°ãƒ˜ãƒ«ãƒ‘
+        // ƒRƒ}ƒ“ƒhó‘ÔˆêŠ‡XVƒwƒ‹ƒp
         private void RaiseResultCommandsCanExecute()
         {
             if (OpenTableWindowCommand is ToolkitRelayCommand tc) tc.NotifyCanExecuteChanged();
             OpenGraphWindowCommand?.NotifyCanExecuteChanged();
-            OpenLogWindowCommand?.NotifyCanExecuteChanged();
         }
 
         [RelayCommand(CanExecute = nameof(CanOpenGraphWindow))]
         private void OpenGraphWindow()
         {
-            try
-            {
-                if (!HasAnyAnalysisResult()) return;
+            // CanExecute ‚Å§Œä‚³‚ê‚é‚½‚ß’Êí‚Í•s—v‚¾‚ª•ÛŒ¯‚Æ‚µ‚Ä
+            if (!HasAnyAnalysisResult()) return;
 
-                var viewModel = new GraphViewModel(this)
-                {
-                    IsHorizontalAnalysisDone = this.IsHorizontalAnalysisDone,
-                    IsVerticalAnalysisDone = this.IsVerticalAnalysisDone,
-                    IsGroupPileSettlementAnalysisDone = this.IsGroupPileSettlementAnalysisDone
-                };
-                viewModel.Initialize();
-
-                var graphWindow = new GraphWindow(viewModel);
-                graphWindow.Show();
-            }
-            catch (Exception ex)
+            // MainWindowViewModel‚ÌƒCƒ“ƒXƒ^ƒ“ƒX(this)‚ğ•K‚¸“n‚·
+            var viewModel = new GraphViewModel(this)
             {
-                MessageBox.Show($"ã‚°ãƒ©ãƒ•ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                IsHorizontalAnalysisDone = this.IsHorizontalAnalysisDone,
+                IsVerticalAnalysisDone = this.IsVerticalAnalysisDone,
+                IsGroupPileSettlementAnalysisDone = this.IsGroupPileSettlementAnalysisDone
+            };
+            viewModel.Initialize();
+
+            var graphWindow = new GraphWindow(viewModel);
+            graphWindow.Show();
         }
         private bool CanOpenGraphWindow() => HasAnyAnalysisResult();
 
 
-        // ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰è¿½åŠ 
+        // ƒtƒB[ƒ‹ƒh’Ç‰Á
         private readonly AnalysisResultTableService _tableService = new();
 
-        // ãƒ—ãƒ­ãƒ‘ãƒ†ã‚£
-        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = Array.Empty<ResultTable>();
+        // ƒvƒƒpƒeƒB
+        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = [];
 
-        // Latest analysis logs
-        public IReadOnlyList<string> LatestAnalysisLogs { get; private set; } = Array.Empty<string>();
-
-        public void SetLatestAnalysisLogs(IReadOnlyList<string> logs)
-        {
-            LatestAnalysisLogs = logs ?? Array.Empty<string>();
-            OnPropertyChanged(nameof(LatestAnalysisLogs));
-            OpenLogWindowCommand?.NotifyCanExecuteChanged();
-        }
-
-        // è§£æå®Œäº†å¾Œ (æ—¢å­˜å‡¦ç†å†…æœ«å°¾ã«è¿½åŠ )
+        // ‰ğÍŠ®—¹Œã (Šù‘¶ˆ—“à––”ö‚É’Ç‰Á)
         private void OnAnalysisFinished(AnalysisStepResult result)
         {
-            // AnaModel ãŒæœªã‚»ãƒƒãƒˆãªã‚‰çµæœãƒ†ãƒ¼ãƒ–ãƒ«ç”Ÿæˆã‚’ã‚¹ã‚­ãƒƒãƒ—
+            // AnaModel ‚ª–¢ƒZƒbƒg‚È‚çŒ‹‰Êƒe[ƒuƒ‹¶¬‚ğƒXƒLƒbƒv
             if (CurrentModel == null)
             {
                 LatestResultTables = [];
@@ -1855,43 +1719,18 @@ namespace PileDesign.ViewModels
 
         private void OpenTableWindow()
         {
-            try
-            {
-                var vm = new TableWindowViewModel();
-                vm.LoadTables(LatestResultTables);
-                var w = new Views.TableWindow { DataContext = vm };
-                w.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ãƒ†ãƒ¼ãƒ–ãƒ«ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            var vm = new TableWindowViewModel();
+            vm.LoadTables(LatestResultTables);
+            var w = new Views.TableWindow { DataContext = vm };
+            w.Show();
         }
 
-        [RelayCommand(CanExecute = nameof(CanOpenLogWindow))]
-        private void OpenLogWindow()
-        {
-            try
-            {
-                if (!CanOpenLogWindow()) return;
-                var vm = new LogWindowViewModel(LatestAnalysisLogs);
-                var w = new Views.LogWindow { DataContext = vm };
-                w.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ãƒ­ã‚°ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private bool CanOpenLogWindow() => LatestAnalysisLogs != null && LatestAnalysisLogs.Count > 0;
-
-        // è§£æçµæœãƒ†ãƒ¼ãƒ–ãƒ«å†ç”Ÿæˆ
+        // ‰ğÍŒ‹‰Êƒe[ƒuƒ‹Ä¶¬
         public void RefreshResultTablesFromLastStep()
         {
-            // AnaModel ã¾ãŸã¯ AnalysisStepResults ãŒ null/ç©ºã®å ´åˆã¯æ—©æœŸãƒªã‚¿ãƒ¼ãƒ³
-            if (CurrentModel == null ||
-                CurrentModel.AnalysisStepResults == null ||
+            // AnaModel ‚Ü‚½‚Í AnalysisStepResults ‚ª null/‹ó‚Ìê‡‚Í‘ŠúƒŠƒ^[ƒ“
+            if (CurrentModel == null || 
+                CurrentModel.AnalysisStepResults == null || 
                 CurrentModel.AnalysisStepResults.Count == 0 ||
                 !HasAnyAnalysisResult())
             {
@@ -1901,7 +1740,7 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // æœ€çµ‚ã‚¹ãƒ†ãƒƒãƒ—çµæœã‚’å–å¾—
+            // ÅIƒXƒeƒbƒvŒ‹‰Ê‚ğæ“¾
             var last = CurrentModel.AnalysisStepResults.LastOrDefault();
             if (last == null)
             {
@@ -1922,19 +1761,12 @@ namespace PileDesign.ViewModels
             RaiseResultCommandsCanExecute();
         }
 
-        // ãƒ˜ãƒ«ãƒ—ãƒ¡ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦è¡¨ç¤ºãƒ¡ã‚½ãƒƒãƒ‰
+        // ƒwƒ‹ƒvƒƒEƒBƒ“ƒhƒE•\¦ƒƒ\ƒbƒh
         [RelayCommand]
         public static void OpenHelpWindow()
         {
-            try
-            {
-                var helpWindow = new HelpWindow();
-                helpWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ãƒ˜ãƒ«ãƒ—ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            var helpWindow = new HelpWindow();
+            helpWindow.Show();
         }
 
         [RelayCommand]
@@ -1943,35 +1775,37 @@ namespace PileDesign.ViewModels
             IsQuickHintVisible = true;
         }
 
-        // å†å…¥é˜²æ­¢ãƒ•ãƒ©ã‚°ï¼ˆåŸå­çš„ã«æ‰±ã†ï¼‰
+        // Ä“ü–h~ƒtƒ‰ƒOiŒ´q“I‚Éˆµ‚¤j
         private int _isChangWindowOpeningFlag = 0;
 
         [RelayCommand]
         public void OpenChangWindow()
         {
-            // ChangViewModel ã«ç¾åœ¨ã® InputModel ã‚’æ³¨å…¥ã—ã¦ä½œæˆ
+            // ChangViewModel ‚ÉŒ»İ‚Ì InputModel ‚ğ’“ü‚µ‚Äì¬
             var vm = new ChangViewModel(CurrentInputModel);
             //var win = new ChangWindow();
             var win = new ChangWindow { DataContext = vm };
 
-            // ã‚¤ãƒ™ãƒ³ãƒˆãƒãƒ³ãƒ‰ãƒ©ã‚’è¨­å®š
+            // ƒCƒxƒ“ƒgƒnƒ“ƒhƒ‰‚ğİ’è
             if (vm is ICloseable closeableViewModel)
             {
                 if (win.IsLoaded && win.IsVisible)
+                {
                     win.Close();
+                }
             }
 
             try
             {
-                // â˜… é‡è¦: ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã‚’é–‹ãå‰ã«ç¾åœ¨ã®ãƒ•ã‚©ãƒ¼ã‚«ã‚¹ã‚’ã‚¯ãƒªã‚¢
-                // ã“ã‚Œã«ã‚ˆã‚Š IME/TextStore ãŒè§£æ”¾ã•ã‚Œã€COMException ã‚’å›é¿ã§ãã‚‹
+                // š d—v: ƒ_ƒCƒAƒƒO‚ğŠJ‚­‘O‚ÉŒ»İ‚ÌƒtƒH[ƒJƒX‚ğƒNƒŠƒA
+                // ‚±‚ê‚É‚æ‚è IME/TextStore ‚ª‰ğ•ú‚³‚êACOMException ‚ğ‰ñ”ğ‚Å‚«‚é
                 var focusedElement = Keyboard.FocusedElement;
                 if (focusedElement is TextBox)
                 {
-                    // ãƒ•ã‚©ãƒ¼ã‚«ã‚¹ã‚’ MainWindow ã«ç§»å‹•
+                    // ƒtƒH[ƒJƒX‚ğ MainWindow ‚ÉˆÚ“®
                     Application.Current.MainWindow?.Focus();
 
-                    // Dispatcher ã§ UI ã‚’æ›´æ–°ã—ã¦ IME ã‚’è§£æ”¾ã™ã‚‹æ™‚é–“ã‚’ä¸ãˆã‚‹
+                    // Dispatcher ‚Å UI ‚ğXV‚µ‚Ä IME ‚ğ‰ğ•ú‚·‚éŠÔ‚ğ—^‚¦‚é
                     Application.Current.Dispatcher.Invoke(
                         System.Windows.Threading.DispatcherPriority.Background,
                         new Action(() => { }));
@@ -1981,11 +1815,10 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"ƒ_ƒCƒAƒƒO‚Ì•\¦’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½: {ex.Message}", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
-            // å¤‰æ›´å¾Œï¼ˆä»¥ä¸‹ã®ç®‡æ‰€ã§é©ç”¨ï¼‰
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke();
             UpdateTreeView();
         }
 
@@ -2002,12 +1835,12 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"æ­ãƒ©ã‚¤ãƒ–ãƒ©ãƒªè¡¨ç¤ºã«å¤±æ•—ã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show($"Yƒ‰ƒCƒuƒ‰ƒŠ•\¦‚É¸”s‚µ‚Ü‚µ‚½: {ex.Message}", "ƒGƒ‰[", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
         //{
-        //    // 0 -> 1 ã«ã§ããªã‘ã‚Œã°æ—¢ã«å®Ÿè¡Œä¸­ã¨ã¿ãªã™
+        //    // 0 -> 1 ‚É‚Å‚«‚È‚¯‚ê‚ÎŠù‚ÉÀs’†‚Æ‚İ‚È‚·
         //    if (System.Threading.Interlocked.CompareExchange(ref _isChangWindowOpeningFlag, 1, 0) != 0)
         //    {
         //        Debug.WriteLine("OpenChangWindow: already opening, ignored.");
@@ -2018,7 +1851,7 @@ namespace PileDesign.ViewModels
         //    {
         //        Debug.WriteLine("OpenChangWindow: start");
 
-        //        // ChangViewModel ã«ç¾åœ¨ã® InputModel ã‚’æ³¨å…¥ã—ã¦ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ç”Ÿæˆãƒ»è¡¨ç¤º
+        //        // ChangViewModel ‚ÉŒ»İ‚Ì InputModel ‚ğ’“ü‚µ‚ÄƒEƒBƒ“ƒhƒE‚ğ¶¬E•\¦
         //        var vm = new ChangViewModel(this.CurrentInputModel);
         //        var win = new ChangWindow
         //        {
@@ -2028,7 +1861,7 @@ namespace PileDesign.ViewModels
         //            ShowInTaskbar = false
         //        };
 
-        //        // ViewModel ã‹ã‚‰é–‰ã˜ã‚‹è¦æ±‚ã‚’å—ã‘å–ã‚‹å ´åˆãŒã‚ã‚‹ãªã‚‰è³¼èª­ï¼ˆã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ã‚¤ã‚¹åã¯ç’°å¢ƒã«åˆã‚ã›ã¦ï¼‰
+        //        // ViewModel ‚©‚ç•Â‚¶‚é—v‹‚ğó‚¯æ‚éê‡‚ª‚ ‚é‚È‚çw“ÇiƒCƒ“ƒ^[ƒtƒFƒCƒX–¼‚ÍŠÂ‹«‚É‡‚í‚¹‚Äj
         //        if (vm is ICloseable closeableVm)
         //        {
         //            closeableVm.RequestClose += (s, e) =>
@@ -2037,14 +1870,14 @@ namespace PileDesign.ViewModels
         //            };
         //        }
 
-        //        // ãƒ¢ãƒ¼ãƒ€ãƒ«è¡¨ç¤ºï¼ˆæ—¢å­˜ã‚³ãƒ¼ãƒ‰ã«åˆã‚ã›ã‚‹ï¼‰
+        //        // ƒ‚[ƒ_ƒ‹•\¦iŠù‘¶ƒR[ƒh‚É‡‚í‚¹‚éj
         //        try
         //        {
         //            win.ShowDialog();
         //        }
         //        catch (Exception ex)
         //        {
-        //            MessageBox.Show($"Changã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+        //            MessageBox.Show($"ChangƒEƒBƒ“ƒhƒE‚Ì•\¦’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½: {ex.Message}", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
         //            Debug.WriteLine(ex);
         //        }
         //    }
@@ -2065,13 +1898,13 @@ namespace PileDesign.ViewModels
         //private void DeleteAnalysisResults()
         //{
         //    var result = MessageBox.Show(
-        //        "è§£æçµæœã‚’å‰Šé™¤ã—ã¾ã™ã€‚ã‚ˆã‚ã—ã„ã§ã™ã‹ï¼Ÿ",
-        //        "ç¢ºèª",
+        //        "‰ğÍŒ‹‰Ê‚ğíœ‚µ‚Ü‚·B‚æ‚ë‚µ‚¢‚Å‚·‚©H",
+        //        "Šm”F",
         //        MessageBoxButton.YesNo,
         //        MessageBoxImage.Question);
         //    if (result == MessageBoxResult.Yes)
         //    {
-        //        // è§£æçµæœã®å‰Šé™¤
+        //        // ‰ğÍŒ‹‰Ê‚Ìíœ
         //        IsHorizontalAnalysisDone = false;
         //        IsVerticalAnalysisDone = false;
         //        IsGroupPileSettlementAnalysisDone = false;
@@ -2082,8 +1915,8 @@ namespace PileDesign.ViewModels
         //            //    pile.ResetAnalysisResults();
         //            //}
         //        }
-        //        CurrentModel = null; // AnaModelã‚‚ãƒªã‚»ãƒƒãƒˆ
-        //        UpdateWindowAction?.Invoke(); // ãƒ‡ãƒªã‚²ãƒ¼ãƒˆã‚’é€šã˜ã¦ã‚³ãƒ¼ãƒ‰ãƒ“ãƒã‚¤ãƒ³ãƒ‰ã®ãƒ¡ã‚½ãƒƒãƒ‰ã‚’å‘¼ã³å‡ºã™
+        //        CurrentModel = null; // AnaModel‚àƒŠƒZƒbƒg
+        //        UpdateWindowAction?.Invoke(); // ƒfƒŠƒQ[ƒg‚ğ’Ê‚¶‚ÄƒR[ƒhƒrƒnƒCƒ“ƒh‚Ìƒƒ\ƒbƒh‚ğŒÄ‚Ño‚·
         //        UpdateTreeView();
         //    }
         //}
@@ -2091,23 +1924,16 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public static void OpenShortcutKeysWindow()
         {
-            try
+            var w = new PileDesign.Views.ShortcutKeysWindow
             {
-                var w = new PileDesign.Views.ShortcutKeysWindow
-                {
-                    Owner = Application.Current.MainWindow,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    ShowInTaskbar = false
-                };
-                w.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ã‚·ãƒ§ãƒ¼ãƒˆã‚«ãƒƒãƒˆä¸€è¦§ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                Owner = Application.Current.MainWindow,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false
+            };
+            w.ShowDialog();
         }
 
-        // ãƒ‡ãƒ¼ã‚¿å…¥åŠ›ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦è¡¨ç¤ºãƒ¡ã‚½ãƒƒãƒ‰
+        // ƒf[ƒ^“ü—ÍƒEƒBƒ“ƒhƒE•\¦ƒƒ\ƒbƒh
         //[RelayCommand]
         //private void OpenInputDataAnchorable()
         //{
@@ -2115,176 +1941,181 @@ namespace PileDesign.ViewModels
         //}
 
         [RelayCommand]
-        private async Task MoveCopyPiles()
+        private async void MoveCopyPiles()
         {
-            try
-            {
-                // é¸æŠç¯€ç‚¹ãŒãªã„å ´åˆã¯å‡¦ç†ã‚’ä¸­æ­¢ã—ã¦ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸è¡¨ç¤º
-                if (CurrentInputModel == null ||
+            // ‘I‘ğß“_‚ª‚È‚¢ê‡‚Íˆ—‚ğ’†~‚µ‚ÄƒƒbƒZ[ƒW•\¦
+            if (CurrentInputModel == null ||
                 CurrentInputModel.PileLayoutItems == null ||
                 !CurrentInputModel.PileLayoutItems.Any(p => p.IsSelected))
-                {
-                    MessageBox.Show("æ­é…ç½®ãŒé¸æŠã•ã‚Œã¦ã„ã¾ã›ã‚“ã€‚", "ç¢ºèª", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-                // MoveWindowã‚’ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹åŒ–ã—ã¦è¡¨ç¤º
-                MoveCopyWindow moveCopyWindow = new();
-
-                var tcs = new TaskCompletionSource<bool>();
-                moveCopyWindow.MoveCopyCompleted += async (sender, e) =>
-                {
-                    await MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
-                    tcs.SetResult(true);
-                };
-
-                moveCopyWindow.ShowDialog(); // ãƒ¢ãƒ¼ãƒ€ãƒ«ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã¨ã—ã¦è¡¨ç¤º
-
-                // â˜… å¾…æ©Ÿã‚«ãƒ¼ã‚½ãƒ«ã‚’è¡¨ç¤º
-                Mouse.OverrideCursor = Cursors.Wait;
-                try
-                {
-                    await tcs.Task; // éåŒæœŸã«å®Œäº†ã‚’å¾…ã¤
-
-                    // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³è‡ªä½“ã®å¤‰æ›´é€šçŸ¥
-                    OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                    OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                    OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                    OnPropertyChanged(nameof(GroupPileSettlementYmax));
-
-                    // å¤‰æ›´: ãƒ‡ãƒã‚¦ãƒ³ã‚¹ä»˜ãã§æ›´æ–°
-                    RequestUpdateWindow();
-                    UpdateTreeView();
-                }
-                finally
-                {
-                    // â˜… ã‚«ãƒ¼ã‚½ãƒ«ã‚’å…ƒã«æˆ»ã™
-                    Mouse.OverrideCursor = null;
-                }
-            }
-            catch (Exception ex)
             {
-                MessageBox.Show($"æ­ã®ç§»å‹•ãƒ»è¤‡è£½ä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸã€‚\n{ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Y”z’u‚ª‘I‘ğ‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB", "Šm”F", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // MoveWindow‚ğƒCƒ“ƒXƒ^ƒ“ƒX‰»‚µ‚Ä•\¦
+            MoveCopyWindow moveCopyWindow = new();
+
+            var tcs = new TaskCompletionSource<bool>();
+            moveCopyWindow.MoveCopyCompleted += async (sender, e) =>
+            {
+                await MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
+                tcs.SetResult(true);
+            };
+
+            moveCopyWindow.ShowDialog(); // ƒ‚[ƒ_ƒ‹ƒ_ƒCƒAƒƒO‚Æ‚µ‚Ä•\¦
+
+            // š ‘Ò‹@ƒJ[ƒ\ƒ‹‚ğ•\¦
+            Mouse.OverrideCursor = Cursors.Wait;
+            try
+            {
+                await tcs.Task; // ”ñ“¯Šú‚ÉŠ®—¹‚ğ‘Ò‚Â
+
+                // ƒRƒŒƒNƒVƒ‡ƒ“©‘Ì‚Ì•ÏX’Ê’m
+                OnPropertyChanged(nameof(GroupPileSettlementXmin));
+                OnPropertyChanged(nameof(GroupPileSettlementXmax));
+                OnPropertyChanged(nameof(GroupPileSettlementYmin));
+                OnPropertyChanged(nameof(GroupPileSettlementYmax));
+
+                UpdateWindowAction?.Invoke();
+                UpdateTreeView();
+            }
+            finally
+            {
+                // š ƒJ[ƒ\ƒ‹‚ğŒ³‚É–ß‚·
+                Mouse.OverrideCursor = null;
             }
         }
 
         private async Task MoveCopyWindow_MoveCopyCompletedAsync(object sender, MoveCopyEventArgs e)
         {
-            // æ–°ã—ã„ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã§ã®æ“ä½œã®çµæœã‚’å‡¦ç†ã™ã‚‹
+            // V‚µ‚¢ƒEƒBƒ“ƒhƒE‚Å‚Ì‘€ì‚ÌŒ‹‰Ê‚ğˆ—‚·‚é
             if (e.IsMove)
-                MoveNodes(e.DX, e.DY);// ç§»å‹•æ“ä½œã®å‡¦ç†
+            {
+                // ˆÚ“®‘€ì‚Ìˆ—
+                MoveNodes(e.DX, e.DY);
+            }
             else if (e.IsCopy)
-                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber); // è¤‡è£½æ“ä½œã®å‡¦ç†
+            {
+                // •¡»‘€ì‚Ìˆ—
+                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber);
+            }
         }
 
         private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
         {
-            // å¤‰æ›´ã‚’è¡Œã†å‰ã«ã€é¸æŠã•ã‚ŒãŸã‚¢ã‚¤ãƒ†ãƒ ã®ãƒªã‚¹ãƒˆã‚’ä½œæˆ
+            // •ÏX‚ğs‚¤‘O‚ÉA‘I‘ğ‚³‚ê‚½ƒAƒCƒeƒ€‚ÌƒŠƒXƒg‚ğì¬
             var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
             int totalCount = selectedItems.Count * repetitionNumber;
 
-            // â˜… å¤§é‡ã‚³ãƒ”ãƒ¼æ™‚ã¯å¾…æ©Ÿã‚«ãƒ¼ã‚½ãƒ«ã‚’è¡¨ç¤º
+            // š ‘å—ÊƒRƒs[‚Í‘Ò‹@ƒJ[ƒ\ƒ‹‚ğ•\¦
             bool showWaitCursor = totalCount > 10;
             if (showWaitCursor)
+            {
                 Mouse.OverrideCursor = Cursors.Wait;
+            }
 
             try
             {
-                // â˜… ä¸€æ™‚ãƒªã‚¹ãƒˆã«äº‹å‰ã«ã™ã¹ã¦ä½œæˆï¼ˆå®¹é‡ã‚’äº‹å‰ç¢ºä¿ã—ã¦é«˜é€ŸåŒ–ï¼‰
+                // š ˆêƒŠƒXƒg‚É–‘O‚É‚·‚×‚Äì¬i—e—Ê‚ğ–‘OŠm•Û‚µ‚Ä‚‘¬‰»j
                 var newItems = new List<PileLayoutDataItem>(totalCount);
 
-                foreach (var pileLocation in selectedItems)
+                foreach (var pilelocation in selectedItems)
                 {
                     for (int i = 0; i < repetitionNumber; i++)
                     {
                         var newItem = new PileLayoutDataItem
                         {
-                            X = pileLocation.X + dX * (i + 1),
-                            Y = pileLocation.Y + dY * (i + 1)
+                            X = pilelocation.X + dX * (i + 1),
+                            Y = pilelocation.Y + dY * (i + 1)
                         };
-                        newItem.SetMainWindowViewModel(this);
                         newItems.Add(newItem);
                     }
-                    pileLocation.IsSelected = false;
+                    pilelocation.IsSelected = false;
                 }
 
-                // â˜… UIã‚¹ãƒ¬ãƒƒãƒ‰ã§ä¸€æ‹¬ç½®æ›ï¼ˆCollectionChangedã‚’1å›ã ã‘ç™ºç«ï¼‰
+                // š UIƒXƒŒƒbƒh‚ÅˆêŠ‡’Ç‰Á
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // æ—¢å­˜ã‚¢ã‚¤ãƒ†ãƒ ã¨æ–°è¦ã‚¢ã‚¤ãƒ†ãƒ ã‚’çµåˆã—ãŸæ–°ã—ã„ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³ã‚’ä½œæˆ
-                    var combined = new ObservableCollection<PileLayoutDataItem>(
-                        CurrentInputModel.PileLayoutItems.Concat(newItems));
-
-                    // ã‚³ãƒ¬ã‚¯ã‚·ãƒ§ãƒ³å…¨ä½“ã‚’ç½®æ›ï¼ˆCollectionChangedã¯1å›ã®ã¿ï¼‰
-                    CurrentInputModel.PileLayoutItems = combined;
-
-                    // SoilPiles ã‚’1å›ã ã‘å†ç”Ÿæˆ
-                    if (!IsElementSplit)
-                        RequestGenerateSoilPiles();
+                    // ’Ê’m‚ğˆê—}§
+                    CurrentInputModel.SuppressNotifications();
+                    try
+                    {
+                        // š ˆêŠ‡’Ç‰ÁiSetMainWindowViewModel ‚àŠÜ‚ß‚Äˆ—j
+                        foreach (var item in newItems)
+                        {
+                            item.SetMainWindowViewModel(this);
+                            CurrentInputModel.PileLayoutItems.Add(item);
+                        }
+                    }
+                    finally
+                    {
+                        // ’Ê’m‚ğÄŠJ‚µASoilPiles ‚ğ1‰ñ‚¾‚¯Ä¶¬
+                        CurrentInputModel.ResumeAndNotify();
+                    }
 
                     UpdatePileLayoutNo();
-                    RequestUpdateWindow();
+                    UpdateWindowAction?.Invoke();
                     UpdateTreeView();
                 });
             }
             finally
             {
                 if (showWaitCursor)
+                {
                     Mouse.OverrideCursor = null;
+                }
             }
         }
 
-        // ç§»å‹•æ“ä½œã‚’è¡Œã†
+        // ˆÚ“®‘€ì‚ğs‚¤
         private void MoveNodes(double dX, double dY)
         {
-            foreach (PileLayoutDataItem pileLocation in CurrentInputModel.PileLayoutItems)
+            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
             {
-                if (pileLocation.IsSelected)
+                if (pilelocation.IsSelected)
                 {
-                    pileLocation.X += dX;
-                    pileLocation.Y += dY;
-                    pileLocation.IsSelected = false;
+                    pilelocation.X += dX;
+                    pilelocation.Y += dY;
+                    pilelocation.IsSelected = false;
                 }
             }
         }
 
-        // ã‚³ãƒ”ãƒ¼ã‚’ä½œæˆã—ã¦æ“ä½œã‚’è¡Œã†
-        // ã‚³ãƒ”ãƒ¼ã‚’ä½œæˆã—ã¦æ“ä½œã‚’è¡Œã†
+        // ƒRƒs[‚ğì¬‚µ‚Ä‘€ì‚ğs‚¤
         private void CopyNodes(double dX, double dY, int repetitionNumber)
         {
-            var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
-            int totalCount = selectedItems.Count * repetitionNumber;
+            // •ÏX‚ğs‚¤‘O‚ÉA‘I‘ğ‚³‚ê‚½ƒAƒCƒeƒ€‚ÌƒŠƒXƒg‚ğì¬
+            var selectedItems = CurrentInputModel.PileLayoutItems.Where(pilelocation => pilelocation.IsSelected).ToList();
 
-            // â˜… ä¸€æ™‚ãƒªã‚¹ãƒˆã«äº‹å‰ã«ã™ã¹ã¦ä½œæˆ
-            var newItems = new List<PileLayoutDataItem>(totalCount);
-
-            foreach (var pilelocation in selectedItems)
+            // ’Ê’m‚ğˆê—}§‚µ‚Ä‚‘¬‰»
+            CurrentInputModel.SuppressNotifications();
+            try
             {
-                for (int i = 0; i < repetitionNumber; i++)
+                foreach (PileLayoutDataItem pilelocation in selectedItems)
                 {
-                    var newItem = new PileLayoutDataItem
+                    for (int i = 0; i < repetitionNumber; i++)
                     {
-                        X = pilelocation.X + dX * (i + 1),
-                        Y = pilelocation.Y + dY * (i + 1)
-                    };
-                    newItem.SetMainWindowViewModel(this);
-                    newItems.Add(newItem);
+                        // ƒRƒs[‚µ‚½ƒRƒŒƒNƒVƒ‡ƒ“‚ÉV‚µ‚¢—v‘f‚ğ’Ç‰Á
+                        CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem()
+                        {
+                            X = pilelocation.X + dX * (i + 1),
+                            Y = pilelocation.Y + dY * (i + 1)
+                        });
+                        CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
+                    }
+                    pilelocation.IsSelected = false;
                 }
-                pilelocation.IsSelected = false;
             }
-
-            // â˜… ä¸€æ‹¬ç½®æ›
-            var combined = new ObservableCollection<PileLayoutDataItem>(
-                CurrentInputModel.PileLayoutItems.Concat(newItems));
-            CurrentInputModel.PileLayoutItems = combined;
+            finally
+            {
+                // ’Ê’m‚ğÄŠJ‚µASoilPiles ‚ğ1‰ñ‚¾‚¯Ä¶¬
+                CurrentInputModel.ResumeAndNotify();
+            }
 
             UpdatePileLayoutNo();
         }
 
-        // æ­é…ç½®ã®ç·¨é›†ãƒ»è¿½åŠ ã‚³ãƒãƒ³ãƒ‰
+        // Y”z’u‚Ì•ÒWE’Ç‰ÁƒRƒ}ƒ“ƒh
         [RelayCommand]
         private void EditAddPiles()
         {
@@ -2293,18 +2124,19 @@ namespace PileDesign.ViewModels
             editPileLayoutWindow.EditPileLayoutCompleted += EditPileLayoutWindow_EditPileLayoutCompleted;
 
             editPileLayoutWindow.ShowDialog();
-            // å¤‰æ›´: ãƒ€ã‚¤ã‚¢ãƒ­ã‚°å¾Œã¯å³æ™‚å®Ÿè¡Œ
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke();
         }
 
         private void EditPileLayoutWindow_EditPileLayoutCompleted(object sender, EditPileLayoutEventArgs e)
         {
             ObservableCollection<PileLayoutDataItem> selectedItems = [];
 
-            foreach (PileLayoutDataItem pileLocation in CurrentInputModel.PileLayoutItems)
+            foreach (PileLayoutDataItem pilelocation in CurrentInputModel.PileLayoutItems)
             {
-                if (pileLocation.IsSelected)
-                    selectedItems.Add(pileLocation);
+                if (pilelocation.IsSelected)
+                {
+                    selectedItems.Add(pilelocation);
+                }
             }
 
             if (e.IsApplicablePileRefNo)
@@ -2347,7 +2179,7 @@ namespace PileDesign.ViewModels
                     selectedItem.AxialForceVLAdditional = isAdd ? selectedItem.AxialForceVLAdditional + e.VLadd : e.VLadd;
             }
 
-            // E1_1 ~ E2_4 ã®å‡¦ç†ï¼ˆç°¡ç•¥åŒ–ï¼‰
+            // E1_1 ~ E2_4 ‚Ìˆ—iŠÈ—ª‰»j
             Action<bool, bool, double, int, bool> applyLevel1 = (applicable, isAdd, val, idx, _) =>
             {
                 if (!applicable) return;
@@ -2394,9 +2226,7 @@ namespace PileDesign.ViewModels
             {
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
-
-                // å¤‰æ›´: å³æ™‚å®Ÿè¡Œ
-                UpdateWindowImmediate();
+                UpdateWindowAction?.Invoke();
                 UpdateTreeView();
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
@@ -2410,9 +2240,7 @@ namespace PileDesign.ViewModels
             {
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
-
-                // å¤‰æ›´: å³æ™‚å®Ÿè¡Œ
-                UpdateWindowImmediate();
+                UpdateWindowAction?.Invoke();
                 UpdateTreeView();
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
@@ -2423,11 +2251,11 @@ namespace PileDesign.ViewModels
             var elementsToRemove = CurrentInputModel.Elements.Where(element => element.Nodes.Contains(oldItem)).ToList();
 
             foreach (var element in elementsToRemove)
+            {
                 CurrentInputModel.Elements.Remove(element);
+            }
 
-
-            // å¤‰æ›´: ãƒ‡ãƒã‚¦ãƒ³ã‚¹ä»˜ãã§æ›´æ–°
-            RequestUpdateWindow();
+            UpdateWindowAction?.Invoke();
         }
 
         public void DeleteDuplicatedPiles()
@@ -2442,20 +2270,21 @@ namespace PileDesign.ViewModels
                     existingItem.Z == pileLayoutItem.Z);
 
                 if (!isDuplicate)
+                {
                     uniquePileLayoutDataItems.Add(pileLayoutItem);
+                }
             }
 
             CurrentInputModel.PileLayoutItems = uniquePileLayoutDataItems;
-            // å¤‰æ›´: ãƒ€ã‚¤ã‚¢ãƒ­ã‚°å¾Œã¯å³æ™‚å®Ÿè¡Œ
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke();
         }
 
         public void DeleteDuplicatedElements()
         {
-            // é‡è¤‡è¦ç´ ã®å‰Šé™¤ãƒ­ã‚¸ãƒƒã‚¯
+            // d•¡—v‘f‚ÌíœƒƒWƒbƒN
         }
 
-        // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // ƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         private void OpenDialogWindow<TViewModel, TWindow>(MainWindowViewModel mainWindowViewModel)
             where TViewModel : ObservableObject
             where TWindow : Window, new()
@@ -2480,66 +2309,52 @@ namespace PileDesign.ViewModels
             }
 
             window.ShowDialog();
-
-            // å¤‰æ›´: ãƒ€ã‚¤ã‚¢ãƒ­ã‚°å¾Œã¯å³æ™‚å®Ÿè¡Œ
-            UpdateWindowImmediate();
+            UpdateWindowAction?.Invoke();
             UpdateTreeView();
         }
 
-        // åŸºæœ¬è¨­å®šã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // Šî–{İ’èƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         private void OpenFundamentalWindow()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
             OpenDialogWindow<FundamentalViewModel, FundamentalWindow>(this);
         }
 
-        // è·é‡æ¡ä»¶ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // ‰×dğŒƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         public void OpenLoadCaseWindow()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
             OpenDialogWindow<LoadCaseViewModel, LoadCaseWindow>(this);
             UpdateLoadCaseOption();
             UpdateLoadCombinationOption();
         }
 
-        // åœ°ç›¤ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // ’n”ÕƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         public void OpenGroundWindow()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
             OpenDialogWindow<GroundLayerViewModel, GroundWindow>(this);
         }
 
-        // æ­ä½“ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // Y‘ÌƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         public void OpenPileBodyWindow()
         {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
             OpenDialogWindow<PileBodyViewModel, PileBodyWindow>(this);
         }
 
-        // è»¸åŠ›ãƒã‚§ãƒƒã‚¯
+        // ²—Íƒ`ƒFƒbƒN
         [RelayCommand]
         public void OnAxialForceCheck()
         {
             if (CurrentInputModel == null || CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                MessageBox.Show("æ­é…ç½®ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚", "ç¢ºèª", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Y”z’u‚ª‘¶İ‚µ‚Ü‚¹‚ñB", "Šm”F", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
             bool hasWarning = false;
-            string warningMessage = "ä»¥ä¸‹ã®é …ç›®ã«å•é¡ŒãŒã‚ã‚Šã¾ã™:\n";
+            string warningMessage = "ˆÈ‰º‚Ì€–Ú‚É–â‘è‚ª‚ ‚è‚Ü‚·:\n";
 
             foreach (var pileLayout in CurrentInputModel.PileLayoutItems)
             {
@@ -2552,32 +2367,33 @@ namespace PileDesign.ViewModels
                     if (pileSection.FactoredServiceNmax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- æ­é…ç½®ç•ªå·{i + 1} è·é‡ã‚±ãƒ¼ã‚¹:VL:\n ä½¿ç”¨é™ç•Œè»¸åŠ›é©ç”¨ç¯„å›²Max{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
+                        warningMessage += $"- Y”z’u”Ô†{i + 1} ‰×dƒP[ƒX:VL:\n g—pŒÀŠE²—Í“K—p”ÍˆÍMax{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
                     }
                     if (force < pileSection.FactoredServiceNmin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- æ­é…ç½®ç•ªå·{i + 1} è·é‡ã‚±ãƒ¼ã‚¹:VL:\n {force:N0}kN < ä½¿ç”¨é™ç•Œè»¸åŠ›é©ç”¨ç¯„å›²Min{pileSection.FactoredServiceNmin:N0}kN\n";
+                        warningMessage += $"- Y”z’u”Ô†{i + 1} ‰×dƒP[ƒX:VL:\n {force:N0}kN < g—pŒÀŠE²—Í“K—p”ÍˆÍMin{pileSection.FactoredServiceNmin:N0}kN\n";
                     }
                 }
             }
 
             if (hasWarning)
-                MessageBox.Show(warningMessage, "è­¦å‘Š", MessageBoxButton.OK, MessageBoxImage.Information);
+            {
+                MessageBox.Show(warningMessage, "Œx", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             else
-                MessageBox.Show("å„æ­é…ç½®ã®è»¸åŠ›ã¯å„æ–­é¢ã®è»¸åŠ›é©ç”¨ç¯„å›²å†…ã§ã™ã€‚", "æƒ…å ±", MessageBoxButton.OK, MessageBoxImage.Information);
+            {
+                MessageBox.Show("ŠeY”z’u‚Ì²—Í‚ÍŠe’f–Ê‚Ì²—Í“K—p”ÍˆÍ“à‚Å‚·B", "î•ñ", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
 
-        // è¦ç´ åˆ†å‰²ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // —v‘f•ªŠ„ƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         public void OpenElementDivisionWindow()
         {
             if (IsPreparedForAnalysis())
             {
-                // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-                GenerateSoilPilesImmediate();  // å³æ™‚å®Ÿè¡Œã«å¤‰æ›´
+                CurrentInputModel.GenerateSoilPiles();
                 CurrentInputModel.GenerateSoilEmbedment();
 
                 var window = new ElementDivisionWindow(this);
@@ -2588,7 +2404,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // æ²ˆä¸‹ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // ’¾‰ºƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         public void OpenSettlementWindow()
         {
@@ -2596,20 +2412,24 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    MessageBox.Show("æ­é…ç½®ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚");
+                    MessageBox.Show("Y”z’u‚ª‘¶İ‚µ‚Ü‚¹‚ñB");
                     return;
                 }
                 else
                 {
                     if (IsElementSplit == false)
-                        System.Windows.MessageBox.Show("è¦ç´ åˆ†å‰²ã‚’è¡Œã£ã¦ãã ã•ã„ã€‚");
+                    {
+                        System.Windows.MessageBox.Show("—v‘f•ªŠ„‚ğs‚Á‚Ä‚­‚¾‚³‚¢B");
+                    }
                     else
+                    {
                         OpenDialogWindow<SettlementViewModel, SettlementWindow>(this);
+                    }
                 }
             }
         }
 
-        // æ°´å¹³è·é‡è§£æã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é–‹ããƒ¡ã‚½ãƒƒãƒ‰
+        // …•½‰×d‰ğÍƒEƒBƒ“ƒhƒE‚ğŠJ‚­ƒƒ\ƒbƒh
         [RelayCommand]
         public void OpenLateralLoadAnalysisWindow()
         {
@@ -2617,27 +2437,26 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel.ElementDivision.SoilPiles == null || CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {
-                    MessageBox.Show("æ­é…ç½®ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚");
+                    MessageBox.Show("Y”z’u‚ª‘¶İ‚µ‚Ü‚¹‚ñB");
                     return;
                 }
                 else
                 {
                     if (IsElementSplit == false)
                     {
-                        System.Windows.MessageBox.Show("è¦ç´ åˆ†å‰²ã‚’è¡Œã£ã¦ãã ã•ã„ã€‚");
+                        System.Windows.MessageBox.Show("—v‘f•ªŠ„‚ğs‚Á‚Ä‚­‚¾‚³‚¢B");
                     }
                     else
                     {
-                        // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ ï¼ˆèª­è¾¼å‰ã®çŠ¶æ…‹ã‚’ä¿å­˜ï¼‰
-                        _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
                         var viewModel = new HorizontalCalculationViewModel(this);
                         var window = new HorizontalCalculationWindow { DataContext = viewModel };
 
                         if (viewModel is ICloseable closeableViewModel)
                         {
                             if (window.IsLoaded && window.IsVisible)
+                            {
                                 window.Close();
+                            }
                         }
 
                         try
@@ -2646,23 +2465,22 @@ namespace PileDesign.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show($"ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã®è¡¨ç¤ºä¸­ã«ã‚¨ãƒ©ãƒ¼ãŒç™ºç”Ÿã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show($"ƒ_ƒCƒAƒƒO‚Ì•\¦’†‚ÉƒGƒ‰[‚ª”­¶‚µ‚Ü‚µ‚½: {ex.Message}", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
 
-                        // å¤‰æ›´: å³æ™‚å®Ÿè¡Œ
-                        UpdateWindowImmediate();
+                        UpdateWindowAction?.Invoke();
                         UpdateTreeView();
                     }
                 }
             }
         }
 
-        // è§£ææº–å‚™ãŒã§ãã¦ã„ã‚‹ã‹ã‚’ç¢ºèªã™ã‚‹ãƒ¡ã‚½ãƒƒãƒ‰
+        // ‰ğÍ€”õ‚ª‚Å‚«‚Ä‚¢‚é‚©‚ğŠm”F‚·‚éƒƒ\ƒbƒh
         private bool IsPreparedForAnalysis()
         {
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
-                System.Windows.MessageBox.Show("æ­é…ç½®ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚");
+                System.Windows.MessageBox.Show("Y”z’u‚ª‘¶İ‚µ‚Ü‚¹‚ñB");
                 return false;
             }
             return true;
@@ -2677,13 +2495,13 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void GroundInputCopyToSettlementGroundLayers()
         {
-            if (SelectedGroundInputModelNo == 0)
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+            if (SelectedGroundInputModelNo == null || SelectedGroundInputModelNo == 0)
             {
-                MessageBox.Show("åœ°ç›¤ãƒ‡ãƒ¼ã‚¿ãŒå­˜åœ¨ã—ã¾ã›ã‚“ã€‚");
+                MessageBox.Show("’n”Õƒf[ƒ^‚ª‘¶İ‚µ‚Ü‚¹‚ñB");
                 return;
             }
-
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
@@ -2697,11 +2515,11 @@ namespace PileDesign.ViewModels
                     double poissonsRatio = 0.33;
                     switch (layer.GranularityClass)
                     {
-                        case "ç²˜æ€§åœŸ":
+                        case "”S«“y":
                             poissonsRatio = 0.4;
                             break;
-                        case "ç ‚è³ªåœŸ":
-                        case "ç¤«è³ªåœŸ":
+                        case "»¿“y":
+                        case "âI¿“y":
                             poissonsRatio = 0.3;
                             break;
                     }
@@ -2727,143 +2545,7 @@ namespace PileDesign.ViewModels
                         CurrentInputModel.PileGroupSettlement.SettlementSoilLayers[i].BottomAltitude;
             }
 
-            // å¤‰æ›´: å³æ™‚å®Ÿè¡Œ
-            UpdateWindowImmediate();
-        }
-
-        // AutoOverturningMomentCommand - è»¢å€’ãƒ¢ãƒ¼ãƒ¡ãƒ³ãƒˆè‡ªå‹•è¨ˆç®—
-        [RelayCommand]
-        private void AutoOverturningMoment()
-        {
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            var window = new AutoOverturningMomentWindow(this);
-
-            var appMain = Application.Current?.MainWindow;
-            if (appMain != null)
-            {
-                try { window.Owner = appMain; }
-                catch { }
-            }
-
-            window.ShowDialog();
-
-            UpdateSumAndOTM();
-            // å¤‰æ›´: å³æ™‚å®Ÿè¡Œ
-            UpdateWindowImmediate();
-            UpdateTreeView();
-        }
-
-        // AutoActionPointXYCommand - ä½œç”¨ç‚¹XYè‡ªå‹•è¨­å®š
-        [RelayCommand]
-        private void AutoActionPointXY()
-        {
-            // ä½œç”¨ç‚¹ã‚’æ­é…ç½®ã®é‡å¿ƒã«ç§»å‹•
-            OnMoveForceActionPointToAverageCenter();
-        }
-
-        /// <summary>
-        /// é¸æŠã•ã‚ŒãŸæ­ã‚’å‰Šé™¤ã™ã‚‹ã‚³ãƒãƒ³ãƒ‰
-        /// </summary>
-        [RelayCommand]
-        private void DeletePiles()
-        {
-            var col = CurrentInputModel.PileLayoutItems;
-            var itemsToRemove = col.Where(x => x.IsSelected).ToList();
-            if (itemsToRemove.Count == 0) return;
-
-            // Undoãƒã‚¤ãƒ³ãƒˆã‚’è¿½åŠ 
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-            // Undoç”¨ã«ã¾ã¨ã‚ã‚‹
-            var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
-            foreach (var item in itemsToRemove)
-            {
-                int index = col.IndexOf(item);
-                if (index < 0) continue;
-                scope.Add(
-                    PileDesign.Common.Undo.CollectionChangeAction<PileLayoutDataItem>
-                        .ForRemove(col, item, index)
-                );
-            }
-            UndoService.Instance.Push(scope);
-
-            // å®Ÿå‰Šé™¤
-            foreach (var item in itemsToRemove)
-                col.Remove(item);
-
-            UpdatePileLayoutNo();
-            RequestUpdateWindow();
-        }
-
-        /// <summary>
-        /// ã™ã¹ã¦ã®æ­ã®é¸æŠã‚’è§£é™¤ã™ã‚‹ã‚³ãƒãƒ³ãƒ‰
-        /// </summary>
-        [RelayCommand]
-        private void DeselectPiles()
-        {
-            foreach (var item in CurrentInputModel.PileLayoutItems)
-                item.IsSelected = false;
-
-            RequestUpdateWindow();
-        }
-
-        /// <summary>
-        /// Canvas3D ã®ç”»åƒã‚’ä¿å­˜ã™ã‚‹ã‚³ãƒãƒ³ãƒ‰
-        /// </summary>
-        [RelayCommand]
-        private void ImageSave()
-        {
-            if (Canvas3DLayout == null) return;
-
-            var dialog = new Microsoft.Win32.SaveFileDialog
-            {
-                Filter = "PNG Image|*.png|JPEG Image|*.jpg|Bitmap Image|*.bmp",
-                DefaultExt = ".png",
-                FileName = "Canvas3D_" + DateTime.Now.ToString("yyyyMMdd_HHmmss")
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                try
-                {
-                    // Canvas ã‚’ RenderTargetBitmap ã§ã‚­ãƒ£ãƒ—ãƒãƒ£
-                    var bounds = VisualTreeHelper.GetDescendantBounds(Canvas3DLayout);
-                    var rtb = new RenderTargetBitmap(
-                        (int)Canvas3DLayout.ActualWidth,
-                        (int)Canvas3DLayout.ActualHeight,
-                        96, 96,
-                        PixelFormats.Pbgra32);
-
-                    var dv = new DrawingVisual();
-                    using (var dc = dv.RenderOpen())
-                    {
-                        var vb = new VisualBrush(Canvas3DLayout);
-                        dc.DrawRectangle(vb, null, new Rect(new Point(), new Size(Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight)));
-                    }
-                    rtb.Render(dv);
-
-                    // ã‚¨ãƒ³ã‚³ãƒ¼ãƒ€ãƒ¼ã‚’é¸æŠ
-                    BitmapEncoder encoder = System.IO.Path.GetExtension(dialog.FileName).ToLower() switch
-                    {
-                        ".jpg" or ".jpeg" => new JpegBitmapEncoder(),
-                        ".bmp" => new BmpBitmapEncoder(),
-                        _ => new PngBitmapEncoder()
-                    };
-
-                    encoder.Frames.Add(BitmapFrame.Create(rtb));
-
-                    using var fs = new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Create);
-                    encoder.Save(fs);
-
-                    StatusMessage = $"ç”»åƒã‚’ä¿å­˜ã—ã¾ã—ãŸ: {dialog.FileName}";
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.MessageBox.Show($"ç”»åƒã®ä¿å­˜ã«å¤±æ•—ã—ã¾ã—ãŸ: {ex.Message}", "ã‚¨ãƒ©ãƒ¼", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
+            UpdateWindowAction?.Invoke();
         }
     }
 }

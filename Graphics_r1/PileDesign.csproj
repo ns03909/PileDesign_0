@@ -227,6 +227,8 @@
     <None Remove="Icons\LoadingPlaneSelected.svg" />
     <None Remove="Icons\LoadingPlaneVisible.png" />
     <None Remove="Icons\LoadingPlaneVisible.svg" />
+    <None Remove="Icons\log.png" />
+    <None Remove="Icons\log.svg" />
     <None Remove="Icons\MergeElements.png" />
     <None Remove="Icons\MergeElements.svg" />
     <None Remove="Icons\MergeNodes.png" />
@@ -979,6 +981,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\LoadingPlaneVisible.svg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\log.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\log.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MergeElements.png">

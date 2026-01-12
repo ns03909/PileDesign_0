@@ -973,7 +973,8 @@ namespace PileDesign.ViewModels
 
                             targetModel.SetR();
 
-                            while (targetModel.NormsROnNormsFint >= alpha)
+                            const int maxIterations = 100; // 最大反復回数
+                            while (targetModel.NormsROnNormsFint >= alpha && n_iter <= maxIterations)
                             {
                                 double diagKMin = double.NaN, diagKMax = double.NaN;
                                 double springKMin = double.NaN, springKMax = double.NaN;
@@ -1055,6 +1056,19 @@ namespace PileDesign.ViewModels
                                 n_iter += 1;
                             }
 
+                            // Maximum iteration check
+                            if (n_iter > maxIterations && targetModel.NormsROnNormsFint >= alpha)
+                            {
+                                await AddLogAsync($"Warning: Maximum iterations {maxIterations} reached. Residual norm={targetModel.NormsROnNormsFint:E3} (tolerance={alpha:E3})");
+                                string warnMsg = $"Convergence failed.\nMaximum iterations {maxIterations} reached.\nResidual norm={targetModel.NormsROnNormsFint:E3}";
+                                Application.Current?.Dispatcher.Invoke(() => RequestShowWarning?.Invoke(warnMsg));
+                            }
+                            else
+                            {
+                                // Log successful convergence
+                                await AddLogAsync($"  → Converged in {n_iter} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}");
+                            }
+
                             targetModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iter, targetModel.NormsROnNormsFint));
                             foreach (var node in targetModel.Nodes)
                                 node.NodeResults.Add(new(loadCase, loadCombination, isLiquefaction, step, node));
@@ -1079,6 +1093,10 @@ namespace PileDesign.ViewModels
 
             token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
+
+            // Pass logs to MainWindowViewModel
+            _mainWindowViewModel.SetLatestAnalysisLogs(_logQueue.ToList());
+
             MessageBox.Show("計算が終了しました。");
         }
 
@@ -1144,8 +1162,9 @@ namespace PileDesign.ViewModels
                 double EI0z = beam.Section.Material.E * beam.Section.IZ;
 
                 // 倍率に変換（数値安定化のため上下限）
-                double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 1e-4, 1.0);
-                double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 1e-4, 1.0);
+                // 下限を 0.01 (1%) に設定して過度の剛性低下を防止
+                double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 0.01, 1.0);
+                double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 0.01, 1.0);
 
                 System.Diagnostics.Debug.WriteLine($"UpdateBeamMPhiTangent: Beam={beam.Name}, phiY={phiY:E6}, phiZ={phiZ:E6}, EIy_eff={EIy_eff:E6}, EI0y={EI0y:E6}, ratioY={ratioY:E6}, EIz_eff={EIz_eff:E6}, EI0z={EI0z:E6}, ratioZ={ratioZ:E6}");
 
@@ -1178,11 +1197,13 @@ namespace PileDesign.ViewModels
 
                 var (EIy_eff, EIz_eff) = beam.EvaluateEIeff(phiY, phiZ);
 
-                double EI0y = beam.Section.Material.E * beam.Section.IZ;
-                double EI0z = beam.Section.Material.E * beam.Section.IY;
+                // 初期 EI（UpdateBeamMPhiTangentと同じ）
+                double EI0y = beam.Section.Material.E * beam.Section.IY;
+                double EI0z = beam.Section.Material.E * beam.Section.IZ;
 
-                double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 1e-4, 1.0);
-                double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 1e-4, 1.0);
+                // 下限を 0.01 (1%) に設定して過度の剛性低下を防止
+                double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 0.01, 1.0);
+                double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 0.01, 1.0);
 
                 beam.Ksec_y = ratioY;
                 beam.Ksec_z = ratioZ;

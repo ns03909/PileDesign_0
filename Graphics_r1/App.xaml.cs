@@ -102,7 +102,16 @@ namespace PileDesign
             {
                 File.WriteAllText("error.log", ex.ToString());
             }
-            catch { /* ログ出力失敗時は無視 */ }
+            catch (UnauthorizedAccessException)
+            {
+                // ファイル書き込み権限がない場合は無視（デバッグ出力のみ）
+                System.Diagnostics.Debug.WriteLine("ログファイルへの書き込み権限がありません");
+            }
+            catch (IOException)
+            {
+                // ファイルI/O例外は無視（デバッグ出力のみ）
+                System.Diagnostics.Debug.WriteLine("ログファイルの書き込みに失敗しました");
+            }
 
             // ユーザーに通知
             MessageBox.Show(

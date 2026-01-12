@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using Graphics_r1.Constants;
 
 namespace PileDesign.Models
 {
@@ -376,13 +377,12 @@ namespace PileDesign.Models
         // TD, TBの更新メソッド
         public void UpdateTDorTB()
         {
-            const double tol = 1e-6;
-
             if (CTPTensionRebars.IsSquareArrangement)
             {
                 foreach (var pcdSquare in CaptainPileTensionBarPCDsSquare)
                 {
-                    if (Math.Abs(D - pcdSquare.D) < tol && Math.Abs(Nu - pcdSquare.Nu) < tol)
+                    if (Math.Abs(D - pcdSquare.D) < NumericalConstants.PCD_COMPARISON_TOLERANCE
+                        && Math.Abs(Nu - pcdSquare.Nu) < NumericalConstants.PCD_COMPARISON_TOLERANCE)
                     {
                         CTPTensionRebars.TDorTBmax = pcdSquare.TDorTBmax;
                         break;
@@ -393,7 +393,8 @@ namespace PileDesign.Models
             {
                 foreach (var pcdCircle in CaptainPileTensionBarPCDsCircle)
                 {
-                    if (Math.Abs(D - pcdCircle.D) < tol && Math.Abs(Nu - pcdCircle.Nu) < tol)
+                    if (Math.Abs(D - pcdCircle.D) < NumericalConstants.PCD_COMPARISON_TOLERANCE
+                        && Math.Abs(Nu - pcdCircle.Nu) < NumericalConstants.PCD_COMPARISON_TOLERANCE)
                     {
                         CTPTensionRebars.TDorTBmax = pcdCircle.TDorTBmax;
                         break;
