@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using System;
 using System.ComponentModel;
@@ -12,7 +13,7 @@ namespace PileDesign.ViewModels
 {
     public partial class FundamentalViewModel : ObservableObject, ICloseable
     {
-        private readonly LoadCaseUndoManager _undoManager = new();
+        private readonly UndoManager _undoManager = new();
 
         private readonly MainWindowViewModel _mainWindowViewModel;
 
@@ -25,9 +26,10 @@ namespace PileDesign.ViewModels
         {
             var oldValue = InputModel.FundamentalInput.RefLevel;
 
-            _undoManager.Execute(
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.RefLevel = oldValue,
                 () => InputModel.FundamentalInput.RefLevel = value,
-                () => InputModel.FundamentalInput.RefLevel = oldValue
+                "RefLevel変更"
             );
             InputModel.FundamentalInput.RefLevel = value;
         }
@@ -39,9 +41,10 @@ namespace PileDesign.ViewModels
         {
             var oldValue = InputModel.FundamentalInput.ProjectNo;
 
-            _undoManager.Execute(
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.ProjectNo = oldValue,
                 () => InputModel.FundamentalInput.ProjectNo = value,
-                () => InputModel.FundamentalInput.ProjectNo = oldValue
+                "ProjectNo変更"
             );
             InputModel.FundamentalInput.ProjectNo = value;
         }
@@ -53,9 +56,10 @@ namespace PileDesign.ViewModels
         {
             var oldValue = InputModel.FundamentalInput.ProjectName;
 
-            _undoManager.Execute(
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.ProjectName = oldValue,
                 () => InputModel.FundamentalInput.ProjectName = value,
-                () => InputModel.FundamentalInput.ProjectName = oldValue
+                "ProjectName変更"
             );
             InputModel.FundamentalInput.ProjectName = value;
         }
@@ -67,9 +71,10 @@ namespace PileDesign.ViewModels
         {
             var oldValue = InputModel.FundamentalInput.SeismicGrade;
 
-            _undoManager.Execute(
+            _undoManager.PushAction(
+                () => InputModel.FundamentalInput.SeismicGrade = oldValue,
                 () => InputModel.FundamentalInput.SeismicGrade = value,
-                () => InputModel.FundamentalInput.SeismicGrade = oldValue
+                "SeismicGrade変更"
             );
             InputModel.FundamentalInput.SeismicGrade = value;
         }

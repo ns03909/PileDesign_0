@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
@@ -203,7 +204,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Undo()
         {
-            _undoManager.Undo();
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is ObservableCollection<SoilPile> state)
             {
                 SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));
@@ -216,7 +217,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is ObservableCollection<SoilPile> state)
             {
                 SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));

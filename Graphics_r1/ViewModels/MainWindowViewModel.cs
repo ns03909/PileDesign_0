@@ -2389,7 +2389,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Undo()
         {
-            _undoManager.Undo();
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is InputModel state)
             {
                 CurrentInputModel = state.DeepCopy();
@@ -2405,7 +2405,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is InputModel state)
             {
                 CurrentInputModel = state.DeepCopy();

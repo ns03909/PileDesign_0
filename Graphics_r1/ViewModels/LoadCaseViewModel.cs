@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using System;
@@ -12,7 +13,7 @@ namespace PileDesign.ViewModels
 {
     public partial class LoadCaseViewModel : BaseViewModel
     {
-        private readonly LoadCaseUndoManager _undoManager = new();
+        private readonly UndoManager _undoManager = new();
         private readonly MainWindowViewModel _mainWindowViewModel;
         // ViewModelにView参照用プロパティを追加
         public LoadCaseWindow LoadCaseWindowInstance { get; set; }
@@ -135,7 +136,7 @@ namespace PileDesign.ViewModels
         // 状態を保存
         public void PushUndoState()
         {
-            var state = new LoadCaseState
+            var currentState = new LoadCaseState
             {
                 LoadCasesLevel1 = new ObservableCollection<LoadCase>(LoadCasesLevel1.Select(x => x.DeepCopy())),
                 LoadCasesLevel2 = new ObservableCollection<LoadCase>(LoadCasesLevel2.Select(x => x.DeepCopy())),
@@ -145,7 +146,7 @@ namespace PileDesign.ViewModels
                 LoadCasesLevel1Common = new ObservableCollection<LoadCaseCommon>(LoadCasesLevel1Common.Select(x => x.DeepCopy())),
                 LoadCasesLevel2Common = new ObservableCollection<LoadCaseCommon>(LoadCasesLevel2Common.Select(x => x.DeepCopy()))
             };
-            _undoManager.Execute(() => { }, () => RestoreState(state));
+            _undoManager.SaveState(currentState);
         }
 
         // 状態を復元
@@ -167,10 +168,24 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        private void Undo() => _undoManager.Undo();
+        private void Undo()
+        {
+            _undoManager.UndoSnapshot();
+            if (_undoManager.CurrentState is LoadCaseState state)
+            {
+                RestoreState(state);
+            }
+        }
 
         [RelayCommand]
-        private void Redo() => _undoManager.Redo();
+        private void Redo()
+        {
+            _undoManager.RedoSnapshot();
+            if (_undoManager.CurrentState is LoadCaseState state)
+            {
+                RestoreState(state);
+            }
+        }
 
         // 例: 編集前にPushUndoState()を呼ぶ
         partial void OnLoadCasesLevel1Changed(ObservableCollection<LoadCase> value)

@@ -6,6 +6,7 @@ using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using Microsoft.Win32;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using ScottPlot.Plottables;

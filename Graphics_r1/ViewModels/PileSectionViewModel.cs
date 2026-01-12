@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using ScottPlot.Plottables;

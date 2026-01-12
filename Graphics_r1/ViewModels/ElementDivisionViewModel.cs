@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using ScottPlot;
@@ -418,11 +419,11 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // メソッド // 
+        // メソッド //
         [RelayCommand]
         private void Undo()
         {
-            _undoManager.Undo();
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is List<SoilPile> state)
             {
                 SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));
@@ -435,7 +436,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is List<SoilPile> state)
             {
                 SoilPiles = new ObservableCollection<SoilPile>(state.Select(p => p.DeepCopy()));

@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using ScottPlot;
@@ -16,7 +17,7 @@ namespace PileDesign.ViewModels
 {
     public partial class GraphViewModel : ObservableObject
     {
-        private readonly LoadCaseUndoManager _undoManager = new();
+        private readonly UndoManager _undoManager = new();
 
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;

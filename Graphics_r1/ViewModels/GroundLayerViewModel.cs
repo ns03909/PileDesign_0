@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LiveChartsCore.Defaults;
 using PileDesign.Common;
+using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using ScottPlot;
@@ -24,13 +25,13 @@ using static PileDesign.ViewModels.MainWindowViewModel;
 namespace PileDesign.ViewModels
 {
     /// <summary>
-    /// GroundLayerViewModelƒNƒ‰ƒX
+    /// GroundLayerViewModelï¿½Nï¿½ï¿½ï¿½X
     /// </summary>
     public partial class GroundLayerViewModel : ObservableObject, ICloseable
     {
         public readonly UndoManager _undoManager = new();
 
-        public GroundWindow GroundWindowInstance { get; set; } // GroundWindow ‚ÌƒCƒ“ƒXƒ^ƒ“ƒX‚ğ•Û‚·‚éƒvƒƒpƒeƒB‚ğ’Ç‰Á
+        public GroundWindow GroundWindowInstance { get; set; } // GroundWindow ï¿½ÌƒCï¿½ï¿½ï¿½Xï¿½^ï¿½ï¿½ï¿½Xï¿½ï¿½Ûï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½pï¿½eï¿½Bï¿½ï¿½Ç‰ï¿½
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
@@ -42,10 +43,10 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _groundsInput, value);
         }
 
-        // Ä“ü–h~ƒtƒ‰ƒO
+        // ï¿½Ä“ï¿½ï¿½hï¿½~ï¿½tï¿½ï¿½ï¿½O
         private bool _isSyncingGroundInput;
 
-        // GroundInput ƒvƒƒpƒeƒB: w“Ç‚Ì•t‚¯‘Ö‚¦‚ğ“à•ï
+        // GroundInput ï¿½vï¿½ï¿½ï¿½pï¿½eï¿½B: ï¿½wï¿½Ç‚Ì•tï¿½ï¿½ï¿½Ö‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         private GroundInput _groundInput;
         public GroundInput GroundInput
         {
@@ -60,7 +61,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ƒRƒ“ƒXƒgƒ‰ƒNƒ^“à: ––”ö‚Ì Update() ŒÄ‚Ño‚µ‘O‚Éw“ÇÏ‚İ‚É‚È‚é‚æ‚¤‚É GroundInput ‚Ì‘ã“üŒo˜H‚ğ’Ê‚Á‚Ä‚¢‚ê‚ÎOK
+        // ï¿½Rï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½Nï¿½^ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Update() ï¿½Ä‚Ñoï¿½ï¿½ï¿½Oï¿½Éwï¿½ÇÏ‚İ‚É‚È‚ï¿½æ‚¤ï¿½ï¿½ GroundInput ï¿½Ì‘ï¿½ï¿½ï¿½oï¿½Hï¿½ï¿½Ê‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½OK
         public GroundLayerViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -80,12 +81,12 @@ namespace PileDesign.ViewModels
 
             UpdateGroundsCountPlusOneList();
 
-            // ‚±‚±‚Å GroundInput ƒZƒbƒ^[‚ğ’Ê‚·iw“Ç‚³‚ê‚éj
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ GroundInput ï¿½Zï¿½bï¿½^ï¿½[ï¿½ï¿½Ê‚ï¿½ï¿½iï¿½wï¿½Ç‚ï¿½ï¿½ï¿½ï¿½j
             GroundInput = GroundsInput[Math.Clamp(GroundNo - 1, 0, GroundsInput.Count - 1)];
 
-            // Update(); ‚Í Initialize() ‚ÅŒÄ‚Î‚ê‚é
+            // Update(); ï¿½ï¿½ Initialize() ï¿½ÅŒÄ‚Î‚ï¿½ï¿½
         }
-        // GroundInput •ÏXŠÄ‹‚Ìw“ÇE‰ğœ
+        // GroundInput ï¿½ÏXï¿½Äï¿½ï¿½Ìwï¿½ÇEï¿½ï¿½ï¿½ï¿½
         private void SubscribeToGroundInput(GroundInput gi)
         {
             if (gi == null) return;
@@ -98,7 +99,7 @@ namespace PileDesign.ViewModels
             gi.PropertyChanged -= OnGroundInputPropertyChanged;
         }
 
-        // ŠÄ‹‘ÎÛƒvƒƒpƒeƒB–¼
+        // ï¿½Äï¿½ï¿½ÎÛƒvï¿½ï¿½ï¿½pï¿½eï¿½Bï¿½ï¿½
         private static readonly HashSet<string> GroundInputTriggerProps =
         [
             nameof(GroundInput.GroundTopAltitude),
@@ -106,19 +107,19 @@ namespace PileDesign.ViewModels
             nameof(GroundInput.StressAltitude),
             nameof(GroundInput.GroundWaterGLDepth),
             nameof(GroundInput.StressGLDepth),
-            // •K—v‚È‚ç‰Á‘¬“x‚â•û–@•ÏX‚à‘«‚¹‚é:
+            // ï¿½Kï¿½vï¿½È‚ï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½ï¿½@ï¿½ÏXï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½:
             // nameof(GroundInput.GroundAcceleration1),
             // nameof(GroundInput.GroundAcceleration2),
             // nameof(GroundInput.ShallowSoilType),
             // nameof(GroundInput.CalculationMethod),
         ];
 
-        // ‘ŠŒİŠ·Zi•W‚Z‚ÆGL[‚³j‚Ì“¯Šú
+        // ï¿½ï¿½ï¿½İŠï¿½ï¿½Zï¿½iï¿½Wï¿½ï¿½Zï¿½ï¿½GLï¿½[ï¿½ï¿½ï¿½jï¿½Ì“ï¿½ï¿½ï¿½
         private void SyncDepthAltitude(GroundInput gi, string propertyName)
         {
             if (gi == null) return;
 
-            // Ä“ü–h~
+            // ï¿½Ä“ï¿½ï¿½hï¿½~
             if (_isSyncingGroundInput) return;
             _isSyncingGroundInput = true;
             try
@@ -126,7 +127,7 @@ namespace PileDesign.ViewModels
                 switch (propertyName)
                 {
                     case nameof(GroundInput.GroundTopAltitude):
-                        // EŒûZ‚ª•Ï‚í‚Á‚½‚çA…ˆÊ/‰—Í‚Ì•W‚Z‚ğ[‚³‚©‚çÄì¬
+                        // ï¿½Eï¿½ï¿½Zï¿½ï¿½ï¿½Ï‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½Í‚Ì•Wï¿½ï¿½Zï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äì¬
                         gi.GroundWaterTableAltitude = gi.GroundWaterGLDepth + gi.GroundTopAltitude;
                         gi.StressAltitude = gi.StressGLDepth + gi.GroundTopAltitude;
                         break;
@@ -154,7 +155,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // GroundInput ‚Ì PropertyChanged ƒnƒ“ƒhƒ‰
+        // GroundInput ï¿½ï¿½ PropertyChanged ï¿½nï¿½ï¿½ï¿½hï¿½ï¿½
         private void OnGroundInputPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is not GroundInput gi) return;
@@ -163,15 +164,15 @@ namespace PileDesign.ViewModels
 
             if (GroundInputTriggerProps.Contains(e.PropertyName))
             {
-                // ‘ŠŒİŠ·Z‚Ì“¯Šú
+                // ï¿½ï¿½ï¿½İŠï¿½ï¿½Zï¿½Ì“ï¿½ï¿½ï¿½
                 SyncDepthAltitude(gi, e.PropertyName);
 
-                // ÄŒvZEÄ•`‰æ
+                // ï¿½ÄŒvï¿½Zï¿½Eï¿½Ä•`ï¿½ï¿½
                 Update();
             }
         }
 
-        // GroundNo •ÏX‚à GroundInput ƒZƒbƒ^[‚Åw“Ç‚ª•t‚¯‘Ö‚¦‚ç‚ê‚é
+        // GroundNo ï¿½ÏXï¿½ï¿½ï¿½ï¿½ GroundInput ï¿½Zï¿½bï¿½^ï¿½[ï¿½Åwï¿½Ç‚ï¿½ï¿½tï¿½ï¿½ï¿½Ö‚ï¿½ï¿½ï¿½ï¿½ï¿½
         public void ComboBoxGroundNo_SelectionChanged(int selectedIndex/*, int previousSelectedIndex*/)
         {
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
@@ -182,14 +183,14 @@ namespace PileDesign.ViewModels
                 GroundsInput.Add(new GroundInput() { GroundRef = "(GR" + newNo.ToString() + ")" });
                 UpdateGroundsCountPlusOneList();
                 GroundNo = newNo;
-                GroundInput = GroundsInput.Last(); // ƒZƒbƒ^[Œo—R‚Åw“Ç
+                GroundInput = GroundsInput.Last(); // ï¿½Zï¿½bï¿½^ï¿½[ï¿½oï¿½Rï¿½Åwï¿½ï¿½
             }
             else
             {
                 if (selectedIndex >= 0 && selectedIndex < GroundsInput.Count)
                 {
                     GroundNo = selectedIndex + 1;
-                    GroundInput = GroundsInput[selectedIndex]; // ƒZƒbƒ^[Œo—R‚Åw“Ç
+                    GroundInput = GroundsInput[selectedIndex]; // ï¿½Zï¿½bï¿½^ï¿½[ï¿½oï¿½Rï¿½Åwï¿½ï¿½
                 }
             }
             Update();
@@ -239,7 +240,7 @@ namespace PileDesign.ViewModels
         //    {
         //        GroundsInput = new ObservableCollection<GroundInput>(_undoManager.CurrentState.Select(x => x.DeepCopy()));
         //        if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
-        //            GroundInput = GroundsInput[GroundNo - 1];   // ƒZƒbƒ^[Œo—R‚Åw“Ç
+        //            GroundInput = GroundsInput[GroundNo - 1];   // ï¿½Zï¿½bï¿½^ï¿½[ï¿½oï¿½Rï¿½Åwï¿½ï¿½
         //        else if (GroundsInput.Count > 0)
         //            GroundInput = GroundsInput[0];
         //        else
@@ -258,7 +259,7 @@ namespace PileDesign.ViewModels
         //    {
         //        GroundsInput = new ObservableCollection<GroundInput>(_undoManager.CurrentState.Select(x => x.DeepCopy()));
         //        if (GroundNo > 0 && GroundNo <= GroundsInput.Count)
-        //            GroundInput = GroundsInput[GroundNo - 1];   // ƒZƒbƒ^[Œo—R‚Åw“Ç
+        //            GroundInput = GroundsInput[GroundNo - 1];   // ï¿½Zï¿½bï¿½^ï¿½[ï¿½oï¿½Rï¿½Åwï¿½ï¿½
         //        else if (GroundsInput.Count > 0)
         //            GroundInput = GroundsInput[0];
         //        else
@@ -275,7 +276,7 @@ namespace PileDesign.ViewModels
         //    set => SetProperty(ref _groundInput, value);
         //}
 
-        // ’n”Õ”+1ƒŠƒXƒg
+        // ï¿½nï¿½Õï¿½+1ï¿½ï¿½ï¿½Xï¿½g
         //private ObservableCollection<int> _groundCountPlusOneList;
         //public ObservableCollection<int> GroundCountPlusOneList
         //{
@@ -305,7 +306,7 @@ namespace PileDesign.ViewModels
             GroundCountPlusOneList = list;
         }
 
-        // ‘I‘ğ’n”Õ”Ô†
+        // ï¿½Iï¿½ï¿½nï¿½Õ”Ôï¿½
         private int _groundNo = 1;
         public int GroundNo
         {
@@ -313,7 +314,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _groundNo, value);
         }
 
-        // DataGridã‚Ì‘I‘ğ’†‚ÌGroundInputƒf[ƒ^
+        // DataGridï¿½ï¿½Ì‘Iï¿½ğ’†‚ï¿½GroundInputï¿½fï¿½[ï¿½^
         private GroundMassDataInput _selectedGroundMassOnDataGrid;
         public GroundMassDataInput SelectedGroundMassOnDataGrid
         {
@@ -321,7 +322,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _selectedGroundMassOnDataGrid, value);
         }
 
-        // DataGridã‚Ì‘I‘ğ’†‚ÌGroundLayerƒf[ƒ^
+        // DataGridï¿½ï¿½Ì‘Iï¿½ğ’†‚ï¿½GroundLayerï¿½fï¿½[ï¿½^
         private GroundLayerInput _selectedGroundLayerOnDataGrid;
         public GroundLayerInput SelectedGroundLayerOnDataGrid
         {
@@ -336,17 +337,17 @@ namespace PileDesign.ViewModels
         public LayoutAnchorable DefTab { get; set; }
         public LayoutAnchorable FsTab { get; set; }
 
-        public string[] AgeCategoryOption { get; } = ["‰«Ï‘w", "^Ï‘w"];
-        //public enum AgeCategoryOption { ‰«Ï‘w, ^Ï‘w }
+        public string[] AgeCategoryOption { get; } = ["ï¿½ï¿½ï¿½Ï‘w", "ï¿½^ï¿½Ï‘w"];
+        //public enum AgeCategoryOption { ï¿½ï¿½ï¿½Ï‘w, ï¿½^ï¿½Ï‘w }
 
         public string[] ShallowSoilTypeOption { get; } =
         [
-            "”S«“y",
-            "»¿“y"
+            "ï¿½Sï¿½ï¿½ï¿½y",
+            "ï¿½ï¿½ï¿½ï¿½ï¿½y"
         ];
-        //public enum ShallowSoilTypeOption { ”S«“y, »¿“y }
+        //public enum ShallowSoilTypeOption { ï¿½Sï¿½ï¿½ï¿½y, ï¿½ï¿½ï¿½ï¿½ï¿½y }
 
-        //// Z’è–@
+        //// ï¿½Zï¿½ï¿½@
         public string[] CalculationMethodOption { get; } =
         [
             "a1(b1)",
@@ -355,32 +356,32 @@ namespace PileDesign.ViewModels
 
         public string[] ChartDispContentOption { get; } =
         [
-            "DmaxU*(ƒŒƒxƒ‹1)",
-            "DmaxU*(ƒŒƒxƒ‹2)",
-            "DmaxU*(ƒŒƒxƒ‹1,2)",
-            "DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹1)",
-            "DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹2)",
-            "DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹1,2)",
+            "DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½1)",
+            "DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½2)",
+            "DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)",
+            "DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½1)",
+            "DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½2)",
+            "DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)",
         ];
 
         public ObservableCollection<string> ChartDispContents { get; } = [];
-        private string _ChartDispContent = "DmaxU*(ƒŒƒxƒ‹1,2)";
+        private string _ChartDispContent = "DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)";
         public string ChartDispContent
         {
             get => _ChartDispContent;
             set => SetProperty(ref _ChartDispContent, value);
         }
 
-        // ƒOƒ‰ƒt2“à—e
+        // ï¿½Oï¿½ï¿½ï¿½t2ï¿½ï¿½ï¿½e
         public string[] ChartFLContentOption { get; } =
         [
-            "FL(ƒŒƒxƒ‹1)",
-            "FL(ƒŒƒxƒ‹2)",
-            "FL(ƒŒƒxƒ‹1,2)",
+            "FL(ï¿½ï¿½ï¿½xï¿½ï¿½1)",
+            "FL(ï¿½ï¿½ï¿½xï¿½ï¿½2)",
+            "FL(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)",
         ];
 
         public ObservableCollection<string> ChartFLContents { get; } = [];
-        private string _ChartFLContent = "FL(ƒŒƒxƒ‹1,2)";
+        private string _ChartFLContent = "FL(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)";
         public string ChartFLContent
         {
             get => _ChartFLContent;
@@ -402,20 +403,20 @@ namespace PileDesign.ViewModels
             get => _selectedExampleItem;
             set
             {
-                // null ‚ğƒZƒbƒg‚·‚éê‡‚Í‚»‚Ì‚Ü‚Ü”½‰fiUIƒNƒŠƒA—pj
+                // null ï¿½ï¿½ï¿½Zï¿½bï¿½gï¿½ï¿½ï¿½ï¿½ê‡ï¿½Í‚ï¿½ï¿½Ì‚Ü‚Ü”ï¿½ï¿½fï¿½iUIï¿½Nï¿½ï¿½ï¿½Aï¿½pï¿½j
                 if (value == null)
                 {
                     SetProperty(ref _selectedExampleItem, null);
                     return;
                 }
 
-                // ‘I‘ğ‚³‚ê‚½‚çA‚Ü‚¸Œ»İó‘Ô‚ğ undo ƒXƒ^ƒbƒN‚Ö•Û‘¶
+                // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ê‚½ï¿½ï¿½Aï¿½Ü‚ï¿½ï¿½ï¿½ï¿½İï¿½Ô‚ï¿½ undo ï¿½Xï¿½^ï¿½bï¿½Nï¿½Ö•Û‘ï¿½
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
-                // ÀsiExampleItem ‚ª ICommand ‚ğ•Û‚µ‚Ä‚¢‚é‘O’ñj
+                // ï¿½ï¿½ï¿½sï¿½iExampleItem ï¿½ï¿½ ICommand ï¿½ï¿½Ûï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½Oï¿½ï¿½j
                 value.Command?.Execute(null);
 
-                // ÀsŒã‚É‘I‘ğ‚ğƒNƒŠƒA‚µ‚ÄA“¯‚¶€–Ú‚ğÄ‘I‘ğ‚Å‚«‚é‚æ‚¤‚É‚·‚é
+                // ï¿½ï¿½ï¿½sï¿½ï¿½É‘Iï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½ÄAï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ï¿½ï¿½Ä‘Iï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½æ‚¤ï¿½É‚ï¿½ï¿½ï¿½
                 _selectedExampleItem = null;
                 OnPropertyChanged(nameof(SelectedExampleItem));
             }
@@ -427,7 +428,7 @@ namespace PileDesign.ViewModels
             int intValue = (int)value;
             int n = GroundInput.GroundLayers.Count;
 
-            // is‚Ìƒ`ƒFƒbƒNƒ{ƒbƒNƒX‚Ìó‘Ô‚ª•ÏX‚³‚ê‚½‚Æ‚«A1`i-1s‚Ìƒ`ƒFƒbƒNƒ{ƒbƒNƒX‚ğ—LŒø‰»Ai+1s–ÚˆÈ~‚Ìƒ`ƒFƒbƒNƒ{ƒbƒNƒX‚ğ–³Œø‰»
+            // iï¿½sï¿½Ìƒ`ï¿½Fï¿½bï¿½Nï¿½{ï¿½bï¿½Nï¿½Xï¿½Ìï¿½Ô‚ï¿½ï¿½ÏXï¿½ï¿½ï¿½ê‚½ï¿½Æ‚ï¿½ï¿½A1ï¿½`i-1ï¿½sï¿½Ìƒ`ï¿½Fï¿½bï¿½Nï¿½{ï¿½bï¿½Nï¿½Xï¿½ï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Ai+1ï¿½sï¿½ÚˆÈ~ï¿½Ìƒ`ï¿½Fï¿½bï¿½Nï¿½{ï¿½bï¿½Nï¿½Xï¿½ğ–³Œï¿½ï¿½ï¿½
             for (int i = 0; i < n; i++)
             {
                 //if (n - 1 - i < intValue)
@@ -443,7 +444,7 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-        // ‚Í‚¶‚ß‚ÄHŠw“IŠî”Õ‚Æ‚È‚é‘wˆÈ‰º‚Ì‘w‚ğ‚·‚×‚ÄHŠw“IŠî”Õ‚É•Ï‚¦‚éƒƒ\ƒbƒh
+        // ï¿½Í‚ï¿½ï¿½ß‚ÄHï¿½wï¿½Iï¿½ï¿½Õ‚Æ‚È‚ï¿½wï¿½È‰ï¿½ï¿½Ì‘wï¿½ï¿½ï¿½ï¿½ï¿½×‚ÄHï¿½wï¿½Iï¿½ï¿½Õ‚É•Ï‚ï¿½ï¿½éƒï¿½\ï¿½bï¿½h
         public void UpdateBedrockChecks()
         {
             bool isEngineeringBedrock = false;
@@ -476,7 +477,7 @@ namespace PileDesign.ViewModels
         //        else
         //            GroundInput = null;
 
-        //        Update(); // UIÄ•`‰æ
+        //        Update(); // UIï¿½Ä•`ï¿½ï¿½
         //    }
         //}
 
@@ -498,7 +499,7 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
-        // “y‘wíœƒƒ\ƒbƒh
+        // ï¿½yï¿½wï¿½íœï¿½ï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         public void DeleteGroundLayer(object sender)
         {
@@ -506,7 +507,7 @@ namespace PileDesign.ViewModels
             if (sender is not GroundLayerInput itemToDelete) return;
             GroundInput.GroundLayers.Remove(itemToDelete);
 
-            // s”Ô†‚Í LoadingRow ‚Åİ’èÏ‚İB•K—v‚È‚ç Items.Refresh ‚Ì‚İ
+            // ï¿½sï¿½Ôï¿½ï¿½ï¿½ LoadingRow ï¿½Åİ’ï¿½Ï‚İBï¿½Kï¿½vï¿½È‚ï¿½ Items.Refresh ï¿½Ì‚ï¿½
             GroundWindowInstance?.DataGridGroundLayer?.Items.Refresh();
 
             UpdateGroundLayerNo();
@@ -514,23 +515,23 @@ namespace PileDesign.ViewModels
         }
         //public void DeleteGroundLayer(object sender)
         //{
-        //    // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+        //    // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
         //    _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
 
-        //    // sender ‚ª GridDataItem ‚Å‚ ‚é‚±‚Æ‚ğŠm”F
+        //    // sender ï¿½ï¿½ GridDataItem ï¿½Å‚ï¿½ï¿½é‚±ï¿½Æ‚ï¿½ï¿½mï¿½F
         //    if (sender is not GroundLayerInput itemToDelete) return;
 
-        //    // ƒRƒŒƒNƒVƒ‡ƒ“‚©‚çíœ
+        //    // ï¿½Rï¿½ï¿½ï¿½Nï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½íœ
         //    GroundInput.GroundLayers.Remove(itemToDelete);
 
-        //    // ”Ô†XV
+        //    // ï¿½Ôï¿½ï¿½Xï¿½V
         //    UpdateAllRowNumbers(GroundWindowInstance.DataGridGroundLayer);
 
         //    UpdateGroundLayerNo();
         //    Update(); ///
         //}
 
-        // “y¿“_íœƒƒ\ƒbƒh
+        // ï¿½yï¿½ï¿½ï¿½_ï¿½íœï¿½ï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         public void DeleteGroundMass(object sender)
         {
@@ -544,16 +545,16 @@ namespace PileDesign.ViewModels
         }
         //public void DeleteGroundMass(object sender)
         //{
-        //    // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+        //    // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
         //    _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
 
-        //    // sender ‚ª GridDataItem ‚Å‚ ‚é‚±‚Æ‚ğŠm”F
+        //    // sender ï¿½ï¿½ GridDataItem ï¿½Å‚ï¿½ï¿½é‚±ï¿½Æ‚ï¿½ï¿½mï¿½F
         //    if (sender is not GroundMassDataInput itemToDelete) return;
 
-        //    // ƒRƒŒƒNƒVƒ‡ƒ“‚©‚çíœ
+        //    // ï¿½Rï¿½ï¿½ï¿½Nï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½íœ
         //    GroundInput.GroundMassesData.Remove(itemToDelete);
 
-        //    // ”Ô†XV
+        //    // ï¿½Ôï¿½ï¿½Xï¿½V
         //    UpdateAllRowNumbers(GroundWindowInstance.DataGridGroundMass);
 
         //    UpdateGroundMassDataLayer();
@@ -561,14 +562,14 @@ namespace PileDesign.ViewModels
         //    Update(); ///
         //}
 
-        // ‚·‚×‚Ä‚Ìs‚Ì”Ô†‚ğXV
+        // ï¿½ï¿½ï¿½×‚Ä‚Ìsï¿½Ì”Ôï¿½ï¿½ï¿½ï¿½Xï¿½V
         private static void UpdateAllRowNumbers(DataGrid dataGrid)
         {
             for (int i = 0; i < dataGrid.Items.Count; i++)
             {
                 if (dataGrid.ItemContainerGenerator.ContainerFromIndex(i) is DataGridRow row)
                 {
-                    row.Header = (i + 1).ToString(); // s”Ô†‚ğİ’è
+                    row.Header = (i + 1).ToString(); // ï¿½sï¿½Ôï¿½ï¿½ï¿½İ’ï¿½
                 }
             }
         }
@@ -627,7 +628,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_FL, value);
         }
 
-        // View‚ğ•Â‚¶‚é‚½‚ß‚ÌƒCƒxƒ“ƒg
+        // Viewï¿½ï¿½Â‚ï¿½ï¿½é‚½ï¿½ß‚ÌƒCï¿½xï¿½ï¿½ï¿½g
         public event EventHandler RequestClose;
         private readonly ObservableCollection<GroundInput> PrevGroundsInput;
         private readonly Dictionary<string, object> previousPropertyValues = [];
@@ -638,54 +639,54 @@ namespace PileDesign.ViewModels
             var gi = GroundInput;
             var errors = new List<string>();
             if (gi.IsErrorGroundWaterTableAltitude)
-                errors.Add("’n‰º…ˆÊZ‚ÍEŒû•W‚ZˆÈ‰º‚É‚µ‚Ä‚­‚¾‚³‚¢B");
+                errors.Add("ï¿½nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ÍEï¿½ï¿½ï¿½Wï¿½ï¿½Zï¿½È‰ï¿½ï¿½É‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B");
             if (gi.IsErrorStressAltitude)
-                errors.Add("’n’†‰—ÍŒvZ—pZ‚ÍEŒû•W‚ZˆÈ‰º‚É‚µ‚Ä‚­‚¾‚³‚¢B");
+                errors.Add("ï¿½nï¿½ï¿½ï¿½ï¿½ï¿½ÍŒvï¿½Zï¿½pZï¿½ÍEï¿½ï¿½ï¿½Wï¿½ï¿½Zï¿½È‰ï¿½ï¿½É‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B");
             if (gi.IsErrorGroundWaterGLDepth)
-                errors.Add("’n‰º…ˆÊ[“x‚Í0ˆÈ‰º‚É‚µ‚Ä‚­‚¾‚³‚¢B");
+                errors.Add("ï¿½nï¿½ï¿½ï¿½ï¿½ï¿½Ê[ï¿½xï¿½ï¿½0ï¿½È‰ï¿½ï¿½É‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B");
             if (gi.IsErrorStressGLDepth)
-                errors.Add("’n’†‰—ÍŒvZ—p[“x‚Í0ˆÈ‰º‚É‚µ‚Ä‚­‚¾‚³‚¢B");
+                errors.Add("ï¿½nï¿½ï¿½ï¿½ï¿½ï¿½ÍŒvï¿½Zï¿½pï¿½[ï¿½xï¿½ï¿½0ï¿½È‰ï¿½ï¿½É‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B");
 
             if (errors.Count > 0)
             {
-                MessageBox.Show(string.Join("\n", errors), "“ü—ÍƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(string.Join("\n", errors), "ï¿½ï¿½ï¿½ÍƒGï¿½ï¿½ï¿½[", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
         [RelayCommand]
         public void GroundDelete()
         {
-            // ’n”Õ‚ª1‚Â‚µ‚©‚È‚¢ê‡‚Ííœ•s‰Â
+            // ï¿½nï¿½Õ‚ï¿½1ï¿½Â‚ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½ê‡ï¿½Ííœï¿½sï¿½ï¿½
             if (GroundsInput.Count <= 1)
             {
-                MessageBox.Show("’n”Õ‚ª1‚Â‚µ‚©‘¶İ‚µ‚È‚¢‚½‚ßAíœ‚Å‚«‚Ü‚¹‚ñB", "Œx", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("ï¿½nï¿½Õ‚ï¿½1ï¿½Â‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ‚ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½ßAï¿½íœï¿½Å‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½B", "ï¿½xï¿½ï¿½", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // ‘I‘ğ’†‚Ì’n”Õ”Ô†
+            // ï¿½Iï¿½ğ’†‚Ì’nï¿½Õ”Ôï¿½
             int index = GroundNo - 1;
             if (index < 0 || index >= GroundsInput.Count)
             {
-                MessageBox.Show("íœ‘ÎÛ‚ª‘I‘ğ‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB", "ƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("ï¿½íœï¿½ÎÛ‚ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½B", "ï¿½Gï¿½ï¿½ï¿½[", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // Šm”FƒƒbƒZ[ƒW
+            // ï¿½mï¿½Fï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½W
             var result = MessageBox.Show(
-                $"’n”Õ”Ô† {GroundNo} ‚ğíœ‚µ‚Ü‚·‚©H\nŒ³‚É–ß‚¹‚Ü‚¹‚ñB",
-                "Šm”F",
+                $"ï¿½nï¿½Õ”Ôï¿½ {GroundNo} ï¿½ï¿½ï¿½íœï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½H\nï¿½ï¿½ï¿½É–ß‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½B",
+                "ï¿½mï¿½F",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
-                // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+                // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 GroundsInput.RemoveAt(index);
                 UpdateGroundsCountPlusOneList();
 
-                // íœŒã‚Ì‘I‘ğó‘Ô‚ğ’²®
+                // ï¿½íœï¿½ï¿½Ì‘Iï¿½ï¿½ï¿½ï¿½Ô‚ğ’²ï¿½
                 if (GroundsInput.Count > 0)
                 {
                     GroundNo = Math.Min(GroundNo, GroundsInput.Count);
@@ -701,23 +702,23 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // GroundWindowInstance ‚ªİ’è‚³‚ê‚½Œã‚É‰Šú‰»ˆ—‚ğs‚¤
+        // GroundWindowInstance ï¿½ï¿½ï¿½İ’è‚³ï¿½ê‚½ï¿½ï¿½Éï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½
         public void Initialize()
         {
-            // ƒRƒ“ƒeƒLƒXƒgiWindow, DataContextj‚ª€”õ‚³‚ê‚½’iŠK‚ÅŒÄ‚Î‚ê‚é‘z’è‚È‚Ì‚Å‚±‚±‚Å‰Šú€–Ú‚ğ—pˆÓ
+            // ï¿½Rï¿½ï¿½ï¿½eï¿½Lï¿½Xï¿½gï¿½iWindow, DataContextï¿½jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‚½ï¿½iï¿½Kï¿½ÅŒÄ‚Î‚ï¿½ï¿½zï¿½ï¿½È‚Ì‚Å‚ï¿½ï¿½ï¿½ï¿½Åï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú‚ï¿½pï¿½ï¿½
             InitializeExampleItems();
 
             Update();
         }
 
-        // ŠK’ióƒf[ƒ^‚Ìì¬ƒƒ\ƒbƒh
+        // ï¿½Kï¿½iï¿½ï¿½fï¿½[ï¿½^ï¿½Ìì¬ï¿½ï¿½ï¿½\ï¿½bï¿½h
         private static (List<double>, List<double>) GetSteppedData(List<double> originalX, List<double> originalY)
         {
-            // ƒK[ƒhß
+            // ï¿½Kï¿½[ï¿½hï¿½ï¿½
             if (originalX == null || originalY == null || originalX.Count == 0 || originalY.Count == 0)
                 return ([], []);
 
-            // ƒXƒeƒbƒvó‚Ìƒf[ƒ^‚ğ¶¬
+            // ï¿½Xï¿½eï¿½bï¿½vï¿½ï¿½Ìƒfï¿½[ï¿½^ï¿½ğ¶ï¿½
             List<double> steppedX = [];
             List<double> steppedY = [];
 
@@ -746,7 +747,7 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // ÅŒã‚Ìƒf[ƒ^ƒ|ƒCƒ“ƒg‚ğ’Ç‰Á
+            // ï¿½ÅŒï¿½Ìƒfï¿½[ï¿½^ï¿½|ï¿½Cï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
             steppedX.Add(originalX[^1]);
             steppedY.Add(originalY[^1]);
 
@@ -788,7 +789,7 @@ namespace PileDesign.ViewModels
 
         private bool _hookedDispMouseMove, _hookedFLMouseMove, _hookedNMouseMove, _hookedVsMouseMove, _hookedEsMouseMove, _hookedCuMouseMove;
 
-        // ’n”Õ•ÏˆÊ•`‰æƒƒ\ƒbƒh
+        // ï¿½nï¿½Õ•ÏˆÊ•`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawGroundDisplacementGraph()
         {
             if (GroundWindowInstance == null)
@@ -811,7 +812,7 @@ namespace PileDesign.ViewModels
 
             if (GroundInput.GroundLayers.Count != 0)
             {
-                if (ChartDispContent.Contains("DmaxU*(ƒŒƒxƒ‹1)") || ChartDispContent.Contains("DmaxU*(ƒŒƒxƒ‹1,2)"))
+                if (ChartDispContent.Contains("DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½1)") || ChartDispContent.Contains("DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
                 {
                     List<double> dMaxU1s = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -833,7 +834,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                if (ChartDispContent.Contains("DmaxU*(ƒŒƒxƒ‹2)") || ChartDispContent.Contains("DmaxU*(ƒŒƒxƒ‹1,2)"))
+                if (ChartDispContent.Contains("DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½2)") || ChartDispContent.Contains("DmaxU*(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
                 {
                     List<double> dMaxU2s = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -854,7 +855,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                if (ChartDispContent.Contains("DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹1)") || ChartDispContent.Contains("DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹1,2)"))
+                if (ChartDispContent.Contains("DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½1)") || ChartDispContent.Contains("DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
                 {
                     List<double> dMaxU1Pluss = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -875,7 +876,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                if (ChartDispContent.Contains("DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹2)") || ChartDispContent.Contains("DmaxU*+‡”ƒÁcyH(ƒŒƒxƒ‹1,2)"))
+                if (ChartDispContent.Contains("DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½2)") || ChartDispContent.Contains("DmaxU*+ï¿½ï¿½ï¿½ï¿½cyH(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
                 {
                     List<double> dMaxU2Pluss = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -899,15 +900,15 @@ namespace PileDesign.ViewModels
             }
             wpf.Plot.Legend.IsVisible = true;
 
-            string title = "’n”Õ•ÏˆÊ";
+            string title = "ï¿½nï¿½Õ•Ïˆï¿½";
             wpf.Plot.Axes.Title.Label.Text = title;
             wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-            string xLabel = "’n”Õ•ÏˆÊ (mm)";
+            string xLabel = "ï¿½nï¿½Õ•Ïˆï¿½ (mm)";
             wpf.Plot.Axes.Bottom.Label.Text = xLabel;
             wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-            string yLabel = "GLŠî€[‚³(m)";
+            string yLabel = "GLï¿½î€ï¿½[ï¿½ï¿½(m)";
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
@@ -915,15 +916,15 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.AutoScaleExpandX();
             wpf.Plot.Axes.AutoScaleExpandY();
 
-            // ƒNƒƒXƒwƒA‚Ì‰Šú‰»
+            // ï¿½Nï¿½ï¿½ï¿½Xï¿½wï¿½Aï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
             //MyCrosshair_Disp = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             MyCrosshair_Disp ??= PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             if (!_hookedDispMouseMove)
             {
-                wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Disp", "•ÏˆÊ(mm)", "GLŠî€[‚³(m)", 1, 3);
+                wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Disp", "ï¿½Ïˆï¿½(mm)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
                 _hookedDispMouseMove = true;
             }
-            //wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Disp", "•ÏˆÊ(mm)", "GLŠî€[‚³(m)", 1, 3);
+            //wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Disp", "ï¿½Ïˆï¿½(mm)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
 
             wpf.Refresh();
         }
@@ -988,21 +989,21 @@ namespace PileDesign.ViewModels
 
             if (ChartFLContent.Contains("FL"))
             {
-                if (ChartFLContent.Contains("FL(ƒŒƒxƒ‹1)") || ChartFLContent.Contains("FL(ƒŒƒxƒ‹1,2)"))
+                if (ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½1)") || ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
                     DrawFLScatter(gLDepths, 0, wpf, NikkenSKColor.SkyBlue);
-                if (ChartFLContent.Contains("FL(ƒŒƒxƒ‹2)") || ChartFLContent.Contains("FL(ƒŒƒxƒ‹1,2)"))
+                if (ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½2)") || ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
                     DrawFLScatter(gLDepths, 1, wpf, NikkenSKColor.DeepBlue);
             }
 
-            string title = "‰tó‰»ˆÀ‘S—¦ FL’l•ª•z";
+            string title = "ï¿½tï¿½ó‰»ˆï¿½ï¿½Sï¿½ï¿½ FLï¿½lï¿½ï¿½ï¿½z";
             wpf.Plot.Axes.Title.Label.Text = title;
             wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-            string xLabel = "FL’l";
+            string xLabel = "FLï¿½l";
             wpf.Plot.Axes.Bottom.Label.Text = xLabel;
             wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-            string yLabel = "GLŠî€[‚³(m)";
+            string yLabel = "GLï¿½î€ï¿½[ï¿½ï¿½(m)";
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
@@ -1014,7 +1015,7 @@ namespace PileDesign.ViewModels
             MyCrosshair_FL ??= PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             if (!_hookedFLMouseMove)
             {
-                wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_FL", "FL", "GLŠî€[‚³(m)", 1, 3);
+                wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_FL", "FL", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
                 _hookedFLMouseMove = true;
             }
 
@@ -1042,12 +1043,12 @@ namespace PileDesign.ViewModels
 
         //    if (ChartFLContent.Contains("FL"))
         //    {
-        //        if (ChartFLContent.Contains("FL(ƒŒƒxƒ‹1)") || ChartFLContent.Contains("FL(ƒŒƒxƒ‹1,2)"))
+        //        if (ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½1)") || ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
         //        {
         //            DrawFLScatter(gLDepths, 0, wpf, NikkenSKColor.SkyBlue);
         //        }
 
-        //        if (ChartFLContent.Contains("FL(ƒŒƒxƒ‹2)") || ChartFLContent.Contains("FL(ƒŒƒxƒ‹1,2)"))
+        //        if (ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½2)") || ChartFLContent.Contains("FL(ï¿½ï¿½ï¿½xï¿½ï¿½1,2)"))
         //        {
         //            DrawFLScatter(gLDepths, 1, wpf, NikkenSKColor.DeepBlue);
         //        }
@@ -1055,15 +1056,15 @@ namespace PileDesign.ViewModels
 
         //    //var verticalLine = wpf.Plot.Add.VerticalLine(1, 1, Color.FromSKColor(NikkenSKColor.Red));
 
-        //    string title = "‰tó‰»ˆÀ‘S—¦ FL’l•ª•z";
+        //    string title = "ï¿½tï¿½ó‰»ˆï¿½ï¿½Sï¿½ï¿½ FLï¿½lï¿½ï¿½ï¿½z";
         //    wpf.Plot.Axes.Title.Label.Text = title;
         //    wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-        //    string xLabel = "FL’l";
+        //    string xLabel = "FLï¿½l";
         //    wpf.Plot.Axes.Bottom.Label.Text = xLabel;
         //    wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-        //    string yLabel = "GLŠî€[‚³(m)";
+        //    string yLabel = "GLï¿½î€ï¿½[ï¿½ï¿½(m)";
         //    wpf.Plot.Axes.Left.Label.Text = yLabel;
         //    wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
@@ -1073,16 +1074,16 @@ namespace PileDesign.ViewModels
         //    wpf.Plot.Axes.Bottom.Min = 0.0;
         //    wpf.Plot.Axes.Bottom.Max = 1.0;
 
-        //    // ƒNƒƒXƒwƒA‚Ì‰Šú‰»
+        //    // ï¿½Nï¿½ï¿½ï¿½Xï¿½wï¿½Aï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
         //    MyCrosshair_FL = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
 
-        //    // —á: ƒOƒ‰ƒt‰Šú‰»
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_FL", "FL", "GLŠî€[‚³(m)", 1, 3);
+        //    // ï¿½ï¿½: ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_FL", "FL", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
 
         //    wpf.Refresh();
         //}
 
-        // N’lƒOƒ‰ƒt•`‰æƒƒ\ƒbƒh
+        // Nï¿½lï¿½Oï¿½ï¿½ï¿½tï¿½`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawNValueGraph()
         {
             if (GroundWindowInstance == null) return;
@@ -1106,15 +1107,15 @@ namespace PileDesign.ViewModels
             for (int i = 0; i < _bottomGLDepths.Count; i++)
                 wpfNValue.Plot.Add.Text($"{ns[i]:N0}", new(ns[i], _bottomGLDepths[i]));
 
-            string title = "N’l•ª•z";
+            string title = "Nï¿½lï¿½ï¿½ï¿½z";
             wpfNValue.Plot.Axes.Title.Label.Text = title;
             wpfNValue.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-            string xLabel = "N’l";
+            string xLabel = "Nï¿½l";
             wpfNValue.Plot.Axes.Bottom.Label.Text = xLabel;
             wpfNValue.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-            string yLabel = "GLŠî€[‚³(m)";
+            string yLabel = "GLï¿½î€ï¿½[ï¿½ï¿½(m)";
             wpfNValue.Plot.Axes.Left.Label.Text = yLabel;
             wpfNValue.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
@@ -1126,7 +1127,7 @@ namespace PileDesign.ViewModels
             MyCrosshair_NValue ??= PlotHelper.InitCrosshair(wpfNValue, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             if (!_hookedNMouseMove)
             {
-                wpfNValue.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NValue", "N’l", "GLŠî€[‚³(m)", 1, 3);
+                wpfNValue.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NValue", "Nï¿½l", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
                 _hookedNMouseMove = true;
             }
 
@@ -1161,15 +1162,15 @@ namespace PileDesign.ViewModels
         //        wpfNValue.Plot.Add.Text($"{ns[i]:N0}", new(ns[i], _bottomGLDepths[i]));
         //    }
 
-        //    string title = "N’l•ª•z";
+        //    string title = "Nï¿½lï¿½ï¿½ï¿½z";
         //    wpfNValue.Plot.Axes.Title.Label.Text = title;
         //    wpfNValue.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-        //    string xLabel = "N’l";
+        //    string xLabel = "Nï¿½l";
         //    wpfNValue.Plot.Axes.Bottom.Label.Text = xLabel;
         //    wpfNValue.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-        //    string yLabel = "GLŠî€[‚³(m)";
+        //    string yLabel = "GLï¿½î€ï¿½[ï¿½ï¿½(m)";
         //    wpfNValue.Plot.Axes.Left.Label.Text = yLabel;
         //    wpfNValue.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
@@ -1180,73 +1181,73 @@ namespace PileDesign.ViewModels
         //    wpfNValue.Plot.Axes.Bottom.Min = 0.0;
         //    wpfNValue.Plot.Axes.Bottom.Max = 60.0;
 
-        //    // ƒNƒƒXƒwƒA‚Ì‰Šú‰»
+        //    // ï¿½Nï¿½ï¿½ï¿½Xï¿½wï¿½Aï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
         //    MyCrosshair_NValue = PlotHelper.InitCrosshair(wpfNValue, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
 
-        //    // —á: ƒOƒ‰ƒt‰Šú‰»
-        //    wpfNValue.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NValue", "N’l", "GLŠî€[‚³(m)", 1, 3);
+        //    // ï¿½ï¿½: ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //    wpfNValue.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NValue", "Nï¿½l", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
 
         //    wpfNValue.Refresh();
         //}
 
-        // “y‘w•`‰æƒƒ\ƒbƒh
+        // ï¿½yï¿½wï¿½`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawSoilLayer(WpfPlot wpf)
         {
             //Color color = Color.FromSKColor(NikkenSKColor.SkyBlue);
             Color color0 = Color.FromSKColor(NikkenSKColor.Yellow);
-            Color grayColor = new(128, 128, 128, 255); // ƒOƒŒ[F
+            Color grayColor = new(128, 128, 128, 255); // ï¿½Oï¿½ï¿½ï¿½[ï¿½F
 
             LinePattern linePattern = LinePattern.Solid;
-            // ’n•\
+            // ï¿½nï¿½\
             wpf.Plot.Add.HorizontalLine(0, 2, grayColor, LinePattern.Solid);
 
-            // “y‘w‹«ŠEƒ‰ƒCƒ“
+            // ï¿½yï¿½wï¿½ï¿½ï¿½Eï¿½ï¿½ï¿½Cï¿½ï¿½
             for (int i = 0; i < GroundInput.GroundLayers.Count; i++)
             {
                 wpf.Plot.Add.HorizontalLine(GroundInput.GroundLayers[i].BottomGLDepth, 1, color0, linePattern);
             }
 
-            // “h‚è‚Â‚Ô‚µi‘w‚²‚Æ‚Ì”wŒij
+            // ï¿½hï¿½ï¿½Â‚Ô‚ï¿½ï¿½iï¿½wï¿½ï¿½ï¿½Æ‚Ì”wï¿½iï¿½j
             for (int i = 0; i < GroundInput.GroundLayers.Count; i++)
             {
                 double y1 = i == 0 ? 0 : GroundInput.GroundLayers[i - 1].BottomGLDepth;
                 double y2 = GroundInput.GroundLayers[i].BottomGLDepth;
 
                 Color fillColor = new(0, 0, 0, 255);
-                if (GroundInput.GroundLayers[i].GranularityClass == "”S«“y")
-                { fillColor = new(210, 180, 140, 64); } // ”¼“§–¾‚Ì”–‚¢’ƒF R G B alpha
-                else if (GroundInput.GroundLayers[i].GranularityClass == "»¿“y")
-                { fillColor = new(255, 165, 0, 64); } // ”¼“§–¾‚Ì”–‚¢ƒIƒŒƒ“ƒW R G B alpha
-                else if (GroundInput.GroundLayers[i].GranularityClass == "âI¿“y")
-                { fillColor = new(144, 238, 144, 64); } // ”¼“§–¾‚Ì”–‚¢—Î R G B alpha
+                if (GroundInput.GroundLayers[i].GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y")
+                { fillColor = new(210, 180, 140, 64); } // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì”ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½F R G B alpha
+                else if (GroundInput.GroundLayers[i].GranularityClass == "ï¿½ï¿½ï¿½ï¿½ï¿½y")
+                { fillColor = new(255, 165, 0, 64); } // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì”ï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½W R G B alpha
+                else if (GroundInput.GroundLayers[i].GranularityClass == "ï¿½Iï¿½ï¿½ï¿½y")
+                { fillColor = new(144, 238, 144, 64); } // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì”ï¿½ï¿½ï¿½ï¿½ï¿½ R G B alpha
 
                 wpf.Plot.Add.VerticalSpan(y1, y2, fillColor);
             }
 
-            // Y=0 ‚ÌŠî€cü
-            Color blackColor = new(0, 0, 0, 255); // •F
+            // Y=0 ï¿½ÌŠî€ï¿½cï¿½ï¿½
+            Color blackColor = new(0, 0, 0, 255); // ï¿½ï¿½ï¿½F
             wpf.Plot.Add.VerticalLine(0, 1, blackColor);
 
-            // ---- ’n‰º…ˆÊ•\¦’Ç‰Á‚±‚±‚©‚ç ----
-            double gwDepth = GroundInput.GroundWaterGLDepth; // (‘½‚­‚Ìê‡ 0 ‚©•‰’l)
+            // ---- ï¿½nï¿½ï¿½ï¿½ï¿½ï¿½Ê•\ï¿½ï¿½ï¿½Ç‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ----
+            double gwDepth = GroundInput.GroundWaterGLDepth; // (ï¿½ï¿½ï¿½ï¿½ï¿½Ìê‡ 0 ï¿½ï¿½ï¿½ï¿½ï¿½l)
 
-            // ’n‰º…ˆÊƒ‰ƒCƒ“iÂj
+            // ï¿½nï¿½ï¿½ï¿½ï¿½ï¿½Êƒï¿½ï¿½Cï¿½ï¿½ï¿½iï¿½Âj
             Color waterColor = Color.FromSKColor(NikkenSKColor.DeepBlue);
             wpf.Plot.Add.HorizontalLine(gwDepth, 2, waterColor, LinePattern.Solid);
 
-            // Y²ƒŒƒ“ƒW‚©‚çüŠÔŠu‚ğŒˆ’èF(maxY - minY) / 50 ‚ğg—pBƒf[ƒ^•s‘«‚Í]—ˆ‚Ì 0.12 ‚ğg—p
+            // Yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÔŠuï¿½ï¿½ï¿½ï¿½ï¿½ï¿½F(maxY - minY) / 50 ï¿½ï¿½ï¿½gï¿½pï¿½Bï¿½fï¿½[ï¿½^ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½Í]ï¿½ï¿½ï¿½ï¿½ 0.12 ï¿½ï¿½ï¿½gï¿½p
             double yMax = 0.0;
             double yMin = 0.0;
             bool hasDepthData = false;
 
-            // ’n‘w’ê‚ğŒó•â‚É‚·‚é
+            // ï¿½nï¿½wï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É‚ï¿½ï¿½ï¿½
             if (GroundInput.GroundLayers != null && GroundInput.GroundLayers.Count > 0)
             {
                 yMin = GroundInput.GroundLayers.Min(l => l.BottomGLDepth);
                 hasDepthData = true;
             }
 
-            // ’n¿“_[‚³‚àl—¶
+            // ï¿½nï¿½ï¿½ï¿½_ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½lï¿½ï¿½
             if (GroundInput.GroundMassesData != null && GroundInput.GroundMassesData.Count > 0)
             {
                 double minMassDepth = GroundInput.GroundMassesData.Min(m => m.GLDepth);
@@ -1264,9 +1265,9 @@ namespace PileDesign.ViewModels
             double range = hasDepthData ? Math.Abs(yMax - yMin) : 0.0;
             double lineGap = range > 0.0 ? range / 100.0 : 0.12;
 
-            // ’¼‰º 3 –{‚Ì…•½ƒ‰ƒCƒ“i‰º‚Ù‚Ç“§‰ß“x‚ğ‚‚­‚æ‚è”–‚­j
+            // ï¿½ï¿½ï¿½ï¿½ 3 ï¿½{ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½iï¿½ï¿½ï¿½Ù‚Ç“ï¿½ï¿½ß“xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½è”–ï¿½ï¿½ï¿½j
             //double lineGap = 0.12;
-            byte[] alphas = [200, 130, 70]; // ã¨‰º
+            byte[] alphas = [200, 130, 70]; // ï¿½ã¨ï¿½ï¿½
             for (int i = 0; i < alphas.Length; i++)
             {
                 double y = gwDepth - (i + 1) * lineGap;
@@ -1275,7 +1276,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ŠK’ióƒOƒ‰ƒt•`‰æƒƒ\ƒbƒh
+        // ï¿½Kï¿½iï¿½ï¿½Oï¿½ï¿½ï¿½tï¿½`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawSteppedGraph(List<double> originalX, List<double> originalY, WpfPlot wpf, string title, string xLabel, string yLabel)
         {
             if (GroundWindowInstance == null)
@@ -1304,7 +1305,7 @@ namespace PileDesign.ViewModels
             {
                 var rectangle = wpf.Plot.Add.Rectangle(coordinate);
                 rectangle.FillColor = Color.FromSKColor(NikkenSKColor.SkyBlue);
-                rectangle.LineColor = new(0, 0, 0, 255); // •F
+                rectangle.LineColor = new(0, 0, 0, 255); // ï¿½ï¿½ï¿½F
                 rectangle.LineWidth = 1;
             }
 
@@ -1325,7 +1326,7 @@ namespace PileDesign.ViewModels
             wpf.Refresh();
         }
 
-        // ”S’…—ÍƒOƒ‰ƒt•`‰æƒƒ\ƒbƒh
+        // ï¿½Sï¿½ï¿½ï¿½ÍƒOï¿½ï¿½ï¿½tï¿½`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawCuGraph()
         {
             if (GroundWindowInstance == null)
@@ -1339,18 +1340,18 @@ namespace PileDesign.ViewModels
                 cus.Add(GroundInput.GroundLayers[i].Cohesive);
                 _bottomGLDepths.Add(GroundInput.GroundLayers[i].BottomGLDepth);
             }
-            DrawSteppedGraph(cus, _bottomGLDepths, GroundWindowInstance.wpfPlotCu, "”S’…—Í•ª•z", "”S’…—ÍCu (kN/m2)", "GLŠî€[‚³(m)");
+            DrawSteppedGraph(cus, _bottomGLDepths, GroundWindowInstance.wpfPlotCu, "ï¿½Sï¿½ï¿½ï¿½Í•ï¿½ï¿½z", "ï¿½Sï¿½ï¿½ï¿½ï¿½Cu (kN/m2)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)");
 
             WpfPlot wpf = GroundWindowInstance.wpfPlotCu;
 
-            // ƒNƒƒXƒwƒA‚Ì‰Šú‰»
+            // ï¿½Nï¿½ï¿½ï¿½Xï¿½wï¿½Aï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
             MyCrosshair_Cu = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
 
-            // —á: ƒOƒ‰ƒt‰Šú‰»
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Cu", "Cu(kN/m2)", "GLŠî€[‚³(m)", 1, 3);
+            // ï¿½ï¿½: ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Cu", "Cu(kN/m2)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
         }
 
-        // ‚¹‚ñ’f‘¬“xƒOƒ‰ƒt•`‰æƒƒ\ƒbƒh
+        // ï¿½ï¿½ï¿½ï¿½fï¿½ï¿½ï¿½xï¿½Oï¿½ï¿½ï¿½tï¿½`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawVsGraph()
         {
             if (GroundWindowInstance == null)
@@ -1364,18 +1365,18 @@ namespace PileDesign.ViewModels
                 vss.Add(GroundInput.GroundLayers[i].Vs);
                 _bottomGLDepths.Add(GroundInput.GroundLayers[i].BottomGLDepth);
             }
-            DrawSteppedGraph(vss, _bottomGLDepths, GroundWindowInstance.wpfPlotVs, "‚¹‚ñ’f”g‘¬“x•ª•z", "‚¹‚ñ’f”g‘¬“x Vs(m/s)", "GLŠî€[‚³(m)");
+            DrawSteppedGraph(vss, _bottomGLDepths, GroundWindowInstance.wpfPlotVs, "ï¿½ï¿½ï¿½ï¿½fï¿½gï¿½ï¿½ï¿½xï¿½ï¿½ï¿½z", "ï¿½ï¿½ï¿½ï¿½fï¿½gï¿½ï¿½ï¿½x Vs(m/s)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)");
 
             WpfPlot wpf = GroundWindowInstance.wpfPlotVs;
 
-            // ƒNƒƒXƒwƒA‚Ì‰Šú‰»
+            // ï¿½Nï¿½ï¿½ï¿½Xï¿½wï¿½Aï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
             MyCrosshair_Vs = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
 
-            // —á: ƒOƒ‰ƒt‰Šú‰»
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Vs", "Vs(m/s)", "GLŠî€[‚³(m)", 1, 3);
+            // ï¿½ï¿½: ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Vs", "Vs(m/s)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
         }
 
-        // •ÏŒ`ŒW”ƒOƒ‰ƒt•`‰æƒƒ\ƒbƒh
+        // ï¿½ÏŒ`ï¿½Wï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½tï¿½`ï¿½æƒï¿½\ï¿½bï¿½h
         private void DrawEsGraph()
         {
             if (GroundWindowInstance == null)
@@ -1389,41 +1390,41 @@ namespace PileDesign.ViewModels
                 ess.Add(GroundInput.GroundLayers[i].Es);
                 _bottomGLDepths.Add(GroundInput.GroundLayers[i].BottomGLDepth);
             }
-            DrawSteppedGraph(ess, _bottomGLDepths, GroundWindowInstance.wpfPlotEs, "•ÏŒ`ŒW”•ª•z", "•ÏŒ`ŒW” Es(kN/m2)", "GLŠî€[‚³(m)");
+            DrawSteppedGraph(ess, _bottomGLDepths, GroundWindowInstance.wpfPlotEs, "ï¿½ÏŒ`ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½z", "ï¿½ÏŒ`ï¿½Wï¿½ï¿½ Es(kN/m2)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)");
 
             WpfPlot wpf = GroundWindowInstance.wpfPlotEs;
 
-            // ƒNƒƒXƒwƒA‚Ì‰Šú‰»
+            // ï¿½Nï¿½ï¿½ï¿½Xï¿½wï¿½Aï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½
             MyCrosshair_Es = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
 
-            // —á: ƒOƒ‰ƒt‰Šú‰»
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Es", "Es(kN/m2)", "GLŠî€[‚³(m)", 1, 3);
+            // ï¿½ï¿½: ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Es", "Es(kN/m2)", "GLï¿½î€ï¿½[ï¿½ï¿½(m)", 1, 3);
         }
 
 
-        // ‘¾“cEŒã“¡®
+        // ï¿½ï¿½ï¿½cï¿½Eï¿½ã“¡ï¿½ï¿½
         [RelayCommand]
         private void OnCalculateOtaVs()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
             {
                 double yg;
-                if (groundMassData.AgeCategory == "‰«Ï‘w")
+                if (groundMassData.AgeCategory == "ï¿½ï¿½ï¿½Ï‘w")
                 { yg = 1.0; }
-                else if (groundMassData.AgeCategory == "^Ï‘w")
+                else if (groundMassData.AgeCategory == "ï¿½^ï¿½Ï‘w")
                 { yg = 1.3; }
                 else
                 { yg = 1.0; }
 
                 double si;
-                if (groundMassData.GranularityClass == "”S«“y")
+                if (groundMassData.GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y")
                 { si = 1.0; }
-                else if (groundMassData.GranularityClass == "»¿“y" || groundMassData.GranularityClass == "»âI“y")
+                else if (groundMassData.GranularityClass == "ï¿½ï¿½ï¿½ï¿½ï¿½y" || groundMassData.GranularityClass == "ï¿½ï¿½ï¿½Iï¿½y")
                 { si = 1.1; }
-                else if (groundMassData.GranularityClass == "âI¿“y")
+                else if (groundMassData.GranularityClass == "ï¿½Iï¿½ï¿½ï¿½y")
                 { si = 1.4; }
                 else
                 { si = 1.0; }
@@ -1432,11 +1433,11 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ¡ˆäE“a“à®
+        // ï¿½ï¿½ï¿½ï¿½Eï¿½aï¿½ï¿½ï¿½ï¿½
         [RelayCommand]
         private void OnCalculateImaiVs()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             double a;
@@ -1445,37 +1446,37 @@ namespace PileDesign.ViewModels
 
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
             {
-                if (groundMassData.AgeCategory == "‰«Ï‘w" && groundMassData.GranularityClass == "”S«“y")
+                if (groundMassData.AgeCategory == "ï¿½ï¿½ï¿½Ï‘w" && groundMassData.GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y")
                 {
                     a = 50;
                     b = 0.42;
                     c = 80.0;
                 }
-                else if (groundMassData.AgeCategory == "‰«Ï‘w" && groundMassData.GranularityClass == "»¿“y")
+                else if (groundMassData.AgeCategory == "ï¿½ï¿½ï¿½Ï‘w" && groundMassData.GranularityClass == "ï¿½ï¿½ï¿½ï¿½ï¿½y")
                 {
                     a = 90;
                     b = 0.30;
                     c = 0.0;
                 }
-                else if (groundMassData.AgeCategory == "‰«Ï‘w" && groundMassData.GranularityClass == "âI¿“y")
+                else if (groundMassData.AgeCategory == "ï¿½ï¿½ï¿½Ï‘w" && groundMassData.GranularityClass == "ï¿½Iï¿½ï¿½ï¿½y")
                 {
                     a = 80;
                     b = 0.38;
                     c = 0.0;
                 }
-                else if (groundMassData.AgeCategory == "^Ï‘w" && groundMassData.GranularityClass == "”S«“y")
+                else if (groundMassData.AgeCategory == "ï¿½^ï¿½Ï‘w" && groundMassData.GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y")
                 {
                     a = 130;
                     b = 0.29;
                     c = 0.0;
                 }
-                else if (groundMassData.AgeCategory == "^Ï‘w" && groundMassData.GranularityClass == "»¿“y")
+                else if (groundMassData.AgeCategory == "ï¿½^ï¿½Ï‘w" && groundMassData.GranularityClass == "ï¿½ï¿½ï¿½ï¿½ï¿½y")
                 {
                     a = 110;
                     b = 0.30;
                     c = 0.0;
                 }
-                else if (groundMassData.AgeCategory == "^Ï‘w" && groundMassData.GranularityClass == "âI¿“y")
+                else if (groundMassData.AgeCategory == "ï¿½^ï¿½Ï‘w" && groundMassData.GranularityClass == "ï¿½Iï¿½ï¿½ï¿½y")
                 {
                     a = 140;
                     b = 0.26;
@@ -1491,22 +1492,22 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // “y‘w’Ç‰Áƒƒ\ƒbƒh
+        // ï¿½yï¿½wï¿½Ç‰ï¿½ï¿½ï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         private void OnAddGroundLayer()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var layers = GroundInput?.GroundLayers;
             if (layers == null) return;
 
-            // “y‘w‚ª0Œ‚Ì‚Æ‚«‚Í‰Šú’l‚ğ’Ç‰Á‚µ‚ÄI—¹
+            // ï¿½yï¿½wï¿½ï¿½0ï¿½ï¿½ï¿½Ì‚Æ‚ï¿½ï¿½Íï¿½ï¿½ï¿½ï¿½lï¿½ï¿½Ç‰ï¿½ï¿½ï¿½ï¿½ÄIï¿½ï¿½
             if (layers.Count == 0)
             {
                 var firstLayer = new GroundLayerInput
                 {
-                    BottomGLDepth = -3.0, // GLŠî€‚Å‰ºŒü‚«‚ª•‰‚Ì‘z’è
+                    BottomGLDepth = -3.0, // GLï¿½î€ï¿½Å‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‘zï¿½ï¿½
                 };
                 layers.Add(firstLayer);
                 SelectedGroundLayerOnDataGrid = firstLayer;
@@ -1517,14 +1518,14 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // ‘I‘ğs‚Ì’¼‰º or ––”ö‚Ö’Ç‰Á
+            // ï¿½Iï¿½ï¿½ï¿½sï¿½Ì’ï¿½ï¿½ï¿½ or ï¿½ï¿½ï¿½ï¿½ï¿½Ö’Ç‰ï¿½
             int selectedIndex = layers.IndexOf(SelectedGroundLayerOnDataGrid);
             int insertIndex;
             GroundLayerInput newGroundLayer;
 
             if (selectedIndex >= 0 && selectedIndex < layers.Count - 1)
             {
-                // ‘I‘ğs‚Æ‚»‚Ì‰ºs‚Ì’†ŠÔ‚É’Ç‰Á
+                // ï¿½Iï¿½ï¿½ï¿½sï¿½Æ‚ï¿½ï¿½Ì‰ï¿½ï¿½sï¿½Ì’ï¿½ï¿½Ô‚É’Ç‰ï¿½
                 double d1 = layers[selectedIndex].BottomGLDepth;
                 double d2 = layers[selectedIndex + 1].BottomGLDepth;
                 newGroundLayer = new GroundLayerInput
@@ -1536,7 +1537,7 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                // ––”ö‚É’Ç‰ÁiÅŒã‚Ì‰º’[‚©‚çˆê’è[‚³‰º‚°‚éj
+                // ï¿½ï¿½ï¿½ï¿½ï¿½É’Ç‰ï¿½ï¿½iï¿½ÅŒï¿½Ì‰ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½j
                 double last = layers[layers.Count - 1].BottomGLDepth;
                 newGroundLayer = new GroundLayerInput
                 {
@@ -1546,7 +1547,7 @@ namespace PileDesign.ViewModels
                 insertIndex = layers.Count - 1;
             }
 
-            // ’Ç‰Ás‚ğ‘I‘ğ
+            // ï¿½Ç‰ï¿½ï¿½sï¿½ï¿½Iï¿½ï¿½
             SelectedGroundLayerOnDataGrid = layers[insertIndex];
 
             UpdateBedrockChecks();
@@ -1554,17 +1555,17 @@ namespace PileDesign.ViewModels
             Update();
         }
         //{
-        //    // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+        //    // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
         //    _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
 
 
-        //    // ‘I‘ğ‚³‚ê‚Ä‚¢‚és‚ÌƒCƒ“ƒfƒbƒNƒX‚ğæ“¾
+        //    // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½sï¿½ÌƒCï¿½ï¿½ï¿½fï¿½bï¿½Nï¿½Xï¿½ï¿½ï¿½æ“¾
         //    int selectedIndex = GroundInput.GroundLayers.IndexOf(SelectedGroundLayerOnDataGrid);
 
-        //    // ‘I‘ğ‚³‚ê‚Ä‚¢‚és‚ª‚ ‚éê‡A‚»‚Ì‰º‚É’Ç‰Á
+        //    // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‡ï¿½Aï¿½ï¿½ï¿½Ì‰ï¿½ï¿½É’Ç‰ï¿½
         //    if (0 <= selectedIndex && selectedIndex < GroundInput.GroundLayers.Count - 1)
         //    {
-        //        // V‚µ‚¢ GroundLayerDataItem ‚ğì¬
+        //        // ï¿½Vï¿½ï¿½ï¿½ï¿½ GroundLayerDataItem ï¿½ï¿½ï¿½ì¬
         //        var newGroundLayer = new GroundLayerInput
         //        {
         //            BottomGLDepth = (
@@ -1575,20 +1576,20 @@ namespace PileDesign.ViewModels
         //    }
         //    else
         //    {
-        //        // V‚µ‚¢ GroundLayerDataItem ‚ğì¬
+        //        // ï¿½Vï¿½ï¿½ï¿½ï¿½ GroundLayerDataItem ï¿½ï¿½ï¿½ì¬
         //        var newGroundLayer = new GroundLayerInput
         //        {
         //            BottomGLDepth = GroundInput.GroundLayers[^1].BottomGLDepth - 3.0,
         //        };
 
-        //        // ‘I‘ğsindex‚ğÅIs‚É‚ ‚í‚¹‚é
+        //        // ï¿½Iï¿½ï¿½ï¿½sindexï¿½ï¿½ï¿½ÅIï¿½sï¿½É‚ï¿½ï¿½í‚¹ï¿½ï¿½
         //        selectedIndex = GroundInput.GroundLayers.Count - 1;
 
-        //        // ‘I‘ğ‚³‚ê‚Ä‚¢‚és‚ª‚È‚¢ê‡A––”ö‚É’Ç‰Á
+        //        // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½È‚ï¿½ï¿½ê‡ï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½É’Ç‰ï¿½
         //        GroundInput.GroundLayers.Add(newGroundLayer);
         //    }
 
-        //    // ‘I‘ğs‚ğ’Ç‰Ás‚É‚¸‚ç‚·
+        //    // ï¿½Iï¿½ï¿½ï¿½sï¿½ï¿½Ç‰ï¿½ï¿½sï¿½É‚ï¿½ï¿½ç‚·
         //    SelectedGroundLayerOnDataGrid = GroundInput.GroundLayers[selectedIndex + 1];
 
         //    UpdateBedrockChecks();
@@ -1596,11 +1597,11 @@ namespace PileDesign.ViewModels
         //    Update();
         //}
 
-        // ‘S“y‘wíœƒƒ\ƒbƒh
+        // ï¿½Sï¿½yï¿½wï¿½íœï¿½ï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         private void OnDeleteAllGroundLayers()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
             GroundInput.GroundLayers.Clear();
             UpdateBedrockChecks();
@@ -1608,7 +1609,7 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-        // GroundLayer”Ô†‚ÌXV
+        // GroundLayerï¿½Ôï¿½ï¿½ÌXï¿½V
         private void UpdateGroundLayerNo()
         {
             for (int i = 0; i < GroundInput.GroundLayers.Count; i++)
@@ -1617,22 +1618,22 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // “y¿“_’Ç‰Áƒƒ\ƒbƒh
+        // ï¿½yï¿½ï¿½ï¿½_ï¿½Ç‰ï¿½ï¿½ï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         private void OnAddGroundMass()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var masses = GroundInput?.GroundMassesData;
             if (masses == null) return;
 
-            // 0Œ‚Í‰Šú’l‚ğ’Ç‰Á
+            // 0ï¿½ï¿½ï¿½ï¿½ï¿½Íï¿½ï¿½ï¿½ï¿½lï¿½ï¿½Ç‰ï¿½
             if (masses.Count == 0)
             {
                 var first = new GroundMassDataInput
                 {
-                    GLDepth = -1.0, // GLŠî€‚Å‰ºŒü‚«‚ª•‰‚Ì‘z’è
+                    GLDepth = -1.0, // GLï¿½î€ï¿½Å‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‘zï¿½ï¿½
                 };
                 masses.Add(first);
                 SelectedGroundMassOnDataGrid = first;
@@ -1642,14 +1643,14 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // ‘I‘ğs‚Ì’¼‰º or ––”ö‚Ö’Ç‰Á
+            // ï¿½Iï¿½ï¿½ï¿½sï¿½Ì’ï¿½ï¿½ï¿½ or ï¿½ï¿½ï¿½ï¿½ï¿½Ö’Ç‰ï¿½
             int selectedIndex = masses.IndexOf(SelectedGroundMassOnDataGrid);
             int insertIndex;
             GroundMassDataInput newMass;
 
             if (selectedIndex >= 0 && selectedIndex < masses.Count - 1)
             {
-                // ‘I‘ğs‚Æ‚»‚Ì‰ºs‚Ì’†ŠÔ‚É’Ç‰Á
+                // ï¿½Iï¿½ï¿½ï¿½sï¿½Æ‚ï¿½ï¿½Ì‰ï¿½ï¿½sï¿½Ì’ï¿½ï¿½Ô‚É’Ç‰ï¿½
                 double d1 = masses[selectedIndex].GLDepth;
                 double d2 = masses[selectedIndex + 1].GLDepth;
                 newMass = new GroundMassDataInput { GLDepth = 0.5 * (d1 + d2) };
@@ -1658,30 +1659,30 @@ namespace PileDesign.ViewModels
             }
             else
             {
-                // ––”ö‚É’Ç‰ÁiÅŒã‚ÌGLDepth‚©‚çˆê’è[‚³‰º‚°‚éj
+                // ï¿½ï¿½ï¿½ï¿½ï¿½É’Ç‰ï¿½ï¿½iï¿½ÅŒï¿½ï¿½GLDepthï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½j
                 double last = masses[masses.Count - 1].GLDepth;
                 newMass = new GroundMassDataInput { GLDepth = last - 1.0 };
                 masses.Add(newMass);
                 insertIndex = masses.Count - 1;
             }
 
-            // ’Ç‰Ás‚ğ‘I‘ğ
+            // ï¿½Ç‰ï¿½ï¿½sï¿½ï¿½Iï¿½ï¿½
             SelectedGroundMassOnDataGrid = masses[insertIndex];
 
             UpdateGroundMassDataLayer();
             Update();
         }
         //{
-        //    // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+        //    // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
         //    _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
 
-        //    // ‘I‘ğ‚³‚ê‚Ä‚¢‚és‚ÌƒCƒ“ƒfƒbƒNƒX‚ğæ“¾
+        //    // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½sï¿½ÌƒCï¿½ï¿½ï¿½fï¿½bï¿½Nï¿½Xï¿½ï¿½ï¿½æ“¾
         //    int selectedIndex = GroundInput.GroundMassesData.IndexOf(SelectedGroundMassOnDataGrid);
 
-        //    // ‘I‘ğ‚³‚ê‚Ä‚¢‚és‚ª‚ ‚éê‡A‚»‚Ì‰º‚É’Ç‰Á
+        //    // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ê‡ï¿½Aï¿½ï¿½ï¿½Ì‰ï¿½ï¿½É’Ç‰ï¿½
         //    if (0 <= selectedIndex && selectedIndex < GroundInput.GroundMassesData.Count - 1)
         //    {
-        //        // V‚µ‚¢ GroundLayerDataItem ‚ğì¬
+        //        // ï¿½Vï¿½ï¿½ï¿½ï¿½ GroundLayerDataItem ï¿½ï¿½ï¿½ì¬
         //        var newGroundMass = new GroundMassDataInput
         //        {
         //            GLDepth = (
@@ -1693,32 +1694,32 @@ namespace PileDesign.ViewModels
         //    }
         //    else
         //    {
-        //        // V‚µ‚¢ GroundLayerDataItem ‚ğì¬
+        //        // ï¿½Vï¿½ï¿½ï¿½ï¿½ GroundLayerDataItem ï¿½ï¿½ï¿½ì¬
         //        var newGroundMass = new GroundMassDataInput
         //        {
         //            GLDepth = GroundInput.GroundMassesData[^1].GLDepth - 1.0,
         //        };
 
-        //        // ‘I‘ğsindex‚ğÅIs‚É‚ ‚í‚¹‚é
+        //        // ï¿½Iï¿½ï¿½ï¿½sindexï¿½ï¿½ï¿½ÅIï¿½sï¿½É‚ï¿½ï¿½í‚¹ï¿½ï¿½
         //        selectedIndex = GroundInput.GroundMassesData.Count - 1;
 
-        //        // ‘I‘ğ‚³‚ê‚Ä‚¢‚és‚ª‚È‚¢ê‡A––”ö‚É’Ç‰Á
+        //        // ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½È‚ï¿½ï¿½ê‡ï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½É’Ç‰ï¿½
         //        GroundInput.GroundMassesData.Add(newGroundMass);
 
         //    }
 
-        //    // ‘I‘ğs‚ğ’Ç‰Ás‚É‚¸‚ç‚·
+        //    // ï¿½Iï¿½ï¿½ï¿½sï¿½ï¿½Ç‰ï¿½ï¿½sï¿½É‚ï¿½ï¿½ç‚·
         //    SelectedGroundMassOnDataGrid = GroundInput.GroundMassesData[selectedIndex + 1];
 
         //    UpdateGroundMassDataLayer();
         //    Update();
         //}
 
-        // ‘S“y¿“_íœƒƒ\ƒbƒh
+        // ï¿½Sï¿½yï¿½ï¿½ï¿½_ï¿½íœï¿½ï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         private void OnDeleteAllGroundMasses()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             GroundInput.GroundMassesData.Clear();
@@ -1726,56 +1727,56 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-        // ‘I‘ğs‚æ‚è‰º‚Ìs‚Ì“y¿“_‚ÌŠÔŠu‚ğ1m‚É‘µ‚¦‚éƒƒ\ƒbƒh
+        // ï¿½Iï¿½ï¿½ï¿½sï¿½ï¿½è‰ºï¿½Ìsï¿½Ì“yï¿½ï¿½ï¿½_ï¿½ÌŠÔŠuï¿½ï¿½1mï¿½É‘ï¿½ï¿½ï¿½ï¿½éƒï¿½\ï¿½bï¿½h
         [RelayCommand]
         private void OnMake1mSpacing()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             var masses = GroundInput?.GroundMassesData;
             if (masses == null || masses.Count == 0) return;
 
-            // ‘ÎÛŠJnˆÊ’u: ‘I‘ğs‚ÌuŸ‚Ìsv‚©‚çB–¢‘I‘ğ‚È‚ç2s–Ú(=index=1)‚©‚çB
+            // ï¿½ÎÛŠJï¿½nï¿½Ê’u: ï¿½Iï¿½ï¿½ï¿½sï¿½Ìuï¿½ï¿½ï¿½Ìsï¿½vï¿½ï¿½ï¿½ï¿½Bï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½È‚ï¿½2ï¿½sï¿½ï¿½(=index=1)ï¿½ï¿½ï¿½ï¿½B
             int selectedIndex = masses.IndexOf(SelectedGroundMassOnDataGrid);
             int startIndex = (selectedIndex >= 0) ? selectedIndex + 1 : 1;
 
             if (startIndex >= masses.Count) return;
 
-            // 1m ƒsƒbƒ`‚Å GLDepth ‚ğÄ”z’uiGLDepth‚Í‰ºŒü‚«‚ª•‰j
+            // 1m ï¿½sï¿½bï¿½`ï¿½ï¿½ GLDepth ï¿½ï¿½ï¿½Ä”zï¿½uï¿½iGLDepthï¿½Í‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½j
             for (int i = startIndex; i < masses.Count; i++)
             {
-                // HŠw“IŠî”Õ‚É“’B‚µ‚½‚çˆÈ~‚ÍG‚ç‚È‚¢
+                // ï¿½Hï¿½wï¿½Iï¿½ï¿½Õ‚É“ï¿½ï¿½Bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È~ï¿½ÍGï¿½ï¿½È‚ï¿½
                 if (masses[i].IsEngineeringBedrock) break;
 
                 masses[i].GLDepth = masses[i - 1].GLDepth - 1.0;
             }
 
-            // ˆÈ~‚Ì”h¶’liSpacing, Altitude ‚È‚Çj‚ğÄŒvZE•`‰æ
+            // ï¿½È~ï¿½Ì”hï¿½ï¿½ï¿½lï¿½iSpacing, Altitude ï¿½È‚Çjï¿½ï¿½ï¿½ÄŒvï¿½Zï¿½Eï¿½`ï¿½ï¿½
             UpdateGroundMassDataLayer();
             Update();
 
-            // ƒGƒ‰[ƒ`ƒFƒbƒNiãs‚æ‚è¬‚³‚¢‚©j‚ğÀs‚µ‚Äƒtƒ‰ƒO‚ğXV
+            // ï¿½Gï¿½ï¿½ï¿½[ï¿½`ï¿½Fï¿½bï¿½Nï¿½iï¿½ï¿½sï¿½ï¿½è¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½jï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½Äƒtï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½Xï¿½V
             bool hasError = ValidateGroundMassMonotone(out string errorMessage);
 
-            // DataGrid ‚ğ‹­§XViƒoƒCƒ“ƒfƒBƒ“ƒO/ƒXƒ^ƒCƒ‹‚ÌÄ•]‰¿‚ÅÔ•\¦‚ğ”½‰fj
+            // DataGrid ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½iï¿½oï¿½Cï¿½ï¿½ï¿½fï¿½Bï¿½ï¿½ï¿½O/ï¿½Xï¿½^ï¿½Cï¿½ï¿½ï¿½ÌÄ•]ï¿½ï¿½ï¿½ÅÔ•\ï¿½ï¿½ï¿½ğ”½‰fï¿½j
             RevalidateAndRefreshGroundMassGrid();
 
-            // •K—v‚É‰‚¶‚ÄƒƒbƒZ[ƒW•\¦
+            // ï¿½Kï¿½vï¿½É‰ï¿½ï¿½ï¿½ï¿½Äƒï¿½ï¿½bï¿½Zï¿½[ï¿½Wï¿½\ï¿½ï¿½
             if (hasError)
             {
-                MessageBox.Show(errorMessage, "“ü—ÍƒGƒ‰[", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(errorMessage, "ï¿½ï¿½ï¿½ÍƒGï¿½ï¿½ï¿½[", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        // uˆê‚Âã‚Ìs‚æ‚è¬‚³‚¢i‚æ‚è[‚¢jGLDepth‚É‚È‚Á‚Ä‚¢‚é‚©v‚ğŒŸØ‚µAˆá”½s‚Ì IsError ‚ğ—§‚Ä‚é
+        // ï¿½uï¿½ï¿½Âï¿½Ìsï¿½ï¿½è¬ï¿½ï¿½ï¿½ï¿½ï¿½iï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½jGLDepthï¿½É‚È‚ï¿½ï¿½Ä‚ï¿½ï¿½é‚©ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½Ø‚ï¿½ï¿½Aï¿½á”½ï¿½sï¿½ï¿½ IsError ï¿½ğ—§‚Ä‚ï¿½
         private bool ValidateGroundMassMonotone(out string message)
         {
             message = string.Empty;
             var masses = GroundInput?.GroundMassesData;
             if (masses == null || masses.Count == 0) return false;
 
-            // ‚¢‚Á‚½‚ñ‘Ss‚ÌƒGƒ‰[ƒtƒ‰ƒO‚ğƒNƒŠƒA
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Sï¿½sï¿½ÌƒGï¿½ï¿½ï¿½[ï¿½tï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½Nï¿½ï¿½ï¿½A
             foreach (var m in masses) m.IsError = false;
 
             bool hasError = false;
@@ -1783,15 +1784,15 @@ namespace PileDesign.ViewModels
 
             for (int i = 1; i < masses.Count; i++)
             {
-                // HŠw“IŠî”ÕˆÈ~‚Í”CˆÓ‚ÅƒXƒLƒbƒv
+                // ï¿½Hï¿½wï¿½Iï¿½ï¿½ÕˆÈ~ï¿½Í”Cï¿½Ó‚ÅƒXï¿½Lï¿½bï¿½v
                 if (masses[i].IsEngineeringBedrock) break;
 
-                // ‰º’[Z‚ÌŒŸØ‚Æ“¯“™: Œ»s‚Í•K‚¸ˆê‚Âã‚Ìs‚æ‚èu¬‚³‚¢v•K—v‚ª‚ ‚é
+                // ï¿½ï¿½ï¿½[Zï¿½ÌŒï¿½ï¿½Ø‚Æ“ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½sï¿½Í•Kï¿½ï¿½ï¿½ï¿½Âï¿½Ìsï¿½ï¿½ï¿½uï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Kï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 if (masses[i].GLDepth >= masses[i - 1].GLDepth)
                 {
                     masses[i].IsError = true;
                     hasError = true;
-                    lines.Add($"s {i + 1}: GLDepth ‚Íˆê‚Âã‚Ìs‚æ‚è¬‚³‚¢’li‚æ‚è[‚¢’lj‚É‚µ‚Ä‚­‚¾‚³‚¢B");
+                    lines.Add($"ï¿½s {i + 1}: GLDepth ï¿½Íˆï¿½Âï¿½Ìsï¿½ï¿½è¬ï¿½ï¿½ï¿½ï¿½ï¿½lï¿½iï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½lï¿½jï¿½É‚ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B");
                 }
             }
 
@@ -1801,10 +1802,10 @@ namespace PileDesign.ViewModels
             return hasError;
         }
 
-        // ƒGƒ‰[ƒ`ƒFƒbƒNÄÀs{ƒOƒŠƒbƒh‹­§XV
+        // ï¿½Gï¿½ï¿½ï¿½[ï¿½`ï¿½Fï¿½bï¿½Nï¿½Äï¿½ï¿½sï¿½{ï¿½Oï¿½ï¿½ï¿½bï¿½hï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½V
         private void RevalidateAndRefreshGroundMassGrid()
         {
-            // •K—v‚È‚ç GroundInput ‘¤‚Ì®‡ŒŸØ‚ğ•¹—piƒGƒ‰[ƒtƒ‰ƒOXV‚ª“à•ï‚³‚ê‚Ä‚¢‚é‘O’ñj
+            // ï¿½Kï¿½vï¿½È‚ï¿½ GroundInput ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø‚ğ•¹—pï¿½iï¿½Gï¿½ï¿½ï¿½[ï¿½tï¿½ï¿½ï¿½Oï¿½Xï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï‚³ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½Oï¿½ï¿½j
             _ = GroundInput?.ValidateForAnalysis(out _);
 
             var view = CollectionViewSource.GetDefaultView(GroundInput?.GroundMassesData);
@@ -1838,7 +1839,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // GroundMassDataLayer”Ô†‚ÌXV
+        // GroundMassDataLayerï¿½Ôï¿½ï¿½ÌXï¿½V
         private void UpdateGroundMassDataLayer()
         {
             for (int i = 0; i < GroundInput.GroundMassesData.Count; i++)
@@ -1849,7 +1850,7 @@ namespace PileDesign.ViewModels
 
         private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
         {
-            e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // s”Ô†‚ğİ’è
+            e.Row.Header = (e.Row.GetIndex() + 1).ToString(); // ï¿½sï¿½Ôï¿½ï¿½ï¿½İ’ï¿½
         }
 
 
@@ -1864,7 +1865,7 @@ namespace PileDesign.ViewModels
         private readonly bool initialSelection = true;
 
 
-        // GroundNoƒRƒ“ƒ{ƒ{ƒbƒNƒX
+        // GroundNoï¿½Rï¿½ï¿½ï¿½{ï¿½{ï¿½bï¿½Nï¿½X
         //public void ComboBoxGroundNo_SelectionChanged(int selectedGroundNo, int previousSelectedGroundNo)
         //{
         //    if (selectedGroundNo != 1 && selectedGroundNo == GroundCountPlusOneList[^1])
@@ -1881,17 +1882,17 @@ namespace PileDesign.ViewModels
         //}
         //public void ComboBoxGroundNo_SelectionChanged(int selectedIndex, int previousSelectedIndex)
         //{
-        //    // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+        //    // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
         //    _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
         //    // selectedIndex: 0-based
         //    if (selectedIndex == GroundCountPlusOneList.Count - 1)
         //    {
-        //        // (New)‚ª‘I‘ğ‚³‚ê‚½ê‡
+        //        // (New)ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ê‚½ï¿½ê‡
         //        int newNo = GroundsInput.Count + 1;
         //        GroundsInput.Add(new GroundInput() { GroundRef = "(GR" + newNo.ToString() + ")" });
         //        UpdateGroundsCountPlusOneList();
-        //        GroundNo = newNo; // V‚µ‚¢’n”Õ”Ô†‚ÉØ‚è‘Ö‚¦
+        //        GroundNo = newNo; // ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½nï¿½Õ”Ôï¿½ï¿½ÉØ‚ï¿½Ö‚ï¿½
         //        GroundInput = GroundsInput.Last();
         //    }
         //    else
@@ -1916,11 +1917,11 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-        //“y¿ƒf[ƒ^@“y¿“_ƒf[ƒ^‚Ì•½‹ÏN’l‚ğ‘ã“ü‚·‚é
+        //ï¿½yï¿½ï¿½ï¿½fï¿½[ï¿½^ï¿½@ï¿½yï¿½ï¿½ï¿½_ï¿½fï¿½[ï¿½^ï¿½Ì•ï¿½ï¿½ï¿½Nï¿½lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         [RelayCommand]
         private void OnInputAverageNValue()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
@@ -1942,11 +1943,11 @@ namespace PileDesign.ViewModels
             Update();
         }
 
-        // “y‘wƒf[ƒ^@“y¿“_ƒf[ƒ^‚Ì•½‹ÏVs‚ğ‘ã“ü‚·‚é
+        // ï¿½yï¿½wï¿½fï¿½[ï¿½^ï¿½@ï¿½yï¿½ï¿½ï¿½_ï¿½fï¿½[ï¿½^ï¿½Ì•ï¿½ï¿½ï¿½Vsï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         [RelayCommand]
         private void InputModelAverageVs()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
@@ -1965,78 +1966,78 @@ namespace PileDesign.ViewModels
                     groundLayerDataItem.Vs = vS0.Average();
                 }
             }
-            Update(); // ƒOƒ‰ƒt‚ğXV
+            Update(); // ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½Xï¿½V
         }
 
-        // “y‘wƒf[ƒ^@•ÏŒ`ŒW”‚ÉN’l~700‚ğ‘ã“ü‚·‚é
+        // ï¿½yï¿½wï¿½fï¿½[ï¿½^ï¿½@ï¿½ÏŒ`ï¿½Wï¿½ï¿½ï¿½ï¿½Nï¿½lï¿½~700ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         [RelayCommand]
         private void OnInput700N()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
-                if (groundLayerDataItem.GranularityClass == "»¿“y" || groundLayerDataItem.GranularityClass == "»âI“y")
+                if (groundLayerDataItem.GranularityClass == "ï¿½ï¿½ï¿½ï¿½ï¿½y" || groundLayerDataItem.GranularityClass == "ï¿½ï¿½ï¿½Iï¿½y")
                 {
                     groundLayerDataItem.Es = groundLayerDataItem.NValue * 700;
                 }
             }
-            Update(); // ƒOƒ‰ƒt‚ğXV
+            Update(); // ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½Xï¿½V
         }
 
-        // “y‘wƒf[ƒ^@Cu=12.5N, 25N‚ğ‘ã“ü‚·‚é
+        // ï¿½yï¿½wï¿½fï¿½[ï¿½^ï¿½@Cu=12.5N, 25Nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         [RelayCommand]
         private void OnInputC()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (GroundLayerInput groundLayerDataItem in GroundInput.GroundLayers)
             {
-                if (groundLayerDataItem.GranularityClass == "”S«“y" && groundLayerDataItem.AgeCategory == "‰«Ï‘w")
+                if (groundLayerDataItem.GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y" && groundLayerDataItem.AgeCategory == "ï¿½ï¿½ï¿½Ï‘w")
                 {
                     groundLayerDataItem.Cohesive = 20 - groundLayerDataItem.BottomGLDepth * 2.0 - groundLayerDataItem.LayerThickness / 2.0;
                 }
-                else if (groundLayerDataItem.GranularityClass == "”S«“y" && groundLayerDataItem.AgeCategory == "^Ï‘w")
+                else if (groundLayerDataItem.GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y" && groundLayerDataItem.AgeCategory == "ï¿½^ï¿½Ï‘w")
                 {
                     groundLayerDataItem.Cohesive = groundLayerDataItem.NValue * 12.5;
                 }
             }
-            Update(); // ƒOƒ‰ƒt‚ğXV
+            Update(); // ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½Xï¿½V
         }
 
         [RelayCommand]
         private void OnApplyTypicalFc()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             foreach (var groundMassDataItem in GroundInput.GroundMassesData)
             {
-                if (groundMassDataItem.GranularityClass == "»¿“y" || groundMassDataItem.GranularityClass == "»âI“y")
+                if (groundMassDataItem.GranularityClass == "ï¿½ï¿½ï¿½ï¿½ï¿½y" || groundMassDataItem.GranularityClass == "ï¿½ï¿½ï¿½Iï¿½y")
                 {
                     groundMassDataItem.Fc = 10;
                 }
-                else if (groundMassDataItem.GranularityClass == "”S«“y")
+                else if (groundMassDataItem.GranularityClass == "ï¿½Sï¿½ï¿½ï¿½y")
                 {
                     groundMassDataItem.Fc = 70;
                 }
 
             }
-            Update(); // ƒOƒ‰ƒt‚ğXV
+            Update(); // ï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½Xï¿½V
         }
 
         [RelayCommand]
         private void OnApplyGroundLayerNValue()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
         }
 
 
-        // View‚ğ•Â‚¶‚é‚½‚ß‚Ìƒƒ\ƒbƒh
+        // Viewï¿½ï¿½Â‚ï¿½ï¿½é‚½ï¿½ß‚Ìƒï¿½ï¿½\ï¿½bï¿½h
         [RelayCommand]
         private void CloseWindow()
         {
@@ -2047,7 +2048,7 @@ namespace PileDesign.ViewModels
         public bool ValidateForAnalysis(out string warningMessage)
         {
             bool hasWarning = false;
-            warningMessage = "ˆÈ‰º‚Ì€–Ú‚É–â‘è‚ª‚ ‚è‚Ü‚·:\n";
+            warningMessage = "ï¿½È‰ï¿½ï¿½Ìï¿½ï¿½Ú‚É–ï¿½è‚ªï¿½ï¿½ï¿½ï¿½Ü‚ï¿½:\n";
 
             if (GroundsInput != null)
             {
@@ -2056,7 +2057,7 @@ namespace PileDesign.ViewModels
                     if (!GroundsInput[i].ValidateForAnalysis(out string groundWarning))
                     {
                         hasWarning = true;
-                        warningMessage += $"- ’n”Õ”Ô†{i + 1}:\n{groundWarning}";
+                        warningMessage += $"- ï¿½nï¿½Õ”Ôï¿½{i + 1}:\n{groundWarning}";
                     }
                 }
             }
@@ -2068,29 +2069,29 @@ namespace PileDesign.ViewModels
         {
             if (GroundsInput != null)
             {
-                if (!_mainWindowViewModel.CheckAndResetElementSplit("’n”Õ"))
-                    return; // ƒLƒƒƒ“ƒZƒ‹‚Íˆ—’†’f
+                if (!_mainWindowViewModel.CheckAndResetElementSplit("ï¿½nï¿½ï¿½"))
+                    return; // ï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½Íï¿½ï¿½ï¿½ï¿½ï¿½ï¿½f
 
                 bool hasWarning = false;
-                string warningMessage = "ˆÈ‰º‚Ì€–Ú‚É–â‘è‚ª‚ ‚è‚Ü‚·:\n";
+                string warningMessage = "ï¿½È‰ï¿½ï¿½Ìï¿½ï¿½Ú‚É–ï¿½è‚ªï¿½ï¿½ï¿½ï¿½Ü‚ï¿½:\n";
 
                 for (int i = 0; i < GroundsInput.Count; i++)
                 {
                     if (!GroundsInput[i].ValidateForAnalysis(out string groundWarning))
                     {
                         hasWarning = true;
-                        warningMessage += $"- ’n”Õ”Ô†{i + 1}:\n{groundWarning}";
+                        warningMessage += $"- ï¿½nï¿½Õ”Ôï¿½{i + 1}:\n{groundWarning}";
                     }
                 }
 
                 if (hasWarning)
                 {
-                    warningMessage += "\nó‘Ô‚ğ•Û‘¶‚µ‚ÄƒEƒBƒ“ƒhƒE‚ğ•Â‚¶‚Ü‚·‚©H";
-                    MessageBoxResult result = MessageBox.Show(warningMessage, "Œx", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                    warningMessage += "\nï¿½ï¿½Ô‚ï¿½Û‘ï¿½ï¿½ï¿½ï¿½ÄƒEï¿½Bï¿½ï¿½ï¿½hï¿½Eï¿½ï¿½Â‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½H";
+                    MessageBoxResult result = MessageBox.Show(warningMessage, "ï¿½xï¿½ï¿½", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
                     if (result == MessageBoxResult.Cancel) return;
                 }
 
-                // [‚¢ƒRƒs[‚ğì¬‚µ‚Ä‘ã“ü
+                // ï¿½[ï¿½ï¿½ï¿½Rï¿½sï¿½[ï¿½ï¿½ï¿½ì¬ï¿½ï¿½ï¿½Ä‘ï¿½ï¿½
                 InputModel.GroundsInput.Clear();
 
                 foreach (var groundInput in GroundsInput)
@@ -2104,16 +2105,16 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            // InputModel.GroundsInput‚ğƒNƒŠƒA
+            // InputModel.GroundsInputï¿½ï¿½ï¿½Nï¿½ï¿½ï¿½A
             InputModel.GroundsInput.Clear();
 
-            // PrevGroundsInput‚Ì“à—e‚ğInputModel.GroundsInput‚É’Ç‰Á
+            // PrevGroundsInputï¿½Ì“ï¿½ï¿½eï¿½ï¿½InputModel.GroundsInputï¿½É’Ç‰ï¿½
             foreach (var groundInput in PrevGroundsInput)
             {
                 InputModel.GroundsInput.Add(groundInput.DeepCopy());
             }
 
-            // ƒ_ƒCƒAƒƒO‚ğ•Â‚¶‚é
+            // ï¿½_ï¿½Cï¿½Aï¿½ï¿½ï¿½Oï¿½ï¿½Â‚ï¿½ï¿½ï¿½
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
@@ -2157,7 +2158,7 @@ namespace PileDesign.ViewModels
             DrawFLGraph();
         }
 
-        // “y‘w”Ô†‚ÌÄŒvZ
+        // ï¿½yï¿½wï¿½Ôï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateGroundLayerNo()
         {
             for (int i = 0; i < GroundInput.GroundLayers.Count; i++)
@@ -2166,7 +2167,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // “y¿“_”Ô†‚ÌÄŒvZ
+        // ï¿½yï¿½ï¿½ï¿½_ï¿½Ôï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateGroundMassDataNo()
         {
             for (int i = 0; i < GroundInput.GroundMassesData.Count; i++)
@@ -2175,7 +2176,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ‰º’[Z‚ÌÄŒvZ
+        // ï¿½ï¿½ï¿½[Zï¿½ÌÄŒvï¿½Z
         internal void RecalculateBottomAltitude()
         {
             foreach (GroundLayerInput groundLayer in GroundInput.GroundLayers)
@@ -2184,7 +2185,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // [‚³‚ÌÄŒvZ
+        // ï¿½[ï¿½ï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateGLDepth()
         {
             double totalThickness = 0;
@@ -2195,7 +2196,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // Œú‚³‚ÌÄŒvZ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateLayerThickness()
         {
             ObservableCollection<GroundLayerInput> groundLayerInput = GroundInput.GroundLayers;
@@ -2209,7 +2210,7 @@ namespace PileDesign.ViewModels
         }
 
 
-        // [‚³‚ÌÄŒvZ
+        // ï¿½[ï¿½ï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateBottomGLDepth()
         {
             double totalThickness = 0;
@@ -2220,7 +2221,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // Œú‚³‚ÌÄŒvZ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateMassSpacing()
         {
             ObservableCollection<GroundMassDataInput> groundMassesData = GroundInput.GroundMassesData;
@@ -2233,7 +2234,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // Z‚ÌÄŒvZ
+        // Zï¿½ÌÄŒvï¿½Z
         internal void RecalculateAltitude()
         {
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
@@ -2242,7 +2243,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ‚‚³‚ÌÄŒvZ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ÌÄŒvï¿½Z
         internal void RecalculateH()
         {
             var groundMassesData = GroundInput.GroundMassesData;
@@ -2297,7 +2298,7 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
-        // –§“xAHŠw“IŠî”Õ‚ÌÄŒvZƒƒ\ƒbƒh
+        // ï¿½ï¿½ï¿½xï¿½Aï¿½Hï¿½wï¿½Iï¿½ï¿½Õ‚ÌÄŒvï¿½Zï¿½ï¿½ï¿½\ï¿½bï¿½h
         internal void RecalculateDensityIsEngineeringBedrock()
         {
             var masses = GroundInput.GroundMassesData;
@@ -2341,7 +2342,7 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
-        // ‰tó‰»‚ÌÄŒvZƒƒ\ƒbƒh
+        // ï¿½tï¿½ó‰»‚ÌÄŒvï¿½Zï¿½ï¿½ï¿½\ï¿½bï¿½h
         //internal void RecalculateIsLiquefaction()
         //{
         //    var groundMassesData = GroundInput.GroundMassesData;
@@ -2453,7 +2454,7 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
-        // ƒÑL/ƒĞz'
+        // ï¿½ï¿½L/ï¿½ï¿½z'
         internal void RecalculateTauLonSigmaZPrime()
         {
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
@@ -2534,7 +2535,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ƒÑd/ƒĞz'
+        // ï¿½ï¿½d/ï¿½ï¿½z'
         internal void RecalculateTauDonSigmaZprime()
         {
             double magnitude = 7.5;
@@ -2587,7 +2588,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ƒÁcy
+        // ï¿½ï¿½cy
         internal void RecalculateGammaCy()
         {
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
@@ -2608,7 +2609,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ‡”ƒĞcyH
+        // ï¿½ï¿½ï¿½ï¿½cyH
         internal void RecalculateSigmaGammaCyH()
         {
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
@@ -2630,7 +2631,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ƒÀL
+        // ï¿½ï¿½L
         internal void RecalculateBetaL()
         {
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
@@ -2702,7 +2703,7 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
-        // ƒĞz
+        // ï¿½ï¿½z
         internal void RecalculateSigmaZ()
         {
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
@@ -2764,7 +2765,7 @@ namespace PileDesign.ViewModels
         //    }
         //}
 
-        // ƒĞz'
+        // ï¿½ï¿½z'
         internal void RecalculateSigmaZPrime()
         {
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
@@ -2910,18 +2911,18 @@ namespace PileDesign.ViewModels
 
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
             {
-                // ’nk‰×d‚É‚æ‚èŒˆ‚Ü‚éŒW”
+                // ï¿½nï¿½kï¿½×dï¿½É‚ï¿½èŒˆï¿½Ü‚ï¿½Wï¿½ï¿½
                 double L = (levelIndex == 0) ? 0.2 : 1.0;
 
-                // ’nˆæŒW”
+                // ï¿½nï¿½ï¿½Wï¿½ï¿½
                 double Z = 1.0;
 
-                // •\‘w‚Ì“y¿‚Ì“®“I•ÏŒ`“Á«‚©‚çŒˆ‚Ü‚é’è”
-                double CAlpha = (shallowSoilType == "”S«“y") ? 25.0 : 40.0;
+                // ï¿½\ï¿½wï¿½Ì“yï¿½ï¿½ï¿½Ì“ï¿½ï¿½Iï¿½ÏŒ`ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½çŒˆï¿½Ü‚ï¿½è”
+                double CAlpha = (shallowSoilType == "ï¿½Sï¿½ï¿½ï¿½y") ? 25.0 : 40.0;
 
-                double T0 = 0.0; // ‰Šú’l
-                double SigmaH = 0.0; // ‰Šú’l
-                double SigmaGammaVS0H = 0.0; // ‰Šú’l
+                double T0 = 0.0; // ï¿½ï¿½ï¿½ï¿½ï¿½l
+                double SigmaH = 0.0; // ï¿½ï¿½ï¿½ï¿½ï¿½l
+                double SigmaGammaVS0H = 0.0; // ï¿½ï¿½ï¿½ï¿½ï¿½l
                 foreach (var groundMassData in groundMassesData)
                 {
                     if (groundMassData.IsEngineeringBedrock) break;
@@ -2935,13 +2936,13 @@ namespace PileDesign.ViewModels
                     SigmaGammaVS0H += density * vs0 * h;
                 }
 
-                // ’n”Õ‚Ì’nk‚ÌŒÅ—LüŠú‚Ì‚Ì‚Ñ
+                // ï¿½nï¿½Õ‚Ì’nï¿½kï¿½ï¿½ï¿½ÌŒÅ—Lï¿½ï¿½ï¿½ï¿½ï¿½Ì‚Ì‚ï¿½
                 double alpha = Math.Min(1 + L * Z * CAlpha * T0 / SigmaH, 4.0);
 
                 GroundInput.NaturalPeriod = T0;
                 GroundInput.NaturalPeriods[levelIndex] = alpha * T0;
 
-                // ’n”Õ‚Ì•\‘w‚ÆHŠw“IŠî”Õ‚Ì‰ŠúƒCƒ“ƒs[ƒ_ƒ“ƒX”ä
+                // ï¿½nï¿½Õ‚Ì•\ï¿½wï¿½ÆHï¿½wï¿½Iï¿½ï¿½Õ‚Ìï¿½ï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½sï¿½[ï¿½_ï¿½ï¿½ï¿½Xï¿½ï¿½
                 double Rz0 = SigmaGammaVS0H / (bedrockDensity * bedrockShearWaveVelocity * SigmaH);
                 double beta = 3.0 / 4.0 * (1.0 - 1.0 / Math.Pow(2.0, alpha - 1.0)) / (1 - Rz0);
 
@@ -2955,15 +2956,15 @@ namespace PileDesign.ViewModels
                     var vs0 = groundMassData.VS0;
                     //var h = groundMassData.H.GetValueOrDefault();
 
-                    // “™‰¿S”g‘¬“x
+                    // ï¿½ï¿½ï¿½ï¿½Sï¿½gï¿½ï¿½ï¿½x
                     groundMassData.VSE[levelIndex] = Math.Pow(density * vs0 / bedrockDensity / bedrockShearWaveVelocity, beta) * vs0;
 
-                    // “™‰¿‚¹‚ñ’f‚Î‚Ë„«
+                    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fï¿½Î‚Ëï¿½ï¿½ï¿½
                     groundMassData.K[levelIndex] = density / 9.80665 * Math.Pow(groundMassData.VSE[levelIndex], 2.0) / groundMassData.Spacing;
 
                     if (i == 0)
                     {
-                        groundMassData.U[levelIndex] = 1.0; // ’n•\‚É‚¨‚¯‚é•ÏˆÊ
+                        groundMassData.U[levelIndex] = 1.0; // ï¿½nï¿½\ï¿½É‚ï¿½ï¿½ï¿½ï¿½ï¿½Ïˆï¿½
                     }
                     else
                     {
@@ -3000,8 +3001,8 @@ namespace PileDesign.ViewModels
                 }
 
                 double fA = Math.Min(1.6 * alpha * T0, 1);
-                double C1 = (shallowSoilType == "”S«“y") ? 0.0028 : 0.0015;
-                double C2 = (shallowSoilType == "”S«“y") ? 0.53 : 0.666;
+                double C1 = (shallowSoilType == "ï¿½Sï¿½ï¿½ï¿½y") ? 0.0028 : 0.0015;
+                double C2 = (shallowSoilType == "ï¿½Sï¿½ï¿½ï¿½y") ? 0.53 : 0.666;
                 double Dmax = 0;
 
                 if (calculationMethod == "a1(b1)")
@@ -3023,7 +3024,7 @@ namespace PileDesign.ViewModels
 
         public void DataGridGroundLayer_CellEditEnding()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             Update();
@@ -3059,7 +3060,7 @@ namespace PileDesign.ViewModels
         //        {
         //            if (e.Column is DataGridBoundColumn boundColumn && boundColumn.Binding is System.Windows.Data.Binding binding)
         //            {
-        //                // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+        //                // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
         //                _undoManager.PushState([.. GroundsInput.Select(x => x.DeepCopy())]);
 
         //                string bindingPath = binding.Path.Path;
@@ -3092,14 +3093,14 @@ namespace PileDesign.ViewModels
         {
             if (_isUpdatingValues)
             {
-                // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+                // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.GroundWaterGLDepth = GroundInput.GroundWaterTableAltitude - GroundInput.GroundTopAltitude;
                 _isUpdatingValues = true;
 
-                // UIEƒOƒ‰ƒt“™‚ÌÄ•`‰æ
+                // UIï¿½Eï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ÌÄ•`ï¿½ï¿½
                 Update();
             }
         }
@@ -3108,14 +3109,14 @@ namespace PileDesign.ViewModels
         {
             if (_isUpdatingValues)
             {
-                // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+                // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.StressGLDepth = GroundInput.StressAltitude - GroundInput.GroundTopAltitude;
                 _isUpdatingValues = true;
 
-                // UIEƒOƒ‰ƒt“™‚ÌÄ•`‰æ
+                // UIï¿½Eï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ÌÄ•`ï¿½ï¿½
                 Update();
             }
         }
@@ -3124,14 +3125,14 @@ namespace PileDesign.ViewModels
         {
             if (_isUpdatingValues)
             {
-                // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+                // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
                 GroundInput.StressAltitude = GroundInput.StressGLDepth + GroundInput.GroundTopAltitude;
                 _isUpdatingValues = true;
 
-                //UIXV
+                //UIï¿½Xï¿½V
                 Update();
             }
         }
@@ -3140,7 +3141,7 @@ namespace PileDesign.ViewModels
         {
             if (_isUpdatingValues)
             {
-                // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+                // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
                 _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
                 _isUpdatingValues = false;
@@ -3152,7 +3153,7 @@ namespace PileDesign.ViewModels
 
         public void DataGridGroundLayer_RowEditEnding(/*string newText*/)
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             Update();
@@ -3160,13 +3161,13 @@ namespace PileDesign.ViewModels
 
         public void GroundTopAltitudeTextBox_LostFocus()
         {
-            // •ÏX‘O‚Ìó‘Ô‚ğ•Û‘¶
+            // ï¿½ÏXï¿½Oï¿½Ìï¿½Ô‚ï¿½Û‘ï¿½
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
 
             GroundInput.GroundWaterTableAltitude = GroundInput.GroundWaterGLDepth + GroundInput.GroundTopAltitude;
             GroundInput.StressAltitude = GroundInput.StressGLDepth + GroundInput.GroundTopAltitude;
 
-            // UIEƒOƒ‰ƒt“™‚ÌÄ•`‰æ
+            // UIï¿½Eï¿½Oï¿½ï¿½ï¿½tï¿½ï¿½ï¿½ÌÄ•`ï¿½ï¿½
             Update();
         }
 
@@ -3180,23 +3181,23 @@ namespace PileDesign.ViewModels
         {
             if (sender is TextBox textBox && !textBox.IsKeyboardFocusWithin)
             {
-                // ƒeƒLƒXƒgƒ{ƒbƒNƒX‚ªƒtƒH[ƒJƒX‚ğ‚Á‚Ä‚¢‚È‚¢ê‡AƒtƒH[ƒJƒX‚ğİ’è‚µA‘SƒeƒLƒXƒg‚ğ‘I‘ğ
+                // ï¿½eï¿½Lï¿½Xï¿½gï¿½{ï¿½bï¿½Nï¿½Xï¿½ï¿½ï¿½tï¿½Hï¿½[ï¿½Jï¿½Xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½È‚ï¿½ï¿½ê‡ï¿½Aï¿½tï¿½Hï¿½[ï¿½Jï¿½Xï¿½ï¿½İ’è‚µï¿½Aï¿½Sï¿½eï¿½Lï¿½Xï¿½gï¿½ï¿½Iï¿½ï¿½
                 textBox.Focus();
-                e.Handled = true; // ƒ}ƒEƒXƒNƒŠƒbƒNƒCƒxƒ“ƒg‚Ìˆ—‚ğ‚±‚±‚ÅŠ®—¹‚³‚¹‚é
+                e.Handled = true; // ï¿½}ï¿½Eï¿½Xï¿½Nï¿½ï¿½ï¿½bï¿½Nï¿½Cï¿½xï¿½ï¿½ï¿½gï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÅŠï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             }
         }
 
-        // “y‘w“ü—Í“àƒRƒ“ƒ{ƒ{ƒbƒNƒX•Ï‰»‚Ìƒƒ\ƒbƒh
+        // ï¿½yï¿½wï¿½ï¿½ï¿½Í“ï¿½ï¿½Rï¿½ï¿½ï¿½{ï¿½{ï¿½bï¿½Nï¿½Xï¿½Ï‰ï¿½ï¿½ï¿½ï¿½Ìƒï¿½ï¿½\ï¿½bï¿½h
         public void ComboBox_SelectionChangedCommand()
         {
-            Update(); // Update() ‚ğŒÄ‚Ño‚µ‚ÄƒOƒ‰ƒt‚ğXV
+            Update(); // Update() ï¿½ï¿½ï¿½Ä‚Ñoï¿½ï¿½ï¿½ÄƒOï¿½ï¿½ï¿½tï¿½ï¿½ï¿½Xï¿½V
         }
     }
 
     [Serializable]
     public class CustomScatterPoint(double x, double y, string text) : ObservablePoint(x, y)
     {
-        // ƒeƒLƒXƒgƒ‰ƒxƒ‹‚ÌƒvƒƒpƒeƒB
+        // ï¿½eï¿½Lï¿½Xï¿½gï¿½ï¿½ï¿½xï¿½ï¿½ï¿½Ìƒvï¿½ï¿½ï¿½pï¿½eï¿½B
         public string Text { get; set; } = text;
     }
 }
