@@ -101,13 +101,24 @@ namespace PileDesign.Output
         private static int MmToTwipsInt(double mm)
             => (int)Math.Round(mm * TwipsPerMm);
 
-        // 従来互換（string）
+        // mm → twips （string）
         private static string MmToTwips(double mm)
             => MmToTwipsInt(mm).ToString();
 
         // mm → EMU
         private static long MmToEmu(double mm)
             => (long)Math.Round(mm * EmuPerMm);
+
+        // インデント作成ヘルパー
+        private static Indentation CreateIndentation(double leftIndentMm = 0, double firstLineIndentMm = 0, double hangingIndentMm = 0)
+        {
+            return new Indentation
+            {
+                Left = leftIndentMm != 0 ? MmToTwips(leftIndentMm) : null,
+                FirstLine = firstLineIndentMm != 0 ? MmToTwips(firstLineIndentMm) : null,
+                Hanging = hangingIndentMm != 0 ? MmToTwips(hangingIndentMm) : null
+            };
+        }
 
         private static readonly Regex InlineMathRx = new(@"\$(.+?)\$", RegexOptions.Singleline | RegexOptions.Compiled);
 
@@ -472,15 +483,7 @@ namespace PileDesign.Output
             {
                 ParagraphProperties = new ParagraphProperties
                 {
-                    Indentation = new Indentation
-                    {
-                        //Left = (leftIndentMm != 0) ? ((leftIndentMm * 56.7).ToString()) : null,
-                        //FirstLine = (firstLineIndentMm != 0) ? ((firstLineIndentMm * 56.7).ToString()) : null,
-                        //Hanging = (hangingIndentMm != 0) ? ((hangingIndentMm * 56.7).ToString()) : null
-                        Left = leftIndentMm != 0 ? MmToTwips(leftIndentMm) : null,
-                        FirstLine = firstLineIndentMm != 0 ? MmToTwips(firstLineIndentMm) : null,
-                        Hanging = hangingIndentMm != 0 ? MmToTwips(hangingIndentMm) : null
-                    }
+                    Indentation = CreateIndentation(leftIndentMm, firstLineIndentMm, hangingIndentMm)
                 }
             };
             paragraph.Append(math);
@@ -1113,15 +1116,7 @@ namespace PileDesign.Output
             {
                 ParagraphProperties = new ParagraphProperties
                 {
-                    Indentation = new Indentation
-                    {
-                        //Left = (leftIndentMm != 0) ? (leftIndentMm * 56.7).ToString() : null,
-                        //FirstLine = (firstLineIndentMm != 0) ? (firstLineIndentMm * 56.7).ToString() : null,
-                        //Hanging = (hangingIndentMm != 0) ? (hangingIndentMm * 56.7).ToString() : null
-                        Left = leftIndentMm != 0 ? MmToTwips(leftIndentMm) : null,
-                        FirstLine = firstLineIndentMm != 0 ? MmToTwips(firstLineIndentMm) : null,
-                        Hanging = hangingIndentMm != 0 ? MmToTwips(hangingIndentMm) : null
-                    }
+                    Indentation = CreateIndentation(leftIndentMm, firstLineIndentMm, hangingIndentMm)
                 }
             };
 
@@ -4017,8 +4012,11 @@ namespace PileDesign.Output
         }
 
 
-        // 杭伏図への曲げモーメント情報の追加メソッド
-        private string GetPileTopBendingMomentMark(PileLayoutDataItem pileLayoutItem)
+        // 杭頂部の力学値（曲げモーメント・せん断力）を取得する汎用メソッド
+        private string GetPileTopForceMark(
+            PileLayoutDataItem pileLayoutItem,
+            Func<BeamForce, double> valueSelector,
+            string title = "")
         {
             string mark = $"{pileLayoutItem.No}";
 
@@ -4041,8 +4039,7 @@ namespace PileDesign.Output
                 ? new List<LoadCombination?>(allCombinations.Cast<LoadCombination?>())
                 : new List<LoadCombination?>() { null };
 
-            // 各レベルについて先頭4ケース（存在する分）を列挙し、各ケースで Mhi を求める。
-            // 各ケースは全 LoadCombination, 液状化フラグ(true/false) を走査して最大値を採用。
+            // 各レベルについて先頭4ケース（存在する分）を列挙し、各ケースで値を求める
             void AppendLevelCases(IEnumerable<LoadCase> loadCases, string levelLabel)
             {
                 mark += $"\n{levelLabel}";
@@ -4067,24 +4064,29 @@ namespace PileDesign.Output
                         try
                         {
                             var resL = beam.GetBeamResult(anaModel, lc, comb, true)?.CumulativeForce;
-                            if (resL != null && !double.IsNaN(resL.Mi))
-                                maxLiq = Math.Max(maxLiq, resL.Mi);
+                            if (resL != null)
+                            {
+                                double val = valueSelector(resL);
+                                if (!double.IsNaN(val))
+                                    maxLiq = Math.Max(maxLiq, val);
+                            }
                         }
                         catch { /* 念のため無視 */ }
 
                         try
                         {
                             var resN = beam.GetBeamResult(anaModel, lc, comb, false)?.CumulativeForce;
-                            if (resN != null && !double.IsNaN(resN.Mi))
-                                maxNonLiq = Math.Max(maxNonLiq, resN.Mi);
+                            if (resN != null)
+                            {
+                                double val = valueSelector(resN);
+                                if (!double.IsNaN(val))
+                                    maxNonLiq = Math.Max(maxNonLiq, val);
+                            }
                         }
                         catch { /* 念のため無視 */ }
                     }
 
-                    // 表示値決定ルール：
-                    // - 両方存在すれば大きい方を表示
-                    // - 片方だけあればその値を表示
-                    // - 無ければ "-" を表示
+                    // 表示値決定ルール
                     double? chosen = null;
                     if (!double.IsNegativeInfinity(maxLiq) && !double.IsNegativeInfinity(maxNonLiq))
                         chosen = Math.Max(maxLiq, maxNonLiq);
@@ -4094,12 +4096,12 @@ namespace PileDesign.Output
                         chosen = maxNonLiq;
 
                     if (chosen.HasValue)
-                        mark += $"\nケース{idx + 1}: {chosen.Value:N1}"; // 単位（kNm 等）は必要なら付与
+                        mark += $"\nケース{idx + 1}: {chosen.Value:N1}";
                     else
                         mark += $"\nケース{idx + 1}: -";
                 }
 
-                // 足りないケースがあれば "-" で埋める（常に4行表示したい場合）
+                // 足りないケースがあれば "-" で埋める
                 for (int idx = lcList.Count; idx < 4; idx++)
                 {
                     mark += $"\nケース{idx + 1}: -";
@@ -4112,100 +4114,17 @@ namespace PileDesign.Output
             return mark;
         }
 
+        // 杭伏図への曲げモーメント情報の追加メソッド
+        private string GetPileTopBendingMomentMark(PileLayoutDataItem pileLayoutItem)
+        {
+            return GetPileTopForceMark(pileLayoutItem, force => force.Mi);
+        }
+
 
         // 杭伏図への線打力情報の追加メソッド
         private string GetPileTopShearForceMark(PileLayoutDataItem pileLayoutItem)
         {
-            string mark = $"{pileLayoutItem.No}";
-
-            if (pileLayoutItem?.Beams == null || pileLayoutItem.Beams.Count == 0)
-                return mark;
-
-            var beam = pileLayoutItem.Beams[0];
-            if (beam == null)
-                return mark;
-
-            var loadCasesInput = inputModel?.LoadCasesInput;
-            if (loadCasesInput == null)
-                return mark;
-
-            var level1 = loadCasesInput.LoadCasesLevel1 ?? new System.Collections.ObjectModel.ObservableCollection<LoadCase>();
-            var level2 = loadCasesInput.LoadCasesLevel2 ?? new System.Collections.ObjectModel.ObservableCollection<LoadCase>();
-            var allCombinations = loadCasesInput.AllLoadCombinations;
-
-            var combos = (allCombinations != null && allCombinations.Count > 0)
-                ? new List<LoadCombination?>(allCombinations.Cast<LoadCombination?>())
-                : new List<LoadCombination?>() { null };
-
-            // 各レベルについて先頭4ケース（存在する分）を列挙し、各ケースで Mhi を求める。
-            // 各ケースは全 LoadCombination, 液状化フラグ(true/false) を走査して最大値を採用。
-            void AppendLevelCases(IEnumerable<LoadCase> loadCases, string levelLabel)
-            {
-                mark += $"\n{levelLabel}";
-                var lcList = loadCases?.ToList() ?? new List<LoadCase>();
-                int casesToShow = Math.Min(4, lcList.Count);
-
-                for (int idx = 0; idx < casesToShow; idx++)
-                {
-                    var lc = lcList[idx];
-                    if (lc == null || !lc.IsApplicable)
-                    {
-                        mark += $"\nケース{idx + 1}: -";
-                        continue;
-                    }
-
-                    double maxLiq = double.NegativeInfinity;
-                    double maxNonLiq = double.NegativeInfinity;
-
-                    foreach (var comb in combos)
-                    {
-                        // 液状化あり / なし 両方チェックし、それぞれで最大を取る
-                        try
-                        {
-                            var resL = beam.GetBeamResult(anaModel, lc, comb, true)?.CumulativeForce;
-                            if (resL != null && !double.IsNaN(resL.Fi))
-                                maxLiq = Math.Max(maxLiq, resL.Fi);
-                        }
-                        catch { /* 念のため無視 */ }
-
-                        try
-                        {
-                            var resN = beam.GetBeamResult(anaModel, lc, comb, false)?.CumulativeForce;
-                            if (resN != null && !double.IsNaN(resN.Fi))
-                                maxNonLiq = Math.Max(maxNonLiq, resN.Fi);
-                        }
-                        catch { /* 念のため無視 */ }
-                    }
-
-                    // 表示値決定ルール：
-                    // - 両方存在すれば大きい方を表示
-                    // - 片方だけあればその値を表示
-                    // - 無ければ "-" を表示
-                    double? chosen = null;
-                    if (!double.IsNegativeInfinity(maxLiq) && !double.IsNegativeInfinity(maxNonLiq))
-                        chosen = Math.Max(maxLiq, maxNonLiq);
-                    else if (!double.IsNegativeInfinity(maxLiq))
-                        chosen = maxLiq;
-                    else if (!double.IsNegativeInfinity(maxNonLiq))
-                        chosen = maxNonLiq;
-
-                    if (chosen.HasValue)
-                        mark += $"\nケース{idx + 1}: {chosen.Value:N1}"; // 単位（kN 等）は必要なら付与
-                    else
-                        mark += $"\nケース{idx + 1}: -";
-                }
-
-                // 足りないケースがあれば "-" で埋める（常に4行表示したい場合）
-                for (int idx = lcList.Count; idx < 4; idx++)
-                {
-                    mark += $"\nケース{idx + 1}: -";
-                }
-            }
-
-            AppendLevelCases(level1, "レベル1");
-            AppendLevelCases(level2, "レベル2");
-
-            return mark;
+            return GetPileTopForceMark(pileLayoutItem, force => force.Fi);
         }
 
 
@@ -5320,71 +5239,6 @@ namespace PileDesign.Output
 
             return table;
         }
-
-        //private static TableCell CreateTableCell(
-        //    List<object> contents,
-        //    double fontSize = 8,
-        //    string alignment = "center",
-        //    string verticalAlignment = "center"
-        //)
-        //{
-        //    var cell = new TableCell();
-
-        //    var cellProperties = new TableCellProperties();
-        //    cellProperties.Append(new TableCellVerticalAlignment
-        //    {
-        //        Val = verticalAlignment.ToLower() switch
-        //        {
-        //            "top" => TableVerticalAlignmentValues.Top,
-        //            "bottom" => TableVerticalAlignmentValues.Bottom,
-        //            _ => TableVerticalAlignmentValues.Center
-        //        }
-        //    });
-        //    cell.Append(cellProperties);
-
-        //    var paragraph = new Paragraph
-        //    {
-        //        ParagraphProperties = new ParagraphProperties
-        //        {
-        //            Justification = new Justification
-        //            {
-        //                //Val = JustificationValues.Center // 中央揃え
-
-        //                Val = alignment.ToLower() switch
-        //                {
-        //                    "center" or "centre" => JustificationValues.Center,
-        //                    "right" => JustificationValues.Right,
-        //                    _ => JustificationValues.Left
-        //                }
-        //            }
-        //        }
-        //    };
-
-        //    for (int i = 0; i < contents.Count; i++)
-        //    {
-        //        var item = contents[i];
-        //        if (item is string str)
-        //        {
-        //            var runs = ConvertStringToRunsWithSuperSub(str, fontSize);
-        //            foreach (var run in runs)
-        //                paragraph.Append(run);
-        //        }
-        //        else if (item is Run run)
-        //        {
-        //            paragraph.Append(run);
-        //        }
-        //        else if (item is DocumentFormat.OpenXml.Math.OfficeMath math)
-        //        {
-        //            paragraph.Append(math);
-        //        }
-
-        //        if (i < contents.Count - 1)
-        //            paragraph.Append(new Run(new Break()));
-        //    }
-
-        //    cell.Append(paragraph);
-        //    return cell;
-        //}
 
         // テーブルセル
         private static TableCell CreateTableCellWithWidth(string text, string alignment = "left", int width = 0, double fontSize = 8)
@@ -6614,14 +6468,7 @@ namespace PileDesign.Output
             {
                 ParagraphProperties = new ParagraphProperties
                 {
-                    Indentation = new Indentation
-                    {
-                        //Left = leftIndentMm != 0 ? (leftIndentMm * TwipsPerMm).ToString() : null,
-                        //FirstLine = firstLineIndentMm != 0 ? (firstLineIndentMm * TwipsPerMm).ToString() : null
-                        Left = leftIndentMm != 0 ? MmToTwips(leftIndentMm) : null,
-                        FirstLine = firstLineIndentMm != 0 ? MmToTwips(firstLineIndentMm) : null,
-                        //Hanging = hangingIndentMm != 0 ? MmToTwips(hangingIndentMm) : null
-                    },
+                    Indentation = CreateIndentation(leftIndentMm, firstLineIndentMm),
                     Tabs = tabPositionsMm > 0
                         ? new Tabs(new TabStop
                         {

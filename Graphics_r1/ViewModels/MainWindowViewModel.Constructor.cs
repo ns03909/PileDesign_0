@@ -2119,6 +2119,11 @@ namespace PileDesign.ViewModels
         // コンストラクタ //
         public MainWindowViewModel()
         {
+            // Services の初期化
+            _fileOperationService = new FileOperationService(_jsonOptions);
+            _pileLayoutService = new PileLayoutService();
+            _settlementAnalysisService = new SettlementAnalysisService();
+
             CurrentInputModel = new InputModel();
             CurrentInputModel.SetMainWindowViewModel(this);
 

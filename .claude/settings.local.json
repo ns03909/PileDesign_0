@@ -6,7 +6,8 @@
       "Bash(dotnet clean:*)",
       "Bash(powershell:*)",
       "Bash(git checkout:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(grep:*)"
     ]
   }
 }
