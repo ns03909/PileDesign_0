@@ -377,7 +377,9 @@ namespace PileDesign.Output
             { }
 
             if (mainWindowViewModel.IncludeGroupPileSettlement) // 群杭沈下
-            { }
+            {
+                AddGroupPileSettlementContourDiagram(mainPart, body);
+            }
 
             // FT-Pile構法
             if (HasFTPile())

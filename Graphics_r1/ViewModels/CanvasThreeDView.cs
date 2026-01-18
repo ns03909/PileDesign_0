@@ -1,4 +1,5 @@
-﻿using PileDesign.Models;
+﻿using PileDesign.Graphics.Abstractions;
+using PileDesign.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,7 +10,7 @@ using System.Windows.Media.Media3D;
 
 namespace PileDesign.ViewModels
 {
-    public class CanvasThreeDView : BaseModel
+    public class CanvasThreeDView : BaseModel, ICoordinateTransform
     {
         public double BoxX { get; set; } // 図枠原点のx座標
         public double BoxY { get; set; } // 図枠原点のy座標
@@ -186,6 +187,9 @@ namespace PileDesign.ViewModels
 
             return s;
         }
+
+        // ICoordinateTransform.Transform の実装（既存のTransformationメソッドをラップ）
+        Point ICoordinateTransform.Transform(Point3D point3D) => Transformation(point3D);
 
         // 新しいメソッドを追加して、逆変換を行います
         public Point3D InverseTransformation(Point point)

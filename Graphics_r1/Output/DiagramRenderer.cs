@@ -1,4 +1,7 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Graphics;
+using PileDesign.Graphics.Abstractions;
+using PileDesign.Graphics.Implementations;
+using PileDesign.Models.InputData;
 using ScottPlot.WPF;
 using System;
 using System.Collections.Generic;
@@ -7,6 +10,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using Color = System.Windows.Media.Color;
 using Path = System.IO.Path;
 
@@ -773,5 +777,356 @@ namespace PileDesign.Output
 
             return result;
         }
+
+        #region 抽象レイヤーを使用した新しい描画メソッド
+
+        /// <summary>
+        /// 抽象レイヤーを使用して杭立面図をPNG出力
+        /// </summary>
+        public static byte[] RenderPileElevationWithAbstraction(
+            SoilPile soilPile,
+            double widthMm = 150,
+            double heightMm = 100,
+            double dpi = DefaultDpi,
+            double scale = 2.0)
+        {
+            if (soilPile == null) return [];
+
+            Func<byte[]> renderAction = () =>
+            {
+                int widthPx = MmToPx(widthMm, dpi, scale);
+                int heightPx = MmToPx(heightMm, dpi, scale);
+
+                var segments = soilPile.PileBodySegments?.ToList() ?? [];
+                if (segments.Count == 0) return RenderEmptyDiagram(widthPx, heightPx, "No pile data");
+
+                // 境界計算
+                double maxDia = segments.Max(s => (s?.PileSection?.PileDiameter ?? 0) * 0.001);
+                double pileDepth = segments[^1].SegmentDepth;
+                double pileTopZ = soilPile.Z;
+
+                double minX = -maxDia * 1.5;
+                double maxX = maxDia * 3.0; // N値グラフ用のスペース
+                double minZ = pileTopZ - pileDepth - 2;
+                double maxZ = pileTopZ + 2;
+
+                var transform = new StaticCoordinateTransform(
+                    widthPx, heightPx,
+                    minX, maxX,
+                    0, 1, // Y方向は使わない
+                    minZ, maxZ,
+                    StaticCoordinateTransform.ViewDirection.FrontView,
+                    0.05,
+                    1.0
+                );
+
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen())
+                {
+                    var size = new Size(widthPx, heightPx);
+                    var target = new DrawingContextTarget(dc, size);
+                    var helper = new DrawingHelper(target, transform);
+
+                    // 背景
+                    target.DrawRectangle(new Rect(0, 0, widthPx, heightPx), DrawingStyle.Filled(Colors.White, null, 0));
+
+                    // 杭セグメント描画
+                    DrawPileSegmentsInternal(helper, segments, pileTopZ);
+
+                    // 地盤層描画
+                    DrawGroundLayersInternal(helper, soilPile.GroundInput, pileTopZ, maxDia * 1.2);
+
+                    // N値グラフ描画
+                    DrawNValueGraphInternal(helper, soilPile.GroundInput, pileTopZ, maxDia * 1.5, maxDia * 2.8);
+
+                    target.Flush();
+                }
+
+                return RenderDrawingVisualToPng(dv, widthPx, heightPx);
+            };
+
+            return ExecuteOnUIThread(renderAction);
+        }
+
+        /// <summary>
+        /// 杭セグメントを描画（内部メソッド）
+        /// </summary>
+        private static void DrawPileSegmentsInternal(DrawingHelper helper, List<PileBodySegment> segments, double pileTopZ)
+        {
+            var pileStyle = DrawingStyle.Solid(Colors.SteelBlue, 1.5);
+            var nodeStyle = new DrawingStyle { StrokeColor = Colors.Black, StrokeThickness = 1.5, FillColor = Colors.White };
+
+            foreach (var seg in segments)
+            {
+                if (seg?.PileSection == null) continue;
+
+                double dia = seg.PileSection.PileDiameter * 0.001; // mm → m
+                double topZ = pileTopZ - (seg.SegmentDepth - seg.SegmentLength);
+                double bottomZ = pileTopZ - seg.SegmentDepth;
+
+                var top = new Point3D(0, 0, topZ);
+                var bottom = new Point3D(0, 0, bottomZ);
+
+                helper.DrawPileSection(top, bottom, dia, pileStyle);
+            }
+
+            // 中心軸線
+            double topMostZ = pileTopZ;
+            double bottomMostZ = pileTopZ - segments[^1].SegmentDepth;
+            helper.AddLine3D(new Point3D(0, 0, topMostZ), new Point3D(0, 0, bottomMostZ), DrawingStyle.Solid(Colors.Black, 2));
+
+            // 節点マーカー
+            helper.DrawNodeMarker(new Point3D(0, 0, topMostZ), 6, nodeStyle);
+            foreach (var seg in segments)
+            {
+                double z = pileTopZ - seg.SegmentDepth;
+                helper.DrawNodeMarker(new Point3D(0, 0, z), 6, nodeStyle);
+            }
+        }
+
+        /// <summary>
+        /// 地盤層を描画（内部メソッド）
+        /// </summary>
+        private static void DrawGroundLayersInternal(DrawingHelper helper, GroundInput ground, double pileTopZ, double xOffset)
+        {
+            if (ground?.GroundLayers == null) return;
+
+            var layerStyle = DrawingStyle.Dashed(Colors.Gray, 0.5);
+
+            foreach (var layer in ground.GroundLayers)
+            {
+                double z = layer.BottomAltitude;
+                helper.AddLine3D(
+                    new Point3D(-xOffset, 0, z),
+                    new Point3D(xOffset, 0, z),
+                    layerStyle
+                );
+
+                // 層名ラベル
+                helper.AddText3D(layer.Name ?? "", new Point3D(-xOffset - 0.2, 0, z + 0.5), new TextStyle
+                {
+                    FontSize = 9,
+                    Color = Colors.DarkGray,
+                    HorizontalAlignment = HorizontalTextAlignment.Right,
+                    VerticalAlignment = VerticalTextAlignment.Center
+                });
+            }
+        }
+
+        /// <summary>
+        /// N値グラフを描画（内部メソッド）
+        /// </summary>
+        private static void DrawNValueGraphInternal(DrawingHelper helper, GroundInput ground, double pileTopZ, double xStart, double xEnd)
+        {
+            if (ground?.GroundMassesData == null || ground.GroundMassesData.Count == 0) return;
+
+            var gridStyle = DrawingStyle.Dashed(Colors.LightGray, 0.5);
+            var lineStyle = DrawingStyle.Solid(Colors.Black, 1);
+            var markerStyle = new DrawingStyle { StrokeColor = Colors.Black, StrokeThickness = 1, FillColor = Colors.White };
+
+            double maxN = 60;
+            double nScale = (xEnd - xStart) / maxN;
+
+            // グリッド線
+            double topZ = ground.GroundTopAltitude;
+            double bottomZ = ground.GroundLayers[^1].BottomAltitude;
+
+            for (int n = 0; n <= 60; n += 10)
+            {
+                double x = xStart + n * nScale;
+                helper.AddLine3D(new Point3D(x, 0, topZ), new Point3D(x, 0, bottomZ), gridStyle);
+
+                // ラベル
+                helper.AddText3D($"{n}", new Point3D(x, 0, topZ + 0.5), new TextStyle
+                {
+                    FontSize = 8,
+                    HorizontalAlignment = HorizontalTextAlignment.Center,
+                    VerticalAlignment = VerticalTextAlignment.Bottom
+                });
+            }
+
+            // N値ポイントとポリライン
+            var points = new List<Point>();
+            foreach (var m in ground.GroundMassesData)
+            {
+                double x = xStart + Math.Min(m.NValue, maxN) * nScale;
+                double z = m.AltitudeDepth;
+                var pt2D = helper.Transform.Transform(new Point3D(x, 0, z));
+                points.Add(pt2D);
+            }
+
+            if (points.Count > 1)
+            {
+                helper.DrawPolyLineWithMarkers(points, false, 4, lineStyle, markerStyle);
+            }
+
+            // 数値ラベル
+            foreach (var m in ground.GroundMassesData)
+            {
+                double x = xStart + Math.Min(m.NValue, maxN) * nScale;
+                helper.AddText3D($"{m.NValue:N0}", new Point3D(x + 0.2, 0, m.AltitudeDepth), new TextStyle
+                {
+                    FontSize = 8,
+                    HorizontalAlignment = HorizontalTextAlignment.Left,
+                    VerticalAlignment = VerticalTextAlignment.Center
+                });
+            }
+        }
+
+        /// <summary>
+        /// 沈下コンター図をPNG出力
+        /// </summary>
+        public static byte[] RenderSettlementContourDiagram(
+            IEnumerable<SettlementGridDataItem> gridData,
+            double widthMm = 150,
+            double heightMm = 150,
+            double dpi = DefaultDpi,
+            double scale = 2.0,
+            int colorBandCount = 12)
+        {
+            if (gridData == null) return [];
+
+            Func<byte[]> renderAction = () =>
+            {
+                var data = gridData.ToList();
+                if (data.Count == 0) return RenderEmptyDiagram(MmToPx(widthMm, dpi, scale), MmToPx(heightMm, dpi, scale), "No settlement data");
+
+                int widthPx = MmToPx(widthMm, dpi, scale);
+                int heightPx = MmToPx(heightMm, dpi, scale);
+
+                // 境界計算
+                double minX = data.Min(d => d.X);
+                double maxX = data.Max(d => d.X);
+                double minY = data.Min(d => d.Y);
+                double maxY = data.Max(d => d.Y);
+                double minS = data.Min(d => d.Settlement);
+                double maxS = data.Max(d => d.Settlement);
+
+                var transform = new StaticCoordinateTransform(
+                    widthPx, heightPx,
+                    minX, maxX,
+                    minY, maxY,
+                    0, 1,
+                    StaticCoordinateTransform.ViewDirection.TopDown,
+                    0.1,
+                    1.0
+                );
+
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen())
+                {
+                    var size = new Size(widthPx, heightPx);
+                    var target = new DrawingContextTarget(dc, size);
+                    var helper = new DrawingHelper(target, transform);
+
+                    // 背景
+                    target.DrawRectangle(new Rect(0, 0, widthPx, heightPx), DrawingStyle.Filled(Colors.White, null, 0));
+
+                    // カラーバンド生成
+                    var colorBands = GenerateColorBands(minS, maxS, colorBandCount);
+
+                    // グリッドポイント描画
+                    foreach (var item in data)
+                    {
+                        var pt = transform.Transform(new Point3D(item.X, item.Y, 0));
+                        double ratio = maxS > minS ? (item.Settlement - minS) / (maxS - minS) : 0.5;
+                        var color = DrawingHelper.GetRainbowColor(ratio);
+
+                        helper.DrawNodeMarker(pt, 8, DrawingStyle.Filled(color, Colors.Black, 0.5));
+                    }
+
+                    // カラーバー描画
+                    var barBands = colorBands.Select(cb => (cb.Value, cb.Color)).ToList();
+                    helper.DrawColorBar(widthPx - 60, 20, 20, 15, barBands, "沈下量", "mm", 10, 2);
+
+                    target.Flush();
+                }
+
+                return RenderDrawingVisualToPng(dv, widthPx, heightPx);
+            };
+
+            return ExecuteOnUIThread(renderAction);
+        }
+
+        /// <summary>
+        /// カラーバンドを生成
+        /// </summary>
+        private static List<(double Value, Color Color)> GenerateColorBands(double min, double max, int count)
+        {
+            var bands = new List<(double, Color)>();
+            if (count <= 0 || max <= min)
+            {
+                bands.Add((min, DrawingHelper.GetRainbowColor(0.5)));
+                return bands;
+            }
+
+            double step = (max - min) / count;
+            for (int i = 0; i <= count; i++)
+            {
+                double value = min + step * i;
+                double ratio = (double)i / count;
+                bands.Add((value, DrawingHelper.GetRainbowColor(ratio)));
+            }
+            return bands;
+        }
+
+        /// <summary>
+        /// 空の図を生成
+        /// </summary>
+        private static byte[] RenderEmptyDiagram(int widthPx, int heightPx, string message)
+        {
+            var dv = new DrawingVisual();
+            using (var dc = dv.RenderOpen())
+            {
+                dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, widthPx, heightPx));
+                var ft = new FormattedText(
+                    message,
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    FlowDirection.LeftToRight,
+                    new Typeface("Meiryo"),
+                    12,
+                    Brushes.Gray,
+                    1.0);
+                dc.DrawText(ft, new Point(widthPx / 2 - ft.Width / 2, heightPx / 2 - ft.Height / 2));
+            }
+            return RenderDrawingVisualToPng(dv, widthPx, heightPx);
+        }
+
+        /// <summary>
+        /// DrawingVisualをPNGバイト配列に変換
+        /// </summary>
+        private static byte[] RenderDrawingVisualToPng(DrawingVisual dv, int widthPx, int heightPx)
+        {
+            var bmp = new RenderTargetBitmap(widthPx, heightPx, 96, 96, PixelFormats.Pbgra32);
+            bmp.Render(dv);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bmp));
+            using var ms = new MemoryStream();
+            encoder.Save(ms);
+            return ms.ToArray();
+        }
+
+        /// <summary>
+        /// UIスレッドで実行
+        /// </summary>
+        private static byte[] ExecuteOnUIThread(Func<byte[]> action)
+        {
+            try
+            {
+                if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+                {
+                    return (byte[])Application.Current.Dispatcher.Invoke(action);
+                }
+                return action();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DiagramRenderer error: {ex.Message}");
+                return [];
+            }
+        }
+
+        #endregion
     }
 }
