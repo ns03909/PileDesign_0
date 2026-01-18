@@ -730,12 +730,7 @@ namespace PileDesignCore
             {
                 // RadioButtonが選択されているかどうかをチェックし、それに応じてIsElasticプロパティを設定する
                 if (radioButton.IsChecked == true) { }
-                //{ viewModel.IsElastic = true; }
                 else if (radioButton.IsChecked == false) { }
-                //{ viewModel.IsElastic = false; }
-
-                //bool isElastic = radioButton.IsChecked ?? false;
-                //UpdateColumnVisibility(isElastic);
             }
         }
     }

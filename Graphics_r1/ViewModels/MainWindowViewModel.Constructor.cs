@@ -20,6 +20,16 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
+    /// <summary>
+    /// MainWindowViewModel.Constructor.cs
+    ///
+    /// 責任範囲:
+    /// - 全プロパティの定義（表示制御、描画設定、解析結果選択など）
+    /// - コンストラクタと初期化処理
+    /// - プロパティ変更イベントの購読設定
+    /// - 集計計算プロパティ（VL合計、OTM、重心座標など）
+    /// - LoadCase/LoadCombinationオプション更新
+    /// </summary>
     public partial class MainWindowViewModel : ObservableObject
     {
         // ステータスメッセージ
@@ -60,9 +70,8 @@ namespace PileDesign.ViewModels
                 if (!ReferenceEquals(CurrentInputModel.PileGroupSettlement.RectLoads, value))
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads = value ?? [];
-                    //OnPropertyChanged();            // nameof(RectLoads)
                     OnPropertyChanged(nameof(RectLoads));
-                    RequestUpdateWindow();   // 画面更新が必要なら
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -75,10 +84,6 @@ namespace PileDesign.ViewModels
         {
             get => _cTreeViewDatas;
             set => SetProperty(ref _cTreeViewDatas, value);
-        }
-
-        private void OnSelectedPileLayoutItemsChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
         }
 
         public CanvasThreeDView CanvasThreeDView { get; set; }
@@ -104,6 +109,14 @@ namespace PileDesign.ViewModels
         {
             get => _isRibbonVisible;
             set => SetProperty(ref _isRibbonVisible, value);
+        }
+
+        // 入力ビジュアライザー表示/非表示
+        private bool _isInputVisualizerVisible = false;
+        public bool IsInputVisualizerVisible
+        {
+            get => _isInputVisualizerVisible;
+            set => SetProperty(ref _isInputVisualizerVisible, value);
         }
 
         // XYZ軸トグル用プロパティ
@@ -374,22 +387,6 @@ namespace PileDesign.ViewModels
             // 選択中の荷重ケースの角度を SelectedDirection に反映
             SelectedDirection = selectedLoadCase.LoadAngle;
         }
-        //{
-        //    var selectedLoadCase = CurrentInputModel.LoadCasesInput.AllLoadCases.FirstOrDefault(lc => lc.LoadName == SelectedLoadCaseName);
-        //    if (selectedLoadCase == null) return;
-        //    if (selectedLoadCase.Level == 1)
-        //    {
-        //        DirectionOption = new ObservableCollection<string>(
-        //            CurrentInputModel.LoadCasesInput.LoadCasesLevel1.Select(loadCase => loadCase.LoadAngle.ToString("N1"))
-        //        );
-        //    }
-        //    else if (selectedLoadCase.Level == 2)
-        //    {
-        //        DirectionOption = new ObservableCollection<string>(
-        //            CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Select(loadCase => loadCase.LoadAngle.ToString("N1"))
-        //        );
-        //    }
-        //}
 
         private ObservableCollection<string> _directionOption = [];
 
@@ -808,185 +805,6 @@ namespace PileDesign.ViewModels
             }
             return sum;
         }
-
-        ////OTM
-        //private double _overturningMoment1_1X;
-        //public double OverturningMoment1_1X
-        //{
-        //    get => _overturningMoment1_1X;
-        //    set
-        //    {
-        //        _overturningMoment1_1X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment1_2X;
-        //public double OverturningMoment1_2X
-        //{
-        //    get => _overturningMoment1_2X;
-        //    set
-        //    {
-        //        _overturningMoment1_2X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment1_3X;
-        //public double OverturningMoment1_3X
-        //{
-        //    get => _overturningMoment1_3X;
-        //    set
-        //    {
-        //        _overturningMoment1_3X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment1_4X;
-        //public double OverturningMoment1_4X
-        //{
-        //    get => _overturningMoment1_4X;
-        //    set
-        //    {
-        //        _overturningMoment1_4X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-
-        //private double _overturningMoment1_1Y;
-        //public double OverturningMoment1_1Y
-        //{
-        //    get => _overturningMoment1_1Y;
-        //    set
-        //    {
-        //        _overturningMoment1_1Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment1_2Y;
-        //public double OverturningMoment1_2Y
-        //{
-        //    get => _overturningMoment1_2Y;
-        //    set
-        //    {
-        //        _overturningMoment1_2Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment1_3Y;
-        //public double OverturningMoment1_3Y
-        //{
-        //    get => _overturningMoment1_3Y;
-        //    set
-        //    {
-        //        _overturningMoment1_3Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment1_4Y;
-        //public double OverturningMoment1_4Y
-        //{
-        //    get => _overturningMoment1_4Y;
-        //    set
-        //    {
-        //        _overturningMoment1_4Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_1X;
-        //public double OverturningMoment2_1X
-        //{
-        //    get => _overturningMoment2_1X;
-        //    set
-        //    {
-        //        _overturningMoment2_1X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_2X;
-        //public double OverturningMoment2_2X
-        //{
-        //    get => _overturningMoment2_2X;
-        //    set
-        //    {
-        //        _overturningMoment2_2X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_3X;
-        //public double OverturningMoment2_3X
-        //{
-        //    get => _overturningMoment2_3X;
-        //    set
-        //    {
-        //        _overturningMoment2_3X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_4X;
-        //public double OverturningMoment2_4X
-        //{
-        //    get => _overturningMoment2_4X;
-        //    set
-        //    {
-        //        _overturningMoment2_4X = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-
-        //private double _overturningMoment2_1Y;
-        //public double OverturningMoment2_1Y
-        //{
-        //    get => _overturningMoment2_1Y;
-        //    set
-        //    {
-        //        _overturningMoment2_1Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_2Y;
-        //public double OverturningMoment2_2Y
-        //{
-        //    get => _overturningMoment2_2Y;
-        //    set
-        //    {
-        //        _overturningMoment2_2Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_3Y;
-        //public double OverturningMoment2_3Y
-        //{
-        //    get => _overturningMoment2_3Y;
-        //    set
-        //    {
-        //        _overturningMoment2_3Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
-
-        //private double _overturningMoment2_4Y;
-        //public double OverturningMoment2_4Y
-        //{
-        //    get => _overturningMoment2_4Y;
-        //    set
-        //    {
-        //        _overturningMoment2_4Y = value;
-        //        OnPropertyChanged();
-        //    }
-        //}
 
         // 作用点描画
         private bool _isActionPointVisible = true;
@@ -2106,7 +1924,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeHorizontal_Shear = true;
         [ObservableProperty] private bool includeHorizontal_NMINT = true;
 
-        [ObservableProperty] private bool includePileLocationMap = false;
+        [ObservableProperty] private bool includepileLocationMap = false;
         [ObservableProperty] private bool includePileAxialLoadMap = false;
         [ObservableProperty] private bool includeIsFrontMap = false;
         [ObservableProperty] private bool includePileHeadMomentMap = false;
@@ -2147,9 +1965,6 @@ namespace PileDesign.ViewModels
             //SelectedLoadCombinationName = LoadCombinationNameOption[0];
             if (LoadCombinationNameOption != null && LoadCombinationNameOption.Count > 0)
                 SelectedLoadCombinationName = LoadCombinationNameOption[0];
-
-            // 初期データのロードや、必要に応じて初期化処理を行う
-            LoadInitialData();
 
             CanvasThreeDView = new CanvasThreeDView();
 
@@ -2207,59 +2022,29 @@ namespace PileDesign.ViewModels
 
         private void UpdateSumAndOTM()
         {
-            OnPropertyChanged(nameof(Sum1_1));
-            OnPropertyChanged(nameof(Sum1_2));
-            OnPropertyChanged(nameof(Sum1_3));
-            OnPropertyChanged(nameof(Sum1_4));
-            OnPropertyChanged(nameof(Sum2_1));
-            OnPropertyChanged(nameof(Sum2_2));
-            OnPropertyChanged(nameof(Sum2_3));
-            OnPropertyChanged(nameof(Sum2_4));
+            // 集計値、OTM、重心、外接範囲を一括通知（配列ループで効率化）
+            string[] propertiesToNotify = [
+                nameof(Sum1_1), nameof(Sum1_2), nameof(Sum1_3), nameof(Sum1_4),
+                nameof(Sum2_1), nameof(Sum2_2), nameof(Sum2_3), nameof(Sum2_4),
+                nameof(SumVL0), nameof(SumVLadd), nameof(SumVL),
+                nameof(OverturningMoment1_1X), nameof(OverturningMoment1_1Y),
+                nameof(OverturningMoment1_2X), nameof(OverturningMoment1_2Y),
+                nameof(OverturningMoment1_3X), nameof(OverturningMoment1_3Y),
+                nameof(OverturningMoment1_4X), nameof(OverturningMoment1_4Y),
+                nameof(OverturningMoment2_1X), nameof(OverturningMoment2_1Y),
+                nameof(OverturningMoment2_2X), nameof(OverturningMoment2_2Y),
+                nameof(OverturningMoment2_3X), nameof(OverturningMoment2_3Y),
+                nameof(OverturningMoment2_4X), nameof(OverturningMoment2_4Y),
+                nameof(GravityCenterVL0), nameof(GravityCenterVLadd), nameof(GravityCenterVLplusVLadd),
+                nameof(GroupPileSettlementXmin), nameof(GroupPileSettlementXmax),
+                nameof(GroupPileSettlementYmin), nameof(GroupPileSettlementYmax)
+            ];
 
-            OnPropertyChanged(nameof(SumVL0));
-            OnPropertyChanged(nameof(SumVLadd));
-            OnPropertyChanged(nameof(SumVL));
-
-            OnPropertyChanged(nameof(OverturningMoment1_1X));
-            OnPropertyChanged(nameof(OverturningMoment1_1Y));
-            OnPropertyChanged(nameof(OverturningMoment1_2X));
-            OnPropertyChanged(nameof(OverturningMoment1_2Y));
-            OnPropertyChanged(nameof(OverturningMoment1_3X));
-            OnPropertyChanged(nameof(OverturningMoment1_3Y));
-            OnPropertyChanged(nameof(OverturningMoment1_4X));
-            OnPropertyChanged(nameof(OverturningMoment1_4Y));
-            OnPropertyChanged(nameof(OverturningMoment2_1X));
-            OnPropertyChanged(nameof(OverturningMoment2_1Y));
-            OnPropertyChanged(nameof(OverturningMoment2_2X));
-            OnPropertyChanged(nameof(OverturningMoment2_2Y));
-            OnPropertyChanged(nameof(OverturningMoment2_3X));
-            OnPropertyChanged(nameof(OverturningMoment2_3Y));
-            OnPropertyChanged(nameof(OverturningMoment2_4X));
-            OnPropertyChanged(nameof(OverturningMoment2_4Y));
-
-            // 追加: 重心・外接範囲の通知もここで一括
-            OnPropertyChanged(nameof(GravityCenterVL0));
-            OnPropertyChanged(nameof(GravityCenterVLadd));
-            OnPropertyChanged(nameof(GravityCenterVLplusVLadd));
-
-            OnPropertyChanged(nameof(GroupPileSettlementXmin));
-            OnPropertyChanged(nameof(GroupPileSettlementXmax));
-            OnPropertyChanged(nameof(GroupPileSettlementYmin));
-            OnPropertyChanged(nameof(GroupPileSettlementYmax));
+            foreach (var propertyName in propertiesToNotify)
+            {
+                OnPropertyChanged(propertyName);
+            }
         }
-
-        //// LoadCaseOptionの更新メソッド
-        //private void UpdateLoadCaseOption()
-        //{
-        //    var loadCaseNames = new ObservableCollection<string>();
-        //    ObservableCollection<LoadCase> allLoadCases = CurrentInputModel.LoadCasesInput.AllLoadCases;
-        //    foreach (var loadCase in allLoadCases)
-        //    {
-        //        loadCaseNames.Add(loadCase.GetLoadName());
-        //    }
-        //    LoadCaseNameOption = loadCaseNames;
-        //}
-
 
         // LoadCombinationOptionの更新メソッド
         private void UpdateLoadCombinationOption()
@@ -2273,7 +2058,7 @@ namespace PileDesign.ViewModels
             LoadCombinationNameOption = loadCombinationNames;
         }
 
-        // DataGridSelecitonコピーメソッド
+        // DataGridSelectionコピーメソッド
         [RelayCommand]
         private static void CopyDataGridSelection(DataGrid dataGrid)
         {
@@ -2304,12 +2089,7 @@ namespace PileDesign.ViewModels
             Clipboard.SetText(sb.ToString());
         }
 
-        private static void LoadInitialData()
-        {
-
-        }
-
-        // 
+        //
         private void PileLayoutItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems != null)
@@ -2331,37 +2111,6 @@ namespace PileDesign.ViewModels
 
             // 一括通知
             UpdateSumAndOTM();
-            // 削除されたアイテムを処理
-            if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems != null)
-            {
-                foreach (PileLayoutDataItem oldItem in e.OldItems)
-                {
-                    RemoveElementsContainingPileLayoutItem(oldItem);
-                }
-            }
-
-            if (e.NewItems != null)
-            {
-                foreach (PileLayoutDataItem newItem in e.NewItems)
-                    newItem.PropertyChanged += PileLayoutItem_PropertyChanged;
-            }
-            if (e.OldItems != null)
-            {
-                foreach (PileLayoutDataItem oldItem in e.OldItems)
-                    oldItem.PropertyChanged -= PileLayoutItem_PropertyChanged;
-            }
-
-            // 集計やOTMは共通メソッドで一括更新
-            UpdateSumAndOTM();
-
-            // 重心・外接範囲なども再通知
-            OnPropertyChanged(nameof(GravityCenterVL0));
-            OnPropertyChanged(nameof(GravityCenterVLadd));
-            OnPropertyChanged(nameof(GravityCenterVLplusVLadd));
-            OnPropertyChanged(nameof(GroupPileSettlementXmin));
-            OnPropertyChanged(nameof(GroupPileSettlementXmax));
-            OnPropertyChanged(nameof(GroupPileSettlementYmin));
-            OnPropertyChanged(nameof(GroupPileSettlementYmax));
         }
 
 

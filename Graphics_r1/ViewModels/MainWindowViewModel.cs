@@ -31,6 +31,26 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
+    /// <summary>
+    /// MainWindowViewModel (メインファイル)
+    ///
+    /// 責任範囲:
+    /// - ファイル操作（新規作成、開く、保存、エクスポート）
+    /// - コレクション管理（杭配置、通り心、荷重面、土層の追加・削除）
+    /// - ウィンドウ表示制御（各種ダイアログウィンドウの開閉）
+    /// - DataGrid編集イベント処理
+    /// - 解析実行制御（要素分割、解析実行前チェック）
+    /// - Undo/Redo機能
+    /// - UI更新制御（デバウンス処理を含む）
+    ///
+    /// その他のpartialクラス:
+    /// - MainWindowViewModel.Constructor.cs : プロパティ定義とコンストラクタ
+    /// - MainWindowViewModel.Examples.cs : 設計例集データ生成
+    /// - MainWindowViewModel.Improvements.cs : パフォーマンス最適化機能
+    /// - MainWindowViewModel.TreeView.cs : TreeView制御
+    /// - MainWindowViewModel.SettlementGridCache.cs : 沈下グリッドキャッシュ
+    /// - MainWindowViewModel.ConfirmDeleteAnalysisModel.cs : 解析モデル削除確認
+    /// </summary>
     public partial class MainWindowViewModel : ObservableObject
     {
         private readonly UndoManager _undoManager = new();
@@ -41,7 +61,7 @@ namespace PileDesign.ViewModels
         private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
         private bool _soilPilesGenerationPending = false;
 
-        private void Debounce(ref System.Windows.Threading.DispatcherTimer? timer, int milliseconds, Action action)
+        private static void Debounce(ref System.Windows.Threading.DispatcherTimer? timer, int milliseconds, Action action)
         {
             timer?.Stop();
             var localTimer = new System.Windows.Threading.DispatcherTimer
@@ -229,7 +249,7 @@ namespace PileDesign.ViewModels
         /// <param name="selectedItems">選択されたアイテムのリスト</param>
         /// <param name="isApplicable">各レベルの適用可否（4要素の配列）</param>
         /// <param name="values">各レベルの値（4要素の配列）</param>
-        private void ApplyIsFrontPileFlags(
+        private static void ApplyIsFrontPileFlags(
             IEnumerable<PileLayoutDataItem> selectedItems,
             bool[] isApplicable,
             bool[] values)
@@ -590,7 +610,6 @@ namespace PileDesign.ViewModels
             if (e.RightButton == MouseButtonState.Pressed)
             {
                 // マウス位置で ContextMenu を表示
-                //startPoint = e.GetPosition(null);
             }
         }
         [RelayCommand]
@@ -636,18 +655,10 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private static void ButtonGround_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            //if (!CheckAndResetElementSplit("地盤"))
-            //{
-            //    e.Handled = true;
-            //}
         }
         [RelayCommand]
         private static void ButtonPileBody_OnPreviewMouseDown(MouseButtonEventArgs e)
         {
-            //if (!CheckAndResetElementSplit("杭体"))
-            //{
-            //    e.Handled = true;
-            //}
         }
         [RelayCommand]
         private static void ButtonSettlement_OnPreviewMouseDown(MouseButtonEventArgs e)
@@ -695,8 +706,6 @@ namespace PileDesign.ViewModels
                 {
                     No = index + 1,
                     LayerThickness = lastItem.LayerThickness,
-                    //TopAltitude = lastItem.TopAltitude,
-                    //BottomAltitude = lastItem.BottomAltitude,
                     X1 = lastItem.X1,
                     X2 = lastItem.X2,
                     Y1 = lastItem.Y1,
@@ -709,8 +718,6 @@ namespace PileDesign.ViewModels
                 {
                     No = index + 1,
                     LayerThickness = 5.0,
-                    //TopAltitude = 0.0,
-                    //BottomAltitude = 0.0,
                     X1 = 0.0,
                     X2 = 50.0,
                     Y1 = 0.0,
@@ -896,7 +903,7 @@ namespace PileDesign.ViewModels
 
             if (CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
             {
-                bottomAlt = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude - 10.0;
+                bottomAlt = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude - 10.0;
                 ek = 100_000_000;
                 poissonsRatio = 0.3;
             }
@@ -984,7 +991,7 @@ namespace PileDesign.ViewModels
         private void UpdateSettlementSoilLayer()
         {
             // SettlementCollection の更新
-            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
             for (int i = 0; i < settlementSoilLayers.Count; i++)
             {
@@ -1083,12 +1090,6 @@ namespace PileDesign.ViewModels
         {
             if (!CheckAndResetPostAnalysisMode()) return;
             if (!CheckAndResetAnalysisResults()) return;
-
-            // ここに追加
-            //var deepCopy = CurrentInputModel.DeepCopy();
-            //Debug.WriteLine("CurrentInputModel.PileLayoutItems Hash: " + CurrentInputModel.PileLayoutItems.GetHashCode());
-            //Debug.WriteLine("DeepCopy.PileLayoutItems Hash: " + deepCopy.PileLayoutItems.GetHashCode());
-            //_undoManager.SaveState(deepCopy);
 
             // スナップショットを保存
             TrySaveUndoSnapshotSafely();
@@ -1755,11 +1756,13 @@ namespace PileDesign.ViewModels
         public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = Array.Empty<ResultTable>();
 
         // Latest analysis logs
-        public IReadOnlyList<string> LatestAnalysisLogs { get; private set; } = Array.Empty<string>();
+        public ObservableCollection<string> LatestAnalysisLogs { get; private set; } = new();
 
         public void SetLatestAnalysisLogs(IReadOnlyList<string> logs)
         {
-            LatestAnalysisLogs = logs ?? Array.Empty<string>();
+            LatestAnalysisLogs.Clear();
+            foreach (var log in logs)
+                LatestAnalysisLogs.Add(log);
             OnPropertyChanged(nameof(LatestAnalysisLogs));
             OpenLogWindowCommand?.NotifyCanExecuteChanged();
         }
@@ -1807,17 +1810,22 @@ namespace PileDesign.ViewModels
         [RelayCommand(CanExecute = nameof(CanOpenLogWindow))]
         private void OpenLogWindow()
         {
-            try
-            {
-                if (!CanOpenLogWindow()) return;
-                var vm = new LogWindowViewModel(LatestAnalysisLogs);
-                var w = new Views.LogWindow { DataContext = vm };
-                w.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ログウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            if (!CanOpenLogWindow()) return;
+            var vm = new LogWindowViewModel(LatestAnalysisLogs);
+            var w = new Views.LogWindow { DataContext = vm };
+            w.Show();
+
+            //try
+            //{
+            //    if (!CanOpenLogWindow()) return;
+            //    var vm = new LogWindowViewModel(LatestAnalysisLogs);
+            //    var w = new Views.LogWindow { DataContext = vm };
+            //    w.Show();
+            //}
+            //catch (Exception ex)
+            //{
+            //    MessageBox.Show($"ログウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            //}
         }
 
         private bool CanOpenLogWindow() => LatestAnalysisLogs != null && LatestAnalysisLogs.Count > 0;
@@ -1926,7 +1934,7 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        public void OpenPileSectionLibraryWindow()
+        public static void OpenPileSectionLibraryWindow()
         {
             try
             {
@@ -1941,88 +1949,6 @@ namespace PileDesign.ViewModels
                 System.Windows.MessageBox.Show($"杭ライブラリ表示に失敗しました: {ex.Message}", "エラー", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
-
-        //{
-        //    // 0 -> 1 にできなければ既に実行中とみなす
-        //    if (System.Threading.Interlocked.CompareExchange(ref _isChangWindowOpeningFlag, 1, 0) != 0)
-        //    {
-        //        Debug.WriteLine("OpenChangWindow: already opening, ignored.");
-        //        return;
-        //    }
-
-        //    try
-        //    {
-        //        Debug.WriteLine("OpenChangWindow: start");
-
-        //        // ChangViewModel に現在の InputModel を注入してウィンドウを生成・表示
-        //        var vm = new ChangViewModel(this.CurrentInputModel);
-        //        var win = new ChangWindow
-        //        {
-        //            DataContext = vm,
-        //            Owner = Application.Current.MainWindow,
-        //            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-        //            ShowInTaskbar = false
-        //        };
-
-        //        // ViewModel から閉じる要求を受け取る場合があるなら購読（インターフェイス名は環境に合わせて）
-        //        if (vm is ICloseable closeableVm)
-        //        {
-        //            closeableVm.RequestClose += (s, e) =>
-        //            {
-        //                if (win.IsVisible) win.Close();
-        //            };
-        //        }
-
-        //        // モーダル表示（既存コードに合わせる）
-        //        try
-        //        {
-        //            win.ShowDialog();
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            MessageBox.Show($"Changウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-        //            Debug.WriteLine(ex);
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        System.Threading.Interlocked.Exchange(ref _isChangWindowOpeningFlag, 0);
-        //        Debug.WriteLine("OpenChangWindow: end");
-        //    }
-        //}
-        //{
-        //    var vm = new ChangViewModel();
-        //    //vm.LoadSample();
-        //    var win = new ChangWindow { DataContext = vm };
-        //    win.ShowDialog();
-        //}
-
-        //[RelayCommand]
-        //private void DeleteAnalysisResults()
-        //{
-        //    var result = MessageBox.Show(
-        //        "解析結果を削除します。よろしいですか？",
-        //        "確認",
-        //        MessageBoxButton.YesNo,
-        //        MessageBoxImage.Question);
-        //    if (result == MessageBoxResult.Yes)
-        //    {
-        //        // 解析結果の削除
-        //        IsHorizontalAnalysisDone = false;
-        //        IsVerticalAnalysisDone = false;
-        //        IsGroupPileSettlementAnalysisDone = false;
-        //        if (CurrentInputModel != null)
-        //        {
-        //            //foreach (var pile in CurrentInputModel.PileLayoutItems)
-        //            //{
-        //            //    pile.ResetAnalysisResults();
-        //            //}
-        //        }
-        //        CurrentModel = null; // AnaModelもリセット
-        //        UpdateWindowAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
-        //        UpdateTreeView();
-        //    }
-        //}
 
         [RelayCommand]
         public static void OpenShortcutKeysWindow()
@@ -2042,13 +1968,6 @@ namespace PileDesign.ViewModels
                 MessageBox.Show($"ショートカット一覧ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        // データ入力ウィンドウ表示メソッド
-        //[RelayCommand]
-        //private void OpenInputDataAnchorable()
-        //{
-        //    InputDataAnchorable.Show();
-        //}
 
         [RelayCommand]
         private async Task MoveCopyPiles()
@@ -2071,38 +1990,53 @@ namespace PileDesign.ViewModels
                 MoveCopyWindow moveCopyWindow = new();
 
                 var tcs = new TaskCompletionSource<bool>();
+                bool operationExecuted = false;
+
                 moveCopyWindow.MoveCopyCompleted += async (sender, e) =>
                 {
+                    operationExecuted = true;
                     await MoveCopyWindow_MoveCopyCompletedAsync(sender, e);
-                    tcs.SetResult(true);
+                    tcs.TrySetResult(true);
+                };
+
+                // ウィンドウが閉じられたら（キャンセル含む）TaskCompletionSourceを完了させる
+                moveCopyWindow.Closed += (sender, e) =>
+                {
+                    tcs.TrySetResult(false);
                 };
 
                 moveCopyWindow.ShowDialog(); // モーダルダイアログとして表示
 
-                // ★ 待機カーソルを表示
-                Mouse.OverrideCursor = Cursors.Wait;
-                try
+                // 操作が実行された場合のみ待機と更新を行う
+                if (operationExecuted)
                 {
-                    await tcs.Task; // 非同期に完了を待つ
+                    // ★ 待機カーソルを表示
+                    Mouse.OverrideCursor = Cursors.Wait;
+                    try
+                    {
+                        await tcs.Task; // 非同期に完了を待つ
 
-                    // コレクション自体の変更通知
-                    OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                    OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                    OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                    OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                        // コレクション自体の変更通知
+                        OnPropertyChanged(nameof(GroupPileSettlementXmin));
+                        OnPropertyChanged(nameof(GroupPileSettlementXmax));
+                        OnPropertyChanged(nameof(GroupPileSettlementYmin));
+                        OnPropertyChanged(nameof(GroupPileSettlementYmax));
 
-                    // 変更: デバウンス付きで更新
-                    RequestUpdateWindow();
-                    UpdateTreeView();
-                }
-                finally
-                {
-                    // ★ カーソルを元に戻す
-                    Mouse.OverrideCursor = null;
+                        // 変更: デバウンス付きで更新
+                        RequestUpdateWindow();
+                        UpdateTreeView();
+                    }
+                    finally
+                    {
+                        // ★ カーソルを元に戻す
+                        Mouse.OverrideCursor = null;
+                    }
                 }
             }
             catch (Exception ex)
             {
+                // 例外発生時もカーソルをリセット
+                Mouse.OverrideCursor = null;
                 MessageBox.Show($"杭の移動・複製中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -2315,7 +2249,7 @@ namespace PileDesign.ViewModels
             UpdateWindowImmediate();
         }
 
-        public void DeleteDuplicatedElements()
+        public static void DeleteDuplicatedElements()
         {
             // 重複要素の削除ロジック
         }
@@ -2543,7 +2477,7 @@ namespace PileDesign.ViewModels
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
 
-            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             foreach (var layer in groundInput.GroundLayers)
             {

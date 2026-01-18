@@ -11,7 +11,7 @@ namespace PileDesign.Models.InputData
     public class PileGroupSettlement : BaseModel
     {
         private double _loadingPlaneAltitude;
-        public double LoadingPlaneAltutude
+        public double LoadingPlaneAltitude
         {
             get => _loadingPlaneAltitude;
             set => SetProperty(ref _loadingPlaneAltitude, value);
@@ -68,7 +68,7 @@ namespace PileDesign.Models.InputData
         //コンストラクタ
         public PileGroupSettlement()
         {
-            LoadingPlaneAltutude = -5.0; /// 5m
+            LoadingPlaneAltitude = -5.0; /// 5m
             LoadingType = "任意矩形";
             RectLoads = [];
             SettlementSoilLayers = [];

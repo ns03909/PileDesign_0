@@ -44,12 +44,12 @@ namespace PileDesign.Views
             // 杭頭
             if (viewModel.IsAxialLoadingVisible)
             {
-                foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+                foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
                 {
-                    if (!pilelocation.IsVisible) continue;
+                    if (!pileLocation.IsVisible) continue;
 
-                    double forceZ = GetForceZ(viewModel, pilelocation, selectedLoadCase); // 既存ヘルパー
-                    Point3D locPileTop = pilelocation.Point3D;
+                    double forceZ = GetForceZ(viewModel, pileLocation, selectedLoadCase); // 既存ヘルパー
+                    Point3D locPileTop = pileLocation.Point3D;
 
                     points.Add(new Point3D(locPileTop.X, locPileTop.Y, locPileTop.Z));
                     valueVectors.Add(new Vector3D(0, 0, forceZ)); // GetForceZ は符号付きを返している

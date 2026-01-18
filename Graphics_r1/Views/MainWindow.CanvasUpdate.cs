@@ -79,60 +79,6 @@ namespace PileDesign.Views
             return colorBaredGeometries;
         }
 
-        //// カラーバージオメトリ取得メソッド
-        //public static List<ColorBaredGeometry> GetColorBarGeometries(ObservableCollection<double> values)
-        //{
-        //    // Diverging カラーバー: 0 をグレー、負側を青へ、正側を赤へ、絶対値が大きい方を完全な青/赤にする
-        //    if (values == null || values.Count == 0)
-        //    {
-        //        return [];
-        //    }
-
-        //    double minValue = values.Min();
-        //    double maxValue = values.Max();
-        //    double maxAbs = Math.Max(Math.Abs(minValue), Math.Abs(maxValue));
-
-        //    // 基準色定義
-        //    Color gray = Color.FromRgb(128, 128, 128);
-        //    Color blue = Color.FromRgb(0, 0, 255);
-        //    Color red = Color.FromRgb(255, 0, 0);
-
-        //    // getColor delegate は GetColorBarGeometriesCore により
-        //    // 中央レンジ (middleRange) を min..max に正規化した t (0..1) を受け取ります。
-        //    // ここでは t -> middle を復元し、middle/maxAbs に基づくダイバージング着色を行います。
-        //    return GetColorBarGeometriesCore(values, t =>
-        //    {
-        //        // middleRange を復元
-        //        double middle = minValue + t * (maxValue - minValue);
-
-        //        if (maxAbs <= 1e-12)
-        //        {
-        //            // 全てゼロに近い場合はグレー固定
-        //            return gray;
-        //        }
-
-        //        // -1..1 に正規化
-        //        double v = middle / maxAbs;
-        //        v = Math.Max(-1.0, Math.Min(1.0, v));
-
-        //        // ゼロ付近はグレー
-        //        if (Math.Abs(v) < 1e-9)
-        //            return gray;
-
-        //        if (v > 0)
-        //        {
-        //            // 0(グレー) -> +max(赤)
-        //            return LerpColor(gray, red, v);
-        //        }
-        //        else
-        //        {
-        //            // 0(グレー) -> -max(青)
-        //            return LerpColor(gray, blue, -v);
-        //        }
-        //    });
-        //}
-
-        // 補助: 色の線形補間 (0..1)
         private static Color LerpColor(Color a, Color b, double t)
         {
             t = Math.Max(0.0, Math.Min(1.0, t));
@@ -181,11 +127,6 @@ namespace PileDesign.Views
             int loadCombinationIndex = GetLoadCombinationIndex(viewModel.SelectedLoadCombinationName);
 
             return (loadCaseIndex, loadCombinationIndex);
-        }
-
-        // 杭軸力更新メソッド
-        public static void UpdateAxialForceLabel3D()
-        {
         }
         
         // 3D地盤変位更新メソッド
@@ -300,7 +241,6 @@ namespace PileDesign.Views
         }
 
         // 以降: ヘルパー関数群を同クラス内に追加
-
         private static double ScaleDispMmToModel(double dispMm, LoadCombination comb, MainWindowViewModel vm)
             => dispMm * 0.001 * comb.Alpha1 * vm.DispDiagramMultiplier;
 
@@ -412,14 +352,14 @@ namespace PileDesign.Views
 
             if (viewModel.CurrentInputModel.PileLayoutItems.Count > 0)
             {
-                var visiblePileLocations = viewModel.CurrentInputModel.PileLayoutItems
+                var visiblepileLocations = viewModel.CurrentInputModel.PileLayoutItems
                     .Where(pileLocation => pileLocation.IsVisible)
                     .Select(pileLocation => pileLocation.Point3D)
                     .ToList();
 
-                if (visiblePileLocations.Count != 0)
+                if (visiblepileLocations.Count != 0)
                 {
-                    viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblePileLocations));
+                    viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
                 }
             }
 
@@ -607,241 +547,6 @@ namespace PileDesign.Views
             path.AddGeometry(lineGeometry);
         }
 
-        // N値描画の更新
-        //private void UpdateNValue3D()
-        //{
-        //    if (DataContext is not MainWindowViewModel vm) return;
-
-        //    var valuesPath = vm.CanvasGeometry.PathGeoNValues;
-        //    var gridPath = vm.CanvasGeometry.PathGeoNValueGrids;
-
-        //    foreach (var pile in vm.CurrentInputModel.PileLayoutItems)
-        //    {
-        //        if (!pile.IsVisible) continue;
-
-        //        int pileBodyIndex = pile.PileBodyNo - 1;
-        //        int groundIndex = pile.GroundNo - 1;
-
-        //        // インデックス範囲チェック
-        //        if (pileBodyIndex < 0 || pileBodyIndex >= vm.CurrentInputModel.PileBodies.Count) continue;
-        //        if (groundIndex < 0 || groundIndex >= vm.CurrentInputModel.GroundsInput.Count) continue;
-
-        //        var ground = vm.CurrentInputModel.GroundsInput[groundIndex];
-        //        var masses = ground.GroundMassesData;
-        //        if (masses == null || masses.Count == 0) continue;
-
-        //        // 1) N値ポリライン（節点マーカー付き）
-        //        var points = new List<Point>(masses.Count);
-        //        foreach (var m in masses)
-        //        {
-        //            var p = vm.CanvasThreeDView.Transformation(
-        //                new Point3D(pile.Point3D.X, pile.Point3D.Y, m.AltitudeDepth));
-        //            p.X += ComputeNShift(m.NValue, vm.CanvasThreeDView); // N=60 で横幅 2.0*Scale
-        //            points.Add(p);
-        //        }
-        //        AddPolyLineGeometryWithMarkers(points, valuesPath, isClosed: false, markerDiameter: 2, markerPathGeometry: valuesPath);
-
-        //        // 2) 縦目盛り（0～60, 10毎）と上端水平線
-        //        double topZ = ground.GroundTopAltitude;
-        //        double btmZ = ground.GroundLayers[^1].BottomAltitude;
-
-        //        var top2D0 = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, topZ));
-        //        var btm2D0 = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, btmZ));
-
-        //        double xShiftEnd = DrawNScaleGrid(top2D0, btm2D0, maxN: 60, stepN: 10, gridPath, vm.CanvasThreeDView);
-
-        //        // 上端水平線（0～最大N目盛位置まで）
-        //        AddLineGeometry(top2D0, new Point(top2D0.X + xShiftEnd, top2D0.Y), gridPath);
-
-        //        // 3) 層境界の水平線（各BottomAltitudeで0～最大N目盛位置まで）
-        //        foreach (var layer in ground.GroundLayers)
-        //        {
-        //            var p0 = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, layer.BottomAltitude));
-        //            AddLineGeometry(p0, new Point(p0.X + xShiftEnd, p0.Y), gridPath);
-        //        }
-        //    }
-        //}
-
-        //// N値→Xオフセット（N=60 で横幅 2.0*Scale）
-        //private static double ComputeNShift(double nValue, CanvasThreeDView view)
-        //    => nValue / 60.0 * 2.0 * view.Scale;
-
-        //// N目盛りグリッド（縦線群）を描画し、最大NのXオフセットを返す
-        //private double DrawNScaleGrid(Point top2D0, Point btm2D0, double maxN, double stepN, PathGeometry gridPath, CanvasThreeDView view)
-        //{
-        //    double xShiftEnd = 0.0;
-        //    for (double n = 0; n <= maxN; n += stepN)
-        //    {
-        //        // 既存仕様に合わせて分母は固定60（スケール一貫性のため）
-        //        double xShift = n / 60.0 * 2.0 * view.Scale;
-        //        var top = new Point(top2D0.X + xShift, top2D0.Y);
-        //        var btm = new Point(btm2D0.X + xShift, btm2D0.Y);
-        //        AddLineGeometry(top, btm, gridPath);
-        //        if (Math.Abs(n - maxN) < double.Epsilon) xShiftEnd = xShift;
-        //    }
-        //    return xShiftEnd;
-        //}
-
-
-        // 粘着力描画の更新
-        //private void UpdateCohesive3D()
-        //{
-        //    if (DataContext is not MainWindowViewModel vm) return;
-
-        //    var valuesPath = vm.CanvasGeometry.PathGeoNValues;         // 従来同様のパスを使用
-        //    var gridPath = vm.CanvasGeometry.PathGeoNValueGrids;
-
-        //    foreach (var pile in vm.CurrentInputModel.PileLayoutItems)
-        //    {
-        //        if (!pile.IsVisible) continue;
-
-        //        int pileBodyIndex = pile.PileBodyNo - 1;
-        //        int groundIndex = pile.GroundNo - 1;
-
-        //        // インデックス範囲チェック
-        //        if (pileBodyIndex < 0 || pileBodyIndex >= vm.CurrentInputModel.PileBodies.Count) continue;
-        //        if (groundIndex < 0 || groundIndex >= vm.CurrentInputModel.GroundsInput.Count) continue;
-
-        //        var ground = vm.CurrentInputModel.GroundsInput[groundIndex];
-        //        var layers = ground.GroundLayers;
-        //        if (layers == null || layers.Count == 0) continue;
-
-        //        // 2D基準点（上端・下端）
-        //        double topZ = ground.GroundTopAltitude;
-        //        double btmZ = layers[^1].BottomAltitude;
-
-        //        var top2D0 = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, topZ));
-        //        var btm2D0 = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, btmZ));
-
-        //        // 1) 各層のポリゴンを描画（cohesion に応じて +X 偏位）
-        //        for (int i = 0; i < layers.Count; i++)
-        //        {
-        //            var layer = layers[i];
-
-        //            double zTop = i == 0 ? topZ : layers[i - 1].BottomAltitude;
-        //            double zBtm = layer.BottomAltitude;
-
-        //            var top2D = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, zTop));
-        //            var btm2D = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, zBtm));
-
-        //            double xShift = ComputeCohesionShift(layer.Cohesive, vm.CanvasThreeDView);
-
-        //            // 四角形ポリゴン（上端→上端+dx→下端+dx→下端）
-        //            var rect = new List<Point>
-        //            {
-        //                top2D,
-        //                new(top2D.X + xShift, top2D.Y),
-        //                new(btm2D.X + xShift, btm2D.Y),
-        //                btm2D
-        //            };
-        //            AddPolyLineGeometry(rect, valuesPath, isClosed: true);
-        //        }
-
-        //        // 2) グリッドの縦線（0～200, 50刻み）と上端・下端の水平線
-        //        double xShiftEnd = DrawCohesionScaleGrid(top2D0, btm2D0, maxC: 200, stepC: 50, gridPath, vm.CanvasThreeDView);
-
-        //        // 上端・下端の水平線（0 から最大オフセットまで）
-        //        AddLineGeometry(top2D0, new Point(top2D0.X + xShiftEnd, top2D0.Y), gridPath);
-        //        AddLineGeometry(btm2D0, new Point(btm2D0.X + xShiftEnd, btm2D0.Y), gridPath);
-        //    }
-        //}
-
-        //// 粘着力→Xオフセット（C=200 で横幅 2.0*Scale）
-        //private static double ComputeCohesionShift(double cohesion, CanvasThreeDView view)
-        //    => cohesion / 200.0 * 2.0 * view.Scale;
-
-        //// 粘着力目盛りグリッド（縦線群）を描画し、最大CのXオフセットを返す
-        //private double DrawCohesionScaleGrid(Point top2D0, Point btm2D0, double maxC, double stepC, PathGeometry gridPath, CanvasThreeDView view)
-        //{
-        //    double xShiftEnd = 0.0;
-        //    for (double c = 0; c <= maxC; c += stepC)
-        //    {
-        //        double xShift = c / 200.0 * 2.0 * view.Scale;
-        //        var top = new Point(top2D0.X + xShift, top2D0.Y);
-        //        var btm = new Point(btm2D0.X + xShift, btm2D0.Y);
-        //        AddLineGeometry(top, btm, gridPath);
-        //        if (Math.Abs(c - maxC) < double.Epsilon) xShiftEnd = xShift;
-        //    }
-        //    return xShiftEnd;
-        //}
-        //private void UpdateCohesive3D()
-        //{
-        //    if (DataContext is not MainWindowViewModel viewModel) return;
-
-        //    PathGeometry pathGeometry = viewModel.CanvasGeometry.PathGeoNValues;
-        //    PathGeometry pathGeometryGrids = viewModel.CanvasGeometry.PathGeoNValueGrids;
-
-        //    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
-        //    {
-        //        if (!pileLocation.IsVisible)
-        //        { continue; }
-
-        //        int pileBodyIndex = pileLocation.PileBodyNo - 1;
-        //        int groundIndex = pileLocation.GroundNo - 1;
-
-        //        // インデックス範囲チェック
-        //        if (pileBodyIndex < 0 || pileBodyIndex >= viewModel.CurrentInputModel.PileBodies.Count)
-        //            continue; // またはエラー通知
-
-        //        if (groundIndex < 0 || groundIndex >= viewModel.CurrentInputModel.GroundsInput.Count)
-        //            continue; // またはエラー通知
-
-        //        Point topCoord0;
-        //        Point btmCoord0;
-        //        // 粘着力
-        //        double topAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundTopAltitude;
-        //        for (int i = 0; i < viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundLayers.Count; i++)
-        //        {
-        //            List<Point> points = [];
-        //            GroundLayerInput groundLayerInput = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundLayers[i];
-        //            double topAlt;
-        //            double btmAlt;
-        //            if (i == 0)
-        //            { 
-        //                topAlt = topAltitude;
-        //                btmAlt = groundLayerInput.BottomAltitude;
-        //            }
-        //            else
-        //            {
-        //                topAlt = viewModel.CurrentInputModel.GroundsInputs[pileLocation.GroundNo - 1].GroundLayers[i - 1].BottomAltitude;
-        //                btmAlt = groundLayerInput.BottomAltitude;
-        //            }
-        //            double cohesion = groundLayerInput.Cohesive;
-
-        //            Point3D top = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, topAlt);
-        //            Point3D btm = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, btmAlt);
-        //            Point topCoord = viewModel.CanvasThreeDView.Transformation(top);
-        //            Point btmCoord = viewModel.CanvasThreeDView.Transformation(btm);
-        //            if (i == 0) topCoord0 = viewModel.CanvasThreeDView.Transformation(top);
-        //            btmCoord0 = btmCoord;
-
-        //            double xShift = cohesion / 200.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
-        //            points.Add(topCoord);
-        //            points.Add(new() { X = topCoord.X + xShift, Y = topCoord.Y });
-        //            points.Add(new() { X = btmCoord.X + xShift, Y = btmCoord.Y });
-        //            points.Add(btmCoord);
-
-        //            AddPolyLineGeometry(points, pathGeometry, true);
-        //        }
-
-        //        // 0-200
-        //        for (int i = 0; i <= 200; i += 50)
-        //        {
-        //            double xShift = i / 200.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
-        //            Point topCoord = new() { X = topCoord0.X + xShift, Y = topCoord0.Y };
-        //            Point btmCoord = new() { X = btmCoord0.X + xShift, Y = btmCoord0.Y };
-
-        //            AddLineGeometry(topCoord, btmCoord, pathGeometryGrids);
-
-        //            if (i == 200)
-        //            {
-        //                AddLineGeometry(topCoord0, topCoord, pathGeometryGrids);
-        //                AddLineGeometry(btmCoord0, btmCoord, pathGeometryGrids);
-        //            }
-        //        }
-        //    }
-        //}
-
         // 節点描画の更新
         private void UpdateNodes3D()
         {
@@ -853,14 +558,14 @@ namespace PileDesign.Views
 
             if (viewModel.CurrentInputModel.PileLayoutItems.Count > 0)
             {
-                var visiblePileLocations = viewModel.CurrentInputModel.PileLayoutItems
+                var visiblepileLocations = viewModel.CurrentInputModel.PileLayoutItems
                     .Where(pileLocation => pileLocation.IsVisible)
                     .Select(pileLocation => pileLocation.Point3D)
                     .ToList();
 
-                if (visiblePileLocations.Count != 0)
+                if (visiblepileLocations.Count != 0)
                 {
-                    viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblePileLocations));
+                    viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
                 }
             }
 
@@ -924,9 +629,6 @@ namespace PileDesign.Views
             }
 
             // 注意: DrawPileTopNodesとDrawElemPathはDrawAllPaths内で既に処理されるため、ここでは呼び出さない
-            // DrawAllPathsの前に呼び出すと、DrawAllPathsで削除されてしまう
-            // viewModel.CanvasGeometry.DrawPileTopNodes(Canvas3DLayout);
-            // viewModel.CanvasGeometry.DrawElemPath(Canvas3DLayout);
 
             if (viewModel == null ||
                 viewModel.CurrentInputModel == null ||
@@ -1060,59 +762,6 @@ namespace PileDesign.Views
             return null;
         }
 
-        //private void AddColorPolyLineGeometry(
-        //    IEnumerable<Point> points,
-        //    List<double> values,
-        //    List<ColorBaredGeometry> colorBaredGeometries,
-        //    bool isClosed = false)
-        //{
-        //    var pointList = points.ToList();
-        //    if (pointList.Count < 2 || values.Count < 2) return;
-
-        //    // 1回だけ前計算
-        //    var boundaries = BuildColorBandBoundaries(colorBaredGeometries);
-
-        //    void DrawSegment(Point p1, Point p2, double v1, double v2, Func<double, ColorBaredGeometry?> picker)
-        //    {
-        //        // 区間内で色が切り替わる境界値を抽出
-        //        var splitValues = boundaries.Where(b => (b > Math.Min(v1, v2)) && (b < Math.Max(v1, v2))).ToList();
-
-        //        var segmentValues = new List<double> { v1 };
-        //        segmentValues.AddRange(splitValues);
-        //        segmentValues.Add(v2);
-
-        //        for (int j = 0; j < segmentValues.Count - 1; j++)
-        //        {
-        //            double sv1 = segmentValues[j];
-        //            double sv2 = segmentValues[j + 1];
-
-        //            double t1 = v2 == v1 ? 0.0 : (sv1 - v1) / (v2 - v1);
-        //            double t2 = v2 == v1 ? 1.0 : (sv2 - v1) / (v2 - v1);
-
-        //            Point sp1 = new(p1.X + (p2.X - p1.X) * t1, p1.Y + (p2.Y - p1.Y) * t1);
-        //            Point sp2 = new(p1.X + (p2.X - p1.X) * t2, p1.Y + (p2.Y - p1.Y) * t2);
-
-        //            double midValue = (sv1 + sv2) * 0.5;
-        //            var colorGeometry = picker(midValue);
-        //            colorGeometry?.PathGeometry.AddGeometry(new LineGeometry(sp1, sp2));
-        //        }
-        //    }
-
-
-        //    // 通常区間: 既存（最後の帯だけ上端含む）ルール
-        //    for (int i = 0; i < pointList.Count - 1; i++)
-        //    {
-        //        DrawSegment(pointList[i], pointList[i + 1], values[i], values[i + 1],
-        //            mid => PickColorGeometry(mid, colorBaredGeometries));
-        //    }
-
-        //    // 閉ループの最後の区間だけ、以前のルール（全帯で上端含む）に戻す
-        //    if (isClosed)
-        //    {
-        //        DrawSegment(pointList[^1], pointList[0], values[^1], values[0],
-        //            mid => PickColorGeometryInclusiveTop(mid, colorBaredGeometries));
-        //    }
-        //}
         private void AddColorPolyLineGeometry(
             IEnumerable<Point> points,
             List<double> values,
@@ -1407,9 +1056,6 @@ namespace PileDesign.Views
 
                     EllipseGeometry ellipse = new(new Point(coordinate.X, coordinate.Y), actualNodeSize * 1, actualNodeSize * 1);
                     viewModel.CanvasGeometry.PathGeoSelectedPileNodes.AddGeometry(ellipse);
-
-                    //EllipseGeometry ellipse1 = new(new Point(coord.X, coord.Y), actualNodeSize * 2, actualNodeSize * 2);
-                    //viewModel.CanvasGeometry.PathGeoSelectedPileNodes.AddGeometry(ellipse1);
                 }
             }
 
@@ -1422,7 +1068,7 @@ namespace PileDesign.Views
 
                     if (viewModel.IsShrinkElementMode)
                     {
-                        (loc0, loc1) = GetShrinkedElementPoints(loc0, loc1);
+                        (loc0, loc1) = GetShrinkElementPoints(loc0, loc1);
                     }
 
                     Point coordinate0 = viewModel.CanvasThreeDView.Transformation(loc0);
@@ -1464,57 +1110,9 @@ namespace PileDesign.Views
             return "0";
         }
 
-        //// ラベル取得メソッド
-        //private string GetLabelText(PileLayoutDataItem pileLocation)
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-        //    string label = string.Empty;
-
-        //    if (viewModel.IsPileRefVisible) label += pileLocation.PileBodyNo.ToString() + ", ";
-        //    if (viewModel.IsSoilRefVisible) label += pileLocation.GroundNo.ToString() + ", ";
-        //    if (viewModel.IsPileTopLevelVisible) label += pileLocation.Point3D.Z.ToString("N3") + ", ";
-        //    if (viewModel.IsGroupPileFactorLabelVisible) label += pileLocation.GroupPileFactor.ToString("N3") + ", ";
-        //    if (viewModel.IsPileDiaSpacingRatioLabelVisible) label += pileLocation.PileSpacingFactor.ToString("N3") + ", ";
-        //    if (viewModel.IsFrontPileLabelVisible)
-        //    {
-        //        var selectedLoadCase = LoadCases.GetLoadCase(viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
-
-        //        if (selectedLoadCase.Level == 1)
-        //        {
-        //            var loadCases1 = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1;
-        //            for (int i = 0; i < loadCases1.Count; i++)
-        //            {
-        //                if (loadCases1[i].LoadName == selectedLoadCase.LoadName)
-        //                {
-        //                    label += pileLocation.IsFrontPiles[i] == true ? "前, " : "後, ";
-        //                    break;
-        //                }
-        //            }
-        //        }
-        //        else if (selectedLoadCase.Level == 2)
-        //        {
-        //            var loadCases2 = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2;
-        //            for (int i = 0; i < loadCases2.Count; i++)
-        //            {
-        //                if (loadCases2[i].LoadName == selectedLoadCase.LoadName)
-        //                {
-        //                    label += pileLocation.IsFrontPiles[i] == true ? "前, " : "後, ";
-        //                    break;
-        //                }
-        //            }
-        //        }
-        //    }
-        //    if (label.Length > 0)
-        //    {
-        //        label = label[..^2]; // 最後のカンマとスペースを削除
-        //    }
-        //    return label;
-        //}
-        //// ラベル取得メソッド（Nullガード強化）
         private string GetLabelText(PileLayoutDataItem pileLocation)
         {
-            var vm = DataContext as MainWindowViewModel;
-            if (vm == null) return string.Empty;
+            if (DataContext is not MainWindowViewModel vm) return string.Empty;
 
             var sb = new System.Text.StringBuilder();
 

@@ -8,6 +8,14 @@ using static PileDesign.Services.ModifyString;
 
 namespace PileDesign.ViewModels
 {
+    /// <summary>
+    /// MainWindowViewModel.TreeView.cs
+    ///
+    /// 責任範囲:
+    /// - TreeViewの更新処理
+    /// - 各種入力データをTreeView形式に変換（基本設定、荷重、地盤、杭体、杭配置、根入部）
+    /// - TreeViewの展開状態の保存・復元
+    /// </summary>
     public partial class MainWindowViewModel : ObservableObject
     {
         public TreeView TreeViewControl { get; set; }
@@ -273,7 +281,7 @@ namespace PileDesign.ViewModels
         //杭位置・軸力
         private void UpdateTreeViewPileLocaiton()
         {
-            CTreeViewData dataPileLocation = new()
+            CTreeViewData datapileLocation = new()
             {
                 Name = $"杭配置（配置数：{CurrentInputModel.PileLayoutItems.Count}）",
                 Children = []
@@ -281,12 +289,12 @@ namespace PileDesign.ViewModels
 
             for (int i = 0; i < CurrentInputModel.PileLayoutItems.Count; i++)
             {
-                dataPileLocation.Children.Add(new CTreeViewData()
+                datapileLocation.Children.Add(new CTreeViewData()
                 {
                     Name = $"<{i + 1}> ",
                 });
             }
-            CTreeViewDatas.Add(dataPileLocation);
+            CTreeViewDatas.Add(datapileLocation);
         }
 
         // 根入部

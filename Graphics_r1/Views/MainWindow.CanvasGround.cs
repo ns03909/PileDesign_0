@@ -30,13 +30,13 @@ namespace PileDesign.Views
 
             double flattening = viewModel.CanvasThreeDView.Flattening;
 
-            foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+            foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
             {
-                if (!pilelocation.IsVisible)
+                if (!pileLocation.IsVisible)
                 { continue; }
 
-                int pileBodyIndex = pilelocation.PileBodyNo - 1;
-                int groundIndex = pilelocation.GroundNo - 1;
+                int pileBodyIndex = pileLocation.PileBodyNo - 1;
+                int groundIndex = pileLocation.GroundNo - 1;
 
                 // インデックス範囲チェック
                 if (pileBodyIndex < 0 || pileBodyIndex >= viewModel.CurrentInputModel.PileBodies.Count)
@@ -47,39 +47,39 @@ namespace PileDesign.Views
 
                 // 地盤dia
                 double soilDia;
-                if (viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1].PileToeDia == 0)
+                if (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia == 0)
                 {
                     soilDia = 2.0 * viewModel.CanvasThreeDView.Scale;
                 }
                 else
                 {
-                    soilDia = viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1].PileToeDia / 1000.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
+                    soilDia = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
                 }
 
                 // 地表
-                double groundTopAltitude = viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundTopAltitude;
-                Point3D loc1 = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, groundTopAltitude);
+                double groundTopAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundTopAltitude;
+                Point3D loc1 = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundTopAltitude);
                 Point coord1 = viewModel.CanvasThreeDView.Transformation(loc1);
 
                 EllipseGeometry ellipse1 = new(coord1, soilDia * 0.5, soilDia * 0.5 * flattening);
                 viewModel.CanvasGeometry.PathGeoPileSoils.AddGeometry(ellipse1);
 
                 // 地下水位
-                double groundWaterTableAltitude = viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundWaterTableAltitude;
-                Point3D loc3 = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, groundWaterTableAltitude);
+                double groundWaterTableAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundWaterTableAltitude;
+                Point3D loc3 = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundWaterTableAltitude);
                 Point coord3 = viewModel.CanvasThreeDView.Transformation(loc3);
 
                 EllipseGeometry ellipse3 = new(coord3, soilDia * 0.5, soilDia * 0.5 * flattening);
                 viewModel.CanvasGeometry.PathGeoPileGroundWater.AddGeometry(ellipse3);
 
-                foreach (GroundLayerInput groundLayerInput in viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundLayers)
+                foreach (GroundLayerInput groundLayerInput in viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundLayers)
                 {
                     double zBtm = groundLayerInput.BottomAltitude;
                     double zTop = groundLayerInput.LayerThickness + zBtm;
                     string granularityClass = groundLayerInput.GranularityClass;
 
-                    Point3D top = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, zTop);
-                    Point3D btm = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, zBtm);
+                    Point3D top = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, zTop);
+                    Point3D btm = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, zBtm);
                     Point btm2D = viewModel.CanvasThreeDView.Transformation(btm);
 
                     EllipseGeometry ellipse2 = new(btm2D, soilDia * 0.5, soilDia * 0.5 * flattening);
@@ -213,13 +213,13 @@ namespace PileDesign.Views
         //    PathGeometry pathGeometry = viewModel.CanvasGeometry.PathGeoNValues;
         //    PathGeometry pathGeometryGrids = viewModel.CanvasGeometry.PathGeoNValueGrids;
 
-        //    foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+        //    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
         //    {
-        //        if (!pilelocation.IsVisible)
+        //        if (!pileLocation.IsVisible)
         //        { continue; }
 
-        //        int pileBodyIndex = pilelocation.PileBodyNo - 1;
-        //        int groundIndex = pilelocation.GroundNo - 1;
+        //        int pileBodyIndex = pileLocation.PileBodyNo - 1;
+        //        int groundIndex = pileLocation.GroundNo - 1;
 
         //        // インデックス範囲チェック
         //        if (pileBodyIndex < 0 || pileBodyIndex >= viewModel.CurrentInputModel.PileBodies.Count)
@@ -231,23 +231,23 @@ namespace PileDesign.Views
 
         //        List<Point> points = [];
         //        // N値
-        //        foreach (GroundMassDataInput groundMassDataInput in viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundMassesData)
+        //        foreach (GroundMassDataInput groundMassDataInput in viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundMassesData)
         //        {
         //            double altitudeDepth = groundMassDataInput.AltitudeDepth;
-        //            Point3D loc = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, altitudeDepth);
+        //            Point3D loc = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, altitudeDepth);
         //            Point coord = viewModel.CanvasThreeDView.Transformation(loc);
         //            double xShift = groundMassDataInput.NValue / 60.0 * 2.0 * viewModel.CanvasThreeDView.Scale;
         //            coord.X += xShift;
         //            points.Add(coord);
         //        }
 
-        //        double groundTopAltitude = viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundTopAltitude;
-        //        double groundBtmAltitude = viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundLayers[^1].BottomAltitude;
+        //        double groundTopAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundTopAltitude;
+        //        double groundBtmAltitude = viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundLayers[^1].BottomAltitude;
 
         //        AddPolyLineGeometryWithMarkers(points, pathGeometry, false, 2, pathGeometry);
 
-        //        Point3D topLoc = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, groundTopAltitude);
-        //        Point3D btmLoc = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, groundBtmAltitude);
+        //        Point3D topLoc = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundTopAltitude);
+        //        Point3D btmLoc = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundBtmAltitude);
         //        Point topCoord0 = viewModel.CanvasThreeDView.Transformation(topLoc);
         //        Point btmCoord0 = viewModel.CanvasThreeDView.Transformation(btmLoc);
         //        Point topCoordEnd = new();
@@ -270,9 +270,9 @@ namespace PileDesign.Views
         //        topCoordEnd = new() { X = topCoord0.X + xShiftEnd, Y = topCoord0.Y };
         //        AddLineGeometry(topCoord0, topCoordEnd, pathGeometryGrids);
 
-        //        foreach(GroundLayerInput groundLayerInput in viewModel.CurrentInputModel.GroundsInput[pilelocation.GroundNo - 1].GroundLayers)
+        //        foreach(GroundLayerInput groundLayerInput in viewModel.CurrentInputModel.GroundsInput[pileLocation.GroundNo - 1].GroundLayers)
         //        {
-        //            Point3D loc = new(pilelocation.Point3D.X, pilelocation.Point3D.Y, groundLayerInput.BottomAltitude);
+        //            Point3D loc = new(pileLocation.Point3D.X, pileLocation.Point3D.Y, groundLayerInput.BottomAltitude);
         //            Point coord0 = viewModel.CanvasThreeDView.Transformation(loc);
         //            Point coordEnd = new() { X = coord0.X + xShiftEnd, Y = coord0.Y };
         //            AddLineGeometry(coord0, coordEnd, pathGeometryGrids);

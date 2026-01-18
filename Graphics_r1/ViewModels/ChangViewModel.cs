@@ -363,40 +363,6 @@ namespace PileDesign.ViewModels
             return 0.0;
         }
 
-        // コンストラクタ
-        //public ChangViewModel()
-        //{
-        //    // 初期化：イベント登録
-        //    Changs.CollectionChanged += Changs_CollectionChanged;
-        //    ChangSoilPiles.CollectionChanged += ChangSoilPiles_CollectionChanged;
-
-        //    // 初期コレクション内の要素に対して PropertyChanged 登録
-        //    foreach (var p in ChangSoilPiles) p.PropertyChanged += ChangSoilPile_PropertyChanged;
-
-        //    // 起動時にインデックスリストを作成（1..N）
-        //    UpdateChangSoilPileIndices();
-
-        //    // 既定の Chang を作成して一つ追加する
-        //    var defaultChang = new Chang(
-        //        _EI: 1.0e8,
-        //        _beta: 1000.0,
-        //        _h: 0.0,
-        //        _horizontalLoad: 500.0,
-        //        _ar: 1.0
-        //        );
-
-        //    // 杭地盤セット番号を 1 に設定（ChangSoilPiles に要素があれば）
-        //    if (ChangSoilPiles != null && ChangSoilPiles.Count >= 1)
-        //    {
-        //        defaultChang.SelectedSoilPileIndex = 1;
-        //        // AssignedSoilPile セッターが EI/Kh0/Beta0 を設定するため、ここで割当てる
-        //        defaultChang.AssignedSoilPile = ChangSoilPiles[0];
-        //    }
-
-        //    // PropertyChanged 登録とコレクション追加
-        //    defaultChang.PropertyChanged += Chang_PropertyChanged;
-        //    Changs.Add(defaultChang);
-        //}
 
         private void Changs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
@@ -547,26 +513,6 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _selectedLoadCombinationName, value);
         }
 
-        // 末尾付近、クラス内の適切な位置に追加してください
-        // ItemsSource を ViewModel 経由で返すプロパティ（ComboBox の SelectedItem と同一インスタンスを使うため）
-        //public ObservableCollection<LoadCase> AllSeismicLoadCases
-        //{
-        //    get
-        //    {
-        //        return App.InputModel?.LoadCasesInput?.AllSeismicLoadCases
-        //            ?? new ObservableCollection<LoadCase>();
-        //    }
-        //}
-
-        //public ObservableCollection<LoadCombination> AllLoadCombinations
-        //{
-        //    get
-        //    {
-        //        // LoadCasesInput.AllLoadCombinations は AllLoadCombinations プロパティ名に合わせる
-        //        return App.InputModel?.LoadCasesInput?.AllLoadCombinations
-        //            ?? new ObservableCollection<LoadCombination>();
-        //    }
-        //}
 
 
         // 集計プロパティ（UI で参照可能）
@@ -577,71 +523,6 @@ namespace PileDesign.ViewModels
             private set => SetProperty(ref _sumAxialForSelectedLoadCase, value);
         }
 
-        // ヘルパ：LoadCase を名前から探す
-        //private LoadCase? ResolveLoadCaseByName(string? name)
-        //{
-        //    var input = App.InputModel;
-        //    if (input?.LoadCasesInput == null || string.IsNullOrEmpty(name)) return null;
-
-        //    // 特別扱い: VL / VL0 / VLadd は LoadCasesInput の専用プロパティがある
-        //    if (name == "VL0") return input.LoadCasesInput.LoadCaseVL0;
-        //    if (name == "VLadd") return input.LoadCasesInput.LoadCaseVLadd;
-        //    if (name == "VL") return input.LoadCasesInput.LoadCaseVL;
-
-        //    // それ以外は AllLoadCases の LoadName と比較
-        //    foreach (var lc in input.LoadCasesInput.AllLoadCases)
-        //    {
-        //        if (lc.LoadName == name) return lc;
-        //    }
-        //    return null;
-        //}
-
-        //// ヘルパ：LoadCombination を名前から探す（GetName 形式を想定）
-        //private LoadCombination? ResolveLoadCombinationByName(string? name)
-        //{
-        //    var input = App.InputModel;
-        //    if (input?.LoadCasesInput?.LoadCombinations == null || string.IsNullOrEmpty(name)) return null;
-
-        //    foreach (var comb in input.LoadCasesInput.LoadCombinations)
-        //    {
-        //        if (comb.GetName() == name || comb.Name == name) return comb;
-        //    }
-        //    return null;
-        //}
-
-        //// ヘルパ：単一杭の軸力を取得（選択 loadCase に応じて）
-        //private double GetPileAxialForLoadCase(Models.InputData.PileLayoutDataItem pile, LoadCase lc)
-        //{
-        //    if (lc == null) return 0.0;
-
-        //    switch (lc.LoadName)
-        //    {
-        //        case "VL0":
-        //            return pile.AxialForceVL0;
-        //        case "VLadd":
-        //            return pile.AxialForceVLAdditional;
-        //        case "VL":
-        //            return pile.AxialForceVL0 + pile.AxialForceVLAdditional;
-        //    }
-
-        //    if (lc.Level == 1)
-        //    {
-        //        for (int i = 0; i < App.InputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
-        //        {
-        //            if (App.InputModel.LoadCasesInput.LoadCasesLevel1[i].LoadName == lc.LoadName)
-        //                return pile.AxialForceLevel1s[i];
-        //        }
-        //    }
-        //    else if (lc.Level == 2)
-        //    {
-        //        for (int i = 0; i < App.InputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
-        //        {
-        //            if (App.InputModel.LoadCasesInput.LoadCasesLevel2[i].LoadName == lc.LoadName)
-        //                return pile.AxialForceLevel2s[i];
-        //        }
-        //    }
-        //    return 0.0;
-        //}
 
         /// <summary>
         /// App.InputModel に定義された PileBody / PileSection 情報を
@@ -896,24 +777,6 @@ namespace PileDesign.ViewModels
             {
                 Debug.WriteLine($"RefreshPlots failed: {ex}");
             }
-            //try
-            //{
-            //    // UI スレッドに描画処理を委譲（AvalonDock 下でも安全）
-            //    var disp = System.Windows.Application.Current?.Dispatcher;
-            //    if (disp != null && !disp.CheckAccess())
-            //    {
-            //        disp.BeginInvoke(new Action(() => DrawGraph()), System.Windows.Threading.DispatcherPriority.Background);
-            //    }
-            //    else
-            //    {
-            //        DrawGraph();
-            //    }
-            //}
-            //catch
-            //{
-            //    // 何らかの理由で Dispatcher が使えない場合は直接呼ぶ（保険）
-            //    DrawGraph();
-            //}
         }
 
         // 既存 DrawGraph を統一版に差し替え
@@ -1022,6 +885,11 @@ namespace PileDesign.ViewModels
                     idx++;
                 }
 
+
+                // X=0, Y=0 の黒い直線を追加
+                Color grayColor = new(128, 128, 128, 255);
+                targetPlot.Plot.Add.VerticalLine(0, 1, grayColor);
+                targetPlot.Plot.Add.HorizontalLine(0, 1, grayColor);
                 // 軸ラベル・タイトル
                 targetPlot.Plot.Title(title);
                 targetPlot.Plot.XLabel(xLabel);
@@ -1048,73 +916,5 @@ namespace PileDesign.ViewModels
                 targetPlot.Refresh();
             });
         }
-        //    // プロット初期化
-        //    targetPlot.Plot.Clear();
-
-        //    // 各 Chang を系列としてプロット（凡例に番号を設定）
-        //    int idx = 0;
-        //    foreach (var chang in Changs)
-        //    {
-        //        var xs = ys.Select(y => valueSelector(chang, y)).ToArray();
-        //        // ラベルに Chang の番号（1-based）を入れる
-        //        var scatter = targetPlot.Plot.Add.Scatter(xs, ys);
-        //        scatter.LegendText = $"{idx + 1}";
-        //        scatter.LineWidth = 2;
-        //        scatter.MarkerSize = 0;
-        //        idx++;
-        //    }
-
-        //    // 軸ラベル・タイトル
-        //    targetPlot.Plot.Title(title);
-
-        //    targetPlot.Plot.XLabel(xLabel);
-        //    targetPlot.Plot.YLabel(yLabel);
-
-        //    targetPlot.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
-        //    targetPlot.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
-        //    targetPlot.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
-
-        //    targetPlot.Plot.Axes.AutoScale();
-        //    targetPlot.Plot.Axes.AutoScaleExpandX();
-        //    targetPlot.Plot.Axes.AutoScaleExpandY();
-
-        //    // 自動スケールして Y 軸を反転（上が 0、下が正）
-        //    targetPlot.Plot.Axes.InvertY();
-
-        //    // クロスヘア初期化とマウスムーブ登録（重複登録防止）
-        //    // --- 追加: targetPlot の DataContext を確実に ViewModel にする（PlotHelper が反射で参照するため）
-        //    //try
-        //    //{
-        //    //    // ViewModel を WpfPlot の DataContext に明示設定（継承が効かないケース対処）
-        //    //    targetPlot.DataContext = this;
-        //    //}
-        //    //catch
-        //    //{
-        //    //    // 何らかの理由で設定できない場合は無視（デバッグで確認）
-        //    //}
-
-        //    if (crosshairPropName == nameof(CrosshairPositionText_M))
-        //    {
-        //        MyCrosshair_M ??= PlotHelper.InitCrosshair(targetPlot, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    }
-        //    else if (crosshairPropName == nameof(CrosshairPositionText_Q))
-        //    {
-        //        MyCrosshair_Q ??= PlotHelper.InitCrosshair(targetPlot, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    }
-        //    else if (crosshairPropName == nameof(CrosshairPositionText_D))
-        //    {
-        //        MyCrosshair_D ??= PlotHelper.InitCrosshair(targetPlot, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    }
-
-        //    if (!hookFlagSetter())
-        //    {
-        //        // 登録前に DataContext を確認するデバッグログを入れると原因把握しやすいです
-        //        // Debug.WriteLine($"Register MouseMove: DataContext={targetPlot.DataContext?.GetType().FullName}, prop={crosshairPropName}");
-        //        targetPlot.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, crosshairPropName, xLabel, yLabel, 1, 3);
-        //        setHookedFlag();
-        //    }
-
-        //    targetPlot.Refresh();
-        //}
     }
 }

@@ -315,7 +315,6 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _ChartDispContent, value);
         }
 
-        // �O���t2���e
         public string[] ChartFLContentOption { get; } =
         [
             "FL(レベル1)",
@@ -413,7 +412,6 @@ namespace PileDesign.ViewModels
             if (sender is not GroundLayerInput itemToDelete) return;
             GroundInput.GroundLayers.Remove(itemToDelete);
 
-            // �s�ԍ��� LoadingRow �Őݒ�ς݁B�K�v�Ȃ� Items.Refresh �̂�
             GroundWindowInstance?.DataGridGroundLayer?.Items.Refresh();
 
             UpdateGroundLayerNo();
@@ -441,7 +439,7 @@ namespace PileDesign.ViewModels
             {
                 if (dataGrid.ItemContainerGenerator.ContainerFromIndex(i) is DataGridRow row)
                 {
-                    row.Header = (i + 1).ToString(); // �s�ԍ���ݒ�
+                    row.Header = (i + 1).ToString();
                 }
             }
         }
@@ -661,7 +659,6 @@ namespace PileDesign.ViewModels
 
         private bool _hookedDispMouseMove, _hookedFLMouseMove, _hookedNMouseMove, _hookedVsMouseMove, _hookedEsMouseMove, _hookedCuMouseMove;
 
-        // �n�Օψʕ`�惁�\�b�h
         private void DrawGroundDisplacementGraph()
         {
             if (GroundWindowInstance == null)

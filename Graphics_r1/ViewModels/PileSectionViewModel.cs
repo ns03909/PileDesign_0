@@ -293,9 +293,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnCancel()
         {
-            //PileSection = PrevPileSection.ShallowCopy(); // プロパティを前回の保存時の値に戻す
-
-            //PileSectionの変更を元に戻す
+            // PileSectionの変更を元に戻す
             PileSection.PileBodyNo = PrevPileSection.PileBodyNo;
             PileSection.PileBodyType = PrevPileSection.PileBodyType;
             PileSection.PileSectionType = PrevPileSection.PileSectionType;
@@ -306,7 +304,6 @@ namespace PileDesign.ViewModels
             PileSection.ConcreteGamma = PrevPileSection.ConcreteGamma;
             PileSection.ConcreteGsi = PrevPileSection.ConcreteGsi;
             PileSection.ConcreteE = PrevPileSection.ConcreteE;
-            //PileSection.SelectedPrecastPileName = PrevPileSection.SelectedPrecastPileName;
             PileSection.SelectedPrecastPile = PrevPileSection.SelectedPrecastPile;
             PileSection.SelectedSteelPipePile = PrevPileSection.SelectedSteelPipePile;
             PileSection.SelectedSteelPipePileName = PrevPileSection.SelectedSteelPipePileName;
@@ -314,13 +311,8 @@ namespace PileDesign.ViewModels
             PileSection.MainBarNum = PrevPileSection.MainBarNum;
             PileSection.MainBarCenterCover = PrevPileSection.MainBarCenterCover;
             PileSection.HoopSize = PrevPileSection.HoopSize;
-            //PileSection.HoopPw = PrevPileSection.HoopPw;
             PileSection.PipeDia = PrevPileSection.PipeDia;
-            //PileSection.PipeAs = PrevPileSection.PipeAs;
             PileSection.PipeGrade = PrevPileSection.PipeGrade;
-            //PileSection.Ac = PrevPileSection.Ac;
-            //PileSection.W = PrevPileSection.W;
-            //PileSection.EI = PrevPileSection.EI;
             PileSection.SelectedPileSectionSpecification = PrevPileSection.SelectedPileSectionSpecification;
 
             RequestClose?.Invoke(this, false);
@@ -467,79 +459,6 @@ namespace PileDesign.ViewModels
 
             PlotNQCurves(svcUnf, svcFac, dmgUnf, dmgFac, ultUnf, ultFac);
         }
-        //{
-        //    // 杭断面オブジェクト生成（MPhi と同様）
-        //    var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-        //    var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-        //    var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-        //    var wpf = PlotNQ;
-        //    if (wpf is null) return;
-        //    wpf.Plot.Clear();
-
-
-        //    // MonQd は ViewModel のプロパティ（1.0..3.0 にクランプ済み）
-        //    double monQd = MonQd;
-        //    double pw = PileSection.HoopPw;
-        //    double sigmaWy = PileSection.HoopSigmay;
-
-        //    // 非低減（isFactored = false）と低減（isFactored = true）の2本を描画
-        //    var (qsServiceUnfactored, nsServiceUnfactored) = section.GetServiceLimitQNInteraction(monQd, false);
-        //    var (qsServiceFactored, nsServiceFactored) = section.GetServiceLimitQNInteraction(monQd, true);
-
-        //    // 損傷限界（level=1 を表示）: 非低減 / 低減
-        //    var (qsDamageUnfactored, nsDamageUnfactored) = section.GetDamageLimitQNInteraction(monQd, false, SeismicLevel);
-        //    var (qsDamageFactored, nsDamageFactored) = section.GetDamageLimitQNInteraction(monQd, true, SeismicLevel);
-
-        //    // 安全限界: pw=0.002, σwy=295 を既定値として取得（非低減 / 低減）
-        //    var (qsUltimateUnfactored, nsUltimateUnfactored) = section.GetUltimateQNInteraction(monQd, pw, sigmaWy, false);
-        //    var (qsUltimateFactored, nsUltimateFactored) = section.GetUltimateQNInteraction(monQd, pw, sigmaWy, true);
-
-        //    // ヘルパ: プロット（N[ N ] -> kN, Q[ N ] -> kN）
-        //    void TryPlot(List<double> nsList, List<double> qsList, string legend, bool dashed = false, double lineWidth = 1.5)
-        //    {
-        //        if (nsList == null || qsList == null) return;
-        //        if (nsList.Count == 0 || nsList.Count != qsList.Count) return;
-
-        //        // 凡例表示用フォントを検出して設定（日本語対応）
-        //        string detectedFont = Fonts.Detect(legend ?? "メイリオ");
-        //        wpf.Plot.Legend.FontName = detectedFont;
-
-        //        double[] xs = [.. nsList.Select(x => x * 1e-3)];
-        //        double[] ys = [.. qsList.Select(q => q * 1e-3)];
-        //        var scatter = wpf.Plot.Add.Scatter(xs, ys);
-        //        scatter.LegendText = legend;
-        //        scatter.LineWidth = (float)lineWidth;
-        //        scatter.MarkerSize = 0;
-        //        if (dashed)
-        //        {
-        //            // ScottPlot のバージョン差を考慮し安全に破線指定
-        //            scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; 
-        //        }
-        //    }
-
-        //    // プロット順：使用限界・損傷限界・安全限界（それぞれ低減前/後）
-        //    TryPlot(nsServiceUnfactored, qsServiceUnfactored, "(低減前) 使用限界 Q-N", true, 2);
-        //    TryPlot(nsServiceFactored, qsServiceFactored, "(低減後) 使用限界 Q-N", false, 2);
-
-        //    TryPlot(nsDamageUnfactored, qsDamageUnfactored, "(低減前) 損傷限界 Q-N", true, 1.5);
-        //    TryPlot(nsDamageFactored, qsDamageFactored, "(低減後) 損傷限界 Q-N", false, 1.5);
-
-        //    TryPlot(nsUltimateUnfactored, qsUltimateUnfactored, "(低減前) 安全限界 Q-N", true, 1.5);
-        //    TryPlot(nsUltimateFactored, qsUltimateFactored, "(低減後) 安全限界 Q-N", false, 1.5);
-
-        //    // 軸ラベル等
-        //    wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
-        //    wpf.Plot.Axes.Left.Label.Text = "Q (kN)";
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Plot.Axes.Left.Min = 0.0; // 追加: Y軸の最小値を0に固定
-        //    wpf.Refresh();
-
-        //    // クロスヘア初期化
-        //    MyCrosshair_NQ = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NQ", "N(kN)", "Q(kN)", 1, 1);
-        //}
 
         // 場所打ち鉄筋コンクリート杭せん断力
         private void DrawInsituSteelPipeReinforcedConcretePile_NQ(double nMin, double nMax, int nDiv)
@@ -561,75 +480,6 @@ namespace PileDesign.ViewModels
 
             PlotNQCurves(svcUnf, svcFac, dmgUnf, dmgFac, ultUnf, ultFac);
         }
-        //{
-        //    // 杭断面オブジェクト生成（MPhi と同様）
-        //    var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-        //    var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-        //    var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-        //    var pileSection = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-
-        //    var wpf = PlotNQ;
-        //    if (wpf is null) return;
-        //    wpf.Plot.Clear();
-
-        //    // 非低減（isFactored = false）と低減（isFactored = true）の2本を描画
-        //    var (qsServiceUnfactored, nsServiceUnfactored) = pileSection.GetServiceLimitQNInteraction();
-        //    var (qsServiceFactored, nsServiceFactored) = pileSection.GetServiceLimitQNInteraction();
-
-        //    // 損傷限界（level=1 を表示）: 非低減 / 低減
-        //    var (qsDamageUnfactored, nsDamageUnfactored) = pileSection.GetDamageLimitQNInteraction();
-        //    var (qsDamageFactored, nsDamageFactored) = pileSection.GetDamageLimitQNInteraction();
-
-        //    // 安全限界: pw=0.002, σwy=295 を既定値として取得（非低減 / 低減）
-        //    var (qsUltimateUnfactored, nsUltimateUnfactored) = pileSection.GetUltimateQNInteraction();
-        //    var (qsUltimateFactored, nsUltimateFactored) = pileSection.GetUltimateQNInteraction();
-
-        //    // ヘルパ: プロット（N[ N ] -> kN, Q[ N ] -> kN）
-        //    void TryPlot(List<double> nsList, List<double> qsList, string legend, bool dashed = false, double lineWidth = 1.5)
-        //    {
-        //        if (nsList == null || qsList == null) return;
-        //        if (nsList.Count == 0 || nsList.Count != qsList.Count) return;
-
-        //        // 凡例表示用フォントを検出して設定（日本語対応）
-        //        string detectedFont = Fonts.Detect(legend ?? "メイリオ");
-        //        wpf.Plot.Legend.FontName = detectedFont;
-
-        //        double[] xs = [.. nsList.Select(x => x * 1e-3)];
-        //        double[] ys = [.. qsList.Select(q => q * 1e-3)];
-        //        var scatter = wpf.Plot.Add.Scatter(xs, ys);
-        //        scatter.LegendText = legend;
-        //        scatter.LineWidth = (float)lineWidth;
-        //        scatter.MarkerSize = 0;
-        //        if (dashed)
-        //        {
-        //            // ScottPlot のバージョン差を考慮し安全に破線指定
-        //            //try { scatter.LineStyle = ScottPlot.LineStyle.Pattern.Dashed; } catch { try { scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; } catch { } }
-        //        }
-        //    }
-
-        //    // プロット順：使用限界・損傷限界・安全限界（それぞれ低減前/後）
-        //    TryPlot(nsServiceUnfactored, qsServiceUnfactored, "(低減前) 使用限界 Q-N", true, 2);
-        //    TryPlot(nsServiceFactored, qsServiceFactored, "(低減後) 使用限界 Q-N", false, 2);
-
-        //    TryPlot(nsDamageUnfactored, qsDamageUnfactored, "(低減前) 損傷限界 Q-N", true, 1.5);
-        //    TryPlot(nsDamageFactored, qsDamageFactored, "(低減後) 損傷限界 Q-N", false, 1.5);
-
-        //    TryPlot(nsUltimateUnfactored, qsUltimateUnfactored, "(低減前) 安全限界 Q-N", true, 1.5);
-        //    TryPlot(nsUltimateFactored, qsUltimateFactored, "(低減後) 安全限界 Q-N", false, 1.5);
-
-        //    // 軸ラベル等
-        //    wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
-        //    wpf.Plot.Axes.Left.Label.Text = "Q (kN)";
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Plot.Axes.Left.Min = 0.0; // 追加: Y軸の最小値を0に固定
-        //    wpf.Refresh();
-
-        //    // クロスヘア初期化
-        //    MyCrosshair_NQ = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NQ", "N(kN)", "Q(kN)", 1, 1);
-        //}
-
 
         // PHC杭せん断力
         private void DrawPHC_NQ(double nMin, double nMax, int nDiv)
@@ -651,80 +501,6 @@ namespace PileDesign.ViewModels
 
             PlotNQCurves(svcUnf, svcFac, dmgUnf, dmgFac, ultUnf, ultFac);
         }
-        //{
-        //    // 杭断面オブジェクト生成（MPhi と同様）
-        //    var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-        //    var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-        //    var pileSection = new PHCSection(precastConcrete, tendons, PileSection.Prestress);
-
-        //    var wpf = PlotNQ;
-        //    if (wpf is null) return;
-        //    wpf.Plot.Clear();
-
-
-        //    // MonQd は ViewModel のプロパティ（1.0..3.0 にクランプ済み）
-        //    double monQd = MonQd;
-        //    double pw = PileSection.HoopPw;
-        //    double sigmaWy = PileSection.HoopSigmay;
-
-        //    // 非低減（isFactored = false）と低減（isFactored = true）の2本を描画
-        //    var (qsServiceUnfactored, nsServiceUnfactored) = pileSection.GetServiceLimitQNInteraction(monQd, false);
-        //    var (qsServiceFactored, nsServiceFactored) = pileSection.GetServiceLimitQNInteraction(monQd, true);
-
-        //    // 損傷限界（level=1 を表示）: 非低減 / 低減
-        //    var (qsDamageUnfactored, nsDamageUnfactored) = pileSection.GetDamageLimitQNInteraction(monQd, false, SeismicLevel);
-        //    var (qsDamageFactored, nsDamageFactored) = pileSection.GetDamageLimitQNInteraction(monQd, true, SeismicLevel);
-
-        //    // 安全限界: pw=0.002, σwy=295 を既定値として取得（非低減 / 低減）
-        //    var (qsUltimateUnfactored, nsUltimateUnfactored) = pileSection.GetUltimateQNInteraction(monQd, false);
-        //    var (qsUltimateFactored, nsUltimateFactored) = pileSection.GetUltimateQNInteraction(monQd, true);
-
-        //    // ヘルパ: プロット（N[ N ] -> kN, Q[ N ] -> kN）
-        //    void TryPlot(List<double> nsList, List<double> qsList, string legend, bool dashed = false, double lineWidth = 1.5)
-        //    {
-        //        if (nsList == null || qsList == null) return;
-        //        if (nsList.Count == 0 || nsList.Count != qsList.Count) return;
-
-        //        // 凡例表示用フォントを検出して設定（日本語対応）
-        //        string detectedFont = Fonts.Detect(legend ?? "メイリオ");
-        //        wpf.Plot.Legend.FontName = detectedFont;
-
-        //        double[] xs = [.. nsList.Select(x => x * 1e-3)];
-        //        double[] ys = [.. qsList.Select(q => q * 1e-3)];
-        //        var scatter = wpf.Plot.Add.Scatter(xs, ys);
-        //        scatter.LegendText = legend;
-        //        scatter.LineWidth = (float)lineWidth;
-        //        scatter.MarkerSize = 0;
-        //        if (dashed)
-        //        {
-        //            // ScottPlot のバージョン差を考慮し安全に破線指定
-        //            scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
-        //        }
-        //    }
-
-        //    // プロット順：使用限界・損傷限界・安全限界（それぞれ低減前/後）
-        //    TryPlot(nsServiceUnfactored, qsServiceUnfactored, "(低減前) 使用限界 Q-N", true, 2);
-        //    TryPlot(nsServiceFactored, qsServiceFactored, "(低減後) 使用限界 Q-N", false, 2);
-
-        //    TryPlot(nsDamageUnfactored, qsDamageUnfactored, "(低減前) 損傷限界 Q-N", true, 1.5);
-        //    TryPlot(nsDamageFactored, qsDamageFactored, "(低減後) 損傷限界 Q-N", false, 1.5);
-
-        //    TryPlot(nsUltimateUnfactored, qsUltimateUnfactored, "(低減前) 安全限界 Q-N", true, 1.5);
-        //    TryPlot(nsUltimateFactored, qsUltimateFactored, "(低減後) 安全限界 Q-N", false, 1.5);
-
-        //    // 軸ラベル等
-        //    wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
-        //    wpf.Plot.Axes.Left.Label.Text = "Q (kN)";
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Plot.Axes.Left.Min = 0.0; // 追加: Y軸の最小値を0に固定
-        //    wpf.Refresh();
-
-        //    // クロスヘア初期化
-        //    MyCrosshair_NQ = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NQ", "N(kN)", "Q(kN)", 1, 1);
-        //}
-
 
         // PRC杭せん断力
         private void DrawPRC_NQ(double nMin, double nMax, int nDiv)
@@ -747,81 +523,8 @@ namespace PileDesign.ViewModels
 
             PlotNQCurves(svcUnf, svcFac, dmgUnf, dmgFac, ultUnf, ultFac);
         }
-        //{
-        //    // 杭断面オブジェクト生成（MPhi と同様）
-        //    var precastConcrete = new PrecastPRCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-        //    var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-        //    var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-        //    var pileSection = new PRCSection(precastConcrete, mainBars, tendons, PileSection.Prestress);
 
-        //    var wpf = PlotNQ;
-        //    if (wpf is null) return;
-        //    wpf.Plot.Clear();
-
-        //    // MonQd は ViewModel のプロパティ（1.0..3.0 にクランプ済み）
-        //    double monQd = MonQd;
-        //    double pw = PileSection.HoopPw;
-        //    double sigmaWy = PileSection.HoopSigmay;
-
-        //    // 非低減（isFactored = false）と低減（isFactored = true）の2本を描画
-        //    var (qsServiceUnfactored, nsServiceUnfactored) = pileSection.GetServiceLimitQNInteraction(monQd, false);
-        //    var (qsServiceFactored, nsServiceFactored) = pileSection.GetServiceLimitQNInteraction(monQd, true);
-
-        //    // 損傷限界（level=1 を表示）: 非低減 / 低減
-        //    var (qsDamageUnfactored, nsDamageUnfactored) = pileSection.GetDamageLimitQNInteraction(monQd, false, SeismicLevel);
-        //    var (qsDamageFactored, nsDamageFactored) = pileSection.GetDamageLimitQNInteraction(monQd, true, SeismicLevel);
-
-        //    // 安全限界: pw=0.002, σwy=295 を既定値として取得（非低減 / 低減）
-        //    var (qsUltimateUnfactored, nsUltimateUnfactored) = pileSection.GetUltimateQNInteraction(monQd, false);
-        //    var (qsUltimateFactored, nsUltimateFactored) = pileSection.GetUltimateQNInteraction(monQd, true);
-
-        //    // ヘルパ: プロット（N[ N ] -> kN, Q[ N ] -> kN）
-        //    void TryPlot(List<double> nsList, List<double> qsList, string legend, bool dashed = false, double lineWidth = 1.5)
-        //    {
-        //        if (nsList == null || qsList == null) return;
-        //        if (nsList.Count == 0 || nsList.Count != qsList.Count) return;
-
-        //        // 凡例表示用フォントを検出して設定（日本語対応）
-        //        string detectedFont = Fonts.Detect(legend ?? "メイリオ");
-        //        wpf.Plot.Legend.FontName = detectedFont;
-
-        //        double[] xs = [.. nsList.Select(x => x * 1e-3)];
-        //        double[] ys = [.. qsList.Select(q => q * 1e-3)];
-        //        var scatter = wpf.Plot.Add.Scatter(xs, ys);
-        //        scatter.LegendText = legend;
-        //        scatter.LineWidth = (float)lineWidth;
-        //        scatter.MarkerSize = 0;
-        //        if (dashed)
-        //        {
-        //            // ScottPlot のバージョン差を考慮し安全に破線指定
-        //            scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
-        //        }
-        //    }
-
-        //    // プロット順：使用限界・損傷限界・安全限界（それぞれ低減前/後）
-        //    TryPlot(nsServiceUnfactored, qsServiceUnfactored, "(低減前) 使用限界 Q-N", true, 2);
-        //    TryPlot(nsServiceFactored, qsServiceFactored, "(低減後) 使用限界 Q-N", false, 2);
-
-        //    TryPlot(nsDamageUnfactored, qsDamageUnfactored, "(低減前) 損傷限界 Q-N", true, 1.5);
-        //    TryPlot(nsDamageFactored, qsDamageFactored, "(低減後) 損傷限界 Q-N", false, 1.5);
-
-        //    TryPlot(nsUltimateUnfactored, qsUltimateUnfactored, "(低減前) 安全限界 Q-N", true, 1.5);
-        //    TryPlot(nsUltimateFactored, qsUltimateFactored, "(低減後) 安全限界 Q-N", false, 1.5);
-
-        //    // 軸ラベル等
-        //    wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
-        //    wpf.Plot.Axes.Left.Label.Text = "Q (kN)";
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Plot.Axes.Left.Min = 0.0; // 追加: Y軸の最小値を0に固定
-        //    wpf.Refresh();
-
-        //    // クロスヘア初期化
-        //    MyCrosshair_NQ = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NQ", "N(kN)", "Q(kN)", 1, 1);
-        //}
-
-        // PRC杭せん断力
+        // SC杭せん断力
         private void DrawSC_NQ(double nMin, double nMax, int nDiv)
         {
             var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
@@ -841,78 +544,6 @@ namespace PileDesign.ViewModels
 
             PlotNQCurves(svcUnf, svcFac, dmgUnf, dmgFac, ultUnf, ultFac);
         }
-        //{
-        //    // 杭断面オブジェクト生成（MPhi と同様）
-        //    var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-        //    var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-        //    var pileSection = new SCSection(precastConcrete, steelPipe);
-
-        //    var wpf = PlotNQ;
-        //    if (wpf is null) return;
-        //    wpf.Plot.Clear();
-
-        //    // MonQd は ViewModel のプロパティ（1.0..3.0 にクランプ済み）
-        //    double monQd = MonQd;
-        //    double pw = PileSection.HoopPw;
-        //    double sigmaWy = PileSection.HoopSigmay;
-
-        //    // 非低減（isFactored = false）と低減（isFactored = true）の2本を描画
-        //    var (qsServiceUnfactored, nsServiceUnfactored) = pileSection.GetServiceLimitQNInteraction(monQd, false);
-        //    var (qsServiceFactored, nsServiceFactored) = pileSection.GetServiceLimitQNInteraction(monQd, true);
-
-        //    // 損傷限界（level=1 を表示）: 非低減 / 低減
-        //    var (qsDamageUnfactored, nsDamageUnfactored) = pileSection.GetDamageLimitQNInteraction(monQd, false, SeismicLevel);
-        //    var (qsDamageFactored, nsDamageFactored) = pileSection.GetDamageLimitQNInteraction(monQd, true, SeismicLevel);
-
-        //    // 安全限界: pw=0.002, σwy=295 を既定値として取得（非低減 / 低減）
-        //    var (qsUltimateUnfactored, nsUltimateUnfactored) = pileSection.GetUltimateQNInteraction(monQd, false);
-        //    var (qsUltimateFactored, nsUltimateFactored) = pileSection.GetUltimateQNInteraction(monQd, true);
-
-        //    // ヘルパ: プロット（N[ N ] -> kN, Q[ N ] -> kN）
-        //    void TryPlot(List<double> nsList, List<double> qsList, string legend, bool dashed = false, double lineWidth = 1.5)
-        //    {
-        //        if (nsList == null || qsList == null) return;
-        //        if (nsList.Count == 0 || nsList.Count != qsList.Count) return;
-
-        //        // 凡例表示用フォントを検出して設定（日本語対応）
-        //        string detectedFont = Fonts.Detect(legend ?? "メイリオ");
-        //        wpf.Plot.Legend.FontName = detectedFont;
-
-        //        double[] xs = [.. nsList.Select(x => x * 1e-3)];
-        //        double[] ys = [.. qsList.Select(q => q * 1e-3)];
-        //        var scatter = wpf.Plot.Add.Scatter(xs, ys);
-        //        scatter.LegendText = legend;
-        //        scatter.LineWidth = (float)lineWidth;
-        //        scatter.MarkerSize = 0;
-        //        if (dashed)
-        //        {
-        //            // ScottPlot のバージョン差を考慮し安全に破線指定
-        //            scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
-        //        }
-        //    }
-
-        //    // プロット順：使用限界・損傷限界・安全限界（それぞれ低減前/後）
-        //    TryPlot(nsServiceUnfactored, qsServiceUnfactored, "(低減前) 使用限界 Q-N", true, 2);
-        //    TryPlot(nsServiceFactored, qsServiceFactored, "(低減後) 使用限界 Q-N", false, 2);
-
-        //    TryPlot(nsDamageUnfactored, qsDamageUnfactored, "(低減前) 損傷限界 Q-N", true, 1.5);
-        //    TryPlot(nsDamageFactored, qsDamageFactored, "(低減後) 損傷限界 Q-N", false, 1.5);
-
-        //    TryPlot(nsUltimateUnfactored, qsUltimateUnfactored, "(低減前) 安全限界 Q-N", true, 1.5);
-        //    TryPlot(nsUltimateFactored, qsUltimateFactored, "(低減後) 安全限界 Q-N", false, 1.5);
-
-        //    // 軸ラベル等
-        //    wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
-        //    wpf.Plot.Axes.Left.Label.Text = "Q (kN)";
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Plot.Axes.Left.Min = 0.0; // 追加: Y軸の最小値を0に固定
-        //    wpf.Refresh();
-
-        //    // クロスヘア初期化
-        //    MyCrosshair_NQ = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_NQ", "N(kN)", "Q(kN)", 1, 1);
-        //}
 
         // 共通: M-φ 曲線を描画するヘルパー
         private void PlotMPhiCurves(
@@ -1072,94 +703,6 @@ namespace PileDesign.ViewModels
                 n => n / section.Ae <= 0.25 * insituConcrete.Gsi * insituConcrete.Fc,
                 notDefinedMessageIfNull: null);
         }
-        //{
-        //    // 杭断面オブジェクト生成
-        //    var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-        //    var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-        //    var pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-        //    nMin *= 1000;
-        //    nMax *= 1000;
-        //    // Ntarget範囲を分割
-        //    var nTargets = Enumerable.Range(0, nDiv + 1)
-        //        .Select(i => nMin + (nMax - nMin) * i / nDiv)
-        //        .ToList();
-
-        //    var wpf = PileSectionWindowInstance.wpfPlotMphi;
-        //    wpf.Plot.Clear();
-
-        //    foreach (var n in nTargets)
-        //    {
-        //        var (phis, Ms) = pileSection.GetMPhiRelationship(n);
-        //        // 単位変換（例：M[kNm], φ[1/m]）
-        //        var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
-
-        //        var phis_1_m = phis.ToArray();
-
-        //        var scatter = wpf.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-        //        scatter.LegendText = $"N={(n * 0.001):N0}kN";
-        //        scatter.LineWidth = 2;
-        //    }
-
-        //    string wpfTitle = "M-φ関係";
-        //    wpf.Plot.Axes.Title.Label.Text = wpfTitle;
-        //    wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpfTitle);
-
-        //    string wpfXLabel = "曲率 φ [1/mm]";
-        //    wpf.Plot.Axes.Bottom.Label.Text = wpfXLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpfXLabel);
-
-        //    string wpfYLabel = "曲げモーメント M [kNm]";
-        //    wpf.Plot.Axes.Left.Label.Text = wpfYLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpfYLabel);
-
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Refresh();
-
-        //    // クロスヘアの初期化
-        //    MyCrosshair_Mphi = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/m)", "M(kNm)", 1, 1);
-
-
-        //    var wpf_Mtheta = PileSectionWindowInstance.wpfPlotMtheta;
-        //    wpf_Mtheta.Plot.Clear();
-
-        //    foreach (var n in nTargets)
-        //    {
-        //        if (n / pileSection.Ae <= 0.25 * insituConcrete.Gsi * insituConcrete.Fc)
-        //        {
-        //            var (thetas, Ms) = pileSection.GetMThetaRelationship(n);
-        //            // 単位変換（例：M[kNm], φ[1/m]）
-        //            var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
-        //            var phis_1_m = thetas.ToArray();
-
-        //            var scatter = wpf_Mtheta.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-        //            scatter.LegendText = $"N={(n * 0.001):N0}kN";
-        //            scatter.LineWidth = 2;
-        //        }
-        //    }
-
-        //    string wpf_MthetaTitle = "M-θ関係";
-        //    wpf_Mtheta.Plot.Axes.Title.Label.Text = wpf_MthetaTitle;
-        //    wpf_Mtheta.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpf_MthetaTitle);
-
-        //    string wpf_MthetafXLabel = "回転角 θ [rad]";
-        //    wpf_Mtheta.Plot.Axes.Bottom.Label.Text = wpf_MthetafXLabel;
-        //    wpf_Mtheta.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpf_MthetafXLabel);
-
-        //    string wpf_MthetaYLabel = "曲げモーメント M [kNm]";
-        //    wpf_Mtheta.Plot.Axes.Left.Label.Text = wpf_MthetaYLabel;
-        //    wpf_Mtheta.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpf_MthetaYLabel);
-
-        //    wpf_Mtheta.Plot.Legend.IsVisible = true;
-        //    wpf_Mtheta.Plot.Axes.AutoScale();
-        //    wpf_Mtheta.Refresh();
-
-        //    // クロスヘアの初期化
-        //    MyCrosshair_Mtheta = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf_Mtheta.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mtheta", "θ(rad)", "M(kNm)", 1, 1);
-        //}
 
         // 場所打ち鋼管コンクリート杭
         private void DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
@@ -1191,72 +734,6 @@ namespace PileDesign.ViewModels
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "場所打ち鋼管コンクリート杭の曲げモーメント-回転角関係の定義はありません");
         }
-        //{
-        //    var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-        //    var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
-        //    var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-        //    var pileSection = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-
-        //    // Ntarget範囲を分割
-        //    var nTargets = Enumerable.Range(0, nDiv + 1)
-        //        .Select(i => nMin + (nMax - nMin) * i / nDiv)
-        //        .ToList();
-
-        //    var wpf = PileSectionWindowInstance.wpfPlotMphi;
-        //    wpf.Plot.Clear();
-
-        //    foreach (var n in nTargets)
-        //    {
-        //        // 杭頭のMφ
-        //        var (phis, Ms) = pileSection.GetMPhiRelationship(n);
-        //        // 単位変換（例：M[kNm], φ[1/m]）
-        //        var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
-        //        var phis_1_m = phis.ToArray();
-
-        //        //杭中間部のφ
-        //        double beta1 = 1.0;
-        //        List<double> phisMiddle = [phis[0], phis[1], phis[2]];
-        //        phisMiddle.Add(phis[1] + (phis[2] - phis[1]) * (beta1 * Ms[3] - Ms[1]) / (Ms[2] - Ms[1]));
-        //        var phisMiddle_1_m = phisMiddle.ToArray();
-
-        //        var scatter = wpf.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-        //        scatter.LegendText = $"杭頭部 N={(n * 0.001):N0}kN";
-        //        wpf.Plot.Legend.FontName = Fonts.Detect(scatter.LegendText); // フォント名
-        //        scatter.LineWidth = 2;
-
-        //        var scatterMiddle = wpf.Plot.Add.Scatter(phisMiddle_1_m, Ms_kNm);
-        //        scatterMiddle.LegendText = $"杭中間部 N={(n * 0.001):N0}kN";
-        //        scatterMiddle.LineWidth = 2;
-        //        scatterMiddle.Color = scatter.Color; // 杭頭部と同じ色
-        //        scatterMiddle.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; // 破線
-        //    }
-
-        //    string wpfTitle = "M-φ関係";
-        //    wpf.Plot.Axes.Title.Label.Text = wpfTitle;
-        //    wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpfTitle);
-
-        //    string wpfXLabel = "曲率 φ [1/mm]";
-        //    wpf.Plot.Axes.Bottom.Label.Text = wpfXLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpfXLabel);
-
-        //    string wpfYLabel = "曲げモーメント M [kNm]";
-        //    wpf.Plot.Axes.Left.Label.Text = wpfYLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpfYLabel);
-
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Refresh();
-
-        //    // クロスヘアの初期化
-        //    MyCrosshair_Mphi = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/m)", "M(kNm)", 1, 1);
-
-        //    var wpf_Mtheta = PileSectionWindowInstance.wpfPlotMtheta;
-        //    wpf_Mtheta.Plot.Clear();
-        //    wpf_Mtheta.Plot.Axes.Title.Label.Text = "場所打ち鋼管コンクリート杭の曲げモーメント-回転角関係の定義はありません";
-        //    wpf_Mtheta.Plot.Axes.Title.Label.FontName = Fonts.Detect("適用なし");
-        //    wpf_Mtheta.Refresh();
-        //}
 
         // PHC杭
         private void DrawPHC_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
@@ -1274,58 +751,6 @@ namespace PileDesign.ViewModels
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "PHC杭の曲げモーメント-回転角関係の定義はありません");
         }
-        //{
-        //    // 杭断面オブジェクト生成
-        //    var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-        //    var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-        //    var pileSection = new PHCSection(precastConcrete, tendons, PileSection.Prestress);
-
-        //    // Ntarget範囲を分割
-        //    var nTargets = Enumerable.Range(0, nDiv + 1)
-        //        .Select(i => nMin + (nMax - nMin) * i / nDiv)
-        //        .ToList();
-
-        //    var wpf = PileSectionWindowInstance.wpfPlotMphi;
-        //    wpf.Plot.Clear();
-
-        //    foreach (var n in nTargets)
-        //    {
-        //        var (phis, Ms) = pileSection.GetMPhiRelationship(n);
-        //        // 単位変換（例：M[kNm], φ[1/m]）
-        //        var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
-        //        var phis_1_m = phis.ToArray();
-
-        //        var scatter = wpf.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-        //        scatter.LegendText = $"N={(n * 0.001):N0}kN";
-        //        scatter.LineWidth = 2;
-        //    }
-
-        //    string wpfTitle = "M-φ関係";
-        //    wpf.Plot.Axes.Title.Label.Text = wpfTitle;
-        //    wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpfTitle);
-
-        //    string wpfXLabel = "曲率 φ [1/mm]";
-        //    wpf.Plot.Axes.Bottom.Label.Text = wpfXLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpfXLabel);
-
-        //    string wpfYLabel = "曲げモーメント M [kNm]";
-        //    wpf.Plot.Axes.Left.Label.Text = wpfYLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpfYLabel);
-
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Refresh();
-
-        //    // クロスヘアの初期化
-        //    MyCrosshair_Mphi = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/m)", "M(kNm)", 1, 1);
-
-        //    var wpf_Mtheta = PileSectionWindowInstance.wpfPlotMtheta;
-        //    wpf_Mtheta.Plot.Clear();
-        //    wpf_Mtheta.Plot.Axes.Title.Label.Text = "PHC杭の曲げモーメント-回転角関係の定義はありません";
-        //    wpf_Mtheta.Plot.Axes.Title.Label.FontName = Fonts.Detect("適用なし");
-        //    wpf_Mtheta.Refresh();
-        //}
 
         // PRC杭
         private void DrawPRC_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
@@ -1348,64 +773,6 @@ namespace PileDesign.ViewModels
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "PRC杭の曲げモーメント-回転角関係の定義はありません");
         }
-        //{
-        //    if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.MainBarSize == null)
-        //    {
-        //        Console.WriteLine("Invalid MainBars properties. Skipping graph generation.");
-        //        return;
-        //    }
-        //    // 杭断面オブジェクト生成
-        //    var precastConcrete = new PrecastPRCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-        //    var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
-        //    var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
-        //    var pileSection = new PRCSection(precastConcrete, mainBars, tendons, PileSection.Prestress);
-
-        //    // Ntarget範囲を分割
-        //    var nTargets = Enumerable.Range(0, nDiv + 1)
-        //        .Select(i => nMin + (nMax - nMin) * i / nDiv)
-        //        .ToList();
-
-        //    var wpf = PileSectionWindowInstance.wpfPlotMphi;
-        //    wpf.Plot.Clear();
-
-        //    foreach (var n in nTargets)
-        //    {
-        //        var (phis, Ms) = pileSection.GetMPhiRelationship(n);
-        //        // 単位変換（例：M[kNm], φ[1/m]）
-        //        var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
-        //        var phis_1_m = phis.ToArray();
-
-        //        var scatter = wpf.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-        //        scatter.LegendText = $"N={(n * 0.001):N0}kN";
-        //        scatter.LineWidth = 2;
-        //    }
-
-        //    string wpfTitle = "M-φ関係";
-        //    wpf.Plot.Axes.Title.Label.Text = wpfTitle;
-        //    wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpfTitle);
-
-        //    string wpfXLabel = "曲率 φ [1/mm]";
-        //    wpf.Plot.Axes.Bottom.Label.Text = wpfXLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpfXLabel);
-
-        //    string wpfYLabel = "曲げモーメント M [kNm]";
-        //    wpf.Plot.Axes.Left.Label.Text = wpfYLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpfYLabel);
-
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Refresh();
-
-        //    // クロスヘアの初期化
-        //    MyCrosshair_Mphi = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/m)", "M(kNm)", 1, 1);
-
-        //    var wpf_Mtheta = PileSectionWindowInstance.wpfPlotMtheta;
-        //    wpf_Mtheta.Plot.Clear();
-        //    wpf_Mtheta.Plot.Axes.Title.Label.Text = "PRC杭の曲げモーメント-回転角関係の定義はありません";
-        //    wpf_Mtheta.Plot.Axes.Title.Label.FontName = Fonts.Detect("適用なし");
-        //    wpf_Mtheta.Refresh();
-        //}
 
         // SC杭
         private void DrawSC_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
@@ -1421,58 +788,6 @@ namespace PileDesign.ViewModels
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
                 notDefinedMessageIfNull: "SC杭の曲げモーメント-回転角関係の定義はありません");
         }
-        //{
-        //    // 杭断面オブジェクト生成
-        //    var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
-        //    var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
-
-        //    var pileSection = new SCSection(precastConcrete, steelPipe);
-        //    // Ntarget範囲を分割
-        //    var nTargets = Enumerable.Range(0, nDiv + 1)
-        //        .Select(i => nMin + (nMax - nMin) * i / nDiv)
-        //        .ToList();
-
-        //    var wpf = PileSectionWindowInstance.wpfPlotMphi;
-        //    wpf.Plot.Clear();
-
-        //    foreach (var n in nTargets)
-        //    {
-        //        var (phis, Ms) = pileSection.GetMPhiRelationship(n);
-        //        // 単位変換（例：M[kNm], φ[1/m]）
-        //        var Ms_kNm = Ms.Select(m => m * 1e-6).ToArray();
-        //        var phis_1_m = phis.ToArray();
-
-        //        var scatter = wpf.Plot.Add.Scatter(phis_1_m, Ms_kNm);
-        //        scatter.LegendText = $"N={(n * 0.001):N0}kN";
-        //        scatter.LineWidth = 2;
-        //    }
-
-        //    string wpfTitle = "M-φ関係";
-        //    wpf.Plot.Axes.Title.Label.Text = wpfTitle;
-        //    wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpfTitle);
-
-        //    string wpfXLabel = "曲率 φ [1/mm]";
-        //    wpf.Plot.Axes.Bottom.Label.Text = wpfXLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpfXLabel);
-
-        //    string wpfYLabel = "曲げモーメント M [kNm]";
-        //    wpf.Plot.Axes.Left.Label.Text = wpfYLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpfYLabel);
-
-        //    wpf.Plot.Legend.IsVisible = true;
-        //    wpf.Plot.Axes.AutoScale();
-        //    wpf.Refresh();
-
-        //    // クロスヘアの初期化
-        //    MyCrosshair_Mphi = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-        //    wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Mphi", "φ(1/m)", "M(kNm)", 1, 1);
-
-        //    var wpf_Mtheta = PileSectionWindowInstance.wpfPlotMtheta;
-        //    wpf_Mtheta.Plot.Clear();
-        //    wpf_Mtheta.Plot.Axes.Title.Label.Text = "SC杭の曲げモーメント-回転角関係の定義はありません";
-        //    wpf_Mtheta.Plot.Axes.Title.Label.FontName = Fonts.Detect("適用なし");
-        //    wpf_Mtheta.Refresh();
-        //}
 
         private void UpdateSeries(string title, List<double> nValues, List<double> mValues/*, ref double maxN, ref double minN*/)
         {

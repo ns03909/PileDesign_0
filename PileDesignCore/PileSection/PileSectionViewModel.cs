@@ -194,7 +194,7 @@ namespace PileDesignCore
             {
                 if (SetProperty(ref _concreteFc, value))
                 {
-                    //RecalculateConcreteE();
+                    RecalculateConcreteE();
                 }
             }
         }
@@ -549,7 +549,7 @@ namespace PileDesignCore
             {
                 if (SetProperty(ref _pipeDia, value))
                 {
-                    //RecalculatePileDia();
+                    RecalculatePileDia();
                 }               
             }
         }
@@ -563,7 +563,7 @@ namespace PileDesignCore
             {
                 if (SetProperty(ref _pipeTs, value))
                 {
-                    //RecalculatePileDia();
+                    RecalculatePileDia();
                 }
             }
         }
@@ -649,221 +649,30 @@ namespace PileDesignCore
             set => SetProperty(ref _ze, value);
         }
 
-        //チャート関連()
-        //[NonSerialized]
-        //public Chart Chart1;
-        //[NonSerialized]
-        //ChartArea Chartarea1;
-        //[NonSerialized]
-        //System.Windows.Forms.DataVisualization.Charting.Series SeriesService;
-        //[NonSerialized]
-        //System.Windows.Forms.DataVisualization.Charting.Series SeriesDamage;
-        //[NonSerialized]
-        //System.Windows.Forms.DataVisualization.Charting.Series SeriesUltimate;
-        //[NonSerialized]
-        //System.Windows.Forms.DataVisualization.Charting.Series SeriesFactoredService;
-        //[NonSerialized]
-        //System.Windows.Forms.DataVisualization.Charting.Series SeriesFactoredDamage;
-        //[NonSerialized]
-        //System.Windows.Forms.DataVisualization.Charting.Series SeriesFactoredUltimate;
-
         // コンストラクタ
         public PileSectionViewModel()
         {
             RecalculatePileDia();
             RecalculateConcreteE();
 
-            //var steelPipeLoader = new SteelPipePileLoader();
             steelPipePiles = steelPipeLoader.LoadFromCsv(@"..\..\PileLibrary\pile_library_SteelPile.csv");
+            SteelPipeOption = steelPipePiles.ToObservableStringCollection(p => $"{p.Diameter}x{p.Thickness}");
 
-            foreach (var pipe in steelPipePiles)
-            {
-                SteelPipeOption.Add($"{pipe.Diameter}x{pipe.Thickness}");
-            }
-
-            //var precastPileLoader = new PrecastPileLoader();
             PHCs = precastPileLoader.LoadFromCsv(@"..\..\PileLibrary\pile_library_PHC.csv");
-
-            foreach (var pipe in PHCs)
-            {
-                PHCOption.Add($"{pipe.Name}");
-            }
+            PHCOption = PHCs.ToObservableStringCollection(p => p.Name);
 
             PRCs = precastPileLoader.LoadFromCsv(@"..\..\PileLibrary\pile_library_PRC.csv");
-
-            foreach (var pipe in PRCs)
-            {
-                PRCOption.Add($"{pipe.Name}");
-            }
+            PRCOption = PRCs.ToObservableStringCollection(p => p.Name);
 
             SCs = precastPileLoader.LoadFromCsv(@"..\..\PileLibrary\pile_library_SC.csv");
+            SCOption = SCs.ToObservableStringCollection(p => p.Name);
 
-            foreach (var pipe in SCs)
-            {
-                SCOption.Add($"{pipe.Name}");
-            }
-
-            //チャート初期化
             ChartInitialize();
         }
 
-        //チャート初期化
         public void ChartInitialize()
         {
-            ////チャート関連
-            //Chart1 = new Chart();
-            ////Chartarea1 = new ChartArea();
-            //Chart1.Legends.Add(new Legend("MNLegend"));
-            //Chart1.Legends[0].Docking = Docking.Right;
-            ////Chart1.Legends[0].Alignment = StringAlignment.Center;
-            ////Chart1.Legends[0].BackColor = Color.Yellow;
-            //Chartarea1 = Chart1.ChartAreas.Add("Area1");
-
-            //SeriesService = new System.Windows.Forms.DataVisualization.Charting.Series();
-            //SeriesDamage = new System.Windows.Forms.DataVisualization.Charting.Series();
-            //SeriesUltimate = new System.Windows.Forms.DataVisualization.Charting.Series();
-
-            //SeriesFactoredService = new System.Windows.Forms.DataVisualization.Charting.Series();
-            //SeriesFactoredDamage = new System.Windows.Forms.DataVisualization.Charting.Series();
-            //SeriesFactoredUltimate = new System.Windows.Forms.DataVisualization.Charting.Series();
-
-            ////ChartAreaの設定(グラフタイトル、軸ラベル)
-            //Chartarea1.AxisX.Title = "N (kN)";
-            //Chartarea1.AxisY.Title = "M (kNm)";
-
-            //// Y軸の目盛りを設定する
-            //Chartarea1.AxisY.Minimum = 0; // Y軸の最小値を0に設定
-
-            ////Seriesの初期設定(グラフの種類、線の太さ、凡例)
-            //SeriesService.ChartType = SeriesChartType.Line;
-            //SeriesService.BorderWidth = 1;
-            //SeriesService.BorderDashStyle = ChartDashStyle.Dash;
-            //SeriesService.Color = NikkenDrawingColors.SkyBlue;
-            //SeriesService.LegendText = "(低減前)使用限界";
-
-            //SeriesDamage.ChartType = SeriesChartType.Line;
-            //SeriesDamage.BorderWidth = 1;
-            //SeriesDamage.BorderDashStyle = ChartDashStyle.Dash;
-            //SeriesDamage.Color = NikkenDrawingColors.Green;
-            //SeriesDamage.LegendText = "(低減前)損傷限界";
-
-            //SeriesUltimate.ChartType = SeriesChartType.Line;
-            //SeriesUltimate.BorderWidth = 1;
-            //SeriesUltimate.BorderDashStyle = ChartDashStyle.Dash;
-            //SeriesUltimate.Color = NikkenDrawingColors.PaleRed;
-            //SeriesUltimate.LegendText = "(低減前)安全限界";
-
-
-            //SeriesFactoredService.ChartType = SeriesChartType.Line;
-            //SeriesFactoredService.BorderWidth = 2;
-            //SeriesFactoredService.Color = NikkenDrawingColors.SkyBlue;
-            //SeriesFactoredService.LegendText = "使用限界";
-
-            //SeriesFactoredDamage.ChartType = SeriesChartType.Line;
-            //SeriesFactoredDamage.BorderWidth = 2;
-            //SeriesFactoredDamage.Color = NikkenDrawingColors.Green;
-            //SeriesFactoredDamage.LegendText = "損傷限界";
-
-            //SeriesFactoredUltimate.ChartType = SeriesChartType.Line;
-            //SeriesFactoredUltimate.BorderWidth = 2;
-            //SeriesFactoredUltimate.Color = NikkenDrawingColors.PaleRed;
-            //SeriesFactoredUltimate.LegendText = "安全限界";
-
-            ////ChartにTitle,Seriesを追加
-            //Chart1.Series.Add(SeriesService);
-            //Chart1.Series.Add(SeriesDamage);
-            //Chart1.Series.Add(SeriesUltimate);
-
-            //Chart1.Series.Add(SeriesFactoredService);
-            //Chart1.Series.Add(SeriesFactoredDamage);
-            //Chart1.Series.Add(SeriesFactoredUltimate);
-
-            //SeriesService.Points.Add(0.0, 0.0); // tentative
-            ////Chart1.Show();
         }
-
-        //public void ReplaceSeries(
-        //    List<double> serviceN, List<double> serviceM,
-        //    List<double> damageN, List<double> damageM,
-        //    List<double> ultimateN, List<double> ultimateM,
-        //    List<double> factoredServiceN, List<double> factoredServiceM,
-        //    List<double> factoredDamageN, List<double> factoredDamageM,
-        //    List<double> factoredUltimateN, List<double> factoredUltimateM
-        //    )
-        //{
-        //    // グラフのデータをクリア
-        //    SeriesService.Points.Clear();
-        //    SeriesDamage.Points.Clear();
-        //    SeriesUltimate.Points.Clear();
-        //    SeriesFactoredService.Points.Clear();
-        //    SeriesFactoredDamage.Points.Clear();
-        //    SeriesFactoredUltimate.Points.Clear();
-
-        //    double maxN = double.MinValue;
-        //    double minN = double.MaxValue;
-
-        //    for (int i = 0; i < serviceN.Count; i++)
-        //    {
-        //        SeriesService.Points.AddXY(serviceN[i], serviceM[i]);
-        //        maxN = Math.Max(maxN, serviceN[i]);
-        //        minN = Math.Min(minN, serviceN[i]);
-        //    }
-
-        //    for (int i = 0; i < damageN.Count; i++)
-        //    {
-        //        SeriesDamage.Points.AddXY(damageN[i], damageM[i]);
-        //        maxN = Math.Max(maxN, damageN[i]);
-        //        minN = Math.Min(minN, damageN[i]);
-        //    }
-
-        //    for (int i = 0; i < ultimateN.Count; i++)
-        //    {
-        //        SeriesUltimate.Points.AddXY(ultimateN[i], ultimateM[i]);
-        //        maxN = Math.Max(maxN, ultimateN[i]);
-        //        minN = Math.Min(minN, ultimateN[i]);
-        //    }
-
-        //    for (int i = 0; i < factoredServiceN.Count; i++)
-        //    {
-        //        SeriesFactoredService.Points.AddXY(factoredServiceN[i], factoredServiceM[i]);
-        //        maxN = Math.Max(maxN, factoredServiceN[i]);
-        //        minN = Math.Min(minN, factoredServiceN[i]);
-        //    }
-
-        //    for (int i = 0; i < factoredDamageN.Count; i++)
-        //    {
-        //        SeriesFactoredDamage.Points.AddXY(factoredDamageN[i], factoredDamageM[i]);
-        //        maxN = Math.Max(maxN, factoredDamageN[i]);
-        //        minN = Math.Min(minN, factoredDamageN[i]);
-        //    }
-
-        //    for (int i = 0; i < factoredUltimateN.Count; i++)
-        //    {
-        //        SeriesFactoredUltimate.Points.AddXY(factoredUltimateN[i], factoredUltimateM[i]);
-        //        maxN = Math.Max(maxN, factoredUltimateN[i]);
-        //        minN = Math.Min(minN, factoredUltimateN[i]);
-        //    }
-
-        //    bool shouldBreak = false;
-        //    for (int i = 0; i <= 5; i++)
-        //    {
-        //        for (int j = 0; j <= 5; j++)
-        //        {
-        //            double minScaleValue = -j * 2 * Math.Pow(10, i);
-        //            if (minScaleValue < minN)
-        //            {
-        //                Chartarea1.AxisX.Minimum = minScaleValue;
-        //                Chartarea1.AxisX.Interval = Math.Abs(minScaleValue);
-        //                shouldBreak = true;
-        //                break;
-        //            }
-        //        }
-        //        if (shouldBreak)
-        //        {
-        //            break;
-        //        }
-        //    }
-        //}
 
         // List<double>型データの構成要素すべてに係数を乗ずるメソッド
         internal List<double> GetMultipliedListValues(List<double> originalList, double multiplier)
@@ -878,225 +687,8 @@ namespace PileDesignCore
 
         public void ChartUpdate()
         {
-            //List<double> serviceN;
-            //List<double> serviceM;
-            //List<double> damageN;
-            //List<double> damageM;
-            //List<double> ultimateN;
-            //List<double> ultimateM;
-
-            //List<double> factoredServiceN;
-            //List<double> factoredServiceM;
-            //List<double> factoredDamageN;
-            //List<double> factoredDamageM;
-            //List<double> factoredUltimateN;
-            //List<double> factoredUltimateM;
-
-            //if (SelectedPileBodyType == "場所打ち鉄筋コンクリート杭")
-            //{
-            //    InsituConcrete insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-            //    MainBars mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-            //    InsituReinforcedConcreteSection pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-            //    var resultService = pileSection.UnfactoredServiceNM;
-            //    serviceN = GetMultipliedListValues(resultService.Item1, Math.Pow(10, -3));
-            //    serviceM = GetMultipliedListValues(resultService.Item2, Math.Pow(10, -6));
-            //    factoredServiceN = serviceN;
-            //    factoredServiceM = serviceM;
-
-            //    var resultDamage = pileSection.UnfactoredDamageNM;
-            //    damageN = GetMultipliedListValues(resultDamage.Item1, Math.Pow(10, -3));
-            //    damageM = GetMultipliedListValues(resultDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultUltimate = pileSection.UnfactoredUltimateNM;
-            //    ultimateN = GetMultipliedListValues(resultUltimate.Item1, Math.Pow(10, -3));
-            //    ultimateM = GetMultipliedListValues(resultUltimate.Item2, Math.Pow(10, -6));
-
-            //    var resultFactedDamage = pileSection.FactoredDamageNM;
-            //    factoredDamageN = GetMultipliedListValues(resultFactedDamage.Item1, Math.Pow(10, -3));
-            //    factoredDamageM = GetMultipliedListValues(resultFactedDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredUltimate = pileSection.FactoredUltimateNM;
-            //    factoredUltimateN = GetMultipliedListValues(resultFactoredUltimate.Item1, Math.Pow(10, -3));
-            //    factoredUltimateM = GetMultipliedListValues(resultFactoredUltimate.Item2, Math.Pow(10, -6));
-
-            //    ReplaceSeries(serviceN, serviceM, damageN, damageM, ultimateN, ultimateM, factoredServiceN, factoredServiceM, factoredDamageN, factoredDamageM, factoredUltimateN, factoredUltimateM);
-            //}
-
-            //else if (SelectedPileBodyType == "場所打ち鋼管コンクリート杭")
-            //{
-            //    if (SelectedPileSectionType == "鉄筋コンクリート部")
-            //    {
-            //        InsituConcrete insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-            //        MainBars mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-            //        InsituReinforcedConcreteSection pileSection = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-
-            //        var resultService = pileSection.UnfactoredServiceNM;
-            //        serviceN = GetMultipliedListValues(resultService.Item1, Math.Pow(10, -3));
-            //        serviceM = GetMultipliedListValues(resultService.Item2, Math.Pow(10, -6));
-            //        factoredServiceN = serviceN;
-            //        factoredServiceM = serviceM;
-
-            //        var resultDamage = pileSection.UnfactoredDamageNM;
-            //        damageN = GetMultipliedListValues(resultDamage.Item1, Math.Pow(10, -3));
-            //        damageM = GetMultipliedListValues(resultDamage.Item2, Math.Pow(10, -6));
-
-            //        var resultUltimate = pileSection.UnfactoredUltimateNM;
-            //        ultimateN = GetMultipliedListValues(resultUltimate.Item1, Math.Pow(10, -3));
-            //        ultimateM = GetMultipliedListValues(resultUltimate.Item2, Math.Pow(10, -6));
-
-            //        var resultFactoredDamage = pileSection.FactoredDamageNM;
-            //        factoredDamageN = GetMultipliedListValues(resultFactoredDamage.Item1, Math.Pow(10, -3));
-            //        factoredDamageM = GetMultipliedListValues(resultFactoredDamage.Item2, Math.Pow(10, -6));
-
-            //        var resultFactoredUltimate = pileSection.FactoredUltimateNM;
-            //        factoredUltimateN = GetMultipliedListValues(resultFactoredUltimate.Item1, Math.Pow(10, -3));
-            //        factoredUltimateM = GetMultipliedListValues(resultFactoredUltimate.Item2, Math.Pow(10, -6));
-
-            //        ReplaceSeries(serviceN, serviceM, damageN, damageM, ultimateN, ultimateM, factoredServiceN, factoredServiceM, factoredDamageN, factoredDamageM, factoredUltimateN, factoredUltimateM);
-            //    }
-            //    else if (SelectedPileSectionType == "鋼管コンクリート部")
-            //    {
-            //        PileDiameter = PipeDia;
-            //        ConcreteOutDia = PipeDia - PipeTs * 2.0;
-            //        ConcreteThickness = ConcreteOutDia / 2.0;
-            //        InsituSteelPipe insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs);
-            //        InsituConcrete insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-            //        MainBars mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-            //        InsituSteelPipeReinforcedConcreteSection pileSection = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-                    
-            //        var resultService = pileSection.UnfactoredServiceNM;
-            //        serviceN = GetMultipliedListValues(resultService.Item1, Math.Pow(10, -3));
-            //        serviceM = GetMultipliedListValues(resultService.Item2, Math.Pow(10, -6));
-            //        factoredServiceN = serviceN;
-            //        factoredServiceM = serviceM;
-
-            //        var resultDamage = pileSection.UnfactoredDamageNM;
-            //        damageN = GetMultipliedListValues(resultDamage.Item1, Math.Pow(10, -3));
-            //        damageM = GetMultipliedListValues(resultDamage.Item2, Math.Pow(10, -6));
-
-            //        var resultUltimate = pileSection.UnfactoredUltimateNM;
-            //        ultimateN = GetMultipliedListValues(resultUltimate.Item1, Math.Pow(10, -3));
-            //        ultimateM = GetMultipliedListValues(resultUltimate.Item2, Math.Pow(10, -6));
-
-            //        var resultFactoredDamage = pileSection.FactoredDamageNM;
-            //        factoredDamageN = GetMultipliedListValues(resultFactoredDamage.Item1, Math.Pow(10, -3));
-            //        factoredDamageM = GetMultipliedListValues(resultFactoredDamage.Item2, Math.Pow(10, -6));
-
-            //        var resultFactoredUltimate = pileSection.FactoredUltimateNM;
-            //        factoredUltimateN = GetMultipliedListValues(resultFactoredUltimate.Item1, Math.Pow(10, -3));
-            //        factoredUltimateM = GetMultipliedListValues(resultFactoredUltimate.Item2, Math.Pow(10, -6));
-
-            //        ReplaceSeries(serviceN, serviceM, damageN, damageM, ultimateN, ultimateM, factoredServiceN, factoredServiceM, factoredDamageN, factoredDamageM, factoredUltimateN, factoredUltimateM);
-            //    }
-            //}
-
-            //else if (SelectedPileBodyType == "既製コンクリート杭" && SelectedPileSectionType == "PHC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
-            //{
-            //    PrecastPHCConcrete precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-            //    Tendons tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-            //    PHCSection pileSection = new PHCSection(precastConcrete, tendons, Prestress);
-
-            //    var resultService = pileSection.UnfactoredServiceNM;
-            //    serviceN = GetMultipliedListValues(resultService.Item1, Math.Pow(10, -3));
-            //    serviceM = GetMultipliedListValues(resultService.Item2, Math.Pow(10, -6));
-
-            //    var resultDamage = pileSection.UnfactoredDamageNM;
-            //    damageN = GetMultipliedListValues(resultDamage.Item1, Math.Pow(10, -3));
-            //    damageM = GetMultipliedListValues(resultDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultUltimate = pileSection.UnfactoredUltimateNM;
-            //    ultimateN = GetMultipliedListValues(resultUltimate.Item1, Math.Pow(10, -3));
-            //    ultimateM = GetMultipliedListValues(resultUltimate.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredService = pileSection.FactoredServiceNM;
-            //    factoredServiceN = GetMultipliedListValues(resultFactoredService.Item1, Math.Pow(10, -3));
-            //    factoredServiceM = GetMultipliedListValues(resultFactoredService.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredDamage = pileSection.FactoredDamageNM;
-            //    factoredDamageN = GetMultipliedListValues(resultFactoredDamage.Item1, Math.Pow(10, -3));
-            //    factoredDamageM = GetMultipliedListValues(resultFactoredDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredUltimate = pileSection.FactoredUltimateNM;
-            //    factoredUltimateN = GetMultipliedListValues(resultFactoredUltimate.Item1, Math.Pow(10, -3));
-            //    factoredUltimateM = GetMultipliedListValues(resultFactoredUltimate.Item2, Math.Pow(10, -6));
-            //    ReplaceSeries(serviceN, serviceM, damageN, damageM, ultimateN, ultimateM, factoredServiceN, factoredServiceM, factoredDamageN, factoredDamageM, factoredUltimateN, factoredUltimateM);
-
-            //}
-
-
-            //else if (SelectedPileBodyType == "既製コンクリート杭" && SelectedPileSectionType == "PRC杭" && TendonAp > 0 && PileDiameter != 2 * ConcreteThickness)
-            //{
-            //    PrecastPRCConcrete precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-            //    MainBars mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-            //    Tendons tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-            //    PRCSection pileSection = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
-
-            //    var resultService = pileSection.UnfactoredServiceNM;
-            //    serviceN = GetMultipliedListValues(resultService.Item1, Math.Pow(10, -3));
-            //    serviceM = GetMultipliedListValues(resultService.Item2, Math.Pow(10, -6));
-
-            //    var resultDamage = pileSection.UnfactoredDamageNM;
-            //    damageN = GetMultipliedListValues(resultDamage.Item1, Math.Pow(10, -3));
-            //    damageM = GetMultipliedListValues(resultDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultUltimate = pileSection.UnfactoredUltimateNM;
-            //    ultimateN = GetMultipliedListValues(resultUltimate.Item1, Math.Pow(10, -3));
-            //    ultimateM = GetMultipliedListValues(resultUltimate.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredService = pileSection.FactoredServiceNM;
-            //    factoredServiceN = GetMultipliedListValues(resultFactoredService.Item1, Math.Pow(10, -3));
-            //    factoredServiceM = GetMultipliedListValues(resultFactoredService.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredDamage = pileSection.FactoredDamageNM;
-            //    factoredDamageN = GetMultipliedListValues(resultFactoredDamage.Item1, Math.Pow(10, -3));
-            //    factoredDamageM = GetMultipliedListValues(resultFactoredDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredUltimate = pileSection.FactoredUltimateNM;
-            //    factoredUltimateN = GetMultipliedListValues(resultFactoredUltimate.Item1, Math.Pow(10, -3));
-            //    factoredUltimateM = GetMultipliedListValues(resultFactoredUltimate.Item2, Math.Pow(10, -6));
-            //    ReplaceSeries(serviceN, serviceM, damageN, damageM, ultimateN, ultimateM, factoredServiceN, factoredServiceM, factoredDamageN, factoredDamageM, factoredUltimateN, factoredUltimateM);
-            //}
-
-            //else if (SelectedPileBodyType == "既製コンクリート杭" && SelectedPileSectionType == "SC杭" && PileDiameter != 2 * ConcreteThickness)
-            //{
-            //    PrecastSCConcrete precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
-            //    PrecastSteelPipe steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs);
-            //    SCSection pileSection = new SCSection(precastConcrete, steelPipe);
-
-            //    var resultService = pileSection.UnfactoredServiceNM;
-            //    serviceN = GetMultipliedListValues(resultService.Item1, Math.Pow(10, -3));
-            //    serviceM = GetMultipliedListValues(resultService.Item2, Math.Pow(10, -6));
-
-            //    var resultDamage = pileSection.UnfactoredDamageNM;
-            //    damageN = GetMultipliedListValues(resultDamage.Item1, Math.Pow(10, -3));
-            //    damageM = GetMultipliedListValues(resultDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultUltimate = pileSection.UnfactoredUltimateNM;
-            //    ultimateN = GetMultipliedListValues(resultUltimate.Item1, Math.Pow(10, -3));
-            //    ultimateM = GetMultipliedListValues(resultUltimate.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredService = pileSection.FactoredServiceNM;
-            //    factoredServiceN = GetMultipliedListValues(resultFactoredService.Item1, Math.Pow(10, -3));
-            //    factoredServiceM = GetMultipliedListValues(resultFactoredService.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredDamage = pileSection.FactoredDamageNM;
-            //    factoredDamageN = GetMultipliedListValues(resultFactoredDamage.Item1, Math.Pow(10, -3));
-            //    factoredDamageM = GetMultipliedListValues(resultFactoredDamage.Item2, Math.Pow(10, -6));
-
-            //    var resultFactoredUltimate = pileSection.FactoredUltimateNM;
-
-            //    factoredUltimateN = ultimateN;
-            //    factoredUltimateM = ultimateM;
-            //    ReplaceSeries(serviceN, serviceM, damageN, damageM, ultimateN, ultimateM, factoredServiceN, factoredServiceM, factoredDamageN, factoredDamageM, factoredUltimateN, factoredUltimateM);
-            //}
-
-            //else if (SelectedPileBodyType == "鋼管杭")
-            //{
-            //    PileDiameter = PipeDia;
-            //}
         }
 
-        // Canvas画像を保存するメソッド
         public void SaveImage(Canvas canvas)
         {
             // ファイル保存ダイアログを作成し、デフォルトの保存場所をデスクトップに設定します

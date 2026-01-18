@@ -117,7 +117,7 @@ namespace PileDesign.Views
             var settlementSoilLayers = viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
             if (settlementSoilLayers == null || settlementSoilLayers.Count == 0) return;
 
-            double loadSurfaceAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double loadSurfaceAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             for (int i = 0; i < settlementSoilLayers.Count; i++)
             {

@@ -46,7 +46,7 @@ namespace PileDesign.Views
 
                 foreach (PileLayoutDataItem pileLayout in viewModel.CurrentInputModel.PileLayoutItems)
                 {
-                    Point3D loc1 = new(pileLayout.Point3D.X, pileLayout.Point3D.Y, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude);
+                    Point3D loc1 = new(pileLayout.Point3D.X, pileLayout.Point3D.Y, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude);
                     double radius = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pileLayout.SoilPileAltNo - 1].GroupPileLoadDia * 0.5;
 
                     List<(Point3D, Point3D)> rectangles = PileGroupSettlement.GetFiveRectsPoints(loc1, radius);
@@ -57,8 +57,8 @@ namespace PileDesign.Views
             {
                 foreach (Models.InputData.RectLoad rectLoad in viewModel.CurrentInputModel.PileGroupSettlement.RectLoads)
                 {
-                    Point3D loc1 = new(rectLoad.X1, rectLoad.Y1, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude);
-                    Point3D loc3 = new(rectLoad.X2, rectLoad.Y2, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude);
+                    Point3D loc1 = new(rectLoad.X1, rectLoad.Y1, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude);
+                    Point3D loc3 = new(rectLoad.X2, rectLoad.Y2, viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude);
 
                     List<(Point3D, Point3D)> rectangles = [(loc1, loc3)];
                     rectangleGeometries.AddRange(viewModel.CanvasThreeDView.RectsTranformation(rectangles));
@@ -100,7 +100,7 @@ namespace PileDesign.Views
                 ymin, ymax, yOffset, ySpacing, viewModel.CurrentInputModel.GridYItems
                 );
 
-            double z = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double z = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             // draw grid
             foreach (var y0 in ys)
@@ -162,16 +162,16 @@ namespace PileDesign.Views
         }
 
         // 荷重ケース名取得メソッド
-        private double GetForceZ(MainWindowViewModel viewModel, PileLayoutDataItem pilelocation, LoadCase selectedLoadCase)
+        private double GetForceZ(MainWindowViewModel viewModel, PileLayoutDataItem pileLocation, LoadCase selectedLoadCase)
         {
             switch (viewModel.SelectedLoadCaseName)
             {
                 case "VL0":
-                    return -pilelocation.AxialForceVL0;
+                    return -pileLocation.AxialForceVL0;
                 case "VLadd":
-                    return -pilelocation.AxialForceVLAdditional;
+                    return -pileLocation.AxialForceVLAdditional;
                 case "VL":
-                    return -pilelocation.AxialForceVL0 - pilelocation.AxialForceVLAdditional;
+                    return -pileLocation.AxialForceVL0 - pileLocation.AxialForceVLAdditional;
             }
 
             if (selectedLoadCase.Level == 1)
@@ -180,7 +180,7 @@ namespace PileDesign.Views
                 {
                     if (selectedLoadCase.LoadName == viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[index].LoadName)
                     {
-                        return -pilelocation.AxialForceLevel1s[index];
+                        return -pileLocation.AxialForceLevel1s[index];
                     }
                 }
 
@@ -191,7 +191,7 @@ namespace PileDesign.Views
                 {
                     if (selectedLoadCase.LoadName == viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[index].LoadName)
                     {
-                        return -pilelocation.AxialForceLevel2s[index];
+                        return -pileLocation.AxialForceLevel2s[index];
                     }
                 }
             }
@@ -203,7 +203,7 @@ namespace PileDesign.Views
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
 
-            double loadingPlaneAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double loadingPlaneAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             AddLineGeometryToPath(new Point3D(0, 0, loadingPlaneAltitude), Canvas3DWidth, viewModel.CanvasGeometry.PathGeoPileSoils);
 
@@ -243,7 +243,7 @@ namespace PileDesign.Views
                 pileGroupSettlement.SettlementGridData == null)
                 return;
 
-            double z = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double z = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
             var xs = pileGroupSettlement.SettlementGridX;
             var ys = pileGroupSettlement.SettlementGridY;
             var items = pileGroupSettlement.SettlementGridData;

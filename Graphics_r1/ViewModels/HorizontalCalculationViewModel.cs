@@ -543,7 +543,7 @@ namespace PileDesign.ViewModels
                 var section = pileBody.PileBodySegments[seg].PileSection;
                 if (section == null) continue;
 
-                var curve = TryCallMphiRelationship(section, axialN);
+                var curve = TryCallMPhiRelationship(section, axialN);
                 if (curve is null) continue;
 
                 beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
@@ -551,11 +551,11 @@ namespace PileDesign.ViewModels
         }
 
         // M-φ関係
-        private static (IList<double> Phis, IList<double> Moments)? TryCallMphiRelationship(object pileSection, double axialN)
+        private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(object pileSection, double axialN)
         {
             if (pileSection == null)
             {
-                System.Diagnostics.Debug.WriteLine("TryCallMphiRelationship: pileSection is null");
+                System.Diagnostics.Debug.WriteLine("TryCallMPhiRelationship: pileSection is null");
                 return null;
             }
 
@@ -590,7 +590,7 @@ namespace PileDesign.ViewModels
                 return null;
 
             foundName = methodInfo.Name;
-            System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: type={t.FullName}, foundMethod={foundName}, params={methodInfo.GetParameters().Length}");
+            System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: type={t.FullName}, foundMethod={foundName}, params={methodInfo.GetParameters().Length}");
 
             // 呼び出し
             object? ret;
@@ -605,7 +605,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: invoking {foundName} threw: {ex}");
+                System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: invoking {foundName} threw: {ex}");
                 return null;
             }
 
@@ -701,7 +701,7 @@ namespace PileDesign.ViewModels
                 catch { /* fallthrough */ }
             }
 
-            System.Diagnostics.Debug.WriteLine($"TryCallMphiRelationship: unable to parse return type {rtype.FullName}");
+            System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: unable to parse return type {rtype.FullName}");
             return null;
         }
 
@@ -800,82 +800,6 @@ namespace PileDesign.ViewModels
                 }
             }
         }
-        //private void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
-        //{
-        //    if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0) return;
-
-        //    double axialN = loadCase.GetType().GetProperty("NonlinearAxialForceN")?.GetValue(loadCase) is double n ? n : 0.0;
-        //    const double Kmin = 1e-6;   // 特異化回避用の下限
-        //    const double Kbig = 1e12;   // 非線形OFF時に「最大の線形剛性」として使用する大きな値（剛体相当）
-
-        //    foreach (var spring in model.RotationalSprings)
-        //    {
-        //        int pb = (spring.PileBodyNo is int v && v > 0) ? v : 1;
-        //        if (pb <= 0 || pb > InputModel.PileBodies.Count) continue;
-
-        //        var pileBody = InputModel.PileBodies[pb - 1];
-        //        var def = pileBody.GetMThetaRelationship(axialN);
-
-        //        if (!loadCase.IsPileNonLinear)
-        //        {
-        //            // 非線形OFF: 曲線は使わず「大きな線形剛性」で剛性を代替（剛体に近い扱い）
-        //            if (def.Mode == PileHeadRotationMode.CombinedXY || def.Mode == PileHeadRotationMode.Rigid)
-        //            {
-        //                spring.Mode = RotationalSpringMode.CombinedXY;
-        //                spring.CurveXY = null;
-        //                // 本来の定義値があれば尊重するが、非線形OFFでは最大値を優先
-        //                spring.KthetaXY = Kbig;
-        //            }
-        //            else // Separate
-        //            {
-        //                spring.Mode = RotationalSpringMode.SingleDof;
-        //                spring.Curve = null;
-        //                if (spring.Dof == RotationalDof.Rx)
-        //                {
-        //                    spring.Ktheta = Kbig;
-        //                }
-        //                else if (spring.Dof == RotationalDof.Ry)
-        //                {
-        //                    spring.Ktheta = Kbig;
-        //                }
-        //            }
-        //            continue;
-        //        }
-
-        //        // 非線形ON: 曲線/線形いずれか（ゼロなら下限）
-        //        switch (def.Mode)
-        //        {
-        //            case PileHeadRotationMode.Rigid:
-        //            case PileHeadRotationMode.CombinedXY:
-        //                spring.Mode = RotationalSpringMode.CombinedXY;
-        //                spring.CurveXY = def.CurveXY;
-        //                spring.KthetaXY = def.KthetaXY;
-        //                if (spring.CurveXY == null && (!spring.KthetaXY.HasValue || spring.KthetaXY.Value <= 0.0))
-        //                    spring.KthetaXY = Kmin;
-        //                break;
-
-        //            case PileHeadRotationMode.Separate:
-        //                spring.Mode = RotationalSpringMode.SingleDof;
-        //                if (spring.Dof == RotationalDof.Rx)
-        //                {
-        //                    spring.Curve = def.CurveX;
-        //                    spring.Ktheta = def.Kx;
-        //                    if (spring.Curve == null && (!spring.Ktheta.HasValue || spring.Ktheta.Value <= 0.0))
-        //                        spring.Ktheta = Kmin;
-        //                }
-        //                else if (spring.Dof == RotationalDof.Ry)
-        //                {
-        //                    spring.Curve = def.CurveY;
-        //                    spring.Ktheta = def.Ky;
-        //                    if (spring.Curve == null && (!spring.Ktheta.HasValue || spring.Ktheta.Value <= 0.0))
-        //                        spring.Ktheta = Kmin;
-        //                }
-        //                break;
-        //        }
-        //    }
-        //}
-
-
 
         // 直近のばね剛性最小/最大を保持（PrepareKmatで更新）
         private double _lastSpringKMin = double.NaN;
@@ -898,11 +822,7 @@ namespace PileDesign.ViewModels
             targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
             int calcNo = 0;
 
-            double alpha = 1.0 * Math.Pow(10, -6);
-            var level1 = InputModel.LoadCasesInput.LoadCasesLevel1
-                .Select((lc, idx) => (loadCase: lc, index: idx, level: 1));
-            var level2 = InputModel.LoadCasesInput.LoadCasesLevel2
-                .Select((lc, idx) => (loadCase: lc, index: idx, level: 2));
+            const double alpha = 1e-6;
             foreach (var loadCaseitem in InputModel.LoadCasesInput.AllSeismicLoadCases)
             {
                 LoadCase loadCase = loadCaseitem;
@@ -968,7 +888,7 @@ namespace PileDesign.ViewModels
                             // 現ステップ軸力での M–φ 再解決は、杭非線形ONのときのみ
                             if (loadCase.IsPileNonLinear)
                             {
-                                SetupMPhiByCurrentAxialForces(targetModel);
+                                SetupMPhiByCurrentAxialForMiddleBeam(targetModel);
                             }
 
                             targetModel.SetR();
@@ -1095,7 +1015,7 @@ namespace PileDesign.ViewModels
             await AddLogAsync("計算終了");
 
             // Pass logs to MainWindowViewModel
-            _mainWindowViewModel.SetLatestAnalysisLogs(_logQueue.ToList());
+            _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
 
             MessageBox.Show("計算が終了しました。");
         }
@@ -1133,7 +1053,13 @@ namespace PileDesign.ViewModels
 
 
         // 接線剛性用: 端部回転から要素中央曲率を評価し、dM/dφ を EI_eff として Ktan（倍率）に反映
-        private void UpdateBeamMPhiTangent(AnaModel model)
+        private static void UpdateBeamMPhiTangent(AnaModel model) => UpdateBeamMPhi(model, true);
+
+        // 割線剛性用（必要なら接線と同手順でKsecも更新）
+        private static void UpdateBeamMPhiSecant(AnaModel model) => UpdateBeamMPhi(model, false);
+
+        // 統合されたM-φ更新メソッド: 接線剛性と割線剛性の両方に対応
+        private static void UpdateBeamMPhi(AnaModel model, bool isTangent)
         {
             foreach (var beam in model.Beams)
             {
@@ -1166,52 +1092,23 @@ namespace PileDesign.ViewModels
                 double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 0.01, 1.0);
                 double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 0.01, 1.0);
 
-                System.Diagnostics.Debug.WriteLine($"UpdateBeamMPhiTangent: Beam={beam.Name}, phiY={phiY:E6}, phiZ={phiZ:E6}, EIy_eff={EIy_eff:E6}, EI0y={EI0y:E6}, ratioY={ratioY:E6}, EIz_eff={EIz_eff:E6}, EI0z={EI0z:E6}, ratioZ={ratioZ:E6}");
-
-                beam.Ktan_y = ratioY;
-                beam.Ktan_z = ratioZ;
-                beam.SetKe(true); // KeTan 再構築
+                if (isTangent)
+                {
+                    System.Diagnostics.Debug.WriteLine($"UpdateBeamMPhiTangent: Beam={beam.Name}, phiY={phiY:E6}, phiZ={phiZ:E6}, EIy_eff={EIy_eff:E6}, EI0y={EI0y:E6}, ratioY={ratioY:E6}, EIz_eff={EIz_eff:E6}, EI0z={EI0z:E6}, ratioZ={ratioZ:E6}");
+                    beam.Ktan_y = ratioY;
+                    beam.Ktan_z = ratioZ;
+                    beam.SetKe(true); // KeTan 再構築
+                }
+                else
+                {
+                    beam.Ksec_y = ratioY;
+                    beam.Ksec_z = ratioZ;
+                    beam.SetKe(false); // KeSec 再構築
+                }
             }
         }
 
-        // 割線剛性用（必要なら接線と同手順でKsecも更新）
-        private void UpdateBeamMPhiSecant(AnaModel model)
-        {
-            foreach (var beam in model.Beams)
-            {
-                var dI = beam.NodeI.CumulativeDisp.GetVector();
-                var dJ = beam.NodeJ.CumulativeDisp.GetVector();
-                var disp = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.Dense(dI.Count + dJ.Count);
-                disp.SetSubVector(0, dI.Count, dI);
-                disp.SetSubVector(dI.Count, dJ.Count, dJ);
-
-                var T = PileDesign.FEM.Utils.GetTransformMatrix(beam.NodeI, beam.NodeJ);
-                var d = T * disp;
-
-                double thetaYi = d[4], thetaYj = d[10];
-                double thetaZi = d[5], thetaZj = d[11];
-                double L = Math.Max(beam.Length, 1e-12);
-
-                double phiY = (thetaYj - thetaYi) / L;
-                double phiZ = (thetaZj - thetaZi) / L;
-
-                var (EIy_eff, EIz_eff) = beam.EvaluateEIeff(phiY, phiZ);
-
-                // 初期 EI（UpdateBeamMPhiTangentと同じ）
-                double EI0y = beam.Section.Material.E * beam.Section.IY;
-                double EI0z = beam.Section.Material.E * beam.Section.IZ;
-
-                // 下限を 0.01 (1%) に設定して過度の剛性低下を防止
-                double ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, 0.01, 1.0);
-                double ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, 0.01, 1.0);
-
-                beam.Ksec_y = ratioY;
-                beam.Ksec_z = ratioZ;
-                beam.SetKe(false); // KeSec 再構築
-            }
-        }
-
-        //private static (IList<double> Phis, IList<double> Moments)? TryCallMphiRelationship(object pileSection, double axialN)
+        //private static (IList<double> Phis, IList<double> Moments)? TryCallMPhiRelationship(object pileSection, double axialN)
         //{
         //    if (pileSection == null) return null;
         //    var t = pileSection.GetType();
@@ -1247,7 +1144,7 @@ namespace PileDesign.ViewModels
         //}
 
         // 現ステップの「各杭の軸力」を用いて、対応する全梁の M–φ（合成）を解決してセット
-        private void SetupMPhiByCurrentAxialForces(AnaModel model)
+        private void SetupMPhiByCurrentAxialForMiddleBeam(AnaModel model)
         {
             if (model == null) return;
             // 各杭について
@@ -1271,15 +1168,15 @@ namespace PileDesign.ViewModels
                     var pileSection = pileBody.PileBodySegments[seg].PileSection;
                     if (pileSection == null) continue;
 
-                    //var curve = TryCallMphiRelationship(pileSection, axialN);
+                    //var curve = TryCallMPhiRelationship(pileSection, axialN);
                     //if (curve is null) continue;
 
                     //// 合成 M–φ を梁へセット（EvaluateEIeff → Ktan/Ksec に反映される）
-                    //beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
-                    var curve = TryCallMphiRelationship(pileSection, axialN);
+                    //beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
+                    var curve = TryCallMPhiRelationship(pileSection, axialN);
                     if (curve is null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForces: Beam={beam.Name}, pileNo={pile.No}, seg={seg}, axialN={axialN:E} -> curve=null");
+                        System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForMiddleBeam: Beam={beam.Name}, pileNo={pile.No}, seg={seg}, axialN={axialN:E} -> curve=null");
                         continue;
                     }
                     // ログ: 点数と先頭数点を出力
@@ -1290,11 +1187,11 @@ namespace PileDesign.ViewModels
                         int cnt = phisArr.Length;
                         var first5 = string.Join(", ", phisArr.Take(5).Select(x => x.ToString("E6")));
                         var first5m = string.Join(", ", msArr.Take(5).Select(x => x.ToString("E6")));
-                        System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForces: Beam={beam.Name}, pileNo={pile.No}, seg={seg}, axialN={axialN:E}, Points={cnt}, phis_first5=[{first5}], moms_first5=[{first5m}]");
+                        System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForMiddleBeam: Beam={beam.Name}, pileNo={pile.No}, seg={seg}, axialN={axialN:E}, Points={cnt}, phis_first5=[{first5}], moms_first5=[{first5m}]");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForces: Beam={beam.Name} logging error: {ex}");
+                        System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForMiddleBeam: Beam={beam.Name} logging error: {ex}");
                     }
 
                     beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
@@ -1323,10 +1220,11 @@ namespace PileDesign.ViewModels
         //            // 非線形OFF: 線形Kのみを適用（曲線は使わない）
         //            if (def.Mode == PileHeadRotationMode.CombinedXY)
         //            {
-        //                double k = def.KthetaXY ?? (def.CurveXY != null ? Math.Max(def.CurveXY.EvaluateTangent(1e-6), 0.0) : 0.0);
+        //                double kx = def.Kx ?? (def.CurveX != null ? Math.Max(def.CurveX.EvaluateTangent(1e-6), 0.0) : 0.0);
+        //                double ky = def.Ky ?? (def.CurveY != null ? Math.Max(def.CurveY.EvaluateTangent(1e-6), 0.0) : 0.0);
         //                spring.Mode = RotationalSpringMode.CombinedXY;
         //                spring.CurveXY = null;
-        //                spring.KthetaXY = Math.Max(k, Kmin);
+        //                spring.KthetaXY = Math.Max(Math.Max(kx, ky), Kmin);
         //            }
         //            else // Separate
         //            {
@@ -1602,16 +1500,16 @@ namespace PileDesign.ViewModels
                 {
                     var item = InputModel.ElementDivision.DoatsuGoryokuBane.Items[i];
 
-                    var reldispTop = item.TopEmbedmentNode.CumulativeDisp - item.TopSoilNode.CumulativeDisp;
-                    var kvecTop = isTan ? item.GetTangentStiffnessVector(reldispTop) : item.GetSecantStiffnessVector(reldispTop);
+                    var relDispTop = item.TopEmbedmentNode.CumulativeDisp - item.TopSoilNode.CumulativeDisp;
+                    var kvecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
                     double kxTop = SafeK(kvecTop.Kx);
                     double kyTop = SafeK(kvecTop.Ky);
                     item.TopHorizontalSoilSpring.SetKe(kxTop, kyTop, 0, 0, 0, 0, isTan);
                     springMin = Math.Min(springMin, Math.Min(kxTop, kyTop));
                     springMax = Math.Max(springMax, Math.Max(kxTop, kyTop));
 
-                    var reldispBtm = item.BtmEmbedmentNode.CumulativeDisp - item.BtmSoilNode.CumulativeDisp;
-                    var kvecBtm = isTan ? item.GetTangentStiffnessVector(reldispBtm) : item.GetSecantStiffnessVector(reldispBtm);
+                    var relDispBtm = item.BtmEmbedmentNode.CumulativeDisp - item.BtmSoilNode.CumulativeDisp;
+                    var kvecBtm = isTan ? item.GetTangentStiffnessVector(relDispBtm) : item.GetSecantStiffnessVector(relDispBtm);
                     double kxBtm = SafeK(kvecBtm.Kx);
                     double kyBtm = SafeK(kvecBtm.Ky);
                     item.BtmHorizontalSoilSpring.SetKe(kxBtm, kyBtm, 0, 0, 0, 0, isTan);
@@ -1630,10 +1528,10 @@ namespace PileDesign.ViewModels
                 {
                     var pileNode = pileLayoutItem.PileNodes[i];
                     var soilNode = pileLayoutItem.SoilNodes[i];
-                    var reldisp = pileNode.CumulativeDisp - soilNode.CumulativeDisp;
+                    var relDisp = pileNode.CumulativeDisp - soilNode.CumulativeDisp;
                     // NaN防止
-                    double abs = (double.IsFinite(reldisp.Ux) && double.IsFinite(reldisp.Uy))
-                        ? Math.Sqrt(reldisp.Ux * reldisp.Ux + reldisp.Uy * reldisp.Uy)
+                    double abs = (double.IsFinite(relDisp.Ux) && double.IsFinite(relDisp.Uy))
+                        ? Math.Sqrt(relDisp.Ux * relDisp.Ux + relDisp.Uy * relDisp.Uy)
                         : 0.0;
 
                     double k = 0.0;

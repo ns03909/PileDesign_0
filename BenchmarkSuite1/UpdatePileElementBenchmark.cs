@@ -67,52 +67,52 @@ namespace PileDesign.Benchmarks
         }
 
         // --- 以下: MainWindow.UpdatePileElement と同等ロジック（描画先は VM 内の PathGeometry） ---
-        private static void UpdatePileElementCore(MainWindowViewModel viewModel, PileLayoutDataItem pilelocation)
+        private static void UpdatePileElementCore(MainWindowViewModel viewModel, PileLayoutDataItem pileLocation)
         {
             if (viewModel.CurrentInputModel.PileBodies.Count == 0)
                 return;
-            if (pilelocation.PileBodyNo <= 0 || pilelocation.PileBodyNo > viewModel.CurrentInputModel.PileBodies.Count)
+            if (pileLocation.PileBodyNo <= 0 || pileLocation.PileBodyNo > viewModel.CurrentInputModel.PileBodies.Count)
             {
                 return;
             }
 
             ObservableCollection<PileBodySegment> pileBodySegments;
-            PileBodyInput pileBody = viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1];
+            PileBodyInput pileBody = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1];
             var zs = new ObservableCollection<double>();
             if (!viewModel.IsElementSplit)
             {
-                pileBodySegments = viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1].PileBodySegments;
-                zs.Add(pilelocation.Point3D.Z);
+                pileBodySegments = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileBodySegments;
+                zs.Add(pileLocation.Point3D.Z);
                 foreach (var segment in pileBodySegments)
                 {
-                    zs.Add(pilelocation.Point3D.Z - segment.SegmentDepth);
+                    zs.Add(pileLocation.Point3D.Z - segment.SegmentDepth);
                 }
             }
             else
             {
-                if (pilelocation.SoilPileAltNo <= 0 || pilelocation.SoilPileAltNo > viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
+                if (pileLocation.SoilPileAltNo <= 0 || pileLocation.SoilPileAltNo > viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
                 {
                     return;
                 }
 
-                var soilPile = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pilelocation.SoilPileAltNo - 1];
+                var soilPile = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pileLocation.SoilPileAltNo - 1];
                 pileBodySegments = soilPile.PileBodySegments;
                 zs = new ObservableCollection<double>(soilPile.ZDataItems.Select(zDataItem => zDataItem.Z));
             }
 
-            double x = pilelocation.Point3D.X;
-            double y = pilelocation.Point3D.Y;
+            double x = pileLocation.Point3D.X;
+            double y = pileLocation.Point3D.Y;
             var pointT = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, zs[0]));
             var pointB = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, zs[^1]));
             AddLineGeometry(pointT, pointB, viewModel.IsElementSplit ? viewModel.CanvasGeometry.PathGeoPileDividedElems : viewModel.CanvasGeometry.PathGeoPileElems);
             if (pileBodySegments.Count == 0)
                 return;
             double pileBottomDia = pileBodySegments[^1].PileSection.PileDiameter / 1000.0;
-            double pileToeDia = viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1].PileToeDia / 1000.0;
+            double pileToeDia = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileToeDia / 1000.0;
             double pileToeAngle = pileBody.InsituPileToeAngle;
             double pileToeHeight = pileBody.InsituPileToeHeight / 1000.0;
             double pileToeHeightRatio = pileBody.PrecastConcretePileToeHeightRatio;
-            double zToeTop = pileToeDia <= pileBottomDia ? zs[^1] : (viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1].PileConstructionType == "場所打ちコンクリート杭" ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(pileToeAngle * Math.PI / 180) + pileToeHeight : zs[^1] + pileToeDia * pileToeHeightRatio);
+            double zToeTop = pileToeDia <= pileBottomDia ? zs[^1] : (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType == "場所打ちコンクリート杭" ? zs[^1] + (pileToeDia - pileBottomDia) * 0.5 / Math.Tan(pileToeAngle * Math.PI / 180) + pileToeHeight : zs[^1] + pileToeDia * pileToeHeightRatio);
             for (int i = 0; i < zs.Count - 1; i++)
             {
                 double z1 = zs[i];
@@ -127,7 +127,7 @@ namespace PileDesign.Benchmarks
                     double pileDia = pileBodySegments[i].PileSection.PileDiameter / 1000.0;
                     double flattening = viewModel.CanvasThreeDView.Flattening;
                     AddPileSectionGeometry(point1, point2, pileDia2D, flattening, viewModel);
-                    if (viewModel.CurrentInputModel.PileBodies[pilelocation.PileBodyNo - 1].PileConstructionType == "場所打ちコンクリート杭")
+                    if (viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1].PileConstructionType == "場所打ちコンクリート杭")
                     {
                         if (i == zs.Count - 2 && pileToeDia > pileDia)
                         {

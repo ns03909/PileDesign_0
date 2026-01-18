@@ -101,7 +101,7 @@ namespace PileDesign.Views
         //    var points = new ObservableCollection<Point3D>();
         //    var values = new ObservableCollection<double>();
 
-        //    double loadingPlaneAlt = vm.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+        //    double loadingPlaneAlt = vm.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
         //    switch (vm.AnalysisResultSettlementType)
         //    {
@@ -188,17 +188,17 @@ namespace PileDesign.Views
         ////    ObservableCollection<Point3D> points = [];
         ////    ObservableCollection<double> values = [];
 
-        ////    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+        ////    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
         ////    if (viewModel.AnalysisResultSettlementType == "単杭")
         ////    {
-        ////        foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+        ////        foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
         ////        {
         ////            if (viewModel.SelectedLoadCaseName == "VL")
         ////            {
         ////                // 単杭沈下は mm をそのまま使用
-        ////                values.Add(pilelocation.SinglePileSettlementVL);
-        ////                points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                values.Add(pileLocation.SinglePileSettlementVL);
+        ////                points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////            }
         ////            else
         ////            {
@@ -207,8 +207,8 @@ namespace PileDesign.Views
         ////                    LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
         ////                    if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
         ////                    {
-        ////                        values.Add(pilelocation.SinglePileSettlementLevel1s[i]); // mm
-        ////                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                        values.Add(pileLocation.SinglePileSettlementLevel1s[i]); // mm
+        ////                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////                    }
         ////                }
         ////                for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
@@ -216,8 +216,8 @@ namespace PileDesign.Views
         ////                    LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
         ////                    if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
         ////                    {
-        ////                        values.Add(pilelocation.SinglePileSettlementLevel2s[i]); // mm
-        ////                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                        values.Add(pileLocation.SinglePileSettlementLevel2s[i]); // mm
+        ////                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////                    }
         ////                }
         ////            }
@@ -225,18 +225,18 @@ namespace PileDesign.Views
         ////    }
         ////    if (viewModel.AnalysisResultSettlementType == "群杭")
         ////    {
-        ////        foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
-        ////            points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////        foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
+        ////            points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////    }
 
         ////    else if (viewModel.AnalysisResultSettlementType == "単杭+群杭")
         ////    {
-        ////        foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+        ////        foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
         ////        {
         ////            if (viewModel.SelectedLoadCaseName == "VL")
         ////            {
-        ////                values.Add(pilelocation.SinglePileSettlementVL + pilelocation.GroupPileSettlement); // mm
-        ////                points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                values.Add(pileLocation.SinglePileSettlementVL + pileLocation.GroupPileSettlement); // mm
+        ////                points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////            }
         ////            else
         ////            {
@@ -246,8 +246,8 @@ namespace PileDesign.Views
         ////                    var loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
         ////                    if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
         ////                    {
-        ////                        values.Add(pilelocation.SinglePileSettlementLevel1s[i]);
-        ////                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                        values.Add(pileLocation.SinglePileSettlementLevel1s[i]);
+        ////                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////                    }
         ////                }
         ////                for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
@@ -255,8 +255,8 @@ namespace PileDesign.Views
         ////                    var loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
         ////                    if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
         ////                    {
-        ////                        values.Add(pilelocation.SinglePileSettlementLevel2s[i]);
-        ////                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                        values.Add(pileLocation.SinglePileSettlementLevel2s[i]);
+        ////                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////                    }
         ////                }
         ////            }
@@ -265,20 +265,20 @@ namespace PileDesign.Views
         ////    else if (viewModel.AnalysisResultSettlementType == "群杭")
         ////    {
         ////        // 修正: 群杭でも values を追加（従来欠落）
-        ////        foreach (var pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+        ////        foreach (var pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
         ////        {
-        ////            points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
-        ////            values.Add(pilelocation.GroupPileSettlement);
+        ////            points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
+        ////            values.Add(pileLocation.GroupPileSettlement);
         ////        }
         ////    }
         ////    else if (viewModel.AnalysisResultSettlementType == "単杭+群杭")
         ////    {
-        ////        foreach (var pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+        ////        foreach (var pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
         ////        {
         ////            if (viewModel.SelectedLoadCaseName == "VL")
         ////            {
-        ////                values.Add(pilelocation.SinglePileSettlementVL + pilelocation.GroupPileSettlement);
-        ////                points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                values.Add(pileLocation.SinglePileSettlementVL + pileLocation.GroupPileSettlement);
+        ////                points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////            }
         ////            else
         ////            {
@@ -287,8 +287,8 @@ namespace PileDesign.Views
         ////                    var loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
         ////                    if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
         ////                    {
-        ////                        values.Add(pilelocation.SinglePileSettlementLevel1s[i] + pilelocation.GroupPileSettlement);
-        ////                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                        values.Add(pileLocation.SinglePileSettlementLevel1s[i] + pileLocation.GroupPileSettlement);
+        ////                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////                    }
         ////                }
         ////                for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
@@ -296,8 +296,8 @@ namespace PileDesign.Views
         ////                    var loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
         ////                    if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
         ////                    {
-        ////                        values.Add(pilelocation.SinglePileSettlementLevel2s[i] + pilelocation.GroupPileSettlement);
-        ////                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+        ////                        values.Add(pileLocation.SinglePileSettlementLevel2s[i] + pileLocation.GroupPileSettlement);
+        ////                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
         ////                    }
         ////                }
         ////            }
@@ -1166,14 +1166,14 @@ namespace PileDesign.Views
 
                 if (viewModel.AnalysisResultSettlementType == "単杭")
                 {
-                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
-                    foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
                             // 単杭沈下は mm をそのまま使用
-                            values.Add(pilelocation.SinglePileSettlementVL);
-                            points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+                            values.Add(pileLocation.SinglePileSettlementVL);
+                            points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                         }
                         else
                         {
@@ -1182,8 +1182,8 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pilelocation.SinglePileSettlementLevel1s[i]); // mm
-                                    points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i]); // mm
+                                    points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
                             for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
@@ -1191,8 +1191,8 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pilelocation.SinglePileSettlementLevel2s[i]); // mm
-                                    points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i]); // mm
+                                    points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
                         }
@@ -1200,22 +1200,22 @@ namespace PileDesign.Views
                 }
                 if (viewModel.AnalysisResultSettlementType == "群杭")
                 {
-                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
-                    foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
                     {
-                        points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
-                        values.Add(pilelocation.GroupPileSettlement); // mmのまま
+                        points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
+                        values.Add(pileLocation.GroupPileSettlement); // mmのまま
                     }
                 }
                 else if (viewModel.AnalysisResultSettlementType == "単杭+群杭")
                 {
-                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
-                    foreach (PileLayoutDataItem pilelocation in viewModel.CurrentInputModel.PileLayoutItems)
+                    double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                    foreach (PileLayoutDataItem pileLocation in viewModel.CurrentInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
-                            values.Add(pilelocation.SinglePileSettlementVL + pilelocation.GroupPileSettlement); // mm
-                            points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+                            values.Add(pileLocation.SinglePileSettlementVL + pileLocation.GroupPileSettlement); // mm
+                            points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                         }
                         else
                         {
@@ -1224,8 +1224,8 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pilelocation.SinglePileSettlementLevel1s[i] + pilelocation.GroupPileSettlement); // mm
-                                    points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] + pileLocation.GroupPileSettlement); // mm
+                                    points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
                             for (int i = 0; i < viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
@@ -1233,8 +1233,8 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pilelocation.SinglePileSettlementLevel2s[i] + pilelocation.GroupPileSettlement); // mm
-                                    points.Add(new Point3D(pilelocation.Point3D.X, pilelocation.Point3D.Y, loadingPlaneAlt));
+                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] + pileLocation.GroupPileSettlement); // mm
+                                    points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
                         }

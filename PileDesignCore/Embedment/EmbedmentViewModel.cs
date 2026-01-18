@@ -78,12 +78,6 @@ namespace PileDesignCore
             set => SetProperty(ref _embedmentCollection, value);
         }
 
-        public EmbedmentViewModel()
-        {
-            // Initialize the GroundLayerCollection property with an empty ObservableCollection
-            EmbedmentCollection = new ObservableCollection<EmbedmentDataItem>();
-        }
-
         private int embedmentNums = 0;
         public int EmbedmentNums
         {

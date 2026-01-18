@@ -12,7 +12,16 @@ using System.Windows.Input;
 
 namespace PileDesign.ViewModels
 {
-    // 追加的な partial MainWindowViewModel に機能を完全に追加するための partial
+    /// <summary>
+    /// MainWindowViewModel.Improvements.cs
+    ///
+    /// 責任範囲:
+    /// - パフォーマンス最適化機能
+    ///   - コマンドCanExecute一括更新（キャッシュ使用）
+    ///   - Undoスナップショット重複保存防止（ハッシュ比較）
+    ///   - 長時間操作のキャンセル機能
+    /// - IDisposable実装（リソース解放）
+    /// </summary>
     public partial class MainWindowViewModel : IDisposable
     {
         // --- Fields for improvements ---

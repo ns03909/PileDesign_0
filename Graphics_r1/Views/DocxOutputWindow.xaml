@@ -144,7 +144,7 @@ Title="DocxOutputWindow" Height="600" Width="400">
                 
                 <CheckBox 
                       Content="杭配置図" 
-                      IsChecked="{Binding IncludePileLocationMap, Mode=TwoWay}" 
+                      IsChecked="{Binding IncludepileLocationMap, Mode=TwoWay}" 
                       Margin="15,0,0,0"/>
                 <CheckBox 
                       Content="杭軸力図" 

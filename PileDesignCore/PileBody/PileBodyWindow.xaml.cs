@@ -102,8 +102,6 @@ namespace PileDesignCore
                     }
                 }
             }
-            // コレクションが変更された場合に DataGrid の表示を更新する
-            //DataGridPileBody.Items.Refresh();
         }
 
         private void DataGridPileBody_Loaded(object sender, RoutedEventArgs e)
@@ -299,42 +297,6 @@ namespace PileDesignCore
 
         private void PileBodyTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            //if (DataContext is PileBodyViewModel viewModel)
-            //{
-            //    if (int.TryParse(ComboBoxPileBodyNo.SelectedItem?.ToString(), out int selectedPileBodyNo))
-            //    {
-            //        if (sender == TextBoxPileBodyRef)
-            //        {
-            //            UpdateViewModelCollection(viewModel.PileBodyRefs, selectedPileBodyNo, TextBoxPileBodyRef.Text);
-            //        }
-            //        else if (sender == TextBoxPileToeDia && double.TryParse(TextBoxPileToeDia.Text, out double toeDia))
-            //        {
-            //            UpdateViewModelCollection(viewModel.PileToeDias, selectedPileBodyNo, toeDia);
-            //            DrawShapes();
-            //        }
-            //        else if (sender == TextBoxPrecastPileTipNonPermability && double.TryParse(TextBoxPrecastPileTipNonPermability.Text, out double precastPileTipNonPermability))
-            //        {
-            //            UpdateViewModelCollection(viewModel.TipNonPermabilities, selectedPileBodyNo, precastPileTipNonPermability);
-            //        }
-            //        else if (sender == TextBoxSteelPileTipNonPermability && double.TryParse(TextBoxSteelPileTipNonPermability.Text, out double steelPileTipNonPermability))
-            //        {
-            //            UpdateViewModelCollection(viewModel.TipNonPermabilities, selectedPileBodyNo, steelPileTipNonPermability);
-            //        }
-            //        else if (sender == TextBoxSettleAlpha && double.TryParse(TextBoxSettleAlpha.Text, out double settleAlpha))
-            //        {
-            //            UpdateViewModelCollection(viewModel.SettleAlphas, selectedPileBodyNo, settleAlpha);
-            //        }
-            //        else if (sender == TextBoxSettleN && double.TryParse(TextBoxSettleN.Text, out double settleN))
-            //        {
-            //            UpdateViewModelCollection(viewModel.SettleNs, selectedPileBodyNo, settleN);
-            //        }
-
-            //        //チャート要素クリアコマンド
-            //        viewModel.ChartClearCmd();
-            //        viewModel.AddComponent(viewModel.SettleAlphas[selectedPileBodyNo - 1], viewModel.SettleNs[selectedPileBodyNo - 1]);
-
-            //    }
-            //}
         }
 
 
@@ -378,18 +340,6 @@ namespace PileDesignCore
             }
         }
 
-        //private void ComboBoxPileTopType_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    if (DataContext is PileBodyViewModel)
-        //    {
-        //        if (int.TryParse(ComboBoxPileBodyNo.SelectedItem?.ToString(), out int selectedPileBodyNo))
-        //        {
-        //            string a = (string)ComboBoxPileTopTypeForInsituReinforcedConcretePile.SelectedItem;
-        //            viewModel.SelectedPileTopTypes[selectedPileBodyNo - 1] = viewModel.SelectedPileTopType;
-        //            viewModel.PileTop.SelectedPileTopType = viewModel.SelectedPileTopType;
-        //        }
-        //    }
-        //}
         private void ComboBoxPileTopType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (DataContext is PileBodyViewModel viewModel)
@@ -398,28 +348,6 @@ namespace PileDesignCore
                 {
                     viewModel.SelectedPileTopTypes[selectedPileBodyNo - 1] = (string)ComboBoxPileTopType.SelectedItem;
                     viewModel.PileTop.SelectedPileTopType = (string)ComboBoxPileTopType.SelectedItem;
-                    //if (sender is ComboBox comboBox)
-                    //{
-                    //    switch (comboBox.Name)
-                    //    {
-                    //        case "ComboBoxPileTopTypeForInsituReinforcedConcretePile":
-                    //            viewModel.SelectedPileTopTypes[selectedPileBodyNo - 1] = (string)ComboBoxPileTopTypeForInsituReinforcedConcretePile.SelectedItem;
-                    //            viewModel.PileTop.SelectedPileTopType = (string)ComboBoxPileTopTypeForInsituReinforcedConcretePile.SelectedItem;
-                    //            break;
-                    //        case "ComboBoxPileTopTypeForInsituSteelReinforcedConcretePile":
-                    //            viewModel.SelectedPileTopTypes[selectedPileBodyNo - 1] = (string)ComboBoxPileTopTypeForInsituSteelReinforcedConcretePile.SelectedItem;
-                    //            viewModel.PileTop.SelectedPileTopType = (string)ComboBoxPileTopTypeForInsituSteelReinforcedConcretePile.SelectedItem;
-                    //            break;
-                    //        case "ComboBoxPileTopTypeForPrecastConcretePile":
-                    //            viewModel.SelectedPileTopTypes[selectedPileBodyNo - 1] = (string)ComboBoxPileTopTypeForPrecastConcretePile.SelectedItem;
-                    //            viewModel.PileTop.SelectedPileTopType = (string)ComboBoxPileTopTypeForPrecastConcretePile.SelectedItem;
-                    //            break;
-                    //        case "ComboBoxPileTopTypeForPrecastSteelPile":
-                    //            viewModel.SelectedPileTopTypes[selectedPileBodyNo - 1] = (string)ComboBoxPileTopTypeForPrecastSteelPile.SelectedItem;
-                    //            viewModel.PileTop.SelectedPileTopType = (string)ComboBoxPileTopTypeForPrecastSteelPile.SelectedItem;
-                    //            break;
-                    //    }
-                    //}
                 }
             }
         }
@@ -495,54 +423,9 @@ namespace PileDesignCore
                 {
                     viewModel.SelectedPileBodyTypes[selectedPileBodyNo - 1] = viewModel.SelectedPileBodyType;
                 }
-
-                if (viewModel.SelectedPileBodyType == "場所打ち鉄筋コンクリート杭")
-                {
-                    viewModel.SelectedPileTopTypeOption = viewModel.InsituReinforcedConcretePileTopTypeOption;
-                    viewModel.SelectedPileConstructionType = "場所打ちコンクリート杭";
-                }
-                else if (viewModel.SelectedPileBodyType == "場所打ち鋼管コンクリート杭")
-                {
-                    viewModel.SelectedPileTopTypeOption = viewModel.InsituSteelPipedConcretePileTopTypeOption;
-                    viewModel.SelectedPileConstructionType = "場所打ちコンクリート杭";
-                    viewModel.SelectedPileTopType = "鉄筋定着工法";
-                }
-                else if (viewModel.SelectedPileBodyType == "既製コンクリート杭")
-                {
-                    viewModel.SelectedPileTopTypeOption = viewModel.PrecastConcretePileTopTypeOption;
-
-                }
-                else if (viewModel.SelectedPileBodyType == "鋼管杭")
-                {
-                    viewModel.SelectedPileTopTypeOption = viewModel.SteelPileTopTypeOption;
-                    viewModel.SelectedPileTopType = "鉄筋定着工法";
-                }
+                // 選択肢の更新はViewModelのsetterで自動的に行われる
             }
         }
-
-
-        //        public ObservableCollection<string> InsituReinforcedConcretePileTopTypeOption { get; } = new ObservableCollection<string>()
-        //{
-        //    "鉄筋定着工法",
-        //    "キャプテンパイル工法",
-        //};
-
-        //public ObservableCollection<string> InsituSteelPipedConcretePileTopTypeOption { get; } = new ObservableCollection<string>()
-        //{
-        //    "鉄筋定着工法",
-        //};
-
-        //public ObservableCollection<string> PrecastConcretePileTopTypeOption { get; } = new ObservableCollection<string>()
-        //{
-        //    "鉄筋定着工法",
-        //    "FT-Pile構法"
-        //};
-
-        //public ObservableCollection<string> SteelPileTopTypeOption { get; } = new ObservableCollection<string>()
-        //{
-        //    "鉄筋定着工法",
-        //};
-
 
         private void ComboBoxPileConstructionType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

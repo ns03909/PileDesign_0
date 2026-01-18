@@ -40,14 +40,6 @@ namespace PileDesignCore
             if (e.Action == NotifyCollectionChangedAction.Remove)
             {
                 // 行が削除された場合、すべての行番号を再計算する
-                //for (int i = 0; i < DataGridPileLayout.Items.Count; i++)
-                //{
-                //    var row = DataGridPileLayout.ItemContainerGenerator.ContainerFromIndex(i) as DataGridRow;
-                //    if (row != null)
-                //    {
-                //        row.Header = (i + 1).ToString();
-                //    }
-                //}
             }
 
             if (e.Action != NotifyCollectionChangedAction.Add)
@@ -90,10 +82,6 @@ namespace PileDesignCore
         // データグリッドのセルが編集された場合のメソッド
         private void ButtonAddPile_Click(object sender, RoutedEventArgs e)
         {
-            //ApplicationViewModel viewModel = (ApplicationViewModel)DataContext;
-            //Collection<PileLayoutDataItem> _collection = viewModel.PileLayoutViewModel.PileLayoutCollection;
-            //_collection.Add(new PileLayoutDataItem());
-            //NumberingNewPileNumber(false);
             var viewModel = DataContext as ApplicationViewModel;
             viewModel.PileLayoutViewModel.PileLayoutCollection.Add(new PileLayoutDataItem());
             NumberingNewPileNumber(false);
@@ -153,13 +141,6 @@ namespace PileDesignCore
             this.DialogResult = true;
             this.Close();
         }
-
-        //private void ButtonCancel_Click(object sender, RoutedEventArgs e)
-        //{
-        //    PileLayoutViewModel viewModel = (PileLayoutViewModel)DataContext;
-        //    RestorePreviousPropertyValues(viewModel);
-        //    this.Close();
-        //}
 
         private void UpdateCanvas(System.Windows.Controls.DataGrid datagrid)
         {
@@ -385,36 +366,8 @@ namespace PileDesignCore
 
             CanvasLayout.Children.Add(path0);
         }
+
         // ラベル取得メソッド
-        //private string GetLabelText(PileLayoutDataItem pileLocation)
-        //{
-        //    return LabelContent switch
-        //    {
-        //        "配置番号" => pileLocation.PileNumber.ToString(),
-        //        "杭頭レベル(m)" => pileLocation.PileTopAltitude.ToString("N3"),
-        //        "杭符号" => pileLocation.PileBodyNo.ToString(),
-        //        "地盤符号" => pileLocation.GroundNo.ToString(),
-        //        "群杭係数" => pileLocation.GroupPileFactor.ToString("N3"),
-        //        "VL(kN)" => pileLocation.AxialForceVL.ToString("N1"),
-        //        "VLadd(kN)" => pileLocation.AxialForceVLAdditional.ToString("N1"),
-        //        "E1(kN)" => pileLocation.AxialForceEX.ToString("N1"),
-        //        "E2(kN)" => pileLocation.AxialForceEY.ToString("N1"),
-        //        "1-1(kN)" => pileLocation.AxialForceLevel1s[0].ToString("N1"),
-        //        "1-2(kN)" => pileLocation.AxialForceLevel1s[1].ToString("N1"),
-        //        "1-3(kN)" => pileLocation.AxialForceLevel1s[2].ToString("N1"),
-        //        "1-4(kN)" => pileLocation.AxialForceLevel1s[3].ToString("N1"),
-        //        "2-1(kN)" => pileLocation.AxialForceLevel2s[0].ToString("N1"),
-        //        "2-2(kN)" => pileLocation.AxialForceLevel2s[1].ToString("N1"),
-        //        "2-3(kN)" => pileLocation.AxialForceLevel2s[2].ToString("N1"),
-        //        "2-4(kN)" => pileLocation.AxialForceLevel2s[3].ToString("N1"),
-        //        "前後1" => pileLocation.IsFrontPiles[0] ? "前" : "後",
-        //        "前後2" => pileLocation.IsFrontPiles[1] ? "前" : "後",
-        //        "前後3" => pileLocation.IsFrontPiles[2] ? "前" : "後",
-        //        "前後4" => pileLocation.IsFrontPiles[3] ? "前" : "後",
-        //        _ => string.Empty
-        //    };
-        //}
-        //// ラベル取得メソッド
         private string GetLabelText(PileLayoutDataItem pilelocation)
         {
             if (LabelContent == "配置番号")
@@ -1488,106 +1441,6 @@ namespace PileDesignCore
             }
         }
 
-        //private void AddAxialForce(double axialForce, string loadCase)
-        //{
-        //    var viewModel = (ApplicationViewModel)DataContext;
-        //    var pileLayoutCopy = viewModel.PileLayoutViewModel.PileLayoutCollection.ToList();
-        //    var selectedItems = DataGridPileLayout.SelectedItems.Cast<PileLayoutDataItem>().ToList();
-
-        //    foreach (var pileLocation in selectedItems)
-        //    {
-        //        if (loadCase == "VL")
-        //        {
-        //            pileLocation.AxialForceVL += axialForce;
-        //        }
-        //        else if (loadCase == "VLadd")
-        //        {
-        //            pileLocation.AxialForceVLAdditional += axialForce;
-        //        }
-        //        else
-        //        {
-        //            var loadCase1 = viewModel.LoadCaseViewModel.LoadCases1.FirstOrDefault(lc => lc.LoadName == loadCase);
-        //            if (loadCase1 != null)
-        //            {
-        //                int index = viewModel.LoadCaseViewModel.LoadCases1.IndexOf(loadCase1);
-        //                pileLocation.AxialForceLevel1s[index] += axialForce;
-        //                continue;
-        //            }
-
-        //            var loadCase2 = viewModel.LoadCaseViewModel.LoadCases2.FirstOrDefault(lc => lc.LoadName == loadCase);
-        //            if (loadCase2 != null)
-        //            {
-        //                int index = viewModel.LoadCaseViewModel.LoadCases2.IndexOf(loadCase2);
-        //                pileLocation.AxialForceLevel2s[index] += axialForce;
-        //                continue;
-        //            }
-
-        //            // エラーハンドリング: 無効なloadCaseが渡された場合
-        //            System.Windows.MessageBox.Show($"無効な荷重ケース: {loadCase}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-        //            return;
-        //        }
-        //    }
-
-        //    // 選択項目をクリア
-        //    DataGridPileLayout.SelectedItems.Clear();
-        //    DataGridPileAxialForce.SelectedItems.Clear();
-        //    DataGridIsFrontPile.SelectedItems.Clear();
-
-        //    // UIの更新
-        //    UpdateCanvas(DataGridPileLayout);
-        //    UpdatePerspectiveView();
-        //}
-
-        ////
-        //private void ReplaceAxialForce(double axialForce, string loadCase)
-        //{
-        //    var viewModel = (ApplicationViewModel)DataContext;
-        //    var pileLayoutCopy = viewModel.PileLayoutViewModel.PileLayoutCollection.ToList();
-        //    var selectedItems = DataGridPileLayout.SelectedItems.Cast<PileLayoutDataItem>().ToList();
-
-        //    foreach (var pileLocation in selectedItems)
-        //    {
-        //        if (loadCase == "VL")
-        //        {
-        //            pileLocation.AxialForceVL = axialForce;
-        //        }
-        //        else if (loadCase == "VLadd")
-        //        {
-        //            pileLocation.AxialForceVLAdditional = axialForce;
-        //        }
-        //        else
-        //        {
-        //            var loadCase1 = viewModel.LoadCaseViewModel.LoadCases1.FirstOrDefault(lc => lc.LoadName == loadCase);
-        //            if (loadCase1 != null)
-        //            {
-        //                int index = viewModel.LoadCaseViewModel.LoadCases1.IndexOf(loadCase1);
-        //                pileLocation.AxialForceLevel1s[index] = axialForce;
-        //                continue;
-        //            }
-
-        //            var loadCase2 = viewModel.LoadCaseViewModel.LoadCases2.FirstOrDefault(lc => lc.LoadName == loadCase);
-        //            if (loadCase2 != null)
-        //            {
-        //                int index = viewModel.LoadCaseViewModel.LoadCases2.IndexOf(loadCase2);
-        //                pileLocation.AxialForceLevel2s[index] = axialForce;
-        //                continue;
-        //            }
-
-        //            // エラーハンドリング: 無効なloadCaseが渡された場合
-        //            System.Windows.MessageBox.Show($"無効な荷重ケース: {loadCase}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-        //            return;
-        //        }
-        //    }
-
-        //    // 選択項目をクリア
-        //    DataGridPileLayout.SelectedItems.Clear();
-        //    DataGridPileAxialForce.SelectedItems.Clear();
-        //    DataGridIsFrontPile.SelectedItems.Clear();
-
-        //    // UIの更新
-        //    UpdateCanvas(DataGridPileLayout);
-        //    UpdatePerspectiveView();
-        //}
         private void ReplaceAxialForce(double axialForce, string loadCase)
         {
             UpdateAxialForce(axialForce, loadCase, isAdd: false);
@@ -1711,62 +1564,5 @@ namespace PileDesignCore
             }
         }
     }
-
-    //public class BoolToVisibilityConverter : IValueConverter
-    //{
-    //    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    //    {
-    //        if (value is bool isVisible)
-    //        {
-    //            return isVisible ? Visibility.Visible : Visibility.Collapsed;
-    //        }
-
-    //        return Visibility.Collapsed;
-    //    }
-
-    //    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
-
-    //public class PileTopAltitudeConverter : IValueConverter
-    //{
-    //    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    //    {
-    //        if (parameter is PileLayoutWindow pileLayoutWindow)
-    //        {
-    //            if (double.TryParse(value.ToString(), out double altitude))
-    //            {
-    //                if (altitude > 0)
-    //                    return $"{pileLayoutWindow.DataContextFundamental.RefLevel}+{altitude:0.00}";
-    //                else if (altitude < 0)
-    //                    return $"{pileLayoutWindow.DataContextFundamental.RefLevel}{altitude:0.00}";
-    //                else
-    //                    return $"{pileLayoutWindow.DataContextFundamental.RefLevel}±{altitude:0.00}";
-    //            }
-    //        }
-    //        return value;
-    //    }
-
-    //    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    //    {
-    //        if (parameter is PileLayoutWindow)
-    //        {
-    //            string input = value.ToString();
-
-    //            // Assuming the input format is "{RefLevel} {Value}"
-    //            string[] parts = input.Split(' ');
-
-    //            if (parts.Length == 2 && double.TryParse(parts[1], out double altitude))
-    //            {
-    //                // Update your variable with the altitude value
-    //                // For example: pileLayoutWindow.DataContextFundamental.RefLevelVariable = altitude;
-    //                return altitude;
-    //            }
-    //        }
-    //        return value;
-    //    }
-    //}
 }
 

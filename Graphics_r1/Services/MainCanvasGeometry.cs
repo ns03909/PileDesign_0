@@ -507,7 +507,7 @@ namespace PileDesign.Services
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.Red,
-                StrokeThickness = 0.5,
+                StrokeThickness = 1,
                 Data = PathGeoAxisX,
                 Name = "AxisX"
             });
@@ -515,7 +515,7 @@ namespace PileDesign.Services
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.Green,
-                StrokeThickness = 0.5,
+                StrokeThickness = 1,
                 Data = PathGeoAxisY,
                 Name = "AxisY"
             });
@@ -523,7 +523,7 @@ namespace PileDesign.Services
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.Blue,
-                StrokeThickness = 0.5,
+                StrokeThickness = 1,
                 Data = PathGeoAxisZ,
                 Name = "AxisZ"
             });

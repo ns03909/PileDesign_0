@@ -830,28 +830,30 @@
 
                 <ribbon:RibbonGroup Header="値表示">
                     <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}"/>
-                    <CheckBox Content="中間のみ" IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
-                        Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                    <CheckBox Content="杭頭のみ" IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
-                        Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <CheckBox Content="中間のみ"
+          IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
+          IsEnabled="{Binding IsResultValueVisible}"/>
+                    <CheckBox Content="杭頭のみ"
+          IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
+          IsEnabled="{Binding IsResultValueVisible}"/>
 
-                    <StackPanel Orientation="Horizontal"  Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsResultValueVisible}">
                         <TextBlock Text="位置" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <Slider Width="50" Minimum="0" Maximum="20"
-                            Value="{Binding TextPosiitonAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
+            Value="{Binding TextPosiitonAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBox Width="45" HorizontalContentAlignment="Right"
-                             Text="{Binding TextPosiitonAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
+             Text="{Binding TextPosiitonAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+             KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0"  Visibility="{Binding IsResultValueVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsResultValueVisible}">
                         <TextBlock Text="小数" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <Slider Width="50" Minimum="0" Maximum="5"
-                            Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
+            Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBox Width="45" HorizontalContentAlignment="Right"
-                             Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
+             Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
+             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+             KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
@@ -1059,7 +1061,7 @@
                     <ribbon:RibbonToggleButton Label="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsPileSectionVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="梁要素軸" ToolTip="梁要素座標軸の表示／非表示を切り替えます。"
+                    <ribbon:RibbonToggleButton Label="杭要素軸" ToolTip="梁要素座標軸の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsBeamLocalAxesVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
 
@@ -1098,7 +1100,7 @@
                 <!-- ラベル -->
                 <ribbon:RibbonGroup Header="杭節点ラベル">
                     <ribbon:RibbonToggleButton Label="節点番号" IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
-                    <ribbon:RibbonToggleButton Label="要素番号" IsChecked="{Binding IsElementNoVisible}" SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
+                    <!--<ribbon:RibbonToggleButton Label="要素番号" IsChecked="{Binding IsElementNoVisible}" SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>-->
                     <ribbon:RibbonToggleButton Label="杭番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭頭Z" IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
@@ -1125,14 +1127,20 @@
                                ToolTip="土層の密度(kN/m3)、粘着力(kN/m2)、せん断波速度Vs(m/s)、または変形係数Es(kN/m2)の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
                                SmallImageSource="pack://application:,,,/Icons/GroundLayerParametersVisible.png"/>
+                    
 
                     <!-- 置換後: 土層項目選択 -->
-                    <ComboBox 
+                    <!--<ComboBox 
                           ItemsSource="{Binding SoilParamDisplayOptions}"
                           SelectedItem="{Binding SelectedSoilParamDisplay}"
                           IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"
                           Visibility="{Binding IsSoilLayerParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
-                          ribbon:RibbonControlService.Label="土層項目"/>
+                          ribbon:RibbonControlService.Label="土層項目"/>-->
+                    <ComboBox 
+                        ItemsSource="{Binding SoilParamDisplayOptions}"
+                        SelectedItem="{Binding SelectedSoilParamDisplay}"
+                        IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"
+                        ribbon:RibbonControlService.Label="土層項目"/>
 
                     <ribbon:RibbonToggleButton Label="土質点パラメータ"
                                ToolTip="N値、せん断波速度Vs0(m/s)、または細粒分含有率Fc(%)の表示／非表示を切り替えます。"
@@ -1140,14 +1148,19 @@
                                SmallImageSource="pack://application:,,,/Icons/GroundPointParametersVisible.png"/>
 
                     <!-- 置換後: 土質点項目選択 -->
-                    <ComboBox 
+                    <!--<ComboBox 
                           ItemsSource="{Binding SoilMassParamDisplayOptions}"
                           SelectedItem="{Binding SelectedSoilMassParamDisplay}"
                           IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
                           Visibility="{Binding IsSoilMassParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                          ribbon:RibbonControlService.Label="土質点項目"/>-->
+                    <ComboBox 
+                          ItemsSource="{Binding SoilMassParamDisplayOptions}"
+                          SelectedItem="{Binding SelectedSoilMassParamDisplay}"
+                          IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
                           ribbon:RibbonControlService.Label="土質点項目"/>
 
-                    <ribbon:RibbonToggleButton Label="パラメータ値表示"
+                    <!--<ribbon:RibbonToggleButton Label="パラメータ値表示"
                                ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilValueVisible}"
                                SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png">
@@ -1157,6 +1170,23 @@
                                 <Binding Path="IsSoilMassParamDisplayEnabled"/>
                             </MultiBinding>
                         </ribbon:RibbonToggleButton.Visibility>
+                    </ribbon:RibbonToggleButton>-->
+                    <ribbon:RibbonToggleButton Label="パラメータ値表示"
+                        ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
+                        IsChecked="{Binding IsSoilValueVisible}"
+                        SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png">
+                        <!--<ribbon:RibbonToggleButton.Visibility>
+                            <MultiBinding Converter="{StaticResource AnyBoolToVisibilityConverter}">
+                                <Binding Path="IsSoilLayerParamDisplayEnabled"/>
+                                <Binding Path="IsSoilMassParamDisplayEnabled"/>
+                            </MultiBinding>
+                        </ribbon:RibbonToggleButton.Visibility>-->
+                        <!--<ribbon:RibbonToggleButton.IsEnabled>
+                            <MultiBinding Converter="{StaticResource AnyBoolToVisibilityConverter}">
+                                <Binding Path="IsSoilLayerParamDisplayEnabled"/>
+                                <Binding Path="IsSoilMassParamDisplayEnabled"/>
+                            </MultiBinding>
+                        </ribbon:RibbonToggleButton.IsEnabled>-->
                     </ribbon:RibbonToggleButton>
                 </ribbon:RibbonGroup>
 
@@ -1165,11 +1195,12 @@
                     <ribbon:RibbonToggleButton Label="地盤変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
                                                    SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
-                    <!--<CheckBox Content="変位スケール適用" IsChecked="{Binding IsDispDiagramMultiplierApplicable}"/>-->
+
                     <StackPanel Orientation="Horizontal">
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
                                 <Setter Property="Visibility" Value="Collapsed"/>
+                                <Setter Property="IsEnabled" Value="False"/>
                                 <Style.Triggers>
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
@@ -1177,6 +1208,15 @@
                                             <Condition Binding="{Binding DataContext.IsDispDiagramMultiplierApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding DataContext.IsForcedDisplacementVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="False"/>
+                                            <Condition Binding="{Binding DataContext.IsDispDiagramMultiplierApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Setter Property="IsEnabled" Value="False"/>
                                     </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1185,11 +1225,10 @@
                         <Slider Width="50" Minimum="0" Maximum="1000.0" 
                             Value="{Binding DispDiagramMultiplier, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBox Width="45" HorizontalContentAlignment="Right"
-                             Text="{Binding DispDiagramMultiplier, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
+                         Text="{Binding DispDiagramMultiplier, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
-
                 </ribbon:RibbonGroup>
 
 
@@ -1392,12 +1431,6 @@
                              SmallImageSource="pack://application:,,,/Icons/DeselectAll.png"/>
                 </ribbon:RibbonGroup>
 
-
-            </ribbon:RibbonTab>
-
-
-            <!-- 既存 Ribbon の </ribbon:RibbonTab> （ビュータブ）直前あたりに挿入 -->
-            <ribbon:RibbonTab Header="表示（群杭沈下）">
                 <ribbon:RibbonGroup Header="群杭沈下ビュー">
                     <ribbon:RibbonToggleButton Label="沈下グリッド" ToolTip="群杭沈下グリッド表示"
                                IsChecked="{Binding IsGroupPileGridVisible}"
@@ -1420,6 +1453,12 @@
                                SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
+
+
+            <!-- 既存 Ribbon の </ribbon:RibbonTab> （ビュータブ）直前あたりに挿入 -->
+            <!--<ribbon:RibbonTab Header="表示（群杭沈下）">
+
+            </ribbon:RibbonTab>-->
 
 
 
@@ -1450,6 +1489,14 @@
                         Command="{Binding OpenPileSectionLibraryWindowCommand}"
                         LargeImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"
                         SmallImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"/>
+                </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="説明用">
+                    <ribbon:RibbonToggleButton Label="入力表示"
+                        ToolTip="マウス・キーボード入力状態を画面右下に表示"
+                        IsChecked="{Binding IsInputVisualizerVisible}"
+                        LargeImageSource="pack://application:,,,/Icons/Display.png"           
+                        SmallImageSource="pack://application:,,,/Icons/Display.png"/>
                 </ribbon:RibbonGroup>
 
             </ribbon:RibbonTab>
@@ -3631,7 +3678,7 @@
                                         <TextBlock Text="{Binding CurrentInputModel.FundamentalInput.RefLevel}" 
                                                      Foreground="Gray" HorizontalAlignment="Right" Grid.Row="1" Grid.Column="1"/>
                                         <TextBox x:Name="TextBoxGroupPileLoadingPlaneAltitude"
-                                                    Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude, 
+                                                    Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude, 
                                                     StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
                                                     
                                                     Grid.Row="1" Grid.Column="2"
@@ -5637,6 +5684,10 @@
             <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Margin="4,0,0,0"
                Foreground="{Binding StatusMessageColor}" VerticalAlignment="Center"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
+
+                <!-- 入力ビジュアライザー（マウス・キーボード状態表示） -->
+                <views:InputVisualizer Visibility="{Binding IsInputVisualizerVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Margin="4,0,8,0"/>
 
                 <!-- 右余白（無描画帯）コントロール -->
                 <Separator Width="8" Opacity="0"/>

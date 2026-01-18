@@ -158,42 +158,6 @@ namespace PileDesign.ViewModels
 
         private string _selectedPileBodyNoItem;
         public string SelectedPileBodyNoItem
-        //{
-        //    get => _selectedPileBodyNoItem;
-        //    set
-        //    {
-        //        if (SetProperty(ref _selectedPileBodyNoItem, value))
-        //        {
-        //            // (New)が選択された場合
-        //            if (value != null && value.Contains("New"))
-        //            {
-        //                int newNo = PileBodies.Count + 1;
-        //                PileBodies.Add(new PileBodyInput() { PileBodyRef = "(PB" + newNo.ToString() + ")" });
-        //                UpdatePileBodiesCountPlusOneList();
-        //                SelectedPileBodyNoItem = PileBodiesCountPlusOneList[PileBodies.Count - 1]; // 新しいアイテムを選択
-        //                PileBodyNo = PileBodies.Count;
-        //                PileBody = PileBodies.Last();
-        //            }
-        //            else
-        //            {
-        //                // 通常の選択
-        //                int idx = PileBodiesCountPlusOneList.IndexOf(value);
-        //                if (idx >= 0 && idx < PileBodies.Count)
-        //                {
-        //                    PileBodyNo = idx + 1;
-        //                    PileBody = PileBodies[idx];
-        //                }
-        //                else
-        //                {
-        //                    // 削除直後などで不正なインデックスの場合は何もしない
-        //                    return;
-        //                }
-        //            }
-        //            DrawShapes();
-        //            UpdateTemporarySoilPile();
-        //        }
-        //    }
-        //}
         {
             get => _selectedPileBodyNoItem;
             set
@@ -752,32 +716,7 @@ namespace PileDesign.ViewModels
         //    UpdateTemporarySoilPile();
         //}
 
-        //public void ComboBoxPileBodyNo_SelectionChanged(int selectedIndex, int previousSelectedPileBodyNo)
-        //{
-        //    if (selectedIndex < 0) return; // 未選択は無視
-        //    // selectedIndex: 0-based
-        //    if (selectedIndex == PileBodiesCountPlusOneList.Count - 1)
-        //    {
-        //        // (New)が選択された場合
-        //        int newNo = PileBodies.Count + 1;
-        //        PileBodies.Add(new PileBodyInput() { PileBodyRef = "(PB" + newNo.ToString() + ")" });
-        //        UpdatePileBodiesCountPlusOneList();
-        //        PileBodyNo = newNo; // 新しい杭体番号に切り替え
-        //        PileBody = PileBodies.Last();
-        //    }
-        //    else
-        //    {
-        //        // 範囲チェック
-        //        if (selectedIndex >= 0 && selectedIndex < PileBodies.Count)
-        //        {
-        //            PileBodyNo = selectedIndex + 1;
-        //            PileBody = PileBodies[selectedIndex];
-        //        }
-        //    }
-        //    DrawShapes();
-        //    UpdateTemporarySoilPile();
-        //}
-        public void ComboBoxPileBodyNo_SelectionChanged(int selectedIndex/*, int previousSelectedPileBodyNo*/)
+        public void ComboBoxPileBodyNo_SelectionChanged(int selectedIndex)
         {
             if (selectedIndex < 0) return; // 未選択は無視
 

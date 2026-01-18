@@ -155,31 +155,5 @@ namespace PileDesignCore
                 UpdatePerspectiveView();
             }
         }
-
-        //private void DataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
-        //{
-        //    if (e.PropertyType == typeof(string) && e.PropertyName == "GroundRef")
-        //    {
-        //        var column = e.Column as DataGridComboBoxColumn;
-        //        if (column != null)
-        //        {
-        //            column.ItemsSource = ((ApplicationViewModel)DataContext).GroundLayerViewModel.GroundRefs;
-        //        }
-        //    }
-
-        //    if (e.PropertyType == typeof(string) && e.PropertyName == "PileBodyRef")
-        //    {
-        //        var column = e.Column as DataGridComboBoxColumn;
-        //        if (column != null)
-        //        {
-        //            column.ItemsSource = ((ApplicationViewModel)DataContext).PileBodyViewModel.PileBodyRefs;
-        //        }
-
-
-        //    }
-        //}
-    
-
-
 }
 }

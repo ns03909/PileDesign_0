@@ -501,10 +501,10 @@ namespace PileDesign.ViewModels
 
         private ObservableCollection<PileLayoutDataItem> GetSelectedPileLayouts()
         {
-            ObservableCollection<PileLayoutDataItem> selectePileLayouts = [];
+            ObservableCollection<PileLayoutDataItem> selectedPileLayouts = [];
             if (SelectedPileOption == "All")
             {
-                selectePileLayouts = InputModel.PileLayoutItems;
+                selectedPileLayouts = InputModel.PileLayoutItems;
             }
             else
             {
@@ -512,12 +512,12 @@ namespace PileDesign.ViewModels
                 {
                     if (SelectedPileOption == $"{pile.No}" + "X:" + pile.X + "Y:" + pile.Y + "Z:" + pile.Z)
                     {
-                        selectePileLayouts.Add(pile);
-                        return selectePileLayouts;
+                        selectedPileLayouts.Add(pile);
+                        return selectedPileLayouts;
                     }
                 }
             }
-            return selectePileLayouts;
+            return selectedPileLayouts;
         }
 
 

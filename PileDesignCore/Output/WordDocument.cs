@@ -1,22 +1,13 @@
-﻿using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using DocumentFormat.OpenXml;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
 using System.Data;
-//using static System.Windows.Forms.VisualStyles.VisualStyleElement.Tab;
 
 namespace PileDesignCore.Output
 {
-    internal class WordDocument
+    internal static class WordDocument
     {
-        // コンストラクタ
-        public WordDocument() { }
 
         // Word文書作成メソッド
         public static void CreateWordDocument(string fileName, ApplicationViewModel viewModel)
@@ -41,17 +32,15 @@ namespace PileDesignCore.Output
                 // MainDocumentPartにドキュメントを追加
                 mainPart.Document = doc;
             }
-
-            Console.WriteLine("Word文書が作成され、保存されました。");
         }
 
         // テキストを追加するメソッド
-        public static void AddText(Body body, string _string)
+        public static void AddText(Body body, string textContent)
         {
             // ドキュメントにテキストを追加
             Paragraph paragraph = new Paragraph();
             Run run = new Run();
-            Text text = new Text(_string);
+            Text text = new Text(textContent);
             run.Append(text);
             paragraph.Append(run);
             body.Append(paragraph);

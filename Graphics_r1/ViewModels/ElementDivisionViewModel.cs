@@ -1322,48 +1322,7 @@ namespace PileDesign.ViewModels
             OnZDataItemsChanged();
         }
 
-        // electedZDataItems操作後に行うメソッド
-        //private void OnZDataItemsChanged()
-        //{
-        //    _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
-
-        //    if (SoilPiles == null || SoilPiles.Count == 0) return;
-        //    if (SelectedSoilPileNo < 1 || SelectedSoilPileNo > SoilPiles.Count) return;
-
-        //    var selectedSoilPile = SoilPiles[SelectedSoilPileNo - 1];
-
-        //    if (selectedSoilPile == null) return;
-        //    if (ElementDivisionWindowInstance == null || ElementDivisionWindowInstance.DataGridZs == null) return;
-
-        //    SoilPiles[SelectedSoilPileNo - 1].ZDataItems = new ObservableCollection<PileZDataItem>
-        //            (SelectedZDataItems.Select(item => item.DeepCopy()));
-        //    SoilPiles[SelectedSoilPileNo - 1].OnZDataItemsChanged(SoilPiles[SelectedSoilPileNo - 1].ZDataItems); // SoilPileのプロパティ更新を委譲
-
-        //    PileGroundNo = SoilPiles[SelectedSoilPileNo - 1].GroundNo;
-        //    PileBodyNo = SoilPiles[SelectedSoilPileNo - 1].PileBodyNo;
-        //    Z = SoilPiles[SelectedSoilPileNo - 1].Z;
-        //    PileBottomAltitude = SoilPiles[SelectedSoilPileNo - 1].PileBottomAltitude;
-
-        //    AutoNumberingDataGrid(ElementDivisionWindowInstance.DataGridZs);
-
-        //    UpdateSelectedSoilPileProperties();
-
-        //    SetHorizontalSoilReaction();
-        //    DrawShapes();
-
-        //    // DataGridZsおよびDataGrid x:Name="horizon"のデータを更新
-        //    if (ElementDivisionWindowInstance != null)
-        //    {
-        //        ElementDivisionWindowInstance.DataGridZs.ItemsSource = SelectedZDataItems;
-        //        ElementDivisionWindowInstance.horizon.ItemsSource = SelectedHorizontalSoilReactions;
-        //    }
-
-        //    // プロパティの変更を通知
-        //    OnPropertyChanged(nameof(PileGroundNo));
-        //    OnPropertyChanged(nameof(PileBodyNo));
-        //    OnPropertyChanged(nameof(Z));
-        //    OnPropertyChanged(nameof(PileBottomAltitude));
-        //}
+        // SelectedZDataItems操作後に行うメソッド
         private void OnZDataItemsChanged()
         {
             // バルク更新時は外部で既に SaveState しているので重複して取らない
@@ -1803,26 +1762,6 @@ namespace PileDesign.ViewModels
 
         public void DrawSoilEmbedment()
         {
-            //GroundInput groundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1];
-
-            //if (DoatsuGoryokuBane == null) return;
-
-            //List<double> zs = [];
-            //foreach (var embedmentZsCollection in EmbedmentZsCollection)
-            //{
-            //    zs.Add(embedmentZsCollection.Z);
-            //}
-
-            //double? selectedZ = SelectedEmbedmentZ?.Z; // 選択節点
-
-            //ShapeDrawer.DrawEmbedmentElevation(
-            //CanvasEmbedment,
-            //DoatsuGoryokuBane,
-            //groundInput,
-            //SelectedDirection,
-            //zs,
-            //selectedZ);
-
             // 前提チェック（ヌル安全）
             if (SoilEmbedment == null) return;
             if (InputModel?.GroundsInput == null) return;

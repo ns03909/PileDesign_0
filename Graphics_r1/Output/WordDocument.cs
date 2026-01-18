@@ -189,7 +189,7 @@ namespace PileDesign.Output
 
 
         // FrontMatter: タイトル・目次・基本説明章
-        private void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model)
+        private static void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model)
         {
             AddText(body, "杭検討プログラム ver プレプロト", "center");
             AddTitle(body, "基礎ぐいの検討書");
@@ -341,7 +341,7 @@ namespace PileDesign.Output
             { }
             if (mainWindowViewModel.IncludeHorizontal_NMINT) // NMINT
             { }
-            if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
+            if (mainWindowViewModel.IncludepileLocationMap) // 杭配置マップ
             {
                 double layoutW = 150; double layoutH = 200;
                 AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileBasicMark);
@@ -2042,7 +2042,7 @@ namespace PileDesign.Output
 
         }
 
-        private void BuildAnalysisResultSummaryTable(
+        private static void BuildAnalysisResultSummaryTable(
             Body body,
             List<string> selectedPileBodies,
             List<int> selectedSegment,
@@ -3853,7 +3853,7 @@ namespace PileDesign.Output
             try
             {
                 // 直径 (m) を決めるオプションセレクタ（安全に null チェック）
-                Func<PileLayoutDataItem, double> diameterSelector = pli =>
+                double diameterSelector(PileLayoutDataItem pli)
                 {
                     if (inputModel?.PileBodies == null) return 1.0;
                     int bodyNo = pli?.PileBodyNo ?? 0;
@@ -3863,12 +3863,12 @@ namespace PileDesign.Output
                     if (seg?.PileSection == null) return 1.0;
                     // 元実装では PileDiameter は mm 単位で扱っているため m に変換
                     return seg.PileSection.PileDiameter * 0.001;
-                };
+                }
 
                 var pngBytes = DiagramRenderer.RenderPilingLayoutPngBytes(
                     inputModel.PileLayoutItems,
                     markSelector,
-                    diameterSelector,
+diameterSelector,
                     widthMm,
                     heightMm,
                     dpi: Layout.BaseDpi,
@@ -5968,7 +5968,7 @@ namespace PileDesign.Output
                 //dataRow.Append(CreateTableCell([$"{pileLayoutData.AxialForceLevel2s[2]:N0}"], fontSize, "right"));
                 //dataRow.Append(CreateTableCell([$"{pileLayoutData.AxialForceLevel2s[3]:N0}"], fontSize, "right"));
 
-                string AF(IList<double> list, int idx) => (list != null && idx >= 0 && idx < list.Count) ? $"{list[idx]:N0}" : string.Empty;
+                static string AF(IList<double> list, int idx) => (list != null && idx >= 0 && idx < list.Count) ? $"{list[idx]:N0}" : string.Empty;
 
                 // データ行の該当箇所
                 dataRow.Append(CreateTableCell([AF(pileLayoutData.AxialForceLevel1s, 0)], fontSize, "right"));
@@ -7193,7 +7193,7 @@ namespace PileDesign.Output
                 "群杭の沈下量は、等価荷重面を用いたスタインブレナーの近似解（「基礎指針'19」5.3節）を用いて求める。"]);
 
             AddText(body, "単杭の先端抵抗-沈下量関係");
-            //AddEquation_PileSettlment(body);
+            //AddEquation_PileSettlement(body);
             AddEq(body, @"\frac{S_{p}/d_{p}}{0.1} = \alpha \frac{R_{p}/A_{p}}{(R_{p}/A_{p})_{u}} + (1-\alpha)\left(\frac{R_{p}/A_{p}}{(R_{p}/A_{p})_{u}}\right)^{n}");
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\S_{p}"), ": 杭先端沈下量(m)"]);

@@ -219,7 +219,7 @@
                                         <TextBlock Text="荷重面Z"/>
                                         <TextBox Text="{Binding CurrentInputModel.FundamentalInput.RefLevel}" IsReadOnly="True" Foreground="Gray"/>
                                         <TextBox x:Name="TextBoxGroupPileLoadingPlaneAltitude"
-                                                 Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude, StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
+                                                 Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude, StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
                                                  GotFocus="TextBox_GotFocus"
                                                  PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
                                                  TextChanged="TextBoxAltitude_TextChanged"

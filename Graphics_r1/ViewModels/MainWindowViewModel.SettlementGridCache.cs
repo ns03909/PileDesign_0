@@ -18,21 +18,29 @@ namespace PileDesign.ViewModels
 
     public class SettlementGridRenderCache
     {
-        // •ÏŒ`ƒOƒŠƒbƒhü•ªi3Dj
+        // çŸ©å½¢ã‚°ãƒªãƒƒãƒ‰ç·šç¾¤(3D)
         public List<(Point3D Start, Point3D End)> GridSegments3D { get; set; } = new();
-        // “™’l‘Ñƒ|ƒŠƒSƒ“i3Dj
+        // ç­‰å€¤ç·šãƒãƒªã‚´ãƒ³(3D)
         public List<SettlementIsoBand> IsoBands3D { get; set; } = new();
-        // “™‚üi3Dj
+        // ç­‰é«˜ç·š(3D)
         public List<List<Point3D>> Contours3D { get; set; } = new();
-        // ƒJƒ‰[ƒo[‘ÑiF‚Æ”ÍˆÍ‚Ì‚İj
+        // ã‚«ãƒ©ãƒ¼ãƒãƒ¼(è‰²ã¨ç¯„å›²ã®ã¿)
         public List<(double Bottom, double Top, Color Color)> ColorBands { get; set; } = new();
-        // ƒtƒBƒ“ƒK[ƒvƒŠƒ“ƒg
+        // ãƒ•ã‚£ãƒ³ã‚¬ãƒ¼ãƒ—ãƒªãƒ³ãƒˆ
         public SettlementGridFingerprint? Fingerprint { get; set; }
     }
 
+    /// <summary>
+    /// MainWindowViewModel.SettlementGridCache.cs
+    ///
+    /// è²¬ä»»ç¯„å›²:
+    /// - ç¾¤æ­æ²ˆä¸‹ã‚°ãƒªãƒƒãƒ‰ã®æç”»ã‚­ãƒ£ãƒƒã‚·ãƒ¥ç®¡ç†
+    /// - ç­‰å€¤ç·šãƒãƒ³ãƒ‰ã€ã‚°ãƒªãƒƒãƒ‰ç·šã€ã‚³ãƒ³ã‚¿ãƒ¼ã®ã‚­ãƒ£ãƒƒã‚·ãƒ¥ãƒ‡ãƒ¼ã‚¿æ§‹é€ 
+    /// - ãƒ•ã‚£ãƒ³ã‚¬ãƒ¼ãƒ—ãƒªãƒ³ãƒˆï¼ˆã‚­ãƒ£ãƒƒã‚·ãƒ¥æ¤œè¨¼ç”¨ï¼‰
+    /// </summary>
     public partial class MainWindowViewModel
     {
-        // ƒ[ƒ‹ƒhŒ`óƒLƒƒƒbƒVƒ…
+        // ãƒ¯ãƒ¼ãƒ«ãƒ‰æç”»ã‚­ãƒ£ãƒƒã‚·ãƒ¥
         public SettlementGridRenderCache SettlementWorldCache { get; set; } = new();
     }
 }

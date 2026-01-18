@@ -343,35 +343,6 @@ namespace PileDesignCore
                 //{
                 //    // ここにCtrlキーが押しながら左クリックしたときの処理を記述する
                 //}
-                //// Ctrlキーが押されていない場合の処理
-                //else
-                //{
-                //    ClearCanvasSelection();
-                //    // マウスの左ボタンが押された時の処理
-
-                //    var elementToRemove = HelixViewport.Children.OfType<Path>().FirstOrDefault(p => p.Name == "Selection");
-                //    if (elementToRemove != null)
-                //    {
-                //        HelixViewport.Children.Remove(elementToRemove);
-                //    }
-                //    startPoint = e.GetPosition(HelixViewport);
-                //}
-
-                //if (e.LeftButton == MouseButtonState.Pressed)
-                //{
-                //    startPoint = e.GetPosition(HelixViewport);
-                //    selectionRectangle = new Rectangle
-                //    {
-                //        //Stroke = Brushes.Black,
-                //        StrokeThickness = 1,
-                //        Opacity = 0.5,
-                //        Fill = Brushes.LightBlue
-                //    };
-
-                //    Canvas.SetLeft(selectionRectangle, startPoint.X);
-                //    Canvas.SetTop(selectionRectangle, startPoint.Y);
-                //    CanvasLayout.Children.Add(selectionRectangle);
-                //}
             }
         }
     }

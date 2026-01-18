@@ -10,10 +10,16 @@ using System.Threading.Tasks; // 先頭の using に追加すること
 
 namespace PileDesign.ViewModels
 {
-
+    /// <summary>
+    /// MainWindowViewModel.Examples.cs
+    ///
+    /// 責任範囲:
+    /// - 設計例集データの生成（Example3_1, Example3_2, Example3_3, Example3_4, ExampleK7, ExampleK8, Example9）
+    /// - 各例集メソッドの再入防止制御
+    /// - サンプルデータの自動設定（地盤、荷重ケース、杭体、杭配置など）
+    /// </summary>
     public partial class MainWindowViewModel : ObservableObject
     {
-
         // 再入防止フラグ（partial クラス内に置く）
         private bool _isExampleRunning = false;
 
@@ -375,7 +381,7 @@ namespace PileDesign.ViewModels
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
                     CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
-                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
                 }
 
                 // 根入れ
@@ -462,18 +468,6 @@ namespace PileDesign.ViewModels
                 section00.PileSectionType = "PHC杭";
                 section00.SetSelectedPrecastPileByName("PHC-500-標準-85-C");
 
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PileDiameter = 500.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PileSectionType = "PHC杭";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteOutDia = 500.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteThickness = 100;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.MainBarDr = 400;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PipeTs = 0.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PipeDia = 500.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.MainBarNum = 0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.MainBarSize = "D29";
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteFc = 85.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteGsi = 1.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteGamma = 23.0;
 
 
                 CurrentInputModel.PileLayoutItems =
@@ -952,7 +946,7 @@ namespace PileDesign.ViewModels
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
                     CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
-                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
                 }
 
                 // 根入れ
@@ -1001,9 +995,6 @@ namespace PileDesign.ViewModels
 
                 for (int i = 0; i < CurrentInputModel.LoadCasesInput.LoadCasesLevel1.Count; i++)
                 {
-                    //CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].ForceActionPoint = new Point3D(16.4, 12.6, -2.0);
-                    CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].IsApplicable = false;
-                    //CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].UpperMassForce = 4734;
                     //CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i].FoundationMassForce = 1188;
                 }
                 for (int i = 0; i < CurrentInputModel.LoadCasesInput.LoadCasesLevel2.Count; i++)
@@ -1035,7 +1026,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[0].PileBodySegments[0].No = 1;
                 CurrentInputModel.PileBodies[0].PileBodySegments[0].SegmentLength = 9.0;
                 CurrentInputModel.PileBodies[0].PileBodySegments[0].SegmentDepth = 9.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[0].PileBodySegments[0].PileSection.ConcreteThickness = 950;
@@ -1053,7 +1043,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[0].PileBodySegments[1].No = 1;
                 CurrentInputModel.PileBodies[0].PileBodySegments[1].SegmentLength = 12.0;
                 CurrentInputModel.PileBodies[0].PileBodySegments[1].SegmentDepth = 21.0;
-                //CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[0].PileBodySegments[1].PileSection.ConcreteThickness = 950;
@@ -1085,7 +1074,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[1].PileBodySegments[0].No = 1;
                 CurrentInputModel.PileBodies[1].PileBodySegments[0].SegmentLength = 9.0;
                 CurrentInputModel.PileBodies[1].PileBodySegments[0].SegmentDepth = 9.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[1].PileBodySegments[0].PileSection.ConcreteThickness = 950;
@@ -1103,7 +1091,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].No = 1;
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].SegmentLength = 12.0;
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].SegmentDepth = 21.0;
-                //CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[1].PileBodySegments[1].PileSection.ConcreteThickness = 950;
@@ -1135,7 +1122,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[2].PileBodySegments[0].No = 1;
                 CurrentInputModel.PileBodies[2].PileBodySegments[0].SegmentLength = 9.0;
                 CurrentInputModel.PileBodies[2].PileBodySegments[0].SegmentDepth = 9.0;
-                //CurrentInputModel.PileBodies[2].PileBodySegments[0].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[2].PileBodySegments[0].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[2].PileBodySegments[0].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[2].PileBodySegments[0].PileSection.ConcreteThickness = 950;
@@ -1153,7 +1139,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[2].PileBodySegments[1].No = 1;
                 CurrentInputModel.PileBodies[2].PileBodySegments[1].SegmentLength = 12.0;
                 CurrentInputModel.PileBodies[2].PileBodySegments[1].SegmentDepth = 21.0;
-                //CurrentInputModel.PileBodies[2].PileBodySegments[1].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[2].PileBodySegments[1].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[2].PileBodySegments[1].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[2].PileBodySegments[1].PileSection.ConcreteThickness = 950;
@@ -1185,7 +1170,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[3].PileBodySegments[0].No = 1;
                 CurrentInputModel.PileBodies[3].PileBodySegments[0].SegmentLength = 9.0;
                 CurrentInputModel.PileBodies[3].PileBodySegments[0].SegmentDepth = 9.0;
-                //CurrentInputModel.PileBodies[3].PileBodySegments[0].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[3].PileBodySegments[0].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[3].PileBodySegments[0].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[3].PileBodySegments[0].PileSection.ConcreteThickness = 950;
@@ -1203,7 +1187,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].No = 1;
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].SegmentLength = 12.0;
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].SegmentDepth = 21.0;
-                //CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.PileDiameter = 1900;
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.ConcreteOutDia = 1900;
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.ConcreteThickness = 950;
@@ -1235,7 +1218,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[4].PileBodySegments[0].No = 1;
                 CurrentInputModel.PileBodies[4].PileBodySegments[0].SegmentLength = 9.0;
                 CurrentInputModel.PileBodies[4].PileBodySegments[0].SegmentDepth = 9.0;
-                //CurrentInputModel.PileBodies[4].PileBodySegments[0].PileSection.PileDiameter = 1800;
                 CurrentInputModel.PileBodies[4].PileBodySegments[0].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[4].PileBodySegments[0].PileSection.ConcreteOutDia = 1800;
                 CurrentInputModel.PileBodies[4].PileBodySegments[0].PileSection.ConcreteThickness = 900;
@@ -1253,7 +1235,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[4].PileBodySegments[1].No = 1;
                 CurrentInputModel.PileBodies[4].PileBodySegments[1].SegmentLength = 12.0;
                 CurrentInputModel.PileBodies[4].PileBodySegments[1].SegmentDepth = 21.0;
-                //CurrentInputModel.PileBodies[4].PileBodySegments[1].PileSection.PileDiameter = 1800;
                 CurrentInputModel.PileBodies[4].PileBodySegments[1].PileSection.PileSectionType = "鉄筋コンクリート部";
                 CurrentInputModel.PileBodies[4].PileBodySegments[1].PileSection.ConcreteOutDia = 1800;
                 CurrentInputModel.PileBodies[4].PileBodySegments[1].PileSection.ConcreteThickness = 900;
@@ -1925,7 +1906,7 @@ namespace PileDesign.ViewModels
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
                     CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
-                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
                 }
 
                 // 根入れ
@@ -2722,18 +2703,6 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.ConcreteFc = 36.0;
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.ConcreteGsi = 1.0;
                 CurrentInputModel.PileBodies[3].PileBodySegments[1].PileSection.ConcreteGamma = 23.0;
-                //CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem());
-
-                //CurrentInputModel.PileLayoutItems[0].PileNo = 1;
-                //CurrentInputModel.PileLayoutItems[0].PileBodyNo = 1;
-                //CurrentInputModel.PileLayoutItems[0].GroundNo = 1;
-                //CurrentInputModel.PileLayoutItems[0].SoilPileAltNo = 1;
-                //CurrentInputModel.PileLayoutItems[0].GroupPileFactor = 1.0;
-                //CurrentInputModel.PileLayoutItems[0].PileSpacingFactor = 10;
-                //CurrentInputModel.PileLayoutItems[0].X = 18.43;
-                //CurrentInputModel.PileLayoutItems[0].Y = 6.90;
-                //CurrentInputModel.PileLayoutItems[0].Z = -5.5;
-                //CurrentInputModel.PileLayoutItems[0].AxialForceVL0 = 2452.0;
 
                 CurrentInputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>
             {
@@ -2962,11 +2931,10 @@ namespace PileDesign.ViewModels
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
                     CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
-                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
                 }
 
                 // -- 真に「null にしたい」場合は次の行を有効化してください（副作用に注意） --
-                // CurrentInputModel.PileGroupSettlement = null;
 
 
                 UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
@@ -3373,11 +3341,10 @@ namespace PileDesign.ViewModels
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads?.Clear();
                     CurrentInputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
-                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = 0.0;
+                    CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
                 }
 
                 // -- 真に「null にしたい」場合は次の行を有効化してください（副作用に注意） --
-                // CurrentInputModel.PileGroupSettlement = null;
 
 
                 UpdateWindowImmediate(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
@@ -3533,7 +3500,7 @@ namespace PileDesign.ViewModels
                     QA = 139.7461,
                 }];
 
-                CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = -2.0;
+                CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = -2.0;
 
                 CurrentInputModel.PileGroupSettlement.SettlementSoilLayers = [
                     new(){
@@ -3750,7 +3717,7 @@ namespace PileDesign.ViewModels
                     QA = 500.0,
                 }];
 
-                CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = -3.0;
+                CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = -3.0;
 
                 CurrentInputModel.PileGroupSettlement.SettlementSoilLayers = [
                     new(){
@@ -3887,7 +3854,7 @@ namespace PileDesign.ViewModels
                 },
                 ];
 
-                CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude = -2.4;
+                CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude = -2.4;
 
                 CurrentInputModel.PileGroupSettlement.SettlementSoilLayers = [
                     new(){

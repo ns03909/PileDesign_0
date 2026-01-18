@@ -20,6 +20,23 @@ namespace PileDesignCore
         public double ForceActionPointX { get; set; }
         public double ForceActionPointY { get; set; }
 
+        // 共通コンストラクタ
+        protected LoadCaseBase(bool isApplicable, int loadCaseNumber, string loadName, double loadAngle,
+                             bool isSoilNonLinear, bool isPileNonLinear,
+                             double upperMassForce, double foundationMassForce,
+                             double forceActionPointX, double forceActionPointY)
+        {
+            IsApplicable = isApplicable;
+            LoadCaseNumber = loadCaseNumber;
+            LoadName = loadName;
+            LoadAngle = loadAngle;
+            IsSoilNonLinear = isSoilNonLinear;
+            IsPileNonLinear = isPileNonLinear;
+            UpperMassForce = upperMassForce;
+            FoundationMassForce = foundationMassForce;
+            ForceActionPointX = forceActionPointX;
+            ForceActionPointY = forceActionPointY;
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -37,18 +54,9 @@ namespace PileDesignCore
                          bool isSoilNonLinear, bool isPileNonLinear,
                          double upperMassForce, double foundationMassForce, double forceActionPointX,
                          double forceActionPointY)
+            : base(isApplicable, loadCaseNumber, loadName, loadAngle, isSoilNonLinear, isPileNonLinear,
+                   upperMassForce, foundationMassForce, forceActionPointX, forceActionPointY)
         {
-            // コンストラクターの本体でプロパティに値を設定する
-            IsApplicable = isApplicable;
-            LoadCaseNumber = loadCaseNumber;
-            LoadName = loadName;
-            LoadAngle = loadAngle;
-            IsSoilNonLinear = isSoilNonLinear;
-            IsPileNonLinear = isPileNonLinear;
-            UpperMassForce = upperMassForce;
-            FoundationMassForce = foundationMassForce;
-            ForceActionPointX = forceActionPointX;
-            ForceActionPointY = forceActionPointY;
         }
     }
 
@@ -59,18 +67,9 @@ namespace PileDesignCore
                          bool isSoilNonLinear, bool isPileNonLinear,
                          double upperMassForce, double foundationMassForce, double forceActionPointX,
                          double forceActionPointY)
+            : base(isApplicable, loadCaseNumber, loadName, loadAngle, isSoilNonLinear, isPileNonLinear,
+                   upperMassForce, foundationMassForce, forceActionPointX, forceActionPointY)
         {
-            // コンストラクターの本体でプロパティに値を設定する
-            IsApplicable = isApplicable;
-            LoadCaseNumber = loadCaseNumber;
-            LoadName = loadName;
-            LoadAngle = loadAngle;
-            IsSoilNonLinear = isSoilNonLinear;
-            IsPileNonLinear = isPileNonLinear;
-            UpperMassForce = upperMassForce;
-            FoundationMassForce = foundationMassForce;
-            ForceActionPointX = forceActionPointX;
-            ForceActionPointY = forceActionPointY;
         }
     }
 
@@ -83,16 +82,12 @@ namespace PileDesignCore
         public double FoundationMassForce { get; set; }
         public double ForceActionPointX { get; set; }
         public double ForceActionPointY { get; set; }
-    }
 
-    [Serializable]
-    public class CommonLoadCase1 : CommonLoadCaseBase
-    {
-        public CommonLoadCase1(bool isSoilNonLinear, bool isPileNonLinear,
-                         double upperMassForce, double foundationMassForce,
-                         double forceActionPointX, double forceActionPointY)
+        // 共通コンストラクタ
+        protected CommonLoadCaseBase(bool isSoilNonLinear, bool isPileNonLinear,
+                                   double upperMassForce, double foundationMassForce,
+                                   double forceActionPointX, double forceActionPointY)
         {
-            // コンストラクターの本体でプロパティに値を設定する
             IsSoilNonLinear = isSoilNonLinear;
             IsPileNonLinear = isPileNonLinear;
             UpperMassForce = upperMassForce;
@@ -103,19 +98,26 @@ namespace PileDesignCore
     }
 
     [Serializable]
+    public class CommonLoadCase1 : CommonLoadCaseBase
+    {
+        public CommonLoadCase1(bool isSoilNonLinear, bool isPileNonLinear,
+                         double upperMassForce, double foundationMassForce,
+                         double forceActionPointX, double forceActionPointY)
+            : base(isSoilNonLinear, isPileNonLinear, upperMassForce, foundationMassForce,
+                   forceActionPointX, forceActionPointY)
+        {
+        }
+    }
+
+    [Serializable]
     public class CommonLoadCase2 : CommonLoadCaseBase
     {
         public CommonLoadCase2(bool isSoilNonLinear, bool isPileNonLinear,
                          double upperMassForce, double foundationMassForce,
                          double forceActionPointX, double forceActionPointY)
+            : base(isSoilNonLinear, isPileNonLinear, upperMassForce, foundationMassForce,
+                   forceActionPointX, forceActionPointY)
         {
-            // コンストラクターの本体でプロパティに値を設定する
-            IsSoilNonLinear = isSoilNonLinear;
-            IsPileNonLinear = isPileNonLinear;
-            UpperMassForce = upperMassForce;
-            FoundationMassForce = foundationMassForce;
-            ForceActionPointX = forceActionPointX;
-            ForceActionPointY = forceActionPointY;
         }
     }
 

@@ -804,7 +804,7 @@ namespace PileDesign.ViewModels
 
             if (CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Count == 0)
             {
-                bottomAlt = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude - 10.0;
+                bottomAlt = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude - 10.0;
                 ek = 100_000_000;
                 poissonsRatio = 0.3;
             }
@@ -899,7 +899,7 @@ namespace PileDesign.ViewModels
         private void UpdateSettlementSoilLayer()
         {
             // SettlementCollection ・ｽﾌ更・ｽV
-            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
             for (int i = 0; i < settlementSoilLayers.Count; i++)
             {
@@ -2455,19 +2455,19 @@ namespace PileDesign.ViewModels
             // ・ｽ・ｽ ・ｽ齊橸ｿｽ・ｽ・ｽX・ｽg・ｽﾉ趣ｿｽ・ｽO・ｽﾉゑｿｽ・ｽﾗて作成
             var newItems = new List<PileLayoutDataItem>(totalCount);
 
-            foreach (var pilelocation in selectedItems)
+            foreach (var pileLocation in selectedItems)
             {
                 for (int i = 0; i < repetitionNumber; i++)
                 {
                     var newItem = new PileLayoutDataItem
                     {
-                        X = pilelocation.X + dX * (i + 1),
-                        Y = pilelocation.Y + dY * (i + 1)
+                        X = pileLocation.X + dX * (i + 1),
+                        Y = pileLocation.Y + dY * (i + 1)
                     };
                     newItem.SetMainWindowViewModel(this);
                     newItems.Add(newItem);
                 }
-                pilelocation.IsSelected = false;
+                pileLocation.IsSelected = false;
             }
 
             // ・ｽ・ｽ ・ｽ鼕・ｿｽu・ｽ・ｽ
@@ -2882,7 +2882,7 @@ namespace PileDesign.ViewModels
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
 
-            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltutude;
+            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
             foreach (var layer in groundInput.GroundLayers)
             {

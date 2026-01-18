@@ -170,14 +170,7 @@ namespace PileDesignCore
         public double Spacing// 間隔
         {
             get => _spacing;
-            set
-            {
-                if (SetProperty(ref _spacing, value))
-                {
-                    SetProperty(ref _spacing, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _spacing, value, viewModel.Update);
         }
 
         private Nullable<double> _H;
@@ -204,14 +197,7 @@ namespace PileDesignCore
         public double NValue // N値
         {
             get => _NValue;
-            set
-            {
-                if (SetProperty(ref _NValue, value))
-                {
-                    SetProperty(ref _NValue, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _NValue, value, viewModel.Update);
         }
 
         private double _Fc = 35.0;
@@ -320,14 +306,7 @@ namespace PileDesignCore
         public double Density // 単位体積重量
         {
             get => _density;
-            set
-            {
-                if (SetProperty(ref _density, value))
-                {
-                    SetProperty(ref _density, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _density, value, viewModel.Update);
         }
 
         private double _mass;
@@ -341,14 +320,7 @@ namespace PileDesignCore
         public double VS0 // 初期S波速度
         {
             get => _VS0;
-            set
-            {
-                if (SetProperty(ref _VS0, value))
-                {
-                    SetProperty(ref _VS0, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _VS0, value, viewModel.Update);
         }
 
         private double _VSE;
@@ -437,14 +409,7 @@ namespace PileDesignCore
         public double LayerThickness // 層厚
         {
             get => _layerThickness;
-            set
-            {
-                if (SetProperty(ref _layerThickness, value))
-                {
-                    SetProperty(ref _layerThickness, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _layerThickness, value, viewModel.Update);
         }
 
         private double _bottomElevation;
@@ -458,14 +423,7 @@ namespace PileDesignCore
         public string LayerName
         {
             get => _layerName;
-            set
-            {
-                if (SetProperty(ref _layerName, value))
-                {
-                    SetProperty(ref _layerName, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _layerName, value, viewModel.Update);
         }
 
         private string _selectedLayerClass = "砂質土"; // 土層分類
@@ -486,14 +444,7 @@ namespace PileDesignCore
         public double Density
         {
             get => _density;
-            set
-            {
-                if (SetProperty(ref _density, value))
-                {
-                    SetProperty(ref _density, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _density, value, viewModel.Update);
         }
 
         public ObservableCollection<string> LayerAgesOption { get; } = new ObservableCollection<string>()
@@ -527,14 +478,7 @@ namespace PileDesignCore
         public double Cohesive
         {
             get => _cohesive;
-            set
-            {
-                if (SetProperty(ref _cohesive, value))
-                {
-                    SetProperty(ref _cohesive, value);
-                    viewModel.Update();
-                }
-            }
+            set => SetPropertyWithAction(ref _cohesive, value, viewModel.Update);
         }
 
         private double _vs; // Vs
@@ -836,27 +780,6 @@ namespace PileDesignCore
 
         // Chart関連
         //[NonSerialized]
-        //internal Chart chart1;
-        //[NonSerialized]
-        //private Series seriesNValue;
-        //[NonSerialized]
-        //private Series seriesCohesive;
-        //[NonSerialized]
-        //private Series seriesCohesiveText;
-        //[NonSerialized]
-        //private List<Series> seriesLayerLines;
-        //[NonSerialized]
-        //private List<Series> seriesLayerTexts;
-
-        //[NonSerialized]
-        //internal Chart chart2;
-        //[NonSerialized]
-        //private List<Series> seriesDmaxUStarSigmaGammaCyH = new List<Series>();
-        //[NonSerialized]
-        //private List<Series> seriesDmaxUStar = new List<Series>();
-        //[NonSerialized]
-        //private List<Series> seriesFL = new List<Series>();
-
         // コンストラクタ
         public GroundLayerViewModel()
         {
@@ -1498,546 +1421,5 @@ namespace PileDesignCore
         //チャート初期化
         private void ChartInitialize()
         {
-            //// チャートのインスタンス作成
-            //chart1 = new Chart();
-            //// レジェンドを作成し、Chartに追加
-            //Legend legend1 = new Legend();
-            //chart1.Legends.Add(legend1);
-            //chart1.Dock = System.Windows.Forms.DockStyle.Fill;
-
-            //// タイトル
-            ////Title title = new Title("N, Cu");
-            ////chart1.Titles.Add(title);
-
-            //// グラフ領域作成
-            //ChartArea chartArea1 = new ChartArea("Area1");
-
-            //chartArea1.AxisX.Title = "N値";
-            //chartArea1.AxisY.Title = "GL深度(m)";
-            //chart1.ChartAreas.Add(chartArea1);
-
-            //// x軸のメモリの大きさを設定
-            //chartArea1.AxisX.Interval = 10.0; // メモリ間の距離
-
-            //// x軸のメモリ範囲を設定
-            //chartArea1.AxisX.Minimum = 0.0; // 最小値
-            //chartArea1.AxisX.Maximum = 60.0; // 最大値
-
-            //// 第2X軸の設定
-            //Axis secondXAxis = new Axis();
-            //chartArea1.AxisX2 = secondXAxis;
-            //chartArea1.AxisX2.Title = "粘着力 Cu(kN/m2)";
-            ////Axis secondYAxis = new Axis();
-            ////chartArea1.AxisY2 = secondYAxis;
-            ////chartArea1.AxisY2.Title = GroundRef;
-
-            //// x軸のメモリの大きさを設定
-
-
-            //// x軸のメモリ範囲を設定
-            //chartArea1.AxisX2.Minimum = 0.0; // 最小値
-            //chartArea1.AxisX2.Maximum = 240.0; // 最大値
-            //chartArea1.AxisX2.Interval = 40; // メモリ間の距離
-
-            //// X軸の目盛り線を非表示にする
-            //chartArea1.AxisX.MajorGrid.Enabled = false;
-            //chartArea1.AxisX.MinorGrid.Enabled = false;
-            //chartArea1.AxisX2.MajorGrid.Enabled = false;
-            //chartArea1.AxisX2.MinorGrid.Enabled = false;
-
-            //// N値のSeriesを追加する
-            //seriesNValue = new Series
-            //{
-            //    ChartType = SeriesChartType.Line,
-            //    LegendText = "N値", // 凡例のテキストを設定するなど、追加の設定を行う
-            //};
-            //chart1.Series.Add(seriesNValue);
-
-            //// 粘着力のSeriesを追加する
-            //seriesCohesive = new Series
-            //{
-            //    ChartType = SeriesChartType.StepLine,
-            //    LegendText = "粘着力Cu", // 凡例のテキストを設定するなど、追加の設定を行う
-            //};
-            //chart1.Series.Add(seriesCohesive);
-
-            //// 粘着力TextのSeriesを追加する
-            //seriesCohesiveText = new Series
-            //{
-            //    ChartType = SeriesChartType.StepLine,
-            //    LegendText = "粘着力", // 凡例のテキストを設定するなど、追加の設定を行う
-            //    IsVisibleInLegend=false,
-            //};
-            //chart1.Series.Add(seriesCohesiveText);
-
-            //// 土層境界線のSeriesを複数管理するためのCollectionを初期化
-            //seriesLayerLines = new List<Series>();
-            //seriesLayerTexts = new List<Series>();
-
-            //chart1.Show();
-
-            //chart2 = new Chart();
-            //// レジェンドを作成し、Chartに追加
-            //Legend legend2 = new Legend();
-            //chart2.Legends.Add(legend2);
-            //chart2.Dock = System.Windows.Forms.DockStyle.Fill;
-            //// タイトル
-
-            //// グラフ領域作成
-            //ChartArea chartArea2 = new ChartArea("Area2");
-
-            //chartArea2.AxisX.Title = "Dmax u*(mm)";
-            //chartArea2.AxisY.Title = "GL深度(m)";
-            //chart2.ChartAreas.Add(chartArea2);
-
-            //// x軸のメモリの大きさを設定
-            ////chartArea2.AxisX.Interval = 10.0; // メモリ間の距離
-
-            //// x軸のメモリ範囲を設定
-            //chartArea2.AxisX.Minimum = 0.0; // 最小値
-                                            
-
-            //// 第2X軸の設定
-            //Axis secondXAxis2 = new Axis();
-            //chartArea2.AxisX2 = secondXAxis2;
-            //chartArea2.AxisX2.Title = "FL";
-
-            ////Axis secondYAxis2 = new Axis();
-            ////chartArea2.AxisY2 = secondYAxis2;
-            ////chartArea2.AxisY2.Title = GroundRef;
-            //// x軸のメモリの大きさを設定
-
-
-            //// x軸のメモリ範囲を設定
-            //chartArea2.AxisX2.Minimum = 0.0; // 最小値
-            //chartArea2.AxisX2.Maximum = 2.0; // 最大値
-            //chartArea2.AxisX2.Interval = 0.5; // メモリ間の距離
-
-            //// X軸の目盛り線を非表示にする
-            //chartArea2.AxisX.MajorGrid.Enabled = false;
-            //chartArea2.AxisX.MinorGrid.Enabled = false;
-            //chartArea2.AxisX2.MajorGrid.Enabled = false;
-            //chartArea2.AxisX2.MinorGrid.Enabled = false;
-
-            //// DmaxUStarのSeriesを追加する
-            //// DmaxUStarのSeriesを追加する
-            //Series dmaxUStarSeries1 = new Series
-            //{
-            //    LegendText = "Dmax U* (level 1)"
-            //};
-            //Series dmaxUStarSeries2 = new Series
-            //{
-            //    LegendText = "Dmax U* (level 2)"
-            //};
-            //seriesDmaxUStar.Add(dmaxUStarSeries1);
-            //seriesDmaxUStar.Add(dmaxUStarSeries2);
-
-            //Series dmaxUStarSigmaGammacyHSeries1 = new Series
-            //{
-            //    LegendText = "Dmax U* + ∑γcyH (level 1)"
-            //};
-            //Series dmaxUStarSigmaGammacyHSeries2 = new Series
-            //{
-            //    LegendText = "Dmax U* + ∑γcyH (level 2)"
-            //};
-            //seriesDmaxUStarSigmaGammaCyH.Add(dmaxUStarSigmaGammacyHSeries1);
-            //seriesDmaxUStarSigmaGammaCyH.Add(dmaxUStarSigmaGammacyHSeries2);
-            //chart2.Series.Add(dmaxUStarSeries1);
-            //chart2.Series.Add(dmaxUStarSeries2);
-
-            //// FLを追加する
-            //Series flSeries1 = new Series
-            //{
-            //    LegendText = "FL (level 1)"
-            //};
-            //Series flSeries2 = new Series
-            //{
-            //    LegendText = "FL (level 2)"
-            //};
-            //seriesFL.Add(flSeries1);
-            //seriesFL.Add(flSeries2);
-            //chart2.Series.Add(flSeries1);
-            //chart2.Series.Add(flSeries2);
         }
-
-        //internal void ClearSeries(Chart chartN)
-        //{
-        //    // 以前のシリーズを削除
-        //    chartN.Series.Clear();
-
-        //    //// 第2Y軸の追加
-        //    //Series series0 = new Series
-        //    //{
-        //    //    YAxisType = AxisType.Secondary,
-        //    //};
-        //    //series0.Points.AddXY(0, 0);
-        //    //chartN.Series.Add(series0);
-
-        //}
-        
-        //internal void DrawNValuesAndCohesive()
-        //{
-
-        //    if (Chart1Content.Contains("N値"))
-        //    {
-        //        // ステップグラフ用のデータポイントの作成
-        //            Series seriesNewNValue = new Series
-        //        {
-        //            ChartType = SeriesChartType.Line, // 折れ線グラフ
-        //            MarkerStyle = MarkerStyle.Circle, // マーカースタイルを設定
-        //            MarkerSize = 6, // マーカーサイズを設定
-        //            BorderWidth = 2, // 折れ線の太さを設定
-        //            Color = Color.SkyBlue, // 線の色を設定
-        //            IsValueShownAsLabel = false, // X の値をラベルとして表示
-        //            LegendText = "N値"
-        //        };
-
-        //        for (int i = 0; i < DataGridMassLayers[SelectedGroundNo - 1][SelectedLevel - 1].Count; i++)
-        //        {
-        //            double _NValue = DataGridMassLayers[SelectedGroundNo - 1][SelectedLevel - 1][i].NValue;
-        //            double _GlDepth = DataGridMassLayers[SelectedGroundNo - 1][SelectedLevel - 1][i].GLDepth;
-        //            seriesNewNValue.Points.AddXY(_NValue, _GlDepth);
-        //            DataPoint point = new DataPoint(_NValue, _GlDepth)
-        //            {
-        //                Label = _NValue.ToString() // マーカーに_NValueの値をラベルとして表示
-        //            };
-        //            seriesNewNValue.Points.Add(point);
-        //        }
-
-        //        // 新しいSeriesを追加する前に、古いSeriesを削除する
-        //        if (seriesNValue != null)
-        //        {
-        //            chart1.Series.Remove(seriesNValue);
-        //        }
-
-        //        // 新しいSeriesを追加する
-        //        seriesNValue = seriesNewNValue;
-        //        chart1.Series.Add(seriesNValue);
-        //    }
-
-        //    if (Chart1Content.Contains("粘着力Cu"))
-        //    {
-        //        // ステップグラフ用のデータポイントの作成
-        //            Series seriesNewCohesive = new Series
-        //        {
-        //            ChartType = SeriesChartType.StepLine,
-        //            BorderWidth = 2, // 折れ線の太さを設定（任意）
-        //            Color = Color.Green, // 線の色を設定（任意）
-        //            XAxisType = AxisType.Secondary, // 第2X軸を使用
-        //            IsValueShownAsLabel = false, // X の値をラベルとして表示
-        //            LegendText="粘着力Cu",
-        //        };
-
-        //        // ステップグラフテキスト用のデータポイントの作成
-        //        Series seriesNewCohesiveText = new Series
-        //        {
-        //            ChartType = SeriesChartType.Point,
-        //            BorderWidth = 0, // 折れ線の太さを設定（任意）
-        //            MarkerBorderColor = Color.Green,
-        //            MarkerColor = Color.White,
-        //            Color = Color.Green, // 線の色を設定（任意）
-        //            XAxisType = AxisType.Secondary, // 第2X軸を使用
-        //            IsValueShownAsLabel = false, // X の値をラベルとして表示
-        //            IsVisibleInLegend = false,
-        //        };
-
-        //        for (int i = 0; i < SelectedGroundLayerCollection.Count; i++)
-        //        {
-        //            double _Cohesive = SelectedGroundLayerCollection[i].Cohesive;
-        //            double _bottomGLDepth = SelectedGroundLayerCollection[i].BottomGLDepth;
-        //            double _middleGLDepth = SelectedGroundLayerCollection[i].BottomGLDepth + SelectedGroundLayerCollection[i].LayerThickness / 2;
-        //            if (i == 0)
-        //            {
-        //                seriesNewCohesive.Points.AddXY(_Cohesive, 0.0);
-        //            }
-        //            if(_Cohesive <= 0.01){ _Cohesive = 0.00001; }
-        //            seriesNewCohesive.Points.AddXY(_Cohesive, _bottomGLDepth);
-        //            DataPoint point = new DataPoint(_Cohesive, _middleGLDepth)
-        //            {
-        //                Label = _Cohesive.ToString("F1") // マーカーに_Cohesiveの値をラベルとして表示
-        //            };
-        //            seriesNewCohesiveText.Points.Add(point);
-        //        }
-
-        //        // 新しいSeriesを追加する
-        //        seriesCohesive = seriesNewCohesive;
-        //        chart1.Series.Add(seriesCohesive);
-        //        seriesCohesiveText = seriesNewCohesiveText;
-        //        chart1.Series.Add(seriesCohesiveText);
-        //    }
-                
-        //}
-
-        //internal void DrawGroundLayers(Chart chartN)
-        //{
-        //    // Y軸最小値の設定
-        //    if (SelectedGroundLayerCollection.Count > 0)
-        //    {
-        //        double AxisYMinimum = SelectedGroundLayerCollection[SelectedGroundLayerCollection.Count - 1].BottomGLDepth;
-        //        AxisYMinimum = Math.Floor(AxisYMinimum / 5.0) * 5.0;
-        //        chartN.ChartAreas[0].AxisY.Maximum = 0.0;
-        //        chartN.ChartAreas[0].AxisY.Minimum = AxisYMinimum;
-        //        chartN.ChartAreas[0].AxisY2.Maximum = GroundTopAltitude;
-        //        chartN.ChartAreas[0].AxisY2.Minimum = AxisYMinimum + GroundTopAltitude;
-        //    }
-
-        //    // チャートエリアの X 軸の範囲を取得
-        //    double maxX2Value = chartN.ChartAreas[0].AxisX2.Maximum;
-        //    double minX2Value = chartN.ChartAreas[0].AxisX2.Minimum;
-
-        //    Series seriesNewGroundLayerText = new Series
-        //    {
-        //        ChartType = SeriesChartType.Point,
-        //        BorderWidth = 0,
-        //        MarkerSize = 3,
-        //        Label = "",
-        //        Color = System.Drawing.Color.LightGreen,
-        //        IsVisibleInLegend = false,
-        //        XAxisType = AxisType.Secondary, // 第2X軸を使用
-        //    };
-
-        //    foreach (var groundLayer in SelectedGroundLayerCollection)
-        //    {
-        //        //double y = groundLayer.BottomGLDepth;
-        //        string text = groundLayer.LayerName;
-        //        double yText = (groundLayer == SelectedGroundLayerCollection.First()) ?
-        //            -groundLayer.LayerThickness / 2 :
-        //            groundLayer.BottomGLDepth + groundLayer.LayerThickness / 2;
-
-        //        // 地層のテキストを追加
-        //        DataPoint point = new DataPoint(maxX2Value * 5.0 / 6.0, yText)
-        //        {
-        //            Label = text
-        //        };
-        //        seriesNewGroundLayerText.Points.Add(point);
-        //    }
-
-        //    // 新しいシリーズを追加
-        //    chartN.Series.Add(seriesNewGroundLayerText);
-
-
-        //    List<Series> seriesNewGroundLayerLines = new List<Series>();
-
-        //    for (int i = 0; i < SelectedGroundLayerCollection.Count; i++)
-        //    {
-        //        double y = SelectedGroundLayerCollection[i].BottomGLDepth;
-
-        //        Series seriesNewGroundLayerLine = new Series // 横線の設定
-        //        {
-        //            ChartType = SeriesChartType.Line,
-        //            IsVisibleInLegend = false,
-        //            XAxisType = AxisType.Secondary, // 第2X軸を使用
-        //        };
-        //        seriesNewGroundLayerLine.Points.AddXY(minX2Value, y); // 横線の開始点
-        //        seriesNewGroundLayerLine.Points.AddXY(maxX2Value, y); // 横線の終了点
-        //        seriesNewGroundLayerLine.BorderDashStyle = ChartDashStyle.Solid;
-        //        seriesNewGroundLayerLine.BorderWidth = 1;
-        //        seriesNewGroundLayerLine.Color = System.Drawing.Color.LightGreen;
-
-        //        // 新しい土層境界線のSeriesをコレクションに追加
-        //        seriesNewGroundLayerLines.Add(seriesNewGroundLayerLine);
-        //    }
-
-        //    // 新しい土層境界線のSeriesを追加
-        //    foreach (Series _line in seriesNewGroundLayerLines)
-        //    {
-        //        chartN.Series.Add(_line);
-        //    }
-
-        //    seriesLayerLines = seriesNewGroundLayerLines;
- 
-        //}
-
-        //internal void DrawDmaxUStar()
-        //{
-        //    if (SelectedGroundLayerCollection.Count != 0)
-        //    {
-        //        for (int _levelIndex = 0; _levelIndex < 2; _levelIndex++)
-        //        {
-        //            bool hasDmaxUStar = true;
-        //            bool hasDmaxUStarSigmaGammaCyH = true;
-        //            bool hasFL = true;
-
-
-        //            if (Chart2Content.Contains("DmaxU*"))
-        //            {
-        //                // データポイントの作成
-        //                Series[] seriesNewDmaxUStar = new Series[2];
-
-        //                // 以前に設定したSeriesをクリアする
-        //                seriesDmaxUStar[_levelIndex].Points.Clear();
-
-        //                // DmaxUStarのSeriesを設定する
-        //                seriesNewDmaxUStar[_levelIndex] = new Series
-        //                {
-        //                    ChartType = SeriesChartType.Line,
-        //                    Color = Color.BlueViolet,
-        //                    MarkerStyle = MarkerStyle.Circle,
-        //                    MarkerSize = 6,
-        //                    BorderWidth = 2,
-        //                    MarkerBorderColor = Color.BlueViolet,
-        //                    LegendText = "Dmax U* (Level " + (_levelIndex + 1).ToString() + ")"
-        //                };
-
-        //                if (_levelIndex == 0)
-        //                {
-        //                    seriesNewDmaxUStar[_levelIndex].MarkerColor = Color.White;
-        //                }
-        //                else if (_levelIndex == 1)
-        //                {
-        //                    seriesNewDmaxUStar[_levelIndex].MarkerColor = Color.BlueViolet;
-        //                }
-
-        //                for (int i = 0; i < DataGridMassLayers[SelectedGroundNo - 1][_levelIndex].Count; i++)
-        //                {
-        //                    double dmaxUStar = DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].DmaxUStar;
-        //                    if (!double.IsNaN(dmaxUStar) && !double.IsInfinity(dmaxUStar))
-        //                    {
-        //                        // 数値であることが確認された場合に処理を行う
-        //                        double _DmaxUStar = dmaxUStar;
-        //                        double _factor = 1.0;
-        //                        if (i == 0) { _factor = 1.0; }
-        //                        else if (i == DataGridMassLayers[SelectedGroundNo - 1][_levelIndex].Count - 1) { _factor = 0.0; }
-        //                        else { _factor = 0.5; }
-        //                        double _GlDepth = DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].GLDepth + DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].Spacing * _factor;
-        //                        DataPoint dmaxUStarPoint = new DataPoint(_DmaxUStar, _GlDepth)
-        //                        {
-        //                            Label = _DmaxUStar.ToString("F2")
-        //                        };
-        //                        seriesNewDmaxUStar[_levelIndex].Points.Add(dmaxUStarPoint);
-        //                    }
-        //                    else
-        //                    {
-        //                        // 数値でない場合にエラーを回避する処理を行う
-        //                        Console.WriteLine("DmaxUStar is not a valid number.");
-        //                        hasDmaxUStar = false;
-        //                    }
-        //                }
-
-
-        //                if (hasDmaxUStar)
-        //                {
-        //                    chart2.Series.Remove(seriesDmaxUStar[_levelIndex]);
-        //                    seriesDmaxUStar[_levelIndex] = seriesNewDmaxUStar[_levelIndex];
-        //                    chart2.Series.Add(seriesDmaxUStar[_levelIndex]);
-        //                }
-        //            }
-
-        //                if (Chart2Content.Contains("DmaxU*+∑γcyH"))
-        //                {
-        //                    // データポイントの作成
-        //                    Series[] seriesNewDmaxUStarSigmaGammaCyH = new Series[2];
-
-        //                    // 以前に設定したSeriesをクリアする
-        //                    seriesDmaxUStarSigmaGammaCyH[_levelIndex].Points.Clear();
-
-        //                    // DmaxUStarのSeriesを設定する
-        //                    seriesNewDmaxUStarSigmaGammaCyH[_levelIndex] = new Series
-        //                    {
-        //                        ChartType = SeriesChartType.Line,
-        //                        Color = Color.Violet,
-        //                        MarkerStyle = MarkerStyle.Circle,
-        //                        MarkerSize = 6,
-        //                        BorderWidth = 2,
-        //                        MarkerBorderColor = Color.Violet,
-        //                        LegendText = "Dmax U* + ∑γcyH (Level " + (_levelIndex + 1).ToString() + ")"
-        //                    };
-
-        //                    if (_levelIndex == 0)
-        //                    {
-        //                        seriesNewDmaxUStarSigmaGammaCyH[_levelIndex].MarkerColor = Color.White;
-        //                    }
-        //                    else if (_levelIndex == 1)
-        //                    {
-        //                        seriesNewDmaxUStarSigmaGammaCyH[_levelIndex].MarkerColor = Color.Violet;
-        //                    }
-
-        //                    for (int i = 0; i < DataGridMassLayers[SelectedGroundNo - 1][_levelIndex].Count; i++)
-        //                    {
-        //                        double dmaxUStarSigmaGammaCyH = DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].DmaxUStarSigmaGammaCyH;
-        //                        if (!double.IsNaN(dmaxUStarSigmaGammaCyH) && !double.IsInfinity(dmaxUStarSigmaGammaCyH))
-        //                        {
-        //                            // 数値であることが確認された場合に処理を行う
-        //                            double _DmaxUStarSigmaGammaCyH = dmaxUStarSigmaGammaCyH;
-        //                            double _factor = 1.0;
-        //                            if (i == 0) { _factor = 1.0; }
-        //                            else if (i == DataGridMassLayers[SelectedGroundNo - 1][_levelIndex].Count - 1) { _factor = 0.0; }
-        //                            else { _factor = 0.5; }
-        //                            double _GlDepth = DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].GLDepth + DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].Spacing * _factor;
-        //                            DataPoint dDmaxUStarSigmaGammacyHPoint = new DataPoint(_DmaxUStarSigmaGammaCyH, _GlDepth)
-        //                            {
-        //                                Label = _DmaxUStarSigmaGammaCyH.ToString("F2")
-        //                            };
-        //                            seriesNewDmaxUStarSigmaGammaCyH[_levelIndex].Points.Add(dDmaxUStarSigmaGammacyHPoint);
-        //                        }
-        //                        else
-        //                        {
-        //                            // 数値でない場合にエラーを回避する処理を行う
-        //                            Console.WriteLine("DmaxUStar is not a valid number.");
-        //                            hasDmaxUStarSigmaGammaCyH = false;
-        //                        }
-        //                    }
-        //                    if (hasDmaxUStarSigmaGammaCyH)
-        //                { 
-        //                    chart2.Series.Remove(seriesDmaxUStarSigmaGammaCyH[_levelIndex]);
-        //                    seriesDmaxUStarSigmaGammaCyH[_levelIndex] = seriesNewDmaxUStarSigmaGammaCyH[_levelIndex];
-        //                    chart2.Series.Add(seriesDmaxUStarSigmaGammaCyH[_levelIndex]);
-        //                }
-        //            }
-
-        //            if (Chart2Content.Contains("FL"))
-        //            {
-        //                // FLのSeriesを設定する
-        //                Series[] seriesNewFL = new Series[2];
-        //                seriesFL[_levelIndex].Points.Clear();
-        //                seriesNewFL[_levelIndex] = new Series
-        //                {
-        //                    ChartType = SeriesChartType.Point,
-        //                    XAxisType = AxisType.Secondary,
-        //                    MarkerStyle = MarkerStyle.Circle,
-        //                    MarkerSize = 6,
-        //                    MarkerBorderColor = Color.HotPink,
-        //                    LegendText = "FL (Level " + (_levelIndex + 1).ToString() + ")"
-        //                };
-
-        //                if (_levelIndex == 0)
-        //                { seriesNewFL[_levelIndex].MarkerColor = Color.White; }
-        //                else if (_levelIndex == 1)
-        //                { seriesNewFL[_levelIndex].MarkerColor = Color.HotPink; }
-                    
-        //                for (int i = 0; i < DataGridMassLayers[SelectedGroundNo - 1][_levelIndex].Count; i++)
-        //                    {
-        //                    double fl = DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].FL.GetValueOrDefault();
-
-
-        //                    if (!double.IsNaN(fl) && !double.IsInfinity(fl))
-        //                    {
-        //                        // 数値であることが確認された場合に処理を行う
-        //                        double _FL = fl;
-        //                        double _GLDepth = DataGridMassLayers[SelectedGroundNo - 1][_levelIndex][i].GLDepth;
-        //                        DataPoint flPoint = new DataPoint(_FL, _GLDepth)
-        //                        {
-        //                            Label = _FL.ToString("F2")
-        //                        };
-        //                        seriesNewFL[_levelIndex].Points.Add(flPoint);
-        //                    }
-        //                    else
-        //                    {
-        //                        // 数値でない場合にエラーを回避する処理を行う
-        //                        Console.WriteLine("FL is not a valid number.");
-        //                        hasFL = false;
-        //                    }
-        //                }
-        //                if (hasFL)
-        //                {
-        //                    chart2.Series.Remove(seriesFL[_levelIndex]);
-        //                    seriesFL[_levelIndex] = seriesNewFL[_levelIndex];
-        //                    chart2.Series.Add(seriesFL[_levelIndex]);
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
-    }
-}
 

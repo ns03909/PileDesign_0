@@ -3,6 +3,14 @@ using System.Windows;
 
 namespace PileDesign.ViewModels
 {
+    /// <summary>
+    /// MainWindowViewModel.ConfirmDeleteAnalysisModel.cs
+    ///
+    /// 責任範囲:
+    /// - 解析結果削除の確認ダイアログ処理
+    /// - 解析モデルのリセット処理
+    /// - 解析関連フラグの一括リセット
+    /// </summary>
     public partial class MainWindowViewModel
     {
         // 共通ヘルパ: 解析モデル削除の確認と（必要なら）リセット実行

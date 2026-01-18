@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows.Media;
+using static PileDesignCore.Shared.PileTypeOptionsMapper;
 
 namespace PileDesignCore
 {
@@ -87,11 +89,29 @@ namespace PileDesignCore
         }
 
         public ObservableCollection<string> SelectedPileBodyTypes { get; } = new ObservableCollection<string>();
-        private string _selectedPileBodyType; //= "場所打ち杭";
+        private string _selectedPileBodyType;
         public string SelectedPileBodyType
         {
             get => _selectedPileBodyType;
-            set => SetProperty(ref _selectedPileBodyType, value);
+            set
+            {
+                if (SetProperty(ref _selectedPileBodyType, value))
+                {
+                    UpdateOptionsForSelectedPileBodyType();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 選択された杭種別に応じて、工法と杭頭接合の選択肢を更新
+        /// </summary>
+        private void UpdateOptionsForSelectedPileBodyType()
+        {
+            var update = PileTypeOptionsMapper.UpdateOptionsForPileBodyType(SelectedPileBodyType);
+            SelectedPileConstructionTypeOption = update.ConstructionTypeOptions;
+            SelectedPileConstructionType = update.DefaultConstructionType;
+            SelectedPileTopTypeOption = update.PileTopTypeOptions;
+            SelectedPileTopType = update.DefaultPileTopType;
         }
 
         public ObservableCollection<string> PileBodyTypeOption { get; } = new ObservableCollection<string>()
@@ -102,62 +122,21 @@ namespace PileDesignCore
             "鋼管杭"
         };
 
-
-        //private void ResetSectionProperties()
-        //{
-        //    if (SelectedPileBodyType == "場所打ち鉄筋コンクリート杭")
-        //    {
-        //        PileSection.PileDiameter = 1200.0;
-        //        PileSection.SelectedPileSectionType = "鉄筋コンクリート";
-
-        //    }
-            //else if (SelectedPileBodyType == "場所打ち鋼管コンクリート杭")
-            //{
-            //    ConcreteOutDia = 0.0;
-            //    PipeDia = 1200.0;
-            //    PipeTs = 16.0;
-
-            //}
-            //else if (SelectedPileBodyType == "既製コンクリート杭")
-            //{
-            //    ConcreteOutDia = 0.0;
-            //    MainBarNum = 0;
-            //    PipeDia = 0.0;
-            //    PipeTs = 0.0;
-            //}
-            //else if (SelectedPileBodyType == "鋼管杭")
-            //{
-            //    ConcreteOutDia = 0.0;
-            //    MainBarNum = 0;
-            //    PipeDia = 0.0;
-            //    PipeTs = 0.0;
-            //}
-        //}
-
-
         public ObservableCollection<string> SelectedPileConstructionTypes { get; } = new ObservableCollection<string>();
+
+        private ObservableCollection<string> _selectedPileConstructionTypeOption;
+        public ObservableCollection<string> SelectedPileConstructionTypeOption
+        {
+            get => _selectedPileConstructionTypeOption;
+            set => SetProperty(ref _selectedPileConstructionTypeOption, value);
+        }
+
         private string _selectedPileConstructionType;
         public string SelectedPileConstructionType
         {
             get => _selectedPileConstructionType;
             set => SetProperty(ref _selectedPileConstructionType, value);
         }
-        public ObservableCollection<string> InsituPileConstructionTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "場所打ちコンクリート杭",
-        };
-        public ObservableCollection<string> PrecastPileConstructionTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "埋込み杭（プレボーリング）",
-            "埋込み杭（中掘り）",
-            "打込み杭",
-        };
-        public ObservableCollection<string> SteelPileConstructionTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "埋込み杭（プレボーリング）",
-            "埋込み杭（中掘り）",
-            "回転貫入杭",
-        };
 
         public ObservableCollection<string> SelectedPileTopTypes { get; } = new ObservableCollection<string>();
         private string _selectedPileTopType;
@@ -167,27 +146,6 @@ namespace PileDesignCore
             set => SetProperty(ref _selectedPileTopType, value);
         }
 
-        public ObservableCollection<string> InsituReinforcedConcretePileTopTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "鉄筋定着工法",
-            "キャプテンパイル工法",
-        };
-
-        public ObservableCollection<string> InsituSteelPipedConcretePileTopTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "鉄筋定着工法",
-        };
-
-        public ObservableCollection<string> PrecastConcretePileTopTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "鉄筋定着工法",
-            "FT-Pile構法"
-        };
-
-        public ObservableCollection<string> SteelPileTopTypeOption { get; } = new ObservableCollection<string>()
-        {
-            "鉄筋定着工法",
-        };
 
         private ObservableCollection<string> _selectedPileTopTypeOption;
         public ObservableCollection<string> SelectedPileTopTypeOption
@@ -289,14 +247,6 @@ namespace PileDesignCore
         public List<PileTipSettlementPresetParameter> PileTipSettlementPresetParameters = new List<PileTipSettlementPresetParameter>();
         public List<string> PileTipSettlementPresetParameterNames = new List<string>();
 
-        //チャート関連()
-        //[NonSerialized]
-        //public Chart chart1;
-        //[NonSerialized]
-        //ChartArea chartarea1;
-        //[NonSerialized]
-        //Series series1;
-
         public event EventHandler RecalculateDataGridPileBodyCompleted;
         protected virtual void OnRecalculateDataGridPileBodyCompleted(EventArgs e)
         {
@@ -309,25 +259,22 @@ namespace PileDesignCore
         public PileBodyViewModel()
         {
             // Initialize the GroundRefs property with 5 empty strings
-            PileBodyRefs = new ObservableCollection<string>(new string[] {"(PB1)", "(PB2)", "(PB3)", "(PB4)", "(PB5)"});
-            SelectedPileTopTypes = new ObservableCollection<string>(new string[5]);
-            SelectedPileBodyTypes = new ObservableCollection<string>(new string[5]);
-            SelectedPileConstructionTypes = new ObservableCollection<string>(new string[5]);
-            PileToeDias = new ObservableCollection<double>(new double[5]);
-            TipNonPermabilities = new ObservableCollection<double>(new double[5]);
-            EmbedmentIntoBearingSoils = new ObservableCollection<double>(new double[5]);
-            PileInnerDias = new ObservableCollection<double>(new double[5]);
-            SelectedTipStyles = new ObservableCollection<string>(new string[5]);
-            SettlePileToeDias = new ObservableCollection<double>(new double[5]);
-            SettleAlphas = new ObservableCollection<double>(new double[5]);
-            SettleNs = new ObservableCollection<double>(new double[5]);
+            PileBodyRefs = CollectionHelper.CreateStringCollection("(PB1)", "(PB2)", "(PB3)", "(PB4)", "(PB5)");
+            SelectedPileTopTypes = CollectionHelper.CreateStringCollection(5);
+            SelectedPileBodyTypes = CollectionHelper.CreateStringCollection(5);
+            SelectedPileConstructionTypes = CollectionHelper.CreateStringCollection(5);
+            PileToeDias = CollectionHelper.CreateDoubleCollection(5);
+            TipNonPermabilities = CollectionHelper.CreateDoubleCollection(5);
+            EmbedmentIntoBearingSoils = CollectionHelper.CreateDoubleCollection(5);
+            PileInnerDias = CollectionHelper.CreateDoubleCollection(5);
+            SelectedTipStyles = CollectionHelper.CreateStringCollection(5);
+            SettlePileToeDias = CollectionHelper.CreateDoubleCollection(5);
+            SettleAlphas = CollectionHelper.CreateDoubleCollection(5);
+            SettleNs = CollectionHelper.CreateDoubleCollection(5);
             for (int i = 0; i < 5; i++)
             {
                 DataGridPileBody.Add(new ObservableCollection<PileBodyDataItem>());
             }
-
-            //チャート初期化
-            ChartInitialize();
 
             // データを読み込む
             LoadPresetSettlementParameters();
@@ -337,74 +284,27 @@ namespace PileDesignCore
         private void LoadPresetSettlementParameters()
         {
             string csvFilePath = "../../PileLibrary/PresetSettlementParameterSet.csv";
-            using (StreamReader reader = new StreamReader(csvFilePath, Encoding.UTF8))
-            {
-                string line;
-                while ((line = reader.ReadLine()) != null)
+
+            PileTipSettlementPresetParameters = CsvLoaderHelper.LoadFromCsv(
+                csvFilePath,
+                parts =>
                 {
-                    string[] parts = line.Split(',');
                     if (parts.Length == 4)
                     {
                         string name = parts[0].Trim();
                         string soilType = parts[1].Trim();
                         double alpha = double.Parse(parts[2].Trim());
                         double n = double.Parse(parts[3].Trim());
-
-                        PileTipSettlementPresetParameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
-                        PileTipSettlementPresetParameterNames.Add(name + "-" + soilType);
+                        return new PileTipSettlementPresetParameter(name, soilType, alpha, n);
                     }
-                }
-            }
+                    return default;
+                });
+
+            PileTipSettlementPresetParameterNames = PileTipSettlementPresetParameters
+                .Select(p => $"{p.Name}-{p.SoilType}")
+                .ToList();
         }
 
-        //チャート初期化
-        public void ChartInitialize()
-        {
-
-            ////チャート関連
-
-            //chart1 = new Chart();
-            //// Chart コントロールの Y軸の上下逆
-            ////title = new Title("杭の先端抵抗-先端変位関係");
-            //chartarea1 = chart1.ChartAreas.Add("Area1");
-
-            //chart1.ChartAreas[0].AxisY.IsReversed = true;
-            //chart1.ChartAreas[0].AxisX.Minimum = 0.0;
-            //chart1.ChartAreas[0].AxisX.Maximum = 1.0;
-            //chart1.ChartAreas[0].AxisY.Minimum = 0.0;
-            //chart1.ChartAreas[0].AxisY.Maximum = 0.1;
-            //series1 = new Series();
-
-            ////ChartAreaの設定(グラフタイトル、軸ラベル)
-            //chartarea1.AxisX.Title = "(Rp/Ap)/(Rp/Ap)u";
-            //chartarea1.AxisY.Title = "Sp/dp";
-
-            ////Seriesの初期設定(グラフの種類、線の太さ、凡例)
-            //series1.ChartType = SeriesChartType.Line;
-            //series1.BorderWidth = 1;
-            //series1.Color = NikkenDrawingColors.SkyBlue;
-            //series1.LegendText = "Number:1";
-
-            ////ChartにTitle,Seriesを追加
-            //chart1.Series.Add(series1);
-        }
-
-        //杭先端沈下チャート要素クリアコマンド
-        public void ChartClearCmd()
-        {
-            //series1.Points.Clear();
-        }
-
-        //杭先端沈下チャート要素追加コマンド
-        public void AddComponent(double alpha, double n)
-        {
-            //    //グラフ要素を追加する
-            //    for (double RponApRatio = 0; RponApRatio <= 1 + 0.01; RponApRatio += 0.01)
-            //    {
-            //        double SponDp = 0.1 * (alpha * RponApRatio + (1 - alpha) * Math.Pow(RponApRatio, n));
-            //        series1.Points.AddXY(RponApRatio, SponDp);
-            //    }
-        }
 
         public void RecalculateDataGridPileBody()
         {
