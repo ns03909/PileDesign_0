@@ -3887,6 +3887,45 @@ diameterSelector,
             }
         }
 
+        /// <summary>
+        /// 群杭沈下コンタ図をWord文書に挿入
+        /// </summary>
+        private void AddGroupPileSettlementContourDiagram(
+            MainDocumentPart mainDocumentPart,
+            Body body,
+            double widthMm = 150,
+            double heightMm = 150)
+        {
+            try
+            {
+                var settlementData = inputModel?.PileGroupSettlement?.SettlementGridData;
+                if (settlementData == null || settlementData.Count == 0)
+                {
+                    // データがない場合はスキップ
+                    return;
+                }
+
+                var pngBytes = DiagramRenderer.RenderSettlementContourDiagram(
+                    settlementData,
+                    widthMm,
+                    heightMm,
+                    dpi: Layout.BaseDpi,
+                    scale: Layout.HiResScale,
+                    colorBandCount: 12
+                );
+
+                if (pngBytes != null && pngBytes.Length > 0)
+                {
+                    WordDrawingBuilder.AddPngBytesToBody(mainDocumentPart, body, pngBytes, widthMm, heightMm);
+                    AddAutoFigureCaption(body, "群杭沈下コンタ図", "図");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AddGroupPileSettlementContourDiagram: 図作成エラー: {ex.Message}");
+            }
+        }
+
         // 杭伏図ダイヤグラム挿入メソッド
         private void AddPilingLayoutPileTopMomentDiagramByMm(
             MainDocumentPart mainDocumentPart,

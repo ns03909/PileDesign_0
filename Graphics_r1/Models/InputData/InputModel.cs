@@ -1131,6 +1131,12 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public void GenerateSoilPiles()
         {
+            // 要素分割済みの場合は再生成しない（分割結果を保持）
+            if (_mainWindowViewModel?.IsElementSplit == true)
+            {
+                return;
+            }
+
             _suppressSoilPileNotify = true;
             try
             {

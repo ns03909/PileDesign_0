@@ -1492,7 +1492,14 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isElementSplit, value))
                 {
-                    if (!value)
+                    if (value)
+                    {
+                        // 要素分割が完了したら、保留中のSoilPiles生成をキャンセル
+                        _generateSoilPilesDebounceTimer?.Stop();
+                        _generateSoilPilesDebounceTimer = null;
+                        _soilPilesGenerationPending = false;
+                    }
+                    else
                     {
                         IsForcedDisplacementVisible = false;
                     }

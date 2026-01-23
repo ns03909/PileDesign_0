@@ -114,7 +114,12 @@
 
         <TabControl Grid.Row="0" SelectionChanged="TabControl_SelectionChange">
             <TabItem Header="土層-杭セット">
-                <avalonDock:DockingManager x:Name="dockingManager" Background="White">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding SoilLayerPileSetCount, StringFormat=土層-杭セット数: {0}}"/>
+                    </StackPanel>
+                
+                    <avalonDock:DockingManager x:Name="dockingManager" Background="White">
                     <avalonDock:LayoutRoot>
                         <avalonDock:LayoutPanel Orientation="Horizontal">
                             <avalonDock:LayoutDocumentPaneGroup DockWidth="*" Orientation="Horizontal">
@@ -579,6 +584,7 @@
                         </avalonDock:LayoutPanel>
                     </avalonDock:LayoutRoot>
                 </avalonDock:DockingManager>
+                </StackPanel>
             </TabItem>
             <TabItem Header="土層-根入れセット" Visibility="{Binding IsDoatsuGoryokuBaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <avalonDock:DockingManager Background="White">

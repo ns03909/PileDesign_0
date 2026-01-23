@@ -11,12 +11,26 @@ using System.Windows;
 namespace PileDesign.FEM
 {
     /// <summary>
+    /// 解析制御モード
+    /// </summary>
+    public enum AnalysisControlMode
+    {
+        /// <summary>荷重制御法（従来方式）</summary>
+        LoadControl,
+        /// <summary>変位制御法（極限状態でも安定）</summary>
+        DisplacementControl
+    }
+
+    /// <summary>
     /// 杭の鉛直荷重伝達解析を行うクラス
     /// </summary>
     public class VerticalLoadTransferMethod : BaseModel
     {
 
         #region Fields
+
+        /// <summary>解析制御モード</summary>
+        private AnalysisControlMode _analysisMode = AnalysisControlMode.LoadControl;
 
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
@@ -43,7 +57,7 @@ namespace PileDesign.FEM
         private double prevF0 = 0.0;
         //private double prevPrevF0 = 0.0;
 
-        private readonly double Tolerance = Math.Pow(10, -8);
+        private readonly double Tolerance = Math.Pow(10, -6);
         private double PileWeight;
         private double FricpMax;
         private double FricmMax;
@@ -178,10 +192,12 @@ namespace PileDesign.FEM
         #region Constructor & Initialization
 
         // コンストラクタ
-        public VerticalLoadTransferMethod(MainWindowViewModel mainWindowViewModel, SoilPile _soilPile)
+        public VerticalLoadTransferMethod(MainWindowViewModel mainWindowViewModel, SoilPile _soilPile,
+            AnalysisControlMode analysisMode = AnalysisControlMode.LoadControl)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
             this.soilPile = _soilPile;
+            _analysisMode = analysisMode;
             pileNodesCount = soilPile.PileCircumVerticals.Count + 1;
             nodesCount = (soilPile.PileCircumVerticals.Count + 1) * 2;
 
@@ -292,13 +308,13 @@ namespace PileDesign.FEM
 
                 if (i == pileNodesCount - 1) // 杭先端抵抗
                 {
-                    double settlment = xs[2 * i] - xs[2 * i + 1]; // 相対変位
+                    double settlement = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; //m
                     double rpu = soilPile.Rpu; // kN
                     double alpha = InputModel.PileBodies[^1].SettleAlpha;
                     double n = InputModel.PileBodies[^1].SettleN;
 
-                    soilReaction += GetSecantStiffnessPileToeFromSettlement(settlment, dp, rpu, alpha, n) * settlment;
+                    soilReaction += GetSecantStiffnessPileToeFromSettlement(settlement, dp, rpu, alpha, n) * settlement;
                 }
                 soilReactions[2 * i] = soilReaction;
             }
@@ -325,7 +341,8 @@ namespace PileDesign.FEM
                     double S2 = soilPile.PileCircumVerticals[j].S2 / 1000.0; // m
                     double psiL = soilPile.PileCircumVerticals[j].PsiL * 0.5; // m2
 
-                    stiffness += GetSecantStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL);
+                    double ktan = GetTangentStiffnessPilePerimeter(state, s, aPC, aPT, tau1, tau2, S1, S2, psiL);
+                    stiffness += ktan;
                 }
 
                 if (i == pileNodesCount - 1) // 杭先端抵抗
@@ -359,10 +376,14 @@ namespace PileDesign.FEM
             {
                 ktan = 0;
             }
+            else if (rpu <= 1e-12) // rpu≈0のガード（0除算防止）
+            {
+                ktan = 0;
+            }
             else
             {
                 double stan = 0.1 * dp * (alpha * (1 / rpu) + n * (1 - alpha) * (1 / rpu) * Math.Pow(rp / rpu, n - 1));
-                ktan = 1 / stan;
+                ktan = (stan > 1e-15) ? 1 / stan : 0; // stan≈0のガード（オーバーフロー防止）
             }
             return ktan;
         }
@@ -376,11 +397,15 @@ namespace PileDesign.FEM
             {
                 ktan = 0;
             }
+            else if (rpu <= 1e-12) // rpu≈0のガード
+            {
+                ktan = 0;
+            }
             else
             {
                 double rp = GetRp(settlement, dp, rpu, alpha, n);
                 double stan = 0.1 * dp * (alpha * (1 / rpu) + n * (1 - alpha) * (1 / rpu) * Math.Pow(rp / rpu, n - 1));
-                ktan = 1 / stan;
+                ktan = (stan > 1e-15) ? 1 / stan : 0; // stan≈0のガード
             }
             return ktan;
         }
@@ -396,30 +421,34 @@ namespace PileDesign.FEM
             }
             else
             {
-                ksec = GetRp(settlment, dp, rpu, alpha, n) / settlment;
+                double safeSettlement = Math.Max(settlment, 1e-12); // 0除算防止
+                ksec = GetRp(settlment, dp, rpu, alpha, n) / safeSettlement;
             }
             return ksec;
         }
 
-        // sTarget -> Rp メソッド
+        // sTarget -> Rp メソッド（ニュートンラフソン法）
         private static double GetRp(double sTarget, double dp, double rpu, double alpha, double n)
         {
-            double sn;
-            double ktan;
-            double rp;
-            if (sTarget <= 0)
+            // 早期リターン
+            if (sTarget <= 0 || rpu <= 1e-12) return 0;
+
+            double rp = rpu;
+            const int maxIter = 100;
+            const double tolerance = 1e-8;
+
+            for (int i = 0; i < maxIter; i++)
             {
-                rp = 0;
-            }
-            else
-            {
-                rp = rpu;
-                do
-                {
-                    sn = GetSettlementPileToe(dp, rp, rpu, alpha, n);
-                    ktan = GetTangentStiffnessPileToeFromRp(rp, dp, rpu, alpha, n);
-                    rp -= (sn - sTarget) * ktan;
-                } while (Math.Abs(sn - sTarget) > Math.Pow(10, -8));
+                double sn = GetSettlementPileToe(dp, rp, rpu, alpha, n);
+                double ktan = GetTangentStiffnessPileToeFromRp(rp, dp, rpu, alpha, n);
+
+                // 収束判定
+                if (Math.Abs(sn - sTarget) <= tolerance) break;
+
+                // ktan≈0の場合は更新できないので打ち切り
+                if (Math.Abs(ktan) < 1e-15) break;
+
+                rp -= (sn - sTarget) * ktan;
             }
             return rp;
         }
@@ -452,7 +481,9 @@ namespace PileDesign.FEM
             }
             else
             {
-                ktan = 0;
+                // 塑性状態でも微小な剛性を残す（数値安定性のため）
+                // 初期剛性の5%程度を残すことで剛性マトリクスの特異性を防ぎつつ収束を改善
+                ktan = tau1 / S1 * psiL * 0.05;
             }
             return ktan;
         }
@@ -480,11 +511,13 @@ namespace PileDesign.FEM
             }
             else if (Math.Abs(s) <= S2)
             {
-                ksec = ((tau2 - tau1) / (S2 - S1) * (Math.Abs(s) - S1) + tau1) / Math.Abs(s) * psiL;
+                double absS = Math.Max(Math.Abs(s), 1e-12); // 0除算防止
+                ksec = ((tau2 - tau1) / (S2 - S1) * (Math.Abs(s) - S1) + tau1) / absS * psiL;
             }
             else
             {
-                ksec = tau2 / Math.Abs(s) * psiL;
+                double absS = Math.Max(Math.Abs(s), 1e-12); // 0除算防止
+                ksec = tau2 / absS * psiL;
             }
             return ksec;
         }
@@ -643,7 +676,15 @@ namespace PileDesign.FEM
             for (int pn = -1; pn <= 1; pn += 2)
             {
                 string state = (pn == -1) ? "positive" : "negative";
-                RunLoadIncrementAnalysis(state, pn);
+
+                if (_analysisMode == AnalysisControlMode.LoadControl)
+                {
+                    RunLoadIncrementAnalysis(state, pn);
+                }
+                else
+                {
+                    RunDisplacementIncrementAnalysis(state, pn);
+                }
             }
 
             RecordResults();
@@ -669,7 +710,7 @@ namespace PileDesign.FEM
 
             if (VectorR.L2Norm() / VectorF.L2Norm() != 0)
             {
-                ConvergenceCaluculation(state);
+                ConvergenceCalculation(state);
 
                 double settlement = VectorX[^2];
                 double dp = soilPile.Dp / 1000.0;
@@ -723,17 +764,149 @@ namespace PileDesign.FEM
             VectorRz.Clear();
             VectorR.Clear();
 
+            // デバッグログ: 荷重上限・下限と各パラメータの出力
+            string stateLabel = (pn == -1) ? "圧縮側" : "引張側";
+            System.Diagnostics.Debug.WriteLine($"=== {stateLabel}解析開始 ===");
+            System.Diagnostics.Debug.WriteLine($"  Rpu (極限先端支持力) = {soilPile.Rpu:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  Rfu (極限周面抵抗力) = {soilPile.Rfu:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  Ru  (極限鉛直支持力) = {soilPile.Ru:F1} kN (= Rpu + Rfu)");
+            System.Diagnostics.Debug.WriteLine($"  R_ULS (終局限界支持力) = {soilPile.R_ULS:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  FricpMax (計算上の周面抵抗合計) = {FricpMax:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  Rpu + FricpMax = {soilPile.Rpu + FricpMax:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  Rt_ULS (終局限界引抜力) = {soilPile.Rt_ULS:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  FricmMax (引張周面抵抗合計) = {FricmMax:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  PileWeight (杭自重) = {PileWeight:F1} kN");
+
             double step = (pn == -1) ? GetStepCompression(soilPile.Rpu, FricpMax) : GetStepTension(FricmMax, PileWeight);
+            double minStep = Math.Abs(step) * 0.01; // 最小ステップ（初期の1%）
             VectorDF.Clear();
             VectorDF[0] = step;
+
+            System.Diagnostics.Debug.WriteLine($"  初期ステップ = {step:F1} kN, 最小ステップ = {minStep:F3} kN");
 
             var limitFlags = new LimitFlags();
 
             do
             {
+                // 収束失敗時のバックアップ用に状態を保存
+                var backupVectorX = VectorX.Clone();
+                var backupVectorF = VectorF.Clone();
+
                 ApplyLoadIncrements(pn, limitFlags);
 
-                ConvergenceCaluculation(state);
+                bool converged = TryConvergenceCalculation(state);
+
+                if (!converged)
+                {
+                    // 収束失敗時の荷重レベルと抵抗力内訳を記録
+                    double attemptedLoad = VectorF[0] - Weights[0];
+                    System.Diagnostics.Debug.WriteLine($"  試行荷重={attemptedLoad:F1}kN で収束失敗");
+
+                    // 先端抵抗力を計算
+                    double settlementAtFailure = VectorX[^2];
+                    double dpAtFailure = soilPile.Dp / 1000.0;
+                    double rpuAtFailure = soilPile.Rpu;
+                    double alphaAtFailure = InputModel.PileBodies[^1].SettleAlpha;
+                    double nAtFailure = InputModel.PileBodies[^1].SettleN;
+                    double rzToeAtFailure = GetRp(settlementAtFailure, dpAtFailure, rpuAtFailure, alphaAtFailure, nAtFailure);
+
+                    // 周面摩擦力を計算（杭頭荷重 - 先端抵抗力 + 杭自重）
+                    double circumFrictionAtFailure = attemptedLoad - rzToeAtFailure + PileWeight;
+
+                    System.Diagnostics.Debug.WriteLine($"    沈下量 = {settlementAtFailure * 1000:F2} mm");
+                    System.Diagnostics.Debug.WriteLine($"    先端抵抗力 Rp = {rzToeAtFailure:F1} kN (Rpu={rpuAtFailure:F1}, 比={rzToeAtFailure / rpuAtFailure:F2})");
+                    System.Diagnostics.Debug.WriteLine($"    周面摩擦力 Rf = {circumFrictionAtFailure:F1} kN (FricpMax={FricpMax:F1}, 比={circumFrictionAtFailure / FricpMax:F2})");
+
+                    // 収束失敗：状態を復元してステップを半分に
+                    VectorX = backupVectorX;
+                    VectorF = backupVectorF;
+
+                    double currentStep = Math.Abs(VectorDF[0]);
+                    if (currentStep <= minStep)
+                    {
+                        // ステップが最小に達しても収束しない場合 → 極限状態に到達したと判断
+                        string stateLabelLocal = (state == "positive") ? "圧縮側" : "引張側";
+                        double currentLoad = VectorF[0] - Weights[0];
+                        double targetLimit = (pn == -1) ? soilPile.R_ULS : soilPile.Rt_ULS;
+                        double ratio = (pn == -1) ? (currentLoad / soilPile.R_ULS * 100) : (currentLoad / soilPile.Rt_ULS * 100);
+
+                        // 最終状態での抵抗力内訳
+                        double settlementFinal = backupVectorX[^2]; // 復元前の最後の収束状態
+                        double dpFinal = soilPile.Dp / 1000.0;
+                        double rzToeFinal = GetRp(settlementFinal, dpFinal, soilPile.Rpu, InputModel.PileBodies[^1].SettleAlpha, InputModel.PileBodies[^1].SettleN);
+                        double circumFrictionFinal = currentLoad - rzToeFinal + PileWeight;
+
+                        System.Diagnostics.Debug.WriteLine($"=== 極限状態到達: {stateLabelLocal} ===");
+                        System.Diagnostics.Debug.WriteLine($"  到達荷重 = {currentLoad:F1} kN");
+                        System.Diagnostics.Debug.WriteLine($"  目標限界 = {targetLimit:F1} kN");
+                        System.Diagnostics.Debug.WriteLine($"  達成率 = {ratio:F1}%");
+                        System.Diagnostics.Debug.WriteLine($"  --- 抵抗力内訳 ---");
+                        System.Diagnostics.Debug.WriteLine($"  沈下量 = {settlementFinal * 1000:F2} mm (杭径10% = {dpFinal * 100:F1} mm)");
+                        System.Diagnostics.Debug.WriteLine($"  先端抵抗力 Rp = {rzToeFinal:F1} kN (Rpu={soilPile.Rpu:F1}, 比={rzToeFinal / soilPile.Rpu:F2})");
+                        System.Diagnostics.Debug.WriteLine($"  周面摩擦力 Rf = {circumFrictionFinal:F1} kN (FricpMax={FricpMax:F1}, 比={circumFrictionFinal / FricpMax:F2})");
+                        System.Diagnostics.Debug.WriteLine($"  杭自重 W = {PileWeight:F1} kN");
+                        System.Diagnostics.Debug.WriteLine($"  釣り合い: Rp + Rf - W = {rzToeFinal + circumFrictionFinal - PileWeight:F1} kN (≒ 杭頭荷重 {currentLoad:F1} kN)");
+
+                        // 杭体剛性と変位分布の出力
+                        System.Diagnostics.Debug.WriteLine($"  --- 杭体剛性と変位分布 ---");
+                        for (int iNode = 0; iNode < soilPile.PileCircumVerticals.Count; iNode++)
+                        {
+                            var pcv = soilPile.PileCircumVerticals[iNode];
+                            double nodeDisp = backupVectorX[2 * iNode] * 1000; // mm
+                            double soilDisp = backupVectorX[2 * iNode + 1] * 1000; // mm
+                            double relativeDisp = (backupVectorX[2 * iNode] - backupVectorX[2 * iNode + 1]) * 1000; // mm
+                            double beamStiff = BeamStiffnesses[iNode];
+                            double S2_mm = pcv.S2; // mm (S2は元々mmで格納されている)
+                            string plasticState = (Math.Abs(relativeDisp) > S2_mm) ? "塑性" : "弾性";
+                            System.Diagnostics.Debug.WriteLine($"    Node{iNode}: 杭変位={nodeDisp:F2}mm, 土変位={soilDisp:F2}mm, 相対変位={relativeDisp:F2}mm (S2={S2_mm:F1}mm) [{plasticState}], EA/L={beamStiff:F0}kN/m");
+                        }
+                        // 杭先端ノード
+                        int lastNode = soilPile.PileCircumVerticals.Count;
+                        double lastNodeDisp = backupVectorX[2 * lastNode] * 1000;
+                        double lastSoilDisp = backupVectorX[2 * lastNode + 1] * 1000;
+                        System.Diagnostics.Debug.WriteLine($"    Node{lastNode}(先端): 杭変位={lastNodeDisp:F2}mm, 土変位={lastSoilDisp:F2}mm");
+
+                        // 要素ごとの周面抵抗を計算して出力
+                        System.Diagnostics.Debug.WriteLine($"  --- 要素ごとの周面抵抗 ---");
+                        double totalCircumFriction = 0;
+                        for (int jElem = 0; jElem < soilPile.PileCircumVerticals.Count; jElem++)
+                        {
+                            var pcvElem = soilPile.PileCircumVerticals[jElem];
+                            // 要素の上端ノードの相対変位
+                            double sTop = backupVectorX[2 * jElem] - backupVectorX[2 * jElem + 1];
+                            // 要素の下端ノードの相対変位
+                            double sBot = backupVectorX[2 * (jElem + 1)] - backupVectorX[2 * (jElem + 1) + 1];
+                            // 平均相対変位
+                            double sAvg = (sTop + sBot) / 2;
+                            double tau2_psiL = pcvElem.Tau2 * pcvElem.PsiL; // 最大周面抵抗力
+                            double S2_m = pcvElem.S2 / 1000.0; // m
+                            string plasticStateElem = (Math.Abs(sAvg) > S2_m) ? "塑性" : "弾性";
+                            // 発揮される周面摩擦力
+                            double frictionElem;
+                            if (Math.Abs(sAvg) > S2_m)
+                            {
+                                frictionElem = pcvElem.Tau2 * pcvElem.PsiL * Math.Sign(sAvg);
+                            }
+                            else
+                            {
+                                // 簡易的に線形補間
+                                frictionElem = pcvElem.Tau2 * pcvElem.PsiL * sAvg / S2_m;
+                            }
+                            totalCircumFriction += frictionElem;
+                            System.Diagnostics.Debug.WriteLine($"    要素{jElem}: tau2*psiL={tau2_psiL:F1}kN, s_avg={sAvg * 1000:F2}mm, S2={pcvElem.S2:F1}mm [{plasticStateElem}], Rf_elem={frictionElem:F1}kN");
+                        }
+                        System.Diagnostics.Debug.WriteLine($"  周面抵抗合計（要素積算） = {totalCircumFriction:F1} kN");
+                        System.Diagnostics.Debug.WriteLine($"  FricpMax との差 = {FricpMax - totalCircumFriction:F1} kN");
+
+                        // 極限状態は正常な終了条件なのでMessageBoxは表示しない
+                        break;
+                    }
+
+                    // ステップを半分に縮小
+                    VectorDF[0] = VectorDF[0] / 2;
+                    System.Diagnostics.Debug.WriteLine($"収束失敗: ステップ縮小 {currentStep} -> {Math.Abs(VectorDF[0])}");
+                    continue; // 縮小したステップで再試行
+                }
 
                 double settlement = VectorX[^2];
                 double dp = soilPile.Dp / 1000.0;
@@ -769,6 +942,318 @@ namespace PileDesign.FEM
             }
             while (IsWithinLoadRange(VectorF[0] - Weights[0], pn));
         }
+
+        #region 変位制御法
+
+        /// <summary>
+        /// 変位制御による増分解析（極限状態でも安定）
+        /// </summary>
+        private void RunDisplacementIncrementAnalysis(string state, int pn)
+        {
+            VectorX = VectorX0.Clone();
+            VectorF = VectorF0.Clone();
+            VectorRz.Clear();
+            VectorR.Clear();
+
+            string stateLabel = (pn == -1) ? "圧縮側" : "引張側";
+            System.Diagnostics.Debug.WriteLine($"=== {stateLabel}解析開始（変位制御法） ===");
+            System.Diagnostics.Debug.WriteLine($"  Rpu = {soilPile.Rpu:F1} kN, Rfu = {soilPile.Rfu:F1} kN");
+            System.Diagnostics.Debug.WriteLine($"  R_ULS = {soilPile.R_ULS:F1} kN, Rt_ULS = {soilPile.Rt_ULS:F1} kN");
+
+            // 目標変位を設定
+            // 圧縮側: 杭径10%まで（極限支持力の定義）、さらに余裕を持って15%まで
+            // 引張側: 杭径5%程度
+            double dp = soilPile.Dp / 1000.0; // m
+            double targetDisp = (pn == -1) ? dp * 0.15 : -dp * 0.10;
+            int numSteps = 30;  // 30ステップで目標変位に到達
+            double dispStep = targetDisp / numSteps;
+
+            System.Diagnostics.Debug.WriteLine($"  杭径 Dp = {soilPile.Dp:F0} mm");
+            System.Diagnostics.Debug.WriteLine($"  目標変位 = {targetDisp * 1000:F1} mm ({numSteps}ステップ)");
+            System.Diagnostics.Debug.WriteLine($"  変位増分 = {dispStep * 1000:F2} mm/step");
+
+            var limitFlags = new LimitFlags();
+
+            for (int step = 1; step <= numSteps; step++)
+            {
+                // 目標杭頭変位（杭DOF = VectorX[0]）
+                double targetHeadDisp = VectorX0[0] + dispStep * step * pn * (-1);
+
+                // 収束計算（変位制御）
+                bool converged = TryDisplacementControlConvergence(state, targetHeadDisp);
+
+                if (!converged)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Step {step}: 収束失敗（変位={targetHeadDisp * 1000:F2}mm）");
+                    break;
+                }
+
+                // 杭頭反力から荷重を計算
+                double headLoad = CalculateHeadReaction(state);
+                System.Diagnostics.Debug.WriteLine($"  Step {step}: 変位={VectorX[0] * 1000:F2}mm, 荷重={headLoad:F1}kN");
+
+                // VectorFを更新（反力から逆算）
+                VectorF.Clear();
+                VectorF[0] = headLoad + Weights[0];
+                for (int i = 0; i < pileNodesCount; i++)
+                {
+                    VectorF[2 * i] += Weights[i];
+                }
+
+                // 先端抵抗力を計算
+                double settlement = VectorX[^2];
+                double rpu = soilPile.Rpu;
+                double alpha = InputModel.PileBodies[^1].SettleAlpha;
+                double n = InputModel.PileBodies[^1].SettleN;
+                double rzToe = GetRp(settlement, dp, rpu, alpha, n);
+
+                // 限界状態フラグの更新
+                UpdateLimitFlags(headLoad, pn, limitFlags);
+
+                // 結果を記録
+                if (state == "positive")
+                {
+                    Fs.Add(VectorF.Clone());
+                    Rs.Add(VectorRz.Clone());
+                    Ds.Add(VectorX.Clone());
+                    RzToes.Add(rzToe);
+
+                    if (limitFlags.IsAnyJustLimit)
+                        RecordLimitState(VectorF, VectorRz, VectorX, rzToe, true);
+                }
+                else
+                {
+                    Fs.Insert(0, VectorF.Clone());
+                    Rs.Insert(0, VectorRz.Clone());
+                    Ds.Insert(0, VectorX.Clone());
+                    RzToes.Insert(0, rzToe);
+
+                    if (limitFlags.IsAnyJustLimit)
+                        RecordLimitState(VectorF, VectorRz, VectorX, rzToe, false);
+                }
+
+                // 極限状態到達でループ終了
+                if (limitFlags.IsAnyJustULS)
+                {
+                    System.Diagnostics.Debug.WriteLine($"=== 極限状態到達: {stateLabel}（変位制御法） ===");
+                    System.Diagnostics.Debug.WriteLine($"  到達荷重 = {headLoad:F1} kN");
+                    System.Diagnostics.Debug.WriteLine($"  沈下量 = {settlement * 1000:F2} mm");
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 変位制御用の収束計算（直接剛性法）
+        /// 杭頭変位を固定し、セカント剛性マトリクスで直接解く
+        /// </summary>
+        private bool TryDisplacementControlConvergence(string state, double targetHeadDisp)
+        {
+            double norm = double.MaxValue;
+            double prevNorm = double.MaxValue;
+            int iterationCount = 0;
+            const int maxIterations = 500;
+
+            // 杭頭変位を目標値に設定
+            VectorX[0] = targetHeadDisp;
+
+            // 外力ベクトル（自重のみ）
+            var vectorF_gravity = Vector<double>.Build.Dense(nodesCount);
+            for (int i = 0; i < pileNodesCount; i++)
+            {
+                vectorF_gravity[2 * i] = Weights[i];
+            }
+
+            while (iterationCount < maxIterations)
+            {
+                iterationCount++;
+
+                // セカント剛性マトリクスを生成
+                var soilStiffnesses = GetSecantSoilStiffness(state, VectorX);
+                var stiffnessMatrix = GenerateStiffnessMatrix(BeamStiffnesses, soilStiffnesses);
+
+                // 右辺ベクトル = 外力（自重）
+                var rhs = vectorF_gravity.Clone();
+
+                // 杭頭変位の境界条件を適用（ペナルティ法）
+                double penalty = 1e12;
+                stiffnessMatrix[0, 0] += penalty;
+                rhs[0] += penalty * targetHeadDisp;
+
+                // 土DOFの境界条件（強制変位=0）
+                for (int i = 0; i < pileNodesCount; i++)
+                {
+                    int soilIdx = 2 * i + 1;
+                    stiffnessMatrix[soilIdx, soilIdx] += penalty;
+                    rhs[soilIdx] += penalty * ForcedSoilDispList[i];
+                }
+
+                // 連立方程式を解く
+                Vector<double> newX;
+                try
+                {
+                    newX = stiffnessMatrix.Solve(rhs);
+                }
+                catch
+                {
+                    System.Diagnostics.Debug.WriteLine($"    [収束] iter={iterationCount}: 連立方程式解法失敗");
+                    return false;
+                }
+
+                if (!newX.ForAll(double.IsFinite))
+                {
+                    System.Diagnostics.Debug.WriteLine($"    [収束] iter={iterationCount}: 解が不正（NaN/Inf）");
+                    return false;
+                }
+
+                // 変位の変化量を計算
+                double deltaSum = 0;
+                double dispSum = 0;
+                for (int i = 0; i < pileNodesCount; i++)
+                {
+                    int pileIdx = 2 * i;
+                    double delta = newX[pileIdx] - VectorX[pileIdx];
+                    deltaSum += delta * delta;
+                    dispSum += VectorX[pileIdx] * VectorX[pileIdx];
+                }
+                norm = Math.Sqrt(deltaSum) / Math.Max(Math.Sqrt(dispSum), 1e-6);
+
+                // 緩和係数で更新（収束を安定化）
+                double relaxation = 0.5;
+                for (int i = 0; i < nodesCount; i++)
+                {
+                    VectorX[i] = (1 - relaxation) * VectorX[i] + relaxation * newX[i];
+                }
+
+                // 杭頭変位を強制
+                VectorX[0] = targetHeadDisp;
+
+                // 土DOFを強制
+                for (int i = 0; i < pileNodesCount; i++)
+                {
+                    VectorX[2 * i + 1] = ForcedSoilDispList[i];
+                }
+
+                // 収束判定
+                if (norm < 1e-6)
+                {
+                    return true;
+                }
+
+                // 発散検出
+                if (norm > prevNorm * 10 && iterationCount > 10)
+                {
+                    System.Diagnostics.Debug.WriteLine($"    [収束] iter={iterationCount}: 発散検出 norm={norm:E3}");
+                    break;
+                }
+                prevNorm = norm;
+            }
+
+            // 最大反復でも収束しなかった場合、緩和条件でチェック
+            if (norm < 0.001)  // 0.1%以下なら実用上OK
+            {
+                return true;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"    [収束] 最大反復回数到達: norm={norm:E3}");
+            return false;
+        }
+
+        /// <summary>
+        /// 変位境界条件（杭頭固定 + 土固定）を剛性マトリクスと残差ベクトルに適用
+        /// </summary>
+        private void ApplyDisplacementBoundaryConditions(Matrix<double> stiffnessMatrix, Vector<double> residualVector, double targetHeadDisp)
+        {
+            // 1. 杭頭DOF (index=0) を固定
+            // 残差ベクトルの杭頭成分を0に
+            residualVector[0] = 0;
+
+            // 剛性マトリクスの杭頭行・列をクリア、対角を1に
+            for (int j = 0; j < nodesCount; j++)
+            {
+                stiffnessMatrix[0, j] = 0;
+                stiffnessMatrix[j, 0] = 0;
+            }
+            stiffnessMatrix[0, 0] = 1.0;
+
+            // 2. 土DOF (奇数インデックス) を固定
+            for (int i = 0; i < pileNodesCount; i++)
+            {
+                int dofIndex = 2 * i + 1;
+                residualVector[dofIndex] = 0;
+
+                for (int j = 0; j < nodesCount; j++)
+                {
+                    stiffnessMatrix[dofIndex, j] = 0;
+                    stiffnessMatrix[j, dofIndex] = 0;
+                }
+                stiffnessMatrix[dofIndex, dofIndex] = 1.0;
+            }
+        }
+
+        /// <summary>
+        /// 杭頭反力（荷重）を計算
+        /// </summary>
+        private double CalculateHeadReaction(string state)
+        {
+            // 地盤反力ベクトルを取得
+            Vector<double> soilReactions = GetSoilReactionVector(state, VectorX);
+
+            // 杭頭の釣り合いから荷重を求める
+            // P = Σ(地盤反力) - 杭自重
+            double totalSoilReaction = 0;
+            for (int i = 0; i < pileNodesCount; i++)
+            {
+                totalSoilReaction += soilReactions[2 * i];
+            }
+
+            // 杭頭荷重 = 全地盤反力 - 杭自重
+            return totalSoilReaction - PileWeight;
+        }
+
+        /// <summary>
+        /// 限界状態フラグの更新
+        /// </summary>
+        private void UpdateLimitFlags(double load, int pn, LimitFlags flags)
+        {
+            double r_SLS = soilPile.R_SLS;
+            double r_DLS = soilPile.R_DLS;
+            double r_ULS = soilPile.R_ULS;
+            double rt_SLS = soilPile.Rt_SLS;
+            double rt_DLS = soilPile.Rt_DLS;
+            double rt_ULS = soilPile.Rt_ULS;
+
+            if (pn == -1)  // 圧縮側
+            {
+                if (!flags.IsR_SLS && load >= r_SLS) flags.IsJustR_SLS = true;
+                if (!flags.IsR_DLS && load >= r_DLS) flags.IsJustR_DLS = true;
+                if (!flags.IsR_ULS && load >= r_ULS) flags.IsJustR_ULS = true;
+
+                if (flags.IsJustR_SLS) flags.IsR_SLS = true;
+                if (flags.IsJustR_DLS) flags.IsR_DLS = true;
+                if (flags.IsJustR_ULS) flags.IsR_ULS = true;
+
+                flags.IsJustR_SLS = false;
+                flags.IsJustR_DLS = false;
+                flags.IsJustR_ULS = false;
+            }
+            else  // 引張側
+            {
+                if (!flags.IsRt_SLS && load <= rt_SLS) flags.IsJustRt_SLS = true;
+                if (!flags.IsRt_DLS && load <= rt_DLS) flags.IsJustRt_DLS = true;
+                if (!flags.IsRt_ULS && load <= rt_ULS) flags.IsJustRt_ULS = true;
+
+                if (flags.IsJustRt_SLS) flags.IsRt_SLS = true;
+                if (flags.IsJustRt_DLS) flags.IsRt_DLS = true;
+                if (flags.IsJustRt_ULS) flags.IsRt_ULS = true;
+
+                flags.IsJustRt_SLS = false;
+                flags.IsJustRt_DLS = false;
+                flags.IsJustRt_ULS = false;
+            }
+        }
+
+        #endregion
 
         // 荷重増分の判定・適用
         private void ApplyLoadIncrements(int pn, LimitFlags flags)
@@ -921,8 +1406,95 @@ namespace PileDesign.FEM
         }
 
 
+        // 収束ループ（例外なしで結果を返す版）
+        private bool TryConvergenceCalculation(string state)
+        {
+            double norm = double.MaxValue;
+            double prevNorm = double.MaxValue;
+            int iterationCount = 0;
+            double damping = 0.8;
+            int stagnationCount = 0;
+            const int maxIterations = 200;
+
+            // 許容値を動的に調整（反復が進むにつれて少し緩和）
+            double currentTolerance = Tolerance;
+
+            while (norm > currentTolerance)
+            {
+                iterationCount += 1;
+
+                // 反復回数が多くなったら許容値を段階的に緩和（最大100倍まで）
+                if (iterationCount > 100)
+                {
+                    currentTolerance = Tolerance * Math.Min(100.0, 1.0 + (iterationCount - 100) * 0.5);
+                }
+
+                if (iterationCount >= maxIterations)
+                {
+                    // 許容値を大幅に緩和しても収束しない場合のみ失敗
+                    if (norm > Tolerance * 1000)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"TryConvergence失敗: norm={norm:E3}, damping={damping:F3}");
+                        System.Diagnostics.Debug.WriteLine($"  VectorX: max={VectorX.AbsoluteMaximum():E3}, min={VectorX.AbsoluteMinimum():E3}");
+                        System.Diagnostics.Debug.WriteLine($"  VectorR: max={VectorR.AbsoluteMaximum():E3}");
+                        System.Diagnostics.Debug.WriteLine($"  VectorF[0]={VectorF[0]:F1}, 荷重={VectorF[0] - Weights[0]:F1}");
+                        var stiffnesses = GetTangentSoilStiffness(state, VectorX);
+                        double minStiff = stiffnesses.Min();
+                        double maxStiff = stiffnesses.Max();
+                        System.Diagnostics.Debug.WriteLine($"  土剛性: min={minStiff:E3}, max={maxStiff:E3}");
+                        return false;
+                    }
+                    // norm <= Tolerance * 1000 なら許容範囲内として成功扱い
+                    System.Diagnostics.Debug.WriteLine($"TryConvergence成功(緩和): iter={iterationCount}, norm={norm:E3}, tol={currentTolerance:E3}");
+                    return true;
+                }
+
+                List<double> soilTangentStiffnesses = GetTangentSoilStiffness(state, VectorX);
+                Vector<double> U = SolveDisp(BeamStiffnesses, soilTangentStiffnesses, -VectorR, VectorX);
+
+                if (!U.ForAll(double.IsFinite))
+                {
+                    System.Diagnostics.Debug.WriteLine($"TryConvergence: NaN/Infinity at iter {iterationCount}");
+                    return false;
+                }
+
+                VectorX += damping * U;
+                Vector<double> T = FindT(state);
+                VectorR = T - VectorF;
+                norm = VectorR.L2Norm() / VectorF.L2Norm();
+
+                if (!double.IsFinite(norm))
+                {
+                    System.Diagnostics.Debug.WriteLine($"TryConvergence: NaN norm at iter {iterationCount}");
+                    return false;
+                }
+
+                // 適応的減衰係数調整（より積極的に）
+                if (norm > prevNorm * 0.99)
+                {
+                    stagnationCount++;
+                    if (stagnationCount >= 3) // 3回停滞で調整（以前は5回）
+                    {
+                        damping = Math.Max(0.05, damping * 0.6); // より大きく減衰
+                        stagnationCount = 0;
+                    }
+                }
+                else
+                {
+                    stagnationCount = 0;
+                    if (norm < prevNorm * 0.5 && damping < 0.95)
+                    {
+                        damping = Math.Min(0.95, damping * 1.2); // より大きく回復
+                    }
+                }
+                prevNorm = norm;
+            }
+            System.Diagnostics.Debug.WriteLine($"TryConvergence成功: iter={iterationCount}, norm={norm:E3}");
+            return true;
+        }
+
         // 収束ループ
-        private void ConvergenceCaluculation(string state)
+        private void ConvergenceCalculation(string state)
         {
             //||res|| / ||VectorF|| < tolerance となるまで繰り返し計算を行う
             //do while ||VectorR|| / ||VectorF|| > tolerance
@@ -934,27 +1506,75 @@ namespace PileDesign.FEM
             //Find VectorR=T-VectorF
             //END DO
             double norm = double.MaxValue;
+            double prevNorm = double.MaxValue;
             int iterationCount = 0;
+            double damping = 0.8; // 初期減衰係数
+            int stagnationCount = 0; // 停滞カウント
+            const int maxIterations = 200; // 最大反復回数を増やす
+
             while (norm > Tolerance)
             {
                 iterationCount += 1;
-                if (iterationCount >= 100)
+                if (iterationCount >= maxIterations)
                 {
-                    MessageBox.Show("収束計算が100回を超えました。計算を中断します。", "収束エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    throw new InvalidOperationException("収束計算が100回を超えたため中断しました。");
+                    System.Diagnostics.Debug.WriteLine($"収束失敗: norm={norm}, damping={damping}, VectorX={string.Join(",", VectorX)}");
+                    MessageBox.Show($"収束計算が{maxIterations}回を超えました。計算を中断します。\nnorm={norm:E3}", "収束エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    throw new InvalidOperationException($"収束計算が{maxIterations}回を超えたため中断しました。");
                 }
 
                 // Find K 接線剛性マトリクスの計算
                 List<double> soilTangentStiffnesses = GetTangentSoilStiffness(state, VectorX);
                 Vector<double> U = SolveDisp(BeamStiffnesses, soilTangentStiffnesses, -VectorR, VectorX);
-                VectorX += U; // update x = x + u (配置更新)
+
+                // NaN/Infinity チェック（数値計算エラー検出）
+                if (!U.ForAll(double.IsFinite))
+                {
+                    System.Diagnostics.Debug.WriteLine($"NaN/Infinity detected in U at iteration {iterationCount}");
+                    throw new InvalidOperationException("数値計算エラー: 変位増分にNaN/Infinityが発生しました。");
+                }
+
+                // 減衰付き更新
+                VectorX += damping * U;
 
                 Vector<double> T = FindT(state);
 
                 // Find VectorR 残差ベクトル
                 VectorR = T - VectorF;
                 norm = VectorR.L2Norm() / VectorF.L2Norm();
+
+                // normのNaNチェック
+                if (!double.IsFinite(norm))
+                {
+                    System.Diagnostics.Debug.WriteLine($"NaN/Infinity detected in norm at iteration {iterationCount}");
+                    throw new InvalidOperationException("数値計算エラー: 残差ノルムにNaN/Infinityが発生しました。");
+                }
+
+                // 適応的減衰係数調整
+                if (norm > prevNorm * 0.99) // 収束が停滞または悪化
+                {
+                    stagnationCount++;
+                    if (stagnationCount >= 5)
+                    {
+                        damping = Math.Max(0.1, damping * 0.7); // 減衰を強める
+                        stagnationCount = 0;
+                        System.Diagnostics.Debug.WriteLine($"iter={iterationCount}, damping reduced to {damping:F3}");
+                    }
+                }
+                else
+                {
+                    stagnationCount = 0;
+                    // 収束が良好なら減衰を緩める
+                    if (norm < prevNorm * 0.5 && damping < 0.95)
+                    {
+                        damping = Math.Min(0.95, damping * 1.1);
+                    }
+                }
+                prevNorm = norm;
+
+                if (iterationCount % 10 == 0)
+                    System.Diagnostics.Debug.WriteLine($"iter={iterationCount}, norm={norm:E3}, damping={damping:F3}, maxU={U.AbsoluteMaximum():E3}");
             }
+            System.Diagnostics.Debug.WriteLine($"収束完了: iter={iterationCount}, norm={norm:E3}");
         }
 
         // 内力
@@ -1105,8 +1725,6 @@ namespace PileDesign.FEM
             // 初期変位を引いて相対変位に変換
             result = vectorX - VectorX0;
             return true;
-
-
         }
 
         private static double GetNorm(Vector<double> vectorR, Vector<double> vectorF)

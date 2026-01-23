@@ -218,11 +218,22 @@ namespace PileDesign.ViewModels
             }
         }
 
+
+
         // 土圧合力ばねタブの表示非表示
         public bool IsDoatsuGoryokuBaneVisible
         {
             //get => DoatsuGoryokuBane != null && DoatsuGoryokuBane.Items.Count > 0;
             get => InputModel.EmbedmentInput.EmbedmentLayersCount != 0;
+        }
+
+        public int SoilLayerPileSetCount => _mainWindowViewModel.CurrentInputModel?.ElementDivision?.SoilPiles?.Count ?? 0;
+
+
+
+        private void SoilPiles_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(SoilLayerPileSetCount));
         }
 
         public static Crosshair MyCrosshair_kh0 { get; private set; }
@@ -388,6 +399,10 @@ namespace PileDesign.ViewModels
 
             var elementDivision = InputModel.ElementDivision;
 
+            // 現在のモデルがあれば購読（CurrentInputModel 変更に合わせて再購読すること）
+            var coll = _mainWindowViewModel.CurrentInputModel?.ElementDivision?.SoilPiles;
+            if (coll != null) coll.CollectionChanged += SoilPiles_CollectionChanged;
+
             // 元コレクションのスナップショットを先に取得
             var soilPilesSnapshot = elementDivision?.SoilPiles?.ToList() ?? new List<SoilPile>();
 
@@ -420,6 +435,7 @@ namespace PileDesign.ViewModels
         }
 
         // メソッド //
+
         [RelayCommand]
         private void Undo()
         {
@@ -1550,6 +1566,12 @@ namespace PileDesign.ViewModels
             // 変更後のデータの表示
             if (newValue.HasValue && newValue.Value > 0 && newValue.Value <= SoilPiles.Count)
             {
+                // 前の杭のデータを保存（切り替え前に実行）
+                if (oldValue.HasValue && oldValue.Value > 0 && oldValue.Value <= SoilPiles.Count)
+                {
+                    SetZdataItemsAndHorizontalSoilReactionItems(oldValue.Value);
+                }
+
                 PreviousSelectedSoilPileNo = oldValue ?? _selectedSoilPileNo;
                 SelectedSoilPileNo = newValue.Value;
 
@@ -1577,6 +1599,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
+            // 現在選択中の杭のデータを保存（OKボタン押下前に確実に反映）
+            if (SelectedSoilPileNo > 0 && SelectedSoilPileNo <= SoilPiles.Count)
+            {
+                SetZdataItemsAndHorizontalSoilReactionItems(SelectedSoilPileNo);
+            }
+
             // 現在の SoilPiles と SoilEmbedment の内容を DeepCopy して InputModel.ElementDivision に設定
             InputModel.ElementDivision.SoilPiles = new ObservableCollection<SoilPile>(
                 SoilPiles.Select(pile => pile.DeepCopy())

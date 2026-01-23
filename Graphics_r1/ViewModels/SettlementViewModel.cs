@@ -92,6 +92,29 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _verticalLoadTransferMethod, value);
         }
 
+        // 解析制御モード選択
+        private AnalysisControlMode _selectedAnalysisMode = AnalysisControlMode.DisplacementControl;
+        public AnalysisControlMode SelectedAnalysisMode
+        {
+            get => _selectedAnalysisMode;
+            set => SetProperty(ref _selectedAnalysisMode, value);
+        }
+
+        // 解析制御モードリスト（ComboBox用）
+        public AnalysisControlMode[] AnalysisModes { get; } =
+            [AnalysisControlMode.LoadControl, AnalysisControlMode.DisplacementControl];
+
+        // 解析制御モードが変位制御法かどうか
+        public bool IsDisplacementControl
+        {
+            get => _selectedAnalysisMode == AnalysisControlMode.DisplacementControl;
+            set
+            {
+                SelectedAnalysisMode = value ? AnalysisControlMode.DisplacementControl : AnalysisControlMode.LoadControl;
+                OnPropertyChanged(nameof(IsDisplacementControl));
+            }
+        }
+
         // xamlフィールド
         public Canvas Canvas { get; set; }
 
@@ -254,7 +277,7 @@ namespace PileDesign.ViewModels
         public void ExecuteAnalysis()
         {
             if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
-                VerticalLoadTransferMethod = new(mainWindowViewModel, SoilPile);
+                VerticalLoadTransferMethod = new(mainWindowViewModel, SoilPile, SelectedAnalysisMode);
 
             // チャートの更新
             UpdateSettlementChart();
