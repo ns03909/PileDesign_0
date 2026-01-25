@@ -67,10 +67,14 @@ namespace PileDesign.Services
             }
 
             // 地盤質量データを適用
+            // groundTopAltitudeとglDepthから標高(AltitudeDepth)を計算
             groundInput.GroundMassesData = new ObservableCollection<GroundMassDataInput>();
             foreach (var massDto in data.GroundMassesData)
             {
-                groundInput.GroundMassesData.Add(massDto.ToGroundMassDataInput());
+                var massInput = massDto.ToGroundMassDataInput();
+                // 標高 = 地盤天端標高 - GL深度
+                massInput.AltitudeDepth = data.GroundTopAltitude - massDto.GLDepth;
+                groundInput.GroundMassesData.Add(massInput);
             }
         }
 
