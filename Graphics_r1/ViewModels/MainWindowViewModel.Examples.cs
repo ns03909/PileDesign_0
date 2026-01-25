@@ -93,6 +93,9 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 杭体数リストを更新（UIのコンボボックス用）
+            CurrentInputModel.UpdateCountLists();
+
             UpdateWindowImmediate();
             UpdateTreeView();
 
