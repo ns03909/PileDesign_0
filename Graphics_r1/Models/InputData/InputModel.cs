@@ -1,4 +1,6 @@
-﻿using PileDesign.ViewModels;
+﻿using Graphics_r1.Constants;
+using Newtonsoft.Json;
+using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -9,10 +11,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Windows.Media.Media3D;
-using Newtonsoft.Json;
 using System.Windows;
-using Graphics_r1.Constants;
+using System.Windows.Media.Media3D;
 
 namespace PileDesign.Models.InputData
 {
@@ -995,8 +995,8 @@ namespace PileDesign.Models.InputData
                     otm += arm * arm;
                 }
 
-            if (otm <= 1e-12) // ほぼゼロ
-                return [.. raw.Select(_ => 0.0)];
+                if (otm <= 1e-12) // ほぼゼロ
+                    return [.. raw.Select(_ => 0.0)];
 
                 return raw.Select(r => r / otm).ToList();
             }

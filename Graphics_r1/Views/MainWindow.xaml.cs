@@ -2872,7 +2872,7 @@ namespace PileDesign.Views
                 && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             { MainWindowViewModel.OpenShortcutKeysWindow(); }
 
-            }
+        }
 
         // CSVエクスポートのコンテキストメニュークリックイベントハンドラ
         private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)

@@ -1,5 +1,4 @@
-﻿using MathNet.Numerics.Distributions;
-using System;
+﻿using System;
 using System.ComponentModel;
 
 namespace PileDesign.Common

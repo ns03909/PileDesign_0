@@ -1,0 +1,71 @@
+{
+  "displayName": "基礎指針'19 計算例9",
+  "groundExampleName": "Example9",
+  "loadCaseLevel1": {
+    "forceActionPointX": 18.43,
+    "forceActionPointY": 6.90,
+    "forceActionPointZ": -5.5,
+    "upperMassForce": 4010,
+    "foundationMassForce": 5200
+  },
+  "loadCaseLevel2": {
+    "forceActionPointX": 18.43,
+    "forceActionPointY": 6.90,
+    "forceActionPointZ": -5.5,
+    "upperMassForce": 8025,
+    "foundationMassForce": 10453
+  },
+  "pileBodies": [
+    {
+      "pileBodyRef": "(PB1)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 1000.0,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 1000.0,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        { "no": 1, "segmentLength": 11.5, "segmentDepth": 11.5, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1000.0, "concreteThickness": 500, "mainBarDr": 700, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 20, "mainBarSize": "D25", "concreteFc": 27.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
+        { "no": 2, "segmentLength": 14.7, "segmentDepth": 26.2, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1000.0, "concreteThickness": 500, "mainBarDr": 700, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 12, "mainBarSize": "D25", "concreteFc": 27.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+      ]
+    }
+  ],
+  "pileLayoutItems": [
+    { "pileNo": 1, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.6, "y": -0.4, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 2, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.375, "y": -0.4, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 3, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.75, "y": -0.4, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 4, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 22.125, "y": -0.4, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 5, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 29.475, "y": -0.4, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 6, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 36.225, "y": -0.4, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 7, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.6, "y": 7.95, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 8, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.375, "y": 7.95, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 9, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.75, "y": 7.95, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 22.125, "y": 7.95, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 11, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 29.475, "y": 7.95, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 12, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 36.225, "y": 7.95, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 13, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.6, "y": 13.15, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 14, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.375, "y": 13.15, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 15, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.75, "y": 13.15, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 16, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 22.125, "y": 13.15, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 17, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 29.475, "y": 13.15, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] },
+    { "pileNo": 18, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 36.225, "y": 13.15, "z": -6.5, "axialForceVL0": 2452.0, "axialForceLevel1s": [], "axialForceLevel2s": [] }
+  ],
+  "gridXItems": [
+    { "name": "1", "coord": 0.0, "spacing": 0.0 },
+    { "name": "2", "coord": 7.375, "spacing": 7.375 },
+    { "name": "3", "coord": 14.725, "spacing": 7.35 },
+    { "name": "4", "coord": 22.075, "spacing": 7.35 },
+    { "name": "5", "coord": 29.425, "spacing": 7.35 },
+    { "name": "6", "coord": 36.8, "spacing": 7.375 }
+  ],
+  "gridYItems": [
+    { "name": "C", "coord": 0.0, "spacing": 0.0 },
+    { "name": "B", "coord": 7.75, "spacing": 7.75 },
+    { "name": "A", "coord": 13.75, "spacing": 6.0 }
+  ]
+}

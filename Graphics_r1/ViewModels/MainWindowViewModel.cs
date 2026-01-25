@@ -4,7 +4,6 @@ using Microsoft.Win32;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.FEM;
-using PileDesign.Models;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using PileDesign.Services;
@@ -12,7 +11,6 @@ using PileDesign.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -362,7 +360,7 @@ namespace PileDesign.ViewModels
                 }
             }
         }
-        
+
         private InputModel? _currentInputModel;
         public InputModel? CurrentInputModel
         {

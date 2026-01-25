@@ -1,14 +1,11 @@
 ﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.EMMA;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using LiveChartsCore.Measure;
 using PileDesign.Common;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using ScottPlot;
-using ScottPlot.Colormaps;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -207,7 +204,7 @@ namespace PileDesign.Output
             AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
 
             AddHeader1(body, "基本設定", 1);
-           
+
             AddFundamentalTable(body, inputModel.FundamentalInput); // 基本設定テーブル
             AddLineBreak(body);
 
@@ -366,7 +363,7 @@ namespace PileDesign.Output
                 AddAutoFigureCaption(body, "杭頭モーメントマップ", "図");
             }
             if (mainWindowViewModel.IncludePileHeadShearMap)  // 杭頭せん断力マップ
-            { 
+            {
                 double layoutW = 150; double layoutH = 200;
                 AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileTopShearForceMark);
                 AddAutoFigureCaption(body, "杭頭せん断力マップ", "図");

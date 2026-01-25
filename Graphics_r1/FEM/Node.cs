@@ -663,7 +663,7 @@ namespace PileDesign.FEM
                 NodeResults = new ObservableCollection<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
             };
             return copy;
-           
+
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using PileDesign.FEM;
 using System;
-using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 namespace PileDesign.Models.InputData

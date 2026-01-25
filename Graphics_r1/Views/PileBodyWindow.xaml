@@ -7,7 +7,6 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         d:DataContext="{d:DesignInstance Type=local:PileBodyViewModel}"
         mc:Ignorable="d"

@@ -1287,13 +1287,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- 地盤例題JSONファイル -->
+  <ItemGroup>
+    <Content Include="Examples\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ACadSharp" Version="3.3.13" />
     <PackageReference Include="CSparse" Version="4.3.0" />
     <PackageReference Include="HelixToolkit.Geometry" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.Maths" Version="3.1.2" />
-    <PackageReference Include="HelixToolkit.SharpDX.Core" Version="2.27.3" />
-    <PackageReference Include="HelixToolkit.SharpDX.Core.Wpf" Version="2.27.3" />
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
     <PackageReference Include="Rhino3dm" Version="8.17.0" />
@@ -1302,7 +1307,6 @@
     <PackageReference Include="SharpVectors" Version="1.8.5" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
-    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.1" />
     <PackageReference Include="Svg.Skia" Version="3.2.1" />
     <PackageReference Include="System.Data.DataSetExtensions" Version="4.6.0-preview3.19128.7" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
@@ -1333,7 +1337,6 @@
     <PackageReference Include="HelixToolkit" Version="3.1.2" />
     <PackageReference Include="LiveChartsCore" Version="2.0.0-rc4.5" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView" Version="2.0.0-rc4.5" />
-    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc4.5" />
     <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
     <PackageReference Include="OpenTK" Version="5.0.0-pre.13" />
     <PackageReference Include="OpenTK.GLWpfControl" Version="5.0.0-pre.1" />

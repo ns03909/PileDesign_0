@@ -1,0 +1,124 @@
+{
+  "displayName": "関東支部 計算例8",
+  "groundExampleName": "ExampleK8",
+  "loadCaseLevel1": {
+    "forceActionPointX": 10.80,
+    "forceActionPointY": 8.25,
+    "forceActionPointZ": -2.0,
+    "upperMassForce": 3282,
+    "foundationMassForce": 828
+  },
+  "loadCaseLevel2": {
+    "forceActionPointX": 10.80,
+    "forceActionPointY": 8.25,
+    "forceActionPointZ": -2.0,
+    "upperMassForce": 6679,
+    "foundationMassForce": 3310
+  },
+  "loadCaseLevel2Alt": {
+    "forceActionPointX": 10.80,
+    "forceActionPointY": 8.25,
+    "forceActionPointZ": -2.0,
+    "upperMassForce": 6794,
+    "foundationMassForce": 3310
+  },
+  "pileBodies": [
+    {
+      "pileBodyRef": "(P1)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 1300.0,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 1300.0,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        { "no": 1, "segmentLength": 10.0, "segmentDepth": 10.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1300.0, "concreteThickness": 650, "mainBarDr": 1000, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 20, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
+        { "no": 2, "segmentLength": 18.0, "segmentDepth": 28.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1300.0, "concreteThickness": 650, "mainBarDr": 1000, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 10, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+      ]
+    },
+    {
+      "pileBodyRef": "(P2)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 1300.0,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 1300.0,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        { "no": 1, "segmentLength": 10.0, "segmentDepth": 10.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1300.0, "concreteThickness": 650, "mainBarDr": 1000, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
+        { "no": 2, "segmentLength": 18.0, "segmentDepth": 28.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1300.0, "concreteThickness": 650, "mainBarDr": 1000, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 12, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+      ]
+    },
+    {
+      "pileBodyRef": "(P3)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 1300.0,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 1300.0,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        { "no": 1, "segmentLength": 10.0, "segmentDepth": 10.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1200.0, "concreteThickness": 600, "mainBarDr": 900, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
+        { "no": 2, "segmentLength": 18.0, "segmentDepth": 28.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1200.0, "concreteThickness": 600, "mainBarDr": 900, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 12, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+      ]
+    },
+    {
+      "pileBodyRef": "(P4)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 1300.0,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 1300.0,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        { "no": 1, "segmentLength": 10.0, "segmentDepth": 10.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1100.0, "concreteThickness": 550, "mainBarDr": 800, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 24, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 },
+        { "no": 2, "segmentLength": 18.0, "segmentDepth": 28.0, "pileSectionType": "鉄筋コンクリート部", "concreteOutDia": 1100.0, "concreteThickness": 550, "mainBarDr": 800, "pipeTs": 0.0, "pipeDia": 0.0, "mainBarNum": 12, "mainBarSize": "D29", "concreteFc": 36.0, "concreteGsi": 1.0, "concreteGamma": 23.0 }
+      ]
+    }
+  ],
+  "pileLayoutItems": [
+    { "pileNo": 1, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 4, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 0.0, "z": -2.0, "axialForceVL0": 1070.0, "axialForceLevel1s": [-142.0, -296.0, 2281.0, 2436.0], "axialForceLevel2s": [-639.0, -775.0, 2773.0, 2931.0] },
+    { "pileNo": 2, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 3, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 0.0, "z": -2.0, "axialForceVL0": 1930.0, "axialForceLevel1s": [2275.0, 520.0, 1585.0, 3341.0], "axialForceLevel2s": [2313.0, 42.0, 1553.0, 3935.0] },
+    { "pileNo": 3, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 3, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 0.0, "z": -2.0, "axialForceVL0": 2073.0, "axialForceLevel1s": [1725.0, 424.0, 2420.0, 3722.0], "axialForceLevel2s": [1690.0, -186.0, 2459.0, 4384.0] },
+    { "pileNo": 4, "pileBodyNo": 4, "groundNo": 1, "soilPileAltNo": 4, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 0.0, "z": -2.0, "axialForceVL0": 1242.0, "axialForceLevel1s": [2454.0, -125.0, 31.0, 2609.0], "axialForceLevel2s": [2947.0, -608.0, -466.0, 3101.0] },
+    { "pileNo": 5, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 5.7, "z": -2.0, "axialForceVL0": 2527.0, "axialForceLevel1s": [1129.0, 2998.0, 3924.0, 2055.0], "axialForceLevel2s": [519.0, 2897.0, 4536.0, 2090.0] },
+    { "pileNo": 6, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 5.7, "z": -2.0, "axialForceVL0": 3546.0, "axialForceLevel1s": [3813.0, 3890.0, 3280.0, 3203.0], "axialForceLevel2s": [3671.0, 3679.0, 3419.0, 3226.0] },
+    { "pileNo": 7, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 5.7, "z": -2.0, "axialForceVL0": 3613.0, "axialForceLevel1s": [3350.0, 4208.0, 3877.0, 3019.0], "axialForceLevel2s": [3492.0, 4128.0, 3732.0, 2970.0] },
+    { "pileNo": 8, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 5.7, "z": -2.0, "axialForceVL0": 2599.0, "axialForceLevel1s": [3996.0, 3075.0, 1201.0, 2123.0], "axialForceLevel2s": [4609.0, 2974.0, 592.0, 2160.0] },
+    { "pileNo": 9, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 3, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0, "y": 16.5, "z": -2.0, "axialForceVL0": 1789.0, "axialForceLevel1s": [636.0, 2682.0, 2941.0, 895.0], "axialForceLevel2s": [69.0, 3261.0, 3510.0, 365.0] },
+    { "pileNo": 10, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 7.2, "y": 16.5, "z": -2.0, "axialForceVL0": 2602.0, "axialForceLevel1s": [2829.0, 3671.0, 2374.0, 1532.0], "axialForceLevel2s": [2827.0, 4361.0, 2374.0, 913.0] },
+    { "pileNo": 11, "pileBodyNo": 2, "groundNo": 1, "soilPileAltNo": 2, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 14.4, "y": 16.5, "z": -2.0, "axialForceVL0": 2599.0, "axialForceLevel1s": [2371.0, 3651.0, 2827.0, 1548.0], "axialForceLevel2s": [2370.0, 4339.0, 2826.0, 936.0] },
+    { "pileNo": 12, "pileBodyNo": 3, "groundNo": 1, "soilPileAltNo": 3, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 21.6, "y": 16.5, "z": -2.0, "axialForceVL0": 1787.0, "axialForceLevel1s": [2940.0, 2679.0, 635.0, 895.0], "axialForceLevel2s": [3508.0, 3264.0, 68.0, 367.0] }
+  ],
+  "gridXItems": [
+    { "name": "X1", "coord": 0.0, "spacing": 0.0 },
+    { "name": "X2", "coord": 7.2, "spacing": 7.2 },
+    { "name": "X3", "coord": 14.4, "spacing": 7.2 },
+    { "name": "X4", "coord": 21.6, "spacing": 7.2 }
+  ],
+  "gridYItems": [
+    { "name": "Y1", "coord": 0.0, "spacing": 0.0 },
+    { "name": "Y2", "coord": 5.7, "spacing": 5.7 },
+    { "name": "Y3", "coord": 16.5, "spacing": 10.8 }
+  ]
+}

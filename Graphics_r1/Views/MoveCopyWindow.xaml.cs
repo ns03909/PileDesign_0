@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Vml.Spreadsheet;
-using PileDesign.ViewModels;
+﻿using PileDesign.ViewModels;
 using System;
 using System.Reflection;
 using System.Windows;

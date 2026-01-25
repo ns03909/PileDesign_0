@@ -1,15 +1,14 @@
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
+using Microsoft.VSDiagnostics;
+using PileDesign.Models.InputData;
+using PileDesign.ViewModels;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Jobs;
-using PileDesign.Models.InputData;
-using PileDesign.Services;
-using PileDesign.ViewModels;
-using Microsoft.VSDiagnostics;
 
 namespace PileDesign.Benchmarks
 {

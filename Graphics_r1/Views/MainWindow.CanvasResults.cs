@@ -8,16 +8,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
-using Element = PileDesign.Models.InputData.Element;
 using Node = PileDesign.FEM.Node;
-using Path = System.Windows.Shapes.Path;
 using Point = System.Windows.Point;
-using TransformGroup = System.Windows.Media.TransformGroup;
 
 namespace PileDesign.Views
 {
@@ -1441,7 +1435,7 @@ namespace PileDesign.Views
 
                     // 正規化（ゼロ長は既定方向を使う）
                     Vector<double> dirI;
-                    if(viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
+                    if (viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
                     {
                         dirI = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
                     }
@@ -1470,19 +1464,19 @@ namespace PileDesign.Views
                         dirI = -dirI;
                     }
 
-                        // 表示座標系に変換
-                        var transformedForceDirectionI = t.Transpose() * dirI;
+                    // 表示座標系に変換
+                    var transformedForceDirectionI = t.Transpose() * dirI;
                     var transformedForceDirectionJ = t.Transpose() * dirJ;
 
                     // 元のスケーリング処理（maxAbsValue 等に応じたスケールは既存ロジックを使う）
                     double forceI = maxAbsValue == 0 ? 0 : originalForceI / maxAbsValue * viewModel.ForceDiagramMultiplier;
                     double forceJ = maxAbsValue == 0 ? 0 : originalForceJ / maxAbsValue * viewModel.ForceDiagramMultiplier;
 
-                    if (originalForceI <0)
+                    if (originalForceI < 0)
                     {
                         transformedForceDirectionI *= -1;
                     }
-                    if (-originalForceJ <0)
+                    if (-originalForceJ < 0)
                     {
                         transformedForceDirectionJ *= -1;
                     }
@@ -1513,15 +1507,15 @@ namespace PileDesign.Views
                         nodeJ3D.Z + forceJ * transformedForceDirectionJ[2]);
                     }
 
-                        // 以下、既存の描画コード（投影→色分け→テキスト等）をそのまま使う
-                        Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
+                    // 以下、既存の描画コード（投影→色分け→テキスト等）をそのまま使う
+                    Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
                     Point nodeIForce2D = viewModel.CanvasThreeDView.Transformation(nodeIForce3D);
                     Point nodeJForce2D = viewModel.CanvasThreeDView.Transformation(nodeJForce3D);
                     Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
 
                     var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
                     //List<double> values = [Math.Abs(originalForceI), Math.Abs(originalForceI), Math.Abs(originalForceJ), Math.Abs(originalForceJ)];
-                    List<double> values = [originalForceI, originalForceI, -originalForceJ,-originalForceJ];
+                    List<double> values = [originalForceI, originalForceI, -originalForceJ, -originalForceJ];
                     AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
 

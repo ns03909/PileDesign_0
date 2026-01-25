@@ -6,7 +6,6 @@
         xmlns:local="clr-namespace:PileDesign.ViewModels"
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
-        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"

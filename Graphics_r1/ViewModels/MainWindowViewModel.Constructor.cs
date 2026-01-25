@@ -1,7 +1,6 @@
 ﻿using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LiveChartsCore.Measure;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Services;
@@ -248,7 +247,7 @@ namespace PileDesign.ViewModels
                 }
             }
         }
-        
+
 
         // バブル描画
         private bool _isBubbleVisible;

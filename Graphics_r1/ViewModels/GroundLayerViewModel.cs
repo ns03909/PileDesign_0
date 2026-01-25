@@ -1,3 +1,4 @@
+#nullable enable
 using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,7 +21,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 //using System.Windows.Media;
-using static PileDesign.ViewModels.MainWindowViewModel;
 
 namespace PileDesign.ViewModels
 {
@@ -231,7 +231,7 @@ namespace PileDesign.ViewModels
                 Update();
             }
         }
-       
+
         private ObservableCollection<string> _groundCountPlusOneList;
         public ObservableCollection<string> GroundCountPlusOneList
         {
@@ -430,7 +430,7 @@ namespace PileDesign.ViewModels
             UpdateGroundMassDataLayer();
             Update();
         }
-        
+
 
         // すべての行の番号を更新
         private static void UpdateAllRowNumbers(DataGrid dataGrid)
@@ -1979,7 +1979,7 @@ namespace PileDesign.ViewModels
                 }
             }
         }
-       
+
         internal void RecalculateTauLonSigmaZPrime2()
         {
             foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
@@ -2202,7 +2202,7 @@ namespace PileDesign.ViewModels
                 groundMassData.SigmaZPrime -= 10.0 * Math.Max(0.0, GroundInput.GroundWaterGLDepth - groundMassData.GLDepth);
             }
         }
-        
+
 
         // M
         internal void RecalculateMass()

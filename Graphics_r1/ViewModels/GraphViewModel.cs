@@ -352,7 +352,8 @@ namespace PileDesign.ViewModels
 
         private void UpdateLegendVisibility()
         {
-            if (WpfPlot != null)
+            // Windows 7.0 以降のみで実行
+            if (OperatingSystem.IsWindowsVersionAtLeast(7, 0) && WpfPlot != null)
             {
                 WpfPlot.Plot.Legend.IsVisible = IsLegendVisible;
                 WpfPlot.Refresh();
@@ -638,7 +639,7 @@ namespace PileDesign.ViewModels
             string yLabel,
             int decimalPlacesX = 1,
             int decimalPlacesY = 1)
-            
+
         {
             if (SelectedGraphOption.StartsWith('杭'))
             {
@@ -651,24 +652,27 @@ namespace PileDesign.ViewModels
                 else
                 { title = xLabel; }
             }
-            wpfPlot.Plot.Axes.Title.Label.Text = title;
-            wpfPlot.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
+            if (OperatingSystem.IsWindowsVersionAtLeast(7, 0))
+            {
+                wpfPlot.Plot.Axes.Title.Label.Text = title;
+                wpfPlot.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-            wpfPlot.Plot.Axes.Bottom.Label.Text = xLabel;
-            wpfPlot.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
+                wpfPlot.Plot.Axes.Bottom.Label.Text = xLabel;
+                wpfPlot.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-            wpfPlot.Plot.Axes.Left.Label.Text = yLabel;
-            wpfPlot.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
+                wpfPlot.Plot.Axes.Left.Label.Text = yLabel;
+                wpfPlot.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
-            wpfPlot.Plot.Legend.FontName = Fonts.Detect(yLabel);
+                wpfPlot.Plot.Legend.FontName = Fonts.Detect(yLabel);
 
-            Color grayColor = new(128, 128, 128, 255);
-            wpfPlot.Plot.Add.VerticalLine(0, 1, grayColor);
-            wpfPlot.Plot.Add.HorizontalLine(0, 1, grayColor);
+                Color grayColor = new(128, 128, 128, 255);
+                wpfPlot.Plot.Add.VerticalLine(0, 1, grayColor);
+                wpfPlot.Plot.Add.HorizontalLine(0, 1, grayColor);
 
-            wpfPlot.Plot.Axes.AutoScale();
-            wpfPlot.Plot.Axes.AutoScaleExpandX();
-            wpfPlot.Plot.Axes.AutoScaleExpandY();
+                wpfPlot.Plot.Axes.AutoScale();
+                wpfPlot.Plot.Axes.AutoScaleExpandX();
+                wpfPlot.Plot.Axes.AutoScaleExpandY();
+            }
 
             //int decimalPlacesX = 3;
             //int decimalPlacesY = 3;
@@ -703,7 +707,10 @@ namespace PileDesign.ViewModels
             }
 
             wpfPlot.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, CrosshairPositionText, xLabel, yLabel, decimalPlacesX, decimalPlacesY);
-            wpfPlot.Refresh();
+            if (OperatingSystem.IsWindowsVersionAtLeast(7, 0))
+            {
+                wpfPlot.Refresh();
+            }
         }
 
         // グラフ更新メソッド
@@ -732,8 +739,11 @@ namespace PileDesign.ViewModels
 
                 if (SelectedLoadCaseOption == "VL0" || SelectedLoadCaseOption == "VLadd" || SelectedLoadCaseOption == "VL")
                 {
-                    WpfPlot.Plot.Clear();
-                    WpfPlot.Refresh();
+                    if (OperatingSystem.IsWindowsVersionAtLeast(7, 0))
+                    {
+                        WpfPlot.Plot.Clear();
+                        WpfPlot.Refresh();
+                    }
                     return;
                 }
 
@@ -783,8 +793,11 @@ namespace PileDesign.ViewModels
                                     }
                                 }
 
-                                var scatter = WpfPlot.Plot.Add.Scatter(beamZs, beamForces);
-                                scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+                                if (OperatingSystem.IsWindowsVersionAtLeast(7, 0))
+                                {
+                                    var scatter = WpfPlot.Plot.Add.Scatter(beamZs, beamForces);
+                                    scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+                                }
                             }
                         }
                     }
@@ -1035,7 +1048,7 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-            else if (SelectedGraphOption=="杭")
+            else if (SelectedGraphOption == "杭")
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -1099,8 +1112,8 @@ namespace PileDesign.ViewModels
 
                 DrawMThetaCurves(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
-                // レジェンド描画
-                UpdateLegendVisibility();
+            // レジェンド描画
+            UpdateLegendVisibility();
         }
 
         // 杭頭M-θ関係描画

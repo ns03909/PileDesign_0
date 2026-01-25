@@ -1,23 +1,15 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
-using PileDesign.Services;
 using PileDesign.ViewModels;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using Element = PileDesign.Models.InputData.Element;
-using Node = PileDesign.FEM.Node;
-using Path = System.Windows.Shapes.Path;
 using Point = System.Windows.Point;
-using TransformGroup = System.Windows.Media.TransformGroup;
 
 namespace PileDesign.Views
 {
@@ -152,8 +144,8 @@ namespace PileDesign.Views
             {
                 return;
             }
-            
-            ObservableCollection < PileBodySegment > pileBodySegments;
+
+            ObservableCollection<PileBodySegment> pileBodySegments;
             PileBodyInput pileBody = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1];
             var zs = new ObservableCollection<double>();
 
@@ -300,7 +292,7 @@ namespace PileDesign.Views
                 path.AddGeometry(lineGeometry);
             }
         }
-        
+
 
         // 杭先端ジオメトリの追加メソッド
         private void AddInsituPileToeGeometry(
@@ -343,7 +335,7 @@ namespace PileDesign.Views
                 AddLineGeometry(start, end, path);
             }
         }
-        
+
 
         // 杭先端ジオメトリの追加メソッド
         private void AddConcretePrecastPileToeGeometry(Point pointBtm, double pileToeDia, double pileDia, double flattening, string pileConstructionType, ObservableCollection<PileBodySegment> pileBodySegments)
@@ -377,6 +369,6 @@ namespace PileDesign.Views
                 path.AddGeometry(lineGeometry);
             }
         }
-        
+
     }
 }

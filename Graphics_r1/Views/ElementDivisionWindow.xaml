@@ -7,7 +7,6 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
-        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         d:DataContext="{d:DesignInstance Type=local:ElementDivisionViewModel}"
         mc:Ignorable="d"

@@ -5,7 +5,6 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-        xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
         xmlns:conv="clr-namespace:PileDesign.Converters"

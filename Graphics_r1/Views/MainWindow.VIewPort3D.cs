@@ -1,22 +1,15 @@
-﻿using DocumentFormat.OpenXml.Math;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
-using HelixToolkit; // MeshBuilder はこの名前空間
-using HelixToolkit.Geometry;
-using HelixToolkit.Wpf; // ConverterExtensions のため追加
+﻿using HelixToolkit.Wpf; // ConverterExtensions のため追加
 using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
-using static Rhino.DocObjects.Font;
 using Color = System.Windows.Media.Color;
 using Colors = System.Windows.Media.Colors;
 using Media3DMaterial = System.Windows.Media.Media3D.Material;

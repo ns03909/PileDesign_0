@@ -1,5 +1,4 @@
-﻿using PileDesign.Common.Undo;
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
 using System;
@@ -22,7 +21,7 @@ namespace PileDesign.Views
     {
         private readonly GroundLayerViewModel _viewModel;
         private bool _isClosingHandled = false;
-        
+
         // 再入防止フラグ
         private bool _isCellEditEndingInProgress = false;
 
@@ -161,7 +160,7 @@ namespace PileDesign.Views
         /// タイマーを使って IME/TextStore が完全に解放された後に実行
         /// </summary>
         private DispatcherTimer? _pendingUpdateTimer;
-        
+
         private void SchedulePendingUpdate()
         {
             if (!_pendingUpdate) return;
@@ -202,7 +201,7 @@ namespace PileDesign.Views
             };
             _pendingUpdateTimer.Start();
         }
-        
+
         /// <summary>
         /// COMException をキャッチしながら Update() を安全に実行
         /// </summary>
@@ -345,7 +344,7 @@ namespace PileDesign.Views
     where T : class
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
-            
+
             // 再入防止
             if (_isCellEditEndingInProgress) return;
             _isCellEditEndingInProgress = true;
@@ -416,7 +415,7 @@ namespace PileDesign.Views
                 }), DispatcherPriority.Background);
             }
         }
-        
+
         // 保留中の更新があるかどうか
         private bool _pendingUpdate = false;
 

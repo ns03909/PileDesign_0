@@ -1,6 +1,4 @@
-﻿using MathNet.Numerics.LinearAlgebra;
-using PileDesign.FEM;
-using PileDesign.Models.InputData;
+﻿using PileDesign.Models.InputData;
 using PileDesign.Services;
 using PileDesign.ViewModels;
 using System;
@@ -11,10 +9,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Media.Media3D;
 using Element = PileDesign.Models.InputData.Element;
-using Node = PileDesign.FEM.Node;
 using Path = System.Windows.Shapes.Path;
 using Point = System.Windows.Point;
 using TransformGroup = System.Windows.Media.TransformGroup;
@@ -128,9 +124,9 @@ namespace PileDesign.Views
 
             return (loadCaseIndex, loadCombinationIndex);
         }
-        
+
         // 3D地盤変位更新メソッド
-       
+
         public void UpdateForcedDisplacement3D()
         {
             if (DataContext is not MainWindowViewModel vm) return;

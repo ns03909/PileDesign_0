@@ -6,24 +6,15 @@ using PileDesign.Views;
 using ScottPlot;
 using ScottPlot.Plottables;
 using ScottPlot.WPF;
-using SkiaSharp;
-using System;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq;
 using System.Text;
 using System.Windows;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace PileDesign.ViewModels
@@ -577,7 +568,7 @@ namespace PileDesign.ViewModels
 
                 ChangSoilPiles.Add(cs);
 
-                
+
             }
 
             // ApplyInputModel の末尾付近（最後に状態通知）に以下を追加して、PileTop バインディングを更新させる
@@ -746,7 +737,7 @@ namespace PileDesign.ViewModels
             {
                 chang.HorizontalLoad = chang.GetHorizontalForce(pileTopDisplacement);
                 chang.Update();
-                
+
             }
             DrawGraph();
         }

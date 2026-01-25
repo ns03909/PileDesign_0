@@ -1,7 +1,4 @@
-﻿using PileDesign.FEM;
-using System;
-using System.Collections.ObjectModel;
-using System.Text.Json.Serialization;
+﻿using System.Collections.ObjectModel;
 
 namespace PileDesign.Models.InputData
 {

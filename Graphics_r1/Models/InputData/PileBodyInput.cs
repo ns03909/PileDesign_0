@@ -2,11 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Collections.Specialized;
 using System.Windows;
 
 namespace PileDesign.Models.InputData
@@ -533,7 +533,7 @@ namespace PileDesign.Models.InputData
                         {
                             // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                             var pts = new List<(double theta, double moment)>(thetas.Count);
-                            for (int i = 0; i < thetas.Count; i++) 
+                            for (int i = 0; i < thetas.Count; i++)
                                 pts.Add((thetas[i], msRaw[i] * 1e-6));
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
@@ -564,7 +564,7 @@ namespace PileDesign.Models.InputData
                         {
                             // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                             var pts = new List<(double theta, double moment)>(thetas.Count);
-                            for (int i = 0; i < thetas.Count; i++) 
+                            for (int i = 0; i < thetas.Count; i++)
                                 pts.Add((thetas[i], msRaw[i] * 1e-6));
                             return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                         }
@@ -616,7 +616,7 @@ namespace PileDesign.Models.InputData
                                 {
                                     // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                                     var pts = new List<(double theta, double moment)>(thetas.Count);
-                                    for (int i = 0; i < thetas.Count; i++) 
+                                    for (int i = 0; i < thetas.Count; i++)
                                         pts.Add((thetas[i], msRaw[i] * 1e-6));
                                     return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                                 }
@@ -648,7 +648,7 @@ namespace PileDesign.Models.InputData
                                             {
                                                 // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
                                                 var pts = new List<(double theta, double moment)>(th.Count);
-                                                for (int i = 0; i < th.Count; i++) 
+                                                for (int i = 0; i < th.Count; i++)
                                                     pts.Add((th[i], mmRaw[i] * 1e-6));
                                                 return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                                             }
@@ -841,7 +841,7 @@ namespace PileDesign.Models.InputData
 
             // 単位変換: 断面計算から取得したデータは M:[N·mm] → [kNm] (×10⁻⁶)
             var pts = new List<(double theta, double moment)>(th.Count);
-            for (int i = 0; i < th.Count; i++) 
+            for (int i = 0; i < th.Count; i++)
                 pts.Add((th[i], mmRaw[i] * 1e-6));
             return new MomentRotationCurve(pts);
         }

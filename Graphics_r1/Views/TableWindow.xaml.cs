@@ -1,8 +1,8 @@
-﻿using System.ComponentModel;
+﻿using PileDesign.ViewModels;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using PileDesign.ViewModels;
 
 namespace PileDesign.Views
 {

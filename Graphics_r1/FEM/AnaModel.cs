@@ -9,68 +9,6 @@ namespace PileDesign.FEM
 {
     public class AnaModel
     {
-        //private static AnaModel? _instance;
-        //private static readonly object _lock = new();
-        //public static AnaModel Instance
-        //{
-        //    get
-        //    {
-        //        if (Instance1 == null)
-        //            throw new InvalidOperationException("AnaModel is not initialized. Call Initialize() first.");
-        //        return Instance1;
-        //    }
-        //}
-
-        //// 初期化メソッド（1回だけ呼ぶ）
-        //public static void Initialize(List<Node> nodes, List<Beam> beams, List<DummyBeam> dummyBeams, List<RigidBody> rigidBodies, List<HorizontalSoilSpring> horizontalSoilSprings)
-        //{
-        //    lock (_lock)
-        //    {
-        //        if (Instance1 != null)
-        //            throw new InvalidOperationException("AnaModel is already initialized.");
-        //        Instance1 = new AnaModel(nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings);
-        //    }
-        //}
-
-        //// 
-        //public static void Reset()
-        //{
-        //    lock (_lock)
-        //    {
-        //        Instance1 = null;
-        //    }
-        //}
-        //private static AnaModel? _instance;
-        //private static readonly object _lock = new();
-        //public static AnaModel Instance
-        //{
-        //    get
-        //    {
-        //        if (_instance == null)
-        //            throw new InvalidOperationException("AnaModel is not initialized. Call Initialize() first.");
-        //        return _instance;
-        //    }
-        //}
-
-        //// 初期化メソッド（1回だけ呼ぶ）
-        //public static void Initialize(List<Node> nodes, List<Beam> beams, List<DummyBeam> dummyBeams, List<RigidBody> rigidBodies, List<HorizontalSoilSpring> horizontalSoilSprings)
-        //{
-        //    lock (_lock)
-        //    {
-        //        if (_instance != null)
-        //            throw new InvalidOperationException("AnaModel is already initialized.");
-        //        _instance = new AnaModel(nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings);
-        //    }
-        //}
-
-        //public static void Reset()
-        //{
-        //    lock (_lock)
-        //    {
-        //        _instance = null;
-        //    }
-        //}
-        //public InputModel InputModel { get; } = InputModel.Instance;
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
@@ -182,9 +120,7 @@ namespace PileDesign.FEM
 
         // 全体剛性マトリクスの作成
         // KAAへの節点ばね剛性のマップオン
-        // KBAの新規作成、要素剛性のマップオン
-        // KBAの新規作成、要素剛性のマップオン
-        // KBBの新規作成、要素剛性のマップオン
+        // KBA, KAB, KBBの新規作成、要素剛性のマップオン
         public void MapOnKtanMat()
         {
             MapOnKmat(true);
@@ -292,13 +228,6 @@ namespace PileDesign.FEM
         // 強制変位のマップオン
         public (Matrix<double>, Vector<double>) GetForcedDispOnLoadVectorAndStiffnessMatrix(bool Istan)
         {
-            //var matrix = Istan ? KAA_tan : KAA_sec;
-            //var vector = VectorR;
-            //if (matrix == null) throw new InvalidOperationException("Stiffness matrix is not initialized.");
-            //if (vector == null) throw new InvalidOperationException("VectorR is not initialized.");
-
-            //Matrix<double> matrixK = (Istan ? KAA_tan : KAA_sec).Clone(); // ハードコピー
-            //Vector<double> vectorR = (Istan ? VectorR : VectorR).Clone(); // ハードコピー
             var orig = Istan ? KAA_tan : KAA_sec;
             var vecOrig = VectorR ?? throw new InvalidOperationException("VectorR is null");
 
@@ -412,14 +341,12 @@ namespace PileDesign.FEM
         // 残余力ベクトルの初期値のセット
         public void SetR()
         {
-            //VectorR = VectorR - VectorDF; // AnaModel.R = AnaModel.R - AnaModel.dF
-            VectorR += VectorDF; // AnaModel.R = AnaModel.R + AnaModel.dF
+            VectorR += VectorDF;
         }
 
         // 残余力ベクトルの更新
         public void FindR()
         {
-            //VectorR = VectorT - VectorF; // F or d F######## R = T - F
             VectorR.Clear();
             for (int i = 0; i < CountFree; i++)
             {
@@ -483,28 +410,6 @@ namespace PileDesign.FEM
             }
         }
 
-        // 節点名、座標(x, y, z)で節点を検索
-        //public Node FindNode(
-        //    string name,
-        //    double? x = null,
-        //    double? y = null,
-        //    double? z = null,
-        //    double tolerance = 1e-8)
-        //{
-        //    foreach (var node in Nodes)
-        //    {
-        //        if (node.Name != name)
-        //            continue;
-        //        if (x.HasValue && Math.Abs(node.Coord.X - x.Value) >= tolerance)
-        //            continue;
-        //        if (y.HasValue && Math.Abs(node.Coord.Y - y.Value) >= tolerance)
-        //            continue;
-        //        if (z.HasValue && Math.Abs(node.Coord.Z - z.Value) >= tolerance)
-        //            continue;
-        //        return node;
-        //    }
-        //    return null;
-        //}
         // 節点名、座標(x, y, z)で節点を検索
         public Node? FindNode(
             string name,

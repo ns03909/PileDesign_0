@@ -82,7 +82,7 @@ namespace PileDesign
         {
             // ★ IME/TextStore 関連の COMException は無視して続行
             // HResult 0x80040206 = "現在、レイアウトは使用できません"
-            if (e.Exception is System.Runtime.InteropServices.COMException comEx 
+            if (e.Exception is System.Runtime.InteropServices.COMException comEx
                 && comEx.HResult == unchecked((int)0x80040206))
             {
                 System.Diagnostics.Debug.WriteLine($"[App] IME/TextStore COMException ignored: {comEx.Message}");

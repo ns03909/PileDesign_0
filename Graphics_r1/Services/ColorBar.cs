@@ -381,7 +381,7 @@ namespace PileDesign.Services
             Canvas.SetTop(background, top);
             colorBarCanvas.Children.Insert(0, background);
         }
-       
+
 
         private static string GetFormat(double step)
         {

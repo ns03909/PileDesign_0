@@ -1,0 +1,24 @@
+{
+  "displayName": "設計例集3.2",
+  "groundRef": "設計例集3.2",
+  "groundTopAltitude": 0,
+  "groundWaterGLDepth": -1.4,
+  "stressGLDepth": 0.0,
+  "groundAcceleration1": 2.0,
+  "groundLayers": [
+    { "no": 1, "bottomGLDepth": -2.2, "layerThickness": 2.2, "bottomAltitude": -2.2, "name": "盛土", "granularityClass": "砂質土", "density": 15.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 12.0, "cohesive": 0.0, "vs": 130.0, "es": 5600.0, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
+    { "no": 2, "bottomGLDepth": -13.95, "layerThickness": 11.75, "bottomAltitude": -13.95, "name": "細砂", "granularityClass": "砂質土", "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 16.0, "cohesive": 20.0, "vs": 230.0, "es": 7700.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 3, "bottomGLDepth": -27.1, "layerThickness": 13.15, "bottomAltitude": -27.1, "name": "シルト", "granularityClass": "粘性土", "density": 16.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 2.0, "cohesive": 20.0, "vs": 180.0, "es": 7700.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 4, "bottomGLDepth": -29.7, "layerThickness": 2.6, "bottomAltitude": -29.7, "name": "シルト混り砂", "granularityClass": "砂質土", "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 5.0, "cohesive": 20.0, "vs": 210.0, "es": 7700.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 5, "bottomGLDepth": -34.35, "layerThickness": 4.65, "bottomAltitude": -34.35, "name": "細砂", "granularityClass": "砂質土", "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 20.0, "cohesive": 20.0, "vs": 320.0, "es": 7700.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 6, "bottomGLDepth": -38.38, "layerThickness": 4.03, "bottomAltitude": -38.38, "name": "砂礫", "granularityClass": "礫質土", "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": true, "nValue": 100.0, "cohesive": 20.0, "vs": 460.0, "es": 7700.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true }
+  ],
+  "groundMassesData": [
+    { "glDepth": -1.1, "nValue": 12.0, "fc": 5.0, "density": 0.0, "vs0": 130.0 },
+    { "glDepth": -2.1, "nValue": 15.0, "fc": 5.0, "density": 0.0, "vs0": 130.0 },
+    { "glDepth": -3.1, "nValue": 12.0, "fc": 21.0, "density": 0.0, "vs0": 230.0 },
+    { "glDepth": -4.1, "nValue": 16.0, "fc": 20.0, "density": 0.0, "vs0": 230.0 },
+    { "glDepth": -5.1, "nValue": 11.0, "fc": 35.0, "density": 0.0, "vs0": 230.0 },
+    { "glDepth": -6.1, "nValue": 13.0, "fc": 31.0, "density": 0.0, "vs0": 230.0 }
+  ]
+}

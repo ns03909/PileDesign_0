@@ -102,9 +102,9 @@ namespace PileDesign.FEM
                 HorizontalSoilSprings.Add(spring);
             }
 
-            Node prevEmbedmentNode = null;
-            Node prevSoilNode = null;
-            HorizontalSoilSpring prevSpring = null;
+            Node? prevEmbedmentNode = null;
+            Node? prevSoilNode = null;
+            HorizontalSoilSpring? prevSpring = null;
 
             for (int i = 0; i < doatsuGoryokuBane.Items.Count; i++)
             {
@@ -185,7 +185,7 @@ namespace PileDesign.FEM
                 Nodes.Add(capNode);
                 RigidBodies[0].AddSlaveNode(capNode); // Cap Nodeをスレーブにする。
 
-                Node prevPileNode = null; // 直前の杭節点
+                Node? prevPileNode = null; // 直前の杭節点
                 for (int i = 0; i < soilPile.ZDataItems.Count; i++)
                 {
                     double z = soilPile.ZDataItems[i].Z;
@@ -263,10 +263,13 @@ namespace PileDesign.FEM
                 rb.SetSlaveNodeRelations();
             }
 
+#if DEBUG
             // デバッグ出力を追加
             DumpRigidBodyAndNodeRelationsForDebug();
+#endif
         }
 
+#if DEBUG
         // デバッグ用: 剛体／節点／回転ばねの関係を出力
         private void DumpRigidBodyAndNodeRelationsForDebug()
         {
@@ -312,285 +315,6 @@ namespace PileDesign.FEM
                 System.Diagnostics.Debug.WriteLine("DumpRigidBodyAndNodeRelations ERROR: " + ex);
             }
         }
+#endif
     }
 }
-
-
-//using PileDesign.Models.InputData;
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-
-//namespace PileDesign.FEM
-//{
-//    public class AnalysisModelling : Models.BaseModel
-//    {
-//        private InputModel _inputModel;
-//        public InputModel InputModel
-//        {
-//            get => _inputModel;
-//            set => SetProperty(ref _inputModel, value);
-//        }
-
-//        public List<Node> Nodes { get; set; } = [];
-//        public List<DummyBeam> DummyBeams { get; set; } = [];
-//        public List<Beam> Beams { get; set; } = [];
-//        public List<RigidBody> RigidBodies { get; set; } = [];
-//        public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; } = []; // 水平土壌ばね
-
-//        // コンストラクタ
-//        public AnalysisModelling(InputModel inputModel)
-//        {
-//            InputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
-//            Initialize();
-//        }
-
-//        private void Initialize()
-//        {
-//            AddActionPointNode();
-//            AddDoatsuGoryokuBane();
-//            AddPile();
-//        }
-
-//        // 代表点の追加
-//        private void AddActionPointNode()
-//        {
-//            if (InputModel.LoadCasesInput?.LoadCasesLevel1 == null || InputModel.LoadCasesInput.LoadCasesLevel1.Count == 0)
-//            {
-//                throw new InvalidOperationException("LoadCasesLevel1 が存在しません。");
-//            }
-
-//            var loadCase = InputModel.LoadCasesInput.LoadCasesLevel1[0];
-//            Node node = new();
-//            node.SetNodeInfo("ActionPoint", loadCase.ForceActionPointX, loadCase.ForceActionPointY, loadCase.ForceActionPointAltitude);
-//            Nodes.Add(node);
-
-//            Nodes[^1].IsLoaded = true;
-//            Nodes[0].SetBoundary(GetActionPointBoundary());
-//            RigidBodies.Add(new(node, [true, true, true, true, true, true]));
-
-//            //Node node = new();
-//            //node.SetNodeInfo("ActionPoint",
-//            //    InputModel.LoadCasesInput.LoadCasesLevel1[0].ForceActionPointX,
-//            //    InputModel.LoadCasesInput.LoadCasesLevel1[0].ForceActionPointY,
-//            //    InputModel.LoadCasesInput.LoadCasesLevel1[0].ForceActionPointAltitude);
-//            //Nodes.Add(node);
-
-//            //Nodes[^1].IsLoaded = true;
-//            //Nodes[0].SetBoundary(GetActionPointBoundary()); // 代表点の回転拘束
-//            //RigidBodies.Add(new(node, [true, true, true, true, true, true])); // 剛盤仮定
-//        }
-
-//        // 杭配置により作用点の拘束を返すメソッド
-//        private Boundary GetActionPointBoundary()
-//        {
-//            if (InputModel.PileLayoutItems == null || !InputModel.PileLayoutItems.Any())
-//            {
-//                throw new InvalidOperationException("杭配置が存在しません。");
-//            }
-
-//            double xmax = InputModel.PileLayoutItems.Max(p => p.X);
-//            double xmin = InputModel.PileLayoutItems.Min(p => p.X);
-//            double ymax = InputModel.PileLayoutItems.Max(p => p.Y);
-//            double ymin = InputModel.PileLayoutItems.Min(p => p.Y);
-
-//            // 杭配置がX、Y方向いずれかにスタンスがない場合、回転拘束をする
-//            if (xmax - xmin < 1e-6 || ymax - ymin < 1e-6)
-//            {
-//                return new Boundary(false, false, false, true, true, true);
-//            }
-
-//            // 杭配置がX、Y方向ともにスタンスがある場合、拘束しない
-//            return new Boundary(false, false, false, false, false, false);
-
-//            //if (InputModel.PileLayoutItems == null || InputModel.PileLayoutItems.Count == 0)
-//            //{
-//            //    throw new InvalidOperationException("杭配置が存在しません。");
-//            //}
-
-//            //double xmax = InputModel.PileLayoutItems[0].X;
-//            //double xmin = InputModel.PileLayoutItems[0].X;
-//            //double ymax = InputModel.PileLayoutItems[0].Y;
-//            //double ymin = InputModel.PileLayoutItems[0].Y;
-
-//            //foreach (var pileLayout in InputModel.PileLayoutItems)
-//            //{
-//            //    xmax = Math.Max(xmax, pileLayout.X);
-//            //    xmin = Math.Min(xmin, pileLayout.X);
-//            //    ymax = Math.Max(ymax, pileLayout.Y);
-//            //    ymin = Math.Min(ymin, pileLayout.Y);
-//            //}
-
-//            //if (xmax - xmin < 1e-6 || ymax - ymin < 1e-6)
-//            //{
-//            //    // 杭配置がX、Y方向いずれかにスタンスがない場合、回転拘束をする
-//            //    return new Boundary(false, false, false, true, true, true);
-//            //}
-//            //else
-//            //{
-//            //    // 杭配置がX、Y方向ともににスタンスがある場合、拘束しない。
-//            //    return new Boundary(false, false, false, false, false, false);
-//            //}
-//        }
-
-//        // 土圧合力ばねの追加
-//        private void AddDoatsuGoryokuBane()
-//        {
-
-//            if (InputModel.ElementDivision.SoilEmbedment == null || InputModel.ElementDivision.DoatsuGoryokuBane == null)
-//                return;
-
-//            var doatsuGoryokuBane = InputModel.ElementDivision.DoatsuGoryokuBane;
-
-//            // ノード生成・初期化
-//            (Node embedmentNode, Node soilNode, HorizontalSoilSpring spring) CreateNodesAndSpring(double x, double y, double z)
-//            {
-//                var embedmentNode = new Node();
-//                embedmentNode.SetNodeInfo("EmbedmentNode", x, y, z);
-//                var soilNode = new Node();
-//                soilNode.SetNodeInfo("SoilNode", x, y, z);
-//                soilNode.SetIsForcedDisped(true);
-//                soilNode.SetBoundary(new(false, false, true, true, true, true));
-//                var spring = new HorizontalSoilSpring("地盤ばね", embedmentNode, soilNode);
-//                return (embedmentNode, soilNode, spring);
-//            }
-
-//            // 追加処理
-//            void AddNodesAndSpring(Node embedmentNode, Node soilNode, HorizontalSoilSpring spring)
-//            {
-//                Nodes.Add(embedmentNode);
-//                RigidBodies[^1].AddSlaveNode(embedmentNode);
-//                Nodes.Add(soilNode);
-//                HorizontalSoilSprings.Add(spring);
-//            }
-
-//            Node prevEmbedmentNode = null;
-//            Node prevSoilNode = null;
-//            HorizontalSoilSpring prevSpring = null;
-
-//            for (int i = 0; i < doatsuGoryokuBane.Items.Count; i++)
-//            {
-//                var item = doatsuGoryokuBane.Items[i];
-//                double x = (item.X1 + item.X2) * 0.5;
-//                double y = (item.Y1 + item.Y2) * 0.5;
-
-//                // 上端
-//                if (i == 0)
-//                {
-//                    // 最初だけ新規生成
-//                    (prevEmbedmentNode, prevSoilNode, prevSpring) = CreateNodesAndSpring(x, y, item.ZTop);
-//                    AddNodesAndSpring(prevEmbedmentNode, prevSoilNode, prevSpring);
-//                }
-//                // 上端ノードをitemにセット
-//                item.SetTopNodesAndSpring(prevEmbedmentNode, prevSoilNode, prevSpring);
-
-//                // 下端
-//                (Node embedmentNode, Node soilNode, HorizontalSoilSpring spring) = CreateNodesAndSpring(x, y, item.ZBtm);
-//                AddNodesAndSpring(embedmentNode, soilNode, spring);
-//                item.SetBtmNodesAndSpring(embedmentNode, soilNode, spring);
-
-//                DummyBeams.Add(new("dummyBeam", Nodes[^4], Nodes[^2]));
-//                // 次ループ用に保持
-//                prevEmbedmentNode = embedmentNode;
-//                prevSoilNode = soilNode;
-//                prevSpring = spring;
-//            }
-//        }
-
-//        // 杭要素の追加
-//        private void SetPileElement(SoilPile soilPile, int i)
-//        {
-//            double youngsModulus = soilPile.PileBodySegments[i].PileSection.ConcreteE * 1000.0; // kN/m2
-//            double shearModulus = Utils.GetShearModulus(youngsModulus, 0.2); // kN/m2
-//            double area = soilPile.PileBodySegments[i].PileSection.EA / youngsModulus; // kN / kN/m2 = m2
-//            double inertia = soilPile.PileBodySegments[i].PileSection.EI / youngsModulus; // kNm2 / kN/m2 = m4
-//            double torsionalInertia = soilPile.PileBodySegments[i].PileSection.GJ / shearModulus; // kNm2 / kN/m2 = m4
-//            Material material = new(youngsModulus, 0.2);
-//            Section section = new(material, area, area, area, torsionalInertia, inertia, inertia);
-//            Beams.Add(new("beam", section, Nodes[^3], Nodes[^1], 1.0, 1.0/*, 999*/));
-
-//            Beams[^1].HorizontalSoilReactionItem = soilPile.HorizontalSoilReactions[i];
-//        }
-
-//        // 杭の追加
-//        private void AddPile()
-//        {
-//            if (InputModel.PileLayoutItems == null)
-//            { return; }
-
-//            foreach (PileLayoutDataItem item in InputModel.PileLayoutItems)
-//            {
-//                item.PileNodes.Clear();
-//                item.SoilNodes.Clear();
-//                item.Beams.Clear();
-//                item.HorizontalSoilSprings.Clear();
-
-//                double x = item.X;
-//                double y = item.Y;
-
-//                int soilPileAltNo = item.SoilPileAltNo;
-
-//                if (InputModel.ElementDivision.SoilPiles == null ||
-//                    soilPileAltNo - 1 < 0 ||
-//                    soilPileAltNo - 1 >= InputModel.ElementDivision.SoilPiles.Count)
-//                {
-//                    throw new InvalidOperationException("対応するSoilPileが存在しません。");
-//                }
-
-//                SoilPile soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
-
-//                for (int i = 0; i < soilPile.ZDataItems.Count; i++)
-//                {
-//                    double z = soilPile.ZDataItems[i].Z;
-//                    Node pilenode = new();
-//                    pilenode.SetNodeInfo($"PileNode-{item.No}-{i}", x, y, z);
-//                    Nodes.Add(pilenode);
-
-//                    item.PileNodes.Add(pilenode); // 杭の解析節点を杭レイアウトデータに登録
-
-//                    if (i == 0) // 杭頭
-//                    {
-//                        RigidBodies[^1].AddSlaveNode(Nodes[^1]); // 剛床仮定への登録
-//                    }
-//                    else if (i != soilPile.ZDataItems.Count - 1) // 杭中間
-//                    {
-//                        SetPileElement(soilPile, i - 1);
-//                        item.Beams.Add(Beams[^1]); // 杭の解析要素を杭レイアウトデータに登録
-
-//                        if (i == 1)
-//                        {
-//                            Beams[^1].SetPileTopFlag(true); // 杭頭の解析要素に設定
-//                        }
-//                    }
-//                    else // i == soilPile.ZDataItems.Count - 1
-//                    {
-//                        // ここで i-1 が PileBodySegments.Count と等しくなる場合がある
-//                        if (i - 1 < soilPile.PileBodySegments.Count)
-//                        {
-//                            SetPileElement(soilPile, i - 1);
-//                            item.Beams.Add(Beams[^1]);
-//                        }
-//                        pilenode.SetBoundary(new(false, false, true, false, false, false));
-//                    }
-//                    //else // i == soilPile.ZDataItems.Count - 1 杭先端
-//                    //{
-//                    //    SetPileElement(soilPile, i - 1);
-//                    //    item.Beams.Add(Beams[^1]); // 杭の解析要素を杭レイアウトデータに登録
-//                    //    pilenode.SetBoundary(new(false, false, true, false, false, false)); // 併進zを拘束
-//                    //}
-
-//                    Node soilNode = new();
-//                    soilNode.SetNodeInfo($"SoilNode-{item.No}-{i}", x, y, z);
-//                    soilNode.SetIsForcedDisped(true); // 土節点は強制変位を持つ
-//                    soilNode.SetBoundary(new(false, false, true, true, true, true)); // 併進x, y以外拘束
-//                    Nodes.Add(soilNode);
-//                    item.SoilNodes.Add(soilNode); // 杭の土節点を杭レイアウトデータに登録
-
-//                    HorizontalSoilSpring horizontalSoilSpring = new($"HorizontalSoilSpring-{item.No}-{i}", Nodes[^2], Nodes[^1]);
-//                    HorizontalSoilSprings.Add(horizontalSoilSpring);
-//                    item.HorizontalSoilSprings.Add(horizontalSoilSpring);
-//                }
-//            }
-//        }
-//    }
-//}

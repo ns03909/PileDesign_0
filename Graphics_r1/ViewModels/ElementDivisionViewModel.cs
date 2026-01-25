@@ -16,7 +16,6 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using static PileDesign.ViewModels.MainWindowViewModel;
 
 
 namespace PileDesign.ViewModels

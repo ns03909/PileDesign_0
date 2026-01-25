@@ -6,8 +6,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Windows.Input;
 
 namespace PileDesign.ViewModels
@@ -99,7 +97,7 @@ namespace PileDesign.ViewModels
                     }
                     catch
                     {
-                       
+
                     }
                 }
             }

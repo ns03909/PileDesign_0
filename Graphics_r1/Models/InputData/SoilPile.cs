@@ -838,7 +838,8 @@ namespace PileDesign.Models.InputData
                     (this.PileCircumVerticals.Select(pileCircumVertical => pileCircumVertical.DeepCopy()));
                 copy.HorizontalSoilReactions = new ObservableCollection<HorizontalSoilReactionItem>
                     (this.HorizontalSoilReactions.Select(horizontalSoilReaction => horizontalSoilReaction.DeepCopy()));
-            };
+            }
+            ;
             return copy;
         }
     }
