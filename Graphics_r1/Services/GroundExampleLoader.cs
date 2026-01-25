@@ -72,8 +72,8 @@ namespace PileDesign.Services
             foreach (var massDto in data.GroundMassesData)
             {
                 var massInput = massDto.ToGroundMassDataInput();
-                // 標高 = 地盤天端標高 - GL深度
-                massInput.AltitudeDepth = data.GroundTopAltitude - massDto.GLDepth;
+                // 標高 = 地盤天端標高 + GL深度（GL深度は負値）
+                massInput.AltitudeDepth = data.GroundTopAltitude + massDto.GLDepth;
                 groundInput.GroundMassesData.Add(massInput);
             }
         }
