@@ -1556,6 +1556,13 @@ namespace PileDesign.ViewModels
                 CurrentFilePath = filePath;
                 CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
                 CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
+
+                // 要素分割・解析状態をリセット
+                IsElementSplit = false;
+                IsHorizontalAnalysisDone = false;
+                IsVerticalAnalysisDone = false;
+                IsGroupPileSettlementAnalysisDone = false;
+
                 UpdateWindowImmediate();
                 UpdateTreeView();
                 MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1620,6 +1627,12 @@ namespace PileDesign.ViewModels
                     // VM 再アタッチ
                     CurrentInputModel.AttachViewModel(this);
                     CurrentFilePath = openFileDialog.FileName;
+
+                    // 要素分割・解析状態をリセット
+                    IsElementSplit = false;
+                    IsHorizontalAnalysisDone = false;
+                    IsVerticalAnalysisDone = false;
+                    IsGroupPileSettlementAnalysisDone = false;
 
                     UpdateWindowImmediate();
                     MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);

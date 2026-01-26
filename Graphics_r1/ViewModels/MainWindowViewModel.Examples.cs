@@ -62,6 +62,9 @@ namespace PileDesign.ViewModels
             // 新規作成状態にリセット
             CurrentFilePath = null;
             IsElementSplit = false;
+            IsHorizontalAnalysisDone = false;
+            IsVerticalAnalysisDone = false;
+            IsGroupPileSettlementAnalysisDone = false;
             UpdateWindowImmediate();
             UpdateTreeView();
 
@@ -119,8 +122,10 @@ namespace PileDesign.ViewModels
             // Undoポイントを追加
             _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
-            // 要素分割状態をリセット
+            // 要素分割・解析状態をリセット
             IsElementSplit = false;
+            IsHorizontalAnalysisDone = false;
+            IsVerticalAnalysisDone = false;
 
             // JSONから群杭沈下解析例題データを読み込む
             var data = GroupSettlementExampleLoader.LoadFromFile(jsonFileName);

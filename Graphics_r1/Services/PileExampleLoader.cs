@@ -170,10 +170,10 @@ namespace PileDesign.Services
                     Z = layoutDto.Z,
                     AxialForceVL0 = layoutDto.AxialForceVL0,
                     // 配列 -> ObservableCollection に変換（4要素未満の場合はデフォルト値を使用）
-                    AxialForceLevel1s = layoutDto.AxialForceLevel1s?.Count >= 4
+                    AxialForceLevel1s = layoutDto.AxialForceLevel1s?.Length >= 4
                         ? new ObservableCollection<double>(layoutDto.AxialForceLevel1s)
                         : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
-                    AxialForceLevel2s = layoutDto.AxialForceLevel2s?.Count >= 4
+                    AxialForceLevel2s = layoutDto.AxialForceLevel2s?.Length >= 4
                         ? new ObservableCollection<double>(layoutDto.AxialForceLevel2s)
                         : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0])
                 };
