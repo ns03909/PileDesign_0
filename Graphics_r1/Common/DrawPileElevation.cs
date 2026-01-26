@@ -37,8 +37,33 @@ namespace PileDesign.Common
             if (pileBodySegments.Count == 0) return;
 
             double pileLength = pileBodySegments[^1].SegmentDepth;
-            double ratio = Math.Min(canvasHeight / (pileLength + 8.0), canvasWidth / (pileToeDia / 1000.0));
-            double topMargin = 3 * ratio;
+
+            // 要素分割点がある場合は、その範囲も考慮して描画範囲を決定
+            double displayLength = pileLength;
+            if (zs != null && zs.Count >= 2)
+            {
+                double zsRange = zs[0] - zs[^1]; // zs[0]が杭頭、zs[^1]が杭先端側
+                if (zsRange > displayLength)
+                {
+                    displayLength = zsRange;
+                }
+            }
+
+            // マージンをピクセル単位で確保（上下各30ピクセル）
+            const double marginPixels = 30.0;
+            double availableHeight = canvasHeight - marginPixels * 2;
+            double availableWidth = canvasWidth - marginPixels * 2;
+
+            // 縦横それぞれのratioを計算し、小さい方を採用（全体がキャンバスに収まるように）
+            double pileToeDiaInMeters = pileToeDia / 1000.0;
+            double ratioHeight = availableHeight / displayLength;
+            double ratioWidth = availableWidth / pileToeDiaInMeters;
+            double ratio = Math.Min(ratioHeight, ratioWidth);
+
+            // ratioが小さすぎる場合の最小値を設定（0以下にならないように）
+            if (ratio <= 0) ratio = 1.0;
+
+            double topMargin = marginPixels;
 
             if (groundInput != null)
             {
@@ -75,7 +100,6 @@ namespace PileDesign.Common
 
             var lastSegment = pileBodySegments[^1];
             double bottomSegmentDia = lastSegment.PileSection?.PileDiameter / 1000.0 ?? 0.0;
-            double pileToeDiaInMeters = pileToeDia / 1000.0;
 
             if (pileConstructionType == "場所打ちコンクリート杭" && pileToeDiaInMeters > bottomSegmentDia)
             {
