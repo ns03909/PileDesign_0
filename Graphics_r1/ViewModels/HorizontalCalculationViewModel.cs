@@ -492,6 +492,27 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private async Task OnExecuteAnalysis()
         {
+            // 荷重がゼロの荷重ケースをチェック
+            var zeroForceLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases
+                .Where(lc => lc.UpperMassForce == 0 && lc.FoundationMassForce == 0)
+                .ToList();
+
+            if (zeroForceLoadCases.Count > 0)
+            {
+                var levelNames = zeroForceLoadCases
+                    .Select(lc => $"レベル{lc.Level}-{lc.No}")
+                    .Distinct();
+                var message = $"以下の荷重ケースで荷重がゼロのため解析をスキップします:\n{string.Join(", ", levelNames)}\n\n" +
+                              "荷重ケースウィンドウで上部構造質量荷重または基礎構造質量荷重を設定してください。";
+                MessageBox.Show(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                // すべての荷重ケースがゼロの場合は解析を中止
+                if (zeroForceLoadCases.Count == InputModel.LoadCasesInput.AllSeismicLoadCases.Count())
+                {
+                    return;
+                }
+            }
+
             IsAnalysisRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
             try
@@ -828,6 +849,13 @@ namespace PileDesign.ViewModels
                 LoadCase loadCase = loadCaseitem;
                 int iLC = loadCaseitem.No - 1;
                 int level = loadCaseitem.Level;
+
+                // 荷重がゼロの場合はスキップ
+                if (loadCase.UpperMassForce == 0 && loadCase.FoundationMassForce == 0)
+                {
+                    await AddLogAsync($"レベル{level}-{iLC + 1}: 荷重がゼロのためスキップ");
+                    continue;
+                }
 
                 foreach (var loadCombination in InputModel.LoadCasesInput.AllLoadCombinations)
                 {
