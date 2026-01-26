@@ -1,5 +1,6 @@
 {
   "displayName": "関東支部 設計例7",
+  "groundExampleName": "ExampleK8",
   "inertiaPoint": { "x": 13.0, "y": 9.5, "z": -0.90 },
   "loadingPlaneAltitude": -2.0,
   "rectLoads": [

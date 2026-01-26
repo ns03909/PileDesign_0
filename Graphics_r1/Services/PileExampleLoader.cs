@@ -169,13 +169,13 @@ namespace PileDesign.Services
                     Y = layoutDto.Y,
                     Z = layoutDto.Z,
                     AxialForceVL0 = layoutDto.AxialForceVL0,
-                    // 配列 -> ObservableCollection に変換して代入する
-                    AxialForceLevel1s = layoutDto.AxialForceLevel1s != null
+                    // 配列 -> ObservableCollection に変換（4要素未満の場合はデフォルト値を使用）
+                    AxialForceLevel1s = layoutDto.AxialForceLevel1s?.Count >= 4
                         ? new ObservableCollection<double>(layoutDto.AxialForceLevel1s)
-                        : new ObservableCollection<double>(),
-                    AxialForceLevel2s = layoutDto.AxialForceLevel2s != null
+                        : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0]),
+                    AxialForceLevel2s = layoutDto.AxialForceLevel2s?.Count >= 4
                         ? new ObservableCollection<double>(layoutDto.AxialForceLevel2s)
-                        : new ObservableCollection<double>()
+                        : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0])
                 };
                 item.SetMainWindowViewModel(viewModel);
                 inputModel.PileLayoutItems.Add(item);

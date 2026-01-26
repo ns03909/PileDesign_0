@@ -15,6 +15,12 @@ namespace PileDesign.Models.InputData
         public string DisplayName { get; set; } = "";
 
         /// <summary>
+        /// 地盤例題名（地盤データJSONファイル名、拡張子なし）
+        /// </summary>
+        [JsonPropertyName("groundExampleName")]
+        public string? GroundExampleName { get; set; }
+
+        /// <summary>
         /// 慣性力中心点
         /// </summary>
         [JsonPropertyName("inertiaPoint")]

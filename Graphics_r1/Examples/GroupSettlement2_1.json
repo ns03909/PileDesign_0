@@ -1,5 +1,6 @@
 {
   "displayName": "設計例集2.1",
+  "groundExampleName": "Example5",
   "loadingPlaneAltitude": -2.4,
   "rectLoads": [
     { "x1": -1.1, "x2": 1.1, "y1": -1.1, "y2": 1.1, "qa": 195.66115702479338 },

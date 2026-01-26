@@ -2361,6 +2361,14 @@ namespace PileDesign.ViewModels
         {
             if (IsPreparedForAnalysis())
             {
+                // 杭下端より下方に土層・土質点が存在するかチェック
+                var validationError = ValidatePileAndGroundDepth();
+                if (!string.IsNullOrEmpty(validationError))
+                {
+                    MessageBox.Show(validationError, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
                 // Undoポイントを追加（読込前の状態を保存）
                 _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
@@ -2373,6 +2381,62 @@ namespace PileDesign.ViewModels
                 UpdateCanvas3DAction?.Invoke();
                 UpdateTreeView();
             }
+        }
+
+        /// <summary>
+        /// 杭下端より下方に土層・土質点が存在するかを検証する
+        /// </summary>
+        /// <returns>エラーメッセージ（問題なければnull）</returns>
+        private string? ValidatePileAndGroundDepth()
+        {
+            var errors = new System.Text.StringBuilder();
+
+            foreach (var pileLayout in CurrentInputModel.PileLayoutItems)
+            {
+                int groundNo = pileLayout.GroundNo;
+                int pileBodyNo = pileLayout.PileBodyNo;
+
+                if (groundNo < 1 || groundNo > CurrentInputModel.GroundsInput.Count) continue;
+                if (pileBodyNo < 1 || pileBodyNo > CurrentInputModel.PileBodies.Count) continue;
+
+                var groundInput = CurrentInputModel.GroundsInput[groundNo - 1];
+                var pileBody = CurrentInputModel.PileBodies[pileBodyNo - 1];
+
+                // 杭下端標高を計算
+                double pileTopAltitude = pileLayout.Z;
+                double pileLength = pileBody.PileBodySegments.Sum(seg => seg.SegmentLength);
+                double pileBottomAltitude = pileTopAltitude - pileLength;
+
+                // 土層の最下層標高をチェック
+                if (groundInput.GroundLayers != null && groundInput.GroundLayers.Count > 0)
+                {
+                    double groundBottomAltitude = groundInput.GroundLayers.Min(layer => layer.BottomAltitude);
+                    if (pileBottomAltitude < groundBottomAltitude)
+                    {
+                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭下端標高({pileBottomAltitude:F2}m)が土層の最下層標高({groundBottomAltitude:F2}m)より下にあります。");
+                    }
+                }
+                else
+                {
+                    errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 地盤No.{groundNo}に土層データがありません。");
+                }
+
+                // 土質点の最深深度をチェック
+                if (groundInput.GroundMassesData != null && groundInput.GroundMassesData.Count > 0)
+                {
+                    double massBottomAltitude = groundInput.GroundMassesData.Min(mass => mass.AltitudeDepth);
+                    if (pileBottomAltitude < massBottomAltitude)
+                    {
+                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭下端標高({pileBottomAltitude:F2}m)が土質点の最深標高({massBottomAltitude:F2}m)より下にあります。");
+                    }
+                }
+                else
+                {
+                    errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 地盤No.{groundNo}に土質点データがありません。");
+                }
+            }
+
+            return errors.Length > 0 ? errors.ToString() : null;
         }
 
         // 沈下ウィンドウを開くメソッド

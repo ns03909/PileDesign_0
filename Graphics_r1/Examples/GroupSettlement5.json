@@ -1,5 +1,6 @@
 {
   "displayName": "設計例5",
+  "groundExampleName": "Example5",
   "inertiaPoint": { "x": 10.5, "y": 9.0, "z": -1.00 },
   "loadingPlaneAltitude": -3.0,
   "rectLoads": [

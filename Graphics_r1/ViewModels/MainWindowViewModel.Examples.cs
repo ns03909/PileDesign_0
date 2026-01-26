@@ -72,6 +72,7 @@ namespace PileDesign.ViewModels
             var groundLayerViewModel = new GroundLayerViewModel(this);
             var groundData = GroundExampleLoader.LoadFromFile(pileData.GroundExampleName);
             GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
+            groundLayerViewModel.Update(); // 土層プロパティを再計算
             CurrentInputModel.GroundsInput[0] = groundLayerViewModel.GroundInput.DeepCopy();
 
             // 杭例題データを適用
@@ -123,6 +124,16 @@ namespace PileDesign.ViewModels
 
             // JSONから群杭沈下解析例題データを読み込む
             var data = GroupSettlementExampleLoader.LoadFromFile(jsonFileName);
+
+            // 地盤例題を読み込む（指定がある場合）
+            if (!string.IsNullOrEmpty(data.GroundExampleName))
+            {
+                var groundLayerViewModel = new GroundLayerViewModel(this);
+                var groundData = GroundExampleLoader.LoadFromFile(data.GroundExampleName);
+                GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
+                groundLayerViewModel.Update(); // 土層プロパティを再計算
+                CurrentInputModel.GroundsInput[0] = groundLayerViewModel.GroundInput.DeepCopy();
+            }
 
             // 例題データを適用
             GroupSettlementExampleLoader.ApplyToInputModel(CurrentInputModel, data, this);
