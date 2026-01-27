@@ -1174,6 +1174,9 @@ namespace PileDesign.ViewModels
                 merged.Insert(1, firstInsert);
             }
 
+            // Zの降順（上から下）に並べ替え
+            merged = merged.OrderByDescending(item => item.Z).ToList();
+
             // バルク置換：OnZDataItemsChanged 内の SaveState 重複を抑止してから反映し、最後に一度だけ処理を実行
             _suppressUndoSave = true;
             SelectedZDataItems = new ObservableCollection<PileZDataItem>(merged.Select(item => item.DeepCopy()));
@@ -1306,6 +1309,9 @@ namespace PileDesign.ViewModels
                 merged.Add(originalList.Last());
             }
 
+            // Zの降順（上から下）に並べ替え
+            merged = merged.OrderByDescending(item => item.Z).ToList();
+
             // 一括更新
             EmbedmentZsCollection = new ObservableCollection<EmbedmentZDataItem>(merged);
 
@@ -1353,6 +1359,18 @@ namespace PileDesign.ViewModels
 
             if (selectedSoilPile == null) return;
             if (ElementDivisionWindowInstance == null || ElementDivisionWindowInstance.DataGridZs == null) return;
+
+            // Zの降順（上から下）に並べ替え
+            var sortedItems = SelectedZDataItems.OrderByDescending(item => item.Z).ToList();
+            if (!SelectedZDataItems.Select(x => x.Z).SequenceEqual(sortedItems.Select(x => x.Z)))
+            {
+                // 並び替えが必要な場合のみコレクションを更新
+                SelectedZDataItems.Clear();
+                foreach (var item in sortedItems)
+                {
+                    SelectedZDataItems.Add(item);
+                }
+            }
 
             SoilPiles[SelectedSoilPileNo - 1].ZDataItems = new ObservableCollection<PileZDataItem>
                     (SelectedZDataItems.Select(item => item.DeepCopy()));

@@ -10,6 +10,50 @@ namespace PileDesign.Models.InputData
 {
     public class PileSection : BaseModel
     {
+        // 静的キャッシュ（CSVデータは一度だけ読み込む）
+        private static readonly Lazy<List<PrecastPile>> _cachedPHCs = new(() => LoadPrecastPilesFromCsv("pile_library_PHC.csv"));
+        private static readonly Lazy<List<PrecastPile>> _cachedPRCs = new(() => LoadPrecastPilesFromCsv("pile_library_PRC.csv"));
+        private static readonly Lazy<List<PrecastPile>> _cachedSCs = new(() => LoadPrecastPilesFromCsv("pile_library_SC.csv"));
+        private static readonly Lazy<List<SteelPipePile>> _cachedSteelPipePiles = new(() => LoadSteelPipePilesFromCsv("pile_library_SteelPile.csv"));
+
+        // オプションリストも静的キャッシュ（一度だけ構築）
+        private static readonly Lazy<ObservableCollection<string>> _cachedPHCOption = new(() =>
+            new ObservableCollection<string>(_cachedPHCs.Value.Select(p => p.Name)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedPRCOption = new(() =>
+            new ObservableCollection<string>(_cachedPRCs.Value.Select(p => p.Name)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedSCOption = new(() =>
+            new ObservableCollection<string>(_cachedSCs.Value.Select(p => p.Name)));
+        private static readonly Lazy<ObservableCollection<string>> _cachedSteelPipeOption = new(() =>
+            new ObservableCollection<string>(_cachedSteelPipePiles.Value.Select(p => $"{p.Diameter}x{p.Thickness}")));
+
+        private static List<PrecastPile> LoadPrecastPilesFromCsv(string fileName)
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string filePath = Path.Combine(baseDir, "Models", "PileLibrary", fileName);
+                return PrecastPileLoader.LoadFromCsv(filePath) ?? [];
+            }
+            catch
+            {
+                return [];
+            }
+        }
+
+        private static List<SteelPipePile> LoadSteelPipePilesFromCsv(string fileName)
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string filePath = Path.Combine(baseDir, "Models", "PileLibrary", fileName);
+                return SteelPipePileLoader.LoadFromCsv(filePath) ?? [];
+            }
+            catch
+            {
+                return [];
+            }
+        }
+
         // フィールド
         private int _pileBodyNo;
         public int PileBodyNo
@@ -700,11 +744,11 @@ namespace PileDesign.Models.InputData
                     MainBarNum = 0;
                     PipeDia = 0.0;
                     PipeTs = 0.0;
-                    // steelPipePilesの要素数チェック
-                    if (steelPipePiles.Count >= 5)
-                        SelectedSteelPipePileName = $"{steelPipePiles[^5].Diameter}x{steelPipePiles[^5].Thickness}";
-                    else if (steelPipePiles.Count > 0)
-                        SelectedSteelPipePileName = $"{steelPipePiles[0].Diameter}x{steelPipePiles[0].Thickness}";
+                    // SteelPipePilesの要素数チェック
+                    if (SteelPipePiles.Count >= 5)
+                        SelectedSteelPipePileName = $"{SteelPipePiles[^5].Diameter}x{SteelPipePiles[^5].Thickness}";
+                    else if (SteelPipePiles.Count > 0)
+                        SelectedSteelPipePileName = $"{SteelPipePiles[0].Diameter}x{SteelPipePiles[0].Thickness}";
                     else
                         SelectedSteelPipePileName = string.Empty;
                     RecalculateSelectedSteelPipePipe();
@@ -822,7 +866,8 @@ namespace PileDesign.Models.InputData
 
         public SteelPipePile SelectedSteelPipePile = new();
 
-        readonly List<SteelPipePile> steelPipePiles;
+        // 鋼管杭リスト（静的キャッシュを参照）
+        private List<SteelPipePile> SteelPipePiles => _cachedSteelPipePiles.Value;
         readonly PrecastPileLoader precastPileLoader = new();
 
         // クラス PileSection 内に追加するメソッド
@@ -948,7 +993,7 @@ namespace PileDesign.Models.InputData
         // S杭選択時のメソッド
         private void RecalculateSelectedSteelPipePipe()
         {
-            foreach (var pipe in steelPipePiles)
+            foreach (var pipe in SteelPipePiles)
             {
                 if (SelectedSteelPipePileName == $"{pipe.Diameter}x{pipe.Thickness}")
                 {
@@ -1021,20 +1066,20 @@ namespace PileDesign.Models.InputData
             "SKK490"
         ];
 
-        // PHC
-        public ObservableCollection<string> PHCOption { get; } = [];
-        public List<PrecastPile> PHCs { get; } = [];
+        // PHC（静的キャッシュを参照）
+        public ObservableCollection<string> PHCOption => _cachedPHCOption.Value;
+        public List<PrecastPile> PHCs => _cachedPHCs.Value;
 
-        // PRC
-        public ObservableCollection<string> PRCOption { get; } = [];
-        public List<PrecastPile> PRCs { get; } = [];
+        // PRC（静的キャッシュを参照）
+        public ObservableCollection<string> PRCOption => _cachedPRCOption.Value;
+        public List<PrecastPile> PRCs => _cachedPRCs.Value;
 
-        // SC
-        public ObservableCollection<string> SCOption { get; } = [];
-        public List<PrecastPile> SCs { get; } = [];
+        // SC（静的キャッシュを参照）
+        public ObservableCollection<string> SCOption => _cachedSCOption.Value;
+        public List<PrecastPile> SCs => _cachedSCs.Value;
 
-        // 鋼管
-        public ObservableCollection<string> SteelPipeOption { get; } = [];
+        // 鋼管（静的キャッシュを参照）
+        public ObservableCollection<string> SteelPipeOption => _cachedSteelPipeOption.Value;
 
 
         // 鉄筋径
@@ -1372,42 +1417,8 @@ namespace PileDesign.Models.InputData
             // 初期化処理
             SelectedPrecastPile = new PrecastPile();
 
-            // 実行ファイルのディレクトリを基準にパスを組み立てる
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-
-            string phcPath = Path.Combine(baseDir, "Models", "PileLibrary", "pile_library_PHC.csv");
-            string prcPath = Path.Combine(baseDir, "Models", "PileLibrary", "pile_library_PRC.csv");
-            string scPath = Path.Combine(baseDir, "Models", "PileLibrary", "pile_library_SC.csv");
-            string steelPilePath = Path.Combine(baseDir, "Models", "PileLibrary", "pile_library_SteelPile.csv");
-
-
-            //PHCs = PrecastPileLoader.LoadFromCsv(phcPath);
-            PHCs = PrecastPileLoader.LoadFromCsv(phcPath) ?? new List<PrecastPile>();
-            foreach (var pipe in PHCs)
-            {
-                PHCOption.Add($"{pipe.Name}");
-            }
-
-            //PRCs = PrecastPileLoader.LoadFromCsv(prcPath);
-            PRCs = PrecastPileLoader.LoadFromCsv(prcPath) ?? new List<PrecastPile>();
-            foreach (var pipe in PRCs)
-            {
-                PRCOption.Add($"{pipe.Name}");
-            }
-
-            //SCs = PrecastPileLoader.LoadFromCsv(scPath);
-            SCs = PrecastPileLoader.LoadFromCsv(scPath) ?? new List<PrecastPile>();
-            foreach (var pipe in SCs)
-            {
-                SCOption.Add($"{pipe.Name}");
-            }
-
-            //steelPipePiles = SteelPipePileLoader.LoadFromCsv(steelPilePath);
-            steelPipePiles = SteelPipePileLoader.LoadFromCsv(steelPilePath) ?? new List<SteelPipePile>();
-            foreach (var pipe in steelPipePiles)
-            {
-                SteelPipeOption.Add($"{pipe.Diameter}x{pipe.Thickness}");
-            }
+            // PHCs, PRCs, SCs, SteelPipeOption は静的キャッシュのプロパティから取得
+            // （コンストラクタでの初期化は不要）
 
             RecalculatePileDia();
             RecalculateConcreteE();

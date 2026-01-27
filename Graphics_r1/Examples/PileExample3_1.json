@@ -38,7 +38,7 @@
       "settleN": 2,
       "segments": [
         { "no": 1, "segmentLength": 5.0, "segmentDepth": 5.0, "pileSectionType": "SC杭", "precastPileName": "SC-700-標準-105-12" },
-        { "no": 2, "segmentLength": 5.0, "segmentDepth": 10.0, "pileSectionType": "PRC杭", "precastPileName": "SCPRC-700-105-Ⅲ" }
+        { "no": 2, "segmentLength": 5.0, "segmentDepth": 10.0, "pileSectionType": "PRC杭", "precastPileName": "CPRC-700-105-Ⅲ" }
       ]
     },
     {

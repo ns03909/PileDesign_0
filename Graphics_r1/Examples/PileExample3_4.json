@@ -38,9 +38,9 @@
       "settleN": 2,
       "segments": [
         { "no": 1, "segmentLength": 7, "segmentDepth": 7, "pileSectionType": "SC杭", "precastPileName": "SC-900-標準-105-19" },
-        { "no": 2, "segmentLength": 13, "segmentDepth": 20, "pileSectionType": "SC杭", "precastPileName": "標準,,SC-900-標準-105-9" },
-        { "no": 3, "segmentLength": 12, "segmentDepth": 32, "pileSectionType": "SC杭", "precastPileName": "標準,,SC-900-標準-105-9" },
-        { "no": 4, "segmentLength": 12, "segmentDepth": 44, "pileSectionType": "SC杭", "precastPileName": "標準,,SC-900-標準-105-9" }
+        { "no": 2, "segmentLength": 13, "segmentDepth": 20, "pileSectionType": "SC杭", "precastPileName": "SC-900-標準-105-9" },
+        { "no": 3, "segmentLength": 12, "segmentDepth": 32, "pileSectionType": "SC杭", "precastPileName": "SC-900-標準-105-9" },
+        { "no": 4, "segmentLength": 12, "segmentDepth": 44, "pileSectionType": "SC杭", "precastPileName": "SC-900-標準-105-9" }
       ]
     },
     {
@@ -58,8 +58,8 @@
       "settleN": 2,
       "segments": [
         { "no": 1, "segmentLength": 7, "segmentDepth": 7, "pileSectionType": "SC杭", "precastPileName": "SC-1000-標準-105-19" },
-        { "no": 2, "segmentLength": 13, "segmentDepth": 20, "pileSectionType": "PHC杭", "precastPileName": "標準,B,PHC-1000-標準-105-B" },
-        { "no": 3, "segmentLength": 12, "segmentDepth": 32, "pileSectionType": "PHC杭", "precastPileName": "標準,B,PHC-1000-標準-105-B" },
+        { "no": 2, "segmentLength": 13, "segmentDepth": 20, "pileSectionType": "PHC杭", "precastPileName": "PHC-1000-標準-105-B" },
+        { "no": 3, "segmentLength": 12, "segmentDepth": 32, "pileSectionType": "PHC杭", "precastPileName": "PHC-1000-標準-105-B" },
         { "no": 4, "segmentLength": 12, "segmentDepth": 44, "pileSectionType": "SC杭", "precastPileName": "SC-1000-標準-105-9" }
       ]
     },

@@ -3,6 +3,7 @@ using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -36,34 +37,47 @@ namespace PileDesign.Common
 
             if (pileBodySegments.Count == 0) return;
 
-            double pileLength = pileBodySegments[^1].SegmentDepth;
+            // 地表面標高を取得（groundInputがない場合は杭頭標高を使用）
+            double groundTopAltitude = groundInput?.GroundTopAltitude ?? pileTopAltitude;
 
-            // 要素分割点がある場合は、その範囲も考慮して描画範囲を決定
-            double displayLength = pileLength;
+            // 杭頭から地表面までの距離（杭頭が地表面より下の場合は正の値）
+            double abovePileTop = groundTopAltitude - pileTopAltitude;
+            if (abovePileTop < 0) abovePileTop = 0;
+
+            // 杭体セグメントからの杭長
+            double pileLengthFromSegments = pileBodySegments[^1].SegmentDepth;
+
+            // 杭の深さを複数のソースから計算
+            double pileDepth = pileLengthFromSegments;
+
+            // 要素分割点がある場合は、分割点の範囲も考慮
             if (zs != null && zs.Count >= 2)
             {
-                double zsRange = zs[0] - zs[^1]; // zs[0]が杭頭、zs[^1]が杭先端側
-                if (zsRange > displayLength)
+                // zsの範囲（最浅点から最深点までの距離）
+                double zsRange = zs.Max() - zs.Min();
+
+                // 最大値を採用（セグメントの杭長 vs 分割点の範囲）
+                if (zsRange > pileDepth)
                 {
-                    displayLength = zsRange;
+                    pileDepth = zsRange;
                 }
             }
 
-            // マージンをピクセル単位で確保（上下各30ピクセル）
-            const double marginPixels = 30.0;
-            double availableHeight = canvasHeight - marginPixels * 2;
-            double availableWidth = canvasWidth - marginPixels * 2;
+            // 総描画範囲 = 地表面から杭下端まで + 上下マージン（メートル単位で2m + 2m）
+            double totalDisplayLength = abovePileTop + pileDepth + 4.0; // 4mは上下マージン分
+            if (totalDisplayLength <= 0) totalDisplayLength = pileLengthFromSegments + 4.0;
 
-            // 縦横それぞれのratioを計算し、小さい方を採用（全体がキャンバスに収まるように）
+            // 縦横それぞれのratioを計算し、小さい方を採用
             double pileToeDiaInMeters = pileToeDia / 1000.0;
-            double ratioHeight = availableHeight / displayLength;
-            double ratioWidth = availableWidth / pileToeDiaInMeters;
+            double ratioHeight = canvasHeight / totalDisplayLength;
+            double ratioWidth = (canvasWidth - 20) / pileToeDiaInMeters; // 横は20px余裕
             double ratio = Math.Min(ratioHeight, ratioWidth);
 
-            // ratioが小さすぎる場合の最小値を設定（0以下にならないように）
+            // ratioが小さすぎる場合の最小値を設定
             if (ratio <= 0) ratio = 1.0;
 
-            double topMargin = marginPixels;
+            // topMargin = 杭頭の描画Y位置（上マージン2m + 地表面から杭頭までの距離）
+            double topMargin = (2.0 + abovePileTop) * ratio;
 
             if (groundInput != null)
             {
@@ -105,12 +119,12 @@ namespace PileDesign.Common
             {
                 double angle = 90 - insituPileToeAngle;
                 double pileToeElevation = insituPileToeHeight / 1000;
-                DrawConeToeShape(canvas, canvasWidth, /*canvasHeight,*/ pileLength, ratio, topMargin, bottomSegmentDia, pileToeDiaInMeters, pileToeElevation, angle);
+                DrawConeToeShape(canvas, canvasWidth, /*canvasHeight,*/ pileLengthFromSegments, ratio, topMargin, bottomSegmentDia, pileToeDiaInMeters, pileToeElevation, angle);
             }
             else if ((pileConstructionType == "埋込み杭（プレボーリング）" || pileConstructionType == "埋込み杭（中掘り）") && pileToeDiaInMeters > bottomSegmentDia)
             {
 
-                DrawCylinderToeShape(canvas, canvasWidth, /*canvasHeight,*/ pileLength, ratio, topMargin, bottomSegmentDia, pileToeDiaInMeters, precastConcretePileToeHeightRatio);
+                DrawCylinderToeShape(canvas, canvasWidth, /*canvasHeight,*/ pileLengthFromSegments, ratio, topMargin, bottomSegmentDia, pileToeDiaInMeters, precastConcretePileToeHeightRatio);
             }
 
             if (isElementDivision)

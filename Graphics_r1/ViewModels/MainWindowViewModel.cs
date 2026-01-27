@@ -2344,20 +2344,22 @@ namespace PileDesign.ViewModels
             foreach (var pileLayout in CurrentInputModel.PileLayoutItems)
             {
                 var force = pileLayout.AxialForceVL;
+                var pileNo = pileLayout.PileNo;
 
-                for (int i = 0; i < CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1].PileBodySegments.Count; i++)
+                var pileBody = CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                for (int i = 0; i < pileBody.PileBodySegments.Count; i++)
                 {
-                    var pileSection = CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1].PileBodySegments[i].PileSection;
+                    var pileSection = pileBody.PileBodySegments[i].PileSection;
 
                     if (pileSection.FactoredServiceNmax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
                     }
                     if (force < pileSection.FactoredServiceNmin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNmin:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNmin:N0}kN\n";
                     }
                 }
             }

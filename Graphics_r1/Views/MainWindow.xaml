@@ -588,7 +588,7 @@
                                               Command="{Binding ExampleK8Command}"
                                               ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"
                                               ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.1　PHC杭"
+                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.1　SC杭, PRC杭"
                                               KeyTip="5"
                                               Command="{Binding Example3_1Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"

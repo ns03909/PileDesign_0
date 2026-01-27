@@ -13,6 +13,54 @@ namespace PileDesign.Models.InputData
 {
     public class PileBodyInput : BaseModel
     {
+        // 静的キャッシュ（CSVデータは一度だけ読み込む）
+        private static readonly Lazy<(List<PileTipSettlementPresetParameter> Parameters, List<string> Names)> _cachedPresetParameters
+            = new(() => LoadPresetSettlementParametersFromCsv());
+
+        private static (List<PileTipSettlementPresetParameter> Parameters, List<string> Names) LoadPresetSettlementParametersFromCsv()
+        {
+            var parameters = new List<PileTipSettlementPresetParameter>();
+            var names = new List<string>();
+
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string csvFilePath = Path.Combine(baseDir, "Models", "PileLibrary", "PresetSettlementParameterSet.csv");
+
+                if (!File.Exists(csvFilePath))
+                {
+                    System.Diagnostics.Debug.WriteLine($"プリセットCSVが見つかりません: {csvFilePath}");
+                    return (parameters, names);
+                }
+
+                using StreamReader reader = new(csvFilePath, Encoding.UTF8);
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string[] parts = line.Split(',');
+                    if (parts.Length == 4)
+                    {
+                        string name = parts[0].Trim();
+                        string soilType = parts[1].Trim();
+                        if (!double.TryParse(parts[2].Trim(), out double alpha) ||
+                            !double.TryParse(parts[3].Trim(), out double n))
+                        {
+                            continue;
+                        }
+
+                        parameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
+                        names.Add($"{name}-{soilType} ,α={alpha:N2} ,n={n:N2}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoadPresetSettlementParametersFromCsv エラー: {ex}");
+            }
+
+            return (parameters, names);
+        }
+
         //private ObservableCollection<PileBodySegment> _pileBodySegments;
         //public ObservableCollection<PileBodySegment> PileBodySegments
         //{
@@ -392,10 +440,10 @@ namespace PileDesign.Models.InputData
             // コンストラクタの該当部分を以下のようにして一度だけ初期化してください
             PileBodySegments = [new() { No = 1 }];
 
-            // データを読み込む
-            PileTipSettlementPresetParameterNames = [];
-            PileTipSettlementPresetParameters = [];
-            LoadPresetSettlementParameters();
+            // 静的キャッシュからデータを参照（毎回CSVを読み込まない）
+            var cached = _cachedPresetParameters.Value;
+            PileTipSettlementPresetParameters = new List<PileTipSettlementPresetParameter>(cached.Parameters);
+            PileTipSettlementPresetParameterNames = new ObservableCollection<string>(cached.Names);
         }
 
         private void PileBodySegments_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -420,85 +468,6 @@ namespace PileDesign.Models.InputData
                 System.Diagnostics.Debug.WriteLine($"PileBodySegments_CollectionChanged エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
-            }
-        }
-
-        // CSVからデータを読み込む
-        private void LoadPresetSettlementParameters()
-        //{
-        //    // アプリケーションの実行ディレクトリを取得
-        //    //string basePath = AppDomain.CurrentDomain.BaseDirectory;
-
-        //    //string relativePath = "../../PileLibrary/PresetSettlementParameterSet.csv";
-        //    //string csvFilePath = @"C:/Users/keisu/source/repos/PileDesign/PileDesign/PileLibrary/PresetSettlementParameterSet.csv";
-        //    // 絶対パスを生成
-        //    //string csvFilePath = Path.GetFullPath(Path.Combine(basePath, relativePath));
-        //    // 実行ファイルのディレクトリを基準にパスを組み立てる
-        //    string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        //    string csvFilePath = Path.Combine(baseDir, "Models", "PileLibrary", "PresetSettlementParameterSet.csv");
-
-
-        //    using StreamReader reader = new(csvFilePath, Encoding.UTF8);
-        //    string line;
-        //    while ((line = reader.ReadLine()) != null)
-        //    {
-        //        string[] parts = line.Split(',');
-        //        if (parts.Length == 4)
-        //        {
-        //            string name = parts[0].Trim();
-        //            string soilType = parts[1].Trim();
-        //            double alpha = double.Parse(parts[2].Trim());
-        //            double n = double.Parse(parts[3].Trim());
-
-        //            PileTipSettlementPresetParameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
-        //            PileTipSettlementPresetParameterNames.Add(name + "-" + soilType + " ,α=" + $"{alpha:N2}" + " ,n=" + $"{n:N2}");
-        //        }
-        //    }
-        //}
-        {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string csvFilePath = Path.Combine(baseDir, "Models", "PileLibrary", "PresetSettlementParameterSet.csv");
-
-            try
-            {
-                // null防止
-                PileTipSettlementPresetParameterNames ??= new ObservableCollection<string>();
-                PileTipSettlementPresetParameters ??= new List<PileTipSettlementPresetParameter>();
-
-                if (!File.Exists(csvFilePath))
-                {
-                    System.Diagnostics.Debug.WriteLine($"プリセットCSVが見つかりません: {csvFilePath}");
-                    Application.Current?.Dispatcher.Invoke(() =>
-                        MessageBox.Show($"プリセットCSVが見つかりません。\n{csvFilePath}", "ファイルエラー", MessageBoxButton.OK, MessageBoxImage.Warning));
-                    return;
-                }
-
-                using StreamReader reader = new(csvFilePath, Encoding.UTF8);
-                string line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    string[] parts = line.Split(',');
-                    if (parts.Length == 4)
-                    {
-                        string name = parts[0].Trim();
-                        string soilType = parts[1].Trim();
-                        if (!double.TryParse(parts[2].Trim(), out double alpha) ||
-                            !double.TryParse(parts[3].Trim(), out double n))
-                        {
-                            System.Diagnostics.Debug.WriteLine($"CSVパースエラー: {line}");
-                            continue;
-                        }
-
-                        PileTipSettlementPresetParameters.Add(new PileTipSettlementPresetParameter(name, soilType, alpha, n));
-                        PileTipSettlementPresetParameterNames.Add($"{name}-{soilType} ,α={alpha:N2} ,n={n:N2}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"LoadPresetSettlementParameters エラー: {ex}");
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"プリセットCSV読込中にエラーが発生しました。\n{ex.Message}", "CSV読込エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
         }
 

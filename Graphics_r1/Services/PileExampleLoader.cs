@@ -117,6 +117,11 @@ namespace PileDesign.Services
                         SegmentLength = segDto.SegmentLength,
                         SegmentDepth = segDto.SegmentDepth
                     };
+
+                    // 先にコレクションに追加（CollectionChangedでデフォルト値が設定される）
+                    pileBody.PileBodySegments.Add(segment);
+
+                    // 追加後にPileSectionTypeとPrecastPileNameを設定（デフォルト値を上書き）
                     segment.PileSection.PileSectionType = segDto.PileSectionType;
 
                     // 既製杭の場合
@@ -146,8 +151,6 @@ namespace PileDesign.Services
                         segment.PileSection.ConcreteGsi = segDto.ConcreteGsi.Value;
                     if (segDto.ConcreteGamma.HasValue)
                         segment.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
-
-                    pileBody.PileBodySegments.Add(segment);
                 }
 
                 inputModel.PileBodies.Add(pileBody);
