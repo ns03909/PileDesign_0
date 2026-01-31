@@ -1,5 +1,6 @@
 ﻿using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
@@ -45,6 +46,11 @@ namespace PileDesign.Views
             viewModel.ElementDivisionWindowInstance = this;
             viewModel.Canvas = Canvas;
             viewModel.CanvasEmbedment = CanvasEmbedment;
+
+            // DataGridのSelectionUnitを明示的にFullRowに設定
+            // EnhancedDataGridのコンストラクタでCellOrRowHeaderが設定されるため、ここで上書きする
+            DataGridZs.SelectionUnit = DataGridSelectionUnit.FullRow;
+            DataGridZs.SelectionMode = DataGridSelectionMode.Single;
 
             // 初期化メソッドを呼び出す
             viewModel.Initialize();
@@ -225,6 +231,80 @@ namespace PileDesign.Views
                 vm.DrawSoilEmbedment();
             }
             CanvasEmbedment.Loaded -= CanvasEmbedment_Loaded;
+        }
+
+        // DataGridZsの選択変更イベントハンドラ
+        private void DataGridZs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dataGrid)
+            {
+                // 選択されたアイテムをViewModelに反映
+                if (dataGrid.SelectedItem is PileZDataItem selectedItem)
+                {
+                    vm.SelectedZDataItem = selectedItem;
+                }
+            }
+        }
+
+        // 追加: horizon のセル選択イベントハンドラ
+        private void Horizon_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
+        {
+            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
+            {
+                // 選択セルの先頭セルから行アイテムを取得して VM に設定
+                if (dg.SelectedCells != null && dg.SelectedCells.Count > 0)
+                {
+                    var item = dg.SelectedCells[0].Item as HorizontalSoilReactionItem;
+                    if (item != null)
+                    {
+                        vm.SelectedLayeronDataGrid = item;
+                    }
+                }
+            }
+        }
+
+        private void Horizon_CurrentCellChanged(object sender, EventArgs e)
+        {
+            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
+            {
+                var item = dg.CurrentCell.Item as HorizontalSoilReactionItem;
+                if (item != null)
+                {
+                    vm.SelectedLayeronDataGrid = item;
+                }
+            }
+        }
+
+
+        // DataGridEmbedmentZs 用（Embedment の選択を VM に反映）
+        private void Embedment_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
+        {
+            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
+            {
+                if (dg.SelectedCells != null && dg.SelectedCells.Count > 0)
+                {
+                    var item = dg.SelectedCells[0].Item as EmbedmentZDataItem;
+                    if (item != null)
+                    {
+                        vm.SelectedEmbedmentZ = item;
+                    }
+                    else if (dg.SelectedIndex >= 0 && dg.SelectedIndex < dg.Items.Count && dg.Items[dg.SelectedIndex] is EmbedmentZDataItem byIndex)
+                    {
+                        vm.SelectedEmbedmentZ = byIndex;
+                    }
+                }
+            }
+        }
+
+        private void Embedment_CurrentCellChanged(object sender, EventArgs e)
+        {
+            if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
+            {
+                if (dg.CurrentCell != null && dg.CurrentCell.Item is EmbedmentZDataItem item)
+                {
+                    vm.SelectedEmbedmentZ = item;
+                }
+            }
         }
     }
 }

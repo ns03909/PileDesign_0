@@ -1,6 +1,7 @@
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
@@ -155,6 +156,43 @@ namespace PileDesign.Services
 
                 inputModel.PileBodies.Add(pileBody);
             }
+
+            // 追加例: data には LoadFromFile で取得した DTO が入る想定
+            //if (data.Embedment != null)
+            //{
+            //    // ElementDivision と SoilEmbedment を初期化する例
+            //    inputModel.ElementDivision ??= new ElementDivision();
+
+            //    // SoilEmbedment クラスがプロジェクトに存在する前提
+            //    inputModel.ElementDivision.SoilEmbedment = new SoilEmbedment
+            //    {
+            //        GroundNo = data.Embedment.GroundNo,
+            //        EmbedmentTopAltitude = data.Embedment.EmbedmentTopAltitude,
+            //        EmbedmentBottomAltitude = data.Embedment.EmbedmentBottomAltitude,
+            //        ZDataItems = new ObservableCollection<EmbedmentZDataItem>(
+            //            (data.Embedment.Zs ?? new List<double>()).Select(z => new EmbedmentZDataItem { Z = z })
+            //        )
+            //    };
+
+            //    // Embedment レイヤーをセット（EmbedmentInput の型に合わせて）
+            //    inputModel.EmbedmentInput ??= new EmbedmentInput();
+            //    inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+            //    if (data.Embedment.EmbedmentLayers != null)
+            //    {
+            //        foreach (var layer in data.Embedment.EmbedmentLayers)
+            //        {
+            //            inputModel.EmbedmentInput.EmbedmentLayers.Add(new EmbedmentDataItem
+            //            {
+            //                TopAltitude = layer.TopAltitude,
+            //                BottomAltitude = layer.BottomAltitude,
+            //                X1 = layer.X1,
+            //                X2 = layer.X2,
+            //                Y1 = layer.Y1,
+            //                Y2 = layer.Y2
+            //            });
+            //        }
+            //    }
+            //}
 
             // PileLayoutItems 設定
             inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>();

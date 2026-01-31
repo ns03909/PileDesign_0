@@ -143,6 +143,25 @@ namespace PileDesign.ViewModels
             // 例題データを適用
             GroupSettlementExampleLoader.ApplyToInputModel(CurrentInputModel, data, this);
 
+            // 追加：LoadPileExampleAsync と同様に各 PileSection を再計算してプロパティ反映
+            foreach (var pb in CurrentInputModel.PileBodies)
+            {
+                foreach (var seg in pb.PileBodySegments)
+                {
+                    var sec = seg.PileSection;
+                    if (!string.IsNullOrWhiteSpace(sec.SelectedPrecastPile?.Name))
+                    {
+                        sec.RecalculateSelectedPrecastPile();
+                    }
+                    sec.RecalculatePileDia();
+                    sec.RecalculateConcreteE();
+                    sec.SetSpecs();
+                }
+            }
+
+            // 追加：杭体数リストを更新（UIのコンボボックス用）
+            CurrentInputModel.UpdateCountLists();
+
             UpdatePileLayoutNo();
             IsGroupPileSettlementAnalysisDone = false;
             UpdateWindowImmediate();

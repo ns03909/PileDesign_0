@@ -1,6 +1,7 @@
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
@@ -20,7 +21,6 @@ namespace PileDesign.Services
             ReadCommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true
         };
-
         /// <summary>
         /// JSONファイルから例題データを読み込む
         /// </summary>
@@ -28,6 +28,7 @@ namespace PileDesign.Services
         /// <returns>例題データ</returns>
         public static GroupSettlementExampleData LoadFromFile(string fileName)
         {
+
             var examplesPath = GetExamplesPath();
             var filePath = Path.Combine(examplesPath, $"{fileName}.json");
 
@@ -96,6 +97,45 @@ namespace PileDesign.Services
                     Thickness = layerDto.Thickness
                 });
             }
+
+            //// 杭体情報（pileBodies）の反映
+            //inputModel.PileBodies.Clear();
+            //if (data.PileBodies != null)
+            //{
+            //    foreach (var pileBodyDto in data.PileBodies)
+            //    {
+            //        var pileBody = new PileBodyInput
+            //        {
+            //            PileBodyRef = pileBodyDto.PileBodyRef,
+            //            PileBodyType = pileBodyDto.PileBodyType,
+            //            PileTopType = pileBodyDto.PileTopType,
+            //            PileConstructionType = pileBodyDto.PileConstructionType,
+            //            PileToeDia = pileBodyDto.PileToeDia,
+            //            TipNonPermability = pileBodyDto.TipNonPermability,
+            //            EmbedmentIntoBearingSoil = pileBodyDto.EmbedmentIntoBearingSoil,
+            //            PileInnerDia = pileBodyDto.PileInnerDia,
+            //            PileTipStyle = pileBodyDto.PileTipStyle,
+            //            SettlePileToeDia = pileBodyDto.SettlePileToeDia,
+            //            SettleAlpha = pileBodyDto.SettleAlpha,
+            //            SettleN = pileBodyDto.SettleN
+            //        };
+            //        pileBody.PileBodySegments.Clear();
+            //        foreach (var segDto in pileBodyDto.Segments)
+            //        {
+            //            var segment = new PileBodySegment
+            //            {
+            //                No = segDto.No,
+            //                SegmentLength = segDto.SegmentLength,
+            //                SegmentDepth = segDto.SegmentDepth
+            //            };
+            //            segment.PileSection.PileSectionType = segDto.PileSectionType;
+            //            if (!string.IsNullOrEmpty(segDto.PrecastPileName))
+            //                segment.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
+            //            pileBody.PileBodySegments.Add(segment);
+            //        }
+            //        inputModel.PileBodies.Add(pileBody);
+            //    }
+            //}
 
             // 杭位置を設定（ある場合）
             if (data.PileLayoutPositions != null && data.PileLayoutPositions.Count > 0)

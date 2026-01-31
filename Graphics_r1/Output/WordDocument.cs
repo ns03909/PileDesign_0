@@ -2781,11 +2781,36 @@ namespace PileDesign.Output
                 }
 
                 plots[i].Axes.Title.Label.Text = titles[i];
-                plots[i].Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titles[i]);
                 plots[i].Axes.Bottom.Label.Text = xLabels[i];
-                plots[i].Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabels[i]);
                 plots[i].Axes.Left.Label.Text = yLabels[i];
-                plots[i].Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabels[i]);
+
+                // 日本語フォントを明示的に設定
+                string[] fontCandidates = ["Meiryo", "Yu Gothic UI", "Yu Gothic", "ＭＳ ゴシック", "MS Gothic"];
+                string useFont = fontCandidates.FirstOrDefault(fn =>
+                {
+                    try { return System.Windows.Media.Fonts.SystemFontFamilies.Any(f => f.Source?.IndexOf(fn, StringComparison.OrdinalIgnoreCase) >= 0); }
+                    catch { return false; }
+                }) ?? "Meiryo";
+
+                void SafeSetFont(object target, string propName)
+                {
+                    if (target == null) return;
+                    try
+                    {
+                        var t = target.GetType();
+                        var pi = t.GetProperty(propName);
+                        if (pi != null && pi.CanWrite && pi.PropertyType == typeof(string))
+                            pi.SetValue(target, useFont);
+                    }
+                    catch { }
+                }
+
+                SafeSetFont(plots[i].Axes.Title.Label, "FontName");
+                SafeSetFont(plots[i].Axes.Bottom.Label, "FontName");
+                SafeSetFont(plots[i].Axes.Bottom, "TickLabelFontName");
+                SafeSetFont(plots[i].Axes.Left.Label, "FontName");
+                SafeSetFont(plots[i].Axes.Left, "TickLabelFontName");
+                SafeSetFont(plots[i].Legend, "FontName");
             }
 
             // apply a custom layout
@@ -3089,11 +3114,27 @@ namespace PileDesign.Output
                     plot.Axes.Bottom.Label.Text = xLabel ?? string.Empty;
                     plot.Axes.Left.Label.Text = yLabel ?? string.Empty;
 
+                    // フォントを設定するヘルパー（リフレクションで安全に適用）
+                    void SafeSetFont(object target, string propName)
+                    {
+                        if (target == null) return;
+                        try
+                        {
+                            var t = target.GetType();
+                            var pi = t.GetProperty(propName);
+                            if (pi != null && pi.CanWrite && pi.PropertyType == typeof(string))
+                                pi.SetValue(target, useFont);
+                        }
+                        catch { }
+                    }
+
                     // 主要なフォントプロパティに明示的指定（API 互換性を考慮して例外を無視）
-                    plot.Axes.Title.Label.FontName = useFont;
-                    plot.Axes.Bottom.Label.FontName = useFont;
-                    plot.Axes.Left.Label.FontName = useFont;
-                    plot.Legend.FontName = useFont;
+                    SafeSetFont(plot.Axes.Title.Label, "FontName");
+                    SafeSetFont(plot.Axes.Bottom.Label, "FontName");
+                    SafeSetFont(plot.Axes.Bottom, "TickLabelFontName");
+                    SafeSetFont(plot.Axes.Left.Label, "FontName");
+                    SafeSetFont(plot.Axes.Left, "TickLabelFontName");
+                    SafeSetFont(plot.Legend, "FontName");
                 }
                 catch { /* 安全に無視 */ }
 

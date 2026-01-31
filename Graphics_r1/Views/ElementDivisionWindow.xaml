@@ -113,13 +113,25 @@
 
         <TabControl Grid.Row="0" SelectionChanged="TabControl_SelectionChange">
             <TabItem Header="土層-杭セット">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding SoilLayerPileSetCount, StringFormat=土層-杭セット数: {0}}"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Grid.Row="0">
+
+                        <TextBlock Text="土層-杭セットNo." Width="100"/>
+                        <ComboBox x:Name="ComboBoxSoilPile"
+                        SelectedItem="{Binding SelectedSoilPileNo, UpdateSourceTrigger=LostFocus}"
+                        ItemsSource="{Binding SoilPileNumberOption, UpdateSourceTrigger=LostFocus}"
+                        HorizontalContentAlignment="Right" Width="50"
+                        SelectionChanged="ComboBoxSoilPile_SelectionChanged"/>
+                        <TextBlock Text="{Binding SoilLayerPileSetCount, StringFormat=（全土層-杭セット数: {0}）}"/>
                     </StackPanel>
-                
-                    <avalonDock:DockingManager x:Name="dockingManager" Background="White">
-                    <avalonDock:LayoutRoot>
+
+                    <avalonDock:DockingManager x:Name="dockingManager" Background="White" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                        <avalonDock:LayoutRoot>
                         <avalonDock:LayoutPanel Orientation="Horizontal">
                             <avalonDock:LayoutDocumentPaneGroup DockWidth="*" Orientation="Horizontal">
                                 <avalonDock:LayoutDocumentPane DockWidth="*" DockMinWidth="100">
@@ -136,15 +148,9 @@
                                                     <RowDefinition Height="auto"/>
                                                     <RowDefinition Height="*"/>
                                                 </Grid.RowDefinitions>
-                                                
-                                                <StackPanel Orientation="Horizontal" Grid.Row="0">
-                                                    <TextBlock Text="土層-杭セットNo." Width="175"/>
-                                                    <ComboBox x:Name="ComboBoxSoilPile"
-                                                    SelectedItem="{Binding SelectedSoilPileNo, UpdateSourceTrigger=LostFocus}"
-                                                    ItemsSource="{Binding SoilPileNumberOption, UpdateSourceTrigger=LostFocus}"
-                                                    HorizontalContentAlignment="Right" Width="100"
-                                                    SelectionChanged="ComboBoxSoilPile_SelectionChanged"/>
-                                                </StackPanel>
+
+                                                    <!--<StackPanel Orientation="Horizontal" Grid.Row="0">
+                                                    </StackPanel>-->
 
                                                 <StackPanel Orientation="Horizontal" Grid.Row="1">
                                                     <TextBlock Text="地盤No." Width="175"/>
@@ -200,16 +206,17 @@
                                                 <common:EnhancedDataGrid x:Name="DataGridZs" AutoGenerateColumns="False" HorizontalAlignment="Left"
                                                         CanUserAddRows="False" CanUserSortColumns="False"
                                                         ItemsSource="{Binding SelectedZDataItems, UpdateSourceTrigger=PropertyChanged}"
-                                                        SelectedItem="{Binding SelectedZDataItem, UpdateSourceTrigger=PropertyChanged}"
+                                                        SelectedItem="{Binding SelectedZDataItem, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                        SelectionUnit="FullRow"
+                                                        SelectionMode="Single"
                                                         CellEditEnding="DataGridZs_CellEditEnding"
                                                         BeginningEdit="DataGridZs_BeginningEdit"
+                                                        SelectionChanged="DataGridZs_SelectionChanged"
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
-                                                          ScrollViewer.HorizontalScrollBarVisibility="Visible"
-                                                       
+                                                        ScrollViewer.HorizontalScrollBarVisibility="Visible"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"
-                                                        CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                           Grid.Row="7">
+                                                        Grid.Row="7">
 
                                                     <DataGrid.AlternatingRowBackground>
                                                         <ImageBrush/>
@@ -353,7 +360,9 @@
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                          Grid.Row="2">
+                                                        Grid.Row="2"
+                                                        SelectedCellsChanged="Horizon_SelectedCellsChanged"
+                                                        CurrentCellChanged="Horizon_CurrentCellChanged">
 
                                                     <DataGrid.AlternatingRowBackground>
                                                         <ImageBrush/>
@@ -583,7 +592,7 @@
                         </avalonDock:LayoutPanel>
                     </avalonDock:LayoutRoot>
                 </avalonDock:DockingManager>
-                </StackPanel>
+                </Grid>
             </TabItem>
             <TabItem Header="土層-根入れセット" Visibility="{Binding IsDoatsuGoryokuBaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <avalonDock:DockingManager Background="White">
@@ -653,7 +662,9 @@
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridEmbedmentZs_RowEditEnding"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                          Grid.Row="2">   
+                                                        Grid.Row="2"
+                                                        SelectedCellsChanged="Embedment_SelectedCellsChanged"
+                                                        CurrentCellChanged="Embedment_CurrentCellChanged">
 
                                                     <DataGrid.AlternatingRowBackground>
                                                         <ImageBrush/>

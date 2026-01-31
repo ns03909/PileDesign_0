@@ -1013,114 +1013,7 @@ namespace PileDesign.ViewModels
 
         // 地盤杭自動分割メソッド
         [RelayCommand]
-        //private void AutoZs()
-        //{
-        //    _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
 
-        //    for (int i = SelectedZDataItems.Count - 2; i >= 0; i--)
-        //    {
-        //        double interval = SelectedZDataItems[i].Z - SelectedZDataItems[i + 1].Z;
-        //        if (interval > MaxPileSpacing)
-        //        {
-        //            int divider = (int)Math.Ceiling(interval / MaxPileSpacing);
-        //            double step = interval / divider;
-
-        //            for (int j = divider - 1; j > 0; j--)
-        //            {
-        //                PileZDataItem pileZDataItem = new()
-        //                {
-        //                    Z = SelectedZDataItems[i].Z - step * j,
-        //                    IsChangeable = true,
-        //                    //GroundLayerNo = PileGroundNo
-        //                    //GroundInput = InputModel.GroundsInput[PileGroundNo - 1],
-        //                    GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput
-        //                };
-        //                // SetSoilDisplacementを呼び出す
-        //                pileZDataItem.SetSoilDisplacement(/*InputModel.Instance*/);
-
-        //                SelectedZDataItems.Insert(i + 1, pileZDataItem);
-        //            }
-        //        }
-        //    }
-
-        //    if (SelectedZDataItems[0].Z - SelectedZDataItems[1].Z > FirstDistance)
-        //    {
-        //        PileZDataItem pileZDataItem = new()
-        //        {
-        //            Z = SelectedZDataItems[0].Z - FirstDistance,
-        //            IsChangeable = true,
-        //            //GroundLayerNo = PileGroundNo
-        //            //GroundInput = InputModel.GroundsInput[PileGroundNo - 1],
-        //            GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput
-        //        };
-        //        // SetSoilDisplacementを呼び出す
-        //        pileZDataItem.SetSoilDisplacement(/*InputModel.Instance*/);
-        //        SelectedZDataItems.Insert(1, pileZDataItem);
-        //    }
-
-        //    OnZDataItemsChanged();
-        //}
-        //private void AutoZs()
-        //{
-        //    // 1回だけ Undo スナップショットを作る
-        //    _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
-
-        //    // 元リストを軽量に取得
-        //    var original = SelectedZDataItems.ToList();
-
-        //    var merged = new System.Collections.Generic.List<PileZDataItem>();
-
-        //    for (int i = 0; i < original.Count - 1; i++)
-        //    {
-        //        // 現要素を追加
-        //        merged.Add(original[i]);
-
-        //        double interval = original[i].Z - original[i + 1].Z;
-        //        if (interval > MaxPileSpacing)
-        //        {
-        //            int divider = (int)Math.Ceiling(interval / MaxPileSpacing);
-        //            double step = interval / divider;
-
-        //            // 中間要素を計算して追加（順次 UI 更新を発生させない）
-        //            for (int j = divider - 1; j > 0; j--)
-        //            {
-        //                var newItem = new PileZDataItem
-        //                {
-        //                    Z = original[i].Z - step * j,
-        //                    IsChangeable = true,
-        //                    GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput
-        //                };
-        //                // 必要なら局所的に土の変位を計算（比較的軽ければここで）
-        //                newItem.SetSoilDisplacement();
-        //                merged.Add(newItem);
-        //            }
-        //        }
-        //    }
-
-        //    // 最後の要素を追加
-        //    if (original.Count > 0) merged.Add(original.Last());
-
-        //    // 先頭の FirstDistance チェック（既存ロジックを保持）
-        //    if (merged.Count >= 2 && merged[0].Z - merged[1].Z > FirstDistance)
-        //    {
-        //        var firstInsert = new PileZDataItem
-        //        {
-        //            Z = merged[0].Z - FirstDistance,
-        //            IsChangeable = true,
-        //            GroundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput
-        //        };
-        //        firstInsert.SetSoilDisplacement();
-        //        merged.Insert(1, firstInsert);
-        //    }
-
-        //    // バルク置換：OnZDataItemsChanged 内の SaveState 重複を抑止してから反映し、最後に一度だけ処理を実行
-        //    _suppressUndoSave = true;
-        //    SelectedZDataItems = new ObservableCollection<PileZDataItem>(merged.Select(item => item)); // 必要なら DeepCopy する
-        //    _suppressUndoSave = false;
-
-        //    // 1 回だけ後処理を実行
-        //    OnZDataItemsChanged();
-        //}
         private void AutoZs()
         {
             // 1回だけ Undo スナップショットを作る（コストの高い DeepCopy を一度に）
@@ -1177,6 +1070,22 @@ namespace PileDesign.ViewModels
             // Zの降順（上から下）に並べ替え
             merged = merged.OrderByDescending(item => item.Z).ToList();
 
+
+            //// 一括差替え（コレクションオブジェクトは置換せず、既存コレクションを更新）
+            //_suppressUndoSave = true;
+            //SelectedZDataItems.Clear();
+            //foreach (var item in merged)
+            //{
+            //    SelectedZDataItems.Add(item.DeepCopy());
+            //}
+            //_suppressUndoSave = false;
+
+            //// レイアウトや DataGrid の再計算が落ち着いてから後処理を実行する（描画は Render 優先で遅延）
+            //Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            //{
+            //    OnZDataItemsChanged();
+            //}), System.Windows.Threading.DispatcherPriority.Background);
+
             // バルク置換：OnZDataItemsChanged 内の SaveState 重複を抑止してから反映し、最後に一度だけ処理を実行
             _suppressUndoSave = true;
             SelectedZDataItems = new ObservableCollection<PileZDataItem>(merged.Select(item => item.DeepCopy()));
@@ -1201,59 +1110,6 @@ namespace PileDesign.ViewModels
         // 根入れ節点自動分割メソッド
         [RelayCommand]
         private void AutoEmbedmentZs()
-        //{
-        //    _undoManager.SaveState(EmbedmentZsCollection.Select(z => z.DeepCopy()).ToList());
-
-        //    // ZsCollectionの初期化
-        //    EmbedmentZsCollection.Clear();
-        //    var newZDataItemCollection = new ObservableCollection<EmbedmentZDataItem>(EmbedmentZsOriginalCollection.Select(
-        //        item => new EmbedmentZDataItem
-        //        {
-        //            Z = item.Z,
-        //            IsChangeable = item.IsChangeable,
-        //            //GroundLayerNo = item.GroundLayerNo,
-        //            GroundInput = item.GroundInput,
-        //            GroundDisp1 = item.GroundDisp1,
-        //            GroundDisp2 = item.GroundDisp2,
-        //            GroundDisp1L = item.GroundDisp1L,
-        //            GroundDisp2L = item.GroundDisp2L
-        //        }));
-        //    EmbedmentZsCollection = newZDataItemCollection;
-
-        //    for (int i = EmbedmentZsCollection.Count - 2; i >= 0; i--)
-        //    {
-        //        double interval = EmbedmentZsCollection[i].Z - EmbedmentZsCollection[i + 1].Z;
-        //        if (interval > MaxEmbedmentSpacing)
-        //        {
-        //            int divider = (int)Math.Ceiling(interval / MaxEmbedmentSpacing);
-        //            double step = interval / divider;
-
-        //            // Zが大きい順（浅い順）に追加されるように j を 1 から昇順で回す
-        //            for (int j = 1; j < divider; j++)
-        //            {
-        //                EmbedmentZDataItem embedmentZDataItem = new()
-        //                {
-        //                    Z = EmbedmentZsCollection[i].Z - step * j,
-        //                    IsChangeable = true,
-        //                    //GroundLayerNo = SoilEmbedment.GroundNo
-        //                    GroundInput = InputModel.GroundsInput[SoilEmbedment.GroundNo - 1],
-        //                };
-
-        //                // SetSoilDisplacementを呼び出す
-        //                embedmentZDataItem.SetSoilDisplacement(/*InputModel.Instance*/);
-
-        //                EmbedmentZsCollection.Insert(i + 1, embedmentZDataItem);
-
-        //            }
-        //        }
-        //    }
-        //    OnPropertyChanged(nameof(SelectedZDataItems));
-        //    AutoNumberingDataGrid(ElementDivisionWindowInstance.DataGridEmbedmentZs);
-
-        //    UpdateSoilEmbedmentProperties();
-        //    SetDoatsuGoryokuBane();
-        //    DrawSoilEmbedment();
-        //}
         {
             _undoManager.SaveState(EmbedmentZsCollection.Select(z => z.DeepCopy()).ToList());
 
@@ -1364,11 +1220,20 @@ namespace PileDesign.ViewModels
             var sortedItems = SelectedZDataItems.OrderByDescending(item => item.Z).ToList();
             if (!SelectedZDataItems.Select(x => x.Z).SequenceEqual(sortedItems.Select(x => x.Z)))
             {
+                // 選択状態を保持（PileZDataItemとして保持）
+                var currentSelectedItem = SelectedZDataItem as PileZDataItem;
+
                 // 並び替えが必要な場合のみコレクションを更新
                 SelectedZDataItems.Clear();
                 foreach (var item in sortedItems)
                 {
                     SelectedZDataItems.Add(item);
+                }
+
+                // 選択状態を復元
+                if (currentSelectedItem != null && SelectedZDataItems.Contains(currentSelectedItem))
+                {
+                    SelectedZDataItem = currentSelectedItem;
                 }
             }
 
@@ -1389,11 +1254,11 @@ namespace PileDesign.ViewModels
             SetHorizontalSoilReaction();
             DrawShapes();
 
-            if (ElementDivisionWindowInstance != null)
-            {
-                ElementDivisionWindowInstance.DataGridZs.ItemsSource = SelectedZDataItems;
-                ElementDivisionWindowInstance.horizon.ItemsSource = SelectedHorizontalSoilReactions;
-            }
+            // ItemsSourceはXAMLのバインディングで設定されているため、直接設定しない
+            // （直接設定するとバインディングが解除されてしまう）
+            // 代わりに、コレクションの変更通知を発行する
+            OnPropertyChanged(nameof(SelectedZDataItems));
+            OnPropertyChanged(nameof(SelectedHorizontalSoilReactions));
 
             OnPropertyChanged(nameof(PileGroundNo));
             OnPropertyChanged(nameof(PileBodyNo));
@@ -1482,7 +1347,6 @@ namespace PileDesign.ViewModels
             DrawSoilEmbedment();
         }
 
-
         public void OnDataGridZsCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (isEditingCancelled)
@@ -1504,9 +1368,11 @@ namespace PileDesign.ViewModels
                             {
                                 if (double.TryParse(textBox.Text, out double newValue))
                                 {
-                                    var dataGrid = sender as DataGrid;
-                                    var items = dataGrid.ItemsSource as IList<ZDataItem>;
-                                    int index = items.IndexOf(editedElement);
+                                    // SelectedZDataItemsを直接使用（ItemsSourceのキャストは型の不一致でnullになる可能性がある）
+                                    var items = SelectedZDataItems;
+                                    if (items == null) return;
+                                    int index = items.IndexOf(editedElement as PileZDataItem);
+                                    if (index < 0) return; // アイテムが見つからない場合は終了
 
                                     if (index > 0 && newValue >= items[index - 1].Z)
                                     {
@@ -1723,6 +1589,13 @@ namespace PileDesign.ViewModels
 
             SelectedZDataItems = new ObservableCollection<PileZDataItem>
                     (ZsCollection[SelectedSoilPileNo - 1].Select(item => item.DeepCopy()));
+
+            // 初期選択を設定
+            if (SelectedZDataItems.Count > 0)
+            {
+                SelectedZDataItem = SelectedZDataItems[0];
+            }
+
             OnZDataItemsChanged();
         }
 
@@ -1777,7 +1650,6 @@ namespace PileDesign.ViewModels
 
         public void DrawShapes()
         {
-
             GroundInput groundInput = SoilPiles[SelectedSoilPileNo - 1].GroundInput;
             double pileTopAltitude = Z;
             if (SoilPiles == null) return;
