@@ -216,6 +216,7 @@
                                                         ScrollViewer.HorizontalScrollBarVisibility="Visible"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"
+                                                        CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                         Grid.Row="7">
 
                                                     <DataGrid.AlternatingRowBackground>
@@ -656,15 +657,15 @@
                                                         CanUserAddRows="False" CanUserSortColumns="False"
                                                         ItemsSource="{Binding EmbedmentZsCollection, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectedItem="{Binding SelectedEmbedmentZ, UpdateSourceTrigger=PropertyChanged}"
+                                                        SelectionUnit="FullRow"
+                                                        SelectionMode="Single"
                                                         CellEditEnding="DataGridZs_CellEditEnding"
                                                         BeginningEdit="DataGridZs_BeginningEdit"
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible" 
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridEmbedmentZs_RowEditEnding"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                                        Grid.Row="2"
-                                                        SelectedCellsChanged="Embedment_SelectedCellsChanged"
-                                                        CurrentCellChanged="Embedment_CurrentCellChanged">
+                                                        Grid.Row="2">
 
                                                     <DataGrid.AlternatingRowBackground>
                                                         <ImageBrush/>
@@ -759,7 +760,6 @@
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
-
                                                     </DataGrid.Columns>
                                                 </common:EnhancedDataGrid>
                                             </Grid>
@@ -796,7 +796,9 @@
                                                 <common:EnhancedDataGrid x:Name="DoatsuGoryokuBaneDataGrid" AutoGenerateColumns="False" HorizontalAlignment="Left"
                                                         CanUserAddRows="False" CanUserSortColumns="False"
                                                         ItemsSource="{Binding DoatsuGoryokuBane.Items, UpdateSourceTrigger=PropertyChanged}"
-                                                          SelectedItem="{Binding SelectedDoatsuGoryokuBaneItem, UpdateSourceTrigger=PropertyChanged}"
+                                                        SelectedItem="{Binding SelectedDoatsuGoryokuBaneItem, UpdateSourceTrigger=PropertyChanged}"
+                                                        SelectionUnit="FullRow"
+                                                        SelectionMode="Single" 
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible" 
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"

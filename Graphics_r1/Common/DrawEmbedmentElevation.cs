@@ -32,7 +32,6 @@ namespace PileDesign.Common
             double canvasWidth = canvas.ActualWidth;
             double canvasHeight = canvas.ActualHeight;
 
-
             // 計算部分を分離
             var (zTop0, embedmentHeight, maxValue, minValue, midValue, ratio, topMargin) =
                 CalculateEmbedmentParameters(canvas, doatsuGoryokuBane, direction);
@@ -40,7 +39,8 @@ namespace PileDesign.Common
             // 地盤層の描画
             if (groundInput != null)
             {
-                DrawSoilLayers(canvas, groundInput, embedmentHeight, ratio, topMargin);
+                //DrawSoilLayers(canvas, groundInput, embedmentHeight, ratio, topMargin);
+                DrawSoilLayers(canvas, groundInput, zTop0, ratio, topMargin);
             }
 
             // 各セグメントの描画
@@ -48,71 +48,6 @@ namespace PileDesign.Common
             {
                 DrawSegment(canvas, segment, direction, midValue, ratio, topMargin, zTop0, canvasWidth);
             }
-
-            //if (doatsuGoryokuBane.Items.Count == 0) return;
-
-            //double zTop0 = doatsuGoryokuBane.Items[0].ZTop;
-            //double embedmentHeight = doatsuGoryokuBane.Items[0].ZTop - doatsuGoryokuBane.Items[^1].ZBtm;
-
-            //double maxValue = double.MinValue;
-            //double minValue = double.MaxValue;
-            //foreach (var doatsuGoryokuBaneItem in doatsuGoryokuBane.Items)
-            //{
-            //    if (direction == "X")
-            //    {
-            //        maxValue = Math.Max(maxValue, Math.Max(doatsuGoryokuBaneItem.Y1, doatsuGoryokuBaneItem.Y2));
-            //        minValue = Math.Min(minValue, Math.Min(doatsuGoryokuBaneItem.Y1, doatsuGoryokuBaneItem.Y2));
-            //    }
-            //    else if (direction == "Y")
-            //    {
-            //        maxValue = Math.Max(maxValue, Math.Max(doatsuGoryokuBaneItem.X1, doatsuGoryokuBaneItem.X2));
-            //        minValue = Math.Min(minValue, Math.Min(doatsuGoryokuBaneItem.X1, doatsuGoryokuBaneItem.X2));
-            //    }
-            //}
-            //double midValue = (maxValue + minValue) * 0.5;
-
-            //double embedmentWidth = maxValue - minValue;
-            //double ratio = Math.Min(canvasHeight / (embedmentHeight + 8.0), canvasWidth / (embedmentWidth + 20));
-            //double topMargin = 3 * ratio;
-
-
-            //if (groundInput != null)
-            //{
-            //    DrawSoilLayers(canvas, groundInput, embedmentHeight, ratio, topMargin);
-            //}
-
-
-            //foreach (var segment in doatsuGoryokuBane.Items)
-            //{
-            //    //if (direction == "X")
-            //    //{
-            //    //}
-            //    //else // if (direction == "Y")
-            //    //{
-
-            //    //}
-            //    double segmentLength = segment.ZTop - segment.ZBtm;
-            //    double segmentDepth = segment.ZBtm;
-
-            //    double width = direction == "X" ? segment.DY : direction == "Y" ? segment.DX : 0;
-            //    double left = direction == "X" ? Math.Min(segment.Y1, segment.Y2) :
-            //        direction == "Y" ? Math.Min(segment.X1, segment.X2) : 0;
-            //    double center = direction == "X" ? (segment.Y1 + segment.Y2) * 0.5 :
-            //        direction == "Y" ? (segment.X1 + segment.X2) * 0.5 : 0;
-
-            //    var rectangle = new Rectangle
-            //    {
-            //        Width = width * ratio,
-            //        Height = segmentLength * ratio,
-            //        Stroke = Brushes.SkyBlue,
-            //        StrokeThickness = 1,
-            //        Fill = Brushes.White,
-            //        //Fill = null,
-            //    };
-            //    Canvas.SetLeft(rectangle, canvasWidth * 0.5 + (left - midValue) * ratio);
-            //    Canvas.SetTop(rectangle, (-segmentLength - segmentDepth + zTop0) * ratio + topMargin);
-            //    canvas.Children.Add(rectangle);
-            //}
 
             // 選択されたZラインの描画
             if (selectedZ != null)

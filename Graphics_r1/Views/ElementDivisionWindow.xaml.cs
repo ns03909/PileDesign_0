@@ -281,16 +281,37 @@ namespace PileDesign.Views
         {
             if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
             {
+                // SelectedCells がある場合は先頭セルの Item を使う
                 if (dg.SelectedCells != null && dg.SelectedCells.Count > 0)
                 {
-                    var item = dg.SelectedCells[0].Item as EmbedmentZDataItem;
-                    if (item != null)
+                    var cellInfo = dg.SelectedCells[0]; // DataGridCellInfo は値型（struct）
+                    if (cellInfo.Item is EmbedmentZDataItem item)
                     {
-                        vm.SelectedEmbedmentZ = item;
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            const double eps = 1e-5;
+                            var matched = vm.EmbedmentZsCollection?
+                                .FirstOrDefault(z => Math.Abs(z.Z - item.Z) <= eps);
+                            vm.SelectedEmbedmentZ = matched ?? item;
+                        }), System.Windows.Threading.DispatcherPriority.Background);
+
+                        return;
                     }
-                    else if (dg.SelectedIndex >= 0 && dg.SelectedIndex < dg.Items.Count && dg.Items[dg.SelectedIndex] is EmbedmentZDataItem byIndex)
+                }
+
+                // フォールバック: SelectedIndex から取り出す
+                if (dg.SelectedIndex >= 0 && dg.SelectedIndex < dg.Items.Count)
+                {
+                    var obj = dg.Items[dg.SelectedIndex];
+                    if (obj is EmbedmentZDataItem byIndex)
                     {
-                        vm.SelectedEmbedmentZ = byIndex;
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            const double eps = 1e-5;
+                            var matched = vm.EmbedmentZsCollection?
+                                .FirstOrDefault(z => Math.Abs(z.Z - byIndex.Z) <= eps);
+                            vm.SelectedEmbedmentZ = matched ?? byIndex;
+                        }), System.Windows.Threading.DispatcherPriority.Background);
                     }
                 }
             }
@@ -300,9 +321,18 @@ namespace PileDesign.Views
         {
             if (DataContext is ElementDivisionViewModel vm && sender is DataGrid dg)
             {
-                if (dg.CurrentCell != null && dg.CurrentCell.Item is EmbedmentZDataItem item)
+                // CurrentCell は DataGridCellInfo（struct）なので ?. は使わない
+                var cell = dg.CurrentCell;
+                var itemObj = cell.Item;
+                if (itemObj is EmbedmentZDataItem item)
                 {
-                    vm.SelectedEmbedmentZ = item;
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        const double eps = 1e-5;
+                        var matched = vm.EmbedmentZsCollection?
+                            .FirstOrDefault(z => Math.Abs(z.Z - item.Z) <= eps);
+                        vm.SelectedEmbedmentZ = matched ?? item;
+                    }), System.Windows.Threading.DispatcherPriority.Background);
                 }
             }
         }

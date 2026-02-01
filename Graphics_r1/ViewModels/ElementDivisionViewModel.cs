@@ -172,10 +172,34 @@ namespace PileDesign.ViewModels
         public EmbedmentZDataItem SelectedEmbedmentZ
         {
             get => _selectedEmbedmentZ;
+            //set
+            //{
+            //    SetProperty(ref _selectedEmbedmentZ, value);
+            //    DrawSoilEmbedment();
+            //}
             set
             {
-                SetProperty(ref _selectedEmbedmentZ, value);
-                DrawSoilEmbedment();
+                // SetProperty が true を返した場合のみ処理（値が変わったとき）
+                if (SetProperty(ref _selectedEmbedmentZ, value))
+                {
+                    // Embedment Canvas を再描画
+                    DrawSoilEmbedment();
+
+                    // DoatsuGoryokuBane の該当層を選択（ZTop または ZBtm が一致する層）
+                    if (DoatsuGoryokuBane?.Items != null && _selectedEmbedmentZ != null)
+                    {
+                        double z = _selectedEmbedmentZ.Z;
+                        // クラス先頭にある epsilon を使う（許容誤差）
+                        var matched = DoatsuGoryokuBane.Items
+                            .FirstOrDefault(b => Math.Abs(b.ZTop - z) <= epsilon || Math.Abs(b.ZBtm - z) <= epsilon);
+
+                        SelectedDoatsuGoryokuBaneItem = matched;
+                    }
+                    else
+                    {
+                        SelectedDoatsuGoryokuBaneItem = null;
+                    }
+                }
             }
         }
 
