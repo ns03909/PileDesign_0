@@ -338,7 +338,7 @@ namespace PileDesign.Output
             { }
             if (mainWindowViewModel.IncludeHorizontal_NMINT) // NMINT
             { }
-            if (mainWindowViewModel.IncludepileLocationMap) // 杭配置マップ
+            if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
             {
                 double layoutW = 150; double layoutH = 200;
                 AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileBasicMark);

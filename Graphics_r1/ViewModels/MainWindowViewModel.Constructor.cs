@@ -78,11 +78,11 @@ namespace PileDesign.ViewModels
         [ObservableProperty] // レベル1地震時軸力
         public bool _isElastic;
 
-        private ObservableCollection<CTreeViewData> _cTreeViewDatas = [];
-        public ObservableCollection<CTreeViewData> CTreeViewDatas
+        private ObservableCollection<CTreeViewData> _cTreeViewData = [];
+        public ObservableCollection<CTreeViewData> CTreeViewData
         {
-            get => _cTreeViewDatas;
-            set => SetProperty(ref _cTreeViewDatas, value);
+            get => _cTreeViewData;
+            set => SetProperty(ref _cTreeViewData, value);
         }
 
         public CanvasThreeDView CanvasThreeDView { get; set; }
@@ -209,10 +209,10 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _isForcedDisplacementVisible, value))
                 {
                     // 変位表示ONで倍率が未設定(0.0)なら、見やすい初期値にブートストラップ
-                    if (value && DispDiagramMultiplier == 0.0)
+                    if (value && DisplacementDiagramMultiplier == 0.0)
                     {
-                        IsDispDiagramMultiplierApplicable = true;
-                        DispDiagramMultiplier = 10.0;
+                        IsDisplacementDiagramMultiplierApplicable = true;
+                        DisplacementDiagramMultiplier = 10.0;
                     }
 
                     UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
@@ -611,13 +611,13 @@ namespace PileDesign.ViewModels
         }
 
         // 値小数点位置
-        private int _dicimalPlaces = 1;
+        private int _decimalPlaces = 1;
         public int DecimalPlaces
         {
-            get => _dicimalPlaces;
+            get => _decimalPlaces;
             set
             {
-                if (SetProperty(ref _dicimalPlaces, value))
+                if (SetProperty(ref _decimalPlaces, value))
                 {
                     UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新
                 }
@@ -640,28 +640,28 @@ namespace PileDesign.ViewModels
         }
 
         // 変位結果倍率適用
-        private bool _isDispDiagramMultiplierApplicable = true; // trueにしっぱなし
-        public bool IsDispDiagramMultiplierApplicable
+        private bool _isDisplacementDiagramMultiplierApplicable = true; // trueにしっぱなし
+        public bool IsDisplacementDiagramMultiplierApplicable
         {
-            get => _isDispDiagramMultiplierApplicable;
+            get => _isDisplacementDiagramMultiplierApplicable;
             set
             {
-                if (SetProperty(ref _isDispDiagramMultiplierApplicable, value))
+                if (SetProperty(ref _isDisplacementDiagramMultiplierApplicable, value))
                 {
-                    if (!value) DispDiagramMultiplier = 0.0;
+                    if (!value) DisplacementDiagramMultiplier = 0.0;
                     UpdateCanvas3DAction?.Invoke();
                 }
             }
         }
 
         // 変位結果表示倍率
-        private double _dispDiagramMultiplier = 0.0;
-        public double DispDiagramMultiplier
+        private double _displacementDiagramMultiplier = 0.0;
+        public double DisplacementDiagramMultiplier
         {
-            get => _dispDiagramMultiplier;
+            get => _displacementDiagramMultiplier;
             set
             {
-                if (SetProperty(ref _dispDiagramMultiplier, value))
+                if (SetProperty(ref _displacementDiagramMultiplier, value))
                 {
                     UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新
                 }
@@ -671,7 +671,7 @@ namespace PileDesign.ViewModels
 
         // テキスト位置調整　
         private double _textPositionAdjuster = 0.0;
-        public double TextPosiitonAdjuster
+        public double TextPositionAdjuster
         {
             get => _textPositionAdjuster;
             set
@@ -699,7 +699,7 @@ namespace PileDesign.ViewModels
         public Point3D GravityCenterVLadd => CurrentInputModel.GetVLaddGravityCenter();
 
         // VL+VLadd重心
-        public Point3D GravityCenterVLplusVLadd => CurrentInputModel.GetVLplusVLaddGravityCenter();
+        public Point3D GravityCenterVLPlusVLadd => CurrentInputModel.GetVLplusVLaddGravityCenter();
 
         private double GetSumVL0()
         {
@@ -786,7 +786,7 @@ namespace PileDesign.ViewModels
             if (items == null || items.Count == 0) return 0.0;
 
             // 回転中心（必要に応じて 0,0 に変更可）
-            var pivot = GravityCenterVLplusVLadd;
+            var pivot = GravityCenterVLPlusVLadd;
 
             double sum = 0.0;
             foreach (var item in items)
@@ -1659,11 +1659,11 @@ namespace PileDesign.ViewModels
         }
 
         // マージ対象限界距離
-        private double _editDistanceThreashold = 0.005;
-        public double EditDistanceThreashold
+        private double _editDistanceThreshold = 0.005;
+        public double EditDistanceThreshold
         {
-            get => _editDistanceThreashold;
-            set => SetProperty(ref _editDistanceThreashold, value);
+            get => _editDistanceThreshold;
+            set => SetProperty(ref _editDistanceThreshold, value);
         }
 
 
@@ -1805,7 +1805,7 @@ namespace PileDesign.ViewModels
         }
 
         // 群杭沈下 //
-        public double GroupPileSettlementXmin
+        public double GroupPileSettlementXMin
         {
             get
             {
@@ -1817,7 +1817,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public double GroupPileSettlementXmax
+        public double GroupPileSettlementXMax
         {
             get
             {
@@ -1829,7 +1829,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public double GroupPileSettlementYmin
+        public double GroupPileSettlementYMin
         {
             get
             {
@@ -1841,7 +1841,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public double GroupPileSettlementYmax
+        public double GroupPileSettlementYMax
         {
             get
             {
@@ -1930,7 +1930,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeHorizontal_Shear = true;
         [ObservableProperty] private bool includeHorizontal_NMINT = true;
 
-        [ObservableProperty] private bool includepileLocationMap = false;
+        [ObservableProperty] private bool includePileLocationMap = false;
         [ObservableProperty] private bool includePileAxialLoadMap = false;
         [ObservableProperty] private bool includeIsFrontMap = false;
         [ObservableProperty] private bool includePileHeadMomentMap = false;
@@ -2041,9 +2041,9 @@ namespace PileDesign.ViewModels
                 nameof(OverturningMoment2_2X), nameof(OverturningMoment2_2Y),
                 nameof(OverturningMoment2_3X), nameof(OverturningMoment2_3Y),
                 nameof(OverturningMoment2_4X), nameof(OverturningMoment2_4Y),
-                nameof(GravityCenterVL0), nameof(GravityCenterVLadd), nameof(GravityCenterVLplusVLadd),
-                nameof(GroupPileSettlementXmin), nameof(GroupPileSettlementXmax),
-                nameof(GroupPileSettlementYmin), nameof(GroupPileSettlementYmax)
+                nameof(GravityCenterVL0), nameof(GravityCenterVLadd), nameof(GravityCenterVLPlusVLadd),
+                nameof(GroupPileSettlementXMin), nameof(GroupPileSettlementXMax),
+                nameof(GroupPileSettlementYMin), nameof(GroupPileSettlementYMax)
             ];
 
             foreach (var propertyName in propertiesToNotify)

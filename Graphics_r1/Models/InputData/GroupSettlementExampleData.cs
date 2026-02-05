@@ -45,6 +45,12 @@ namespace PileDesign.Models.InputData
         public List<SettlementSoilLayerDto> SettlementSoilLayers { get; set; } = [];
 
         /// <summary>
+        /// 杭体リスト
+        /// </summary>
+        [JsonPropertyName("pileBodies")]
+        public List<PileBodyDto>? PileBodies { get; set; }
+
+        /// <summary>
         /// 杭位置リスト（X,Y座標のみ）
         /// </summary>
         [JsonPropertyName("pileLayoutPositions")]

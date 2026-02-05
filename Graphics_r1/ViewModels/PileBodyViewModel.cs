@@ -208,8 +208,8 @@ namespace PileDesign.ViewModels
         public TextBox TextBoxPileBodyRef { get; set; }
 
         public TextBox TextBoxPileToeDia { get; set; }
-        public TextBox TextBoxPrecastPileTipNonPermability { get; set; }
-        public TextBox TextBoxSteelPileTipNonPermability { get; set; }
+        public TextBox TextBoxPrecastPileTipNonPermeability { get; set; }
+        public TextBox TextBoxSteelPileTipNonPermeability { get; set; }
         public TextBox TextBoxSettleAlpha { get; set; }
         public TextBox TextBoxSettleN { get; set; }
 
@@ -258,8 +258,8 @@ namespace PileDesign.ViewModels
             ComboBoxPileBodyNo = new();
             TextBoxPileBodyRef = new();
             TextBoxPileToeDia = new();
-            TextBoxPrecastPileTipNonPermability = new();
-            TextBoxSteelPileTipNonPermability = new();
+            TextBoxPrecastPileTipNonPermeability = new();
+            TextBoxSteelPileTipNonPermeability = new();
             TextBoxSettleAlpha = new();
             TextBoxSettleN = new();
 
@@ -517,8 +517,8 @@ namespace PileDesign.ViewModels
                         UpdateTemporarySoilPile();
                     }
                     break;
-                case nameof(TextBoxPrecastPileTipNonPermability):
-                case nameof(TextBoxSteelPileTipNonPermability):
+                case nameof(TextBoxPrecastPileTipNonPermeability):
+                case nameof(TextBoxSteelPileTipNonPermeability):
                     if (double.TryParse(textBox.Text, out double tipNonPermability))
                     {
                         pileBody.TipNonPermability = tipNonPermability;

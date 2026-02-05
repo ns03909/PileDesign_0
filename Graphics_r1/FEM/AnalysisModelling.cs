@@ -1,7 +1,9 @@
 ﻿using PileDesign.Models.InputData;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace PileDesign.FEM
 {
@@ -21,6 +23,14 @@ namespace PileDesign.FEM
         public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; } = []; // 水平地盤ばね
         public List<RotationalSpring> RotationalSprings { get; set; } = [];        // 杭頭回転ばね（RunAsyncでカーブ/剛性をセット）
 
+        // 最適化用: Material/Section キャッシュ
+        private readonly ConcurrentDictionary<double, Material> _materialCache = new();
+        private readonly ConcurrentDictionary<(double, double, double, double, double), Section> _sectionCache = new();
+
+        // 最適化用: 共通Boundaryオブジェクト（毎回newしない）
+        private static readonly Boundary SoilNodeBoundary = new(false, false, true, true, true, true);
+        private static readonly Boundary PileTipBoundary = new(false, false, true, false, false, false);
+
         // コンストラクタ
         public AnalysisModelling(InputModel inputModel)
         {
@@ -30,9 +40,42 @@ namespace PileDesign.FEM
 
         private void Initialize()
         {
+            PreallocateCollections();
             AddActionPointNode();
             AddDoatsuGoryokuBane();
-            AddPile();
+            AddPileOptimized();
+        }
+
+        // 最適化: リストの事前割り当て
+        private void PreallocateCollections()
+        {
+            if (InputModel.PileLayoutItems == null) return;
+
+            int pileCount = InputModel.PileLayoutItems.Count;
+            int avgNodesPerPile = 0;
+
+            // 各杭の節点数を計算
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                int soilPileAltNo = pile.SoilPileAltNo;
+                if (InputModel.ElementDivision.SoilPiles != null &&
+                    soilPileAltNo - 1 >= 0 &&
+                    soilPileAltNo - 1 < InputModel.ElementDivision.SoilPiles.Count)
+                {
+                    avgNodesPerPile = Math.Max(avgNodesPerPile, InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1].ZDataItems.Count);
+                }
+            }
+
+            // 杭ごと: capNode(1) + pileNodes(N) + soilNodes(N) = 1 + 2*N
+            // 合計: pileCount * (1 + 2*avgNodesPerPile) + ActionPoint(1) + DGB nodes
+            int estimatedNodes = pileCount * (1 + 2 * avgNodesPerPile) + 10;
+            int estimatedBeams = pileCount * (avgNodesPerPile - 1) + 10;
+            int estimatedSprings = pileCount * avgNodesPerPile + 10;
+
+            Nodes = new List<Node>(estimatedNodes);
+            Beams = new List<Beam>(estimatedBeams);
+            HorizontalSoilSprings = new List<HorizontalSoilSpring>(estimatedSprings);
+            RotationalSprings = new List<RotationalSpring>(pileCount + 5);
         }
 
         // 代表点の追加
@@ -132,25 +175,236 @@ namespace PileDesign.FEM
             }
         }
 
-        // 杭要素の追加（接続ノードを明示引数に）
-        private void SetPileElement(SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
+        // 杭要素の追加（接続ノードを明示引数に）- キャッシュ対応版
+        private Beam CreatePileElement(SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
         {
             double youngsModulus = soilPile.PileBodySegments[segIndex].PileSection.ConcreteE * 1000.0; // kN/m2
             double shearModulus = Utils.GetShearModulus(youngsModulus, 0.2); // kN/m2
             double area = soilPile.PileBodySegments[segIndex].PileSection.EA / youngsModulus; // m2
             double inertia = soilPile.PileBodySegments[segIndex].PileSection.EI / youngsModulus; // m4
             double torsionalInertia = soilPile.PileBodySegments[segIndex].PileSection.GJ / shearModulus; // m4
-            Material material = new(youngsModulus, 0.2);
-            Section section = new(material, area, area, area, torsionalInertia, inertia, inertia);
 
-            Beams.Add(new("beam", section, upperNode, lowerNode, 1.0, 1.0));
-            Beams[^1].HorizontalSoilReactionItem = soilPile.HorizontalSoilReactions[segIndex];
+            // Material キャッシュ
+            var material = _materialCache.GetOrAdd(youngsModulus, y => new Material(y, 0.2));
 
-            // 重要: M-φ は RunAsync で N に応じてセットするため、ここでは設定しない
-            // Beams[^1].PileBodyNo/SegmentIndex のみ付与（RunAsyncがSectionへ辿るため）
+            // Section キャッシュ（丸め誤差を考慮して5桁で丸める）
+            var sectionKey = (
+                Math.Round(area, 5),
+                Math.Round(torsionalInertia, 5),
+                Math.Round(inertia, 5),
+                Math.Round(youngsModulus, 0),
+                Math.Round(shearModulus, 0)
+            );
+            var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, area, area, torsionalInertia, inertia, inertia));
+
+            var beam = new Beam("beam", section, upperNode, lowerNode, 1.0, 1.0)
+            {
+                HorizontalSoilReactionItem = soilPile.HorizontalSoilReactions[segIndex]
+            };
+
+            return beam;
         }
 
-        // 杭の追加
+        // 旧メソッド（互換性のため残す）
+        private void SetPileElement(SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
+        {
+            var beam = CreatePileElement(soilPile, segIndex, upperNode, lowerNode);
+            Beams.Add(beam);
+        }
+
+        // 杭の追加（最適化版：並列処理対応）
+        private void AddPileOptimized()
+        {
+            if (InputModel.PileLayoutItems == null) return;
+
+            // 重要: 並列処理を始める前に PileLayoutItems の No（および PileNo）をリスト番号で上書きする
+            // これにより ProcessSinglePile 内で使用される pile.No が 0 で固定される問題を解消します。
+            for (int i = 0; i < InputModel.PileLayoutItems.Count; i++)
+            {
+                var item = InputModel.PileLayoutItems[i];
+                item.No = i + 1;       // Node.No（表示／識別に使われる）
+                item.PileNo = i + 1;   // PileLayoutDataItem 側の PileNo（必要なら同期）
+            }
+            var pileList = InputModel.PileLayoutItems.ToList();
+            int pileCount = pileList.Count;
+
+            // 並列処理用: 各杭の処理結果を格納
+            var pileResults = new PileProcessingResult[pileCount];
+
+            // 並列で各杭を処理（杭間に依存関係がないため安全）
+            Parallel.For(0, pileCount, i =>
+            {
+                pileResults[i] = ProcessSinglePile(pileList[i]);
+            });
+
+            // メインスレッドで結果をマージ
+            MergePileResults(pileResults);
+
+            // RigidBody の関係設定
+            foreach (var rb in RigidBodies)
+            {
+                rb.SetSlaveNodeRelations();
+            }
+
+#if DEBUG
+            DumpRigidBodyAndNodeRelationsForDebug();
+#endif
+        }
+
+        // 単一杭の処理結果を格納する構造体
+        private class PileProcessingResult
+        {
+            public PileLayoutDataItem Pile { get; set; }
+            public Node CapNode { get; set; }
+            public List<Node> PileNodes { get; } = [];
+            public List<Node> SoilNodes { get; } = [];
+            public List<Beam> Beams { get; } = [];
+            public List<HorizontalSoilSpring> HorizontalSoilSprings { get; } = [];
+            public RotationalSpring RotationalSpring { get; set; }
+        }
+
+        // 単一杭を処理（スレッドセーフ）
+        private PileProcessingResult ProcessSinglePile(PileLayoutDataItem pile)
+        {
+            var result = new PileProcessingResult { Pile = pile };
+
+            double x = pile.X;
+            double y = pile.Y;
+            int soilPileAltNo = pile.SoilPileAltNo;
+            double initialRotK = 10e12;
+
+            if (InputModel.ElementDivision.SoilPiles == null ||
+                soilPileAltNo - 1 < 0 ||
+                soilPileAltNo - 1 >= InputModel.ElementDivision.SoilPiles.Count)
+            {
+                throw new InvalidOperationException("対応するSoilPileが存在しません。");
+            }
+
+            SoilPile soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
+
+            // Cap Node
+            double z0 = soilPile.ZDataItems[0].Z;
+            var capNode = new Node();
+            capNode.SetNodeInfo($"CapNode-{pile.No}", x, y, z0);
+            result.CapNode = capNode;
+
+            Node prevPileNode = null;
+            int nodeCount = soilPile.ZDataItems.Count;
+
+            for (int i = 0; i < nodeCount; i++)
+            {
+                double z = soilPile.ZDataItems[i].Z;
+
+                // Pile Node
+                var pileNode = new Node();
+                pileNode.SetNodeInfo($"PileNode-{pile.No}-{i}", x, y, z);
+                result.PileNodes.Add(pileNode);
+
+                if (i == 0)
+                {
+                    // 杭頭回転ばね
+                    var rxy = new RotationalSpring($"RθXY-{pile.No}", capNode, pileNode, initialRotK)
+                    {
+                        PileBodyNo = pile.PileBodyNo,
+                        TieUx = true,
+                        TieUy = true,
+                        TieUz = true,
+                        TieRz = true,
+                        Kbig = 10e12
+                    };
+                    result.RotationalSpring = rxy;
+                    prevPileNode = pileNode;
+                }
+                else if (i != nodeCount - 1)
+                {
+                    // 杭中間
+                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode, pileNode);
+                    beam.PileBodyNo = soilPile.PileBodyNo;
+                    beam.SegmentIndex = i - 1;
+                    if (i == 1) beam.SetPileTopFlag(true);
+                    result.Beams.Add(beam);
+                    prevPileNode = pileNode;
+                }
+                else
+                {
+                    // 先端
+                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode, pileNode);
+                    beam.PileBodyNo = soilPile.PileBodyNo;
+                    beam.SegmentIndex = i - 1;
+                    result.Beams.Add(beam);
+                    pileNode.SetBoundary(PileTipBoundary);
+                }
+
+                // Soil Node
+                var soilNode = new Node();
+                soilNode.SetNodeInfo($"SoilNode-{pile.No}-{i}", x, y, z);
+                soilNode.SetIsForcedDisped(true);
+                soilNode.SetBoundary(SoilNodeBoundary);
+                result.SoilNodes.Add(soilNode);
+
+                // 水平土ばね
+                var hspring = new HorizontalSoilSpring($"HorizontalSoilSpring-{pile.No}-{i}", pileNode, soilNode);
+                result.HorizontalSoilSprings.Add(hspring);
+            }
+
+            return result;
+        }
+
+        // 処理結果をメインコレクションにマージ
+        private void MergePileResults(PileProcessingResult[] results)
+        {
+            foreach (var result in results)
+            {
+                var pile = result.Pile;
+
+                // クリア
+                pile.PileNodes.Clear();
+                pile.SoilNodes.Clear();
+                pile.Beams.Clear();
+                pile.HorizontalSoilSprings.Clear();
+
+                // Cap Node
+                Nodes.Add(result.CapNode);
+                RigidBodies[0].AddSlaveNode(result.CapNode);
+
+                // Pile Nodes
+                foreach (var pileNode in result.PileNodes)
+                {
+                    Nodes.Add(pileNode);
+                    pile.PileNodes.Add(pileNode);
+                }
+
+                // Soil Nodes
+                foreach (var soilNode in result.SoilNodes)
+                {
+                    Nodes.Add(soilNode);
+                    pile.SoilNodes.Add(soilNode);
+                }
+
+                // Beams
+                foreach (var beam in result.Beams)
+                {
+                    Beams.Add(beam);
+                    pile.Beams.Add(beam);
+                }
+
+                // Rotational Spring
+                if (result.RotationalSpring != null)
+                {
+                    RotationalSprings.Add(result.RotationalSpring);
+                    pile.PileTopRotationalSpring = result.RotationalSpring;
+                }
+
+                // Horizontal Soil Springs
+                foreach (var hspring in result.HorizontalSoilSprings)
+                {
+                    HorizontalSoilSprings.Add(hspring);
+                    pile.HorizontalSoilSprings.Add(hspring);
+                }
+            }
+        }
+
+        // 旧メソッド（互換性のため残す）
         private void AddPile()
         {
             if (InputModel.PileLayoutItems == null) return;
@@ -240,14 +494,14 @@ namespace PileDesign.FEM
                         Beams[^1].PileBodyNo = soilPile.PileBodyNo;
                         Beams[^1].SegmentIndex = i - 1;
                         pile.Beams.Add(Beams[^1]);
-                        pileNode.SetBoundary(new(false, false, true, false, false, false));
+                        pileNode.SetBoundary(PileTipBoundary);
                     }
 
                     // 土節点
                     Node soilNode = new();
                     soilNode.SetNodeInfo($"SoilNode-{pile.No}-{i}", x, y, z);
                     soilNode.SetIsForcedDisped(true);
-                    soilNode.SetBoundary(new(false, false, true, true, true, true));
+                    soilNode.SetBoundary(SoilNodeBoundary);
                     Nodes.Add(soilNode);
                     pile.SoilNodes.Add(soilNode);
 

@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -48,6 +49,11 @@ namespace PileDesign.ViewModels
 
         [ObservableProperty]
         private double _maxEmbedmentSpacing;
+
+
+        public ObservableCollection<PileDesign.Models.LampState> SoilPileLampStates { get; } = new();
+        public ObservableCollection<PileDesign.Models.LampState> EmbedmentLampStates { get; } = new();
+
 
         private int _selectedSoilPileNo = 1;
         public int SelectedSoilPileNo
@@ -172,34 +178,10 @@ namespace PileDesign.ViewModels
         public EmbedmentZDataItem SelectedEmbedmentZ
         {
             get => _selectedEmbedmentZ;
-            //set
-            //{
-            //    SetProperty(ref _selectedEmbedmentZ, value);
-            //    DrawSoilEmbedment();
-            //}
             set
             {
-                // SetProperty が true を返した場合のみ処理（値が変わったとき）
-                if (SetProperty(ref _selectedEmbedmentZ, value))
-                {
-                    // Embedment Canvas を再描画
-                    DrawSoilEmbedment();
-
-                    // DoatsuGoryokuBane の該当層を選択（ZTop または ZBtm が一致する層）
-                    if (DoatsuGoryokuBane?.Items != null && _selectedEmbedmentZ != null)
-                    {
-                        double z = _selectedEmbedmentZ.Z;
-                        // クラス先頭にある epsilon を使う（許容誤差）
-                        var matched = DoatsuGoryokuBane.Items
-                            .FirstOrDefault(b => Math.Abs(b.ZTop - z) <= epsilon || Math.Abs(b.ZBtm - z) <= epsilon);
-
-                        SelectedDoatsuGoryokuBaneItem = matched;
-                    }
-                    else
-                    {
-                        SelectedDoatsuGoryokuBaneItem = null;
-                    }
-                }
+                SetProperty(ref _selectedEmbedmentZ, value);
+                DrawSoilEmbedment();
             }
         }
 
@@ -455,9 +437,90 @@ namespace PileDesign.ViewModels
                 DoatsuGoryokuBane.Items.CollectionChanged -= OnDoatsuGoryokuBaneItemsChanged;
                 DoatsuGoryokuBane.Items.CollectionChanged += OnDoatsuGoryokuBaneItemsChanged;
             }
+
+            // SoilPile ランプ初期化（土層-杭セット数に合わせて false で作成）
+            SoilPileLampStates.Clear();
+            for (int i = 0; i < SoilPiles.Count; i++)
+            {
+                SoilPileLampStates.Add(new PileDesign.Models.LampState(i, false));
+            }
+
+            // ランプのPropertyChanged購読（AllLampsLit通知用）
+            foreach (var lamp in SoilPileLampStates)
+            {
+                lamp.PropertyChanged += OnLampPropertyChanged;
+            }
+
+            // 根入れランプ（Embedment）が存在する場合は 1 つ以上作成する（ここでは単一扱い）
+            EmbedmentLampStates.Clear();
+            if (SoilEmbedment != null && InputModel?.EmbedmentInput != null && InputModel.EmbedmentInput.EmbedmentLayersCount > 0)
+            {
+                var embedmentLamp = new PileDesign.Models.LampState(0, false);
+                embedmentLamp.PropertyChanged += OnLampPropertyChanged;
+                EmbedmentLampStates.Add(embedmentLamp);
+            }
+        }
+
+        // ランプのPropertyChanged購読用ハンドラ
+        private void OnLampPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PileDesign.Models.LampState.IsOn))
+            {
+                OnPropertyChanged(nameof(AllLampsLit));
+            }
+        }
+
+        // 全てのランプが点灯しているかどうか
+        public bool AllLampsLit
+        {
+            get
+            {
+                // 土層-杭セットのランプが全て点灯しているか
+                bool allPilesLit = SoilPileLampStates == null || SoilPileLampStates.Count == 0
+                    || SoilPileLampStates.All(lamp => lamp.IsOn);
+
+                // 根入れランプが全て点灯しているか（存在する場合）
+                bool allEmbedmentsLit = EmbedmentLampStates == null || EmbedmentLampStates.Count == 0
+                    || EmbedmentLampStates.All(lamp => lamp.IsOn);
+
+                return allPilesLit && allEmbedmentsLit;
+            }
+        }
+
+        // 初期ランプ点灯（UIバインディング完了後に呼び出される）
+        private void EnsureLampInitialState()
+        {
+            if (SoilPileLampStates != null && SoilPileLampStates.Count > 0)
+            {
+                int idx = Math.Max(0, Math.Min(SoilPileLampStates.Count - 1, SelectedSoilPileNo - 1));
+                SoilPileLampStates[idx].IsOn = true;
+            }
+        }
+
+        // 土層-杭セットのランプを点灯
+        private void MarkPileAsShown(int pileIndex)
+        {
+            if (pileIndex < 0 || SoilPileLampStates == null || pileIndex >= SoilPileLampStates.Count) return;
+            if (!SoilPileLampStates[pileIndex].IsOn)
+            {
+                SoilPileLampStates[pileIndex].IsOn = true;
+            }
+        }
+
+        // 根入れランプを点灯
+        private void MarkEmbedmentAsShown(int idx = 0)
+        {
+            if (idx >= 0 && EmbedmentLampStates != null && idx < EmbedmentLampStates.Count)
+            {
+                if (!EmbedmentLampStates[idx].IsOn)
+                {
+                    EmbedmentLampStates[idx].IsOn = true;
+                }
+            }
         }
 
         // メソッド //
+
 
         [RelayCommand]
         private void Undo()
@@ -502,7 +565,30 @@ namespace PileDesign.ViewModels
             SetDoatsuGoryokuBane();
             DrawDoatsuGoryokuBaneGraph();
             DrawSoilEmbedment();
+
+            // UI バインディング／初期描画が完了した後にランプの初期点灯を保証する
+            EnsureLampInitialState();
         }
+
+
+        // 追加：初期ランプ点灯を確実に行うヘルパー（クラス内に追加）
+        //private void EnsureLampInitialState()
+        //{
+        //    try
+        //    {
+        //        // コレクションが構築済みかつ SelectedSoilPileNo が有効なら、そのインデックスを点灯
+        //        if (SoilPileLampStates != null && SoilPileLampStates.Count > 0)
+        //        {
+        //            int idx = Math.Max(0, Math.Min(SoilPileLampStates.Count - 1, SelectedSoilPileNo - 1));
+        //            SoilPileLampStates[idx].IsOn = true;
+        //            Debug.WriteLine($"EnsureLampInitialState: set lamp[{idx}] = true");
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine($"EnsureLampInitialState error: {ex}");
+        //    }
+        //}
 
         // 水平地盤反力係数のセットメソッド
         public void SetHorizontalSoilReaction()
@@ -1487,6 +1573,9 @@ namespace PileDesign.ViewModels
                     (selectedSoilPile.ZDataItems.Select(item => item.DeepCopy()));
 
                 OnZDataItemsChanged();
+
+                // 切り替え先のランプを点灯
+                MarkPileAsShown(newValue.Value - 1);
             }
         }
 
@@ -1699,6 +1788,10 @@ namespace PileDesign.ViewModels
                 true,
                 zs,
                 selectedZ);
+
+            // 現在表示した土層-杭セットのランプを点灯
+            MarkPileAsShown(SelectedSoilPileNo - 1);
+
         }
 
         public void DrawSoilEmbedment()
@@ -1743,6 +1836,37 @@ namespace PileDesign.ViewModels
                 direction,
                 zs,
                 selectedZ);
+
+            // 根入れ表示でランプを点灯（単一扱い）
+            MarkEmbedmentAsShown(0);
+        }
+
+        // 追加: ElementDivisionViewModel クラス内の適切な位置に貼ってください
+        public void SelectSoilPileIndex(int index)
+        {
+            if (SoilPiles == null || SoilPiles.Count == 0) return;
+            if (index < 0 || index >= SoilPiles.Count) return;
+
+            SelectedSoilPileNo = index + 1;
+
+            if (ZsCollection != null && index >= 0 && index < ZsCollection.Count)
+            {
+                SelectedZDataItems = new ObservableCollection<PileZDataItem>(
+                    ZsCollection[index].Select(item => item.DeepCopy())
+                );
+                OnZDataItemsChanged();
+            }
+
+            DrawShapes();
+        }
+
+        public void SelectEmbedmentIndex(int index)
+        {
+            if (EmbedmentZsCollection != null && index >= 0 && index < EmbedmentZsCollection.Count)
+            {
+                SelectedEmbedmentZ = EmbedmentZsCollection[index];
+            }
+            DrawSoilEmbedment();
         }
     }
 }

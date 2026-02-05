@@ -603,7 +603,7 @@ namespace PileDesign.Views
         //    string unit = isThetaLocal ? "rad" : "mm";
 
         //    // DrawNodeDisplacementsResult3D の冒頭付近（unit の決定後あたり）
-        //    double displayScale = viewModel.DispDiagramMultiplier == 0.0 ? 1.0 : viewModel.DispDiagramMultiplier;
+        //    double displayScale = viewModel.DisplacementDiagramMultiplier == 0.0 ? 1.0 : viewModel.DisplacementDiagramMultiplier;
 
         //    // 選択ケース/組合せ（既存）
         //    var selectedLoadCase = LoadCases.GetLoadCase(
@@ -704,17 +704,17 @@ namespace PileDesign.Views
         //                    Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
         //                    Math.Pow(ndJ.Rz * effectiveVector[5], 2));
 
-        //                // 変位量をモデル座標でスケール（multiplier はユーザー単位 -> 描画には DispDiagramMultiplier を使う）
+        //                // 変位量をモデル座標でスケール（multiplier はユーザー単位 -> 描画には DisplacementDiagramMultiplier を使う）
         //                Point3D nI = dummyBeam.NodeI.Coord;
         //                Point3D nJ = dummyBeam.NodeJ.Coord;
         //                Point3D nIDisp3D = new(
-        //                    nI.X + ndI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-        //                    nI.Y + ndI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-        //                    nI.Z + ndI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+        //                    nI.X + ndI.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+        //                    nI.Y + ndI.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+        //                    nI.Z + ndI.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
         //                Point3D nJDisp3D = new(
-        //                    nJ.X + ndJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-        //                    nJ.Y + ndJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-        //                    nJ.Z + ndJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+        //                    nJ.X + ndJ.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+        //                    nJ.Y + ndJ.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+        //                    nJ.Z + ndJ.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
 
         //                Point pI = viewModel.CanvasThreeDView.Transformation(nI);
         //                Point pIDisp = viewModel.CanvasThreeDView.Transformation(nIDisp3D);
@@ -771,13 +771,13 @@ namespace PileDesign.Views
         //            Point3D nodeI3D = beam.NodeI.Coord;
         //            Point3D nodeJ3D = beam.NodeJ.Coord;
         //            Point3D nodeIDisp3D = new(
-        //                nodeI3D.X + ndI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-        //                nodeI3D.Y + ndI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-        //                nodeI3D.Z + ndI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+        //                nodeI3D.X + ndI.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+        //                nodeI3D.Y + ndI.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+        //                nodeI3D.Z + ndI.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
         //            Point3D nodeJDisp3D = new(
-        //                nodeJ3D.X + ndJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-        //                nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-        //                nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+        //                nodeJ3D.X + ndJ.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+        //                nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+        //                nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
 
         //            Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
         //            Point nodeIDisp2D = viewModel.CanvasThreeDView.Transformation(nodeIDisp3D);
@@ -816,7 +816,7 @@ namespace PileDesign.Views
         //        // θ 系：全節点に対して楕円を描く（ProjectionUtils を利用）
         //        double flattening = viewModel.CanvasThreeDView.Flattening;
 
-        //        // カラーバー用 allValues は既に「rot * multiplier * DispDiagramMultiplier」で作成済み（上で）
+        //        // カラーバー用 allValues は既に「rot * multiplier * DisplacementDiagramMultiplier」で作成済み（上で）
         //        // colorBaredGeometries を使って楕円を色分けする
         //        foreach (var node in nodeSet)
         //        {
@@ -850,7 +850,7 @@ namespace PileDesign.Views
         //            if (rot <= 1e-15) continue;
 
         //            double displayedMagnitude = rot * multiplier;
-        //            double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DispDiagramMultiplier;
+        //            double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
         //            if (targetPixelDiameter <= 0) continue;
 
         //            var proj = ProjectionUtils.ProjectCircleAsEllipseExact(node.Coord, axis, 1.0, viewModel.CanvasThreeDView.Transformation);
@@ -877,7 +877,7 @@ namespace PileDesign.Views
         //            }
 
         //            // midValue はカラーバーに合わせたスケール（同じスケールで allValues を作っているのでそれを使う）
-        //            double midValue = Math.Abs(displayedMagnitude) * viewModel.DispDiagramMultiplier;
+        //            double midValue = Math.Abs(displayedMagnitude) * viewModel.DisplacementDiagramMultiplier;
 
         //            //var picked = PickColorGeometry(midValue, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(midValue, colorBaredGeometries);
         //            var picked = ColorBarUtils.PickColorGeometry(midValue, colorBaredGeometries)
@@ -990,7 +990,7 @@ namespace PileDesign.Views
         //                    0
         //                );
 
-        //                // 表示スケール: viewModel.DispDiagramMultiplier を使う（必要に応じて調整してください）
+        //                // 表示スケール: viewModel.DisplacementDiagramMultiplier を使う（必要に応じて調整してください）
         //                var scaledDisp = dispDiff * viewModel.ForceDiagramMultiplier * 1000;
 
         //                // 矢印の頂点（I点）と尾（頂点 - scaledDisp）
@@ -1681,8 +1681,8 @@ namespace PileDesign.Views
                         Math.Pow(nd.Rz * effectiveVector[5], 2));
                     if (isThetaLocal)
                     {
-                        // θ 系は表示上の値領域とカラーバーを揃えるため DispDiagramMultiplier を乗ずる
-                        allValues.Add(Math.Abs(val) * multiplier * viewModel.DispDiagramMultiplier);
+                        // θ 系は表示上の値領域とカラーバーを揃えるため DisplacementDiagramMultiplier を乗ずる
+                        allValues.Add(Math.Abs(val) * multiplier * viewModel.DisplacementDiagramMultiplier);
                     }
                     else
                     {
@@ -1727,17 +1727,17 @@ namespace PileDesign.Views
                                 Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
                                 Math.Pow(ndJ.Rz * effectiveVector[5], 2));
 
-                            // 変位量をモデル座標でスケール（multiplier はユーザー単位 -> 描画には DispDiagramMultiplier を使う）
+                            // 変位量をモデル座標でスケール（multiplier はユーザー単位 -> 描画には DisplacementDiagramMultiplier を使う）
                             Point3D nI = dummyBeam.NodeI.Coord;
                             Point3D nJ = dummyBeam.NodeJ.Coord;
                             Point3D nIDisp3D = new(
-                                nI.X + ndI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                                nI.Y + ndI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                                nI.Z + ndI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+                                nI.X + ndI.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+                                nI.Y + ndI.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+                                nI.Z + ndI.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
                             Point3D nJDisp3D = new(
-                                nJ.X + ndJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                                nJ.Y + ndJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                                nJ.Z + ndJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+                                nJ.X + ndJ.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+                                nJ.Y + ndJ.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+                                nJ.Z + ndJ.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
 
                             Point pI = viewModel.CanvasThreeDView.Transformation(nI);
                             Point pIDisp = viewModel.CanvasThreeDView.Transformation(nIDisp3D);
@@ -1787,13 +1787,13 @@ namespace PileDesign.Views
                         Point3D nodeI3D = beam.NodeI.Coord;
                         Point3D nodeJ3D = beam.NodeJ.Coord;
                         Point3D nodeIDisp3D = new(
-                            nodeI3D.X + ndI.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                            nodeI3D.Y + ndI.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                            nodeI3D.Z + ndI.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+                            nodeI3D.X + ndI.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+                            nodeI3D.Y + ndI.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+                            nodeI3D.Z + ndI.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
                         Point3D nodeJDisp3D = new(
-                            nodeJ3D.X + ndJ.Ux * effectiveVector[0] * viewModel.DispDiagramMultiplier,
-                            nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * viewModel.DispDiagramMultiplier,
-                            nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * viewModel.DispDiagramMultiplier);
+                            nodeJ3D.X + ndJ.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
+                            nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
+                            nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
 
                         Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
                         Point nodeIDisp2D = viewModel.CanvasThreeDView.Transformation(nodeIDisp3D);
@@ -1826,7 +1826,7 @@ namespace PileDesign.Views
                     // θ 系：全節点に対して楕円を描く（ProjectionUtils を利用）
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
-                    // カラーバー用 allValues は既に「rot * multiplier * DispDiagramMultiplier」で作成済み（上で）
+                    // カラーバー用 allValues は既に「rot * multiplier * DisplacementDiagramMultiplier」で作成済み（上で）
                     // colorBaredGeometries を使って楕円を色分けする
                     foreach (var node in nodeSet)
                     {
@@ -1860,7 +1860,7 @@ namespace PileDesign.Views
                         if (rot <= 1e-15) continue;
 
                         double displayedMagnitude = rot * multiplier;
-                        double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DispDiagramMultiplier;
+                        double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
                         if (targetPixelDiameter <= 0) continue;
 
                         var proj = ProjectionUtils.ProjectCircleAsEllipseExact(node.Coord, axis, 1.0, viewModel.CanvasThreeDView.Transformation);
@@ -1887,7 +1887,7 @@ namespace PileDesign.Views
                         }
 
                         // midValue はカラーバーに合わせたスケール（同じスケールで allValues を作っているのでそれを使う）
-                        double midValue = Math.Abs(displayedMagnitude) * viewModel.DispDiagramMultiplier;
+                        double midValue = Math.Abs(displayedMagnitude) * viewModel.DisplacementDiagramMultiplier;
 
                         //var picked = PickColorGeometry(midValue, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(midValue, colorBaredGeometries);
                         var picked = ColorBarUtils.PickColorGeometry(midValue, colorBaredGeometries)
@@ -1957,8 +1957,8 @@ namespace PileDesign.Views
             else
             {
                 Point textAdjustUnit = GetAdjustUnit(nodeJ2D, nodeI2D);
-                double textAdjustX = textAdjustUnit.X * viewModel.TextPosiitonAdjuster;
-                double textAdjustY = textAdjustUnit.Y * viewModel.TextPosiitonAdjuster;
+                double textAdjustX = textAdjustUnit.X * viewModel.TextPositionAdjuster;
+                double textAdjustY = textAdjustUnit.Y * viewModel.TextPositionAdjuster;
                 AddText3D(solidColorBrush, string.Format(formatI, valueI),
                     pointI.X - textAdjustX, pointI.Y - textAdjustY, "C", "C", 0.0);
                 AddText3D(solidColorBrush, string.Format(formatJ, valueJ),
@@ -2031,7 +2031,7 @@ namespace PileDesign.Views
                         0
                     );
 
-                    // 表示スケール: viewModel.DispDiagramMultiplier を使う（必要に応じて調整してください）
+                    // 表示スケール: viewModel.DisplacementDiagramMultiplier を使う（必要に応じて調整してください）
                     var scaledDisp = dispDiff * viewModel.ForceDiagramMultiplier * 1000;
 
                     // 矢印の頂点（I点）と尾（頂点 - scaledDisp）

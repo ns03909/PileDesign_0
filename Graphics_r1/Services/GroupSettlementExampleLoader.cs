@@ -98,44 +98,70 @@ namespace PileDesign.Services
                 });
             }
 
-            //// 杭体情報（pileBodies）の反映
-            //inputModel.PileBodies.Clear();
-            //if (data.PileBodies != null)
-            //{
-            //    foreach (var pileBodyDto in data.PileBodies)
-            //    {
-            //        var pileBody = new PileBodyInput
-            //        {
-            //            PileBodyRef = pileBodyDto.PileBodyRef,
-            //            PileBodyType = pileBodyDto.PileBodyType,
-            //            PileTopType = pileBodyDto.PileTopType,
-            //            PileConstructionType = pileBodyDto.PileConstructionType,
-            //            PileToeDia = pileBodyDto.PileToeDia,
-            //            TipNonPermability = pileBodyDto.TipNonPermability,
-            //            EmbedmentIntoBearingSoil = pileBodyDto.EmbedmentIntoBearingSoil,
-            //            PileInnerDia = pileBodyDto.PileInnerDia,
-            //            PileTipStyle = pileBodyDto.PileTipStyle,
-            //            SettlePileToeDia = pileBodyDto.SettlePileToeDia,
-            //            SettleAlpha = pileBodyDto.SettleAlpha,
-            //            SettleN = pileBodyDto.SettleN
-            //        };
-            //        pileBody.PileBodySegments.Clear();
-            //        foreach (var segDto in pileBodyDto.Segments)
-            //        {
-            //            var segment = new PileBodySegment
-            //            {
-            //                No = segDto.No,
-            //                SegmentLength = segDto.SegmentLength,
-            //                SegmentDepth = segDto.SegmentDepth
-            //            };
-            //            segment.PileSection.PileSectionType = segDto.PileSectionType;
-            //            if (!string.IsNullOrEmpty(segDto.PrecastPileName))
-            //                segment.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
-            //            pileBody.PileBodySegments.Add(segment);
-            //        }
-            //        inputModel.PileBodies.Add(pileBody);
-            //    }
-            //}
+            // 杭体情報（pileBodies）の反映
+            if (data.PileBodies != null && data.PileBodies.Count > 0)
+            {
+                inputModel.PileBodies.Clear();
+                foreach (var pileBodyDto in data.PileBodies)
+                {
+                    var pileBody = new PileBodyInput
+                    {
+                        PileBodyRef = pileBodyDto.PileBodyRef,
+                        PileBodyType = pileBodyDto.PileBodyType,
+                        PileTopType = pileBodyDto.PileTopType,
+                        PileConstructionType = pileBodyDto.PileConstructionType,
+                        PileToeDia = pileBodyDto.PileToeDia,
+                        TipNonPermability = pileBodyDto.TipNonPermability,
+                        EmbedmentIntoBearingSoil = pileBodyDto.EmbedmentIntoBearingSoil,
+                        PileInnerDia = pileBodyDto.PileInnerDia,
+                        PileTipStyle = pileBodyDto.PileTipStyle,
+                        SettlePileToeDia = pileBodyDto.SettlePileToeDia,
+                        SettleAlpha = pileBodyDto.SettleAlpha,
+                        SettleN = pileBodyDto.SettleN
+                    };
+                    pileBody.PileBodySegments.Clear();
+                    foreach (var segDto in pileBodyDto.Segments)
+                    {
+                        var segment = new PileBodySegment
+                        {
+                            No = segDto.No,
+                            SegmentLength = segDto.SegmentLength,
+                            SegmentDepth = segDto.SegmentDepth
+                        };
+
+                        // 先にコレクションに追加
+                        pileBody.PileBodySegments.Add(segment);
+
+                        // 追加後にPileSectionTypeとPrecastPileNameを設定
+                        segment.PileSection.PileSectionType = segDto.PileSectionType;
+                        if (!string.IsNullOrEmpty(segDto.PrecastPileName))
+                            segment.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
+
+                        // 場所打ち杭用プロパティ
+                        if (segDto.ConcreteOutDia.HasValue)
+                            segment.PileSection.ConcreteOutDia = segDto.ConcreteOutDia.Value;
+                        if (segDto.ConcreteThickness.HasValue)
+                            segment.PileSection.ConcreteThickness = segDto.ConcreteThickness.Value;
+                        if (segDto.MainBarDr.HasValue)
+                            segment.PileSection.MainBarDr = segDto.MainBarDr.Value;
+                        if (segDto.PipeTs.HasValue)
+                            segment.PileSection.PipeTs = segDto.PipeTs.Value;
+                        if (segDto.PipeDia.HasValue)
+                            segment.PileSection.PipeDia = segDto.PipeDia.Value;
+                        if (segDto.MainBarNum.HasValue)
+                            segment.PileSection.MainBarNum = segDto.MainBarNum.Value;
+                        if (!string.IsNullOrEmpty(segDto.MainBarSize))
+                            segment.PileSection.MainBarSize = segDto.MainBarSize;
+                        if (segDto.ConcreteFc.HasValue)
+                            segment.PileSection.ConcreteFc = segDto.ConcreteFc.Value;
+                        if (segDto.ConcreteGsi.HasValue)
+                            segment.PileSection.ConcreteGsi = segDto.ConcreteGsi.Value;
+                        if (segDto.ConcreteGamma.HasValue)
+                            segment.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
+                    }
+                    inputModel.PileBodies.Add(pileBody);
+                }
+            }
 
             // 杭位置を設定（ある場合）
             if (data.PileLayoutPositions != null && data.PileLayoutPositions.Count > 0)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
@@ -662,12 +663,14 @@ namespace PileDesign.Models.InputData
             return phiC;
         }
 
-        // ある軸力時のM-φ関係を得るメソッド
-        internal (List<double>, List<double>) GetMPhiRelationship(double Ntarget)
+        // ある軸力時のM-φ関係を得るメソッド（IPileSectionCalculationインターフェース実装）
+        public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double Ntarget)
         {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
             (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
+
+            System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Ntarget={Ntarget:E3}[N], MCr={MCr:E3}, phiCr={phiCr:E6}, MY={MY:E3}, phiY={phiY:E6}, Mu0={Mu0:E3}");
 
             //if (MCr > MY)
             //{
@@ -693,6 +696,8 @@ namespace PileDesign.Models.InputData
                 phis = [0.0, phiCr, phiCshort];
                 Ms = [0.0, MCr, beta1 * beta2 * Mu0];
             }
+
+            System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Result phis=[{string.Join(",", phis.Select(p => p.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
             return (phis, Ms);
         }
 

@@ -392,10 +392,10 @@ namespace PileDesign.ViewModels
                 UpdateTreeView();
 
                 // コレクション自体の変更通知
-                OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                OnPropertyChanged(nameof(GroupPileSettlementXMin));
+                OnPropertyChanged(nameof(GroupPileSettlementXMax));
+                OnPropertyChanged(nameof(GroupPileSettlementYMin));
+                OnPropertyChanged(nameof(GroupPileSettlementYMax));
             }
         }
 
@@ -1356,10 +1356,10 @@ namespace PileDesign.ViewModels
         //            point, rectLoads, CurrentInputModel.PileGroupSettlement.SettlementSoilLayers) * 1000;
         //    }
 
-        //    double xMin = GroupPileSettlementXmin;
-        //    double xMax = GroupPileSettlementXmax;
-        //    double yMin = GroupPileSettlementYmin;
-        //    double yMax = GroupPileSettlementYmax;
+        //    double xMin = GroupPileSettlementXMin;
+        //    double xMax = GroupPileSettlementXMax;
+        //    double yMin = GroupPileSettlementYMin;
+        //    double yMax = GroupPileSettlementYMax;
         //    double xOffset = GroupPileSettlementXOffset;
         //    double yOffset = GroupPileSettlementYOffset;
         //    double xSpacing = GroupPileSettlementXSpacing;
@@ -1443,10 +1443,10 @@ namespace PileDesign.ViewModels
                         point, rectLoads, CurrentInputModel.PileGroupSettlement.SettlementSoilLayers) * 1000;
                 }
 
-                double xMin = GroupPileSettlementXmin;
-                double xMax = GroupPileSettlementXmax;
-                double yMin = GroupPileSettlementYmin;
-                double yMax = GroupPileSettlementYmax;
+                double xMin = GroupPileSettlementXMin;
+                double xMax = GroupPileSettlementXMax;
+                double yMin = GroupPileSettlementYMin;
+                double yMax = GroupPileSettlementYMax;
                 double xOffset = GroupPileSettlementXOffset;
                 double yOffset = GroupPileSettlementYOffset;
                 double xSpacing = GroupPileSettlementXSpacing;
@@ -2278,10 +2278,10 @@ namespace PileDesign.ViewModels
                     await tcs.Task; // ・ｽｯ奇ｿｽ・ｽﾉ奇ｿｽ根入部ﾒゑｿｽ
 
                     // コレクション自体の変更通知
-                    OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                    OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                    OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                    OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                    OnPropertyChanged(nameof(GroupPileSettlementXMin));
+                    OnPropertyChanged(nameof(GroupPileSettlementXMax));
+                    OnPropertyChanged(nameof(GroupPileSettlementYMin));
+                    OnPropertyChanged(nameof(GroupPileSettlementYMax));
 
                     // 変更: デバウンスで更新
                     RequestUpdateWindow();

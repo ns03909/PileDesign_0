@@ -76,10 +76,10 @@ namespace PileDesign.Views
             if (viewModel.CurrentInputModel == null) return;
             if (viewModel.CurrentInputModel.PileGroupSettlement == null) return;
 
-            double xmin = viewModel.GroupPileSettlementXmin;
-            double xmax = viewModel.GroupPileSettlementXmax;
-            double ymin = viewModel.GroupPileSettlementYmin;
-            double ymax = viewModel.GroupPileSettlementYmax;
+            double xmin = viewModel.GroupPileSettlementXMin;
+            double xmax = viewModel.GroupPileSettlementXMax;
+            double ymin = viewModel.GroupPileSettlementYMin;
+            double ymax = viewModel.GroupPileSettlementYMax;
             double xOffset = viewModel.GroupPileSettlementXOffset;
             double yOffset = viewModel.GroupPileSettlementYOffset;
             double xSpacing = viewModel.GroupPileSettlementXSpacing;
@@ -252,7 +252,7 @@ namespace PileDesign.Views
             var fp = new PileDesign.ViewModels.SettlementGridFingerprint(
                 xs.Count, ys.Count, items.Count,
                 minS, maxS,
-                z, viewModel.DispDiagramMultiplier,
+                z, viewModel.DisplacementDiagramMultiplier,
                 sumX, sumY, sumS);
 
             bool needRebuild = viewModel.SettlementWorldCache.Fingerprint == null ||
@@ -289,8 +289,8 @@ namespace PileDesign.Views
                     {
                         var p1 = grid[ix, iy];
                         var p2 = grid[ix, iy + 1];
-                        var s1 = z - p1.Settlement * viewModel.DispDiagramMultiplier;
-                        var s2 = z - p2.Settlement * viewModel.DispDiagramMultiplier;
+                        var s1 = z - p1.Settlement * viewModel.DisplacementDiagramMultiplier;
+                        var s2 = z - p2.Settlement * viewModel.DisplacementDiagramMultiplier;
                         cache.GridSegments3D.Add((new Point3D(p1.X, p1.Y, s1), new Point3D(p2.X, p2.Y, s2)));
                     }
                 }
@@ -301,8 +301,8 @@ namespace PileDesign.Views
                     {
                         var p1 = grid[ix, iy];
                         var p2 = grid[ix + 1, iy];
-                        var s1 = z - p1.Settlement * viewModel.DispDiagramMultiplier;
-                        var s2 = z - p2.Settlement * viewModel.DispDiagramMultiplier;
+                        var s1 = z - p1.Settlement * viewModel.DisplacementDiagramMultiplier;
+                        var s2 = z - p2.Settlement * viewModel.DisplacementDiagramMultiplier;
                         cache.GridSegments3D.Add((new Point3D(p1.X, p1.Y, s1), new Point3D(p2.X, p2.Y, s2)));
                     }
                 }
@@ -337,7 +337,7 @@ namespace PileDesign.Views
                             {
                                 if (vals[v] >= minC && vals[v] <= maxC)
                                 {
-                                    double zz = z - cellPts[v].Settlement * viewModel.DispDiagramMultiplier;
+                                    double zz = z - cellPts[v].Settlement * viewModel.DisplacementDiagramMultiplier;
                                     regionPoints3D.Add(new Point3D(cellPts[v].X, cellPts[v].Y, zz));
                                 }
                             }
@@ -565,7 +565,7 @@ namespace PileDesign.Views
                 double t = (contour - p1.Settlement) / (p2.Settlement - p1.Settlement);
                 double x = p1.X + t * (p2.X - p1.X);
                 double y = p1.Y + t * (p2.Y - p1.Y);
-                double zz = z - (p1.Settlement + t * (p2.Settlement - p1.Settlement)) * viewModel.DispDiagramMultiplier;
+                double zz = z - (p1.Settlement + t * (p2.Settlement - p1.Settlement)) * viewModel.DisplacementDiagramMultiplier;
                 return new Point3D(x, y, zz);
             }
         }

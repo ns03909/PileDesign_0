@@ -1,5 +1,7 @@
-﻿using PileDesign.ViewModels;
+﻿using PileDesign.Output;
+using PileDesign.ViewModels;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -67,7 +69,8 @@ namespace PileDesign.Views
                 Header = "液状化",
                 Binding = new Binding("DataContext.SelectedTable.LiquefactionLabel")
                 {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1),
+                    Mode = BindingMode.OneWay
                 },
                 IsReadOnly = true
             });
@@ -84,6 +87,33 @@ namespace PileDesign.Views
                     },
                     IsReadOnly = true
                 });
+            }
+        }
+
+        // CSVエクスポートのコンテキストメニュークリックイベントハンドラ
+        private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is DataGrid dataGrid)
+            {
+                var data = dataGrid.ItemsSource.Cast<object>();
+                {
+                    DataGridCsv.Export(data, dataGrid);
+                }
+            }
+        }
+
+        // ContextMenuが開かれたときにDataGridをCommandParameterに設定するイベントハンドラ
+        private void ContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is ContextMenu contextMenu)
+            {
+                if (contextMenu.PlacementTarget is DataGrid dataGrid)
+                {
+                    foreach (MenuItem menuItem in contextMenu.Items)
+                    {
+                        menuItem.CommandParameter = dataGrid;
+                    }
+                }
             }
         }
     }

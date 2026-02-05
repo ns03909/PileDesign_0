@@ -16,5 +16,23 @@ namespace PileDesign.Models.Results
         public bool IsLiquefaction { get; init; }
 
         public string LiquefactionLabel => IsLiquefaction ? "有" : "無";
+
+        /// <summary>
+        /// ListBox表示用の名前（液状化状態を含む）
+        /// 液状化状態を先頭に表示して、切れても区別できるようにする
+        /// </summary>
+        public string DisplayName
+        {
+            get
+            {
+                // 液状化状態を先頭に表示（ListBoxで切れても区別できるように）
+                var parts = new List<string> { $"[{LiquefactionLabel}]", Name };
+                if (!string.IsNullOrEmpty(LoadCaseName))
+                    parts.Add(LoadCaseName);
+                if (!string.IsNullOrEmpty(LoadCombinationName))
+                    parts.Add(LoadCombinationName);
+                return string.Join(" / ", parts);
+            }
+        }
     }
 }

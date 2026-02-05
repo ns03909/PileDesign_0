@@ -1,12 +1,37 @@
 ﻿<Window x:Class="PileDesign.Views.TableWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+        xmlns:viewmodels="clr-namespace:PileDesign.ViewModels" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=viewmodels:TableWindowViewModel}"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         Title="解析結果テーブル" Width="1150" Height="680">
+    
+    <Window.Resources>
+        <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
+            <MenuItem Click="ExportCsvFromContextMenu_Click">
+                <MenuItem.Icon>
+                    <svgc:SvgViewbox Source="/Icons/CSVFileOutput.svg" Style="{DynamicResource SvgIconStyle16}"/>
+                </MenuItem.Icon>
+                <MenuItem.Header>
+                    <TextBlock Text="CSVファイル出力"/>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Header="コピー"
+              Command="{Binding PlacementTarget.DataContext.CopyDataGridSelectionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+              CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+        </ContextMenu>
+    </Window.Resources>
+    
     <DockPanel>
         <StackPanel Width="220" Margin="6" DockPanel.Dock="Left">
             <TextBlock Text="テーブル一覧" FontWeight="Bold" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding FilteredTables}"
-                     DisplayMemberPath="Name"
+                     DisplayMemberPath="DisplayName"
                      SelectedItem="{Binding SelectedTable}"
                      SelectionChanged="ListBox_SelectionChanged"
                      Height="280"/>
@@ -30,16 +55,35 @@
 
             <Button Content="CSV出力"
                     Command="{Binding ExportCsvCommand}"
-                    IsEnabled="{Binding SelectedTable}"
                     Height="32"/>
         </StackPanel>
 
-        <DataGrid x:Name="ResultGrid"
+        <common:EnhancedDataGrid x:Name="ResultGrid"
                   Margin="6"
                   AutoGenerateColumns="False"
                   ItemsSource="{Binding SelectedTable.Rows}"
                   IsReadOnly="True"
                   CanUserAddRows="False"
-                  Loaded="ResultGrid_Loaded"/>
+                  Loaded="ResultGrid_Loaded"
+                  CellStyle="{StaticResource CustomDataGridCellStyle}">
+            <DataGrid.AlternatingRowBackground>
+                <ImageBrush/>
+            </DataGrid.AlternatingRowBackground>
+            <DataGrid.Style>
+                <Style/>
+            </DataGrid.Style>
+
+            <!--CSVファイル出力等-->
+            <DataGrid.ContextMenu>
+                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+            </DataGrid.ContextMenu>
+
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    <Setter Property="Foreground" Value="#62B0E2" />
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+        </common:EnhancedDataGrid>
     </DockPanel>
 </Window>

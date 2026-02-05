@@ -296,10 +296,10 @@ namespace PileDesign.Models.InputData
         ///   φ: [1/m] = [rad/m]
         ///   M: [kNm]
         /// </summary>
-        public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN)
+        public (List<double> Phis, List<double> Moments) GetMphiRelationship(double axialN)
             => GetMphiRelationship(axialN, 1.0);
 
-        public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN, double _)
+        public (List<double> Phis, List<double> Moments) GetMphiRelationship(double axialN, double _)
         {
             try
             {
@@ -307,7 +307,10 @@ namespace PileDesign.Models.InputData
 
                 // 断面が生成できない場合はフォールバック
                 if (section == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"GetMphiRelationship: CreateSectionCalculator returned null - PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                     return CreateLinearFallback();
+                }
 
                 // 単位変換: 軸力 kN → N
                 double axialN_inN = axialN * 1000.0;
@@ -316,12 +319,16 @@ namespace PileDesign.Models.InputData
 
                 // 結果が不正な場合もフォールバック
                 if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
+                {
+                    System.Diagnostics.Debug.WriteLine($"GetMphiRelationship: Invalid result - phisRaw={phisRaw?.Count}, msRaw={msRaw?.Count}, PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                     return CreateLinearFallback();
+                }
 
                 // 単位変換: φ [1/mm] → [1/m], M [N·mm] → [kNm]
                 var phis = phisRaw.Select(p => p * 1000.0).ToList();
                 var ms = msRaw.Select(m => m * 1e-6).ToList();
 
+                System.Diagnostics.Debug.WriteLine($"GetMphiRelationship: Success - Points={phis.Count}, phi=[{phis.First():E3}..{phis.Last():E3}], M=[{ms.First():F0}..{ms.Last():F0}], PileBodyType={PileBodyType}");
                 return (phis, ms);
             }
             catch (Exception ex)
@@ -334,7 +341,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// M-φ 関係のフォールバック（線形近似）
         /// </summary>
-        private (IList<double> Phis, IList<double> Moments) CreateLinearFallback()
+        private (List<double> Phis, List<double> Moments) CreateLinearFallback()
         {
             const double phiSample = 1e-6; // [1/m]
             return (
@@ -676,7 +683,7 @@ namespace PileDesign.Models.InputData
                 {
                     PileDiameter = PipeDia;
                 }
-                System.Diagnostics.Debug.WriteLine($"RecalculatePileDia finished. after: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
+                //System.Diagnostics.Debug.WriteLine($"RecalculatePileDia finished. after: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
             }
             catch (Exception ex)
             {
@@ -691,7 +698,7 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"ResetSectionProperties called. PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, Hash={this.GetHashCode()}");
+                //System.Diagnostics.Debug.WriteLine($"ResetSectionProperties called. PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, Hash={this.GetHashCode()}");
 
 
                 // 表示の即時更新用にクリア（後で GetNMRaw が再計算して再設定）
@@ -1389,8 +1396,10 @@ namespace PileDesign.Models.InputData
         public double EA => (ConcreteE * Ac + MainBarEr * MainBarAg + TendonEp * TendonAp) * 0.001;
 
         // 曲げ剛性 (kNm2)
+        // 鉄筋の換算断面二次モーメント項は MainBarAg（鉄筋断面積）を使用
+        // ※ A0（全断面積）を使用すると過大評価になるので注意
         public double EI => (ConcreteE * (Math.PI * Math.Pow(ConcreteOutDia, 4) / 64.0
-            + 0.5 * (MainBarEr / ConcreteE - 1) * A0 * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
+            + 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
         // ねじり剛性 (kNm2)

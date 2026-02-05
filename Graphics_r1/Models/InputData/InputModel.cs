@@ -751,12 +751,12 @@ namespace PileDesign.Models.InputData
             }
             catch (InvalidOperationException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSumVL�v�Z�G���[ - �R���N�V�������������: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSumVLメソッド - 無効な操作例外: {ex}");
                 return 0.0;
             }
             catch (ArgumentNullException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSumVL�v�Z�G���[ - null�A�C�e��: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSumVLメソッド - null参照: {ex}");
                 return 0.0;
             }
         }
@@ -770,12 +770,12 @@ namespace PileDesign.Models.InputData
             }
             catch (InvalidOperationException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSumVLadd�v�Z�G���[ - �R���N�V�������������: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSumVLaddメソッド - 無効な操作例外: {ex}");
                 return 0.0;
             }
             catch (ArgumentNullException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSumVLadd�v�Z�G���[ - null�A�C�e��: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSumVLaddメソッド - null参照: {ex}");
                 return 0.0;
             }
         }
@@ -788,7 +788,7 @@ namespace PileDesign.Models.InputData
             }
             catch (OverflowException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetSumVLplusVLadd�v�Z�G���[ - �I�[�o�[�t���[: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetSumVLplusVLaddメソッド - オーバーフロー例外: {ex}");
                 return 0.0;
             }
         }
@@ -879,20 +879,6 @@ namespace PileDesign.Models.InputData
             return new Point3D(sumMX / sumW, sumMY / sumW, sumMZ / sumW);
         }
 
-        // �}�S��Ԃ����\�b�h
-        //public Point3D GetCentroid()
-        //{
-        //    double sumX = 0;
-        //    double sumY = 0;
-        //    double sumZ = 0;
-        //    foreach (var item in PileLayoutItems)
-        //    {
-        //        sumX += item.X;
-        //        sumY += item.Y;
-        //        sumZ += item.Z;
-        //    }
-        //    return new Point3D(sumX / PileLayoutItems.Count, sumY / PileLayoutItems.Count, sumZ / PileLayoutItems.Count);
-        //}
         public Point3D GetCentroid()
         {
             try
@@ -917,12 +903,12 @@ namespace PileDesign.Models.InputData
             }
             catch (DivideByZeroException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetCentroid�v�Z�G���[ - �[���Z�Z: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetCentroidメソッド - ゼロ除算: {ex}");
                 return new Point3D(0, 0, 0);
             }
             catch (InvalidOperationException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetCentroid�v�Z�G���[ - �R���N�V�������: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetCentroidメソッド - 無効な操作: {ex}");
                 return new Point3D(0, 0, 0);
             }
         }
@@ -1002,44 +988,11 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetReactionForUnitMoment�v�Z�G���[: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetReactionForUnitMomentメソッド: {ex}");
                 return new List<double>();
             }
         }
-        //{
-        //    double radian = angle * Math.PI / 180;
-        //    double c = Math.Cos(radian);
-        //    double s = Math.Sin(radian);
-        //    Point3D centroid = GetCentroid();
 
-        //    var raw = new List<double>();
-        //    double otm = 0;
-        //    foreach (var item in PileLayoutItems)
-        //    {
-        //        double arm = c * (item.X - centroid.X) + s * (item.Y - centroid.Y);
-        //        raw.Add(arm);
-        //        otm += arm * arm;
-        //    }
-
-        //    if (otm <= 1e-12) // �قڃ[��
-        //        return [.. raw.Select(_ => 0.0)];
-
-        //    return [.. raw.Select(r => r / otm)];
-
-        //    //List<double> reactions = [];
-        //    //double otm = 0;
-        //    //foreach (var item in PileLayoutItems)
-        //    //{
-        //    //    double momentArm = c * (item.X - centroid.X) + s * (item.Y - centroid.Y);
-        //    //    reactions.Add(momentArm);
-        //    //    otm += momentArm * momentArm;
-        //    //}
-
-        //    //reactions = [.. reactions.Select(r => r / otm)];
-        //    //return reactions;
-        //}
-
-        // JsonSerializerOptions���L���b�V��
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
@@ -1048,11 +1001,6 @@ namespace PileDesign.Models.InputData
         };
 
         // データの保存
-        //public void SaveToFile(string filePath)
-        //{
-        //    string jsonString = JsonSerializer.Serialize(this, _jsonOptions);
-        //    File.WriteAllText(filePath, jsonString);
-        //}
         public void SaveToFile(string filePath)
         {
             string jsonString = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
@@ -1316,25 +1264,19 @@ namespace PileDesign.Models.InputData
         }
 
         public InputModel DeepCopy()
-        //{
-        //    string json = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
-        //    var clone = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
-        //                ?? throw new InvalidOperationException("DeepCopy ���s");
-        //    return clone;
-        //}
         {
             try
             {
                 string json = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
                 var clone = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
-                            ?? throw new InvalidOperationException("DeepCopy ���s");
+                            ?? throw new InvalidOperationException("DeepCopy 失敗");
                 return clone;
             }
             catch (Exception ex)
             {
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"DeepCopy���ɃG���[���������܂����B\n{ex.Message}", "DeepCopy�G���[", MessageBoxButton.OK, MessageBoxImage.Error));
-                System.Diagnostics.Debug.WriteLine($"DeepCopy�G���[: {ex}");
+                    MessageBox.Show($"DeepCopyに失敗しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                System.Diagnostics.Debug.WriteLine($"DeepCopyエラー: {ex}");
                 return null;
             }
         }

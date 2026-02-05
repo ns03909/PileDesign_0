@@ -239,7 +239,7 @@
 
                 <TextBlock Grid.Row="10" Grid.Column="0" Text="既製杭先端閉塞率" />
                 <TextBox  Grid.Row="10" Grid.Column="2" 
-                              x:Name="TextBoxPrecastPileTipNonPermability"
+                              x:Name="TextBoxPrecastPileTipNonPermeability"
                              Text="{Binding PileBody.TipNonPermability, UpdateSourceTrigger=LostFocus}"
                              HorizontalContentAlignment="Right"
                             LostFocus="OnPileBodyLostFocus" 
@@ -249,7 +249,7 @@
                 <TextBlock  Grid.Row="11" Grid.Column="0" 
                             Text="鋼管杭先端閉塞率" />
                 <TextBox  Grid.Row="11" Grid.Column="2" 
-                        x:Name="TextBoxSteelPileTipNonPermability"
+                        x:Name="TextBoxSteelPileTipNonPermeability"
                              Text="{Binding PileBody.TipNonPermability, 
                         UpdateSourceTrigger=LostFocus}"
                           
@@ -460,11 +460,11 @@
 
                         <TextBlock Text="土層の杭周面抵抗力" FontWeight="Bold" Grid.Row="0" Grid.Column="1" />
                         <ScottPlot:WpfPlot x:Name="wpfPlotCircum" Grid.Row="1" Grid.Column="1" />
-                        <TextBlock Text="{Binding CrosshairPositionText_PileCircum}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
+                        <TextBlock Text="{Binding CrosshairPositionText_PileCircumstance}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
                         <common:EnhancedDataGrid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
                             ItemsSource="{Binding SoilPile.PileCircumVerticals}"
-                                  SelectedItem="{Binding SelectedPileCircumVertical}"
+                                  SelectedItem="{Binding SelectedPileCircumstanceVertical}"
                                   AutoGenerateColumns="False"
                                 CanUserAddRows="False"
                                 SelectionChanged="DataGridCircum_SelecitonChanged"

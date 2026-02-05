@@ -157,42 +157,57 @@ namespace PileDesign.Services
                 inputModel.PileBodies.Add(pileBody);
             }
 
-            // 追加例: data には LoadFromFile で取得した DTO が入る想定
-            //if (data.Embedment != null)
-            //{
-            //    // ElementDivision と SoilEmbedment を初期化する例
-            //    inputModel.ElementDivision ??= new ElementDivision();
+            // 根入れ情報を設定（ある場合）
+            if (data.Embedment != null)
+            {
+                // ElementDivision と SoilEmbedment を初期化
+                inputModel.ElementDivision ??= new ElementDivision();
 
-            //    // SoilEmbedment クラスがプロジェクトに存在する前提
-            //    inputModel.ElementDivision.SoilEmbedment = new SoilEmbedment
-            //    {
-            //        GroundNo = data.Embedment.GroundNo,
-            //        EmbedmentTopAltitude = data.Embedment.EmbedmentTopAltitude,
-            //        EmbedmentBottomAltitude = data.Embedment.EmbedmentBottomAltitude,
-            //        ZDataItems = new ObservableCollection<EmbedmentZDataItem>(
-            //            (data.Embedment.Zs ?? new List<double>()).Select(z => new EmbedmentZDataItem { Z = z })
-            //        )
-            //    };
+                // ZDataItemsを作成
+                var zDataItems = new ObservableCollection<EmbedmentZDataItem>();
+                if (data.Embedment.Zs != null)
+                {
+                    foreach (var z in data.Embedment.Zs)
+                    {
+                        zDataItems.Add(new EmbedmentZDataItem { Z = z });
+                    }
+                }
 
-            //    // Embedment レイヤーをセット（EmbedmentInput の型に合わせて）
-            //    inputModel.EmbedmentInput ??= new EmbedmentInput();
-            //    inputModel.EmbedmentInput.EmbedmentLayers.Clear();
-            //    if (data.Embedment.EmbedmentLayers != null)
-            //    {
-            //        foreach (var layer in data.Embedment.EmbedmentLayers)
-            //        {
-            //            inputModel.EmbedmentInput.EmbedmentLayers.Add(new EmbedmentDataItem
-            //            {
-            //                TopAltitude = layer.TopAltitude,
-            //                BottomAltitude = layer.BottomAltitude,
-            //                X1 = layer.X1,
-            //                X2 = layer.X2,
-            //                Y1 = layer.Y1,
-            //                Y2 = layer.Y2
-            //            });
-            //        }
-            //    }
-            //}
+                // SoilEmbedment を設定
+                inputModel.ElementDivision.SoilEmbedment = new SoilEmbedment
+                {
+                    GroundNo = data.Embedment.GroundNo,
+                    EmbedmentTopAltitude = data.Embedment.EmbedmentTopAltitude,
+                    EmbedmentBottomAltitude = data.Embedment.EmbedmentBottomAltitude,
+                    ZDataItems = zDataItems
+                };
+
+                // EmbedmentInput を設定
+                inputModel.EmbedmentInput ??= new EmbedmentInput();
+                inputModel.EmbedmentInput.GroundNo = data.Embedment.GroundNo;
+                inputModel.EmbedmentInput.BottomAltitude = data.Embedment.EmbedmentBottomAltitude;
+                inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+
+                if (data.Embedment.EmbedmentLayers != null)
+                {
+                    int no = 1;
+                    foreach (var layer in data.Embedment.EmbedmentLayers)
+                    {
+                        inputModel.EmbedmentInput.EmbedmentLayers.Add(new EmbedmentDataItem
+                        {
+                            No = no++,
+                            TopAltitude = layer.TopAltitude,
+                            BottomAltitude = layer.BottomAltitude,
+                            LayerThickness = layer.TopAltitude - layer.BottomAltitude,
+                            X1 = layer.X1,
+                            X2 = layer.X2,
+                            Y1 = layer.Y1,
+                            Y2 = layer.Y2
+                        });
+                    }
+                    inputModel.EmbedmentInput.EmbedmentLayersCount = inputModel.EmbedmentInput.EmbedmentLayers.Count;
+                }
+            }
 
             // PileLayoutItems 設定
             inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>();
@@ -264,8 +279,11 @@ namespace PileDesign.Services
                 inputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
             }
 
-            // 根入れクリア
-            inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+            // 根入れクリア（JSONに根入れ情報がない場合のみ）
+            if (data.Embedment == null)
+            {
+                inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+            }
         }
 
         /// <summary>

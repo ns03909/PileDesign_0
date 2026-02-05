@@ -11,31 +11,30 @@ namespace PileDesign.Common
 {
     public class LoadTransferMethod : BaseModel
     {
-        //private readonly InputModel InputModel = InputModel.Instance;/*{ get; set; }*/
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
-        private readonly SoilPile SoilPile;/*{ get; set; }*/
+        private readonly SoilPile SoilPile;
 
         private readonly int NodesCount /*{get; set;}*/;
 
-        private Vector<double> X; /*{ get; set; }*/  // 杭体節点の鉛直変位
-        private readonly Vector<double> Rz; /*{ get; set; }*/ // 杭体節点の鉛直反力
+        private Vector<double> X;  // 杭体節点の鉛直変位
+        private readonly Vector<double> Rz; // 杭体節点の鉛直反力
 
         private readonly Matrix<double> Kmat;
 
-        private Vector<double> R; /*{ get; set; }*/ // 残留荷重
-        private Vector<double> DeltaF; /*{ get; set; }*/ // 荷重増分ベクトル
-        private Vector<double> F; /*{ get; set; }*/ // 荷重ベクトル
+        private Vector<double> R; // 残留荷重
+        private Vector<double> DeltaF; // 荷重増分ベクトル
+        private Vector<double> F; // 荷重ベクトル
 
-        private Vector<double> X0; /*{ get; set; }*/ // 初期変位
-        private Vector<double> F0; /*{ get; set; }*/ // 初期荷重
-        private Vector<double> Rz0; /*{ get; set; }*/ // 初期反力
+        private Vector<double> X0; // 初期変位
+        private Vector<double> F0; // 初期荷重
+        private Vector<double> Rz0; // 初期反力
 
-        private readonly double Tolerance = Math.Pow(10, -8); /*{ get; set; }*/
-        private double PileWeight; /*{ get; set; }*/
-        private double FricpMax; /*{ get; set; }*/
-        private double FricmMax; /*{ get; set; }*/
+        private readonly double Tolerance = Math.Pow(10, -8); 
+        private double PileWeight; 
+        private double FricpMax; 
+        private double FricmMax; 
         private readonly List<double> RzToes = [];
 
         private Vector<double> Weights { get; set; }
@@ -150,7 +149,6 @@ namespace PileDesign.Common
         // コンストラクタ
         public LoadTransferMethod(SoilPile soilPile)
         {
-            //InputModel = InputModel.Instance;
             this.SoilPile = soilPile;
 
             NodesCount = SoilPile.PileCircumVerticals.Count + 1;
@@ -167,26 +165,12 @@ namespace PileDesign.Common
 
             Weights = Vector<double>.Build.Dense(NodesCount, 0);
 
-            //Fs = [];
-            //Rs = [];
-            //Ds = [];
-            //RzToes = [];
-
-            //FsLimit = [];
-            //RsLimit = [];
-            //DsLimit = [];
-            //RzToesLimit = [];
-
-            //LoadDisplacements = [];
-            //LoadDisplacementsLimit = [];
-
             SetBeamStiffnesses();
             Kmat = GenerateElementStiffnessMatrix(BeamStiffnesses);
             SetWeights();
 
             Initialize();
 
-            //NewMain();/////////////////////////////////////////////////////////
             Main();
         }
 
@@ -240,7 +224,7 @@ namespace PileDesign.Common
                 {
                     double s = us[^1];
 
-                    double dp = SoilPile.Dp / 1000.0; //m
+                    double dp = SoilPile.Dp / 1000.0; // m
                     double rpu = SoilPile.Rpu;
                     double alpha = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha;
                     double n = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN;
@@ -277,13 +261,13 @@ namespace PileDesign.Common
 
                 if (i == us.Count - 1) // 杭先端抵抗
                 {
-                    double settlment = us[^1];
+                    double settlement = us[^1];
                     double dp = SoilPile.Dp / 1000.0; //m
                     double rpu = SoilPile.Rpu; // kN
                     double alpha = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha;
                     double n = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN;
 
-                    soilReaction += GetSecantStiffnessPileToeFromSettlement(settlment, dp, rpu, alpha, n) * settlment;
+                    soilReaction += GetSecantStiffnessPileToeFromSettlement(settlement, dp, rpu, alpha, n) * settlement;
                 }
                 soilReactions[i] = soilReaction;
             }
@@ -315,13 +299,13 @@ namespace PileDesign.Common
 
                 if (i == us.Count - 1) // 杭先端抵抗
                 {
-                    double settlment = us[^1];
+                    double settlement = us[^1];
                     double dp = SoilPile.Dp / 1000.0; // m
                     double rpu = SoilPile.Rpu; // kN
                     double alpha = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha;
                     double n = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN;
 
-                    stiffness += GetSecantStiffnessPileToeFromSettlement(settlment, dp, rpu, alpha, n);
+                    stiffness += GetSecantStiffnessPileToeFromSettlement(settlement, dp, rpu, alpha, n);
                 }
                 secantStiffnesses.Add(stiffness);
             }
@@ -337,47 +321,47 @@ namespace PileDesign.Common
         // Rp -> Tangent K メソッド
         private static double GetTangentStiffnessPileToeFromRp(double rp, double dp, double rpu, double alpha, double n)
         {
-            double ktan;
+            double kTan;
             if (rp < 0)
             {
-                ktan = 0;
+                kTan = 0;
             }
             else
             {
                 double stan = 0.1 * dp * (alpha * (1 / rpu) + n * (1 - alpha) * (1 / rpu) * Math.Pow(rp / rpu, n - 1));
-                ktan = 1 / stan;
+                kTan = 1 / stan;
             }
-            return ktan;
+            return kTan;
         }
 
         // sTarget -> Tangent K メソッド
         private static double GetTangentStiffnessPileToeFromSettlement(double settlement, double dp, double rpu, double alpha, double n)
         {
-            double ktan;
+            double kTan;
             if (settlement < 0)
             {
-                ktan = 0;
+                kTan = 0;
             }
             else
             {
                 double rp = GetRp(settlement, dp, rpu, alpha, n);
                 double stan = 0.1 * dp * (alpha * (1 / rpu) + n * (1 - alpha) * (1 / rpu) * Math.Pow(rp / rpu, n - 1));
-                ktan = 1 / stan;
+                kTan = 1 / stan;
             }
-            return ktan;
+            return kTan;
         }
 
         // sTarget -> Secant K メソッド
-        private static double GetSecantStiffnessPileToeFromSettlement(double settlment, double dp, double rpu, double alpha, double n)
+        private static double GetSecantStiffnessPileToeFromSettlement(double settlement, double dp, double rpu, double alpha, double n)
         {
             double ksec;
-            if (settlment <= 0) // 変位が0以下(0または引抜方向)であれば
+            if (settlement <= 0) // 変位が0以下(0または引抜方向)であれば
             {
                 ksec = 0;
             }
             else
             {
-                ksec = GetRp(settlment, dp, rpu, alpha, n) / settlment;
+                ksec = GetRp(settlement, dp, rpu, alpha, n) / settlement;
             }
             return ksec;
         }
@@ -386,7 +370,7 @@ namespace PileDesign.Common
         private static double GetRp(double sTarget, double dp, double rpu, double alpha, double n)
         {
             double sn;
-            double ktan;
+            double kTan;
             double rp;
             if (sTarget <= 0)
             {
@@ -398,8 +382,8 @@ namespace PileDesign.Common
                 do
                 {
                     sn = GetSettlementPileToe(dp, rp, rpu, alpha, n);
-                    ktan = GetTangentStiffnessPileToeFromRp(rp, dp, rpu, alpha, n);
-                    rp -= (sn - sTarget) * ktan;
+                    kTan = GetTangentStiffnessPileToeFromRp(rp, dp, rpu, alpha, n);
+                    rp -= (sn - sTarget) * kTan;
                 } while (Math.Abs(sn - sTarget) > Math.Pow(10, -8));
             }
             return rp;
@@ -409,32 +393,32 @@ namespace PileDesign.Common
         private static double GetTangentStiffnessPilePerimeter(string state, double s, bool aPC, bool aPT, double tau1, double tau2, double S1, double S2, double psiL)
         {
             //double PI = Math.PI;
-            double ktan;
+            double kTan;
             if (state == "initial")
             {
-                ktan = 0;
+                kTan = 0;
             }
             else if (state == "positive" && aPC == false)
             {
-                ktan = 0;
+                kTan = 0;
             }
             else if (state == "negative" && aPT == false)
             {
-                ktan = 0;
+                kTan = 0;
             }
             else if (Math.Abs(s) <= S1)
             {
-                ktan = tau1 / S1 * psiL;
+                kTan = tau1 / S1 * psiL;
             }
             else if (Math.Abs(s) <= S2)
             {
-                ktan = (tau2 - tau1) / (S2 - S1) * psiL;
+                kTan = (tau2 - tau1) / (S2 - S1) * psiL;
             }
             else
             {
-                ktan = 0;
+                kTan = 0;
             }
-            return ktan;
+            return kTan;
         }
 
         // 杭周面の割線剛性を返すメソッド
@@ -593,7 +577,7 @@ namespace PileDesign.Common
 
             if (R.L2Norm() / F.L2Norm() != 0)
             {
-                ConvergenceCaluculation(state);
+                ConvergenceCalculation(state);
                 X0 = X.Clone();
                 F0 = F.Clone();
                 Rz0 = Rz.Clone();
@@ -620,7 +604,7 @@ namespace PileDesign.Common
             Rz.Clear();
             R.Clear();
 
-            double step = (pn == -1) ? GetStepCompression(SoilPile.Rpu, FricpMax/*, PileWeight*/) : GetStepTension(FricmMax, PileWeight);
+            double step = (pn == -1) ? GetStepCompression(SoilPile.Rpu, FricpMax) : GetStepTension(FricmMax, PileWeight);
             DeltaF.Clear();
             DeltaF[0] = step;
 
@@ -631,7 +615,7 @@ namespace PileDesign.Common
             {
                 ApplyLoadIncrements(ref stepCount, pn, step, limitFlags);
 
-                ConvergenceCaluculation(state);
+                ConvergenceCalculation(state);
 
                 double settlement = X[^1];
                 double dp = SoilPile.Dp / 1000.0;
@@ -878,7 +862,7 @@ namespace PileDesign.Common
             double rt_SLS = SoilPile.Rt_SLS;
 
             // 押込側荷重ステップ
-            double step_p = GetStepCompression(SoilPile.Rpu, FricpMax/*, PileWeight*/);
+            double step_p = GetStepCompression(SoilPile.Rpu, FricpMax);
 
             // 引抜側荷重ステップ
             double step_n = GetStepTension(FricmMax, PileWeight);
@@ -892,7 +876,7 @@ namespace PileDesign.Common
             if (R.L2Norm() / F.L2Norm() != 0)
             {
                 // 初期状態
-                ConvergenceCaluculation(state);
+                ConvergenceCalculation(state);
                 X0 = X.Clone();
                 F0 = F.Clone();
                 Rz0 = Rz.Clone();
@@ -1041,10 +1025,10 @@ namespace PileDesign.Common
                         step += 1;
                     }
 
-                    ConvergenceCaluculation(state);
+                    ConvergenceCalculation(state);
 
                     // 鉛直反力の計算
-                    double settlment = X[^1];
+                    double settlement = X[^1];
                     double dp = SoilPile.Dp / 1000.0; // m
                     double rpu = SoilPile.Rpu; // kN
                     double alpha = InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha;
@@ -1055,14 +1039,14 @@ namespace PileDesign.Common
                         Fs.Add(F);
                         Rs.Add(Rz);
                         Ds.Add(X);
-                        RzToes.Add(GetRp(settlment, dp, rpu, alpha, n));
+                        RzToes.Add(GetRp(settlement, dp, rpu, alpha, n));
 
                         if (isJustR_SLS || isJustR_DLS || isJustR_ULS)
                         {
                             FsLimit.Add(F);
                             RsLimit.Add(Rz);
                             DsLimit.Add(X);
-                            RzToesLimit.Add(GetRp(settlment, dp, rpu, alpha, n));
+                            RzToesLimit.Add(GetRp(settlement, dp, rpu, alpha, n));
                         }
                     }
                     else
@@ -1070,14 +1054,14 @@ namespace PileDesign.Common
                         Fs.Insert(0, F);
                         Rs.Insert(0, Rz);
                         Ds.Insert(0, X);
-                        RzToes.Insert(0, GetRp(settlment, dp, rpu, alpha, n));
+                        RzToes.Insert(0, GetRp(settlement, dp, rpu, alpha, n));
 
                         if (isJustRt_SLS || isJustRt_DLS || isJustRt_ULS)
                         {
                             FsLimit.Insert(0, F);
                             RsLimit.Insert(0, Rz);
                             DsLimit.Insert(0, X);
-                            RzToesLimit.Insert(0, GetRp(settlment, dp, rpu, alpha, n));
+                            RzToesLimit.Insert(0, GetRp(settlement, dp, rpu, alpha, n));
                         }
                     }
 
@@ -1132,7 +1116,7 @@ namespace PileDesign.Common
         }
 
         // 収束ループ
-        private void ConvergenceCaluculation(string state)
+        private void ConvergenceCalculation(string state)
         {
             //||res|| / ||F|| < tolerance となるまで繰り返し計算を行う
             //do while ||R|| / ||F|| > tolerance
@@ -1170,10 +1154,10 @@ namespace PileDesign.Common
         }
 
         // 引張ステップ
-        private static double GetStepTension(double fricmMax, double pileWeight)
+        private static double GetStepTension(double frictionMMax, double pileWeight)
         {
-            double pmin = fricmMax - pileWeight;
-            return pmin switch
+            double pMin = frictionMMax - pileWeight;
+            return pMin switch
             {
                 >= 0 => 0,
                 >= -1000 => -10,
@@ -1186,10 +1170,10 @@ namespace PileDesign.Common
         }
 
         // 圧縮ステップ
-        private static double GetStepCompression(double rpu, double fripMax/*, double pileWeight*/)
+        private static double GetStepCompression(double rpu, double frictionPMax)
         {
-            double pmax = rpu + fripMax;
-            return pmax switch
+            double pMax = rpu + frictionPMax;
+            return pMax switch
             {
                 <= 0 => 0,
                 <= 1000 => 10,

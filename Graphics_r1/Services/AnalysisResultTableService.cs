@@ -17,8 +17,24 @@ namespace PileDesign.Services
         {
             var tables = new List<ResultTable>();
 
-            var beams = model.Beams?.ToList() ?? new List<PileDesign.FEM.Beam>();
-            var nodes = model.Nodes?.ToList() ?? new List<PileDesign.FEM.Node>();
+            var beams = model.Beams?.ToList() ?? [];
+            var nodes = model.Nodes?.ToList() ?? [];
+
+            // 結果検索用のヘルパー: BeamResultsから該当する結果を取得
+            BeamResult? FindBeamResult(Beam beam) =>
+                beam.BeamResults?.FirstOrDefault(r =>
+                    r.IsLiquefaction == isLiquefaction &&
+                    r.Step == step &&
+                    (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                    (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
+
+            // 結果検索用のヘルパー: NodeResultsから該当する結果を取得
+            NodeResult? FindNodeResult(PileDesign.FEM.Node node) =>
+                node.NodeResults?.FirstOrDefault(r =>
+                    r.IsLiquefaction == isLiquefaction &&
+                    r.Step == step &&
+                    (loadCase == null || r.LoadCase?.LoadName == loadCase.LoadName) &&
+                    (loadCombination == null || r.LoadCombination?.Name == loadCombination.Name));
 
             if (beams.Count > 0)
             {
@@ -27,7 +43,9 @@ namespace PileDesign.Services
                     {
                         int n1 = nodes.IndexOf(beam.NodeI) + 1;
                         int n2 = nodes.IndexOf(beam.NodeJ) + 1;
-                        var bf = beam.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                        // 保存された結果から取得、なければ現在の値を使用
+                        var result = FindBeamResult(beam);
+                        var bf = result?.CumulativeForce ?? beam.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                         return ElementSectionForceRow.From(idx + 1, n1, n2, beam, bf);
                     })
                     .Cast<object>()
@@ -52,7 +70,9 @@ namespace PileDesign.Services
                     {
                         int n1 = nodes.IndexOf(beam.NodeI) + 1;
                         int n2 = nodes.IndexOf(beam.NodeJ) + 1;
-                        var bd = beam.CumulativeDisp ?? new BeamDisp(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                        // 保存された結果から取得、なければ現在の値を使用
+                        var result = FindBeamResult(beam);
+                        var bd = result?.CumulativeDisp ?? beam.CumulativeDisp ?? new BeamDisp(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                         return ElementSectionDispRow.From(idx + 1, n1, n2, beam, bd);
                     })
                     .Cast<object>()
@@ -75,7 +95,9 @@ namespace PileDesign.Services
                 var nodeForceRows = nodes
                     .Select((node, idx) =>
                     {
-                        var react = node.CumulativeReaction ?? new NodeReaction(0, 0, 0, 0, 0, 0);
+                        // 保存された結果から取得、なければ現在の値を使用
+                        var result = FindNodeResult(node);
+                        var react = result?.CumulativeReaction ?? node.CumulativeReaction ?? new NodeReaction(0, 0, 0, 0, 0, 0);
                         return NodeForceRow.From(idx + 1, node, react);
                     })
                     .Cast<object>()
@@ -98,7 +120,9 @@ namespace PileDesign.Services
                 var nodeDispRows = nodes
                     .Select((node, idx) =>
                     {
-                        var disp = node.CumulativeDisp ?? new NodeDisp(0, 0, 0, 0, 0, 0);
+                        // 保存された結果から取得、なければ現在の値を使用
+                        var result = FindNodeResult(node);
+                        var disp = result?.CumulativeDisp ?? node.CumulativeDisp ?? new NodeDisp(0, 0, 0, 0, 0, 0);
                         return NodeDisplacementRow.From(idx + 1, node, disp);
                     })
                     .Cast<object>()

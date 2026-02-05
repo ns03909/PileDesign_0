@@ -135,21 +135,9 @@
 
 //            var copy = new HorizontalSoilSpring(Name, nodeICopy, nodeJCopy)
 //            {
-//                IncrementalDisp = this.IncrementalDisp?.Clone(),
-//                CumulativeDisp = this.CumulativeDisp?.Clone(),
-//                IncrementalForce = this.IncrementalForce?.Clone(),
-//                CumulativeForce = this.CumulativeForce?.Clone(),
-//                KeTan = this.KeTan?.Clone(),
-//                KeSec = this.KeSec?.Clone(),
-//                HorizontalSpringResults = new ObservableCollection<HorizontalSpringResult>(
-//                    this.HorizontalSpringResults.Select(r => r.DeepCopy()))
-//            };
-//            return copy;
-//        }
-
-//    }
 //}
 using MathNet.Numerics.LinearAlgebra;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -168,7 +156,7 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public new Matrix<double> KeSec => base.KeSec;
 
-        public ObservableCollection<HorizontalSpringResult> HorizontalSpringResults { get; set; } = [];
+        public List<HorizontalSpringResult> HorizontalSpringResults { get; set; } = [];
 
         // パラメータなしコンストラクタ（シリアライザ用）
         public HorizontalSoilSpring() : base() { }
@@ -202,7 +190,7 @@ namespace PileDesign.FEM
             if (this.KeSec != null) copy.SetKeFromMatrix(this.KeSec, isTan: false);
 
             // 結果コピー
-            copy.HorizontalSpringResults = new ObservableCollection<HorizontalSpringResult>(
+            copy.HorizontalSpringResults = new List<HorizontalSpringResult>(
                 this.HorizontalSpringResults.Select(r => r.DeepCopy()));
 
             return copy;

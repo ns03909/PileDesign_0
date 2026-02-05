@@ -57,48 +57,118 @@ namespace PileDesign.Models.PileLibrary
 
     public class PCRingLoader
     {
+        //public static ObservableCollection<PCRing> LoadFromCsv(string filePath)
+        //{
+        //    var _PCRings = new ObservableCollection<PCRing>();
+
+        //    using (var reader = new StreamReader(filePath))
+        //    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        //    {
+        //        reader.ReadLine();
+        //        try
+        //        {
+        //            while (csv.Read())
+        //            {
+        //                var _PCRing = new PCRing
+        //                {
+        //                    D = csv.GetField<double>(0),
+        //                    RD1 = csv.GetField<double>(1),
+        //                    Tc = csv.GetField<double>(2),
+        //                    RD2 = csv.GetField<double>(1) + 2 * csv.GetField<double>(2) + 2 * csv.GetField<double>(9),
+        //                    Hr = csv.GetField<double>(3),
+        //                    BarNum = csv.GetField<int>(4),
+        //                    BarSize = csv.GetField<string>(5),
+        //                    L1 = csv.GetField<double>(6), // 
+        //                    L2 = csv.GetField<double>(7), // 
+        //                    Name = csv.GetField<string>(8), // 
+        //                    RingSteelTs = csv.GetField<double>(9),
+        //                    RingSteelGrade = csv.GetField<string>(10),
+        //                    SpiralDia = csv.GetField<string>(11), // プレストレス
+        //                    SpiralNum = csv.GetField<int>(12), // コンクリート縦弾性係数
+
+        //                };
+
+        //                _PCRings.Add(_PCRing);
+        //            }
+        //        }
+        //        catch (CsvHelper.TypeConversion.TypeConverterException ex)
+        //        {
+        //            // フィールドの読み取りに失敗した場合の処理
+        //            // 例外を適切にハンドリングする
+        //            Console.WriteLine("CSVファイルの形式が正しくありません。");
+        //            Console.WriteLine(ex.Message);
+        //        }
+        //    }
+        //    return _PCRings;
+        //}
         public static ObservableCollection<PCRing> LoadFromCsv(string filePath)
         {
             var _PCRings = new ObservableCollection<PCRing>();
 
-            using (var reader = new StreamReader(filePath))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            using var reader = new StreamReader(filePath);
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+            // ヘッダを読み取る（CsvHelper に任せる）
+            if (!csv.Read()) return _PCRings;
+            csv.ReadHeader();
+
+            while (csv.Read())
             {
-                reader.ReadLine();
                 try
                 {
-                    while (csv.Read())
+                    // 先頭フィールドにヘッダ文字列が入っている行をスキップ
+                    var firstRaw = csv.GetField(0);
+                    if (string.IsNullOrWhiteSpace(firstRaw)) continue;
+                    if (firstRaw.Trim().Equals("D", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    // 安全にフィールドを取得（TryGetField を使う）
+                    csv.TryGetField(0, out double d);
+                    csv.TryGetField(1, out double rd1);
+                    csv.TryGetField(2, out double tc);
+                    csv.TryGetField(3, out double hr);
+                    csv.TryGetField(4, out int barNum);
+                    csv.TryGetField(5, out string barSize);
+                    csv.TryGetField(6, out double l1);
+                    csv.TryGetField(7, out double l2);
+                    csv.TryGetField(8, out string name);
+                    csv.TryGetField(9, out double ts);
+                    csv.TryGetField(10, out string ringSteelGrade);
+                    csv.TryGetField(11, out string spiralDia);
+                    csv.TryGetField(12, out int spiralNum);
+
+                    var _PCRing = new PCRing
                     {
-                        var _PCRing = new PCRing
-                        {
-                            D = csv.GetField<double>(0),
-                            RD1 = csv.GetField<double>(1),
-                            Tc = csv.GetField<double>(2),
-                            RD2 = csv.GetField<double>(1) + 2 * csv.GetField<double>(2) + 2 * csv.GetField<double>(9),
-                            Hr = csv.GetField<double>(3),
-                            BarNum = csv.GetField<int>(4),
-                            BarSize = csv.GetField<string>(5),
-                            L1 = csv.GetField<double>(6), // 
-                            L2 = csv.GetField<double>(7), // 
-                            Name = csv.GetField<string>(8), // 
-                            RingSteelTs = csv.GetField<double>(9),
-                            RingSteelGrade = csv.GetField<string>(10),
-                            SpiralDia = csv.GetField<string>(11), // プレストレス
-                            SpiralNum = csv.GetField<int>(12), // コンクリート縦弾性係数
+                        D = d,
+                        RD1 = rd1,
+                        Tc = tc,
+                        RD2 = rd1 + 2 * tc + 2 * ts,
+                        Hr = hr,
+                        BarNum = barNum,
+                        BarSize = barSize ?? string.Empty,
+                        L1 = l1,
+                        L2 = l2,
+                        Name = name ?? string.Empty,
+                        RingSteelTs = ts,
+                        RingSteelGrade = ringSteelGrade ?? string.Empty,
+                        SpiralDia = spiralDia ?? string.Empty,
+                        SpiralNum = spiralNum,
+                    };
 
-                        };
-
-                        _PCRings.Add(_PCRing);
-                    }
+                    _PCRings.Add(_PCRing);
                 }
                 catch (CsvHelper.TypeConversion.TypeConverterException ex)
                 {
-                    // フィールドの読み取りに失敗した場合の処理
-                    // 例外を適切にハンドリングする
-                    Console.WriteLine("CSVファイルの形式が正しくありません。");
-                    Console.WriteLine(ex.Message);
+                    // 型変換失敗の行はスキップしてデバッグ出力（運用時はログ出力に置き換える）
+                    System.Diagnostics.Debug.WriteLine($"PCRing.LoadFromCsv: skipped row {csv.Context.Parser.Row} - {ex.Message}");
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"PCRing.LoadFromCsv: unexpected error row {csv.Context.Parser.Row} - {ex.Message}");
+                    continue;
                 }
             }
+
             return _PCRings;
         }
     }

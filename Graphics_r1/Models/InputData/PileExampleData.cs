@@ -26,6 +26,9 @@ namespace PileDesign.Models.InputData
         [JsonPropertyName("pileBodies")]
         public List<PileBodyDto> PileBodies { get; set; } = [];
 
+        [JsonPropertyName("embedment")]
+        public EmbedmentDto? Embedment { get; set; }
+
         [JsonPropertyName("pileLayoutItems")]
         public List<PileLayoutItemDto> PileLayoutItems { get; set; } = [];
 
@@ -209,5 +212,50 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("spacing")]
         public double Spacing { get; set; }
+    }
+
+    /// <summary>
+    /// 根入れDTO
+    /// </summary>
+    public class EmbedmentDto
+    {
+        [JsonPropertyName("groundNo")]
+        public int GroundNo { get; set; } = 1;
+
+        [JsonPropertyName("embedmentTopAltitude")]
+        public double EmbedmentTopAltitude { get; set; }
+
+        [JsonPropertyName("embedmentBottomAltitude")]
+        public double EmbedmentBottomAltitude { get; set; }
+
+        [JsonPropertyName("zs")]
+        public List<double>? Zs { get; set; }
+
+        [JsonPropertyName("embedmentLayers")]
+        public List<EmbedmentLayerDto>? EmbedmentLayers { get; set; }
+    }
+
+    /// <summary>
+    /// 根入れ層DTO
+    /// </summary>
+    public class EmbedmentLayerDto
+    {
+        [JsonPropertyName("topAltitude")]
+        public double TopAltitude { get; set; }
+
+        [JsonPropertyName("bottomAltitude")]
+        public double BottomAltitude { get; set; }
+
+        [JsonPropertyName("x1")]
+        public double X1 { get; set; }
+
+        [JsonPropertyName("x2")]
+        public double X2 { get; set; }
+
+        [JsonPropertyName("y1")]
+        public double Y1 { get; set; }
+
+        [JsonPropertyName("y2")]
+        public double Y2 { get; set; }
     }
 }

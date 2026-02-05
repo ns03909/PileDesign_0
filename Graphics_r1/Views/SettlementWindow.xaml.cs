@@ -106,7 +106,7 @@ namespace PileDesign.Views
         private void DataGridCircum_SelecitonChanged(object sender, SelectionChangedEventArgs e)
         {
             if (DataContext is SettlementViewModel viewModel)
-                viewModel.UpdateCircumSeries();
+                viewModel.UpdateCircumstanceSeries();
         }
 
         private void DataGridLoadDisplacement_SelecitonChanged(object sender, SelectionChangedEventArgs e)

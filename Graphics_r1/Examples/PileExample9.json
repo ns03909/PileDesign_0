@@ -66,29 +66,20 @@
     }
   ],
 
-
   /* ← ここから根入れ情報を追加 */
   "embedment": {
     "groundNo": 1,
-    "embedmentTopAltitude": -6.5,
-    "embedmentBottomAltitude": -17.0,
-    "zs": [ -6.5, -8.0, -10.0, -13.0, -17.0 ],
+    "embedmentTopAltitude": 0.0,
+    "embedmentBottomAltitude": -6.5,
+    "zs": [ -6.5, 0.0 ],
     "embedmentLayers": [
       {
-        "topAltitude": -6.5,
-        "bottomAltitude": -10.0,
+        "topAltitude": 0.0,
+        "bottomAltitude": -6.5,
         "x1": 0.0,
-        "x2": 7.0,
-        "y1": 0.0,
-        "y2": 7.0
-      },
-      {
-        "topAltitude": -10.0,
-        "bottomAltitude": -17.0,
-        "x1": 0.0,
-        "x2": 7.0,
-        "y1": 0.0,
-        "y2": 7.0
+        "x2": 36.8,
+        "y1": -2.85,
+        "y2": 13.75
       }
     ]
   },
@@ -106,8 +97,8 @@
       "y": -0.4,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 2,
@@ -120,8 +111,8 @@
       "y": -0.4,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 3,
@@ -134,8 +125,8 @@
       "y": -0.4,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 4,
@@ -148,8 +139,8 @@
       "y": -0.4,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 5,
@@ -162,8 +153,8 @@
       "y": -0.4,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 6,
@@ -176,8 +167,8 @@
       "y": -0.4,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 7,
@@ -190,8 +181,8 @@
       "y": 7.95,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 8,
@@ -204,8 +195,8 @@
       "y": 7.95,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 9,
@@ -218,8 +209,8 @@
       "y": 7.95,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 10,
@@ -232,8 +223,8 @@
       "y": 7.95,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 11,
@@ -246,8 +237,8 @@
       "y": 7.95,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 12,
@@ -260,8 +251,8 @@
       "y": 7.95,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 13,
@@ -274,8 +265,8 @@
       "y": 13.15,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 14,
@@ -288,8 +279,8 @@
       "y": 13.15,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 15,
@@ -302,8 +293,8 @@
       "y": 13.15,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 16,
@@ -316,8 +307,8 @@
       "y": 13.15,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 17,
@@ -330,8 +321,8 @@
       "y": 13.15,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     },
     {
       "pileNo": 18,
@@ -344,8 +335,8 @@
       "y": 13.15,
       "z": -6.5,
       "axialForceVL0": 2452.0,
-      "axialForceLevel1s": [],
-      "axialForceLevel2s": []
+      "axialForceLevel1s": [ 2452.0, 2452.0, 2452.0, 2452.0 ],
+      "axialForceLevel2s": [ 2452.0, 2452.0, 2452.0, 2452.0 ]
     }
   ],
   "gridXItems": [

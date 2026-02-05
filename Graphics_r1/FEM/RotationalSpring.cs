@@ -41,7 +41,16 @@ namespace PileDesign.FEM
             if (Points.Count == 0) return 0.0;
             double t = Math.Abs(theta);
             if (Points.Count == 1) return SlopeFromOrigin(Points[0]);
-            if (t <= Points[0].Theta) return SlopeFromOrigin(Points[0]);
+            // 原点からの初期接線剛性: 最初の点が原点(0,0)の場合は次の点との傾きを使用
+            if (t <= Points[0].Theta)
+            {
+                if (Points[0].Theta <= 1e-12 && Points.Count >= 2)
+                {
+                    // 最初の点が原点の場合、原点と次の点との傾きを返す
+                    return SafeSlope(Points[0], Points[1]);
+                }
+                return SlopeFromOrigin(Points[0]);
+            }
             if (t >= Points[^1].Theta) return SafeSlope(Points[^2], Points[^1]);
 
             int idx = FindSegmentIndex(t);
@@ -106,7 +115,7 @@ namespace PileDesign.FEM
     public class RotationalSpring : TwoNodeSpringElement
     {
 
-        public ObservableCollection<RotationalSpringResult> RotationalSpringResults { get; set; } = [];
+        public List<RotationalSpringResult> RotationalSpringResults { get; set; } = [];
 
         public BeamDisp IncrementalDisp { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         public BeamDisp CumulativeDisp { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);

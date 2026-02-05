@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:models="clr-namespace:PileDesign.Models" 
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
@@ -13,30 +14,10 @@
         Title="要素分割ウィンドウ" Height="650" Width="650"
         Loaded="ElementDivisionWindow_Loaded">
 
-    <Window.InputBindings>
-        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
-        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
-        <!-- 追加: Ctrl+Enter で OkCommand を実行 -->
-        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
-        <!-- 追加: Esc で CancelCommand を実行 -->
-        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
-    </Window.InputBindings>
-    
     <Window.Resources>
         <local:DoubleLessThanConverter x:Key="DoubleLessThanConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-
-        <!-- DataGridCellのスタイルを定義 -->
-        <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
-                    <Setter Property="Foreground" Value="White"/>
-                    <Setter Property="BorderBrush" Value="White"/>
-                    <Setter Property="BorderThickness" Value="0.75"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>-->
+        <conv:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
 
         <!--CheckBoxのスタイル定義-->
         <Style x:Key="GrayCheckBoxStyle" TargetType="CheckBox">
@@ -106,12 +87,51 @@
     </Window.Resources>
 
     <Grid>
+        <!-- 上にランプ表示行を追加 -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="auto"/>
+            <RowDefinition Height="Auto"/> <!-- ランプ -->
+            <RowDefinition Height="*"/>    <!-- 既存 TabControl -->
+            <RowDefinition Height="auto"/> <!-- 下部ボタン -->
         </Grid.RowDefinitions>
 
-        <TabControl Grid.Row="0" SelectionChanged="TabControl_SelectionChange">
+        <!-- ランプ群（タイトル直下） -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="8" VerticalAlignment="Center" HorizontalAlignment="Left">
+            <!-- 土層-杭セットランプ -->
+            <ItemsControl ItemsSource="{Binding SoilPileLampStates}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type models:LampState}">
+                        <Button Width="18" Height="18" Margin="2" Click="SoilPileLamp_Click" ToolTip="土層-杭セットを開く">
+                            <Ellipse Width="14" Height="14" Fill="{Binding IsOn, Converter={StaticResource BoolToBrushConverter}}" Stroke="Black" StrokeThickness="0.5"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 根入れセットランプ（単一または複数に対応） -->
+            <ItemsControl ItemsSource="{Binding EmbedmentLampStates}" Margin="12,0,0,0"
+              Visibility="{Binding IsDoatsuGoryokuBaneVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type models:LampState}">
+                        <Button Width="18" Height="18" Margin="2" Click="EmbedmentLamp_Click" ToolTip="土層-根入れセットを開く">
+                            <Ellipse Width="14" Height="14" Fill="{Binding IsOn, Converter={StaticResource BoolToBrushConverter}}" Stroke="Black" StrokeThickness="0.5"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="{Binding SoilLayerPileSetCount, StringFormat=  (全 {0} セット)}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 既存 TabControl を下に移動、名前を付与 -->
+        <TabControl x:Name="MainTabControl" Grid.Row="1" SelectionChanged="TabControl_SelectionChange">
             <TabItem Header="土層-杭セット">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -1023,12 +1043,13 @@
             </TabItem>
         </TabControl>
 
+        <!-- 既存の下部ボタン領域を Grid.Row=2 に移動 -->
         <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
             <Button x:Name="ButtonOk" Content="保存して閉じる(Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
+                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                    IsEnabled="{Binding AllLampsLit}"/>
             <Button x:Name="ButtonCancel" Content="破棄して閉じる(Esc)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
-
         </StackPanel>
     </Grid>
 

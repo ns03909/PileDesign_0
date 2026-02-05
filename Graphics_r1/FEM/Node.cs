@@ -56,7 +56,7 @@ namespace PileDesign.FEM
         [JsonIgnore]
         public Matrix<double> TransferMatrix { get; set; } = Matrix<double>.Build.DenseIdentity(6);
 
-        public ObservableCollection<NodeResult> NodeResults { get; set; } = [];
+        public System.Collections.Generic.List<NodeResult> NodeResults { get; set; } = [];
 
         // 
         public NodeResult GetNodeResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
@@ -660,7 +660,8 @@ namespace PileDesign.FEM
                 IsForcedDisped = this.IsForcedDisped,
 
                 TransferMatrix = this.TransferMatrix.Clone(),
-                NodeResults = new ObservableCollection<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
+                //NodeResults = new ObservableCollection<NodeResult>(this.NodeResults.Select(r => r.DeepCopy()))
+                NodeResults = this.NodeResults.Select(r => r.DeepCopy()).ToList()
             };
             return copy;
 

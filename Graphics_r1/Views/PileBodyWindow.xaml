@@ -494,7 +494,7 @@
                                         Converter={StaticResource VisibilityConverter},
                                         ConverterParameter='開端杭'}">
                                     <TextBlock Text="杭先端閉塞効率" Width="200" HorizontalAlignment="Right"/>
-                                    <TextBox x:Name="TextBoxPrecastPileTipNonPermability" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                    <TextBox x:Name="TextBoxPrecastPileTipNonPermeability" HorizontalAlignment="Left" VerticalAlignment="Center"
                                          Width="100" Text="{Binding PileBody.TipNonPermability }"  HorizontalContentAlignment="Right"
                                              IsReadOnly = "true" Foreground="gray">
                                         <i:Interaction.Triggers>
@@ -537,7 +537,7 @@
                                 </i:Interaction.Triggers>
                             </ComboBox>
                             <TextBlock Text="杭先端閉塞効率" Width="100" HorizontalAlignment="Right"/>
-                            <TextBox x:Name="TextBoxSteelPileTipNonPermability" HorizontalAlignment="Left" VerticalAlignment="Center"
+                            <TextBox x:Name="TextBoxSteelPileTipNonPermeability" HorizontalAlignment="Left" VerticalAlignment="Center"
                              Width="100"  HorizontalContentAlignment="Right" PreviewKeyDown="TextBox_PreviewKeyDown"
                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                      Text="{Binding PileBody.TipNonPermability }" IsReadOnly = "true" Foreground="gray">

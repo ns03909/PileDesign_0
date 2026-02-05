@@ -25,9 +25,9 @@ namespace PileDesign.ViewModels
             // 展開状態を保存
             var expandedNodes = GetExpandedNodes(TreeViewControl);
 
-            if (CurrentInputModel != null && CTreeViewDatas != null)
+            if (CurrentInputModel != null && CTreeViewData != null)
             {
-                CTreeViewDatas.Clear();
+                CTreeViewData.Clear();
 
                 UpdateTreeViewFundamental();
                 UpdateTreeViewLoadCases();
@@ -70,7 +70,7 @@ namespace PileDesign.ViewModels
                 TextColor = Brushes.Red
             });
 
-            CTreeViewDatas.Add(dataFundamental1);
+            CTreeViewData.Add(dataFundamental1);
         }
 
         // 荷重条件
@@ -160,9 +160,9 @@ namespace PileDesign.ViewModels
                         ]
                 });
             }
-            CTreeViewDatas.Add(dataLoadcombination);
-            CTreeViewDatas.Add(dataLoadCaseLevel1);
-            CTreeViewDatas.Add(dataLoadCaseLevel2);
+            CTreeViewData.Add(dataLoadcombination);
+            CTreeViewData.Add(dataLoadCaseLevel1);
+            CTreeViewData.Add(dataLoadCaseLevel2);
         }
 
         // 地盤
@@ -203,7 +203,7 @@ namespace PileDesign.ViewModels
 
                 dataGround.Children.Add(groundChildrenGround);
             }
-            CTreeViewDatas.Add(dataGround);
+            CTreeViewData.Add(dataGround);
         }
 
         // 杭体
@@ -275,7 +275,7 @@ namespace PileDesign.ViewModels
                     dataPileBodies.Children.Add(groundChildrenPileBody);
                 }
             }
-            CTreeViewDatas.Add(dataPileBodies);
+            CTreeViewData.Add(dataPileBodies);
         }
 
         //杭位置・軸力
@@ -294,7 +294,7 @@ namespace PileDesign.ViewModels
                     Name = $"<{i + 1}> ",
                 });
             }
-            CTreeViewDatas.Add(datapileLocation);
+            CTreeViewData.Add(datapileLocation);
         }
 
         // 根入部
@@ -336,7 +336,7 @@ namespace PileDesign.ViewModels
                 });
             }
             dataEmbedment.Children.Add(dataEmbementSections);
-            CTreeViewDatas.Add(dataEmbedment);
+            CTreeViewData.Add(dataEmbedment);
         }
 
         // 地盤杭レベルセット
@@ -369,7 +369,7 @@ namespace PileDesign.ViewModels
                 });
             }
 
-            CTreeViewDatas.Add(dataSoilPiles);
+            CTreeViewData.Add(dataSoilPiles);
         }
 
         // 杭根入部セット
@@ -382,7 +382,7 @@ namespace PileDesign.ViewModels
                     Name = "杭根入部セット" + $"(節点数:{CurrentInputModel.ElementDivision.SoilEmbedment.ZDataItems.Count})",
                 };
 
-                CTreeViewDatas.Add(dataSoilEmbedment);
+                CTreeViewData.Add(dataSoilEmbedment);
             }
         }
 

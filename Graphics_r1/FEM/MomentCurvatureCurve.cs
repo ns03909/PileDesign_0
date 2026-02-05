@@ -91,7 +91,11 @@ namespace PileDesign.FEM
         // dM/dφ（接線剛性）: EI_eff として扱える
         public double EvaluateTangent(double phi)
         {
-            if (Points == null || Points.Count <= 1) return 0.0;
+            if (Points == null || Points.Count <= 1)
+            {
+                System.Diagnostics.Debug.WriteLine($"EvaluateTangent: phi={phi:E6}, returning 0.0 (no points)");
+                return 0.0;
+            }
 
             for (int i = 0; i < Points.Count - 1; i++)
             {

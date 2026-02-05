@@ -32,6 +32,12 @@ namespace PileDesign.FEM
         private MomentCurvatureCurve? _yCurve;
         private MomentCurvatureCurve? _zCurve;
 
+        // 曲線の初期接線剛性（φ→0 での dM/dφ）：EI正規化の基準
+        public double InitialCurveTangent { get; private set; }
+
+        // 解決済みの合成M-φ曲線を取得（グラフ表示用）
+        public MomentCurvatureCurve? ResolvedCombinedCurve => _combinedCurve;
+
         // 追加: PileSection.GetMPhiRelationship で得た曲線（合成）を直接設定
         public void SetResolvedCombinedMphi(System.Collections.Generic.IEnumerable<double> phis,
                                             System.Collections.Generic.IEnumerable<double> moments)
@@ -89,12 +95,26 @@ namespace PileDesign.FEM
             // 曲線作成（安全化済みデータ）
             _combinedCurve = new MomentCurvatureCurve(cleanPts.Select(t => (t.Phi, t.Moment)));
 
+            // 曲線の初期接線剛性を計算（φ→0 での dM/dφ）
+            // 最初の2点間の傾きを使用
+            if (cleanPts.Count >= 2)
+            {
+                var p0 = cleanPts[0];
+                var p1 = cleanPts[1];
+                double dPhi = p1.Phi - p0.Phi;
+                InitialCurveTangent = (dPhi > 1e-15) ? (p1.Moment - p0.Moment) / dPhi : 0.0;
+            }
+            else
+            {
+                InitialCurveTangent = 0.0;
+            }
+
             // デバッグログ（先頭/末尾の点を出力）
             try
             {
                 var first = cleanPts.First();
                 var last = cleanPts.Last();
-                System.Diagnostics.Debug.WriteLine($"SetResolvedCombinedMphi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}");
+                System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMphi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
             catch { }
         }
@@ -175,6 +195,7 @@ namespace PileDesign.FEM
             {
                 double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
                 double EIeff = _combinedCurve.EvaluateTangent(phiRes);
+                System.Diagnostics.Debug.WriteLine($"EvaluateEIeff: Beam={Name}, phiRes={phiRes:E6}, EIeff_raw={EIeff:E6}, EI0y={EI0y:E6}, curvePoints={_combinedCurve.Points?.Count ?? 0}");
                 if (!double.IsFinite(EIeff) || EIeff <= 0.0) EIeff = (EI0y > 0.0 ? EI0y : EI0z);
                 return (EIeff, EIeff);
             }
@@ -215,6 +236,9 @@ namespace PileDesign.FEM
 
         public double EA_Multiplier { get; set; }
 
+        // 要素中央の曲率（解析中に更新される）
+        public double CurrentCurvature { get; set; }
+
         [JsonIgnore]
         public Matrix<double> KeTan { get; set; }
         [JsonIgnore]
@@ -223,7 +247,7 @@ namespace PileDesign.FEM
         public Vector<double> Curve { get; set; }
 
         public HorizontalSoilReactionItem HorizontalSoilReactionItem { get; set; }
-        public ObservableCollection<BeamResult> BeamResults { get; set; } = [];
+        public System.Collections.Generic.List<BeamResult> BeamResults { get; set; } = [];
 
         // パラメータなしコンストラクタ（必須）
         public Beam() { }
@@ -563,7 +587,7 @@ namespace PileDesign.FEM
                 KeSec = this.KeSec?.Clone(),
                 Curve = this.Curve?.Clone(),
                 HorizontalSoilReactionItem = soilReactionCopy,
-                BeamResults = new ObservableCollection<BeamResult>(this.BeamResults.Select(r => r.DeepCopy()))
+                BeamResults = new System.Collections.Generic.List<BeamResult>(this.BeamResults.Select(r => r.DeepCopy()))
             };
             return copy;
         }

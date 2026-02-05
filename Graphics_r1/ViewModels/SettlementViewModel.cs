@@ -81,7 +81,7 @@ namespace PileDesign.ViewModels
         public ObservableCollection<double> Ds { get; set; } = [];
 
         // 選択杭区間
-        public PileCircumVertical SelectedPileCircumVertical { get; set; }
+        public PileCircumVertical SelectedPileCircumstanceVertical { get; set; }
 
         public VerticalLoadTransferMethod.LoadDisplacement SelectedLoadDisplacement { get; set; }
 
@@ -92,8 +92,8 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _verticalLoadTransferMethod, value);
         }
 
-        // 解析制御モード選択
-        private AnalysisControlMode _selectedAnalysisMode = AnalysisControlMode.DisplacementControl;
+        // 解析制御モード選択（荷重制御法をデフォルトに）
+        private AnalysisControlMode _selectedAnalysisMode = AnalysisControlMode.LoadControl;
         public AnalysisControlMode SelectedAnalysisMode
         {
             get => _selectedAnalysisMode;
@@ -122,8 +122,8 @@ namespace PileDesign.ViewModels
         public ComboBox ComboBoxPileBodyNo { get; set; }
         public TextBox TextBoxPileBodyRef { get; set; }
         public TextBox TextBoxPileToeDia { get; set; }
-        public TextBox TextBoxPrecastPileTipNonPermability { get; set; }
-        public TextBox TextBoxSteelPileTipNonPermability { get; set; }
+        public TextBox TextBoxPrecastPileTipNonPermeability { get; set; }
+        public TextBox TextBoxSteelPileTipNonPermeability { get; set; }
         public TextBox TextBoxSettleAlpha { get; set; }
         public TextBox TextBoxSettleN { get; set; }
 
@@ -149,13 +149,13 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_PileToe, value);
         }
 
-        public static Crosshair MyCrosshair_PileCircum { get; private set; }
+        public static Crosshair MyCrosshair_PileCircumstance { get; private set; }
 
-        private string _crosshairPositionText_PileCircum;
-        public string CrosshairPositionText_PileCircum
+        private string _crosshairPositionText_PileCircumstance;
+        public string CrosshairPositionText_PileCircumstance
         {
-            get => _crosshairPositionText_PileCircum;
-            set => SetProperty(ref _crosshairPositionText_PileCircum, value);
+            get => _crosshairPositionText_PileCircumstance;
+            set => SetProperty(ref _crosshairPositionText_PileCircumstance, value);
         }
 
         public static Crosshair MyCrosshair_PileToeSettlement { get; private set; }
@@ -182,7 +182,7 @@ namespace PileDesign.ViewModels
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
 
             // 元コレクションを先にスナップショット化（この時点では DeepCopy は呼ばれない）
-            var soilPilesSnapshot = InputModel.ElementDivision.SoilPiles?.ToList() ?? new List<SoilPile>();
+            var soilPilesSnapshot = InputModel.ElementDivision.SoilPiles?.ToList() ?? [];
 
             // スナップショットを列挙して DeepCopy（元コレクションはもはや触らない）
             SoilPiles = new ObservableCollection<SoilPile>(soilPilesSnapshot.Select(pile => pile.DeepCopy()));
@@ -209,15 +209,15 @@ namespace PileDesign.ViewModels
             ComboBoxPileBodyNo = new();
             TextBoxPileBodyRef = new();
             TextBoxPileToeDia = new();
-            TextBoxPrecastPileTipNonPermability = new();
-            TextBoxSteelPileTipNonPermability = new();
+            TextBoxPrecastPileTipNonPermeability = new();
+            TextBoxSteelPileTipNonPermeability = new();
             TextBoxSettleAlpha = new();
             TextBoxSettleN = new();
 
             AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
 
             UpdateSettlementChart();
-            UpdateCircumSeries();
+            UpdateCircumstanceSeries();
             DrawShapes();
 
             // 初期状態をUndoManagerに保存（ここもスナップショット→DeepCopyで安全に）
@@ -313,6 +313,7 @@ namespace PileDesign.ViewModels
             wpf.Plot.Clear();
             wpfToe.Plot.Clear();
 
+            // Rt_ULS, Rt_DLS, Rt_SLSは負の値で格納されている
             List<double> allowableLoads = [SoilPile.Rt_ULS, SoilPile.Rt_DLS, SoilPile.Rt_SLS, SoilPile.R_SLS, SoilPile.R_DLS, SoilPile.R_ULS];
             List<double> settlements = [];
             List<double> settlementsToe = [];
@@ -381,40 +382,53 @@ namespace PileDesign.ViewModels
             List<double> forcesLevel2 = [];
             List<double> settlementsLevel2 = [];
 
+            // デバッグ: VL値の確認
+            System.Diagnostics.Debug.WriteLine($"=== UpdateSettlementChart VL Debug ===");
+            System.Diagnostics.Debug.WriteLine($"SoilPileNo = {SoilPileNo}");
+            System.Diagnostics.Debug.WriteLine($"_mainWindowViewModel HashCode = {_mainWindowViewModel?.GetHashCode()}");
+            System.Diagnostics.Debug.WriteLine($"InputModel HashCode = {InputModel?.GetHashCode()}");
+            System.Diagnostics.Debug.WriteLine($"PileLayoutItems HashCode = {InputModel?.PileLayoutItems?.GetHashCode()}");
+            System.Diagnostics.Debug.WriteLine($"PileLayoutItems.Count = {InputModel.PileLayoutItems?.Count ?? 0}");
+
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
+                System.Diagnostics.Debug.WriteLine($"  PileNo={pileLayoutItem.PileNo}, SoilPileAltNo={pileLayoutItem.SoilPileAltNo}, VL0={pileLayoutItem.AxialForceVL0:F1}, VLadd={pileLayoutItem.AxialForceVLAdditional:F1}");
+
                 if (pileLayoutItem.SoilPileAltNo == SoilPileNo)
                 {
                     int no = pileLayoutItem.No;
                     double force = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional;
+                    System.Diagnostics.Debug.WriteLine($"    -> Matched! force={force:F1}");
+
                     Vector<double>? settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(force);
                     if (settlementVector != null)
                     {
                         pileLayoutItem.SinglePileSettlementVL = settlementVector[0];
                         forcesVL.Add(force);
-                        settlementVL.Add(settlementVector[0] * 1000);
+                        settlementsVL.Add(settlementVector[0] * 1000);
+                        System.Diagnostics.Debug.WriteLine($"    -> Added to forcesVL: {force:F1}, settlementsVL: {settlementVector[0] * 1000:F2}");
                     }
 
                     for (int i = 0; i < pileLayoutItem.AxialForceLevel1s.Count; i++)
                     {
-                        var axialforce = pileLayoutItem.AxialForceLevel1s[i];
-                        settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(axialforce);
+                        var axialForce = pileLayoutItem.AxialForceLevel1s[i];
+                        settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(axialForce);
                         if (settlementVector != null)
                         {
                             pileLayoutItem.SinglePileSettlementLevel1s[i] = settlementVector[0];
-                            forcesLevel1.Add(axialforce);
+                            forcesLevel1.Add(axialForce);
                             settlementsLevel1.Add(settlementVector[0] * 1000);
                         }
                     }
 
                     for (int i = 0; i < pileLayoutItem.AxialForceLevel2s.Count; i++)
                     {
-                        var axialforce = pileLayoutItem.AxialForceLevel2s[i];
-                        settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(axialforce);
+                        var axialForce = pileLayoutItem.AxialForceLevel2s[i];
+                        settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(axialForce);
                         if (settlementVector != null)
                         {
                             pileLayoutItem.SinglePileSettlementLevel2s[i] = settlementVector[0];
-                            forcesLevel2.Add(axialforce);
+                            forcesLevel2.Add(axialForce);
                             settlementsLevel2.Add(settlementVector[0] * 1000);
                         }
                     }
@@ -508,14 +522,14 @@ namespace PileDesign.ViewModels
                     DrawShapes();
                 }
 
-                else if (textBox.Name == "TextBoxPrecastPileTipNonPermability" && double.TryParse(textBox.Text, out double precastPileTipNonPermability))
+                else if (textBox.Name == "TextBoxPrecastPileTipNonPermeability" && double.TryParse(textBox.Text, out double precastPileTipNonPermeability))
                 {
-                    PileBody.TipNonPermability = precastPileTipNonPermability;
+                    PileBody.TipNonPermability = precastPileTipNonPermeability;
                 }
 
-                else if (textBox.Name == "TextBoxSteelPileTipNonPermability" && double.TryParse(textBox.Text, out double steelPileTipNonPermability))
+                else if (textBox.Name == "TextBoxSteelPileTipNonPermeability" && double.TryParse(textBox.Text, out double steelPileTipNonPermeability))
                 {
-                    PileBody.TipNonPermability = steelPileTipNonPermability;
+                    PileBody.TipNonPermability = steelPileTipNonPermeability;
                 }
 
                 else if (textBox.Name == "TextBoxSettleAlpha" && double.TryParse(textBox.Text, out double settleAlpha))
@@ -643,11 +657,11 @@ namespace PileDesign.ViewModels
             List<double> xValues = [];
             List<double> yValues = [];
 
-            for (double RponApRatio = 0; RponApRatio <= 1 + 0.01; RponApRatio += 0.01)
+            for (double RpOnApRatio = 0; RpOnApRatio <= 1 + 0.01; RpOnApRatio += 0.01)
             {
-                double SponDp = 0.1 * (alpha * RponApRatio + (1 - alpha) * Math.Pow(RponApRatio, n));
+                double SponDp = 0.1 * (alpha * RpOnApRatio + (1 - alpha) * Math.Pow(RpOnApRatio, n));
 
-                xValues.Add(RponApRatio); // 例: fs の最初の要素を x 軸の値として使用
+                xValues.Add(RpOnApRatio); // 例: fs の最初の要素を x 軸の値として使用
                 yValues.Add(-SponDp); // 例: ds の最初の要素を y 軸の値として使用
             }
             var scatter = wpf.Plot.Add.Scatter(xValues.ToArray(), [.. yValues]);
@@ -688,7 +702,7 @@ namespace PileDesign.ViewModels
         }
 
         // 杭周更新メソッド
-        public void UpdateCircumSeries()
+        public void UpdateCircumstanceSeries()
         {
 
             if (SettlementWindowInstance == null)
@@ -700,13 +714,13 @@ namespace PileDesign.ViewModels
             List<Point> textPositions = [];
             for (int i = 0; i < SoilPile.PileCircumVerticals.Count; i++)
             {
-                var pileCircumVertical = SoilPile.PileCircumVerticals[i];
-                double psi = pileCircumVertical.Psi;
-                double tauT = pileCircumVertical.TauT;
-                double tau1 = pileCircumVertical.Tau1;
-                double tau2 = pileCircumVertical.Tau2;
-                double s1 = pileCircumVertical.S1;
-                double s2 = pileCircumVertical.S2;
+                var pileCircumstanceVertical = SoilPile.PileCircumVerticals[i];
+                double psi = pileCircumstanceVertical.Psi;
+                double tauT = pileCircumstanceVertical.TauT;
+                double tau1 = pileCircumstanceVertical.Tau1;
+                double tau2 = pileCircumstanceVertical.Tau2;
+                double s1 = pileCircumstanceVertical.S1;
+                double s2 = pileCircumstanceVertical.S2;
                 double sT = tauT == 0 ? 0 : tauT * s1 / tau1;
 
                 List<double> xValues = [-50.0, sT, s1, s2, 50.0,];
@@ -717,14 +731,14 @@ namespace PileDesign.ViewModels
                 scatter.MarkerSize = 0;
             }
 
-            if (SelectedPileCircumVertical != null)
+            if (SelectedPileCircumstanceVertical != null)
             {
-                double selectedPsi = SelectedPileCircumVertical.Psi;
-                double selectedTauT = SelectedPileCircumVertical.TauT;
-                double selectedTau1 = SelectedPileCircumVertical.Tau1;
-                double selectedTau2 = SelectedPileCircumVertical.Tau2;
-                double selectedS1 = SelectedPileCircumVertical.S1;
-                double selectedS2 = SelectedPileCircumVertical.S2;
+                double selectedPsi = SelectedPileCircumstanceVertical.Psi;
+                double selectedTauT = SelectedPileCircumstanceVertical.TauT;
+                double selectedTau1 = SelectedPileCircumstanceVertical.Tau1;
+                double selectedTau2 = SelectedPileCircumstanceVertical.Tau2;
+                double selectedS1 = SelectedPileCircumstanceVertical.S1;
+                double selectedS2 = SelectedPileCircumstanceVertical.S2;
                 double selectedST = selectedTauT == 0 ? 0 : selectedTauT * selectedS1 / selectedTau1;
 
                 // 新しいデータポイントを追加
@@ -735,7 +749,7 @@ namespace PileDesign.ViewModels
                     selectedTau1 * selectedPsi,
                     selectedTau2 * selectedPsi,
                     selectedTau2 * selectedPsi];
-                //CircumChartSeries.Add(seriesToUpdate);
+                //CircumstanceChartSeries.Add(seriesToUpdate);
                 var selectedScatter = wpf.Plot.Add.Scatter(selectedXValues.ToArray(), [.. selectedYValues]);
                 selectedScatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                 selectedScatter.LineWidth = 6;
@@ -770,8 +784,8 @@ namespace PileDesign.ViewModels
             wpf.Refresh();
 
             // クロスヘアの初期化
-            MyCrosshair_PileCircum = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_PileCircum", "相対変位(mm)", "単位長さ当たり抵抗力(kN/m)");
+            MyCrosshair_PileCircumstance = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_PileCircumstance", "相対変位(mm)", "単位長さ当たり抵抗力(kN/m)");
         }
 
         // 選択番号を変えた場合のメソッド
@@ -800,7 +814,7 @@ namespace PileDesign.ViewModels
                 InputModel.GroundsInput[SoilPile.GroundNo - 1]);
         }
 
-        // DataGridSelecitonコピーメソッド
+        // DataGridSelectionコピーメソッド
         [RelayCommand]
         private static void CopyDataGridSelection(DataGrid dataGrid)
         {

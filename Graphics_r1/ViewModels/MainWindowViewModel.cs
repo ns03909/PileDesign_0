@@ -545,10 +545,10 @@ namespace PileDesign.ViewModels
                 RequestGenerateSoilPiles();
 
                 // コレクション自体の変更通知
-                OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                OnPropertyChanged(nameof(GroupPileSettlementXMin));
+                OnPropertyChanged(nameof(GroupPileSettlementXMax));
+                OnPropertyChanged(nameof(GroupPileSettlementYMin));
+                OnPropertyChanged(nameof(GroupPileSettlementYMax));
             });
         }
 
@@ -796,7 +796,7 @@ namespace PileDesign.ViewModels
             TrySaveUndoSnapshotSafely();
 
             // 防波堤: null の場合はここで生成
-            CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
+            CurrentInputModel.GridXItems ??= [];
             AddGrid(CurrentInputModel.GridXItems, "X1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridXItems));
         }
@@ -806,7 +806,7 @@ namespace PileDesign.ViewModels
         private void AddGridY()
         {
             TrySaveUndoSnapshotSafely();
-            CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
+            CurrentInputModel.GridYItems ??= [];
             AddGrid(CurrentInputModel.GridYItems, "Y1", 7.2);
             OnPropertyChanged(nameof(CurrentInputModel.GridYItems));
         }
@@ -1370,10 +1370,10 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.ElementDivision.SoilPiles,
                 CurrentInputModel.GridXItems,
                 CurrentInputModel.GridYItems,
-                GroupPileSettlementXmin,
-                GroupPileSettlementXmax,
-                GroupPileSettlementYmin,
-                GroupPileSettlementYmax,
+                GroupPileSettlementXMin,
+                GroupPileSettlementXMax,
+                GroupPileSettlementYMin,
+                GroupPileSettlementYMax,
                 GroupPileSettlementXOffset,
                 GroupPileSettlementYOffset,
                 GroupPileSettlementXSpacing,
@@ -1554,8 +1554,8 @@ namespace PileDesign.ViewModels
                 CurrentInputModel = loaded;
                 CurrentInputModel.AttachViewModel(this);
                 CurrentFilePath = filePath;
-                CurrentInputModel.GridXItems ??= new ObservableCollection<GridDataItem>();
-                CurrentInputModel.GridYItems ??= new ObservableCollection<GridDataItem>();
+                CurrentInputModel.GridXItems ??= [];
+                CurrentInputModel.GridYItems ??= [];
 
                 // 要素分割・解析状態をリセット
                 IsElementSplit = false;
@@ -1764,10 +1764,10 @@ namespace PileDesign.ViewModels
         private readonly AnalysisResultTableService _tableService = new();
 
         // プロパティ
-        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = Array.Empty<ResultTable>();
+        public IReadOnlyList<ResultTable> LatestResultTables { get; private set; } = [];
 
         // Latest analysis logs
-        public ObservableCollection<string> LatestAnalysisLogs { get; private set; } = new();
+        public ObservableCollection<string> LatestAnalysisLogs { get; private set; } = [];
 
         public void SetLatestAnalysisLogs(IReadOnlyList<string> logs)
         {
@@ -1856,22 +1856,54 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 最終ステップ結果を取得
-            var last = CurrentModel.AnalysisStepResults.LastOrDefault();
-            if (last == null)
+            // デバッグ: AnalysisStepResultsの内容を確認
+            System.Diagnostics.Debug.WriteLine($"=== RefreshResultTablesFromLastStep ===");
+            System.Diagnostics.Debug.WriteLine($"AnalysisStepResults.Count = {CurrentModel.AnalysisStepResults.Count}");
+            foreach (var r in CurrentModel.AnalysisStepResults)
             {
-                LatestResultTables = [];
-                OnPropertyChanged(nameof(LatestResultTables));
-                RaiseResultCommandsCanExecute();
-                return;
+                System.Diagnostics.Debug.WriteLine($"  LoadCase={r.LoadCase?.LoadName}, LoadComb={r.LoadCombination?.Name}, IsLiq={r.IsLiquefaction}, Step={r.Step}");
             }
 
-            LatestResultTables = _tableService.BuildTables(
-                CurrentModel,
-                last.LoadCase,
-                last.LoadCombination,
-                last.IsLiquefaction,
-                last.Step);
+            // 全ての解析結果から一意の組み合わせ（LoadCase, LoadCombination, IsLiquefaction）を取得
+            // 各組み合わせについて最終ステップのテーブルを生成
+            var allTables = new List<ResultTable>();
+
+            var uniqueCombinations = CurrentModel.AnalysisStepResults
+                .GroupBy(r => new
+                {
+                    LoadCaseName = r.LoadCase?.LoadName ?? "",
+                    LoadCombinationName = r.LoadCombination?.Name ?? "",
+                    r.IsLiquefaction
+                })
+                .Select(g => g.OrderByDescending(r => r.Step).First()) // 各組み合わせの最終ステップを取得
+                .ToList();
+
+            System.Diagnostics.Debug.WriteLine($"uniqueCombinations.Count = {uniqueCombinations.Count}");
+            foreach (var c in uniqueCombinations)
+            {
+                System.Diagnostics.Debug.WriteLine($"  UniqueComb: LoadCase={c.LoadCase?.LoadName}, LoadComb={c.LoadCombination?.Name}, IsLiq={c.IsLiquefaction}, Step={c.Step}");
+            }
+
+            foreach (var stepResult in uniqueCombinations)
+            {
+                var tables = _tableService.BuildTables(
+                    CurrentModel,
+                    stepResult.LoadCase,
+                    stepResult.LoadCombination,
+                    stepResult.IsLiquefaction,
+                    stepResult.Step);
+
+                System.Diagnostics.Debug.WriteLine($"  Built {tables.Count} tables for IsLiq={stepResult.IsLiquefaction}");
+                allTables.AddRange(tables);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"Total tables: {allTables.Count}");
+            foreach (var t in allTables)
+            {
+                System.Diagnostics.Debug.WriteLine($"  Table: {t.Name}, IsLiq={t.IsLiquefaction}");
+            }
+
+            LatestResultTables = allTables;
 
             OnPropertyChanged(nameof(LatestResultTables));
             RaiseResultCommandsCanExecute();
@@ -2028,10 +2060,10 @@ namespace PileDesign.ViewModels
                         await tcs.Task; // 非同期に完了を待つ
 
                         // コレクション自体の変更通知
-                        OnPropertyChanged(nameof(GroupPileSettlementXmin));
-                        OnPropertyChanged(nameof(GroupPileSettlementXmax));
-                        OnPropertyChanged(nameof(GroupPileSettlementYmin));
-                        OnPropertyChanged(nameof(GroupPileSettlementYmax));
+                        OnPropertyChanged(nameof(GroupPileSettlementXMin));
+                        OnPropertyChanged(nameof(GroupPileSettlementXMax));
+                        OnPropertyChanged(nameof(GroupPileSettlementYMin));
+                        OnPropertyChanged(nameof(GroupPileSettlementYMax));
 
                         // 変更: デバウンス付きで更新
                         RequestUpdateWindow();
@@ -2161,31 +2193,31 @@ namespace PileDesign.ViewModels
                 IsAddAxialForceVLAdditional = e.IsAddVLadd,
                 AxialForceVLAdditional = e.VLadd,
 
-                ApplyLevel1 = new[]
-                {
+                ApplyLevel1 =
+                [
                     e.IsApplicableE1_1, e.IsApplicableE1_2, e.IsApplicableE1_3, e.IsApplicableE1_4
-                },
-                IsAddLevel1 = new[]
-                {
+                ],
+                IsAddLevel1 =
+                [
                     e.IsAddE1_1, e.IsAddE1_2, e.IsAddE1_3, e.IsAddE1_4
-                },
-                Level1Values = new[]
-                {
+                ],
+                Level1Values =
+                [
                     e.E1_1, e.E1_2, e.E1_3, e.E1_4
-                },
+                ],
 
-                ApplyLevel2 = new[]
-                {
+                ApplyLevel2 =
+                [
                     e.IsApplicableE2_1, e.IsApplicableE2_2, e.IsApplicableE2_3, e.IsApplicableE2_4
-                },
-                IsAddLevel2 = new[]
-                {
+                ],
+                IsAddLevel2 =
+                [
                     e.IsAddE2_1, e.IsAddE2_2, e.IsAddE2_3, e.IsAddE2_4
-                },
-                Level2Values = new[]
-                {
+                ],
+                Level2Values =
+                [
                     e.E2_1, e.E2_2, e.E2_3, e.E2_4
-                }
+                ]
             };
 
             _pileLayoutService.BulkEditSelectedPiles(CurrentInputModel.PileLayoutItems, options);
@@ -2194,8 +2226,8 @@ namespace PileDesign.ViewModels
             var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
             ApplyIsFrontPileFlags(
                 selectedItems,
-                new[] { e.IsApplicableIsFrontPile1, e.IsApplicableIsFrontPile2, e.IsApplicableIsFrontPile3, e.IsApplicableIsFrontPile4 },
-                new[] { e.IsFrontPile1, e.IsFrontPile2, e.IsFrontPile3, e.IsFrontPile4 });
+                [e.IsApplicableIsFrontPile1, e.IsApplicableIsFrontPile2, e.IsApplicableIsFrontPile3, e.IsApplicableIsFrontPile4],
+                [e.IsFrontPile1, e.IsFrontPile2, e.IsFrontPile3, e.IsFrontPile4]);
         }
 
         [RelayCommand]
@@ -2384,14 +2416,28 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                // Undoポイントを追加（読込前の状態を保存）
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                // 待機カーソルを表示（重い処理があるため）
+                var previousCursor = System.Windows.Input.Mouse.OverrideCursor;
+                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
 
-                GenerateSoilPilesImmediate();  // 即時実行に変更
-                CurrentInputModel.GenerateSoilEmbedment();
+                ElementDivisionWindow window = null;
+                try
+                {
+                    // Undoポイントを追加（読込前の状態を保存）
+                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
-                var window = new ElementDivisionWindow(this);
-                window.ShowDialog();
+                    GenerateSoilPilesImmediate();  // 即時実行に変更
+                    CurrentInputModel.GenerateSoilEmbedment();
+
+                    window = new ElementDivisionWindow(this);
+                }
+                finally
+                {
+                    // カーソルを元に戻す
+                    System.Windows.Input.Mouse.OverrideCursor = previousCursor;
+                }
+
+                window?.ShowDialog();
 
                 UpdateCanvas3DAction?.Invoke();
                 UpdateTreeView();
@@ -2477,7 +2523,7 @@ namespace PileDesign.ViewModels
 
         // 水平荷重解析ウィンドウを開くメソッド
         [RelayCommand]
-        public void OpenLateralLoadAnalysisWindow()
+        public async Task OpenLateralLoadAnalysisWindowAsync()
         {
             if (IsPreparedForAnalysis())
             {
@@ -2494,30 +2540,44 @@ namespace PileDesign.ViewModels
                     }
                     else
                     {
-                        // Undoポイントを追加（読込前の状態を保存）
-                        _undoManager.SaveState(CurrentInputModel.DeepCopy());
-
-                        var viewModel = new HorizontalCalculationViewModel(this);
-                        var window = new HorizontalCalculationWindow { DataContext = viewModel };
-
-                        if (viewModel is ICloseable closeableViewModel)
-                        {
-                            if (window.IsLoaded && window.IsVisible)
-                                window.Close();
-                        }
+                        // 砂時計カーソルを表示
+                        Mouse.OverrideCursor = Cursors.Wait;
+                        // UIを更新させるために短時間待機
+                        await Task.Delay(50);
 
                         try
                         {
+                            // Undoポイントを追加（読込前の状態を保存）
+                            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+                            var viewModel = new HorizontalCalculationViewModel(this);
+                            var window = new HorizontalCalculationWindow { DataContext = viewModel };
+
+                            if (viewModel is ICloseable closeableViewModel)
+                            {
+                                if (window.IsLoaded && window.IsVisible)
+                                    window.Close();
+                            }
+
+                            // 砂時計を戻してからダイアログを表示
+                            Mouse.OverrideCursor = null;
+
                             window.ShowDialog();
                         }
                         catch (Exception ex)
                         {
                             MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
+                        finally
+                        {
+                            // 念のため砂時計を戻す
+                            Mouse.OverrideCursor = null;
+                        }
 
                         // 変更: 即時実行
                         UpdateWindowImmediate();
                         UpdateTreeView();
+
                     }
                 }
             }

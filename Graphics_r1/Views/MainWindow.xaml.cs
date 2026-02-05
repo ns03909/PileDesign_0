@@ -65,7 +65,7 @@ namespace PileDesign.Views
         public double Canvas3DHeight { get; set; }
         public double Canvas3DWidth { get; set; }
         // ツリーメニュー
-        public ObservableCollection<CTreeViewData> CTreeViewDatas { get; set; } = [];
+        public ObservableCollection<CTreeViewData> CTreeViewData { get; set; } = [];
 
         public CanvasThreeDView CanvasThreeDViewModel { get; set; }
 
@@ -2843,7 +2843,7 @@ namespace PileDesign.Views
             // 水平解析
             else if (e.Key == Key.F5)
             {
-                viewModel?.OpenLateralLoadAnalysisWindow();
+                _ = viewModel?.OpenLateralLoadAnalysisWindowAsync();
                 e.Handled = true;
             }
 
@@ -3021,6 +3021,8 @@ namespace PileDesign.Views
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
             ActivateGroupPileLoadTab();
+            MessageBox.Show("群杭沈下解析は、（初期状態で左側にある）「群杭荷重」タブで、" +
+                "「荷重」、「土層」、「グリッド」を設定し、最下段の「群杭沈下解析実行」ボタンを押してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ActivateGroupPileLoadTab()

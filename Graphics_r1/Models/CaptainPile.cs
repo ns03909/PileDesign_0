@@ -4,12 +4,39 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using System.Numerics;
 
 namespace PileDesign.Models
 {
     // CaptainPileクラス
     public class CaptainPile : BaseModel
     {
+        // 追加: 計算結果のメモ化（epsilon0/curvature を丸めたキー）
+        private readonly ConcurrentDictionary<long, (double N, double M)> _forceMomentCache = new();
+
+        private static long MakeKey(double epsilon0, double curvature, int roundDigits = 9)
+        {
+            // 丸めてビット列からキー生成（簡易）
+            long a = BitConverter.DoubleToInt64Bits(Math.Round(epsilon0, roundDigits));
+            long b = BitConverter.DoubleToInt64Bits(Math.Round(curvature, roundDigits));
+            unchecked
+            {
+                return a ^ (b << 1);
+            }
+        }
+
+        // Cached wrapper: 既存の GetForceAndMoment(epsilon0, curvature) を内部で呼ぶ
+        private (double N, double M) GetForceAndMomentCached(double epsilon0, double curvature)
+        {
+            var key = MakeKey(epsilon0, curvature);
+            return _forceMomentCache.GetOrAdd(key, _ =>
+            {
+                var res = GetForceAndMoment(epsilon0, curvature); // 既存の重い実計算（N,M,epsilon0,curvature）を呼ぶ
+                return (res.Item1, res.Item2);
+            });
+        }
         internal int DivisionNum { get; } = 100;
 
         private double _d;
@@ -359,19 +386,44 @@ namespace PileDesign.Models
             // 実行ファイルのディレクトリを基準にパスを組み立てる
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string squarePath = Path.Combine(baseDir, "Models", "PileLibrary", "CaptainPileTensionBarPCD_square.csv");
+            if (File.Exists(squarePath))
+            {
+                try
+                {
+                    CaptainPileTensionBarPCDsSquare = CaptainPileTensionBarPCDLoader.LoadFromCsv(squarePath);
+                    foreach (var pcdSquare in CaptainPileTensionBarPCDsSquare)
+                        PCD_squareOption.Add($"{pcdSquare.D}-{pcdSquare.Nu}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to load {squarePath}: {ex}");
+                }
+            }
             string circlePath = Path.Combine(baseDir, "Models", "PileLibrary", "CaptainPileTensionBarPCD_circle.csv");
-
-            CaptainPileTensionBarPCDsSquare = CaptainPileTensionBarPCDLoader.LoadFromCsv(squarePath);
-            foreach (var pcdSquare in CaptainPileTensionBarPCDsSquare)
+            if (File.Exists(circlePath))
             {
-                PCD_squareOption.Add($"{pcdSquare.D}-{pcdSquare.Nu}");
+                try
+                {
+                    CaptainPileTensionBarPCDsCircle = CaptainPileTensionBarPCDLoader.LoadFromCsv(circlePath);
+                    foreach (var pcdCircle in CaptainPileTensionBarPCDsCircle)
+                        PCD_circleOption.Add($"{pcdCircle.D}-{pcdCircle.Nu}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to load {circlePath}: {ex}");
+                }
             }
+            //CaptainPileTensionBarPCDsSquare = CaptainPileTensionBarPCDLoader.LoadFromCsv(squarePath);
+            //foreach (var pcdSquare in CaptainPileTensionBarPCDsSquare)
+            //{
+            //    PCD_squareOption.Add($"{pcdSquare.D}-{pcdSquare.Nu}");
+            //}
 
-            CaptainPileTensionBarPCDsCircle = CaptainPileTensionBarPCDLoader.LoadFromCsv(circlePath);
-            foreach (var pcdCircle in CaptainPileTensionBarPCDsCircle)
-            {
-                PCD_circleOption.Add($"{pcdCircle.D}-{pcdCircle.Nu}");
-            }
+            //CaptainPileTensionBarPCDsCircle = CaptainPileTensionBarPCDLoader.LoadFromCsv(circlePath);
+            //foreach (var pcdCircle in CaptainPileTensionBarPCDsCircle)
+            //{
+            //    PCD_circleOption.Add($"{pcdCircle.D}-{pcdCircle.Nu}");
+            //}
         }
 
         // TD, TBの更新メソッド
@@ -402,31 +454,6 @@ namespace PileDesign.Models
                 }
             }
         }
-        //public void UpdateTDorTB()
-        //{
-        //    if (CTPTensionRebars.IsSquareArrangement)
-        //    {
-        //        foreach (var pcdSquare in CaptainPileTensionBarPCDsSquare)
-        //        {
-        //            if (D == pcdSquare.D && Nu == pcdSquare.Nu)
-        //            {
-        //                CTPTensionRebars.TDorTBmax = pcdSquare.TDorTBmax;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //    else if (CTPTensionRebars.IsCircleArrangement)
-        //    {
-        //        foreach (var pcdCircle in CaptainPileTensionBarPCDsCircle)
-        //        {
-        //            if (D == pcdCircle.D && Nu == pcdCircle.Nu)
-        //            {
-        //                CTPTensionRebars.TDorTBmax = pcdCircle.TDorTBmax;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //}
 
         private void LoadPCRingOptions()
         {
@@ -653,65 +680,7 @@ namespace PileDesign.Models
             }
             return (0.0, 0.0);
         }
-        //internal (double, double) GetMyCurvatureY(double NTarget)
-        //{
-        //    if (YieldNs != null && YieldNs.Count > 0)
-        //    {
-        //        double N = 0.0;
-        //        double N1;
-        //        double M = 0.0;
-        //        double curvature = 1.0 * Math.Pow(10, -6);
-        //        double deltaCurvature = curvature / 500.0;
-
-        //        double epsilon0;
-        //        double x = -CTPConcrete.D * Nu * 0.5;
-        //        double epsilon = CTPConcrete.Epsilon085;
-        //        for (int i = 0; i < YieldNs.Count; i++)
-        //        {
-        //            if (i == YieldNs.Count - 1) return (0.0, 0.0);
-
-        //            if (NTarget < YieldNs[i])
-        //            {
-        //                double factor1 = (YieldNs[i] - NTarget) / (YieldNs[i] - YieldNs[i - 1]);
-        //                double factor2 = (NTarget - YieldNs[i - 1]) / (YieldNs[i] - YieldNs[i - 1]);
-        //                N = YieldNs[i - 1] * factor1 + YieldNs[i] * factor2;
-        //                M = YieldMs[i - 1] * factor1 + YieldMs[i] * factor2;
-        //                curvature = YieldCurvatures[i - 1] * factor1 + YieldCurvatures[i] * factor2;
-        //                deltaCurvature = (YieldCurvatures[i] - YieldCurvatures[i - 1]) / 100;
-
-        //                if (i < YieldNs.Count * 0.5 && CTPTensionRebars.HasTensionRebars) // isCompressionSide = false;
-        //                {
-        //                    x = CTPTensionRebars.TDorTB * 0.5;
-        //                    epsilon = -CTPTensionRebars.SigmaY / CTPTensionRebars.Es;
-        //                }
-        //                else
-        //                {
-        //                    x = -CTPConcrete.D * Nu * 0.5; // isCompressionSide=true;
-        //                    epsilon = CTPConcrete.Epsilon085; // isCompressionSide=true;
-        //                }
-        //                break;
-        //            }
-        //        }
-
-        //        while (Math.Abs(N - NTarget) > 0.1)
-        //        {
-
-        //            epsilon0 = GetEpsilon0(curvature, x, epsilon);
-        //            N1 = GetForceAndMoment(epsilon0, curvature + deltaCurvature).Item1;
-        //            curvature = -deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
-
-        //            epsilon0 = GetEpsilon0(curvature, x, epsilon);
-        //            var result = GetForceAndMoment(epsilon0, curvature);
-        //            (N, M) = (result.Item1, result.Item2);
-        //        }
-
-        //        return (M, curvature);
-        //    }
-        //    else
-        //    {
-        //        return (0.0, 0.0);
-        //    }
-        //}
+        
 
         // 終局時曲げモーメントMuを返すメソッド
         internal double GetMu(double NTarget)
@@ -756,58 +725,6 @@ namespace PileDesign.Models
             }
             return 0.0;
         }
-        //internal double GetMu(double NTarget)
-        //{
-        //    if (UltimateNs != null && UltimateNs.Count > 0)
-        //    {
-        //        double N = 0.0;
-        //        double N1;
-        //        double M = 0.0;
-        //        double curvature = 1.0 * Math.Pow(10, -6);
-        //        double deltaCurvature = curvature / 500.0;
-        //        double epsilon0;
-
-        //        for (int i = 0; i < UltimateNs.Count; i++) // UltimateNsは昇順
-        //        {
-        //            if (NTarget <= UltimateNs[i])
-        //            {
-        //                if (i == 0)
-        //                {
-        //                    return 0.0;
-        //                }
-
-        //                double factor1 = (UltimateNs[i] - NTarget) / (UltimateNs[i] - UltimateNs[i - 1]);
-        //                double factor2 = (NTarget - UltimateNs[i - 1]) / (UltimateNs[i] - UltimateNs[i - 1]);
-        //                N = UltimateNs[i - 1] * factor1 + UltimateNs[i] * factor2;
-        //                M = UltimateMs[i - 1] * factor1 + UltimateMs[i] * factor2;
-        //                curvature = UltimateCurvatures[i - 1] * factor1 + YieldCurvatures[i] * factor2;
-        //                deltaCurvature = (UltimateCurvatures[i] - UltimateCurvatures[i - 1]) / 100;
-
-        //                break;
-        //            }
-        //            else if (i == UltimateNs.Count - 1)
-        //            {
-        //                return 0.0;
-        //            }
-        //        }
-
-        //        while (Math.Abs(N - NTarget) > 0.1)
-        //        {
-        //            epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * Nu * 0.5, CTPConcrete.EpsilonB);
-        //            N1 = GetForceAndMoment(epsilon0, curvature + deltaCurvature).Item1;
-        //            curvature = -deltaCurvature / (N1 - N) * (NTarget - N) + curvature;
-
-        //            epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * Nu * 0.5, CTPConcrete.EpsilonB);
-        //            var result = GetForceAndMoment(epsilon0, curvature);
-        //            (N, M) = (result.Item1, result.Item2);
-        //        }
-        //        return M;
-        //    }
-        //    else
-        //    {
-        //        return 0.0;
-        //    }
-        //}
 
         // 基本属性をセットするメソッド
         internal void SetBasicProperties(PCRing _pcring, double pileCapEc)
@@ -840,15 +757,15 @@ namespace PileDesign.Models
             if (CTPTensionRebars.HasTensionRebars) // 引張定着筋がある場合
             {
                 YieldMaxCurvature = GetAllowableMaxCurvature();
-                var result01 = GetAllowableMNInterection(YieldMaxCurvature);
+                var result01 = GetAllowableMNInteraction(YieldMaxCurvature);
                 (YieldNs, YieldMs, YieldEpsilon0s, YieldCurvatures) = (result01.Item1, result01.Item2, result01.Item3, result01.Item4);
             }
             else // 引張定着筋がない場合
             {
-                var result02 = GetUltimateMNInterection(CTPConcrete.GetEpsilon(0.85 * CTPConcrete.SigmaMax));
+                var result02 = GetUltimateMNInteraction(CTPConcrete.GetEpsilon(0.85 * CTPConcrete.SigmaMax));
                 (YieldNs, YieldMs, YieldEpsilon0s, YieldCurvatures) = (result02.Item1, result02.Item2, result02.Item3, result02.Item4);
             }
-            var result03 = GetUltimateMNInterection(0.003);
+            var result03 = GetUltimateMNInteraction(0.003);
             (UltimateNs, UltimateMs, UltimateEpsilon0s, UltimateCurvatures) = (result03.Item1, result03.Item2, result03.Item3, result03.Item4);
         }
 
@@ -892,9 +809,9 @@ namespace PileDesign.Models
         {
             double N;
             double M;
-            CTPCirclularSolidSection circlularSoildSection = new(CTPConcrete.D * Nu);
+            CTPCircularSolidSection circularSolidSection = new(CTPConcrete.D * Nu);
 
-            (N, M) = circlularSoildSection.GetForceAndMoment(CTPConcrete, epsilon0, curvature);
+            (N, M) = circularSolidSection.GetForceAndMoment(CTPConcrete, epsilon0, curvature);
             if (CTPTensionRebars.HasTensionRebars)
             {
                 if (CTPTensionRebars.IsCircleArrangement)
@@ -922,20 +839,63 @@ namespace PileDesign.Models
         }
 
         // 使用損傷限界MNインタラクション取得メソッド
-        internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetAllowableMNInterection(double maxCurvature)
-        {
-            ObservableCollection<double> axialForces = [];
-            ObservableCollection<double> bendingMoments = [];
-            ObservableCollection<double> epsilonCs = [];
-            ObservableCollection<double> curvatures = [];
-            double epsilon0;
-            double curvature;
-            double epsilonC;
+        //internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetAllowableMNInterection(double maxCurvature)
+        //{
+        //    ObservableCollection<double> axialForces = [];
+        //    ObservableCollection<double> bendingMoments = [];
+        //    ObservableCollection<double> epsilonCs = [];
+        //    ObservableCollection<double> curvatures = [];
+        //    double epsilon0;
+        //    double curvature;
+        //    double epsilonC;
 
-            for (int i = 0; i <= DivisionNum; i++)
+        //    for (int i = 0; i <= DivisionNum; i++)
+        //    {
+        //        curvature = maxCurvature * i / DivisionNum;
+        //        if (CTPTensionRebars.HasTensionRebars == true)
+        //        {
+        //            epsilonC = GetEpsilonC(curvature, CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.EpsilonY);
+        //            epsilon0 = GetEpsilon0(curvature, CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.EpsilonY);
+        //        }
+        //        else
+        //        {
+        //            epsilonC = GetEpsilonC(curvature, -CTPConcrete.D * 0.5, 0.0);
+        //            epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * 0.5, 0.0);
+        //        }
+        //        var result = GetForceAndMoment(epsilon0, curvature); // 引張側 純引張～
+        //        axialForces.Add(result.Item1);
+        //        bendingMoments.Add(result.Item2);
+        //        epsilonCs.Add(epsilonC);
+        //        curvatures.Add(curvature);
+        //    }
+
+        //    for (int i = DivisionNum; i >= 0; i--)
+        //    {
+        //        curvature = maxCurvature * i / DivisionNum;
+        //        epsilonC = CTPConcrete.Epsilon085;
+        //        epsilon0 = CTPConcrete.Epsilon085 - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
+        //        var result = GetForceAndMoment(epsilon0, curvature); // 圧縮側 ～純圧縮
+        //        axialForces.Add(result.Item1);
+        //        bendingMoments.Add(result.Item2);
+        //        epsilonCs.Add(epsilonC);
+        //        curvatures.Add(curvature);
+        //    }
+        //    return (axialForces, bendingMoments, epsilonCs, curvatures);
+        //}
+                internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetAllowableMNInteraction(double maxCurvature)
+        {
+            int n = DivisionNum + 1;
+            var axialA = new double[n];
+            var bendingA = new double[n];
+            var epsilonCsA = new double[n];
+            var curvA = new double[n];
+
+            // 引張側〜中立側（ ascending ）
+            Parallel.For(0, n, i =>
             {
-                curvature = maxCurvature * i / DivisionNum;
-                if (CTPTensionRebars.HasTensionRebars == true)
+                double curvature = maxCurvature * i / DivisionNum;
+                double epsilonC, epsilon0;
+                if (CTPTensionRebars.HasTensionRebars)
                 {
                     epsilonC = GetEpsilonC(curvature, CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.EpsilonY);
                     epsilon0 = GetEpsilon0(curvature, CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.EpsilonY);
@@ -944,43 +904,118 @@ namespace PileDesign.Models
                 {
                     epsilonC = GetEpsilonC(curvature, -CTPConcrete.D * 0.5, 0.0);
                     epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * 0.5, 0.0);
-
                 }
-                //epsilon0 = curvature * CTPTensionRebars.TDorTB * 0.5 - CTPTensionRebars.EpsilonY;
-                var result = GetForceAndMoment(epsilon0, curvature); // 引張側 純引張～
-                axialForces.Add(result.Item1);
-                bendingMoments.Add(result.Item2);
-                epsilonCs.Add(epsilonC);
-                curvatures.Add(curvature);
+                var res = GetForceAndMomentCached(epsilon0, curvature);
+                axialA[i] = res.N;
+                bendingA[i] = res.M;
+                epsilonCsA[i] = epsilonC;
+                curvA[i] = curvature;
+            });
+
+            // 圧縮側（descending を保持するため index を反転して計算）
+            var axialB = new double[n];
+            var bendingB = new double[n];
+            var epsilonCsB = new double[n];
+            var curvB = new double[n];
+
+            Parallel.For(0, n, i =>
+            {
+                int idx = DivisionNum - i; // 逆順
+                double curvature = maxCurvature * idx / DivisionNum;
+                double epsilonC = CTPConcrete.Epsilon085;
+                double epsilon0 = CTPConcrete.Epsilon085 - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
+                var res = GetForceAndMomentCached(epsilon0, curvature);
+                axialB[i] = res.N;
+                bendingB[i] = res.M;
+                epsilonCsB[i] = epsilonC;
+                curvB[i] = curvature;
+            });
+
+            // 結果を ObservableCollection にまとめる（元の順序に合わせる）
+            var axialList = new ObservableCollection<double>();
+            var bendingList = new ObservableCollection<double>();
+            var epsList = new ObservableCollection<double>();
+            var curvList = new ObservableCollection<double>();
+
+            for (int i = 0; i < n; i++)
+            {
+                axialList.Add(axialA[i]);
+                bendingList.Add(bendingA[i]);
+                epsList.Add(epsilonCsA[i]);
+                curvList.Add(curvA[i]);
+            }
+            for (int i = 0; i < n; i++)
+            {
+                axialList.Add(axialB[i]);
+                bendingList.Add(bendingB[i]);
+                epsList.Add(epsilonCsB[i]);
+                curvList.Add(curvB[i]);
             }
 
-            for (int i = DivisionNum; i >= 0; i--)
-            {
-                curvature = maxCurvature * i / DivisionNum;
-                epsilonC = CTPConcrete.Epsilon085;
-                epsilon0 = CTPConcrete.Epsilon085 - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
-                var result = GetForceAndMoment(epsilon0, curvature); // 圧縮側 ～純圧縮
-                axialForces.Add(result.Item1);
-                bendingMoments.Add(result.Item2);
-                epsilonCs.Add(epsilonC);
-                curvatures.Add(curvature);
-            }
-            return (axialForces, bendingMoments, epsilonCs, curvatures);
+            return (axialList, bendingList, epsList, curvList);
         }
 
         // 安全限界MN インタラクション取得メソッド
-        internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInterection(double maxEpsilonC)
-        {
-            ObservableCollection<double> axialForces = [];
-            ObservableCollection<double> bendingMoments = [];
-            ObservableCollection<double> epsilonCs = [];
-            ObservableCollection<double> curvatures = [];
-            double epsilonC;
-            double epsilon0;
-            double curvature;
-            double maxCurvature;
+        //internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInteraction(double maxEpsilonC)
+        //{
+        //    ObservableCollection<double> axialForces = [];
+        //    ObservableCollection<double> bendingMoments = [];
+        //    ObservableCollection<double> epsilonCs = [];
+        //    ObservableCollection<double> curvatures = [];
+        //    double epsilonC;
+        //    double epsilon0;
+        //    double curvature;
+        //    double maxCurvature;
 
-            if (PCRing.D != 0)　// 0除算回避
+        //    if (PCRing.D != 0)　// 0除算回避
+        //    {
+        //        maxCurvature = (0.003 + 0.0025) * 20.0 / (PCRing.D * Nu);
+        //    }
+        //    else
+        //    {
+        //        maxCurvature = 0;
+        //    }
+
+        //    for (int i = 0; i <= DivisionNum * 2; i++)
+        //    {
+        //        if (i == 0) // 純引張
+        //        {
+        //            epsilon0 = -0.006;
+        //            epsilonC = -0.006;
+        //            curvature = 0.0;
+        //        }
+        //        else if (i != DivisionNum * 2)
+        //        {
+        //            curvature = maxCurvature * (DivisionNum * 2 - i) / (DivisionNum * 2);
+        //            epsilon0 = maxEpsilonC - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
+
+        //            epsilonC = maxEpsilonC;
+        //        }
+        //        else // i = = DivisionNum * 2 // 純圧縮
+        //        {
+        //            epsilon0 = maxEpsilonC;
+        //            epsilonC = maxEpsilonC;
+        //            curvature = 0.0;
+        //        }
+
+        //        var result = GetForceAndMoment(epsilon0, curvature); // 引張側 純引張～
+        //        axialForces.Add(result.Item1);
+        //        bendingMoments.Add(result.Item2);
+        //        epsilonCs.Add(epsilonC);
+        //        curvatures.Add(curvature);
+        //    }
+        //    return (axialForces, bendingMoments, epsilonCs, curvatures);
+        //}
+        internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInteraction(double maxEpsilonC)
+        {
+            int n = DivisionNum * 2 + 1;
+            var axial = new double[n];
+            var bending = new double[n];
+            var epsilonCs = new double[n];
+            var curvatures = new double[n];
+
+            double maxCurvature;
+            if (PCRing.D != 0) // 0除算回避
             {
                 maxCurvature = (0.003 + 0.0025) * 20.0 / (PCRing.D * Nu);
             }
@@ -989,35 +1024,48 @@ namespace PileDesign.Models
                 maxCurvature = 0;
             }
 
-            for (int i = 0; i <= DivisionNum * 2; i++)
+            // 各インデックスは独立なので Parallel.For で並列計算
+            Parallel.For(0, n, i =>
             {
+                double epsilon0;
+                double epsilonC;
+                double curvature;
+
                 if (i == 0) // 純引張
                 {
                     epsilon0 = -0.006;
                     epsilonC = -0.006;
                     curvature = 0.0;
                 }
-                else if (i != DivisionNum * 2)
+                else if (i != n - 1)
                 {
-                    curvature = maxCurvature * (DivisionNum * 2 - i) / (DivisionNum * 2);
+                    // オリジナルの式を保つ：curvature は減少方向
+                    curvature = maxCurvature * (DivisionNum * 2 - i) / (double)(DivisionNum * 2);
                     epsilon0 = maxEpsilonC - curvature * CTPConcrete.D * 0.5 * CTPConcrete.Nu;
-
                     epsilonC = maxEpsilonC;
                 }
-                else // i = = DivisionNum * 2 // 純圧縮
+                else // 純圧縮
                 {
                     epsilon0 = maxEpsilonC;
                     epsilonC = maxEpsilonC;
                     curvature = 0.0;
                 }
 
-                var result = GetForceAndMoment(epsilon0, curvature); // 引張側 純引張～
-                axialForces.Add(result.Item1);
-                bendingMoments.Add(result.Item2);
-                epsilonCs.Add(epsilonC);
-                curvatures.Add(curvature);
-            }
-            return (axialForces, bendingMoments, epsilonCs, curvatures);
+                // キャッシュ済み計算を利用
+                var res = GetForceAndMomentCached(epsilon0, curvature);
+                axial[i] = res.N;
+                bending[i] = res.M;
+                epsilonCs[i] = epsilonC;
+                curvatures[i] = curvature;
+            });
+
+            // 結果を ObservableCollection に詰め替え（UI スレッドでの利用を想定）
+            var axialList = new ObservableCollection<double>(axial);
+            var bendingList = new ObservableCollection<double>(bending);
+            var epsList = new ObservableCollection<double>(epsilonCs);
+            var curvList = new ObservableCollection<double>(curvatures);
+
+            return (axialList, bendingList, epsList, curvList);
         }
     }
 
@@ -1068,7 +1116,7 @@ namespace PileDesign.Models
         }
 
         // CaptainPileコンクリートクラス dσ/dε取得メソッド
-        public double GetDSigmaonDEpsilon(double epsilon)
+        public double GetDSigmaOnDEpsilon(double epsilon)
         {
             return 6.75 * (-0.812 / EpsilonB * Math.Exp(-0.812 * (epsilon / EpsilonB)) - (-1.218) / EpsilonB * Math.Exp(-1.218 * (epsilon / EpsilonB))) * SigmaMax;
         }
@@ -1076,15 +1124,27 @@ namespace PileDesign.Models
         // CaptainPileコンクリートクラス ε0取得メソッド
         internal double GetEpsilon(double targetSigma)
         {
+            //double sigma = double.MaxValue;
+            //double epsilon = 0.003 / 100.0;
+            //double _DSigmaonDEpsilon;
+
+            //while (Math.Abs(targetSigma - sigma) > 0.003 / 1000.0)
+            //{
+            //    sigma = GetStress(epsilon);
+            //    _DSigmaonDEpsilon = GetDSigmaonDEpsilon(epsilon);
+            //    epsilon += (targetSigma - sigma) / _DSigmaonDEpsilon;
+            //}
+            //return epsilon;
             double sigma = double.MaxValue;
             double epsilon = 0.003 / 100.0;
-            double _DSigmaonDEpsilon;
-
-            while (Math.Abs(targetSigma - sigma) > 0.003 / 1000.0)
+            int iter = 0;
+            const int maxIter = 200;
+            while (Math.Abs(targetSigma - sigma) > 0.003 / 1000.0 && iter++ < maxIter)
             {
                 sigma = GetStress(epsilon);
-                _DSigmaonDEpsilon = GetDSigmaonDEpsilon(epsilon);
-                epsilon += (targetSigma - sigma) / _DSigmaonDEpsilon;
+                double dSigma = GetDSigmaOnDEpsilon(epsilon);
+                if (Math.Abs(dSigma) < 1e-12) break;
+                epsilon += (targetSigma - sigma) / dSigma;
             }
             return epsilon;
         }
@@ -1232,43 +1292,85 @@ namespace PileDesign.Models
     internal abstract class CTPSection { }
 
     // 円形断面クラス
-    internal class CTPCirclularSolidSection : CTPSection
-    {
-        private double Dia { get; }
+    internal class CTPCircularSolidSection : CTPSection
+    //{
+        //private double Dia { get; }
 
-        // 円形断面クラス コンストラクタ
-        internal CTPCirclularSolidSection(double diameter)
+        //// 円形断面クラス コンストラクタ
+        //internal CTPCircularSolidSection(double diameter)
+        {
+        private double Dia { get; }
+        private readonly int _division;
+        private readonly double[] _z;
+        private readonly double[] _width;
+        private readonly double _dz;
+
+        // コンストラクタ: ノード幅を事前計算してキャッシュ
+        internal CTPCircularSolidSection(double diameter, int division = 100)
         {
             Dia = diameter;
+            _division = Math.Max(1, division);
+            _dz = Dia / _division;
+            _z = new double[_division];
+            _width = new double[_division];
+            double half = Dia * 0.5;
+            double half2 = half * half;
+            for (int i = 0; i < _division; i++)
+            {
+                _z[i] = -half + (0.5 + i) * _dz;
+                // 数学的オーバーフローを防ぐ
+                double tmp = half2 - _z[i] * _z[i];
+                _width[i] = tmp <= 0.0 ? 0.0 : 2.0 * Math.Sqrt(tmp);
+            }
         }
 
-        // 軸力、曲げモーメント取得メソッド
-        internal (double, double) GetForceAndMoment(CTPMaterial material, double epsilon0, double curvature, int division = 100)
+        // 軸力・曲げモーメント計算（事前計算値を利用）
+        internal (double, double) GetForceAndMoment(CTPMaterial material, double epsilon0, double curvature)
         {
-            double z;
-            double dz = Dia / division;
-            double epsilon;
-            double sigma;
-            double width;
-
             double axialForce = 0.0;
             double bendingMoment = 0.0;
 
-            // 圧縮縁ひずみ度 epsilonC
-            // 中心ひずみ度 epsilon0
-            for (int i = 0; i < division; i++)
+            for (int i = 0; i < _division; i++)
             {
-                z = -Dia * 0.5 + (0.5 + i) * dz;
-                width = 2.0 * Math.Sqrt(Math.Pow(Dia * 0.5, 2) - Math.Pow(z, 2));
-                epsilon = epsilon0 - curvature * z;
-                sigma = material.GetStress(epsilon);
-                axialForce += width * sigma * dz;
-                bendingMoment += width * sigma * dz * -z;
+                double epsilon = epsilon0 - curvature * _z[i];
+                double sigma = material.GetStress(epsilon);
+                double contrib = _width[i] * sigma * _dz;
+                axialForce += contrib;
+                bendingMoment += contrib * -_z[i];
             }
             return (axialForce, bendingMoment);
         }
     }
+    //    {
+    //        Dia = diameter;
+    //    }
 
+    //    // 軸力、曲げモーメント取得メソッド
+    //    internal (double, double) GetForceAndMoment(CTPMaterial material, double epsilon0, double curvature, int division = 100)
+    //    {
+    //        double z;
+    //        double dz = Dia / division;
+    //        double epsilon;
+    //        double sigma;
+    //        double width;
+
+    //        double axialForce = 0.0;
+    //        double bendingMoment = 0.0;
+
+    //        // 圧縮縁ひずみ度 epsilonC
+    //        // 中心ひずみ度 epsilon0
+    //        for (int i = 0; i < division; i++)
+    //        {
+    //            z = -Dia * 0.5 + (0.5 + i) * dz;
+    //            width = 2.0 * Math.Sqrt(Math.Pow(Dia * 0.5, 2) - Math.Pow(z, 2));
+    //            epsilon = epsilon0 - curvature * z;
+    //            sigma = material.GetStress(epsilon);
+    //            axialForce += width * sigma * dz;
+    //            bendingMoment += width * sigma * dz * -z;
+    //        }
+    //        return (axialForce, bendingMoment);
+    //    }
+    //}
 
     // 正方形配置　点断面クラス
     class CTPSquareDotSection(double _TB, int numDot, double area) : CTPSection

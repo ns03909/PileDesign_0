@@ -596,6 +596,8 @@ namespace PileDesign.ViewModels
                 GraphOptions.Add("杭");
                 GraphOptions.Add("NMINT");
                 GraphOptions.Add("杭頭M-θ");
+                GraphOptions.Add("M-φ関係");
+                GraphOptions.Add("M-θ関係");
 
             }
             if (IsVerticalAnalysisDone)
@@ -1112,6 +1114,32 @@ namespace PileDesign.ViewModels
 
                 DrawMThetaCurves(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
+            else if (SelectedGraphOption == "M-φ関係")
+            {
+                // M-φ関係: 任意の荷重ケース、任意の杭、任意の要素のM-φ曲線を描画
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = true;
+                IsPileBodyOptionVisible = true;
+                IsPileSegmentOptionVisible = true;
+                IsLiquefactionOptionVisible = true;
+                IsGridOptionVisible = false;
+
+                DrawMPhiCurves(WpfPlot, MyCrosshair, "CrosshairPositionText");
+            }
+            else if (SelectedGraphOption == "M-θ関係")
+            {
+                // M-θ関係: 任意の荷重ケース、任意の杭の杭頭M-θ曲線を描画（最終ステップマーカー付き）
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = true;
+                IsPileBodyOptionVisible = false;
+                IsPileSegmentOptionVisible = false;
+                IsLiquefactionOptionVisible = true;
+                IsGridOptionVisible = false;
+
+                DrawMThetaCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
+            }
             // レジェンド描画
             UpdateLegendVisibility();
         }
@@ -1204,8 +1232,8 @@ namespace PileDesign.ViewModels
                         if (!k.HasValue || k.Value <= 0.0) continue;
                         const double thetaMax = 0.02;
                         int nDiv = 50;
-                        thetas = Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1)).ToArray();
-                        moments = thetas.Select(t => k.Value * t).ToArray();
+                        thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];
+                        moments = [.. thetas.Select(t => k.Value * t)];
                         modeTag = rs.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
                     }
                     if (thetas.Length == 0 || moments.Length == 0) continue;
@@ -1218,6 +1246,327 @@ namespace PileDesign.ViewModels
             }
 
             ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "杭頭M-θ", "θ (rad)", "M (kN·m)");
+            wpfPlot.Plot.ShowLegend();
+            wpfPlot.Refresh();
+        }
+
+        // M-φ関係描画（任意の杭の任意の要素について軸力に応じたM-φ曲線と最終ステップマーカー）
+        private void DrawMPhiCurves(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
+        {
+            var model = AnaModel;
+            wpfPlot.Plot.Clear();
+
+            var targetPiles = GetSelectedPileLayouts();
+            var selectedLoadCases = GetSelectedLoadCases();
+            var selectedCombinations = GetSelectedLoadCombinations();
+
+            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: START - targetPiles={targetPiles.Count}, loadCases={selectedLoadCases.Count}, SelectedPileBodyRef={SelectedPileBodyRef}, SelectedPileSegmentNo={SelectedPileSegmentNo}");
+
+            foreach (var pileLayout in targetPiles)
+            {
+                // 杭体取得
+                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileLayout.No={pileLayout.No}, PileBodyNo={pileLayout.PileBodyNo}, Beams.Count={pileLayout.Beams?.Count ?? 0}");
+                if (pileLayout.PileBodyNo <= 0 || pileLayout.PileBodyNo > InputModel.PileBodies.Count)
+                {
+                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyNo out of range");
+                    continue;
+                }
+                var pileBody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileBody.PileBodyRef={pileBody.PileBodyRef}, segments={pileBody.PileBodySegments?.Count ?? 0}");
+                if (pileBody.PileBodyRef != SelectedPileBodyRef)
+                {
+                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyRef mismatch");
+                    continue;
+                }
+
+                // 対応するBeam要素を見つける
+                Beam targetBeam = null;
+                for (int i = 0; i < pileLayout.Beams.Count && i < pileBody.PileBodySegments.Count; i++)
+                {
+                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: segment[{i}].No={pileBody.PileBodySegments[i].No}");
+                    if (pileBody.PileBodySegments[i].No == SelectedPileSegmentNo)
+                    {
+                        targetBeam = pileLayout.Beams[i];
+                        break;
+                    }
+                }
+                if (targetBeam == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - targetBeam not found");
+                    continue;
+                }
+
+                foreach (var loadCase in selectedLoadCases)
+                {
+                    foreach (var loadCombination in selectedCombinations)
+                    {
+                        foreach (var isLiquefaction in SelectedLiquefactionCases)
+                        {
+                            // 軸力推定
+                            double axialN = 0.0;
+                            var prop = loadCase.GetType().GetProperty("NonlinearAxialForceN");
+                            if (prop?.GetValue(loadCase) is double nlc && double.IsFinite(nlc) && nlc != 0.0)
+                            {
+                                axialN = nlc;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                    if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                        axialN = nSeis;
+                                }
+                                catch { }
+                                if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
+                                    axialN = pileLayout.AxialForce;
+                            }
+
+                            // M-φ曲線取得
+                            List<double> phis = null;
+                            List<double> moments = null;
+
+                            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Beam={targetBeam.Name}, MPhi_ByN={targetBeam.Mphi_ByN != null}, axialN={axialN}");
+
+                            // 方法0: BeamResultに保存されたM-φ曲線を使用（最優先）
+                            int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            BeamResult beamResultForCurve = null;
+                            if (lastStep >= 0)
+                            {
+                                beamResultForCurve = targetBeam.GetBeamResult(model, loadCase, loadCombination, isLiquefaction, lastStep);
+                                if (beamResultForCurve?.MPhiCurve_Phis != null && beamResultForCurve.MPhiCurve_Phis.Count >= 2)
+                                {
+                                    phis = beamResultForCurve.MPhiCurve_Phis;
+                                    moments = beamResultForCurve.MPhiCurve_Moments;
+                                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using BeamResult curve, Points={phis.Count}");
+                                }
+                            }
+
+                            // 方法1: BeamのMPhi_ByNからAxialCurveFamilyで解決
+                            if ((phis == null || phis.Count < 2) && targetBeam.Mphi_ByN != null)
+                            {
+                                var resolvedCurve = AxialCurveFamily.ResolveMPhi(targetBeam.Mphi_ByN, axialN);
+                                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: resolvedCurve={resolvedCurve != null}, Points={resolvedCurve?.Points?.Count ?? 0}");
+                                if (resolvedCurve?.Points != null && resolvedCurve.Points.Count >= 2)
+                                {
+                                    phis = [.. resolvedCurve.Points.Select(p => p.Phi)];
+                                    moments = [.. resolvedCurve.Points.Select(p => p.Moment)];
+                                }
+                            }
+
+                            // 方法1.5: 解析時に解決済みのキャッシュ曲線を使用
+                            if ((phis == null || phis.Count < 2) && targetBeam.ResolvedCombinedCurve?.Points != null)
+                            {
+                                var cachedCurve = targetBeam.ResolvedCombinedCurve;
+                                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using ResolvedCombinedCurve, Points={cachedCurve.Points.Count}");
+                                if (cachedCurve.Points.Count >= 2)
+                                {
+                                    phis = [.. cachedCurve.Points.Select(p => p.Phi)];
+                                    moments = [.. cachedCurve.Points.Select(p => p.Moment)];
+                                }
+                            }
+
+                            // 方法2: フォールバック - PileSectionから取得
+                            if ((phis == null || phis.Count < 2) && SelectedPileSegmentNo > 0 && SelectedPileSegmentNo <= pileBody.PileBodySegments.Count)
+                            {
+                                var pileSegment = pileBody.PileBodySegments[SelectedPileSegmentNo - 1];
+                                var pileSection = pileSegment.PileSection;
+                                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Trying PileSection fallback, pileSection={pileSection != null}");
+                                if (pileSection != null)
+                                {
+                                    try
+                                    {
+                                        var mPhi = pileSection.GetMphiRelationship(axialN);
+                                        phis = mPhi.Phis?.ToList();
+                                        moments = mPhi.Moments?.ToList();
+                                        System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: PileSection result, phis={phis?.Count ?? 0}, moments={moments?.Count ?? 0}");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: PileSection exception: {ex.Message}");
+                                    }
+                                }
+                            }
+
+                            if (phis == null || moments == null || phis.Count < 2)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: No curve data available, phis={phis?.Count ?? 0}, moments={moments?.Count ?? 0}");
+                                continue;
+                            }
+
+                            // 曲線プロット
+                            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Plotting curve with {phis.Count} points, phi range [{phis.Min():E3}, {phis.Max():E3}], M range [{moments.Min():F0}, {moments.Max():F0}]");
+                            string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{SelectedPileSegmentNo}";
+                            var scatter = wpfPlot.Plot.Add.Scatter(phis.ToArray(), [.. moments]);
+                            scatter.LineStyle.Width = 2;  // 線幅を明示的に設定
+                            scatter.MarkerSize = 5;       // マーカーサイズも設定
+                            scatter.LegendText = legend;
+
+                            // 最終ステップの曲率・モーメント取得（lastStepとbeamResultForCurveは上で取得済み）
+                            if (lastStep >= 0 && beamResultForCurve?.CumulativeForce != null)
+                            {
+                                // 曲げモーメントの最大値
+                                double mFinal = beamResultForCurve.CumulativeForce.MabsMax;
+
+                                // 曲率：解析で保存した値を使用（フォールバック：回転角差から推定）
+                                double phiFinal = beamResultForCurve.Curvature;
+                                if (phiFinal <= 0.0 && beamResultForCurve.CumulativeDisp != null)
+                                {
+                                    // フォールバック：回転角差から計算 φ ≈ (Rj - Ri) / L
+                                    double length = targetBeam.Length;
+                                    double rotI = beamResultForCurve.CumulativeDisp.Ri;
+                                    double rotJ = beamResultForCurve.CumulativeDisp.Rj;
+                                    phiFinal = length > 0 ? Math.Abs(rotJ - rotI) / length : 0.0;
+                                }
+
+                                // マーカープロット
+                                if (double.IsFinite(phiFinal) && double.IsFinite(mFinal))
+                                {
+                                    Scatter marker = wpfPlot.Plot.Add.Scatter([phiFinal], new[] { mFinal });
+                                    marker.LineStyle.Width = 0;
+                                    marker.MarkerSize = 12;
+                                    marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
+                                    marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+                                    marker.LegendText = $"最終:{legend}";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-φ関係", "φ (rad/m)", "M (kN·m)");
+            wpfPlot.Plot.ShowLegend();
+            wpfPlot.Refresh();
+        }
+
+        // M-θ関係描画（任意の杭の杭頭について軸力に応じたM-θ曲線と最終ステップマーカー）
+        private void DrawMThetaCurvesWithMarker(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
+        {
+            var model = AnaModel;
+            if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0)
+            {
+                wpfPlot.Plot.Clear();
+                wpfPlot.Refresh();
+                return;
+            }
+
+            var targetPiles = GetSelectedPileLayouts();
+            var targetPileNos = new HashSet<int>(targetPiles.Select(p => p.No));
+            var selectedLoadCases = GetSelectedLoadCases();
+            var selectedCombinations = GetSelectedLoadCombinations();
+
+            wpfPlot.Plot.Clear();
+
+            foreach (var loadCase in selectedLoadCases)
+            {
+                foreach (var loadCombination in selectedCombinations)
+                {
+                    foreach (var isLiquefaction in SelectedLiquefactionCases)
+                    {
+                        foreach (var rs in model.RotationalSprings)
+                        {
+                            // 対応杭レイアウト探索
+                            PileLayoutDataItem pileLayout = null;
+                            if (rs.PileBodyNo is int pb && pb > 0 && pb <= InputModel.PileBodies.Count)
+                            {
+                                pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.PileBodyNo == pb);
+                            }
+                            if (pileLayout == null && rs.NodeJ != null)
+                            {
+                                pileLayout = InputModel.PileLayoutItems.FirstOrDefault(pl => pl.PileNodes.Count > 0 && ReferenceEquals(pl.PileNodes[0], rs.NodeJ));
+                            }
+
+                            if (pileLayout == null) continue;
+                            if (SelectedPileOption != "All" && !targetPileNos.Contains(pileLayout.No)) continue;
+
+                            // 軸力推定
+                            double axialN = 0.0;
+                            var prop = loadCase.GetType().GetProperty("NonlinearAxialForceN");
+                            if (prop?.GetValue(loadCase) is double nlc && double.IsFinite(nlc) && nlc != 0.0)
+                            {
+                                axialN = nlc;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                    if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                        axialN = nSeis;
+                                }
+                                catch { }
+                                if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
+                                    axialN = pileLayout.AxialForce;
+                            }
+
+                            // 曲線取得
+                            double[] thetas;
+                            double[] moments;
+                            string modeTag;
+                            if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
+                            {
+                                (thetas, moments) = rs.CurveXY.ToArrays();
+                                modeTag = "XY";
+                            }
+                            else if (rs.Mode == RotationalSpringMode.SingleDof && rs.Curve != null)
+                            {
+                                (thetas, moments) = rs.Curve.ToArrays();
+                                modeTag = rs.Dof.ToString();
+                            }
+                            else
+                            {
+                                double? k = rs.Mode == RotationalSpringMode.CombinedXY ? rs.KthetaXY : rs.Ktheta;
+                                if (!k.HasValue || k.Value <= 0.0) continue;
+                                const double thetaMax = 0.02;
+                                int nDiv = 50;
+                                thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];
+                                moments = [.. thetas.Select(t => k.Value * t)];
+                                modeTag = rs.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
+                            }
+                            if (thetas.Length == 0 || moments.Length == 0) continue;
+
+                            // 曲線プロット
+                            string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Mode:{modeTag}";
+                            var scatter = wpfPlot.Plot.Add.Scatter(thetas, moments);
+                            scatter.LegendText = legend;
+
+                            // 最終ステップの回転角・モーメント取得
+                            int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            if (lastStep >= 0 && rs.CumulativeDisp != null && rs.CumulativeForce != null)
+                            {
+                                // 回転角（合成または単自由度）
+                                double thetaFinal = rs.Mode == RotationalSpringMode.CombinedXY
+                                    ? rs.CumulativeDisp.Ri  // 合成の場合
+                                    : (rs.Dof == RotationalDof.Rx ? rs.CumulativeDisp.Rxi
+                                        : rs.Dof == RotationalDof.Ry ? rs.CumulativeDisp.Ryi
+                                        : rs.CumulativeDisp.Rzi);
+                                thetaFinal = Math.Abs(thetaFinal);
+
+                                // モーメント
+                                double mFinal = rs.Mode == RotationalSpringMode.CombinedXY
+                                    ? Math.Sqrt(rs.CumulativeForce.Myi * rs.CumulativeForce.Myi + rs.CumulativeForce.Mzi * rs.CumulativeForce.Mzi)
+                                    : (rs.Dof == RotationalDof.Rx ? Math.Abs(rs.CumulativeForce.Mxi)
+                                        : rs.Dof == RotationalDof.Ry ? Math.Abs(rs.CumulativeForce.Myi)
+                                        : Math.Abs(rs.CumulativeForce.Mzi));
+
+                                // マーカープロット
+                                if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
+                                {
+                                    var marker = wpfPlot.Plot.Add.Scatter([thetaFinal], new[] { mFinal });
+                                    marker.LineStyle.Width = 0;
+                                    marker.MarkerSize = 12;
+                                    marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
+                                    marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+                                    marker.LegendText = $"最終:{legend}";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-θ関係", "θ (rad)", "M (kN·m)");
             wpfPlot.Plot.ShowLegend();
             wpfPlot.Refresh();
         }

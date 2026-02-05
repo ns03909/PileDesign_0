@@ -428,12 +428,19 @@ namespace PileDesign.FEM
         }
 
         // sTarget -> Rp メソッド（ニュートンラフソン法）
+        // 杭先端支持力は数式に従って上昇し続ける（極限支持力rpuを超えても上昇）
         private static double GetRp(double sTarget, double dp, double rpu, double alpha, double n)
         {
             // 早期リターン
             if (sTarget <= 0 || rpu <= 1e-12) return 0;
 
-            double rp = rpu;
+            // 極限沈下量（杭径の10%）
+            double ultimateSettlement = 0.1 * dp;
+
+            // 良好な初期値を設定（沈下量に応じて調整、rpuを超える場合も考慮）
+            double ratio = sTarget / ultimateSettlement;
+            double rp = rpu * ratio; // 沈下量比率に応じた初期値
+
             const int maxIter = 100;
             const double tolerance = 1e-8;
 
@@ -449,7 +456,11 @@ namespace PileDesign.FEM
                 if (Math.Abs(ktan) < 1e-15) break;
 
                 rp -= (sn - sTarget) * ktan;
+
+                // rpは0以上（負の支持力は物理的に意味がない）
+                rp = Math.Max(0, rp);
             }
+
             return rp;
         }
 
@@ -481,9 +492,9 @@ namespace PileDesign.FEM
             }
             else
             {
-                // 塑性状態でも微小な剛性を残す（数値安定性のため）
-                // 初期剛性の5%程度を残すことで剛性マトリクスの特異性を防ぎつつ収束を改善
-                ktan = tau1 / S1 * psiL * 0.05;
+                // 塑性状態では剛性をほぼゼロに（tau2で抵抗力一定）
+                // 数値安定性のため極小値を残す
+                ktan = tau1 / S1 * psiL * 0.001;
             }
             return ktan;
         }
@@ -1239,6 +1250,7 @@ namespace PileDesign.FEM
             }
             else  // 引張側
             {
+                // rt_SLS, rt_DLS, rt_ULSは負の値で格納されている
                 if (!flags.IsRt_SLS && load <= rt_SLS) flags.IsJustRt_SLS = true;
                 if (!flags.IsRt_DLS && load <= rt_DLS) flags.IsJustRt_DLS = true;
                 if (!flags.IsRt_ULS && load <= rt_ULS) flags.IsJustRt_ULS = true;
@@ -1320,6 +1332,7 @@ namespace PileDesign.FEM
             }
             else // 引抜側 (pn == 1)
             {
+                // rt_SLS, rt_DLS, rt_ULSは負の値で格納されている
                 if (VectorF[0] + VectorDF[0] - Weights[0] < rt_SLS && !flags.IsRt_SLS)
                 {
                     prevF0 = VectorF[0];
@@ -1389,10 +1402,13 @@ namespace PileDesign.FEM
         }
 
         // 荷重範囲判定
+        // Rt_ULS等は負の値で格納されている（引張は負）
         private bool IsWithinLoadRange(double pileTopLoad, int pn)
         {
             double r_ULS = soilPile.R_ULS;
             double rt_ULS = soilPile.Rt_ULS;
+            // 圧縮側: 荷重がR_ULS以下なら継続
+            // 引張側: 荷重がRt_ULS以上なら継続（rt_ULSは負値なので、荷重がより負になるまで継続）
             return (pn == -1) ? (pileTopLoad <= r_ULS) : (pileTopLoad >= rt_ULS);
         }
 
@@ -1589,10 +1605,20 @@ namespace PileDesign.FEM
         // 引張ステップ
         private static double GetStepTension(double fricmMax, double pileWeight)
         {
+            // 引張容量 = 摩擦力 - 杭自重
+            // 摩擦力が杭自重より大きい場合でも、最小ステップで引張解析を実行
             double pmin = fricmMax - pileWeight;
+
+            // 引張容量がない場合（摩擦力が自重を上回る場合）でも、
+            // 負の変位（浮き上がり）方向の解析を行うため最小ステップを使用
+            if (pmin >= 0)
+            {
+                // 最小ステップで解析（摩擦力 > 自重の場合）
+                return -10;
+            }
+
             return pmin switch
             {
-                >= 0 => 0,
                 >= -1000 => -10,
                 >= -5000 => -50,
                 >= -10000 => -100,
@@ -1673,58 +1699,57 @@ namespace PileDesign.FEM
         #endregion
 
         /// <summary>
-        /// 指定した杭頭荷重に対する変位ベクトルを返す（RunAnalysisと同様の構造）
+        /// 指定した杭頭荷重に対する変位ベクトルを返す
+        /// LoadDisplacementsの結果から線形補間して求める（荷重制御解析結果を利用）
         /// </summary>
         public Vector<double>? GetDisplacementForGivenLoad(double pileTopForce)
         {
-            // 1. 初期化
-            var vectorX = VectorX0;
-            var beamStiffnesses = BeamStiffnesses;
-            var weights = Weights.ToList();
-            var vectorF = GenerateForceVector(weights, pileTopForce);
+            // LoadDisplacementsから補間して沈下量を求める
+            if (LoadDisplacements == null || LoadDisplacements.Count < 2)
+                return null;
 
-            string state = pileTopForce >= 0 ? "positive" : "negative";
+            // 荷重でソートされたリストを作成
+            var sortedList = LoadDisplacements.OrderBy(ld => ld.PileTopLoad).ToList();
 
-            // 2. 収束計算
-            bool converged = TryConvergeDisplacement(vectorF, beamStiffnesses, ref vectorX, out Vector<double> result, state);
-
-            // 3. 結果返却
-            return converged ? result : null;
-        }
-
-
-        /// <summary>
-        /// 収束計算（ニュートンラフソン法）を実行
-        /// </summary>
-        private bool TryConvergeDisplacement(
-            Vector<double> vectorF,
-            List<double> beamStiffnesses,
-            ref Vector<double> vectorX,
-            out Vector<double> result,
-            string state)
-        {
-            double norm = double.MaxValue;
-            int counter = 0;
-            Vector<double> vectorR = -vectorF;
-
-            while (norm > Tolerance)
+            // 範囲外チェック
+            if (pileTopForce <= sortedList[0].PileTopLoad)
             {
-                counter += 1;
-                // Find K 接線剛性マトリクスの計算
-                List<double> soilTangentStiffnesses = GetTangentSoilStiffness(state, vectorX);
-                Vector<double> U = SolveDisp(beamStiffnesses, soilTangentStiffnesses, -vectorR, vectorX);
-                vectorX += U; // update x = x + u (配置更新)
-
-                List<double> soilSecantStiffnesses = GetSecantSoilStiffness(state, vectorX);
-                Vector<double> vectorT = GetVectorT(beamStiffnesses, soilSecantStiffnesses, vectorX);
-                // Find VectorR 残差ベクトル
-                vectorR = vectorT - vectorF;
-                norm = GetNorm(vectorR, vectorF);
+                // 最小荷重以下の場合は最小値を返す
+                var result = Vector<double>.Build.Dense(nodesCount);
+                result[0] = sortedList[0].DD0s / 1000.0; // mm -> m
+                result[^2] = sortedList[0].DDns / 1000.0; // mm -> m
+                return result;
             }
 
-            // 初期変位を引いて相対変位に変換
-            result = vectorX - VectorX0;
-            return true;
+            if (pileTopForce >= sortedList[^1].PileTopLoad)
+            {
+                // 最大荷重以上の場合は最大値を返す
+                var result = Vector<double>.Build.Dense(nodesCount);
+                result[0] = sortedList[^1].DD0s / 1000.0; // mm -> m
+                result[^2] = sortedList[^1].DDns / 1000.0; // mm -> m
+                return result;
+            }
+
+            // 線形補間
+            for (int i = 0; i < sortedList.Count - 1; i++)
+            {
+                var lower = sortedList[i];
+                var upper = sortedList[i + 1];
+
+                if (pileTopForce >= lower.PileTopLoad && pileTopForce <= upper.PileTopLoad)
+                {
+                    double ratio = (pileTopForce - lower.PileTopLoad) / (upper.PileTopLoad - lower.PileTopLoad);
+                    double d0s = lower.DD0s + ratio * (upper.DD0s - lower.DD0s);
+                    double dns = lower.DDns + ratio * (upper.DDns - lower.DDns);
+
+                    var result = Vector<double>.Build.Dense(nodesCount);
+                    result[0] = d0s / 1000.0; // mm -> m
+                    result[^2] = dns / 1000.0; // mm -> m
+                    return result;
+                }
+            }
+
+            return null;
         }
 
         private static double GetNorm(Vector<double> vectorR, Vector<double> vectorF)

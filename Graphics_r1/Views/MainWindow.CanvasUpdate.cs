@@ -238,7 +238,7 @@ namespace PileDesign.Views
 
         // 以降: ヘルパー関数群を同クラス内に追加
         private static double ScaleDispMmToModel(double dispMm, LoadCombination comb, MainWindowViewModel vm)
-            => dispMm * 0.001 * comb.Alpha1 * vm.DispDiagramMultiplier;
+            => dispMm * 0.001 * comb.Alpha1 * vm.DisplacementDiagramMultiplier;
 
         private static double GetDispFromZDataItem(ZDataItem item, int level, bool isLiquefaction)
         {
