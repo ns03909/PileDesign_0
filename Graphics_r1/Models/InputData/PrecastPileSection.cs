@@ -368,9 +368,14 @@ namespace PileDesign.Models.InputData
             Tendons.Prestrain = Tendons.EpsilonPi;
         }
 
+        // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
+        public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+        {
+            return GetMPhiRelationshipInternal(axialN, 0.8);
+        }
 
-        // ある軸力時のM-φ関係を得るメソッド
-        internal (List<double>, List<double>) GetMPhiRelationship(double Ntarget, double beta1 = 0.8)
+        // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 0.8)
         {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MY, double phiY) = GetMomentCurvatureForN(Ntarget, "TendonYield");
@@ -1076,9 +1081,14 @@ namespace PileDesign.Models.InputData
             MainBars.Prestrain = MainBars.EpsilonSi;
         }
 
+        // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
+        public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+        {
+            return GetMPhiRelationshipInternal(axialN, 0.8);
+        }
 
-        // ある軸力時のM-φ関係を得るメソッド
-        internal (List<double>, List<double>) GetMPhiRelationship(double Ntarget, double beta1 = 0.8)
+        // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 0.8)
         {
             // コンクリートのひび割れモーメント、曲率を取得
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
@@ -1814,9 +1824,14 @@ namespace PileDesign.Models.InputData
             return (qs, ns);
         }
 
+        // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
+        public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+        {
+            return GetMPhiRelationshipInternal(axialN, 0.9);
+        }
 
-        // ある軸力時のM-φ関係を得るメソッド
-        internal (List<double>, List<double>) GetMPhiRelationship(double Ntarget, double beta1 = 0.9)
+        // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 0.9)
         {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MYT, double phiYT) = GetMomentCurvatureForN(Ntarget, "SteelPipeTensionYield");

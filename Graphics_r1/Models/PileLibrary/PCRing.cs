@@ -144,13 +144,13 @@ namespace PileDesign.Models.PileLibrary
                         RD2 = rd1 + 2 * tc + 2 * ts,
                         Hr = hr,
                         BarNum = barNum,
-                        BarSize = barSize ?? string.Empty,
+                        BarSize = barSize?.Trim() ?? string.Empty,
                         L1 = l1,
                         L2 = l2,
-                        Name = name ?? string.Empty,
+                        Name = name?.Trim() ?? string.Empty,
                         RingSteelTs = ts,
-                        RingSteelGrade = ringSteelGrade ?? string.Empty,
-                        SpiralDia = spiralDia ?? string.Empty,
+                        RingSteelGrade = ringSteelGrade?.Trim() ?? string.Empty,
+                        SpiralDia = spiralDia?.Trim() ?? string.Empty,
                         SpiralNum = spiralNum,
                     };
 

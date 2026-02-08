@@ -9,14 +9,10 @@ namespace PileDesign.FEM
 {
     internal class Solver
     {
-        // ソルバ
-        public static void SolveDisp(AnaModel anaModel)
+        // ソルバ（緩和係数対応版）
+        public static void SolveDisp(AnaModel anaModel, double relaxationFactor = 1.0)
         {
             anaModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true); // KAA_tanとVectorRを取得
-            //Vector<double> incrementalDispVector = anaModel.KAA_tan.Solve(anaModel.VectorR);
-
-            // KAA_tan と VectorR を構築
-            //anaModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true);
 
             // CSparse で一次方程式を解く（MathNetと同じく K Δd = R）
             Vector<double> incrementalDispVector;
@@ -30,6 +26,24 @@ namespace PileDesign.FEM
             {
                 // フォールバック（MathNet と完全同等の経路）
                 incrementalDispVector = anaModel.KAA_tan.Solve(anaModel.VectorR);
+            }
+
+            // 緩和係数を適用（1.0未満で収束を安定化）
+            if (relaxationFactor < 1.0 && relaxationFactor > 0.0)
+            {
+                incrementalDispVector = incrementalDispVector * relaxationFactor;
+            }
+
+            // 変位増分制限（発散防止のためのライン検索簡易版）
+            // 増分変位が大きすぎる場合はスケールダウン
+            // 注意：制限が厳しすぎると収束を妨げる可能性あり
+            const double maxDispIncrement = 0.05; // 最大増分 50mm = 0.05m に緩和
+            double maxAbsIncrement = incrementalDispVector.AbsoluteMaximum();
+            if (maxAbsIncrement > maxDispIncrement)
+            {
+                double scaleFactor = maxDispIncrement / maxAbsIncrement;
+                incrementalDispVector = incrementalDispVector * scaleFactor;
+                System.Diagnostics.Debug.WriteLine($"[Solver] Displacement increment limited: max={maxAbsIncrement:E3} -> scaled by {scaleFactor:F4}");
             }
 
             anaModel.SetDispVector(incrementalDispVector);
@@ -60,11 +74,12 @@ namespace PileDesign.FEM
                         ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
 
                         // クロス項の加算
+                        // 修正: crossIdx のマスターノードから crossIdx の方程式番号を取得
                         foreach (var (crossIdx, arm, sign) in crossTerms[i])
                         {
                             if (node.MasterNodes[crossIdx] != null)
                             {
-                                int eqCross = node.MasterNodes[i].EquationNumber[crossIdx];
+                                int eqCross = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
                                 ddisp[i] += eqCross < 0 ? 0 : incrementalDispVector[eqCross] * arm(node.SlaveArm) * sign;
                             }
                         }

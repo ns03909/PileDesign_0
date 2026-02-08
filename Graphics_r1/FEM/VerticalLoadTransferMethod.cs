@@ -272,7 +272,7 @@ namespace PileDesign.FEM
                 {
                     double s = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; //m
-                    double rpu = soilPile.Rpu;
+                    double rpu = soilPile.SettleRpu;
                     double alpha = InputModel.PileBodies[^1].SettleAlpha;
                     double n = InputModel.PileBodies[^1].SettleN;
 
@@ -310,7 +310,7 @@ namespace PileDesign.FEM
                 {
                     double settlement = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; //m
-                    double rpu = soilPile.Rpu; // kN
+                    double rpu = soilPile.SettleRpu; // kN
                     double alpha = InputModel.PileBodies[^1].SettleAlpha;
                     double n = InputModel.PileBodies[^1].SettleN;
 
@@ -349,7 +349,7 @@ namespace PileDesign.FEM
                 {
                     double settlment = xs[2 * i] - xs[2 * i + 1]; // 相対変位
                     double dp = soilPile.Dp / 1000.0; // m
-                    double rpu = soilPile.Rpu; // kN
+                    double rpu = soilPile.SettleRpu; // kN
                     double alpha = InputModel.PileBodies[^1].SettleAlpha;
                     double n = InputModel.PileBodies[^1].SettleN;
 
@@ -725,7 +725,7 @@ namespace PileDesign.FEM
 
                 double settlement = VectorX[^2];
                 double dp = soilPile.Dp / 1000.0;
-                double rpu = soilPile.Rpu;
+                double rpu = soilPile.SettleRpu;
                 double alpha = InputModel.PileBodies[^1].SettleAlpha;
                 double n = InputModel.PileBodies[^1].SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
@@ -788,7 +788,7 @@ namespace PileDesign.FEM
             System.Diagnostics.Debug.WriteLine($"  FricmMax (引張周面抵抗合計) = {FricmMax:F1} kN");
             System.Diagnostics.Debug.WriteLine($"  PileWeight (杭自重) = {PileWeight:F1} kN");
 
-            double step = (pn == -1) ? GetStepCompression(soilPile.Rpu, FricpMax) : GetStepTension(FricmMax, PileWeight);
+            double step = (pn == -1) ? GetStepCompression(soilPile.SettleRpu, FricpMax) : GetStepTension(FricmMax, PileWeight);
             double minStep = Math.Abs(step) * 0.01; // 最小ステップ（初期の1%）
             VectorDF.Clear();
             VectorDF[0] = step;
@@ -816,7 +816,7 @@ namespace PileDesign.FEM
                     // 先端抵抗力を計算
                     double settlementAtFailure = VectorX[^2];
                     double dpAtFailure = soilPile.Dp / 1000.0;
-                    double rpuAtFailure = soilPile.Rpu;
+                    double rpuAtFailure = soilPile.SettleRpu;
                     double alphaAtFailure = InputModel.PileBodies[^1].SettleAlpha;
                     double nAtFailure = InputModel.PileBodies[^1].SettleN;
                     double rzToeAtFailure = GetRp(settlementAtFailure, dpAtFailure, rpuAtFailure, alphaAtFailure, nAtFailure);
@@ -844,7 +844,7 @@ namespace PileDesign.FEM
                         // 最終状態での抵抗力内訳
                         double settlementFinal = backupVectorX[^2]; // 復元前の最後の収束状態
                         double dpFinal = soilPile.Dp / 1000.0;
-                        double rzToeFinal = GetRp(settlementFinal, dpFinal, soilPile.Rpu, InputModel.PileBodies[^1].SettleAlpha, InputModel.PileBodies[^1].SettleN);
+                        double rzToeFinal = GetRp(settlementFinal, dpFinal, soilPile.SettleRpu, InputModel.PileBodies[^1].SettleAlpha, InputModel.PileBodies[^1].SettleN);
                         double circumFrictionFinal = currentLoad - rzToeFinal + PileWeight;
 
                         System.Diagnostics.Debug.WriteLine($"=== 極限状態到達: {stateLabelLocal} ===");
@@ -921,7 +921,7 @@ namespace PileDesign.FEM
 
                 double settlement = VectorX[^2];
                 double dp = soilPile.Dp / 1000.0;
-                double rpu = soilPile.Rpu;
+                double rpu = soilPile.SettleRpu;
                 double alpha = InputModel.PileBodies[^1].SettleAlpha;
                 double n = InputModel.PileBodies[^1].SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
@@ -1013,7 +1013,7 @@ namespace PileDesign.FEM
 
                 // 先端抵抗力を計算
                 double settlement = VectorX[^2];
-                double rpu = soilPile.Rpu;
+                double rpu = soilPile.SettleRpu;
                 double alpha = InputModel.PileBodies[^1].SettleAlpha;
                 double n = InputModel.PileBodies[^1].SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);

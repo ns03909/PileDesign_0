@@ -454,7 +454,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void ViewXYPlane()
         {
-            // θ=-90, φ=90
+            // θ=-90, φ=90、透視投影を無効化
+            CanvasThreeDView.IsPerspective = false;
             if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 90);
             else
             {
@@ -468,6 +469,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void ViewYZPlane()
         {
+            // 透視投影を無効化
+            CanvasThreeDView.IsPerspective = false;
             if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(0, 0);
             else
             {
@@ -480,6 +483,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void ViewXZPlane()
         {
+            // 透視投影を無効化
+            CanvasThreeDView.IsPerspective = false;
             if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 0);
             else
             {
@@ -1563,6 +1568,11 @@ namespace PileDesign.ViewModels
                 IsVerticalAnalysisDone = false;
                 IsGroupPileSettlementAnalysisDone = false;
 
+                // 群杭沈下解析結果をクリア
+                CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
+                CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
+                CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
+
                 UpdateWindowImmediate();
                 UpdateTreeView();
                 MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1633,6 +1643,11 @@ namespace PileDesign.ViewModels
                     IsHorizontalAnalysisDone = false;
                     IsVerticalAnalysisDone = false;
                     IsGroupPileSettlementAnalysisDone = false;
+
+                    // 群杭沈下解析結果をクリア
+                    CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
+                    CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
+                    CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
 
                     UpdateWindowImmediate();
                     MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);

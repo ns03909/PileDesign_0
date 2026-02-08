@@ -705,16 +705,26 @@ namespace PileDesign.Models.InputData
         internal (List<double>, List<double>) GetMThetaRelationship(double Ntarget, double alpha = 32)
         {
             double beta1 = 0.95;
-            (double MCr, double _) = GetCrackMoment(Ntarget, false);
+            (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
-            double thetaY = 0.5 * alpha * ExtractBarSizeNumber(MainBars.BarSize) * phiY;
+
+            // φ→θ変換: θ = 0.5 * α * D_bar * φ
+            double D_bar = ExtractBarSizeNumber(MainBars.BarSize);
+            double thetaCr = 0.5 * alpha * D_bar * phiCr;  // ひび割れ回転角
+            double thetaY = 0.5 * alpha * D_bar * phiY;    // 降伏回転角
 
             (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
-            //double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
-            double thetaU = 0.01;
-            List<double> thetas = [0.0, 0.0, thetaY, thetaU];
+            double thetaU = 0.01;  // 終局回転角
+
+            // θの重複を避けるため、thetaCrが非常に小さい場合は最小値を設定
+            if (thetaCr < 1e-6) thetaCr = 1e-6;
+            if (thetaY <= thetaCr) thetaY = thetaCr * 1.5;  // thetaY > thetaCrを保証
+            if (thetaU <= thetaY) thetaU = thetaY * 2.0;    // thetaU > thetaYを保証
+
+            List<double> thetas = [0.0, thetaCr, thetaY, thetaU];
             List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
 
+            System.Diagnostics.Debug.WriteLine($"InsituRC.GetMThetaRelationship: thetas=[{string.Join(",", thetas.Select(t => t.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
             return (thetas, Ms);
         }
 

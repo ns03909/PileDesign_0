@@ -68,6 +68,29 @@ namespace PileDesign.FEM
             int countFix = 0;
             var dofForcedDispList = new List<bool>();
 
+            #if DEBUG
+            // 診断: CapNodeの境界状態を確認
+            var capNodes = Nodes.Where(n => n.Name != null && n.Name.StartsWith("CapNode")).ToList();
+            if (capNodes.Count > 0)
+            {
+                var freeDofs = capNodes.SelectMany(n => Enumerable.Range(0, 6)
+                    .Where(i => n.GetBoundary(i) == false)
+                    .Select(i => $"{n.Name}:{i}")).ToList();
+                if (freeDofs.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AnaModel] CapNodes with FREE DOFs ({freeDofs.Count}):");
+                    foreach (var dof in freeDofs.Take(20))
+                        System.Diagnostics.Debug.WriteLine($"  {dof}");
+                    if (freeDofs.Count > 20)
+                        System.Diagnostics.Debug.WriteLine($"  ... and {freeDofs.Count - 20} more");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AnaModel] All {capNodes.Count} CapNodes have FIXED boundaries (correct)");
+                }
+            }
+            #endif
+
             foreach (var node in Nodes)
             {
                 for (int index = 0; index < 6; index++)
@@ -161,12 +184,64 @@ namespace PileDesign.FEM
                 }
             }
 
-            // 正則化
+            // 正則化（ゼロ/負の対角値を診断）+ 小さい対角値の診断
             const double eps = 1e-9;
+            const double smallThreshold = 1e-6; // この値以下の対角値を警告
+            var zeroDiagDofs = new List<(int eq, string nodeName, double val)>();
+            var smallDiagDofs = new List<(int eq, string nodeName, double val)>();
+
             for (int i = 0; i < CountFree; i++)
             {
                 double v = matrixKAA[i, i];
-                if (!double.IsFinite(v) || v <= 0.0) matrixKAA[i, i] = eps;
+                string nodeDofName = null;
+
+                // この方程式番号に対応するノードと自由度を特定
+                foreach (var node in Nodes)
+                {
+                    for (int d = 0; d < 6; d++)
+                    {
+                        if (node.EquationNumber[d] == i)
+                        {
+                            string dofName = d switch { 0 => "Ux", 1 => "Uy", 2 => "Uz", 3 => "Rx", 4 => "Ry", _ => "Rz" };
+                            nodeDofName = $"{node.Name}:{dofName}";
+                            break;
+                        }
+                    }
+                    if (nodeDofName != null) break;
+                }
+
+                if (!double.IsFinite(v) || v <= 0.0)
+                {
+                    zeroDiagDofs.Add((i, nodeDofName ?? $"eq{i}", v));
+                    matrixKAA[i, i] = eps;
+                }
+                else if (v < smallThreshold)
+                {
+                    smallDiagDofs.Add((i, nodeDofName ?? $"eq{i}", v));
+                }
+            }
+
+            if (zeroDiagDofs.Count > 0)
+            {
+                // ノード名のプレフィックスでグループ化して出力
+                var groupedByPrefix = zeroDiagDofs
+                    .GroupBy(x => x.nodeName.Split(':')[0].Split('-')[0].Split('_')[0])
+                    .Select(g => $"{g.Key}({g.Count()})")
+                    .ToList();
+                System.Diagnostics.Debug.WriteLine($"[MapOnKmat] WARNING: {zeroDiagDofs.Count} DOFs have zero/negative diagonal (regularized to {eps}):");
+                System.Diagnostics.Debug.WriteLine($"  Node types: {string.Join(", ", groupedByPrefix)}");
+                foreach (var (eq, name, val) in zeroDiagDofs.Take(30))
+                    System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
+                if (zeroDiagDofs.Count > 30)
+                    System.Diagnostics.Debug.WriteLine($"  ... and {zeroDiagDofs.Count - 30} more");
+            }
+            if (smallDiagDofs.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MapOnKmat] INFO: {smallDiagDofs.Count} DOFs have SMALL diagonal (<{smallThreshold:E0}):");
+                foreach (var (eq, name, val) in smallDiagDofs.Take(20))
+                    System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
+                if (smallDiagDofs.Count > 20)
+                    System.Diagnostics.Debug.WriteLine($"  ... and {smallDiagDofs.Count - 20} more");
             }
 
             if (isTan)
@@ -332,10 +407,146 @@ namespace PileDesign.FEM
             VectorD += incrementalDispVector; // 累積変位
         }
 
+        // ラインサーチ用: 累積変位と増分変位を直接設定
+        public void SetDispVectorDirect(Vector<double> cumulativeDispVector, Vector<double> incrementalDispVector)
+        {
+            VectorD = cumulativeDispVector.Clone();
+            VectorDD = incrementalDispVector.Clone();
+        }
+
         // 内力ベクトルの計算メソッド
+        // Newton-Raphson法: 各要素の構成則から計算された内力を全体ベクトルに組み立て
         public void SetT()
         {
-            VectorT = KAA_sec * VectorD; // 割線剛性 × 累積変位
+            // VectorTをゼロで初期化
+            VectorT = Vector<double>.Build.Sparse(CountFree, 0.0);
+
+            // 梁要素の内力を組み立て
+            foreach (var beam in Beams)
+            {
+                // beam.CumulativeForce は SetBeamDispAndForce() で計算済み（要素座標系）
+                AssembleBeamForceToGlobal(beam);
+            }
+
+            // 水平地盤ばねの内力を組み立て（全体座標系で定義されている）
+            foreach (var spring in HorizontalSoilSprings)
+            {
+                AssembleSpringForceToGlobal(spring.NodeI, spring.NodeJ, spring.CumulativeForce);
+            }
+
+            // 回転ばねの内力を組み立て（全体座標系で定義されている）
+            if (RotationalSprings != null)
+            {
+                foreach (var rs in RotationalSprings)
+                {
+                    AssembleSpringForceToGlobal(rs.NodeI, rs.NodeJ, rs.CumulativeForce);
+                }
+            }
+
+            // デバッグ: 組み立て方式と K_sec*d の差を確認（初回のみ出力）
+            #if DEBUG
+            if (KAA_sec != null && VectorD != null)
+            {
+                var T_old = KAA_sec * VectorD;
+                double diff = (VectorT - T_old).L2Norm();
+                double T_norm = VectorT.L2Norm();
+                double T_old_norm = T_old.L2Norm();
+                if (diff > 1e-6 * Math.Max(T_norm, T_old_norm))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SetT] Assembly vs K*d: ||T_asm||={T_norm:E3}, ||T_old||={T_old_norm:E3}, ||diff||={diff:E3}");
+                }
+            }
+            #endif
+        }
+
+        // 梁要素の内力を全体ベクトルに組み立て（要素座標系→全体座標系変換＋マスター節点変換を含む）
+        private void AssembleBeamForceToGlobal(Beam beam)
+        {
+            // 要素内力（要素座標系）
+            Vector<double> f_local = beam.CumulativeForce.GetVector();
+
+            // 要素座標系→全体座標系への変換: f_global = T_coord^T * f_local
+            Matrix<double> coordTransform = Utils.GetTransformMatrix(beam.NodeI, beam.NodeJ);
+            Vector<double> f_global = coordTransform.Transpose() * f_local;
+
+            // スレーブ節点のマスター変換（TransferMatrix）を適用
+            // 剛性マトリクスと同様: K = T_slave^T * K_local * T_slave に対応して f = T_slave^T * f_local
+            Matrix<double> slaveTransform = Matrix<double>.Build.DenseIdentity(12);
+            for (int r = 0; r < 6; r++)
+            {
+                for (int c = 0; c < 6; c++)
+                {
+                    slaveTransform[r, c] = beam.NodeI.TransferMatrix[r, c];
+                    slaveTransform[r + 6, c + 6] = beam.NodeJ.TransferMatrix[r, c];
+                }
+            }
+            Vector<double> f_transformed = slaveTransform.Transpose() * f_global;
+
+            // 方程式番号リストを取得（マスター節点を考慮）
+            var eq = Utils.GetEquationNumbers(beam.NodeI, beam.NodeJ);
+
+            // NodeI の内力を VectorT に加算（f_transformed[0:6]）
+            for (int i = 0; i < 6; i++)
+            {
+                int eqNum = eq[i];
+                if (eqNum >= 0) // 自由度のみ（固定DOFは負値）
+                {
+                    VectorT[eqNum] += f_transformed[i];
+                }
+            }
+
+            // NodeJ の内力を VectorT に加算（f_transformed[6:12]）
+            for (int i = 0; i < 6; i++)
+            {
+                int eqNum = eq[6 + i];
+                if (eqNum >= 0)
+                {
+                    VectorT[eqNum] += f_transformed[6 + i];
+                }
+            }
+        }
+
+        // ばね要素の内力を全体ベクトルに組み立て（マスター節点変換を含む）
+        private void AssembleSpringForceToGlobal(Node nodeI, Node nodeJ, BeamForce cumulativeForce)
+        {
+            // ばね内力（既に全体座標系）
+            Vector<double> f = cumulativeForce.GetVector();
+
+            // スレーブ節点のマスター変換（TransferMatrix）を適用
+            // 剛性マトリクスと同様: K = T_slave^T * K_local * T_slave に対応して f = T_slave^T * f_local
+            Matrix<double> slaveTransform = Matrix<double>.Build.DenseIdentity(12);
+            for (int r = 0; r < 6; r++)
+            {
+                for (int c = 0; c < 6; c++)
+                {
+                    slaveTransform[r, c] = nodeI.TransferMatrix[r, c];
+                    slaveTransform[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
+                }
+            }
+            Vector<double> f_transformed = slaveTransform.Transpose() * f;
+
+            // 方程式番号リストを取得（マスター節点を考慮）
+            var eq = Utils.GetEquationNumbers(nodeI, nodeJ);
+
+            // NodeI の内力を VectorT に加算（f_transformed[0:6]）
+            for (int i = 0; i < 6; i++)
+            {
+                int eqNum = eq[i];
+                if (eqNum >= 0)
+                {
+                    VectorT[eqNum] += f_transformed[i];
+                }
+            }
+
+            // NodeJ の内力を VectorT に加算（f_transformed[6:12]）
+            for (int i = 0; i < 6; i++)
+            {
+                int eqNum = eq[6 + i];
+                if (eqNum >= 0)
+                {
+                    VectorT[eqNum] += f_transformed[6 + i];
+                }
+            }
         }
 
         // 残余力ベクトルの初期値のセット

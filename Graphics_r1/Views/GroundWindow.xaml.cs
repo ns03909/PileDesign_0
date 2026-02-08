@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Common;
+using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
 using System;
@@ -103,6 +104,14 @@ namespace PileDesign.Views
                         // 最終的に失敗しても続行
                     }
                 }
+
+                // CSVエクスポートメニューを追加
+                PlotHelper.AddCsvExportMenu(wpfPlotNValue, "N値");
+                PlotHelper.AddCsvExportMenu(wpfPlotCu, "Cu");
+                PlotHelper.AddCsvExportMenu(wpfPlotVs, "Vs");
+                PlotHelper.AddCsvExportMenu(wpfPlotEs, "Es");
+                PlotHelper.AddCsvExportMenu(wpfPlotDisplacement, "地盤変位");
+                PlotHelper.AddCsvExportMenu(wpfPlotFL, "FL値");
             }
         }
 

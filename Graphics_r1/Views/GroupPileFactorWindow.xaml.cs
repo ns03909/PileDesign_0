@@ -1,4 +1,5 @@
-﻿using PileDesign.ViewModels;
+﻿using PileDesign.Common;
+using PileDesign.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -19,6 +20,10 @@ namespace PileDesign.Views
             this.DataContext = viewModel;
             viewModel.WpfPlot = wpfPlot;
             viewModel.UpdateGraph(); // 初期表示
+
+            // CSVエクスポートメニューを追加
+            PlotHelper.AddCsvExportMenu(wpfPlot, "群杭係数");
+
             viewModel.RequestClose += (s, e) =>
             {
                 {

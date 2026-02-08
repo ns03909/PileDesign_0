@@ -11,6 +11,11 @@ namespace PileDesign.FEM
     // M-θ曲線（タプル名の有無に依存しない実装）
     public sealed class MomentRotationCurve
     {
+        // デバッグ用カウンタ
+        private static int _curveCreateCount = 0;
+        private static int _evalTangentCount = 0;
+        private static int _evalSecantCount = 0;
+        private static readonly object _logLock = new();
 
         public List<(double Theta, double Moment)> Points { get; } = [];
 
@@ -20,6 +25,36 @@ namespace PileDesign.FEM
             if (points == null) return;
             foreach (var (t, m) in points) Points.Add((t, m));
             Points.Sort((a, b) => a.Theta.CompareTo(b.Theta));
+
+            // デバッグ: 曲線の点と各区間の接線剛性を出力（最初の10曲線のみ）
+            #if DEBUG
+            lock (_logLock)
+            {
+                _curveCreateCount++;
+                if (_curveCreateCount <= 10)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[M-θ Curve #{_curveCreateCount}] Points={Points.Count}:");
+                    for (int i = 0; i < Points.Count; i++)
+                    {
+                        var pt = Points[i];
+                        System.Diagnostics.Debug.WriteLine($"  [{i}] θ={pt.Theta:E6} [rad], M={pt.Moment:F1} [kNm]");
+                    }
+                    // 各区間の接線剛性を表示
+                    System.Diagnostics.Debug.WriteLine($"  Segment tangent stiffnesses (dM/dθ = K_rot):");
+                    double prevTheta = 0.0, prevMoment = 0.0;
+                    for (int i = 0; i < Points.Count; i++)
+                    {
+                        var (t, m) = Points[i];
+                        double dTheta = t - prevTheta;
+                        double dM = m - prevMoment;
+                        double tangent = dTheta > 1e-12 ? dM / dTheta : 0.0;
+                        System.Diagnostics.Debug.WriteLine($"    Seg[{(i == 0 ? "origin" : (i - 1).ToString())}→{i}]: dM/dθ = {tangent:E3} [kNm/rad]");
+                        prevTheta = t;
+                        prevMoment = m;
+                    }
+                }
+            }
+            #endif
         }
 
         public double EvaluateMoment(double theta)
@@ -40,23 +75,82 @@ namespace PileDesign.FEM
         {
             if (Points.Count == 0) return 0.0;
             double t = Math.Abs(theta);
-            if (Points.Count == 1) return SlopeFromOrigin(Points[0]);
+            double result;
+            string region = "";
+
+            if (Points.Count == 1)
+            {
+                result = SlopeFromOrigin(Points[0]);
+                region = "single_point";
+            }
             // 原点からの初期接線剛性: 最初の点が原点(0,0)の場合は次の点との傾きを使用
-            if (t <= Points[0].Theta)
+            else if (t <= Points[0].Theta)
             {
                 if (Points[0].Theta <= 1e-12 && Points.Count >= 2)
                 {
                     // 最初の点が原点の場合、原点と次の点との傾きを返す
-                    return SafeSlope(Points[0], Points[1]);
+                    result = SafeSlope(Points[0], Points[1]);
+                    region = "origin→1";
                 }
-                return SlopeFromOrigin(Points[0]);
+                else
+                {
+                    result = SlopeFromOrigin(Points[0]);
+                    region = "slope_from_origin";
+                }
             }
-            if (t >= Points[^1].Theta) return SafeSlope(Points[^2], Points[^1]);
+            else if (t >= Points[^1].Theta)
+            {
+                result = SafeSlope(Points[^2], Points[^1]);
+                region = "above_last";
+            }
+            else
+            {
+                int idx = FindSegmentIndex(t);
+                var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
+                var b = Points[idx];
+                result = SafeSlope(a, b);
+                region = $"{(idx == 0 ? "origin" : (idx - 1).ToString())}→{idx}";
+            }
 
-            int idx = FindSegmentIndex(t);
-            var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
-            var b = Points[idx];
-            return SafeSlope(a, b);
+            #if DEBUG
+            _evalTangentCount++;
+            if (_evalTangentCount <= 30)
+            {
+                System.Diagnostics.Debug.WriteLine($"[M-θ EvalTangent #{_evalTangentCount}] θ={theta:E6}, seg={region}, K_tan={result:E3}");
+            }
+            #endif
+            return result;
+        }
+
+        // 割線剛性: M/θ（内力計算用）
+        // θ→0では初期接線剛性に収束
+        public double EvaluateSecant(double theta)
+        {
+            double t = Math.Abs(theta);
+            // θがゼロに近い場合は初期接線剛性を返す（ゼロ除算回避）
+            // 閾値を1e-9に引き上げて数値安定性を向上
+            if (t < 1e-9)
+            {
+                double tan0 = EvaluateTangent(0.0);
+                #if DEBUG
+                _evalSecantCount++;
+                if (_evalSecantCount <= 30)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6} (near zero) -> using tangent={tan0:E3}");
+                }
+                #endif
+                return tan0;
+            }
+            double M = EvaluateMoment(theta);
+            double secant = M / t;
+            #if DEBUG
+            _evalSecantCount++;
+            if (_evalSecantCount <= 30)
+            {
+                System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6}, M={M:F1}, K_sec={secant:E3}");
+            }
+            #endif
+            return secant;
         }
 
         private static double Lerp((double Theta, double Moment) a, (double Theta, double Moment) b, double t)
@@ -127,7 +221,8 @@ namespace PileDesign.FEM
         public bool TieUy { get; set; } = true;
         public bool TieUz { get; set; } = true;
         public bool TieRz { get; set; } = true;
-        public double Kbig { get; set; } = 1e12;
+        [System.Text.Json.Serialization.JsonIgnore]  // JSONから古い値が読み込まれないようにする
+        public double Kbig { get; set; } = 1e6;  // アーム変換後の条件数を改善するため1e6に低減
 
         public RotationalSpringMode Mode { get; set; } = RotationalSpringMode.CombinedXY;
         public RotationalDof Dof { get; set; } = RotationalDof.Rx;

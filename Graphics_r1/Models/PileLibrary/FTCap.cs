@@ -38,34 +38,54 @@ namespace PileDesign.Models.PileLibrary
         {
             var _FTCaps = new List<FTCap>();
 
-            using (var reader = new StreamReader(filePath))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            using var reader = new StreamReader(filePath);
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+
+            // ヘッダを読み取る（CsvHelper に任せる）
+            if (!csv.Read()) return _FTCaps;
+            csv.ReadHeader();
+
+            while (csv.Read())
             {
-                reader.ReadLine();
                 try
                 {
-                    while (csv.Read())
+                    // 先頭フィールドにヘッダ文字列が入っている行をスキップ
+                    var firstRaw = csv.GetField(0);
+                    if (string.IsNullOrWhiteSpace(firstRaw)) continue;
+                    if (firstRaw.Trim().Equals("Phi", StringComparison.OrdinalIgnoreCase)) continue;
+
+                    // 安全にフィールドを取得（TryGetField を使う）
+                    csv.TryGetField(0, out double phi);
+                    csv.TryGetField(1, out double t);
+                    csv.TryGetField(2, out double d1);
+                    csv.TryGetField(3, out double d2);
+                    csv.TryGetField(4, out double h);
+                    csv.TryGetField(5, out double w);
+
+                    var _FTCap = new FTCap
                     {
-                        var _FTCap = new FTCap
-                        {
-                            Phi = csv.GetField<double>(0),
-                            T = csv.GetField<double>(1),
-                            D1 = csv.GetField<double>(2),
-                            D2 = csv.GetField<double>(3),
-                            H = csv.GetField<double>(4),
-                            W = csv.GetField<double>(5),
-                        };
-                        _FTCaps.Add(_FTCap);
-                    }
+                        Phi = phi,
+                        T = t,
+                        D1 = d1,
+                        D2 = d2,
+                        H = h,
+                        W = w,
+                    };
+                    _FTCaps.Add(_FTCap);
                 }
                 catch (CsvHelper.TypeConversion.TypeConverterException ex)
                 {
-                    // フィールドの読み取りに失敗した場合の処理
-                    // 例外を適切にハンドリングする
-                    Console.WriteLine("CSVファイルの形式が正しくありません。");
-                    Console.WriteLine(ex.Message);
+                    // 型変換失敗の行はスキップしてデバッグ出力
+                    System.Diagnostics.Debug.WriteLine($"FTCap.LoadFromCsv: skipped row {csv.Context.Parser.Row} - {ex.Message}");
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"FTCap.LoadFromCsv: unexpected error row {csv.Context.Parser.Row} - {ex.Message}");
+                    continue;
                 }
             }
+
             return _FTCaps;
         }
     }

@@ -16,6 +16,9 @@ namespace PileDesign.FEM
         // 要素中央の曲率 [rad/m]
         public double Curvature { get; set; }
 
+        // 要素中央のモーメント [kNm]（M-φ曲線から直接評価した値）
+        public double Moment { get; set; }
+
         // M-φ曲線データ（グラフ表示用）
         public List<double> MPhiCurve_Phis { get; set; }
         public List<double> MPhiCurve_Moments { get; set; }
@@ -33,6 +36,7 @@ namespace PileDesign.FEM
             CumulativeDisp = beam.CumulativeDisp?.Clone();
             CumulativeForce = beam.CumulativeForce?.Clone();
             Curvature = beam.CurrentCurvature;
+            Moment = beam.CurrentMoment;
 
             // M-φ曲線データを保存（解析時に解決済みの曲線から）
             var curve = beam.ResolvedCombinedCurve;
@@ -54,6 +58,7 @@ namespace PileDesign.FEM
                 CumulativeDisp = this.CumulativeDisp?.Clone(),
                 CumulativeForce = this.CumulativeForce?.Clone(),
                 Curvature = this.Curvature,
+                Moment = this.Moment,
                 MPhiCurve_Phis = this.MPhiCurve_Phis?.ToList(),
                 MPhiCurve_Moments = this.MPhiCurve_Moments?.ToList()
             };

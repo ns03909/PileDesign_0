@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Common;
+using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
 using System.Collections.ObjectModel;
@@ -7,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PileDesign.Views
 {
@@ -71,8 +73,17 @@ namespace PileDesign.Views
                 ;
             };
 
+            // 杭先端沈下グラフを描画（α, nのデフォルト値で）
+            viewModel.AddComponent(viewModel.PileBody.SettleAlpha, viewModel.PileBody.SettleN);
+
             // グラフ描画を実行
             viewModel.ExecuteAnalysis();
+
+            // CSVエクスポートメニューを追加
+            PlotHelper.AddCsvExportMenu(wpfPlotSettlement, "杭頭沈下");
+            PlotHelper.AddCsvExportMenu(wpfPlotSettlementToe, "杭先端沈下");
+            PlotHelper.AddCsvExportMenu(wpfPlotCircum, "周面抵抗");
+            PlotHelper.AddCsvExportMenu(wpfPlotPileToe, "杭先端支持力");
         }
 
         private void Canvas_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -109,10 +120,55 @@ namespace PileDesign.Views
                 viewModel.UpdateCircumstanceSeries();
         }
 
+        // 杭周面抵抗力表の選択解除（選択行を再クリックで解除）
+        private void DataGridCircum_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not DataGrid dataGrid) return;
+
+            // クリックされた要素からDataGridRowを取得（VisualTreeを使用）
+            var clickedRow = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+
+            if (clickedRow != null && clickedRow.IsSelected)
+            {
+                // 既に選択されている行をクリックした場合は選択解除
+                dataGrid.SelectedItem = null;
+                e.Handled = true;
+            }
+        }
+
         private void DataGridLoadDisplacement_SelecitonChanged(object sender, SelectionChangedEventArgs e)
         {
+            // 選択が変わったらチャートを更新して選択位置を強調表示
             if (DataContext is SettlementViewModel viewModel)
-                viewModel.ExecuteAnalysis();
+                viewModel.UpdateSettlementChartSelection();
+        }
+
+        // 沈下曲線表の選択解除（選択行を再クリックで解除）
+        private void DataGridLoadDisplacement_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not DataGrid dataGrid) return;
+
+            // クリックされた要素からDataGridRowを取得（VisualTreeを使用）
+            var clickedRow = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+
+            if (clickedRow != null && clickedRow.IsSelected)
+            {
+                // 既に選択されている行をクリックした場合は選択解除
+                dataGrid.SelectedItem = null;
+                e.Handled = true;
+            }
+        }
+
+        // VisualTree上で指定した型の親要素を検索するヘルパーメソッド
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent)
+                    return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
 
         private void ComboBoxPresetSettlementParameters_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -122,19 +178,10 @@ namespace PileDesign.Views
                 // 選択された値を取得
                 var selectedParameter = (sender as ComboBox)?.SelectedItem as string;
 
-                // 必要に応じて処理を実行
+                // 必要に応じて処理を実行（ViewModelのExecuteAnalysisで解析とグラフ更新を行う）
                 if (!string.IsNullOrEmpty(selectedParameter))
                 {
                     viewModel.PresetSettlementParametersChangedCommand?.Execute(selectedParameter);
-
-                    // 解析結果タブを前面に
-                    viewModel.SelectedTabIndex = 0;
-                    var wpf = wpfPlotSettlement;
-                    var wpfToe = wpfPlotSettlementToe;
-                    wpf.Plot.Clear();
-                    wpfToe.Plot.Clear();
-                    wpf.Refresh();
-                    wpfToe.Refresh();
                 }
             }
         }
@@ -215,5 +262,17 @@ namespace PileDesign.Views
         //    }
 
         //}
+
+        // 押込み/引抜き周面抵抗考慮チェックボックス変更時の処理
+        private void CircumResistanceCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is SettlementViewModel viewModel)
+            {
+                // 支持力を再計算（Rfu, Rt_SLS, Rt_DLS, Rt_ULS等）とUI通知
+                viewModel.RecalculateResistances();
+                // 沈下を再計算
+                viewModel.ExecuteAnalysis();
+            }
+        }
     }
 }

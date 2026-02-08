@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Common;
+using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
 using ScottPlot.Plottables;
@@ -62,6 +63,12 @@ namespace PileDesign.Views
             // コンストラクタ末尾の登録を修正
             _viewModel.PropertyChanged += SharedViewModel_PropertyChanged;
             _viewModel.PileSection.PropertyChanged += PileSection_PropertyChanged;
+
+            // CSVエクスポートメニューを追加
+            PlotHelper.AddCsvExportMenu(wpfPlotMN, "MN曲線");
+            PlotHelper.AddCsvExportMenu(wpfPlotMphi, "Mφ曲線");
+            PlotHelper.AddCsvExportMenu(wpfPlotMtheta, "Mθ曲線");
+            PlotHelper.AddCsvExportMenu(wpfPlotNQ, "NQ曲線");
         }
 
 

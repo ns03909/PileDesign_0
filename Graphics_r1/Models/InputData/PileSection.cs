@@ -1398,12 +1398,14 @@ namespace PileDesign.Models.InputData
         // 曲げ剛性 (kNm2)
         // 鉄筋の換算断面二次モーメント項は MainBarAg（鉄筋断面積）を使用
         // ※ A0（全断面積）を使用すると過大評価になるので注意
-        public double EI => (ConcreteE * (Math.PI * Math.Pow(ConcreteOutDia, 4) / 64.0
+        // ※ コンクリート断面は中空断面（ConcreteOutDia - 2*ConcreteThickness = 内径）として計算
+        public double EI => (ConcreteE * (Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0
             + 0.5 * (MainBarEr / ConcreteE - 1) * MainBarAg * Math.Pow((ConcreteOutDia - 2 * MainBarCenterCover), 2) / 4.0)
             + PipeEs * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
         // ねじり剛性 (kNm2)
-        public double GJ => (GetG(ConcreteE, 0.2) * Math.PI * Math.Pow(ConcreteOutDia, 4) / 64.0 +
+        // ※ コンクリート断面は中空断面として計算
+        public double GJ => (GetG(ConcreteE, 0.2) * Math.PI * (Math.Pow(ConcreteOutDia, 4) - Math.Pow(ConcreteOutDia - 2 * ConcreteThickness, 4)) / 64.0 +
             GetG(PipeEs, 0.3) * Math.PI * (Math.Pow(PipeDia, 4) - Math.Pow(PipeDia - 2 * PipeTs, 4)) / 64.0) * Math.Pow(10, -9);
 
         // せん断剛性

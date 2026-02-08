@@ -7,7 +7,14 @@
       "Bash(powershell:*)",
       "Bash(git checkout:*)",
       "Bash(python:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(dotnet test:*)",
+      "Bash(taskkill:*)",
+      "WebFetch(domain:scottplot.net)",
+      "WebFetch(domain:github.com)",
+      "Bash(dotnet list package:*)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)"
     ]
   }
 }

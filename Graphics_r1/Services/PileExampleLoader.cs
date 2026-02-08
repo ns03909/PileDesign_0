@@ -271,11 +271,14 @@ namespace PileDesign.Services
                 inputModel.Elements = new ObservableCollection<Element>();
             }
 
-            // PileGroupSettlement クリア
+            // PileGroupSettlement クリア（解析結果を含む）
             if (inputModel.PileGroupSettlement != null)
             {
                 inputModel.PileGroupSettlement.RectLoads?.Clear();
                 inputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
+                inputModel.PileGroupSettlement.SettlementGridData?.Clear();
+                inputModel.PileGroupSettlement.SettlementGridX?.Clear();
+                inputModel.PileGroupSettlement.SettlementGridY?.Clear();
                 inputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
             }
 

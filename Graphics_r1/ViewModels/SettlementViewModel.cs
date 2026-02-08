@@ -54,6 +54,28 @@ namespace PileDesign.ViewModels
             private set => SetProperty(ref _pileBody, value);
         }
 
+        // 杭先端閉塞率を使用する工法かどうか
+        public bool UsesPileToeEta => SoilPile?.PileConstructionType == "回転貫入杭"
+                                    || SoilPile?.PileConstructionType == "打込み杭";
+
+        // 沈下検討用杭先端径 (m単位で表示・編集)
+        public double SettlePileToeDiaM
+        {
+            get => PileBody?.SettlePileToeDia / 1000.0 ?? 0;
+            set
+            {
+                if (PileBody != null)
+                {
+                    double valueInMm = value * 1000.0;
+                    PileBody.SettlePileToeDia = valueInMm;
+                    SoilPile.Dp = valueInMm;
+                    OnPropertyChanged(nameof(SettlePileToeDiaM));
+                    DrawShapes();
+                    ExecuteAnalysis();
+                }
+            }
+        }
+
         // 地盤杭体数+1リスト
         private ObservableCollection<int> _soilPilesCountList;
         public ObservableCollection<int> SoilPilesCountList
@@ -81,7 +103,18 @@ namespace PileDesign.ViewModels
         public ObservableCollection<double> Ds { get; set; } = [];
 
         // 選択杭区間
-        public PileCircumVertical SelectedPileCircumstanceVertical { get; set; }
+        private PileCircumVertical _selectedPileCircumstanceVertical;
+        public PileCircumVertical SelectedPileCircumstanceVertical
+        {
+            get => _selectedPileCircumstanceVertical;
+            set
+            {
+                if (SetProperty(ref _selectedPileCircumstanceVertical, value))
+                {
+                    DrawShapes(); // 選択変更時に杭姿図を再描画
+                }
+            }
+        }
 
         public VerticalLoadTransferMethod.LoadDisplacement SelectedLoadDisplacement { get; set; }
 
@@ -121,9 +154,8 @@ namespace PileDesign.ViewModels
         // xaml
         public ComboBox ComboBoxPileBodyNo { get; set; }
         public TextBox TextBoxPileBodyRef { get; set; }
-        public TextBox TextBoxPileToeDia { get; set; }
-        public TextBox TextBoxPrecastPileTipNonPermeability { get; set; }
-        public TextBox TextBoxSteelPileTipNonPermeability { get; set; }
+        public TextBox TextBoxSettlePileToeDia { get; set; }
+        public TextBox TextBoxPileTipNonPermeability { get; set; }
         public TextBox TextBoxSettleAlpha { get; set; }
         public TextBox TextBoxSettleN { get; set; }
 
@@ -208,9 +240,8 @@ namespace PileDesign.ViewModels
             // xaml
             ComboBoxPileBodyNo = new();
             TextBoxPileBodyRef = new();
-            TextBoxPileToeDia = new();
-            TextBoxPrecastPileTipNonPermeability = new();
-            TextBoxSteelPileTipNonPermeability = new();
+            TextBoxSettlePileToeDia = new();
+            TextBoxPileTipNonPermeability = new();
             TextBoxSettleAlpha = new();
             TextBoxSettleN = new();
 
@@ -272,22 +303,49 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
+        // 周面抵抗考慮フラグ変更時の支持力再計算
+        public void RecalculateResistances()
+        {
+            SoilPile.CalculateResistances();
+            OnPropertyChanged(nameof(SoilPile));
+        }
+
         // 荷重沈下解析実行
         [RelayCommand]
         public void ExecuteAnalysis()
         {
-            if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
-                VerticalLoadTransferMethod = new(mainWindowViewModel, SoilPile, SelectedAnalysisMode);
+            try
+            {
+                // 砂時計カーソルを表示
+                Mouse.OverrideCursor = Cursors.Wait;
 
-            // チャートの更新
+                // コンストラクタで保存した_mainWindowViewModelを使用
+                VerticalLoadTransferMethod = new(_mainWindowViewModel, SoilPile, SelectedAnalysisMode);
+
+                // チャートの更新
+                UpdateSettlementChart();
+                UpdateCircumstanceSeries();  // 土層の杭周面抵抗力グラフを更新
+
+                // SoilPileに計算結果を保存
+                SoilPile.LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
+                SoilPile.LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
+            }
+            finally
+            {
+                // カーソルを元に戻す
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        // 沈下曲線表の選択変更時にチャートを更新（選択位置を強調表示）
+        public void UpdateSettlementChartSelection()
+        {
+            // VerticalLoadTransferMethodがnullの場合は何もしない
+            if (VerticalLoadTransferMethod == null)
+                return;
+
+            // チャートを再描画して選択位置を強調表示
             UpdateSettlementChart();
-
-            // SoilPileに計算結果を保存
-            SoilPile.LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
-            SoilPile.LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
-
-            // 解析結果タブを前面に
-            SelectedTabIndex = 1;
         }
 
         private void UpdateSettlementChart()
@@ -355,8 +413,14 @@ namespace PileDesign.ViewModels
 
             if (SelectedLoadDisplacement != null)
             {
-                wpf.Plot.Add.VerticalLine(SelectedLoadDisplacement.D0s, 1);
-                wpfToe.Plot.Add.VerticalLine(SelectedLoadDisplacement.Dns, 1);
+                // 選択位置を赤色の細い縦線で強調表示
+                var selectedColor = Color.FromSKColor(NikkenSKColor.Red);
+
+                // 杭頭沈下グラフ: 垂直線（沈下量）のみ
+                wpf.Plot.Add.VerticalLine(SelectedLoadDisplacement.D0s, 1, selectedColor);
+
+                // 杭先端沈下グラフ: 垂直線（沈下量）のみ
+                wpfToe.Plot.Add.VerticalLine(SelectedLoadDisplacement.Dns, 1, selectedColor);
             }
 
             AddScatterPlotAllowable(wpf, [.. settlements], [.. allowableLoads], verticalLineColor);
@@ -516,48 +580,57 @@ namespace PileDesign.ViewModels
                     PileBody.PileBodyRef = textBox.Text;
                 }
 
-                else if (textBox.Name == "TextBoxPileToeDia" && double.TryParse(textBox.Text, out double toeDia))
+                else if (textBox.Name == "TextBoxPileTipNonPermeability" && double.TryParse(textBox.Text, out double tipNonPermeability))
                 {
-                    PileBody.PileToeDia = toeDia;
+                    PileBody.TipNonPermability = tipNonPermeability;
+                    // 閉塞率変更時に解析実行
+                    ExecuteAnalysis();
+                    return;
+                }
+
+                else if (textBox.Name == "TextBoxPileToeDiaD" && double.TryParse(textBox.Text, out double pileToeDiaD))
+                {
+                    // 杭先端径D(m)を更新
+                    SoilPile.D = pileToeDiaD;
+                    // PileBodyのPileToeDia(mm)も同期
+                    PileBody.PileToeDia = pileToeDiaD * 1000.0;
+                    // Apが変わるのでRpuの計算に反映される（プロパティで自動計算）
+                    // 沈下検討用極限先端支持力度も更新（デフォルトでQpuと同じ）
+                    SoilPile.SettleQpu = SoilPile.Qpu;
+                    OnPropertyChanged(nameof(SoilPile));
                     DrawShapes();
+                    // 支持力の再計算と解析実行
+                    ExecuteAnalysis();
+                    return;
                 }
 
-                else if (textBox.Name == "TextBoxPrecastPileTipNonPermeability" && double.TryParse(textBox.Text, out double precastPileTipNonPermeability))
+                else if (textBox.Name == "TextBoxSettleQpu" && double.TryParse(textBox.Text, out double settleQpu))
                 {
-                    PileBody.TipNonPermability = precastPileTipNonPermeability;
-                }
-
-                else if (textBox.Name == "TextBoxSteelPileTipNonPermeability" && double.TryParse(textBox.Text, out double steelPileTipNonPermeability))
-                {
-                    PileBody.TipNonPermability = steelPileTipNonPermeability;
+                    // 沈下検討用極限先端支持力度を更新
+                    SoilPile.SettleQpu = settleQpu;
+                    // 沈下グラフを更新
+                    ExecuteAnalysis();
+                    return;
                 }
 
                 else if (textBox.Name == "TextBoxSettleAlpha" && double.TryParse(textBox.Text, out double settleAlpha))
                 {
                     PileBody.SettleAlpha = settleAlpha;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
-                    // 解析結果タブを前面に
-                    SelectedTabIndex = 0;
-                    var wpf = SettlementWindowInstance.wpfPlotSettlement;
-                    var wpfToe = SettlementWindowInstance.wpfPlotSettlementToe;
-                    wpf.Plot.Clear();
-                    wpfToe.Plot.Clear();
-                    wpf.Refresh();
-                    wpfToe.Refresh();
+                    // チャート要素更新と解析実行
+                    AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
+                    ExecuteAnalysis();
+                    return;
                 }
 
                 else if (textBox.Name == "TextBoxSettleN" && double.TryParse(textBox.Text, out double settleN))
                 {
                     PileBody.SettleN = settleN;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
-                    // 解析結果タブを前面に
-                    SelectedTabIndex = 0;
-                    var wpf = SettlementWindowInstance.wpfPlotSettlement;
-                    var wpfToe = SettlementWindowInstance.wpfPlotSettlementToe;
-                    wpf.Plot.Clear();
-                    wpfToe.Plot.Clear();
-                    wpf.Refresh();
-                    wpfToe.Refresh();
+                    // チャート要素更新と解析実行
+                    AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
+                    ExecuteAnalysis();
+                    return;
                 }
 
                 //チャート要素クリアコマンド
@@ -568,17 +641,26 @@ namespace PileDesign.ViewModels
             {
                 if (double.TryParse(text, out double value))
                 {
+                    bool parameterChanged = false;
                     if (text == TextBoxSettleAlpha.Text)
                     {
                         PileBody.SettleAlpha = value;
+                        parameterChanged = true;
                     }
                     else if (text == TextBoxSettleN.Text)
                     {
                         PileBody.SettleN = value;
+                        parameterChanged = true;
                     }
 
                     // チャート要素クリアコマンド
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
+
+                    // パラメータ変更時に自動で解析実行
+                    if (parameterChanged)
+                    {
+                        ExecuteAnalysis();
+                    }
                 }
             }
         }
@@ -621,11 +703,9 @@ namespace PileDesign.ViewModels
 
         [RelayCommand]
         private void OnPresetSettlementParametersChanged(object sender)
-
         {
-            if (ComboBoxPresetSettlementParameters == null) return;
-
-            var selectedPresetParameter = ComboBoxPresetSettlementParameters.SelectedItem?.ToString();
+            // senderは選択されたプリセットパラメータの文字列
+            var selectedPresetParameter = sender as string;
             if (string.IsNullOrEmpty(selectedPresetParameter)) return;
 
             foreach (PileBodyInput.PileTipSettlementPresetParameter parameter in InputModel.PileBodies[SoilPile.PileBodyNo - 1].PileTipSettlementPresetParameters)
@@ -640,6 +720,8 @@ namespace PileDesign.ViewModels
                 }
             }
             AddComponent(InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha, InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN);
+            // プリセット変更時に自動で解析実行
+            ExecuteAnalysis();
         }
 
 
@@ -721,11 +803,23 @@ namespace PileDesign.ViewModels
                 double tau2 = pileCircumstanceVertical.Tau2;
                 double s1 = pileCircumstanceVertical.S1;
                 double s2 = pileCircumstanceVertical.S2;
-                double sT = tauT == 0 ? 0 : tauT * s1 / tau1;
+                // tau1が0の場合のゼロ除算を回避
+                double sT = (tauT == 0 || tau1 == 0) ? 0 : tauT * s1 / tau1;
 
-                List<double> xValues = [-50.0, sT, s1, s2, 50.0,];
-                List<double> yValues = [tauT * psi, tauT * psi, tau1 * psi, tau2 * psi, tau2 * psi];
-                var scatter = wpf.Plot.Add.Scatter(xValues.ToArray(), [.. yValues]);
+                // 点を(x, y)のペアとして作成し、x座標でソート
+                var points = new List<(double x, double y)>
+                {
+                    (-50.0, tauT * psi),
+                    (sT, tauT * psi),
+                    (s1, tau1 * psi),
+                    (s2, tau2 * psi),
+                    (50.0, tau2 * psi)
+                };
+                points.Sort((a, b) => a.x.CompareTo(b.x));
+
+                var scatter = wpf.Plot.Add.Scatter(
+                    points.Select(p => p.x).ToArray(),
+                    points.Select(p => p.y).ToArray());
                 scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                 scatter.LineWidth = 2;
                 scatter.MarkerSize = 0;
@@ -739,18 +833,23 @@ namespace PileDesign.ViewModels
                 double selectedTau2 = SelectedPileCircumstanceVertical.Tau2;
                 double selectedS1 = SelectedPileCircumstanceVertical.S1;
                 double selectedS2 = SelectedPileCircumstanceVertical.S2;
-                double selectedST = selectedTauT == 0 ? 0 : selectedTauT * selectedS1 / selectedTau1;
+                // tau1が0の場合のゼロ除算を回避
+                double selectedST = (selectedTauT == 0 || selectedTau1 == 0) ? 0 : selectedTauT * selectedS1 / selectedTau1;
 
-                // 新しいデータポイントを追加
-                List<double> selectedXValues = [-50.0, selectedST, selectedS1, selectedS2, 50.0,];
-                List<double> selectedYValues = [
-                    selectedTauT * selectedPsi,
-                    selectedTauT * selectedPsi,
-                    selectedTau1 * selectedPsi,
-                    selectedTau2 * selectedPsi,
-                    selectedTau2 * selectedPsi];
-                //CircumstanceChartSeries.Add(seriesToUpdate);
-                var selectedScatter = wpf.Plot.Add.Scatter(selectedXValues.ToArray(), [.. selectedYValues]);
+                // 点を(x, y)のペアとして作成し、x座標でソート
+                var selectedPoints = new List<(double x, double y)>
+                {
+                    (-50.0, selectedTauT * selectedPsi),
+                    (selectedST, selectedTauT * selectedPsi),
+                    (selectedS1, selectedTau1 * selectedPsi),
+                    (selectedS2, selectedTau2 * selectedPsi),
+                    (50.0, selectedTau2 * selectedPsi)
+                };
+                selectedPoints.Sort((a, b) => a.x.CompareTo(b.x));
+
+                var selectedScatter = wpf.Plot.Add.Scatter(
+                    selectedPoints.Select(p => p.x).ToArray(),
+                    selectedPoints.Select(p => p.y).ToArray());
                 selectedScatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                 selectedScatter.LineWidth = 6;
                 selectedScatter.MarkerSize = 0;
@@ -795,6 +894,7 @@ namespace PileDesign.ViewModels
             if (previousSelectedSoilPileNo != -1)
             {
                 SoilPile = SoilPiles[SoilPileNo - 1];
+                OnPropertyChanged(nameof(UsesPileToeEta));
             }
 
             DrawShapes();
@@ -803,6 +903,11 @@ namespace PileDesign.ViewModels
         public void DrawShapes()
         {
             if (Canvas == null) { return; }
+
+            // 選択されたセグメントの位置情報を取得
+            double? selectedTop = SelectedPileCircumstanceVertical?.Top;
+            double? selectedBottom = SelectedPileCircumstanceVertical?.Bottom;
+
             ShapeDrawer.DrawPileElevation(
                 Canvas, SoilPile.PileBodySegments,
                 PileBody.PileToeDia,
@@ -811,7 +916,12 @@ namespace PileDesign.ViewModels
                 PileBody.PrecastConcretePileToeHeightRatio,
                 SoilPile.PileConstructionType,
                 SoilPile.Z,
-                InputModel.GroundsInput[SoilPile.GroundNo - 1]);
+                InputModel.GroundsInput[SoilPile.GroundNo - 1],
+                false,           // isElementDivision
+                null,            // zs
+                null,            // selectedZ
+                selectedTop,     // 選択区間上端
+                selectedBottom); // 選択区間下端
         }
 
         // DataGridSelectionコピーメソッド

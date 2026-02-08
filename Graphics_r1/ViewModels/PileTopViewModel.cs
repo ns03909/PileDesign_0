@@ -1,9 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LiveChartsCore;
-using LiveChartsCore.Defaults;
-using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Painting;
 using Microsoft.Win32;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
@@ -127,21 +123,6 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _pileSection, value);
         }
 
-        //チャート関連
-        private ObservableCollection<ISeries> _chartMNSeries;
-        public ObservableCollection<ISeries> ChartMNSeries
-        {
-            get { return _chartMNSeries; }
-            set
-            {
-                if (_chartMNSeries != value)
-                {
-                    _chartMNSeries = value;
-                    OnPropertyChanged(nameof(ChartMNSeries)); // プロパティ名を通知
-                }
-            }
-        }
-
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
 
@@ -231,7 +212,6 @@ namespace PileDesign.ViewModels
             PrevPileTop = PileTop.ShallowCopy();
 
             PileTop.SelectedPileTopSpecification = [];
-            ChartMNSeries = [];
 
             // 初期表示用：場所打ち鋼管コンクリート杭 の場合は最上段 PileSection 情報を表示
             RefreshTopSectionDisplayFromProvidedSection();
@@ -458,63 +438,39 @@ namespace PileDesign.ViewModels
 
             if (yieldMs != null && yieldMs.Count > 0)
             {
-                var seriesYieldToUpdate = ChartMNSeries.OfType<LineSeries<ObservablePoint>>().FirstOrDefault(series => series.Name == "yieldMN");
-
-                // 既存のLineSeriesが見つかった場合、そのValuesを更新
-                if (seriesYieldToUpdate != null)
+                List<double> xs = [];
+                List<double> ys = [];
+                for (int j = 0; j < yieldNs.Count; j++)
                 {
-                    seriesYieldToUpdate.Values = []; // 既存のデータポイントをクリア
-                    var newValues = new List<ObservablePoint>();
-                    List<double> xs = [];
-                    List<double> ys = [];
-                    // 新しいデータポイントを追加
-                    for (int j = 0; j < yieldNs.Count; j++)
-                    {
-                        newValues.Add(new ObservablePoint(yieldNs[j] / Math.Pow(10, 3), yieldMs[j] / Math.Pow(10, 6))); // データポイントを追加
-                        xs.Add(yieldNs[j] / Math.Pow(10, 3));
-                        ys.Add(yieldMs[j] / Math.Pow(10, 6));
-                    }
-                    seriesYieldToUpdate.Values = newValues;
-
-                    var scatter = wpf.Plot.Add.Scatter(xs, ys);
-                    //scatter.Color = Color.Fro;
-                    scatter.LineWidth = 1;
-                    scatter.MarkerSize = 0;
-                    scatter.MarkerShape = ScottPlot.MarkerShape.None;
-                    string legend = "yieldMN";
-                    scatter.LegendText = legend;
-                    wpf.Plot.Legend.FontName = Fonts.Detect(legend);
+                    xs.Add(yieldNs[j] / Math.Pow(10, 3));
+                    ys.Add(yieldMs[j] / Math.Pow(10, 6));
                 }
+
+                var scatter = wpf.Plot.Add.Scatter(xs, ys);
+                scatter.LineWidth = 1;
+                scatter.MarkerSize = 0;
+                scatter.MarkerShape = ScottPlot.MarkerShape.None;
+                string legend = "yieldMN";
+                scatter.LegendText = legend;
+                wpf.Plot.Legend.FontName = Fonts.Detect(legend);
             }
             if (ultimateMs != null && ultimateMs.Count > 0)
             {
-                var seriesUltimateToUpdate = ChartMNSeries.OfType<LineSeries<ObservablePoint>>().FirstOrDefault(series => series.Name == "ultimateMN");
-
-                // 既存のLineSeriesが見つかった場合、そのValuesを更新
-                if (seriesUltimateToUpdate != null)
+                List<double> xs = [];
+                List<double> ys = [];
+                for (int j = 0; j < ultimateNs.Count; j++)
                 {
-                    seriesUltimateToUpdate.Values = []; // 既存のデータポイントをクリア
-                    var newValues = new ObservableCollection<ObservablePoint>();
-                    List<double> xs = [];
-                    List<double> ys = [];
-                    // 新しいデータポイントを追加
-                    for (int j = 0; j < ultimateNs.Count; j++)
-                    {
-                        newValues.Add(new ObservablePoint(ultimateNs[j] / Math.Pow(10, 3), ultimateMs[j] / Math.Pow(10, 6))); // データポイントを追加
-                        xs.Add(ultimateNs[j] / Math.Pow(10, 3));
-                        ys.Add(ultimateMs[j] / Math.Pow(10, 6));
-                    }
-                    seriesUltimateToUpdate.Values = newValues;
-
-                    var scatter = wpf.Plot.Add.Scatter(xs, ys);
-                    //scatter.Color = Color.Fro;
-                    scatter.LineWidth = 1;
-                    scatter.MarkerSize = 0;
-                    scatter.MarkerShape = ScottPlot.MarkerShape.None;
-                    string legend = "ultimateMN";
-                    scatter.LegendText = legend;
-                    wpf.Plot.Legend.FontName = Fonts.Detect(legend);
+                    xs.Add(ultimateNs[j] / Math.Pow(10, 3));
+                    ys.Add(ultimateMs[j] / Math.Pow(10, 6));
                 }
+
+                var scatter = wpf.Plot.Add.Scatter(xs, ys);
+                scatter.LineWidth = 1;
+                scatter.MarkerSize = 0;
+                scatter.MarkerShape = ScottPlot.MarkerShape.None;
+                string legend = "ultimateMN";
+                scatter.LegendText = legend;
+                wpf.Plot.Legend.FontName = Fonts.Detect(legend);
             }
 
             wpf.Plot.Axes.AutoScale();
@@ -528,12 +484,6 @@ namespace PileDesign.ViewModels
             // クロスヘアの初期化
             MyCrosshair_MN = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_MN", "N(kN)", "M(kNm)", 1, 1);
-
-            var updatedSeries = new ObservableCollection<ISeries>(ChartMNSeries);
-            ChartMNSeries = updatedSeries;
-            // 必要に応じて、ビューモデルのプロパティ変更通知を発行
-            OnPropertyChanged(nameof(ChartMNSeries));
-
         }
 
         public void UpdateChartThetaMSeries(
@@ -559,36 +509,18 @@ namespace PileDesign.ViewModels
 
             if (axialForces != null && axialForces.Count > 0)
             {
-                //ChartThetaMSeries.Clear(); // 既存のシリーズをクリア
-
                 for (int i = axialForces.Count - 1; i >= 0; i--)
                 {
-                    var series = new LineSeries<ObservablePoint>
-                    {
-                        Name = $"N = {axialForces[i] / Math.Pow(10, 3):N0}kN", // シリーズのタイトルを設定
-                        Values = [], // データポイントのコレクションを初期化
-                        LineSmoothness = 0, // 線の滑らかさを設定 (0で直線)
-                        GeometrySize = 1,
-                        DataLabelsSize = 5, // データラベルのサイズ
-                        Stroke = new SolidColorPaint(NikkenSKColor.DeepBlue) { StrokeThickness = 1 },
-                        Fill = null,
-                    };
-
                     ObservableCollection<double> thetas = thetasMs[i].Item1;
                     ObservableCollection<double> moments = thetasMs[i].Item2;
                     List<double> xs = [];
                     List<double> ys = [];
-                    var newValues = new ObservableCollection<ObservablePoint>();
                     for (int j = 0; j < thetas.Count; j++)
                     {
-                        newValues.Add(new ObservablePoint(thetas[j], moments[j] / Math.Pow(10, 6))); // データポイントを追加
                         xs.Add(thetas[j]);
                         ys.Add(moments[j] / Math.Pow(10, 6));
                     }
-                    series.Values = newValues;
-                    //ChartThetaMSeries.Add(series); // シリーズをチャートに追加
                     var scatter = wpf.Plot.Add.Scatter(xs, ys);
-                    //scatter.Color = Color.Fro;
                     scatter.LineWidth = 1;
                     scatter.MarkerSize = 0;
                     scatter.MarkerShape = ScottPlot.MarkerShape.None;
@@ -609,10 +541,6 @@ namespace PileDesign.ViewModels
             // クロスヘアの初期化
             MyCrosshair_ThetaM = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_ThetaM", "θ(rad)", "M(kNm)", 1, 1);
-
-
-            // 必要に応じて、ビューモデルのプロパティ変更通知を発行
-            //OnPropertyChanged(nameof(ChartThetaMSeries));
         }
 
         public static void ReplaceSeries(List<double> damageN, List<double> ultimateN)

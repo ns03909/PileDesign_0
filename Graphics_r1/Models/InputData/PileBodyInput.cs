@@ -495,7 +495,8 @@ namespace PileDesign.Models.InputData
                 {
                     try
                     {
-                        var (thetasObs, msObs) = cp.GetMThetaRelationship(axialN);
+                        // axialN は kN、CaptainPile は N を期待するため×1000
+                        var (thetasObs, msObs) = cp.GetMThetaRelationship(axialN * 1000);
                         var thetas = thetasObs?.Cast<double>().ToList();
                         var msRaw = msObs?.Cast<double>().ToList();
                         if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
@@ -514,7 +515,8 @@ namespace PileDesign.Models.InputData
                 }
 
                 // 反射フォールバック（既存のヘルパをそのまま利用）
-                var curve = TryCallMThetaRelationship(cpObj, axialN);
+                // axialN は kN、計算クラスは N を期待するため×1000
+                var curve = TryCallMThetaRelationship(cpObj, axialN * 1000);
                 if (curve != null) return PileHeadRotationDef.Combined(curve);
             }
 
@@ -526,7 +528,8 @@ namespace PileDesign.Models.InputData
                 {
                     try
                     {
-                        var (thetasObs, msObs) = ft.GetMThetaRelationship(axialN);
+                        // axialN は kN、FTPile は N を期待するため×1000
+                        var (thetasObs, msObs) = ft.GetMThetaRelationship(axialN * 1000);
                         var thetas = thetasObs?.Cast<double>().ToList();
                         var msRaw = msObs?.Cast<double>().ToList();
                         if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
@@ -544,7 +547,8 @@ namespace PileDesign.Models.InputData
                     }
                 }
 
-                var curve = TryCallMThetaRelationship(ftObj, axialN);
+                // axialN は kN、FTPile は N を期待するため×1000
+                var curve = TryCallMThetaRelationship(ftObj, axialN * 1000);
                 if (curve != null) return PileHeadRotationDef.Combined(curve);
             }
 
@@ -578,7 +582,8 @@ namespace PileDesign.Models.InputData
                         {
                             try
                             {
-                                var tup = ircSection.GetMThetaRelationship(axialN);
+                                // axialN は kN、計算クラスは N を期待するため×1000
+                                var tup = ircSection.GetMThetaRelationship(axialN * 1000);
                                 var thetas = tup.Item1;
                                 var msRaw = tup.Item2;
                                 if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
@@ -602,7 +607,8 @@ namespace PileDesign.Models.InputData
                             {
                                 try
                                 {
-                                    var ret = miPS.Invoke(ps, new object[] { axialN });
+                                    // axialN は kN、計算クラスは N を期待するため×1000
+                                    var ret = miPS.Invoke(ps, new object[] { axialN * 1000 });
                                     if (ret != null)
                                     {
                                         // TryCallMThetaRelationship と同様にタプル(Item1,Item2) をパース
@@ -664,7 +670,8 @@ namespace PileDesign.Models.InputData
                         }
 
                         // 3) 最後に既存の反射フォールバック（元の TryCallMThetaRelationship を利用）
-                        var curve = TryCallMThetaRelationship(sectionObj, axialN);
+                        // axialN は kN、計算クラスは N を期待するため×1000
+                        var curve = TryCallMThetaRelationship(sectionObj, axialN * 1000);
                         if (curve != null) return PileHeadRotationDef.Combined(curve);
                     }
                 }

@@ -404,7 +404,7 @@ namespace PileDesign.Views
             if (TryGetPresetAngles(_cubeHoverItem, out double tht, out double phi))
             {
                 // 安全クランプしてアニメーション
-                phi = Math.Clamp(phi, -89.99, 89.99);
+                phi = Math.Clamp(phi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle);
                 _viewAnimationCts?.Cancel();
                 _viewAnimationCts = new CancellationTokenSource();
                 _ = AnimateViewToAsync(tht, phi, 350, _viewAnimationCts.Token);
@@ -534,7 +534,7 @@ namespace PileDesign.Views
             double startPhi = vm.CanvasThreeDView.Phi;
 
             // Phiの目標を安全範囲に
-            targetPhi = Math.Max(-89.9, Math.Min(89.9, targetPhi));
+            targetPhi = Math.Clamp(targetPhi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle);
 
             bool prevLightweight = isLightweightDrawing;
             isLightweightDrawing = true;
@@ -597,7 +597,7 @@ namespace PileDesign.Views
                 double phSaved = vm.CanvasThreeDView.Phi;
 
                 vm.CanvasThreeDView.Tht = th;
-                vm.CanvasThreeDView.Phi = Math.Clamp(ph, -89.9, 89.9);
+                vm.CanvasThreeDView.Phi = Math.Clamp(ph, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle);
                 Vector3D v = vm.CanvasThreeDView.GetViewVector();
 
                 vm.CanvasThreeDView.Tht = thSaved;
@@ -607,7 +607,7 @@ namespace PileDesign.Views
             }
 
             static (double th, double ph) ClampAngles((double th, double ph) a)
-                => (NormalizeAngle360(a.th), Math.Clamp(a.ph, -89.9, 89.9));
+                => (NormalizeAngle360(a.th), Math.Clamp(a.ph, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle));
 
             // 解析解（±dir）を初期値に
             var a = ClampAngles(AnglesFromDirection(targetDir));
@@ -628,7 +628,7 @@ namespace PileDesign.Views
                         {
                             if (dth == 0 && dph == 0) continue;
                             double thTry = NormalizeAngle360(bestTh + dth * stepTh);
-                            double phTry = Math.Clamp(bestPh + dph * stepPh, -89.9, 89.9);
+                            double phTry = Math.Clamp(bestPh + dph * stepPh, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle);
 
                             double val = Eval(thTry, phTry);
                             if (val > best)
@@ -672,7 +672,7 @@ namespace PileDesign.Views
             double angDelta = Math.Max(Math.Abs(DeltaAngle(vm.CanvasThreeDView.Tht, tht)), Math.Abs(phi - vm.CanvasThreeDView.Phi));
             int duration = (int)Math.Clamp(150 + angDelta * 4.0, 220, 700);
 
-            await AnimateViewToAsync(tht, Math.Clamp(phi, -89.9, 89.9), duration, _viewAnimationCts.Token);
+            await AnimateViewToAsync(tht, Math.Clamp(phi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle), duration, _viewAnimationCts.Token);
         }
 
         // MainWindow クラス内（フィールド群）

@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using PileDesign.Common;
+using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using PileDesign.Models;
 using System;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PileDesign.Views
 {
@@ -52,6 +54,14 @@ namespace PileDesign.Views
                 _isClosingHandled = true;
                 if (this.IsLoaded && this.IsVisible) this.Close();
             };
+
+            // CSVエクスポートメニューを追加
+            PlotHelper.AddCsvExportMenu(wpfPlotKh0, "水平地盤反力係数");
+            PlotHelper.AddCsvExportMenu(wpfPlotPFront, "前方杭反力");
+            PlotHelper.AddCsvExportMenu(wpfPlotPRear, "後方杭反力");
+            PlotHelper.AddCsvExportMenu(wpfPlotPpPo, "土圧分布");
+            PlotHelper.AddCsvExportMenu(wpfPlotDGBperM, "単位幅土圧合力");
+            PlotHelper.AddCsvExportMenu(wpfPlotDGB, "土圧合力");
         }
 
         private void CanvasEmbedment_Loaded(object sender, RoutedEventArgs e)
@@ -322,6 +332,34 @@ namespace PileDesign.Views
                     vm.SelectedEmbedmentZ = matched ?? item;
                 }
             }
+        }
+
+        // DataGrid選択解除用のPreviewMouseDownハンドラ（選択行を再クリックで解除）
+        private void DataGrid_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is not DataGrid dataGrid) return;
+
+            // クリックされた要素からDataGridRowを取得（VisualTreeを使用）
+            var clickedRow = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+
+            if (clickedRow != null && clickedRow.IsSelected)
+            {
+                // 既に選択されている行をクリックした場合は選択解除
+                dataGrid.SelectedItem = null;
+                e.Handled = true;
+            }
+        }
+
+        // VisualTree上で指定した型の親要素を検索するヘルパーメソッド
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent)
+                    return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
     }
 }

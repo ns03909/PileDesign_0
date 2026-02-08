@@ -27,6 +27,9 @@ namespace PileDesign.Common
         {
             if (canvas == null || canvas.ActualWidth == 0 || canvas.ActualHeight == 0) return;
 
+            // 安全チェック: 層情報が無い場合は描画を中止
+            if (doatsuGoryokuBane == null || doatsuGoryokuBane.Items == null || doatsuGoryokuBane.Items.Count == 0) return;
+
             canvas.Children.Clear();
 
             double canvasWidth = canvas.ActualWidth;
@@ -35,6 +38,9 @@ namespace PileDesign.Common
             // 計算部分を分離
             var (zTop0, embedmentHeight, maxValue, minValue, midValue, ratio, topMargin) =
                 CalculateEmbedmentParameters(canvas, doatsuGoryokuBane, direction);
+
+            // 無効な比率は描画せず終了
+            if (ratio <= 0) return;
 
             // 地盤層の描画
             if (groundInput != null)
@@ -62,6 +68,14 @@ namespace PileDesign.Common
         private static (double zTop0, double embedmentHeight, double maxValue, double minValue, double midValue, double ratio, double topMargin)
             CalculateEmbedmentParameters(Canvas canvas, DoatsuGoryokuBane doatsuGoryokuBane, string direction)
         {
+            // 安全チェック: Items が無効な場合はデフォルト値を返す
+            if (doatsuGoryokuBane == null || doatsuGoryokuBane.Items == null || doatsuGoryokuBane.Items.Count == 0)
+            {
+                double defaultRatio = Math.Min(canvas.ActualHeight / 8.0, canvas.ActualWidth / 20.0);
+                if (double.IsInfinity(defaultRatio) || double.IsNaN(defaultRatio) || defaultRatio <= 0) defaultRatio = 1.0;
+                return (0.0, 0.0, 0.0, 0.0, 0.0, defaultRatio, 3 * defaultRatio);
+            }
+
             double zTop0 = doatsuGoryokuBane.Items[0].ZTop;
             double embedmentHeight = doatsuGoryokuBane.Items[0].ZTop - doatsuGoryokuBane.Items[^1].ZBtm;
 
@@ -82,10 +96,23 @@ namespace PileDesign.Common
                 }
             }
 
+            // 万一すべての値が未設定だった場合のフォールバック
+            if (maxValue == double.MinValue && minValue == double.MaxValue)
+            {
+                maxValue = minValue = 0.0;
+            }
+
             double midValue = (maxValue + minValue) * 0.5;
             double embedmentWidth = maxValue - minValue;
-            double ratio = Math.Min(canvas.ActualHeight / (embedmentHeight + 8.0), canvas.ActualWidth / (embedmentWidth + 20));
+
+            double ratio = Math.Min(
+                canvas.ActualHeight / (embedmentHeight + 8.0), 
+                canvas.ActualWidth / (embedmentWidth + 20));
+
+            if (double.IsInfinity(ratio) || double.IsNaN(ratio) || ratio <= 0) ratio = 1.0;
+
             double topMargin = 3 * ratio;
+
 
             return (zTop0, embedmentHeight, maxValue, minValue, midValue, ratio, topMargin);
         }
@@ -119,22 +146,21 @@ namespace PileDesign.Common
             double canvasWidth = canvas.ActualWidth;
             double canvasHeight = canvas.ActualHeight;
 
+            if (ratio <= 0) return; // 安全策
+
             double start = midValue - 0.5 * canvasWidth / ratio;
             double end = midValue + 0.5 * canvasWidth / ratio;
 
-            //// 5で割り切れる最初の値を計算
-            //double first = Math.Ceiling(start / 5) * 5;
+            // start > end にならないように guard
+            if (end < start) return;
 
-            //// 5で割り切れる値のリストを作成
-            //List<double> multiplesOf5 = [];
-            //for (double v = first; v <= end; v += 5)
-            //{
-            //    multiplesOf5.Add(v);
-            //}
+            // 5で割り切れる値のリストを作成（安全に型変換）
+            int firstIndex = (int)Math.Ceiling(start / 5.0);
+            int lastIndex = (int)Math.Floor(end / 5.0);
+            if (lastIndex < firstIndex) return;
 
-            // 5で割り切れる値のリストを作成
-            var multiplesOf5 = Enumerable.Range((int)Math.Ceiling(start / 5), (int)((end - start) / 5) + 1)
-                                          .Select(v => v * 5);
+            var multiplesOf5 = Enumerable.Range(firstIndex, lastIndex - firstIndex + 1)
+                                          .Select(v => v * 5.0);
 
             double tickLength = 10;
             foreach (var number in multiplesOf5)
@@ -159,12 +185,6 @@ namespace PileDesign.Common
                     Foreground = Brushes.Black,
                     FontSize = 10
                 };
-                //text.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
-                //double textWidth = text.DesiredSize.Width;
-
-                //Canvas.SetLeft(text, x); // 文字の位置を調整
-                //Canvas.SetTop(text, canvasHeight - tickLength); // 文字の位置を調整
-                //canvas.Children.Add(text);
 
                 // 文字の位置を調整
                 Canvas.SetLeft(text, x - text.ActualWidth / 2);

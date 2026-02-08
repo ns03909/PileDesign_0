@@ -577,5 +577,180 @@ namespace PileDesign.Views
             var center = new Point(points.Average(p => p.X), points.Average(p => p.Y));
             return [.. points.OrderBy(p => Math.Atan2(p.Y - center.Y, p.X - center.X))];
         }
+
+        // 沈下マップツールチップ用フィールド
+        private System.Windows.Controls.Primitives.Popup? _settlementTooltipPopup;
+        private System.Windows.Controls.TextBlock? _settlementTooltipText;
+
+        /// <summary>
+        /// マウス位置から沈下値を取得してツールチップを表示
+        /// </summary>
+        private void UpdateSettlementTooltip(Point mousePos)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+
+            // 群杭グリッド変位表示が有効かチェック
+            if (!viewModel.IsGroupPileGridDeformationVisible)
+            {
+                HideSettlementTooltip();
+                return;
+            }
+
+            // 沈下データが存在するか確認
+            var pileGroupSettlement = viewModel.CurrentInputModel?.PileGroupSettlement;
+            if (pileGroupSettlement?.SettlementGridData == null ||
+                pileGroupSettlement.SettlementGridData.Count == 0 ||
+                pileGroupSettlement.SettlementGridX == null ||
+                pileGroupSettlement.SettlementGridY == null)
+            {
+                HideSettlementTooltip();
+                return;
+            }
+
+            // スクリーン座標からワールド座標へ変換
+            Point3D worldPoint = viewModel.CanvasThreeDView.InverseTransformation(mousePos);
+            double worldX = worldPoint.X;
+            double worldY = worldPoint.Y;
+
+            // グリッド範囲内かチェック
+            var xs = pileGroupSettlement.SettlementGridX;
+            var ys = pileGroupSettlement.SettlementGridY;
+
+            if (xs.Count < 2 || ys.Count < 2)
+            {
+                HideSettlementTooltip();
+                return;
+            }
+
+            double xMin = xs.Min();
+            double xMax = xs.Max();
+            double yMin = ys.Min();
+            double yMax = ys.Max();
+
+            if (worldX < xMin || worldX > xMax || worldY < yMin || worldY > yMax)
+            {
+                HideSettlementTooltip();
+                return;
+            }
+
+            // 沈下値を双線形補間で取得
+            double? settlement = InterpolateSettlement(worldX, worldY, pileGroupSettlement);
+            if (settlement == null)
+            {
+                HideSettlementTooltip();
+                return;
+            }
+
+            // ツールチップを表示
+            ShowSettlementTooltip(mousePos, worldX, worldY, settlement.Value);
+        }
+
+        /// <summary>
+        /// 双線形補間で沈下値を取得
+        /// </summary>
+        private double? InterpolateSettlement(double x, double y, PileGroupSettlement pileGroupSettlement)
+        {
+            var xs = pileGroupSettlement.SettlementGridX;
+            var ys = pileGroupSettlement.SettlementGridY;
+            var items = pileGroupSettlement.SettlementGridData;
+
+            // x, yを含むセルを探す
+            int ix = -1, iy = -1;
+            for (int i = 0; i < xs.Count - 1; i++)
+            {
+                if (x >= xs[i] && x <= xs[i + 1])
+                {
+                    ix = i;
+                    break;
+                }
+            }
+            for (int i = 0; i < ys.Count - 1; i++)
+            {
+                if (y >= ys[i] && y <= ys[i + 1])
+                {
+                    iy = i;
+                    break;
+                }
+            }
+
+            if (ix < 0 || iy < 0) return null;
+
+            // 4隅の点を取得
+            var p00 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix]) < 0.001 && Math.Abs(p.Y - ys[iy]) < 0.001);
+            var p10 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix + 1]) < 0.001 && Math.Abs(p.Y - ys[iy]) < 0.001);
+            var p01 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix]) < 0.001 && Math.Abs(p.Y - ys[iy + 1]) < 0.001);
+            var p11 = items.FirstOrDefault(p => Math.Abs(p.X - xs[ix + 1]) < 0.001 && Math.Abs(p.Y - ys[iy + 1]) < 0.001);
+
+            if (p00 == null || p10 == null || p01 == null || p11 == null) return null;
+
+            // 双線形補間
+            double tx = (x - xs[ix]) / (xs[ix + 1] - xs[ix]);
+            double ty = (y - ys[iy]) / (ys[iy + 1] - ys[iy]);
+
+            double s00 = p00.Settlement;
+            double s10 = p10.Settlement;
+            double s01 = p01.Settlement;
+            double s11 = p11.Settlement;
+
+            double s0 = s00 * (1 - tx) + s10 * tx;
+            double s1 = s01 * (1 - tx) + s11 * tx;
+            double settlement = s0 * (1 - ty) + s1 * ty;
+
+            return settlement;
+        }
+
+        /// <summary>
+        /// 沈下値ツールチップを表示
+        /// </summary>
+        private void ShowSettlementTooltip(Point mousePos, double worldX, double worldY, double settlement)
+        {
+            // ポップアップが未作成なら作成
+            if (_settlementTooltipPopup == null)
+            {
+                _settlementTooltipText = new System.Windows.Controls.TextBlock
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(230, 50, 50, 50)),
+                    Foreground = Brushes.White,
+                    Padding = new Thickness(8, 4, 8, 4),
+                    FontSize = 12
+                };
+
+                var border = new System.Windows.Controls.Border
+                {
+                    BorderBrush = Brushes.DarkGray,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(3),
+                    Child = _settlementTooltipText
+                };
+
+                _settlementTooltipPopup = new System.Windows.Controls.Primitives.Popup
+                {
+                    Child = border,
+                    AllowsTransparency = true,
+                    Placement = System.Windows.Controls.Primitives.PlacementMode.Relative,
+                    PlacementTarget = Canvas3DLayout,
+                    IsHitTestVisible = false
+                };
+            }
+
+            // ツールチップのテキストを更新
+            _settlementTooltipText!.Text = $"沈下量: {settlement:F3} mm\nX: {worldX:F2} m, Y: {worldY:F2} m";
+
+            // 位置を更新（マウスの右下に表示）
+            _settlementTooltipPopup.HorizontalOffset = mousePos.X + 15;
+            _settlementTooltipPopup.VerticalOffset = mousePos.Y + 15;
+            _settlementTooltipPopup.IsOpen = true;
+        }
+
+        /// <summary>
+        /// 沈下値ツールチップを非表示
+        /// </summary>
+        private void HideSettlementTooltip()
+        {
+            if (_settlementTooltipPopup != null)
+            {
+                _settlementTooltipPopup.IsOpen = false;
+            }
+        }
     }
 }

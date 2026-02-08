@@ -12,6 +12,7 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
         Title="Settlement Window" Height="600" Width="800">
 
     <Window.InputBindings>
@@ -24,6 +25,12 @@
     </Window.InputBindings>
 
     <Window.Resources>
+        <!-- FormulaControlに適用するスタイルを定義 -->
+        <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">
+            <Setter Property="Scale" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
         <!-- 特定の列ヘッダーの色を変更するスタイル -->
         <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="#238966"/>
@@ -72,6 +79,7 @@
         </Style>
 
         <conv:HeightToMaxHeightConverter x:Key="HeightToMaxHeightConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
         <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
             <MenuItem Click="ExportCsvFromContextMenu_Click">
@@ -136,83 +144,88 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="auto" />
-                    <ColumnDefinition Width="75" />
+                    <ColumnDefinition Width="auto" />
                     <ColumnDefinition Width="auto" />
 
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="SoilPileNo"/>
 
-                <ComboBox Grid.Row="0" Grid.Column="2" 
+                <ComboBox Grid.Row="0" Grid.Column="2"
                           x:Name="ComboBoxSoilPileNo"
 
                       ItemsSource="{Binding SoilPilesCountList}"
                       SelectedValue="{Binding SoilPileNo, UpdateSourceTrigger=LostFocus}"
                       SelectionChanged = "ComboBoxSoilPileBodyNo_SelectionChanged"/>
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="地盤番号"/>
-                <TextBox Grid.Row="1" Grid.Column="2" 
-                         Text="{Binding SoilPile.GroundNo, UpdateSourceTrigger=LostFocus}" 
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="杭工法"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                         Text="{Binding SoilPile.PileConstructionType, Mode=OneWay}"
+                         IsReadOnly="True" Foreground="Gray"
+                         HorizontalContentAlignment="Right"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="地盤番号"/>
+                <TextBox Grid.Row="2" Grid.Column="2"
+                         Text="{Binding SoilPile.GroundNo, UpdateSourceTrigger=LostFocus}"
                              HorizontalContentAlignment="Right"
                              IsReadOnly="true" Foreground="Gray"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="杭上端レベル" 
-                               />
-                <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding SoilPile.Z, UpdateSourceTrigger=LostFocus}" 
-
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="杭上端レベル"/>
+                <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding SoilPile.Z, UpdateSourceTrigger=LostFocus}"
                              HorizontalContentAlignment="Right"
                              IsReadOnly="true" Foreground="Gray"/>
-                <TextBlock Grid.Row="2" Grid.Column="3"  Text="m" />
+                <TextBlock Grid.Row="3" Grid.Column="3" Text="m"/>
 
 
-                <TextBlock Grid.Row="3" Grid.Column="0"  Text="杭体番号"                               />
-                <TextBox  Grid.Row="3" Grid.Column="2"  Text="{Binding SoilPile.PileBodyNo, UpdateSourceTrigger=LostFocus}" 
-
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="杭体番号"/>
+                <TextBox Grid.Row="4" Grid.Column="2" Text="{Binding SoilPile.PileBodyNo, UpdateSourceTrigger=LostFocus}"
                              HorizontalContentAlignment="Right"
                              IsReadOnly="true" Foreground="Gray"/>
 
-                <TextBlock Grid.Row="4" Grid.Column="0"   Text="杭体符号" />
-                <TextBox  Grid.Row="4" Grid.Column="2"  x:Name="TextBoxPileBodyRef"
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="杭体符号"/>
+                <TextBox Grid.Row="5" Grid.Column="2" x:Name="TextBoxPileBodyRef"
                              Text="{Binding PileBody.PileBodyRef, UpdateSourceTrigger=LostFocus}"
                              HorizontalContentAlignment="Right"
                             IsReadOnly="true" Foreground="Gray"/>
 
 
-                <TextBlock  Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4" Text="プリセット沈下パラメータ"/>
-                <ComboBox  Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="4" 
+                <TextBlock Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="4" Text="プリセット沈下パラメータ"/>
+                <ComboBox Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="4"
                            Name="ComboBoxPresetSettlementParameters"
                             HorizontalAlignment="Stretch"
                             ItemsSource="{Binding PileBody.PileTipSettlementPresetParameterNames}"
-                            SelectionChanged = "ComboBoxPresetSettlementParameters_SelectionChanged" />
+                            SelectionChanged = "ComboBoxPresetSettlementParameters_SelectionChanged"/>
 
-                <TextBlock  Grid.Row="7" Grid.Column="0"
+                <TextBlock Grid.Row="8" Grid.Column="0"
                             Text="杭先端沈下曲線パラメータ"/>
-                <TextBlock  Grid.Row="7" Grid.Column="1"
-                            Text="α"/>
-                <TextBox Grid.Row="7" Grid.Column="2" x:Name="TextBoxSettleAlpha"
+                <!--<TextBlock Grid.Row="8" Grid.Column="1"
+                            Text="α" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="8" Grid.Column="1" Formula="\alpha" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="8" Grid.Column="2" x:Name="TextBoxSettleAlpha"
                             HorizontalContentAlignment="Right"
                             LostFocus="OnPileBodyLostFocus"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"
-                             >
+                             KeyDown="TextBox_KeyDown">
                     <Binding Path="PileBody.SettleAlpha" UpdateSourceTrigger="LostFocus" StringFormat="N2">
                         <Binding.ValidationRules>
                             <common:RangeValidationRule Min="0.05" Max="0.5" />
                         </Binding.ValidationRules>
                     </Binding>
-                    <TextBox.ToolTip >
+                    <TextBox.ToolTip>
                         "適用範囲：0.05 ≦ α ≦ 0.50"
                     </TextBox.ToolTip>
                 </TextBox>
 
-                <TextBlock  Grid.Row="8" Grid.Column="0" Text="杭先端沈下曲線パラメータ"/>
-                <TextBlock  Grid.Row="8" Grid.Column="1" Text="n" />
-                <TextBox  Grid.Row="8" Grid.Column="2"  
+                <TextBlock Grid.Row="9" Grid.Column="0" Text="杭先端沈下曲線パラメータ"/>
+                <!--<TextBlock Grid.Row="9" Grid.Column="1" Text="n" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="9" Grid.Column="1" Formula="n" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="9" Grid.Column="2"
                     x:Name="TextBoxSettleN"
-
                             HorizontalContentAlignment="Right"
                             LostFocus="OnPileBodyLostFocus"
                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
@@ -222,212 +235,224 @@
                             <common:RangeValidationRule Min="1" Max="10" />
                         </Binding.ValidationRules>
                     </Binding>
-                    <TextBox.ToolTip >
+                    <TextBox.ToolTip>
                         "適用範囲：1.0 ≦ α ≦ 10.0"
                     </TextBox.ToolTip>
                 </TextBox>
-                <TextBlock   Grid.Row="9" Grid.Column="0" Text="沈下検討用杭先端径" />
-                <TextBlock   Grid.Row="9" Grid.Column="1" Text="d" />
-                <TextBox  Grid.Row="9" Grid.Column="2" 
-                          x:Name="TextBoxPileToeDia"
-                             Text="{Binding PileBody.PileToeDia, UpdateSourceTrigger=LostFocus, StringFormat=N0}"
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="沈下検討用杭先端径"/>
+                <!--<TextBlock Grid.Row="10" Grid.Column="1" Text="dp" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="10" Grid.Column="1" Formula="d_p" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="10" Grid.Column="2"
+                          x:Name="TextBoxSettlePileToeDia"
+                             Text="{Binding SettlePileToeDiaM, UpdateSourceTrigger=LostFocus, StringFormat=N3}"
                              HorizontalContentAlignment="Right"
-                            LostFocus="OnPileBodyLostFocus" 
                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                             KeyDown="TextBox_KeyDown"/>
-                <TextBlock  Grid.Row="9" Grid.Column="3" Text="mm"/>
+                <TextBlock Grid.Row="10" Grid.Column="3" Text="m"/>
 
-                <TextBlock Grid.Row="10" Grid.Column="0" Text="既製杭先端閉塞率" />
-                <TextBox  Grid.Row="10" Grid.Column="2" 
-                              x:Name="TextBoxPrecastPileTipNonPermeability"
-                             Text="{Binding PileBody.TipNonPermability, UpdateSourceTrigger=LostFocus}"
-                             HorizontalContentAlignment="Right"
-                            LostFocus="OnPileBodyLostFocus" 
-                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                              KeyDown="TextBox_KeyDown"/>
+                <!-- 杭先端閉塞率（回転貫入杭、打込み杭の場合のみ表示） -->
+                <TextBlock Grid.Row="11" Grid.Column="0" Text="杭先端閉塞率"
+                           Visibility="{Binding UsesPileToeEta, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <TextBox Grid.Row="11" Grid.Column="2"
+                         x:Name="TextBoxPileTipNonPermeability"
+                         Text="{Binding PileBody.TipNonPermability, UpdateSourceTrigger=LostFocus}"
+                         HorizontalContentAlignment="Right"
+                         LostFocus="OnPileBodyLostFocus"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         KeyDown="TextBox_KeyDown"
+                         Visibility="{Binding UsesPileToeEta, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
-                <TextBlock  Grid.Row="11" Grid.Column="0" 
-                            Text="鋼管杭先端閉塞率" />
-                <TextBox  Grid.Row="11" Grid.Column="2" 
-                        x:Name="TextBoxSteelPileTipNonPermeability"
-                             Text="{Binding PileBody.TipNonPermability, 
-                        UpdateSourceTrigger=LostFocus}"
-                          
-                             HorizontalContentAlignment="Right"
-                            LostFocus="OnPileBodyLostFocus" 
-                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                        KeyDown="TextBox_KeyDown"/>
-
-
-                <TextBlock  Grid.Row="12" Grid.Column="0" Text="杭先端閉塞率"/>
-                <TextBox  Grid.Row="12" Grid.Column="2" 
-                             Text="{Binding SoilPile.PileToeEta, Mode=OneWay, StringFormat=N2}" IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-
-                <TextBlock  Grid.Row="13" Grid.Column="0" Text="杭先端径" />
-                <TextBlock  Grid.Row="13" Grid.Column="1" Text="D" />
-                <TextBox  Grid.Row="13" Grid.Column="2" 
-                            Text="{Binding SoilPile.D, Mode=OneWay, StringFormat=N3}" 
-                            IsReadOnly="True"
-                            Foreground="Gray"
-                            HorizontalContentAlignment="Right"
-                            LostFocus="OnPileBodyLostFocus" 
-                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                        KeyDown="TextBox_KeyDown"
-                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboartFocus"/>
-                <TextBlock  Grid.Row="13" Grid.Column="3" Text="m" />
+                <TextBlock Grid.Row="12" Grid.Column="0" Text="杭先端径"/>
+                <!--<TextBlock Grid.Row="12" Grid.Column="1" Text="D" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="12" Grid.Column="1" Formula="D" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="12" Grid.Column="2"
+                         x:Name="TextBoxPileToeDiaD"
+                         Text="{Binding SoilPile.D, UpdateSourceTrigger=LostFocus, StringFormat=N3}"
+                         HorizontalContentAlignment="Right"
+                         LostFocus="OnPileBodyLostFocus"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         KeyDown="TextBox_KeyDown"
+                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboartFocus"/>
+                <TextBlock Grid.Row="12" Grid.Column="3" Text="m"/>
 
 
-                <TextBlock  Grid.Row="14" Grid.Column="0" 
+                <TextBlock Grid.Row="13" Grid.Column="0"
                             Text="杭先端平均N値"/>
-                <TextBox  Grid.Row="14" Grid.Column="2" 
+                <!--<TextBlock Grid.Row="13" Grid.Column="1"
+                                Text="Nbar" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="13" Grid.Column="1" Formula="\overline{N}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                
+                <TextBox Grid.Row="13" Grid.Column="2"
                              Text="{Binding SoilPile.PileToeNValue,
                         Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
 
 
-                <TextBlock  Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2"
+                <TextBlock Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="2"
                             Text="杭先端平均N値算定範囲上限レベル"/>
-                <TextBox  Grid.Row="15" Grid.Column="2" 
+                <TextBox Grid.Row="14" Grid.Column="2"
                              Text="{Binding SoilPile.PileToeNValueAverageRangeUpperAltitude,
-                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                        Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="1157" Grid.Column="3" 
+                <TextBlock Grid.Row="14" Grid.Column="3"
                             Text="m"/>
 
 
-                <TextBlock Grid.Row="16" Grid.Column="0"  Text="杭先端レベル" 
-                               />
-                <TextBox Grid.Row="16" Grid.Column="2" 
-                         Text="{Binding SoilPile.PileBottomAltitude, UpdateSourceTrigger=LostFocus}" 
-
+                <TextBlock Grid.Row="15" Grid.Column="0" Text="杭先端レベル"/>
+                <TextBox Grid.Row="15" Grid.Column="2"
+                         Text="{Binding SoilPile.PileBottomAltitude, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
                              HorizontalContentAlignment="Right"
                              IsReadOnly="true" Foreground="Gray"/>
-                <TextBlock Grid.Row="16" Grid.Column="3"  Text="m" />
+                <TextBlock Grid.Row="15" Grid.Column="3" Text="m"/>
 
 
-                <TextBlock  Grid.Row="17" Grid.Column="0"  Grid.ColumnSpan="2"
+                <TextBlock Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2"
                             Text="杭先端平均N値算定範囲下限レベル"/>
-                <TextBox  Grid.Row="17" Grid.Column="2" 
-                             Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude, 
-                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
+                <TextBox Grid.Row="16" Grid.Column="2"
+                             Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude,
+                        Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="17" Grid.Column="3" 
+                <TextBlock Grid.Row="16" Grid.Column="3"
                             Text="m"/>
 
 
 
-                <TextBlock  Grid.Row="18" Grid.Column="0" 
-                                Text="杭先端支持力度" />
-                <TextBlock  Grid.Row="18" Grid.Column="1" 
-                                Text="qpu" />
-                <TextBox  Grid.Row="18" Grid.Column="2" 
-                             Text="{Binding SoilPile.Qpu, Mode=OneWay, StringFormat=N0}" 
+                <TextBlock Grid.Row="17" Grid.Column="0"
+                                Text="極限先端支持力度"/>
+                <!--<TextBlock Grid.Row="17" Grid.Column="1"
+                                Text="qpu" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="17" Grid.Column="1" Formula="q_{pu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="17" Grid.Column="2"
+                             Text="{Binding SoilPile.Qpu, Mode=OneWay, StringFormat=N0}"
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="18" Grid.Column="3" 
-                                Text="kN/m2" />
+                <TextBlock Grid.Row="17" Grid.Column="3"
+                                Text="kN/m2"/>
 
-                <TextBlock  Grid.Row="19" Grid.Column="0" 
-                            Text="杭先端面積" />
-                <TextBlock  Grid.Row="19" Grid.Column="1" 
-                            Text="Ap"/>
-                <TextBox  Grid.Row="19" Grid.Column="2" 
-                             Text="{Binding SoilPile.Ap, Mode=OneWay, StringFormat=N3}" 
+                <TextBlock Grid.Row="18" Grid.Column="0" 
+                                Text="沈下検討用極限先端支持力度"/>
+                <!--<TextBlock Grid.Row="18" Grid.Column="1"
+                                Text="qpu_" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="18" Grid.Column="1" Formula="q_{pu(s)}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="18" Grid.Column="2"
+                         x:Name="TextBoxSettleQpu"
+                         Text="{Binding SoilPile.SettleQpu, UpdateSourceTrigger=LostFocus, StringFormat=N0}"
+                         HorizontalContentAlignment="Right"
+                         LostFocus="OnPileBodyLostFocus"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         KeyDown="TextBox_KeyDown"
+                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboartFocus"/>
+                <TextBlock Grid.Row="18" Grid.Column="3"
+                                Text="kN/m2"/>
+
+                <TextBlock Grid.Row="19" Grid.Column="0"
+                            Text="杭先端面積"/>
+                <!--<TextBlock Grid.Row="19" Grid.Column="1"
+                            Text="Ap" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="19" Grid.Column="1" Formula="A_p" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="19" Grid.Column="2"
+                             Text="{Binding SoilPile.Ap, Mode=OneWay, StringFormat=N3}"
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="19" Grid.Column="3" 
-                            Text="m2" />
+                <TextBlock Grid.Row="19" Grid.Column="3"
+                            Text="m2"/>
 
-                <TextBlock  Grid.Row="20" Grid.Column="0" 
+                <TextBlock Grid.Row="20" Grid.Column="0"
                             Text="極限先端支持力"/>
-                <TextBlock  Grid.Row="20" Grid.Column="1" 
-                            Text="Rpu"/>
-                <TextBox  Grid.Row="20" Grid.Column="2" 
-                             Text="{Binding SoilPile.Rpu, Mode=OneWay, StringFormat=N0}" 
+                <!--<TextBlock Grid.Row="20" Grid.Column="1"
+                            Text="Rpu" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="20" Grid.Column="1" Formula="R_{pu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="20" Grid.Column="2"
+                             Text="{Binding SoilPile.Rpu, Mode=OneWay, StringFormat=N0}"
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="20" Grid.Column="3" 
+                <TextBlock Grid.Row="20" Grid.Column="3"
                             Text="kN"/>
 
 
-                <TextBlock  Grid.Row="21" Grid.Column="0" Text="極限周面抵抗力" />
-                <TextBlock  Grid.Row="21" Grid.Column="1" Text="Rfu"/>
-                
-                <TextBox  Grid.Row="21" Grid.Column="2" 
+                <TextBlock Grid.Row="21" Grid.Column="0" Text="極限周面抵抗力"/>
+                <!--<TextBlock Grid.Row="21" Grid.Column="1" Text="Rfu" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="21" Grid.Column="1" Formula="R_{fu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+
+                <TextBox Grid.Row="21" Grid.Column="2"
                              Text="{Binding SoilPile.Rfu, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="21" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="21" Grid.Column="3" Text="kN"/>
 
 
-                <TextBlock  Grid.Row="22" Grid.Column="0" Text="終局限界引抜力" />
-                <TextBlock  Grid.Row="22" Grid.Column="1" Text="Rt_ULS"/>
-                <TextBox  Grid.Row="22" Grid.Column="2" 
+                <TextBlock Grid.Row="22" Grid.Column="0" Text="終局限界引抜力"/>
+                <!--<TextBlock Grid.Row="22" Grid.Column="1" Text="Rt_ULS" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="22" Grid.Column="1" Formula="R_{t,UL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="22" Grid.Column="2"
                              Text="{Binding SoilPile.Rt_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="22" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="22" Grid.Column="3" Text="kN"/>
 
 
-                <TextBlock  Grid.Row="23" Grid.Column="0" 
+                <TextBlock Grid.Row="23" Grid.Column="0"
                             Text="損傷限界引抜力"/>
-                <TextBlock  Grid.Row="23" Grid.Column="1" 
-                            Text="Rt_DLS"/>
-                <TextBox  Grid.Row="23" Grid.Column="2" 
+                <!--<TextBlock Grid.Row="23" Grid.Column="1"
+                            Text="Rt_DLS" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="23" Grid.Column="1" Formula="R_{t,DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="23" Grid.Column="2"
                              Text="{Binding SoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="23" Grid.Column="3" 
+                <TextBlock Grid.Row="23" Grid.Column="3"
                             Text="kN"/>
 
-                <TextBlock  Grid.Row="24" Grid.Column="0" 
+                <TextBlock Grid.Row="24" Grid.Column="0"
                             Text="使用限界引抜力"/>
-                <TextBlock  Grid.Row="24" Grid.Column="1" 
-                            Text="Rt_SLS"/>
-                <TextBox  Grid.Row="24" Grid.Column="2" 
+                <!--<TextBlock Grid.Row="24" Grid.Column="1"
+                            Text="Rt_SLS" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="24" Grid.Column="1" Formula="R_{t,SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="24" Grid.Column="2"
                              Text="{Binding SoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="24" Grid.Column="3" 
+                <TextBlock Grid.Row="24" Grid.Column="3"
                             Text="kN"/>
 
 
-                <TextBlock  Grid.Row="25" Grid.Column="0" Text="使用限界支持力" />
-                <TextBlock  Grid.Row="25" Grid.Column="1" Text="R_SLS" />
-                <TextBox  Grid.Row="25" Grid.Column="2" 
+                <TextBlock Grid.Row="25" Grid.Column="0" Text="使用限界支持力"/>
+                <!--<TextBlock Grid.Row="25" Grid.Column="1" Text="R_SLS" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="25" Grid.Column="1" Formula="R_{SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="25" Grid.Column="2"
                              Text="{Binding SoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="25" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="25" Grid.Column="3" Text="kN"/>
 
 
-                <TextBlock  Grid.Row="26" Grid.Column="0" Text="損傷限界支持力"/>
-                <TextBlock  Grid.Row="26" Grid.Column="1" Text="R_DLS"/>
-                <TextBox  Grid.Row="26" Grid.Column="2" 
+                <TextBlock Grid.Row="26" Grid.Column="0" Text="損傷限界支持力"/>
+                <!--<TextBlock Grid.Row="26" Grid.Column="1" Text="R_DLS" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="26" Grid.Column="1" Formula="R_{DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="26" Grid.Column="2"
                              Text="{Binding SoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="26" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="26" Grid.Column="3" Text="kN"/>
 
 
-                <TextBlock  Grid.Row="27" Grid.Column="0" Text="終局限界支持力" />
-                <TextBlock  Grid.Row="27" Grid.Column="1" Text="R_ULS" />
-                <TextBox  Grid.Row="27" Grid.Column="2" 
+                <TextBlock Grid.Row="27" Grid.Column="0" Text="終局限界支持力"/>
+                <!--<TextBlock Grid.Row="27" Grid.Column="1" Text="R_ULS" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="27" Grid.Column="1" Formula="R_{UL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="27" Grid.Column="2"
                              Text="{Binding SoilPile.R_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock  Grid.Row="27" Grid.Column="3" Text="kN" />
+                <TextBlock Grid.Row="27" Grid.Column="3" Text="kN"/>
 
-                <Button  Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="4"
-                         Content="杭の荷重沈下関係解析実行" Command="{Binding ExecuteAnalysisCommand}"/>
+                <!--<Button Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="4"
+                         Content="杭の荷重沈下関係解析実行" Command="{Binding ExecuteAnalysisCommand}"/>-->
 
             </Grid>
 
@@ -462,12 +487,15 @@
                         <ScottPlot:WpfPlot x:Name="wpfPlotCircum" Grid.Row="1" Grid.Column="1" />
                         <TextBlock Text="{Binding CrosshairPositionText_PileCircumstance}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
-                        <common:EnhancedDataGrid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                        <common:EnhancedDataGrid x:Name="DataGridCircum"
+                            Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
                             ItemsSource="{Binding SoilPile.PileCircumVerticals}"
                                   SelectedItem="{Binding SelectedPileCircumstanceVertical}"
                                   AutoGenerateColumns="False"
                                 CanUserAddRows="False"
+                                SelectionUnit="FullRow"
                                 SelectionChanged="DataGridCircum_SelecitonChanged"
+                                PreviewMouseDown="DataGridCircum_PreviewMouseDown"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                   ColumnHeaderStyle="{StaticResource CenterHeaderStyle}" IsReadOnly="True" Foreground="Gray">
                             <common:EnhancedDataGrid.AlternatingRowBackground>
@@ -560,10 +588,8 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
-                                Binding="{Binding GroundLayer.IsPositiveCircumResistance}"
-                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
-                                    <DataGridTextColumn.Header>
+                                <DataGridTemplateColumn Width="*" MinWidth="50">
+                                    <DataGridTemplateColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="押込み" TextAlignment="Center"/>
                                             <TextBlock Text="周面抵抗"
@@ -571,13 +597,21 @@
                                             <TextBlock Text="考慮"
                                                 TextAlignment="Center" HorizontalAlignment="Center"/>
                                         </StackPanel>
-                                    </DataGridTextColumn.Header>
-                                </DataGridTextColumn>
+                                    </DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsPositiveCircumResistance, UpdateSourceTrigger=PropertyChanged}"
+                                                      Content="{Binding IsPositiveCircumResistance}"
+                                                      Foreground="Black"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Click="CircumResistanceCheckBox_Changed"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Width="*"
-                                Binding="{Binding GroundLayer.IsNegativeCircumResistance}"
-                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
-                                    <DataGridTextColumn.Header>
+                                <DataGridTemplateColumn Width="*" MinWidth="50">
+                                    <DataGridTemplateColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="引抜き" TextAlignment="Center"/>
                                             <TextBlock Text="周面抵抗"
@@ -585,8 +619,18 @@
                                             <TextBlock Text="考慮"
                                                 TextAlignment="Center" HorizontalAlignment="Center"/>
                                         </StackPanel>
-                                    </DataGridTextColumn.Header>
-                                </DataGridTextColumn>
+                                    </DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsNegativeCircumResistance, UpdateSourceTrigger=PropertyChanged}"
+                                                      Content="{Binding IsNegativeCircumResistance}"
+                                                      Foreground="Black"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Click="CircumResistanceCheckBox_Changed"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
 
                                 <DataGridTextColumn Width="*"
                                 Binding="{Binding S1, StringFormat=N1}"
@@ -695,7 +739,8 @@
                         <ScottPlot:WpfPlot Grid.Row="1" Grid.Column="1" x:Name="wpfPlotSettlementToe"/>
                         <TextBlock Text="{Binding CrosshairPositionText_PileToeSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="1"/>
 
-                        <common:EnhancedDataGrid  ItemsSource="{Binding VerticalLoadTransferMethod.LoadDisplacements}"    
+                        <common:EnhancedDataGrid x:Name="DataGridLoadDisplacement"
+                                   ItemsSource="{Binding VerticalLoadTransferMethod.LoadDisplacements}"
                                    SelectedItem="{Binding SelectedLoadDisplacement}"
                                 AutoGenerateColumns="False"
                                 CanUserAddRows="False"
@@ -705,7 +750,9 @@
                                 Grid.Row="3"
                                 Grid.Column="0"
                                 Grid.ColumnSpan="2"
+                                SelectionUnit="FullRow"
                                 SelectionChanged="DataGridLoadDisplacement_SelecitonChanged"
+                                PreviewMouseDown="DataGridLoadDisplacement_PreviewMouseDown"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                    ColumnHeaderStyle="{StaticResource CenterHeaderStyle}"
                                     IsReadOnly="True" Foreground="Gray">

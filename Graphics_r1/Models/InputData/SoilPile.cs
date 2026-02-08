@@ -206,7 +206,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pileToeEta, value);
         }
 
-        // 杭先端極限先端支持力度
+        // 極限先端支持力度
         private double _qpu;
         public double Qpu
         {
@@ -214,7 +214,18 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _qpu, value);
         }
 
-        // 杭先端極限先端支持力度
+        // 沈下検討用極限先端支持力度
+        private double _settleQpu;
+        public double SettleQpu
+        {
+            get => _settleQpu;
+            set => SetProperty(ref _settleQpu, value);
+        }
+
+        // 沈下検討用極限先端支持力（沈下計算で使用）
+        public double SettleRpu => SettleQpu * Ap;
+
+        // 杭工法
         private string _pileConstructionType;
         public string PileConstructionType
         {
@@ -586,6 +597,9 @@ namespace PileDesign.Models.InputData
                 },
                 _ => Qpu
             };
+
+            // 沈下検討用極限先端支持力度をデフォルトで極限先端支持力度と同じ値に設定
+            SettleQpu = Qpu;
         }
 
         // 杭周面抵抗プロパティの更新メソッド
@@ -641,7 +655,7 @@ namespace PileDesign.Models.InputData
                 (pileCircumVertical.Tau1, pileCircumVertical.S1, pileCircumVertical.S2, pileCircumVertical.TauT) = granularityClass switch
                 {
                     "砂質土" => (0.8 * pileCircumVertical.Tau2, 5.0, 20.0, -2.0 / 3.0 * pileCircumVertical.Tau2),
-                    "礫質土" => (0.7 * pileCircumVertical.Tau2, 105.0, 30.0, -2.0 / 3.0 * pileCircumVertical.Tau2),
+                    "礫質土" => (0.7 * pileCircumVertical.Tau2, 10.0, 30.0, -2.0 / 3.0 * pileCircumVertical.Tau2),
                     "粘性土" => (0.8 * pileCircumVertical.Tau2, 3.0, 10.0, -4.0 / 5.0 * pileCircumVertical.Tau2),
                     _ => (pileCircumVertical.Tau1, pileCircumVertical.S1, pileCircumVertical.S2, pileCircumVertical.TauT)
                 };
@@ -660,14 +674,15 @@ namespace PileDesign.Models.InputData
         }
 
         // 抵抗力の計算メソッド
-        private void CalculateResistances()
+        public void CalculateResistances()
         {
             if (PileCircumVerticals == null) return;
 
-            Rfu = PileCircumVerticals.Where(pcv => pcv.GroundLayer.IsPositiveCircumResistance).Sum(pcv => pcv.Rf);
-            Rtu = PileCircumVerticals.Where(pcv => pcv.GroundLayer.IsNegativeCircumResistance).Sum(pcv => pcv.Rtu);
-            Rtr = PileCircumVerticals.Where(pcv => pcv.GroundLayer.IsNegativeCircumResistance).Sum(pcv => pcv.Rtr);
-            Rty = PileCircumVerticals.Where(pcv => pcv.GroundLayer.IsNegativeCircumResistance).Sum(pcv => pcv.Rty);
+            // PileCircumVerticalのフラグを使用（チェックボックスで編集可能）
+            Rfu = PileCircumVerticals.Where(pcv => pcv.IsPositiveCircumResistance).Sum(pcv => pcv.Rf);
+            Rtu = PileCircumVerticals.Where(pcv => pcv.IsNegativeCircumResistance).Sum(pcv => pcv.Rtu);
+            Rtr = PileCircumVerticals.Where(pcv => pcv.IsNegativeCircumResistance).Sum(pcv => pcv.Rtr);
+            Rty = PileCircumVerticals.Where(pcv => pcv.IsNegativeCircumResistance).Sum(pcv => pcv.Rty);
 
             double w = PileCircumVerticals.Sum(pcv => pcv.PileBodySegment.PileSection.W * pcv.L);
 
@@ -813,6 +828,7 @@ namespace PileDesign.Models.InputData
                 copy.PileToeCohesive = this.PileToeCohesive;
                 copy.PileToeEta = this.PileToeEta;
                 copy.Qpu = this.Qpu;
+                copy.SettleQpu = this.SettleQpu;
                 copy.PileConstructionType = this.PileConstructionType;
                 copy.PileToeGranularityClass = this.PileToeGranularityClass;
                 copy.D = this.D;

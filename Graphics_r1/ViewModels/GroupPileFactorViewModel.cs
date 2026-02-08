@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.Mvvm.Input;
-using LiveChartsCore.Defaults;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
@@ -142,16 +141,12 @@ namespace PileDesign.ViewModels
 
             for (int i = 0; i < totalPileCounts.Count; i++)
             {
-                List<ObservablePoint> newValues = [];
-
                 List<double> pileGroupFactors = [];
                 foreach (double rOnB in rOnBs)
                 {
                     double e = 1.2 / Math.Pow(totalPileCounts[i], 0.65 / rOnB);
                     double pileGroupFactor = Math.Min(Math.Pow(e, 4.0 / 3.0), 1);
-
                     pileGroupFactors.Add(pileGroupFactor);
-                    newValues.Add(new ObservablePoint(rOnB, pileGroupFactor)); // 新しいリストに追加
                 }
 
                 var scatter = WpfPlot.Plot.Add.Scatter(rOnBs, pileGroupFactors);

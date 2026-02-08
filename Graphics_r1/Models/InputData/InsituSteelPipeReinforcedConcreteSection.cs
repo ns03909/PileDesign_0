@@ -79,7 +79,7 @@ namespace PileDesign.Models.InputData
             // 安全限界軸力閾値
 
             UltimateLimitAxialForceThresholds = [
-                -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.F * insituSteelPipe.Aminus),
+                -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.F * insituSteelPipe.AMinus),
                 0.4 * insituConcrete.Gsi * insituConcrete.Fc * Math.PI * Math.Pow(PileDia, 2) / 4.0
             ];
 
@@ -140,7 +140,7 @@ namespace PileDesign.Models.InputData
         {
             double beta1 = 1.0;
 
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaminus, 2) - Math.Pow(InsituSteelPipe.OutDiaminus - InsituSteelPipe.Tminus, 2)) / 4.0;
+            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double kappa = 2.0;
             double sfss = InsituSteelPipe.F / 1.5 / Math.Sqrt(3);
             return beta1 * area / kappa * sfss;
@@ -154,7 +154,7 @@ namespace PileDesign.Models.InputData
             double beta1 = 1.0;
             double beta2 = 1.0;
             double beta = level == 1 ? beta1 : beta1 * beta2;
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaminus, 2) - Math.Pow(InsituSteelPipe.OutDiaminus - InsituSteelPipe.Tminus, 2)) / 4.0;
+            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double kappa = 2.0;
             double sfsd = InsituSteelPipe.F / Math.Sqrt(3);
             return beta1 * area / kappa * sfsd;
@@ -167,9 +167,9 @@ namespace PileDesign.Models.InputData
         {
             double beta1 = 1.0;
             double beta2 = 1.0;
-            double ts = InsituSteelPipe.Tminus;
-            double d = InsituSteelPipe.OutDiaminus;
-            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaminus, 2) - Math.PI * Math.Pow(InsituSteelPipe.OutDiaminus - InsituSteelPipe.Tminus, 2)) / 4.0;
+            double ts = InsituSteelPipe.TMinus;
+            double d = InsituSteelPipe.OutDiaMinus;
+            double area = Math.PI * (Math.Pow(InsituSteelPipe.OutDiaMinus, 2) - Math.PI * Math.Pow(InsituSteelPipe.OutDiaMinus - InsituSteelPipe.TMinus, 2)) / 4.0;
             double fcy = 1.1 * InsituSteelPipe.F;
             double ns;
             if (n >= 0)
@@ -251,8 +251,8 @@ namespace PileDesign.Models.InputData
             double nr = MainBars.Er / InsituConcrete.Ec;
             double ns = InsituSteelPipe.SE1 / InsituConcrete.Ec;
 
-            Ae = InsituConcrete.Ac + (nr - 1) * MainBars.Ag + ns * InsituSteelPipe.Aminus;
-            Ie = Ic + 1.0 / 2.0 * (nr - 1) * MainBars.Ag * Math.Pow(MainBars.PCD / 2.0, 2) + ns * InsituSteelPipe.Iminus;
+            Ae = InsituConcrete.Ac + (nr - 1) * MainBars.Ag + ns * InsituSteelPipe.AMinus;
+            Ie = Ic + 1.0 / 2.0 * (nr - 1) * MainBars.Ag * Math.Pow(MainBars.PCD / 2.0, 2) + ns * InsituSteelPipe.IMinus;
             Ze = Ie / rc;
             Ft = 0.56 * Math.Sqrt(InsituConcrete.Gsi * InsituConcrete.Fc);
         }
@@ -311,8 +311,14 @@ namespace PileDesign.Models.InputData
         //    return phiC;
         //}
 
-        // ある軸力時のM-φ関係を得るメソッド
-        internal (List<double>, List<double>) GetMPhiRelationship(double Ntarget, double beta1 = 1.0)
+        // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
+        public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+        {
+            return GetMPhiRelationshipInternal(axialN, 1.0);
+        }
+
+        // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget, double beta1 = 1.0)
         {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MY, double phiY) = GetYieldMoment(Ntarget);

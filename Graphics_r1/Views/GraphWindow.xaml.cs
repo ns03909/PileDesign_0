@@ -1,4 +1,5 @@
-﻿using PileDesign.ViewModels;
+﻿using PileDesign.Common;
+using PileDesign.ViewModels;
 using System.Windows;
 using System.Windows.Input;
 
@@ -25,6 +26,12 @@ namespace PileDesign.Views
                     vm.WpfPlot3 = wpfPlot3;
                     vm.UpdateGraph(); // 初期表示
                     vm.RequestClose += (sender, args) => this.Close(); // RequestCloseイベント
+
+                    // CSVエクスポートメニューを追加
+                    PlotHelper.AddCsvExportMenu(wpfPlot, "解析結果");
+                    PlotHelper.AddCsvExportMenu(wpfPlot1, "解析結果1");
+                    PlotHelper.AddCsvExportMenu(wpfPlot2, "解析結果2");
+                    PlotHelper.AddCsvExportMenu(wpfPlot3, "解析結果3");
                 }
             };
 

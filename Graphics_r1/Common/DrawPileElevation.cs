@@ -25,7 +25,9 @@ namespace PileDesign.Common
             GroundInput groundInput = null,
             bool isElementDivision = false,
             List<double> zs = null,
-            double? selectedZ = null)
+            double? selectedZ = null,
+            double? selectedTop = null,
+            double? selectedBottom = null)
 
         {
             if (canvas == null || canvas.ActualWidth == 0 || canvas.ActualHeight == 0) return;
@@ -135,6 +137,32 @@ namespace PileDesign.Common
             if (selectedZ != null)
             {
                 DrawSelectedZ(canvas, zs[0], selectedZ, ratio, topMargin);
+            }
+
+            // 選択区間の強調表示
+            if (selectedTop.HasValue && selectedBottom.HasValue)
+            {
+                double topDepth = pileTopAltitude - selectedTop.Value;
+                double bottomDepth = pileTopAltitude - selectedBottom.Value;
+
+                double y1 = topDepth * ratio + topMargin;
+                double y2 = bottomDepth * ratio + topMargin;
+
+                // 杭径を取得して幅を計算
+                double maxDia = pileBodySegments.Max(s => s.PileSection?.PileDiameter ?? 0) / 1000.0;
+                double highlightWidth = maxDia * ratio + 10;
+
+                var highlightRect = new Rectangle
+                {
+                    Stroke = Brushes.Red,
+                    StrokeThickness = 3,
+                    Fill = new SolidColorBrush(Color.FromArgb(40, 255, 0, 0)),
+                    Width = highlightWidth,
+                    Height = y2 - y1,
+                };
+                Canvas.SetLeft(highlightRect, canvasWidth * 0.5 - highlightWidth / 2);
+                Canvas.SetTop(highlightRect, y1);
+                canvas.Children.Add(highlightRect);
             }
         }
 

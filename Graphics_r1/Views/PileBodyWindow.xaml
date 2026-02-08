@@ -198,7 +198,7 @@
                         </i:EventTrigger>
                     </i:Interaction.Triggers>
                 </ComboBox>
-                <TextBlock Text="既製コンクリート杭、鋼管杭未対応" Margin="10,0,0,0" Foreground="Red"/>
+                <TextBlock Text="鋼管杭未対応" Margin="10,0,0,0" Foreground="Red"/>
             </StackPanel>
             <GroupBox Header="杭頭">
                 <StackPanel Orientation="Horizontal">
@@ -222,8 +222,6 @@
                         Content="杭頭編集"
                         Command="{Binding EditPileHeadCommand}">
                     </Button>
-
-                    <TextBlock Text="未対応" Margin="10,0,0,0" Foreground="Red"/>
                 </StackPanel>
             </GroupBox>
 

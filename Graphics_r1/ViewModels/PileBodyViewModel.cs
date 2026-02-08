@@ -834,15 +834,170 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnPileTopTypeSelectionChanged(object parameter)
         {
-            if (parameter is SelectionChangedEventArgs)
+            // ViewModelのPileBodyNoプロパティを直接使用（ComboBoxは設定されていないため）
+            int pileBodyNo = PileBodyNo;
+            if (pileBodyNo <= 0 || pileBodyNo > PileBodies.Count) return;
+
+            var selectedTopType = PileBody?.PileTopType;
+            if (string.IsNullOrEmpty(selectedTopType)) return;
+
+            PileBodies[pileBodyNo - 1].PileTop.PileTopType = selectedTopType;
+
+            // キャプテンパイル工法選択時にCaptainPileを作成してPCリングを自動選定
+            if (selectedTopType == "キャプテンパイル工法")
             {
-                if (int.TryParse(ComboBoxPileBodyNo.SelectedItem?.ToString(), out int PileBodyNo))
+                var pileTop = PileBodies[pileBodyNo - 1].PileTop;
+                // CaptainPileが存在しない場合は作成
+                if (pileTop.CaptainPile == null)
                 {
-                    PileBodies[PileBodyNo - 1].PileTopType =
-                        (string)ComboBoxPileTopType.SelectedItem;
-                    PileBodies[PileBodyNo - 1].PileTop.PileTopType =
-                        (string)ComboBoxPileTopType.SelectedItem;
+                    pileTop.CaptainPile = new(pileTop.PileCapFc, pileTop.PileCapEc);
                 }
+                AutoSelectPCRing(pileBodyNo);
+            }
+            // FT-Pile構法選択時にFTPileを作成してFTキャップを自動選定
+            else if (selectedTopType == "FT-Pile構法")
+            {
+                var pileTop = PileBodies[pileBodyNo - 1].PileTop;
+                // FTPileが存在しない場合は作成
+                if (pileTop.FTPile == null)
+                {
+                    pileTop.FTPile = new(pileTop.PileCapFc, pileTop.PileCapEc);
+                }
+                AutoSelectFTCap(pileBodyNo);
+            }
+        }
+
+        /// <summary>
+        /// キャプテンパイル工法選択時にPCリングを自動選定
+        /// セグメント0の杭径以上で最小のPCリング(-N)を選定
+        /// </summary>
+        private void AutoSelectPCRing(int pileBodyNo)
+        {
+            var pileBody = PileBodies[pileBodyNo - 1];
+            if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
+                return;
+
+            // セグメント0の杭径を取得
+            var segment0 = pileBody.PileBodySegments[0];
+            double pileDia = segment0.PileSection?.PileDiameter ?? 0;
+            if (pileDia <= 0) return;
+
+            // 杭径以上で最小のPCリングサイズを計算
+            // PCリングは800mmから3000mmまで100mm刻み
+            int targetSize = (int)Math.Ceiling(pileDia / 100.0) * 100;
+            targetSize = Math.Max(targetSize, 800);   // 最小800mm
+            targetSize = Math.Min(targetSize, 3000);  // 最大3000mm
+
+            // 標準タイプ名を生成 (例: "800-N", "1200-N")
+            string targetPCRingName = $"{targetSize}-N";
+
+            // CaptainPileのPCRingsから該当するPCRingを選択
+            var captainPile = pileBody.PileTop?.CaptainPile;
+            if (captainPile?.PCRings == null || captainPile.PCRings.Count == 0)
+                return;
+
+            var targetPCRing = captainPile.PCRings
+                .FirstOrDefault(r => r.Name == targetPCRingName);
+
+            if (targetPCRing != null)
+            {
+                // PCRingオブジェクトと選択名の両方を設定
+                captainPile.PCRing = targetPCRing;
+                captainPile.SelectedPCRingName = targetPCRingName;
+                captainPile.D = targetPCRing.D;
+
+                // Update()を呼ぶとCTPConcreteが作成され、SetBasicPropertiesも内部で呼ばれる
+                captainPile.Update();
+
+                // 引張定着筋のtD/tB最大値を更新
+                captainPile.UpdateTDorTB();
+
+                // 諸元表示を更新
+                pileBody.PileTop.SelectedPileTopSpecification = targetPCRing.GetSpecs();
+
+                Debug.WriteLine($"AutoSelectPCRing: 杭径={pileDia}mm → PCリング={targetPCRingName}");
+            }
+            else
+            {
+                Debug.WriteLine($"AutoSelectPCRing: 杭径={pileDia}mm に対応するPCリング {targetPCRingName} が見つかりません");
+            }
+        }
+
+        /// <summary>
+        /// FT-Pile構法選択時にFTキャップを自動選定
+        /// セグメント0の杭径に一致するFTキャップを選定
+        /// </summary>
+        private void AutoSelectFTCap(int pileBodyNo)
+        {
+            var pileBody = PileBodies[pileBodyNo - 1];
+            if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
+                return;
+
+            // セグメント0の杭径を取得
+            var segment0 = pileBody.PileBodySegments[0];
+            double pileDia = segment0.PileSection?.PileDiameter ?? 0;
+            if (pileDia <= 0) return;
+
+            // FTPileのFTCapsから該当するFTCapを選択
+            var ftPile = pileBody.PileTop?.FTPile;
+            if (ftPile?.FTCaps == null || ftPile.FTCaps.Count == 0)
+                return;
+
+            // 杭径に一致するFTキャップを検索（FTキャップは300-1200mm）
+            // 完全一致がなければ、杭径以上で最小のものを選択
+            var targetFTCap = ftPile.FTCaps.FirstOrDefault(c => Math.Abs(c.Phi - pileDia) < 1);
+            if (targetFTCap == null)
+            {
+                // 完全一致がない場合、杭径以上で最小のものを選択
+                targetFTCap = ftPile.FTCaps
+                    .Where(c => c.Phi >= pileDia)
+                    .OrderBy(c => c.Phi)
+                    .FirstOrDefault();
+            }
+            // それでもない場合、最大のものを選択
+            if (targetFTCap == null)
+            {
+                targetFTCap = ftPile.FTCaps.OrderByDescending(c => c.Phi).FirstOrDefault();
+            }
+
+            if (targetFTCap != null)
+            {
+                // FTCapを設定
+                ftPile.FTCap = targetFTCap;
+                ftPile.SelectedFTCapName = targetFTCap.Phi.ToString();
+                pileBody.PileTop.SelectedFTCap = (int)targetFTCap.Phi;
+
+                // 杭の寸法を設定（外径と内径）
+                // PHC杭の場合: 内径 = 外径 - 2 × コンクリート厚
+                double outerDia = pileDia;
+                double innerDia = 0;
+                var pileSection = segment0.PileSection;
+                if (pileSection != null)
+                {
+                    double thickness = pileSection.ConcreteThickness;
+                    if (thickness > 0)
+                    {
+                        innerDia = outerDia - 2 * thickness;
+                    }
+                    else
+                    {
+                        // コンクリート厚が設定されていない場合は一般的な比率で推定
+                        innerDia = outerDia * 0.6; // 仮の値
+                    }
+                }
+                ftPile.FTPilePile.SetDimensions(outerDia, innerDia);
+
+                // FTPileを更新
+                ftPile.Update();
+
+                // 諸元表示を更新
+                pileBody.PileTop.SelectedPileTopSpecification = targetFTCap.GetSpecs();
+
+                Debug.WriteLine($"AutoSelectFTCap: 杭径={pileDia}mm → FTキャップ={targetFTCap.Phi}mm");
+            }
+            else
+            {
+                Debug.WriteLine($"AutoSelectFTCap: 杭径={pileDia}mm に対応するFTキャップが見つかりません");
             }
         }
 

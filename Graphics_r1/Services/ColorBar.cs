@@ -1,5 +1,4 @@
-﻿using LiveChartsCore.SkiaSharpView.Painting;
-using PileDesign.Common;
+﻿using PileDesign.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -78,47 +77,6 @@ namespace PileDesign.Services
                 }
             }
             throw new ArgumentOutOfRangeException("Value is out of range");
-        }
-
-        // 
-        public static SolidColorPaint GetSolidColorPaint(double valueToInterpolate)
-        {
-            //List<double> points = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
-            List<Color> colors =
-            [
-                (Color)ColorConverter.ConvertFromString("#000088"),
-                (Color)ColorConverter.ConvertFromString("#0000FF"),
-                (Color)ColorConverter.ConvertFromString("#00FFFF"),
-                (Color)ColorConverter.ConvertFromString("#FFFF00"),
-                (Color)ColorConverter.ConvertFromString("#FF0000"),
-                //(Color)ColorConverter.ConvertFromString("#FFFFFF")
-            ];
-
-            List<double> points = [];
-            for (int i = 0; i < colors.Count; i++)
-            {
-                points.Add((double)i / (colors.Count - 1));
-            }
-            return InterpolateSolidColorPaint(points, colors, valueToInterpolate);
-        }
-
-        // 
-        static SolidColorPaint InterpolateSolidColorPaint(List<double> points, List<Color> colors, double value)
-        {
-            for (int i = 0; i < points.Count - 1; i++)
-            {
-                if (value >= points[i] && value <= points[i + 1])
-                {
-                    double t = (value - points[i]) / (points[i + 1] - points[i]);
-                    return new(new(
-                        (byte)(colors[i].R + t * (colors[i + 1].R - colors[i].R)),
-                        (byte)(colors[i].G + t * (colors[i + 1].G - colors[i].G)),
-                        (byte)(colors[i].B + t * (colors[i + 1].B - colors[i].B))
-                    ));
-                }
-            }
-            throw new ArgumentOutOfRangeException("Value is out of range");
-
         }
 
         public static void DrawStepColorBar(

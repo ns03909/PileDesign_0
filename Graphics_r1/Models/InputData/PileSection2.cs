@@ -331,18 +331,18 @@ namespace PileDesign.Models.InputData
         public string Grade { get; }
         public double OutDia { get; }
         public double T { get; }
-        public double Tminus => T - 1.0;
+        public double TMinus => T - 1.0;
         public double SSigmaU { get; private set; }
         public double F { get; private set; }
         public double Fcy => 1.1 * F;
-        public double OutDiaminus => OutDia - 2.0;
-        public double Aminus => Math.PI * (OutDia - Tminus) * Tminus;
+        public double OutDiaMinus => OutDia - 2.0;
+        public double AMinus => Math.PI * (OutDia - TMinus) * TMinus;
         public double SSigmaY { get; private set; }　// 材料強度 1.1F
         public double SEpsilonY { get; private set; }
         public double SEpsilonU { get; private set; }
         public double SE1 { get; private set; } = 205000.0;
         public double SE2 { get; private set; } = 205000.0 / 30.0;
-        public double Iminus => Math.PI * (Math.Pow(OutDiaminus, 4) - Math.Pow(OutDiaminus - 2 * Tminus, 4)) / 64.0;
+        public double IMinus => Math.PI * (Math.Pow(OutDiaMinus, 4) - Math.Pow(OutDiaMinus - 2 * TMinus, 4)) / 64.0;
 
         // コンストラクタ
         public InsituSteelPipe(string _Grade, double _OutDia, double _T, double _corrosionDepth)

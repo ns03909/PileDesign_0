@@ -223,15 +223,16 @@ namespace PileDesign.FEM
                 if (MasterNodes[i] != null)
                 {
                     int eq = MasterNodes[i].EquationNumber[i];
-                    ddisp[i] = dd[eq];
+                    ddisp[i] = eq < 0 ? 0 : dd[eq];
 
                     // クロス項の加算
+                    // 修正: crossIdx のマスターノードから crossIdx の方程式番号を取得
                     foreach (var (crossIdx, arm, sign) in crossTerms[i])
                     {
                         if (MasterNodes[crossIdx] != null)
                         {
-                            int eqCross = MasterNodes[i].EquationNumber[crossIdx];
-                            ddisp[i] += dd[eqCross] * arm(SlaveArm) * sign;
+                            int eqCross = MasterNodes[crossIdx].EquationNumber[crossIdx];
+                            ddisp[i] += eqCross < 0 ? 0 : dd[eqCross] * arm(SlaveArm) * sign;
                         }
                     }
                 }
@@ -270,14 +271,15 @@ namespace PileDesign.FEM
             {
                 int e_num_x = MasterNodes[0].EquationNumber[0];
                 ddisp[0] = dd[e_num_x];
+                // 修正: crossIdxのマスターノードからcrossIdxの方程式番号を取得
                 if (MasterNodes[4] != null)
                 {
-                    int e_num_yy = MasterNodes[0].EquationNumber[4];
+                    int e_num_yy = MasterNodes[4].EquationNumber[4];  // Ry contribution
                     ddisp[0] += dd[e_num_yy] * SlaveArm.Z;
                 }
                 if (MasterNodes[5] != null)
                 {
-                    int e_num_zz = MasterNodes[0].EquationNumber[5];
+                    int e_num_zz = MasterNodes[5].EquationNumber[5];  // Rz contribution
                     ddisp[0] += dd[e_num_zz] * -SlaveArm.Y;
                 }
             }
@@ -296,15 +298,16 @@ namespace PileDesign.FEM
             {
                 int e_num_y = MasterNodes[1].EquationNumber[1];
                 ddisp[1] += dd[e_num_y];
+                // 修正: crossIdxのマスターノードからcrossIdxの方程式番号を取得
                 if (MasterNodes[5] != null)
                 {
-                    int e_num_zz = MasterNodes[1].EquationNumber[4];
+                    int e_num_zz = MasterNodes[5].EquationNumber[5];  // Rz contribution
                     ddisp[1] += dd[e_num_zz] * SlaveArm.X;
                 }
 
                 if (MasterNodes[3] != null)
                 {
-                    int e_num_xx = MasterNodes[1].EquationNumber[5];
+                    int e_num_xx = MasterNodes[3].EquationNumber[3];  // Rx contribution
                     ddisp[1] += dd[e_num_xx] * -SlaveArm.Z;
                 }
             }
@@ -323,14 +326,15 @@ namespace PileDesign.FEM
             {
                 int e_num_z = MasterNodes[2].EquationNumber[2];
                 ddisp[2] += dd[e_num_z];
+                // 修正: crossIdxのマスターノードからcrossIdxの方程式番号を取得
                 if (MasterNodes[3] != null)
                 {
-                    int e_num_xx = MasterNodes[2].EquationNumber[3];
+                    int e_num_xx = MasterNodes[3].EquationNumber[3];  // Rx contribution
                     ddisp[2] += dd[e_num_xx] * SlaveArm.Y;
                 }
                 if (MasterNodes[4] != null)
                 {
-                    int e_num_yy = MasterNodes[2].EquationNumber[4];
+                    int e_num_yy = MasterNodes[4].EquationNumber[4];  // Ry contribution
                     ddisp[2] += dd[e_num_yy] * -SlaveArm.X;
                 }
             }
@@ -471,25 +475,34 @@ namespace PileDesign.FEM
 
         public void SetTransferMatrix()
         {
+            // 剛体運動学に基づく変換行列:
+            // Ux' = Ux + Ry * ΔZ - Rz * ΔY
+            // Uy' = Uy - Rx * ΔZ + Rz * ΔX
+            // Uz' = Uz + Rx * ΔY - Ry * ΔX
+            // クロス項は対応する回転自由度がスレーブの場合のみ設定
             Matrix<double> transferMatrix = Matrix<double>.Build.DenseIdentity(6);
+
+            // Rx (index 3) がスレーブ → Uy, Uz に Rx からのクロス項
             if (MasterNodes[3] != null)
             {
-                transferMatrix[0, 3] = 0;
-                transferMatrix[0, 4] = GetSlaveArm(2);
-                transferMatrix[0, 5] = -GetSlaveArm(1);
+                transferMatrix[1, 3] = -GetSlaveArm(2);  // Uy += -Rx * ΔZ
+                transferMatrix[2, 3] = GetSlaveArm(1);   // Uz += Rx * ΔY
             }
+
+            // Ry (index 4) がスレーブ → Ux, Uz に Ry からのクロス項
             if (MasterNodes[4] != null)
             {
-                transferMatrix[1, 3] = -GetSlaveArm(2);
-                transferMatrix[1, 4] = 0;
-                transferMatrix[1, 5] = GetSlaveArm(0);
+                transferMatrix[0, 4] = GetSlaveArm(2);   // Ux += Ry * ΔZ
+                transferMatrix[2, 4] = -GetSlaveArm(0);  // Uz += -Ry * ΔX
             }
+
+            // Rz (index 5) がスレーブ → Ux, Uy に Rz からのクロス項
             if (MasterNodes[5] != null)
             {
-                transferMatrix[2, 3] = GetSlaveArm(1);
-                transferMatrix[2, 4] = -GetSlaveArm(0);
-                transferMatrix[2, 5] = 0;
+                transferMatrix[0, 5] = -GetSlaveArm(1);  // Ux += -Rz * ΔY
+                transferMatrix[1, 5] = GetSlaveArm(0);   // Uy += Rz * ΔX
             }
+
             TransferMatrix = transferMatrix;
         }
 

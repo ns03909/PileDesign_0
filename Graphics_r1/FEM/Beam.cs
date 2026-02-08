@@ -39,6 +39,8 @@ namespace PileDesign.FEM
         public MomentCurvatureCurve? ResolvedCombinedCurve => _combinedCurve;
 
         // 追加: PileSection.GetMPhiRelationship で得た曲線（合成）を直接設定
+        // 注: 入力はFEM解析の単位系（φ: 1/m, M: kN·m）を期待
+        //     PHC/PRC/SC杭のGetMPhiRelationshipは既にFEM単位で値を返すため、単位変換は不要
         public void SetResolvedCombinedMphi(System.Collections.Generic.IEnumerable<double> phis,
                                             System.Collections.Generic.IEnumerable<double> moments)
         {
@@ -48,6 +50,10 @@ namespace PileDesign.FEM
             var pList = phis.ToList();
             var mList = moments.ToList();
             if (pList.Count != mList.Count || pList.Count < 2) { _combinedCurve = null; return; }
+
+            // デバッグ: 入力値を出力（単位変換なし：入力はFEM単位系を期待）
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] SetResolvedCombinedMphi: Beam={Name}, Points={pList.Count}, " +
+                $"phi[0]={pList[0]:E6} [1/m], phi[last]={pList[^1]:E6} [1/m], M[0]={mList[0]:F1} [kNm], M[last]={mList[^1]:F1} [kNm]");
 
             // フィルタ: 有限値のみ
             var pairs = new System.Collections.Generic.List<(double Phi, double Moment)>(pList.Count);
@@ -212,6 +218,44 @@ namespace PileDesign.FEM
             return (eiy, eiz);
         }
 
+        // 要素中央曲率から割線剛性（M/φ）を返す（内力計算用）
+        // φ→0では初期接線剛性に収束
+        public (double EIy_eff, double EIz_eff) EvaluateEIeffSecant(double phiY, double phiZ)
+        {
+            // 初期 EI を取得（null 安全）
+            double EI0y = 0.0;
+            double EI0z = 0.0;
+            try
+            {
+                if (Section?.Material != null)
+                {
+                    EI0y = Section.Material.E * Section.IY;
+                    EI0z = Section.Material.E * Section.IZ;
+                }
+            }
+            catch { /* 無視：フォールバックはゼロ */ }
+
+            // 合成曲線があれば合成で評価
+            if (_combinedCurve != null)
+            {
+                double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+                double EIeff = _combinedCurve.EvaluateSecant(phiRes);
+                if (!double.IsFinite(EIeff) || EIeff <= 0.0) EIeff = (EI0y > 0.0 ? EI0y : EI0z);
+                return (EIeff, EIeff);
+            }
+
+            // 個別曲線があればそれで評価、なければ初期 EI をフォールバック
+            double eiy = double.NaN;
+            double eiz = double.NaN;
+            try { eiy = _yCurve?.EvaluateSecant(phiY) ?? double.NaN; } catch { eiy = double.NaN; }
+            try { eiz = _zCurve?.EvaluateSecant(phiZ) ?? double.NaN; } catch { eiz = double.NaN; }
+
+            if (!double.IsFinite(eiy) || eiy <= 0.0) eiy = EI0y;
+            if (!double.IsFinite(eiz) || eiz <= 0.0) eiz = EI0z;
+
+            return (eiy, eiz);
+        }
+
         // i端回転
         public double Ryi_tan { get; set; }
         public double Rzi_tan { get; set; }
@@ -238,6 +282,9 @@ namespace PileDesign.FEM
 
         // 要素中央の曲率（解析中に更新される）
         public double CurrentCurvature { get; set; }
+
+        // 要素中央のモーメント（M-φ曲線から直接評価、解析中に更新される）
+        public double CurrentMoment { get; set; }
 
         [JsonIgnore]
         public Matrix<double> KeTan { get; set; }
@@ -339,13 +386,14 @@ namespace PileDesign.FEM
             double rzb = 1 + rzi + rzj;
 
             double eA_per_L = Section.Material.E * Section.AX / Length;　// Nmm >> kNm
-            double gJ_per_L = Section.Material.G * Section.IX / Length;　// Nmm >> kNm 
+            double gJ_per_L = Section.Material.G * Section.IX / Length;　// Nmm >> kNm
             double eIy_per_L1 = Section.Material.E * Section.IY / Length * k_y;
             double eIz_per_L1 = Section.Material.E * Section.IZ / Length * k_z;
-            double eIy_per_L2 = eIy_per_L1 / Length * k_y;
-            double eIz_per_L2 = eIz_per_L1 / Length * k_z;
-            double eIy_per_L3 = eIy_per_L2 / Length * k_y;
-            double eIz_per_L3 = eIz_per_L2 / Length * k_z;
+            // 修正: k_y/k_z は一度だけ掛ける（以前は二重・三重に掛けていた）
+            double eIy_per_L2 = eIy_per_L1 / Length;
+            double eIz_per_L2 = eIz_per_L1 / Length;
+            double eIy_per_L3 = eIy_per_L2 / Length;
+            double eIz_per_L3 = eIz_per_L2 / Length;
 
             // z軸まわりの曲げ
             double eIz_per_L3_RM1 = eIz_per_L3 * (rzi + rzj + 4 * rzi * rzj) / rzb;

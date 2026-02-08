@@ -115,6 +115,9 @@ namespace PileDesign.Views
                 {
                     wpfPlotM.MouseMove += (s, ev) => PlotHelper.WpfPlot_MouseMove(s, ev, nameof(ChangViewModel.CrosshairPositionText_M), "M (kNm)", "GL基準深さ(m)", 1, 3);
                     _mouseMoveMRegistered = true;
+
+                    // CSVエクスポートメニューを追加
+                    PlotHelper.AddCsvExportMenu(wpfPlotM, "曲げモーメント");
                 }
             }
 
@@ -125,6 +128,9 @@ namespace PileDesign.Views
                 {
                     wpfPlotQ.MouseMove += (s, ev) => PlotHelper.WpfPlot_MouseMove(s, ev, nameof(ChangViewModel.CrosshairPositionText_Q), "せん断力 (kN)", "GL基準深さ(m)", 1, 3);
                     _mouseMoveQRegistered = true;
+
+                    // CSVエクスポートメニューを追加
+                    PlotHelper.AddCsvExportMenu(wpfPlotQ, "せん断力");
                 }
             }
 
@@ -135,6 +141,9 @@ namespace PileDesign.Views
                 {
                     wpfPlotD.MouseMove += (s, ev) => PlotHelper.WpfPlot_MouseMove(s, ev, nameof(ChangViewModel.CrosshairPositionText_D), "変位 (m)", "GL基準深さ(m)", 1, 3);
                     _mouseMoveDRegistered = true;
+
+                    // CSVエクスポートメニューを追加
+                    PlotHelper.AddCsvExportMenu(wpfPlotD, "変位");
                 }
             }
             // 追加：初回のプロット描画を要求（DataContext 設定後に必須）

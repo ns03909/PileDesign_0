@@ -11,7 +11,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         d:DataContext="{d:DesignInstance Type=local:HorizontalCalculationViewModel}"
         mc:Ignorable="d"
-        Title="HorizontalCalculationWindow" Height="650" Width="800"
+        Title="HorizontalCalculationWindow" Height="700" Width="1200"
         x:Name="LateralCalcWin">
     
     <Window.CommandBindings>
@@ -86,6 +86,7 @@
         </Style>
 
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
+        <conv:BooleanNegationConverter x:Key="BooleanNegationConverter"/>
         <!-- 既存リソース -->
 
     </Window.Resources>
@@ -98,8 +99,8 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="2*"/>
         </Grid.ColumnDefinitions>
 
         <!-- 上部コントロール -->
@@ -207,7 +208,7 @@
                 <TextBlock Text="Level2 1荷重あたり計算ステップ数" Grid.Column="0" HorizontalAlignment="Left"/>
                 <TextBox Text="{Binding Level2CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1" 
                          Width="50" 
-                          HorizontalAlignment="Right" HorizontalContentAlignment="Right"/>
+                         HorizontalAlignment="Right" HorizontalContentAlignment="Right"/>
             </Grid>
 
 
@@ -215,8 +216,63 @@
             <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16"/>
             <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Margin="0,10,0,0"/>
 
+
+            <!-- ここを既存レイアウトの設定パネル等に挿入 -->
+            <StackPanel Orientation="Horizontal" Margin="8" VerticalAlignment="Center" x:Name="DisplacementThresholdPanel">
+                <CheckBox Content="変位閾値で解析中止"
+                      IsChecked="{Binding StopOnMaxDisplacement, Mode=TwoWay}"
+                      VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="閾値 (m):" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBox Width="60" VerticalAlignment="Center"
+                     Text="{Binding MaxAllowedDisplacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N3, ValidatesOnExceptions=True, ValidatesOnDataErrors=True}"
+                     PreviewTextInput="NumericOnly_PreviewTextInput"
+                     DataObject.Pasting="NumericOnly_Pasting"
+                     ToolTip="最大許容代表変位（m）。この値を超えると解析が停止します。"/>
+            </StackPanel>
+
+            <!-- Newton-Raphson設定 -->
+            <StackPanel Orientation="Vertical" Margin="8,4">
+                <!-- NR法の種類（排他的） -->
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="NR法:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
+                    <RadioButton Content="Full NR" GroupName="NRMethod" Margin="0,0,12,0" VerticalAlignment="Center"
+                                 IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                 ToolTip="Full Newton-Raphson法&#x0a;反復中も接線剛性を更新（高速だが不安定な場合あり）"/>
+                    <RadioButton Content="Modified NR" GroupName="NRMethod" VerticalAlignment="Center"
+                                 IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay}"
+                                 ToolTip="Modified Newton-Raphson法&#x0a;反復中は接線剛性を固定（安定）"/>
+                </StackPanel>
+
+                <!-- 収束安定化手法（排他的） -->
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="安定化:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
+                    <RadioButton Content="固定ω" GroupName="ConvergenceMethod" Margin="0,0,4,0" VerticalAlignment="Center"
+                                 IsChecked="{Binding SelectedConvergenceMethod, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=FixedRelaxation}"
+                                 ToolTip="固定緩和係数を使用（標準）"/>
+                    <TextBox Width="40" VerticalAlignment="Center" Margin="0,0,12,0"
+                             Text="{Binding RelaxationFactor, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                             PreviewTextInput="NumericOnly_PreviewTextInput"
+                             DataObject.Pasting="NumericOnly_Pasting"
+                             ToolTip="緩和係数ω（0.1-1.0）&#x0a;小さいほど安定だが収束に時間がかかる"/>
+                    <RadioButton Content="適応的ω" GroupName="ConvergenceMethod" Margin="0,0,12,0" VerticalAlignment="Center"
+                                 IsChecked="{Binding SelectedConvergenceMethod, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=AdaptiveRelaxation}"
+                                 ToolTip="適応的緩和係数&#x0a;残差の変化に応じてωを自動調整"/>
+                    <RadioButton Content="ラインサーチ" GroupName="ConvergenceMethod" VerticalAlignment="Center"
+                                 IsChecked="{Binding SelectedConvergenceMethod, Mode=TwoWay, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=LineSearch}"
+                                 ToolTip="ラインサーチ法&#x0a;Newton方向に沿って最適なステップ長を自動探索&#x0a;発散やリミットサイクルを防ぐ効果がある"/>
+                </StackPanel>
+
+                <!-- 反復なし（独立オプション） -->
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="特殊:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
+                    <CheckBox Content="反復なし（各ステップ1回解析）" VerticalAlignment="Center"
+                              IsChecked="{Binding SkipIteration, Mode=TwoWay}"
+                              ToolTip="各ステップで1回のみ解析（最も安定）&#x0a;荷重ステップ数を32～64に増やしてください"/>
+                </StackPanel>
+            </StackPanel>
+            
             <!-- ...existing code... -->
-            <Button Content="水平解析" Command="{Binding ExecuteAnalysisCommand}">
+            <Button Content="水平解析実行" Command="{Binding ExecuteAnalysisCommand}">
                 <Button.Style>
                     <Style TargetType="Button">
                         <Style.Triggers>
@@ -230,20 +286,8 @@
 
             <!--<Button Content="一時停止" Command="{Binding PauseAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
             <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
-            <Button Content="キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
+            <Button Content="水平解析キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
 
-            <!-- ここを既存レイアウトの設定パネル等に挿入 -->
-            <StackPanel Orientation="Horizontal" Margin="8" VerticalAlignment="Center" x:Name="DisplacementThresholdPanel">
-                <CheckBox Content="変位閾値で解析中止" 
-              IsChecked="{Binding StopOnMaxDisplacement, Mode=TwoWay}" 
-              VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="閾値 (m):" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                <TextBox Width="60" VerticalAlignment="Center"
-             Text="{Binding MaxAllowedDisplacement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=N3, ValidatesOnExceptions=True, ValidatesOnDataErrors=True}"
-             PreviewTextInput="NumericOnly_PreviewTextInput"
-             DataObject.Pasting="NumericOnly_Pasting"
-             ToolTip="最大許容代表変位（m）。この値を超えると解析が停止します。"/>
-            </StackPanel>
         </StackPanel>
 
         <!-- メイン表示部: TabControlでタブ切替 -->

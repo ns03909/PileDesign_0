@@ -1,5 +1,4 @@
-﻿using LiveChartsCore.SkiaSharpView.Painting;
-using SkiaSharp;
+﻿using SkiaSharp;
 using System.Windows.Media;
 
 namespace PileDesign.Common
@@ -32,16 +31,6 @@ namespace PileDesign.Common
         public static readonly SolidColorBrush DeepBlue = new(NikkenWindowsMediaColors.DeepBlue);
         public static readonly SolidColorBrush Yellow = new(NikkenWindowsMediaColors.Yellow);
         public static readonly SolidColorBrush Green = new(NikkenWindowsMediaColors.Green);
-    }
-
-    public static class NikkenPaint
-    {
-        public static readonly SolidColorPaint SkyBlue = new(new SKColor(98, 176, 226));
-        public static readonly SolidColorPaint PaleRed = new(new SKColor(233, 85, 65));
-        public static readonly SolidColorPaint Red = new(new SKColor(216, 37, 49));
-        public static readonly SolidColorPaint DeepBlue = new(new SKColor(50, 113, 173));
-        public static readonly SolidColorPaint Yellow = new(new SKColor(247, 181, 21));
-        public static readonly SolidColorPaint Green = new(new SKColor(35, 137, 102));
     }
 
     public static class NikkenSKColor

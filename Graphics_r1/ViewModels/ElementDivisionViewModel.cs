@@ -232,6 +232,33 @@ namespace PileDesign.ViewModels
             get => InputModel.EmbedmentInput.EmbedmentLayersCount != 0;
         }
 
+        // 赤ランプが1つでもあるかどうか（IsOn == false が赤）
+        public bool HasAnyRedLamp
+        {
+            get
+            {
+                bool hasSoilPileRed = SoilPileLampStates != null && SoilPileLampStates.Any(lamp => !lamp.IsOn);
+                bool hasEmbedmentRed = IsDoatsuGoryokuBaneVisible && EmbedmentLampStates != null && EmbedmentLampStates.Any(lamp => !lamp.IsOn);
+                return hasSoilPileRed || hasEmbedmentRed;
+            }
+        }
+
+        // 警告メッセージ
+        public string WarningMessage
+        {
+            get
+            {
+                if (IsDoatsuGoryokuBaneVisible)
+                {
+                    return "すべての土層-杭セット、土層-根入れセットの要素分割を確認してください。";
+                }
+                else
+                {
+                    return "すべての土層-杭セットの要素分割を確認してください。";
+                }
+            }
+        }
+
         public int SoilLayerPileSetCount => _mainWindowViewModel.CurrentInputModel?.ElementDivision?.SoilPiles?.Count ?? 0;
 
 
@@ -467,6 +494,7 @@ namespace PileDesign.ViewModels
             if (e.PropertyName == nameof(PileDesign.Models.LampState.IsOn))
             {
                 OnPropertyChanged(nameof(AllLampsLit));
+                OnPropertyChanged(nameof(HasAnyRedLamp));
             }
         }
 
@@ -568,6 +596,12 @@ namespace PileDesign.ViewModels
 
             // UI バインディング／初期描画が完了した後にランプの初期点灯を保証する
             EnsureLampInitialState();
+
+            // 土層-根入れセットタブは初期状態で隠れているため、ランプは赤（未確認）にリセット
+            foreach (var lamp in EmbedmentLampStates)
+            {
+                lamp.IsOn = false;
+            }
         }
 
 

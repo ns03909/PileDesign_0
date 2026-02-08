@@ -95,6 +95,14 @@ namespace PileDesign.Models
             UpdateAp();
         }
 
+        // 杭の外径と内径を設定
+        public void SetDimensions(double outerDia, double innerDia)
+        {
+            D1 = outerDia;
+            D2 = innerDia;
+            UpdateAp();
+        }
+
         public void UpdateAp()
         {
             Ap = Math.PI * (Math.Pow(D1, 2) - Math.Pow(D2, 2)) / 4.0;
@@ -110,6 +118,14 @@ namespace PileDesign.Models
         public FTCap FTCap = new();
         public List<FTCap> FTCaps { get; set; }
         public ObservableCollection<string> FTCapOption { get; set; } = [];
+
+        private string _selectedFTCapName;
+        public string SelectedFTCapName
+        {
+            get => _selectedFTCapName;
+            set => SetProperty(ref _selectedFTCapName, value);
+        }
+
         public double PhiC { get; private set; } // 支圧係数
         public double K0 { get; private set; } // 杭頭接合部の初期回転剛性
         public ObservableCollection<double> Ns { get; private set; }
@@ -128,10 +144,21 @@ namespace PileDesign.Models
 
         private void LoadFTCaps()
         {
-            FTCaps = FTCapLoader.LoadFromCsv(@"C:\Users\keisu\source\repos\PileDesign\PileDesign\PileLibrary\FTCap.csv");
-            foreach (var ftCap in FTCaps)
+            // 実行ファイルのディレクトリを基準にパスを組み立てる
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string filePath = System.IO.Path.Combine(baseDir, "Models", "PileLibrary", "FTCap.csv");
+
+            if (System.IO.File.Exists(filePath))
             {
-                FTCapOption.Add($"{ftCap.Phi}");
+                FTCaps = FTCapLoader.LoadFromCsv(filePath);
+                foreach (var ftCap in FTCaps)
+                {
+                    FTCapOption.Add($"{ftCap.Phi}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"FTCap.csv not found at: {filePath}");
             }
         }
 

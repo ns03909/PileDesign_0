@@ -20,11 +20,6 @@ namespace PileDesign.ViewModels
     public partial class HorizontalCalculationViewModel : ObservableObject
     {
         static HorizontalCalculationViewModel()
-        //{
-        //    try { Control.UseNativeMKL(); }          // MathNet.Numerics.MKL パッケージ導入時に有効
-        //    catch { Control.UseBestProviders(); }    // 利用可能な最適プロバイダを選択
-        //    Control.MaxDegreeOfParallelism = Environment.ProcessorCount;
-        //}
         {
             try
             {
@@ -127,6 +122,91 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _level2CalculationStepsCount, value);
                 OnPropertyChanged(nameof(TotalCalculationCount));
+            }
+        }
+
+        // Newton-Raphson緩和係数（0.0-1.0: 1.0=フル更新、小さいほど安定だが収束遅い）
+        // Full NR: 1.0推奨、Modified NR: 0.5推奨
+        private double _relaxationFactor = 1.0;
+        public double RelaxationFactor
+        {
+            get => _relaxationFactor;
+            set => SetProperty(ref _relaxationFactor, Math.Clamp(value, 0.1, 1.0));
+        }
+
+        // Modified Newton-Raphson（反復中は接線剛性を更新しない）
+        // デフォルトはFull NR（OFF）- 収束が速い
+        private bool _useModifiedNewtonRaphson = false;
+        public bool UseModifiedNewtonRaphson
+        {
+            get => _useModifiedNewtonRaphson;
+            set
+            {
+                if (SetProperty(ref _useModifiedNewtonRaphson, value))
+                {
+                    // Modified NR切り替え時に適切な緩和係数を自動設定
+                    // Full NR (OFF): ω=1.0, Modified NR (ON): ω=0.5
+                    RelaxationFactor = value ? 0.5 : 1.0;
+                }
+            }
+        }
+
+        // 反復なし簡易法（1ステップ=1回解析、最も安定だがステップ数を増やす必要あり）
+        private bool _skipIteration = false;
+        public bool SkipIteration
+        {
+            get => _skipIteration;
+            set => SetProperty(ref _skipIteration, value);
+        }
+
+        // 収束安定化手法のenum型（排他的選択）
+        public enum ConvergenceMethod
+        {
+            FixedRelaxation,    // 固定緩和係数
+            AdaptiveRelaxation, // 適応的緩和
+            LineSearch          // ラインサーチ
+        }
+
+        private ConvergenceMethod _selectedConvergenceMethod = ConvergenceMethod.FixedRelaxation;
+        public ConvergenceMethod SelectedConvergenceMethod
+        {
+            get => _selectedConvergenceMethod;
+            set
+            {
+                if (SetProperty(ref _selectedConvergenceMethod, value))
+                {
+                    // 既存のboolプロパティも更新（互換性維持）
+                    _useAdaptiveRelaxation = (value == ConvergenceMethod.AdaptiveRelaxation);
+                    _useLineSearch = (value == ConvergenceMethod.LineSearch);
+                    OnPropertyChanged(nameof(UseAdaptiveRelaxation));
+                    OnPropertyChanged(nameof(UseLineSearch));
+                }
+            }
+        }
+
+        // 適応的緩和係数（残差の変化に応じてωを自動調整）
+        // 既存コードとの互換性のため維持
+        private bool _useAdaptiveRelaxation = false;
+        public bool UseAdaptiveRelaxation
+        {
+            get => _useAdaptiveRelaxation;
+            set
+            {
+                if (SetProperty(ref _useAdaptiveRelaxation, value) && value)
+                    SelectedConvergenceMethod = ConvergenceMethod.AdaptiveRelaxation;
+            }
+        }
+
+        // ラインサーチ（線探索）- Newton方向に沿って最適なステップ長を自動探索
+        // 既存コードとの互換性のため維持
+        private bool _useLineSearch = false;
+        public bool UseLineSearch
+        {
+            get => _useLineSearch;
+            set
+            {
+                if (SetProperty(ref _useLineSearch, value) && value)
+                    SelectedConvergenceMethod = ConvergenceMethod.LineSearch;
             }
         }
 
@@ -513,6 +593,100 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // キャプテンパイル工法またはFT-Pile構法を使用している場合のチェック
+            bool hasSemiRigidPileTop = InputModel.PileBodies?.Any(pb =>
+                pb.PileTopType?.Contains("キャプテンパイル工法") == true ||
+                pb.PileTopType?.Contains("FT-Pile構法") == true) ?? false;
+
+            if (hasSemiRigidPileTop)
+            {
+                // IsPileNonLinear=false の荷重ケースがあるかチェック
+                var nonLinearOffLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases
+                    .Where(lc => !lc.IsPileNonLinear)
+                    .ToList();
+
+                if (nonLinearOffLoadCases.Count > 0)
+                {
+                    var levelNames = nonLinearOffLoadCases
+                        .Select(lc => $"レベル{lc.Level}-{lc.No}")
+                        .Distinct();
+                    var message = $"杭頭半剛接合（キャプテンパイル工法またはFT-Pile構法）を使用していますが、" +
+                                   $"以下の荷重ケースで「杭体の非線形」が無効になっています:\n{string.Join(", ", levelNames)}\n\n" +
+                                   "半剛接合の効果を考慮するには杭体の非線形を有効にする必要があります。\n" +
+                                   "すべての荷重ケースで杭体の非線形を有効にしますか？";
+
+                    var result = MessageBox.Show(message, "杭頭半剛接合の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // すべての荷重ケースで IsPileNonLinear を true に設定
+                        foreach (var lc in InputModel.LoadCasesInput.AllSeismicLoadCases)
+                        {
+                            lc.IsPileNonLinear = true;
+                        }
+                        // 共通設定も更新
+                        if (InputModel.LoadCasesInput.LoadCaseLevel1Common != null)
+                            InputModel.LoadCasesInput.LoadCaseLevel1Common.IsPileNonLinear = true;
+                        if (InputModel.LoadCasesInput.LoadCaseLevel2Common != null)
+                            InputModel.LoadCasesInput.LoadCaseLevel2Common.IsPileNonLinear = true;
+                    }
+                }
+            }
+
+            // 杭体の非線形が有効で解析ステップ数が少ない場合の警告
+            var nonLinearOnLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases
+                .Where(lc => lc.IsPileNonLinear)
+                .ToList();
+
+            if (nonLinearOnLoadCases.Count > 0)
+            {
+                bool needsMoreSteps = false;
+                string suggestedAction = "";
+
+                // レベル1の非線形解析がある場合、ステップ数をチェック
+                bool hasLevel1NonLinear = nonLinearOnLoadCases.Any(lc => lc.Level == 1);
+                bool hasLevel2NonLinear = nonLinearOnLoadCases.Any(lc => lc.Level == 2);
+
+                if (hasLevel1NonLinear && Level1CalculationStepsCount < 4)
+                {
+                    needsMoreSteps = true;
+                    suggestedAction += $"レベル1の解析ステップ数が {Level1CalculationStepsCount} と少なくなっています。\n";
+                }
+                if (hasLevel2NonLinear && Level2CalculationStepsCount < 8)
+                {
+                    needsMoreSteps = true;
+                    suggestedAction += $"レベル2の解析ステップ数が {Level2CalculationStepsCount} と少なくなっています。\n";
+                }
+
+                if (needsMoreSteps)
+                {
+                    var message = $"杭体の非線形解析が有効ですが、解析ステップ数が少ない可能性があります。\n\n" +
+                                   suggestedAction +
+                                   "\n収束性や精度を向上させるため、解析ステップ数を増やすことをお勧めします。\n" +
+                                   "（推奨: レベル1は4以上、レベル2は16〜32）\n\n" +
+                                   "解析ステップ数を変更しますか？";
+
+                    var result = MessageBox.Show(message, "解析ステップ数の確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // 推奨値に設定
+                        if (hasLevel1NonLinear && Level1CalculationStepsCount < 4)
+                        {
+                            Level1CalculationStepsCount = 4;
+                        }
+                        if (hasLevel2NonLinear && Level2CalculationStepsCount < 8)
+                        {
+                            Level2CalculationStepsCount = 16;
+                        }
+                        MessageBox.Show($"解析ステップ数を更新しました。\n" +
+                                         $"レベル1: {Level1CalculationStepsCount}\n" +
+                                         $"レベル2: {Level2CalculationStepsCount}",
+                                         "設定更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+            }
+
             IsAnalysisRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
             
@@ -640,6 +814,14 @@ namespace PileDesign.ViewModels
                 {
                     skippedNoCurve++;
                     continue;
+                }
+
+                // デバッグ: TryCallMPhiRelationshipの戻り値を確認
+                if (curve.Value.Phis.Count > 0 && curve.Value.Moments.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] TryCallMPhiRelationship result for Beam={beam.Name}: " +
+                        $"Phis[0]={curve.Value.Phis[0]:E6}, Phis[last]={curve.Value.Phis[^1]:E6}, " +
+                        $"Moments[0]={curve.Value.Moments[0]:E6}, Moments[last]={curve.Value.Moments[^1]:E6}");
                 }
 
                 beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
@@ -776,9 +958,7 @@ namespace PileDesign.ViewModels
                     }
 
                     // IEnumerable経由のフォールバック
-                    var e1 = v1 as System.Collections.IEnumerable;
-                    var e2 = v2 as System.Collections.IEnumerable;
-                    if (e1 != null && e2 != null)
+                    if (v1 is System.Collections.IEnumerable e1 && v2 is System.Collections.IEnumerable e2)
                     {
                         var phis = new List<double>();
                         var ms = new List<double>();
@@ -811,8 +991,7 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    var ptsObj = pointsProp.GetValue(ret) as System.Collections.IEnumerable;
-                    if (ptsObj != null)
+                    if (pointsProp.GetValue(ret) is System.Collections.IEnumerable ptsObj)
                     {
                         var phis = new List<double>();
                         var ms = new List<double>();
@@ -886,7 +1065,7 @@ namespace PileDesign.ViewModels
             if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0) return;
 
             const double KMin = 1e-6;   // 特異化回避用の下限
-            const double KBig = 1e12;   // 剛体相当
+            const double KBig = 1e6;    // 剛体相当（アーム変換後の条件数を改善するため1e6に低減）
 
             foreach (var spring in model.RotationalSprings)
             {
@@ -896,7 +1075,7 @@ namespace PileDesign.ViewModels
                 // 回転バネの名前から杭番号を抽出して軸力を取得
                 // 名前形式: "RθXY-{pileNo}"
                 double axialN = 0.0;
-                if (spring.Name != null && spring.Name.Contains("-"))
+                if (spring.Name != null && spring.Name.Contains('-'))
                 {
                     var parts = spring.Name.Split('-');
                     if (parts.Length >= 2 && int.TryParse(parts[^1], out int pileNo))
@@ -904,7 +1083,7 @@ namespace PileDesign.ViewModels
                         var pile = InputModel.PileLayoutItems?.FirstOrDefault(p => p.No == pileNo);
                         if (pile != null)
                         {
-                            axialN = pile.AxialForce; // 既にN単位
+                            axialN = pile.AxialForce; // kN単位（PileBodyInput内でN単位に変換される）
                         }
                     }
                 }
@@ -1087,7 +1266,8 @@ namespace PileDesign.ViewModels
                                 "αL:" + $"{loadCombination.Alpha1:N2}" +
                                 ", βU:" + $"{loadCombination.Beta1:N2}" +
                                 ", βL:" + $"{loadCombination.Beta2:N2}" +
-                                ",　荷重ステップ" + (step + 1) + "/" + nStep);
+                                ",　荷重ステップ" + (step + 1) + "/" + nStep +
+                                (RelaxationFactor < 1.0 ? $", 緩和係数={RelaxationFactor:N2}" : ""));
                             targetModel.InitializeNormsqR_onNormsqFint();
 
                             int n_iteration = 1;
@@ -1102,14 +1282,21 @@ namespace PileDesign.ViewModels
 
                             targetModel.SetR();
 
-                            const int maxIterations = 100; // 最大反復回数
-                            // デバッグ: ループ条件を出力（ビルド確認用 v2）
-                            System.Diagnostics.Debug.WriteLine($"[v2] Pre-iteration: NormsROnNormsFint={targetModel.NormsROnNormsFint:E6}, alpha={alpha:E6}, IsPileNonLinear={loadCase.IsPileNonLinear}");
+                            // 反復なし簡易法の場合は1回で終了
+                            int maxIterations = SkipIteration ? 1 : 100;
+                            // 適応的緩和係数の初期化
+                            double currentRelaxFactor = SkipIteration ? 1.0 : RelaxationFactor; // 簡易法は緩和なし
+                            double prevResidual = targetModel.NormsROnNormsFint;
+                            int consecutiveDecrease = 0; // 連続減少カウント
+
+                            // デバッグ: ループ条件を出力
+                            System.Diagnostics.Debug.WriteLine($"[v10] Pre-iteration: SkipIteration={SkipIteration}, maxIter={maxIterations}");
                             while (targetModel.NormsROnNormsFint >= alpha && n_iteration <= maxIterations)
                             {
                                 double diagKMin = double.NaN, diagKMax = double.NaN;
                                 double springKMin = double.NaN, springKMax = double.NaN;
                                 double dispMaxAbs = double.NaN;
+                                double usedRelaxFactor = currentRelaxFactor; // このステップで使う値を保存
 
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
                                 await Task.Run(() =>
@@ -1121,34 +1308,53 @@ namespace PileDesign.ViewModels
                                     //SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
 
                                     // 接線剛性更新は杭非線形ONのときのみ
-                                    // v8: 最初の3反復は接線剛性更新をスキップして安定化
-                                    System.Diagnostics.Debug.WriteLine($"[v8] Iteration loop: n={n_iteration}, IsPileNonLinear={loadCase.IsPileNonLinear}, beam count={targetModel.Beams.Count}");
-                                    if (loadCase.IsPileNonLinear && n_iteration > 3)
+                                    // Modified Newton-Raphson: 反復中は接線剛性を更新しない（荷重ステップ開始時のみ）
+                                    // Full Newton-Raphson: 毎反復で接線剛性を更新
+                                    System.Diagnostics.Debug.WriteLine($"[v9] Iteration loop: n={n_iteration}, IsPileNonLinear={loadCase.IsPileNonLinear}, UseModifiedNR={UseModifiedNewtonRaphson}");
+                                    if (loadCase.IsPileNonLinear && !UseModifiedNewtonRaphson)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"[v8] -> Calling UpdateBeamMPhiTangent");
+                                        // Full Newton-Raphson: 毎反復で接線剛性を更新
+                                        System.Diagnostics.Debug.WriteLine($"[v9] -> Calling UpdateBeamMPhiTangent (Full NR)");
                                         UpdateBeamMPhiTangent(targetModel);
                                     }
                                     else if (loadCase.IsPileNonLinear)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"[v8] -> Skipping UpdateBeamMPhiTangent for first 3 iterations (n={n_iteration})");
+                                        System.Diagnostics.Debug.WriteLine($"[v9] -> Skipping UpdateBeamMPhiTangent (Modified NR)");
                                     }
                                     else
-                                        System.Diagnostics.Debug.WriteLine("[v2] -> Skipping UpdateBeamMPhiTangent (IsPileNonLinear=false)");
+                                        System.Diagnostics.Debug.WriteLine("[v9] -> Skipping UpdateBeamMPhiTangent (IsPileNonLinear=false)");
 
                                     // KTan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
                                     FindK(iLC, targetModel);
 
-                                    // 1ステップ解く
-                                    SolveDdAndUpdateX(targetModel);
+                                    // ラインサーチ or 通常の更新
+                                    if (UseLineSearch)
+                                    {
+                                        // ラインサーチ: Newton方向を計算し、最適なステップ長を探索
+                                        var newtonDir = SolveNewtonDirection(targetModel);
+                                        double currentRes = targetModel.NormsROnNormsFint;
 
-                                    // 断面力・T更新と残差更新
-                                    FindT(iLC, targetModel);
+                                        // バックトラッキングラインサーチで最適αを見つける
+                                        double optimalAlpha = BacktrackingLineSearch(
+                                            targetModel, newtonDir, currentRes, iLC, loadCase.IsPileNonLinear);
 
-                                    // 割線剛性更新も杭非線形ONのときのみ
-                                    if (loadCase.IsPileNonLinear)
-                                        UpdateBeamMPhiSecant(targetModel);
+                                        // 最適αでの状態は既にEvaluateResidualAtAlpha内で適用済み
+                                        usedRelaxFactor = optimalAlpha; // ログ用に記録
+                                    }
+                                    else
+                                    {
+                                        // 通常の更新（緩和係数適用）
+                                        SolveDdAndUpdateX(targetModel, usedRelaxFactor);
 
-                                    targetModel.FindR();
+                                        // 割線剛性更新（FindTの前に実行して、最新のK_secで内力を計算）
+                                        if (loadCase.IsPileNonLinear)
+                                            UpdateBeamMPhiSecant(targetModel);
+
+                                        // 断面力・T更新と残差更新
+                                        FindT(iLC, targetModel);
+
+                                        targetModel.FindR();
+                                    }
 
                                     // 診断値: ばね剛性min/max（PrepareKMatで集計済み）
                                     springKMin = _lastSpringKMin;
@@ -1161,7 +1367,7 @@ namespace PileDesign.ViewModels
                                     dispMaxAbs = GetMaxAbsIncrementalDisp(targetModel);
 
                                     // ループ内の要所で再チェック（重い処理の長い段階がある場合はここに複数入れる）
-                                    //token.ThrowIfCancellationRequested();
+                                    token.ThrowIfCancellationRequested();
 
                                 }, token);
 
@@ -1182,17 +1388,66 @@ namespace PileDesign.ViewModels
 
 
                                 // 残差ログ
+                                string relaxInfo;
+                                if (UseLineSearch && usedRelaxFactor < 0.99)
+                                    relaxInfo = $" (α={usedRelaxFactor:N2})";  // ラインサーチのステップ長
+                                else if (currentRelaxFactor < 0.99)
+                                    relaxInfo = $" (ω={currentRelaxFactor:N2})"; // 緩和係数
+                                else
+                                    relaxInfo = "";
                                 if (targetModel.NormsROnNormsFint < alpha)
                                 {
-                                    await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged");
+                                    await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged" + relaxInfo);
                                 }
                                 else
                                 {
-                                    await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}");
+                                    await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}" + relaxInfo);
                                 }
 
                                 // 診断ログ
                                 await AddLogAsync($"　　diag(K)[min,max]=[{diagKMin:E3}, {diagKMax:E3}], spring k[min,max]=[{springKMin:E3}, {springKMax:E3}], max|d|={dispMaxAbs:E3}");
+
+                                // 適応的緩和係数の更新（UseAdaptiveRelaxation=trueの場合のみ）
+                                double currentResidual = targetModel.NormsROnNormsFint;
+                                if (UseAdaptiveRelaxation)
+                                {
+                                    double residualRatio = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
+
+                                    if (residualRatio < 0.8) // 残差が20%以上減少 → 良好な収束
+                                    {
+                                        consecutiveDecrease++;
+                                        // 2回連続で大幅減少したらω回復（最大1.0）
+                                        if (consecutiveDecrease >= 2 && currentRelaxFactor < 1.0)
+                                        {
+                                            currentRelaxFactor = Math.Min(currentRelaxFactor * 1.3, 1.0);
+                                            consecutiveDecrease = 0;
+                                        }
+                                    }
+                                    else if (residualRatio > 1.02) // 残差が2%以上増加 → 即座にω減少
+                                    {
+                                        // 増加量に応じてω減少幅を調整（より積極的に）
+                                        double reductionFactor = residualRatio > 1.5 ? 0.25 : (residualRatio > 1.1 ? 0.5 : 0.7);
+                                        currentRelaxFactor = Math.Max(currentRelaxFactor * reductionFactor, 0.1);
+                                        consecutiveDecrease = 0;
+                                    }
+                                    else if (residualRatio < 1.0) // 微減（0-20%）
+                                    {
+                                        consecutiveDecrease++;
+                                        // 3回連続微減でもω小幅回復
+                                        if (consecutiveDecrease >= 3 && currentRelaxFactor < 0.7)
+                                        {
+                                            currentRelaxFactor = Math.Min(currentRelaxFactor * 1.1, 0.7);
+                                            consecutiveDecrease = 0;
+                                        }
+                                    }
+                                    else // 停滞（1.0-1.02）
+                                    {
+                                        consecutiveDecrease = 0;
+                                        // 停滞時もωを少し下げる
+                                        currentRelaxFactor = Math.Max(currentRelaxFactor * 0.85, 0.15);
+                                    }
+                                }
+                                prevResidual = currentResidual;
 
                                 await Task.Yield(); // UIスレッドを解放
                                 n_iteration += 1;
@@ -1342,7 +1597,10 @@ namespace PileDesign.ViewModels
                 double phiY = (thetaYj - thetaYi) / L;
                 double phiZ = (thetaZj - thetaZi) / L;
 
-                var (EIy_eff, EIz_eff) = beam.EvaluateEIeff(phiY, phiZ);
+                // 接線剛性の場合は dM/dφ、割線剛性の場合は M/φ を使用
+                var (EIy_eff, EIz_eff) = isTangent
+                    ? beam.EvaluateEIeff(phiY, phiZ)
+                    : beam.EvaluateEIeffSecant(phiY, phiZ);
 
                 // 初期 EI（断面から計算）
                 double EI0y = beam.Section.Material.E * beam.Section.IY;
@@ -1354,20 +1612,31 @@ namespace PileDesign.ViewModels
                 bool useCurveBase = (EI_base > 1e-6);
 
                 // 倍率に変換（数値安定化のため上下限）
-                // v7: 下限を 0.20 (20%) に下げて塑性領域での剛性低下を許容
-                const double RATIO_MIN = 0.20;
+                // v8: 下限を 0.001 (0.1%) に下げて正確なM-φ関係を再現
+                const double RATIO_MIN = 0.001;
                 double ratioY, ratioZ;
-                if (useCurveBase)
+
+                // デバッグ: E*I と EI_base の比較（初回のみ）
+                if (beamIdx == 0 && isTangent)
                 {
-                    // M-φ曲線の初期接線剛性を基準にした相対的な剛性変化
-                    ratioY = (double.IsNaN(EIy_eff) || EI_base <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI_base, RATIO_MIN, 1.0);
-                    ratioZ = (double.IsNaN(EIz_eff) || EI_base <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI_base, RATIO_MIN, 1.0);
+                    System.Diagnostics.Debug.WriteLine($"[v8] EI comparison: E*Iy={EI0y:E6}, E*Iz={EI0z:E6}, EI_base(curve)={EI_base:E6}, ratio={EI_base/EI0y:F4}");
                 }
-                else
+
+                // v8: 常にE*Iを基準にしてratioを計算
+                // SetKeでは EI_used = E*I * ratio なので、
+                // ratio = EI_sec / E*I とすることで EI_used = EI_sec となる
+                // これによりM = EI_sec × φ = M(φ)（M-φ曲線上の値）が得られる
+                ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, RATIO_MIN, 1.0);
+                ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, RATIO_MIN, 1.0);
+
+                // 要素中央の曲率を保存（合成値）- 接線/割線の両方で更新
+                double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+                beam.CurrentCurvature = phiRes;
+
+                // 要素中央のモーメント（M-φ曲線から直接評価）
+                if (beam.ResolvedCombinedCurve != null)
                 {
-                    // フォールバック: 断面EIを基準
-                    ratioY = (double.IsNaN(EIy_eff) || EI0y <= 0) ? 1.0 : Math.Clamp(EIy_eff / EI0y, RATIO_MIN, 1.0);
-                    ratioZ = (double.IsNaN(EIz_eff) || EI0z <= 0) ? 1.0 : Math.Clamp(EIz_eff / EI0z, RATIO_MIN, 1.0);
+                    beam.CurrentMoment = beam.ResolvedCombinedCurve.EvaluateMoment(phiRes);
                 }
 
                 if (isTangent)
@@ -1381,23 +1650,17 @@ namespace PileDesign.ViewModels
                     double newKy = (prevKy > 0.01) ? prevKy * (1 - RELAXATION) + ratioY * RELAXATION : ratioY;
                     double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION) + ratioZ * RELAXATION : ratioZ;
 
-                    System.Diagnostics.Debug.WriteLine($"[v7] UpdateBeamMPhiTangent: Beam={beam.Name}, phiZ={phiZ:E6}, EIy_eff={EIy_eff:E6}, EI_base={EI_base:E6}, ratioY={ratioY:E6}, prevKy={prevKy:E6}, newKy={newKy:E6}");
+                    System.Diagnostics.Debug.WriteLine($"[v8] UpdateBeamMPhiTangent: Beam={beam.Name}, phiRes={phiRes:E6}, EIy_eff={EIy_eff:E6}, EI0y={EI0y:E6}, ratioY={ratioY:E6}, prevKy={prevKy:E6}, newKy={newKy:E6}");
                     beam.Ktan_y = newKy;
                     beam.Ktan_z = newKz;
                     beam.SetKe(true); // KeTan 再構築
-
-                    // 要素中央の曲率を保存（合成値）
-                    beam.CurrentCurvature = Math.Sqrt(phiY * phiY + phiZ * phiZ);
                 }
                 else
                 {
-                    // 割線剛性にも緩和を適用（収束性改善）
-                    // v4: 0.5→0.3に下げてより緩やかな剛性更新
-                    const double RELAXATION_SEC = 0.3;
-                    double prevKy = beam.Ksec_y;
-                    double prevKz = beam.Ksec_z;
-                    beam.Ksec_y = (prevKy > 0.01) ? prevKy * (1 - RELAXATION_SEC) + ratioY * RELAXATION_SEC : ratioY;
-                    beam.Ksec_z = (prevKz > 0.01) ? prevKz * (1 - RELAXATION_SEC) + ratioZ * RELAXATION_SEC : ratioZ;
+                    // v8: 割線剛性は緩和なしで正確な値を使用
+                    // 内力計算でM-φ曲線上のMを得るため、EI_sec = M/φ を正確に反映する必要がある
+                    beam.Ksec_y = ratioY;
+                    beam.Ksec_z = ratioZ;
                     beam.SetKe(false); // KeSec 再構築
                 }
             }
@@ -1527,10 +1790,10 @@ namespace PileDesign.ViewModels
             targetModel.MapOnKtanMat(); // 要素剛性、節点剛性の剛性マトリクスKmatへのマッピング
         }
 
-        private static void SolveDdAndUpdateX(AnaModel targetModel) // Solve Ku = -R 全体剛性方程式の求解, Update x = x + u 配置更新 // R = R - dF
-                                                                    // >> Solve Ku = R にする。
+        private static void SolveDdAndUpdateX(AnaModel targetModel, double relaxationFactor = 1.0) // Solve Ku = -R 全体剛性方程式の求解, Update x = x + u 配置更新 // R = R - dF
+                                                                                                   // >> Solve Ku = R にする。
         {
-            Solver.SolveDisp(targetModel); // 増分変位  [d] = inv([Kaa_tan])[-R]
+            Solver.SolveDisp(targetModel, relaxationFactor); // 増分変位  [d] = inv([Kaa_tan])[-R] * relaxationFactor
         }
 
         // K対角の最小/最大を取得（isTan=trueで接線剛性）
@@ -1539,13 +1802,35 @@ namespace PileDesign.ViewModels
             // GetForcedDispOnLoadVectorAndStiffnessMatrix: (K, rhs) を返す前提
             var (K, _) = model.GetForcedDispOnLoadVectorAndStiffnessMatrix(isTan);
             double min = double.PositiveInfinity, max = double.NegativeInfinity;
+            int minIdx = -1, maxIdx = -1;
             int n = K.RowCount;
             for (int i = 0; i < n; i++)
             {
                 double v = K[i, i];
-                if (v < min) min = v;
-                if (v > max) max = v;
+                if (v < min) { min = v; minIdx = i; }
+                if (v > max) { max = v; maxIdx = i; }
             }
+
+            // 最小値のDOFを特定して出力（1回だけ）
+            const double smallThreshold = 1e-6;
+            if (min < smallThreshold && minIdx >= 0)
+            {
+                string minDofName = $"eq{minIdx}";
+                foreach (var node in model.Nodes)
+                {
+                    for (int d = 0; d < 6; d++)
+                    {
+                        if (node.EquationNumber[d] == minIdx)
+                        {
+                            string dofName = d switch { 0 => "Ux", 1 => "Uy", 2 => "Uz", 3 => "Rx", 4 => "Ry", _ => "Rz" };
+                            minDofName = $"{node.Name}:{dofName}";
+                            break;
+                        }
+                    }
+                }
+                System.Diagnostics.Debug.WriteLine($"[GetKDiagonalMinMax] SMALL diag: eq={minIdx}, {minDofName}, val={min:E3}");
+            }
+
             if (double.IsInfinity(min)) min = double.NaN;
             if (double.IsInfinity(max)) max = double.NaN;
             return (min, max);
@@ -1574,10 +1859,285 @@ namespace PileDesign.ViewModels
             foreach (Beam beam in targetModel.Beams) beam.SetBeamDispAndForce();
             foreach (HorizontalSoilSpring horizontalSoilSpring in targetModel.HorizontalSoilSprings)
                 horizontalSoilSpring.SetBeamDispAndForce();
+            // 回転ばねの内力も計算
+            if (targetModel.RotationalSprings != null)
+            {
+                foreach (RotationalSpring rotationalSpring in targetModel.RotationalSprings)
+                    rotationalSpring.SetBeamDispAndForce();
+            }
 
             targetModel.MapOnKsecMat();
             targetModel.SetT();
         }
+
+        #region Line Search (線探索)
+
+        /// <summary>
+        /// Newton方向を解く（変位を更新しない）
+        /// </summary>
+        /// <returns>増分変位ベクトル（Newton方向）</returns>
+        private static MathNet.Numerics.LinearAlgebra.Vector<double> SolveNewtonDirection(AnaModel targetModel)
+        {
+            targetModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true); // KAA_tanとVectorRを取得
+
+            MathNet.Numerics.LinearAlgebra.Vector<double> newtonDirection;
+            try
+            {
+                var x = CsparseLinearSolver.Solve(targetModel.KAA_tan, targetModel.VectorR, isSpd: false);
+                newtonDirection = MathNet.Numerics.LinearAlgebra.Vector<double>.Build.DenseOfArray(x);
+            }
+            catch
+            {
+                newtonDirection = targetModel.KAA_tan.Solve(targetModel.VectorR);
+            }
+
+            // 変位増分制限（発散防止）
+            const double maxDispIncrement = 0.05; // 最大増分 50mm
+            double maxAbsIncrement = newtonDirection.AbsoluteMaximum();
+            if (maxAbsIncrement > maxDispIncrement)
+            {
+                double scaleFactor = maxDispIncrement / maxAbsIncrement;
+                newtonDirection *= scaleFactor;
+                System.Diagnostics.Debug.WriteLine($"[LineSearch] Newton direction limited: max={maxAbsIncrement:E3} -> scaled by {scaleFactor:F4}");
+            }
+
+            return newtonDirection;
+        }
+
+        /// <summary>
+        /// 指定したステップ長αで変位を更新し、残差を評価する
+        /// </summary>
+        /// <param name="targetModel">解析モデル</param>
+        /// <param name="savedVectorD">保存された累積変位</param>
+        /// <param name="newtonDirection">Newton方向</param>
+        /// <param name="alpha">ステップ長</param>
+        /// <param name="iLC">荷重ケース番号</param>
+        /// <param name="isPileNonLinear">杭非線形フラグ</param>
+        /// <param name="isLightweight">軽量評価モード（割線剛性更新をスキップ）</param>
+        /// <returns>残差ノルム ||R||²/||Fint||²</returns>
+        private double EvaluateResidualAtAlpha(
+            AnaModel targetModel,
+            MathNet.Numerics.LinearAlgebra.Vector<double> savedVectorD,
+            MathNet.Numerics.LinearAlgebra.Vector<double> newtonDirection,
+            double alpha,
+            int iLC,
+            bool isPileNonLinear,
+            bool isLightweight = false)
+        {
+            // αを適用した増分変位
+            var incrementalDisp = newtonDirection * alpha;
+
+            // 累積変位を更新（ラインサーチ用メソッドで直接設定）
+            targetModel.SetDispVectorDirect(savedVectorD + incrementalDisp, incrementalDisp);
+
+            // 節点変位を更新（Solver.SolveDisp内のロジックを再現）
+            UpdateNodeDisplacementsForLineSearch(targetModel, incrementalDisp);
+
+            // 割線剛性更新（非線形の場合）
+            // 軽量モードでは現在の割線剛性を使用（近似的だが高速）
+            if (isPileNonLinear && !isLightweight)
+                UpdateBeamMPhiSecant(targetModel);
+
+            // 内力計算
+            FindT(iLC, targetModel);
+
+            // 残差計算
+            targetModel.FindR();
+
+            return targetModel.NormsROnNormsFint;
+        }
+
+        /// <summary>
+        /// ラインサーチ用: 増分変位から節点変位を更新する
+        /// Solver.SolveDispのロジックを再現
+        /// </summary>
+        private static void UpdateNodeDisplacementsForLineSearch(AnaModel targetModel, MathNet.Numerics.LinearAlgebra.Vector<double> incrementalDispVector)
+        {
+            foreach (var node in targetModel.Nodes)
+            {
+                double[] ddisp = new double[6];
+
+                // クロス項の定義: (クロス先index, arm成分, 符号)
+                (int crossIdx, Func<Vector3S, double> arm, double sign)[][] crossTerms =
+                [
+                    [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)], // 0: Ux
+                    [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)], // 1: Uy
+                    [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)], // 2: Uz
+                    [], [], [], // 3: Rx // 4: Ry // 5: Rz
+                ];
+
+                for (int i = 0; i < 6; i++)
+                {
+                    int e_num = node.EquationNumber[i];
+                    if (node.MasterNodes[i] != null)
+                    {
+                        int eq = node.MasterNodes[i].EquationNumber[i];
+                        ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
+
+                        foreach (var (crossIdx, arm, sign) in crossTerms[i])
+                        {
+                            if (node.MasterNodes[crossIdx] != null)
+                            {
+                                int crossEq = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
+                                double armVal = arm(node.SlaveArm);
+                                ddisp[i] += (crossEq >= 0 ? incrementalDispVector[crossEq] : 0.0) * armVal * sign;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        ddisp[i] = e_num < 0 ? 0 : incrementalDispVector[e_num];
+                    }
+                }
+
+                var incDisp = new NodeDisp(ddisp[0], ddisp[1], ddisp[2], ddisp[3], ddisp[4], ddisp[5]);
+                node.IncrementalDisp = incDisp;
+
+                // 累積変位の更新
+                if (node.CumulativeDisp == null)
+                    node.CumulativeDisp = incDisp;
+                else
+                    node.CumulativeDisp = new NodeDisp(
+                        node.CumulativeDisp.Ux + incDisp.Ux,
+                        node.CumulativeDisp.Uy + incDisp.Uy,
+                        node.CumulativeDisp.Uz + incDisp.Uz,
+                        node.CumulativeDisp.Rx + incDisp.Rx,
+                        node.CumulativeDisp.Ry + incDisp.Ry,
+                        node.CumulativeDisp.Rz + incDisp.Rz
+                    );
+            }
+        }
+
+        /// <summary>
+        /// 遅延バックトラッキングラインサーチ（最適化版）
+        /// まずα=1.0で試し、残差が増加した場合のみフルラインサーチを実行
+        /// 試行中は軽量評価（割線剛性更新スキップ）で高速化
+        /// </summary>
+        /// <param name="targetModel">解析モデル</param>
+        /// <param name="newtonDirection">Newton方向</param>
+        /// <param name="currentResidual">現在の残差</param>
+        /// <param name="iLC">荷重ケース番号</param>
+        /// <param name="isPileNonLinear">杭非線形フラグ</param>
+        /// <returns>最適なステップ長α</returns>
+        private double BacktrackingLineSearch(
+            AnaModel targetModel,
+            MathNet.Numerics.LinearAlgebra.Vector<double> newtonDirection,
+            double currentResidual,
+            int iLC,
+            bool isPileNonLinear)
+        {
+            // 現在の累積変位と節点変位を保存
+            var savedVectorD = targetModel.VectorD.Clone();
+            var savedNodeDisps = SaveNodeDisplacements(targetModel);
+
+            // まずα=1.0で完全評価（これが成功すれば即終了）
+            double alpha = 1.0;
+            double trialResidual = EvaluateResidualAtAlpha(
+                targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: false);
+
+            // 残差が減少していれば成功（厳密なArmijo条件より緩和）
+            // 残差が10%以上増加しなければ受け入れる（発散防止に十分）
+            if (trialResidual <= currentResidual * 1.1)
+            {
+                if (trialResidual <= currentResidual)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LineSearch] α=1.0 accepted, residual: {currentResidual:E3} -> {trialResidual:E3}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LineSearch] α=1.0 accepted (slight increase OK), residual: {currentResidual:E3} -> {trialResidual:E3}");
+                }
+                return alpha; // α=1.0で成功
+            }
+
+            // α=1.0で残差が大きく増加した場合のみフルラインサーチを実行
+            System.Diagnostics.Debug.WriteLine($"[LineSearch] α=1.0 rejected (residual increased: {currentResidual:E3} -> {trialResidual:E3}), starting backtracking...");
+
+            // ラインサーチパラメータ
+            const double rho = 0.5;       // 縮小率
+            const int maxTrials = 4;      // 最大試行回数（軽量評価なので高速）
+            const double alphaMin = 0.1;  // 最小ステップ長
+
+            double bestAlpha = alpha;
+            double bestResidual = trialResidual;
+
+            alpha *= rho; // α=0.5から開始
+
+            // 試行中は軽量評価（割線剛性更新スキップ）で高速化
+            for (int trial = 1; trial < maxTrials && alpha >= alphaMin; trial++)
+            {
+                // 状態を復元してからα評価（軽量モード）
+                RestoreNodeDisplacements(targetModel, savedNodeDisps);
+
+                trialResidual = EvaluateResidualAtAlpha(
+                    targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: true);
+
+                System.Diagnostics.Debug.WriteLine($"[LineSearch] trial={trial}, α={alpha:F4}, residual={trialResidual:E3} (lightweight)");
+
+                // 最小残差を記録
+                if (trialResidual < bestResidual)
+                {
+                    bestResidual = trialResidual;
+                    bestAlpha = alpha;
+                }
+
+                // 残差が現在値より減少したら成功（完全評価で確認）
+                if (trialResidual < currentResidual)
+                {
+                    // 採用するαで完全評価を実行
+                    RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                    double finalResidual = EvaluateResidualAtAlpha(
+                        targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: false);
+                    System.Diagnostics.Debug.WriteLine($"[LineSearch] Accepted α={alpha:F4}, final residual: {currentResidual:E3} -> {finalResidual:E3}");
+                    return alpha;
+                }
+
+                // αを縮小
+                alpha *= rho;
+            }
+
+            // すべての試行で条件を満たさなかった場合、最小残差のαを使用
+            System.Diagnostics.Debug.WriteLine($"[LineSearch] Using best α={bestAlpha:F4} with residual={bestResidual:E3}");
+
+            // 最良のαで完全評価を実行
+            RestoreNodeDisplacements(targetModel, savedNodeDisps);
+            EvaluateResidualAtAlpha(targetModel, savedVectorD, newtonDirection, bestAlpha, iLC, isPileNonLinear, isLightweight: false);
+
+            return bestAlpha;
+        }
+
+        /// <summary>
+        /// 節点変位を保存
+        /// </summary>
+        private static Dictionary<FEM.Node, (NodeDisp incremental, NodeDisp cumulative)> SaveNodeDisplacements(AnaModel targetModel)
+        {
+            var saved = new Dictionary<FEM.Node, (NodeDisp, NodeDisp)>();
+            foreach (var node in targetModel.Nodes)
+            {
+                saved[node] = (
+                    node.IncrementalDisp?.Clone(),
+                    node.CumulativeDisp?.Clone()
+                );
+            }
+            return saved;
+        }
+
+        /// <summary>
+        /// 節点変位を復元
+        /// </summary>
+        private static void RestoreNodeDisplacements(AnaModel targetModel, Dictionary<FEM.Node, (NodeDisp incremental, NodeDisp cumulative)> saved)
+        {
+            foreach (var node in targetModel.Nodes)
+            {
+                if (saved.TryGetValue(node, out var displacement))
+                {
+                    node.IncrementalDisp = displacement.incremental?.Clone();
+                    node.CumulativeDisp = displacement.cumulative?.Clone();
+                }
+            }
+        }
+
+        #endregion
 
         private void InitializeSoilDisplacementIncrement(AnaModel targetModel, LoadCase loadCase, LoadCombination loadCombination, int level, bool isLiquefaction, double nStep)
         {
@@ -1714,7 +2274,7 @@ namespace PileDesign.ViewModels
                 {
                     var item = InputModel.ElementDivision.DoatsuGoryokuBane.Items[i];
 
-                    const double KminSoilDoatsu = 1e-3;  // 最小地盤バネ剛性 [kN/m]
+                    const double KminSoilDoatsu = 100.0;  // 最小地盤バネ剛性 [kN/m]
                     var relDispTop = item.TopEmbedmentNode.CumulativeDisp - item.TopSoilNode.CumulativeDisp;
                     var kVecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
                     double kxTop = Math.Max(SafeK(kVecTop.Kx), KminSoilDoatsu);
@@ -1766,7 +2326,8 @@ namespace PileDesign.ViewModels
                     }
 
                     // 地盤バネの剛性に最小値を設定（0になると解析が不安定になる）
-                    const double KminSoil = 1e-3;  // 最小地盤バネ剛性 [kN/m]
+                    // 最小値は初期剛性の1%程度を確保（1e-3は小さすぎて発散の原因になる）
+                    const double KminSoil = 100.0;  // 最小地盤バネ剛性 [kN/m]
                     k = Math.Max(SafeK(k), KminSoil);
                     pileLayoutItem.HorizontalSoilSprings[i].SetKe(k, k, 0, 0, 0, 0, isTan);
 
@@ -1778,7 +2339,8 @@ namespace PileDesign.ViewModels
             // 追加: 杭頭 M-θ を RotationalSpring の Ke に反映
             if (model?.RotationalSprings != null && model.RotationalSprings.Count > 0)
             {
-                const double KminRot = 1e-6;
+                // 杭頭回転ばねの最小剛性（小さすぎると発散の原因になる）
+                const double KminRot = 1e1;  // 最小回転剛性 [kNm/rad] - キャプテンパイル等のM-θ曲線を反映できるよう1e3から1e1に低減
                 // const double KBig = 1e12; // 旧: 並進・Rz の剛結用の巨大値
 
                 foreach (var pile in InputModel.PileLayoutItems)
@@ -1800,27 +2362,54 @@ namespace PileDesign.ViewModels
                     if (rxy.Mode == RotationalSpringMode.CombinedXY)
                     {
                         double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
-                        double kxy = isTan
-                            ? (rxy.CurveXY != null ? SafeK(rxy.CurveXY.EvaluateTangent(theta)) : SafeK(rxy.KthetaXY ?? 0.0))
-                            : (rxy.KthetaXY.HasValue ? SafeK(rxy.KthetaXY.Value) : (rxy.CurveXY != null ? SafeK(rxy.CurveXY.EvaluateTangent(theta)) : 0.0));
+                        // 修正: CurveXYが存在する場合は曲線を優先使用（KthetaXYより優先）
+                        // これにより非線形M-θ曲線が正しく反映される
+                        double kxy;
+                        if (rxy.CurveXY != null)
+                        {
+                            kxy = isTan
+                                ? SafeK(rxy.CurveXY.EvaluateTangent(theta))
+                                : SafeK(rxy.CurveXY.EvaluateSecant(theta));
+                        }
+                        else
+                        {
+                            kxy = SafeK(rxy.KthetaXY ?? 0.0);
+                        }
                         kxy = Math.Max(kxy, KminRot);
                         kRx = kxy; kRy = kxy;
                     }
                     else
                     {
+                        // SingleDof モード: Curveが存在する場合は曲線を優先使用
                         if (rxy.Dof == RotationalDof.Rx)
                         {
-                            double k = isTan
-                                ? (rxy.Curve != null ? SafeK(rxy.Curve.EvaluateTangent(dRx)) : SafeK(rxy.Ktheta ?? 0.0))
-                                : (rxy.Ktheta.HasValue ? SafeK(rxy.Ktheta.Value) : (rxy.Curve != null ? SafeK(rxy.Curve.EvaluateTangent(dRx)) : 0.0));
+                            double k;
+                            if (rxy.Curve != null)
+                            {
+                                k = isTan
+                                    ? SafeK(rxy.Curve.EvaluateTangent(dRx))
+                                    : SafeK(rxy.Curve.EvaluateSecant(dRx));
+                            }
+                            else
+                            {
+                                k = SafeK(rxy.Ktheta ?? 0.0);
+                            }
                             kRx = Math.Max(k, KminRot);
                             kRy = KminRot;
                         }
                         else if (rxy.Dof == RotationalDof.Ry)
                         {
-                            double k = isTan
-                                ? (rxy.Curve != null ? SafeK(rxy.Curve.EvaluateTangent(dRy)) : SafeK(rxy.Ktheta ?? 0.0))
-                                : (rxy.Ktheta.HasValue ? SafeK(rxy.Ktheta.Value) : (rxy.Curve != null ? SafeK(rxy.Curve.EvaluateTangent(dRy)) : 0.0));
+                            double k;
+                            if (rxy.Curve != null)
+                            {
+                                k = isTan
+                                    ? SafeK(rxy.Curve.EvaluateTangent(dRy))
+                                    : SafeK(rxy.Curve.EvaluateSecant(dRy));
+                            }
+                            else
+                            {
+                                k = SafeK(rxy.Ktheta ?? 0.0);
+                            }
                             kRy = Math.Max(k, KminRot);
                             kRx = KminRot;
                         }
@@ -1830,7 +2419,7 @@ namespace PileDesign.ViewModels
                     // 引数は (kx, ky, kz, kxx(Rx), kyy(Ry), kzz(Rz), isTan)
                     System.Diagnostics.Debug.WriteLine($"PrepareKmat: RotSpring={rxy.Name}, Mode={rxy.Mode}, dRx={dRx:E3}, dRy={dRy:E3}, set_kRx={kRx:E3}, set_kRy={kRy:E3}, isTan={isTan}");
 
-                    const double KBig = 1e12; // 数値不安定なら 1e9～1e11 に調整
+                    const double KBig = 1e6; // アーム変換後の条件数を改善するため1e6に低減
                     double kx = rxy.TieUx ? KBig : 0.0;
                     double ky = rxy.TieUy ? KBig : 0.0;
                     double kz = rxy.TieUz ? KBig : 0.0;

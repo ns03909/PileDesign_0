@@ -19,6 +19,13 @@ namespace PileDesign.ViewModels
         public double FigScale { get; set; } // 図の縮尺
         public const double Sscale = 10;
 
+        /// <summary>
+        /// φ角度の最大・最小制限値（±90度）
+        /// ジンバルロック回避のため以前は89.9に制限していたが、
+        /// IsPerspective=false時は問題ないため90.0に設定
+        /// </summary>
+        public const double MaxPhiAngle = 90.0;
+
         public Action UpdateCanvas3DAction { get; set; }
 
         private Point3D _ct; // 透視変換の図心

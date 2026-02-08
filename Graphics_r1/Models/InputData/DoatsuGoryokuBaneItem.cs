@@ -153,30 +153,47 @@ namespace PileDesign.Models.InputData
         // kN/m3
         public double GetTangentStiffness(double disp)
         {
+            double absDisp = Math.Abs(disp);
             double fraction = Math.Pow(10, -6);
-            if (disp == 0)
+            double k0 = GetPressure(fraction) / fraction; // 初期剛性
+            if (absDisp < fraction)
             {
-                return GetPressure(fraction) / fraction;
+                // 初期剛性
+                return k0;
             }
-            else if (disp < DeltaP)
+            else if (absDisp < DeltaP)
             {
-                return (GetPressure(disp + fraction) - GetPressure(disp - fraction)) / (2 * fraction);
+                // 非線形領域: 数値微分で接線剛性を求める
+                return (GetPressure(absDisp + fraction) - GetPressure(absDisp - fraction)) / (2 * fraction);
             }
-            else { return 0; }
+            else
+            {
+                // 塑性領域: 小さな接線剛性を維持（ゼロだと剛性マトリクスが特異になる）
+                // HorizontalSoilReaction.GetkhTanと同様に、初期剛性の0.01%程度を返す
+                return 0.0001 * k0;
+            }
         }
 
         public double GetSecantStiffness(double disp)
         {
+            double absDisp = Math.Abs(disp);
             double fraction = Math.Pow(10, -6);
-            if (disp == 0)
+            if (absDisp < fraction)
             {
+                // 初期剛性
                 return GetPressure(fraction) / fraction;
             }
-            else if (disp < DeltaP)
+            else if (absDisp < DeltaP)
             {
-                return GetPressure(disp) / disp;
+                // 非線形領域: 割線剛性 = P / |disp|
+                return GetPressure(absDisp) / absDisp;
             }
-            else { return 0; }
+            else
+            {
+                // 塑性領域: 圧力は最大値(Pp - P0)で一定
+                // 割線剛性 = P_max / |disp|
+                return (Pp - P0) / absDisp;
+            }
         }
 
         // 剛性ベクトルを返すメソッド

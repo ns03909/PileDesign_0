@@ -2,7 +2,6 @@
 using AvalonDock.Layout;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LiveChartsCore.Defaults;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
@@ -2498,12 +2497,5 @@ namespace PileDesign.ViewModels
         {
             Update(); // Update() を呼び出してグラフを更新
         }
-    }
-
-    [Serializable]
-    public class CustomScatterPoint(double x, double y, string text) : ObservablePoint(x, y)
-    {
-        // テキストラベルのプロパティ
-        public string Text { get; set; } = text;
     }
 }

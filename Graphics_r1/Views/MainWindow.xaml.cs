@@ -226,6 +226,35 @@ namespace PileDesign.Views
             }
         }
 
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // 確認ダイアログを表示
+            var result = MessageBox.Show(
+                "現在のデータを保存しますか？",
+                "確認",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question
+            );
+
+            switch (result)
+            {
+                case MessageBoxResult.Yes:
+                    // 保存して閉じる
+                    if (DataContext is MainWindowViewModel viewModel)
+                    {
+                        viewModel.SaveInputModelFile();
+                    }
+                    break;
+                case MessageBoxResult.No:
+                    // 保存せずに閉じる
+                    break;
+                case MessageBoxResult.Cancel:
+                    // 閉じるのをキャンセル
+                    e.Cancel = true;
+                    break;
+            }
+        }
+
         private void Window_Closed(object sender, EventArgs e)
         {
             // MainWindowが閉じられたときにOptionWindowも閉じる
@@ -820,24 +849,30 @@ namespace PileDesign.Views
                          Math.Abs(targetPhi - vm.CanvasThreeDView.Phi));
             int duration = (int)Math.Clamp(150 + angDelta * 4.0, 220, 700);
 
-            await AnimateViewToAsync(targetTht, Math.Clamp(targetPhi, -89.9, 89.9), duration, _viewAnimationCts.Token);
+            await AnimateViewToAsync(targetTht, Math.Clamp(targetPhi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle), duration, _viewAnimationCts.Token);
         }
 
         // XY平面モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonXYPlane_Clicked(object sender, RoutedEventArgs e)
         {
+            if (DataContext is MainWindowViewModel vm)
+                vm.CanvasThreeDView.IsPerspective = false;
             await AnimateToAnglesAsync(-90, 90);
         }
 
         // YZ平面モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonYZPlane_Clicked(object sender, RoutedEventArgs e)
         {
+            if (DataContext is MainWindowViewModel vm)
+                vm.CanvasThreeDView.IsPerspective = false;
             await AnimateToAnglesAsync(0, 0);
         }
 
         // XZ平面モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonXZPlane_Clicked(object sender, RoutedEventArgs e)
         {
+            if (DataContext is MainWindowViewModel vm)
+                vm.CanvasThreeDView.IsPerspective = false;
             await AnimateToAnglesAsync(-90, 0);
         }
 
@@ -910,6 +945,9 @@ namespace PileDesign.Views
             _rightDragged = false;
             UnhookRendering();
             isLightweightDrawing = false;
+
+            // 沈下マップツールチップを非表示
+            HideSettlementTooltip();
 
             if (e.LeftButton == MouseButtonState.Released)
             {
@@ -1237,7 +1275,7 @@ namespace PileDesign.Views
             double newPhi = _anchorPhi + delta.Y * RotateDegPerPixelY;
 
             // φの範囲制限
-            newPhi = Math.Clamp(newPhi, -89.9, 89.9);
+            newPhi = Math.Clamp(newPhi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle);
 
             // 角度が変わっていない場合はスキップ（無駄な再描画を防止）
             if (Math.Abs(newTht - _lastRenderedTht) < 0.01 &&
@@ -1432,6 +1470,19 @@ namespace PileDesign.Views
                 previousMousePosition = currentMousePosition;
 
                 UpdateWhileMouseAction();
+            }
+
+            // 沈下マップツールチップの更新（ボタンが押されていない時のみ）
+            if (e.LeftButton == MouseButtonState.Released &&
+                e.RightButton == MouseButtonState.Released &&
+                !IsMouseWheelPressed)
+            {
+                Point mousePos = e.GetPosition(Canvas3DLayout);
+                UpdateSettlementTooltip(mousePos);
+            }
+            else
+            {
+                HideSettlementTooltip();
             }
         }
 
@@ -3021,7 +3072,7 @@ namespace PileDesign.Views
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
             ActivateGroupPileLoadTab();
-            MessageBox.Show("群杭沈下解析は、（初期状態で左側にある）「群杭荷重」タブで、" +
+            MessageBox.Show("群杭沈下解析は、（初期状態で左側にある）「群杭荷重」タブで行います。" +
                 "「荷重」、「土層」、「グリッド」を設定し、最下段の「群杭沈下解析実行」ボタンを押してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 

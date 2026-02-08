@@ -370,7 +370,7 @@
                                                 <TextBlock Text="FTキャップ"/>
                                                 <ComboBox x:Name="ComboBoxFTCap" Width="100" HorizontalContentAlignment="Right"
                                                     ItemsSource="{Binding PileTop.FTPile.FTCapOption}"
-                                                    SelectedItem="{Binding PileTop.SelectedFTCap, UpdateSourceTrigger=PropertyChanged}"
+                                                    SelectedItem="{Binding PileTop.FTPile.SelectedFTCapName, UpdateSourceTrigger=PropertyChanged}"
                                                     SelectionChanged="ComboBoxFTCapChanged" />
                                             </StackPanel>
 
@@ -448,7 +448,7 @@
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="MNインタラクション" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="MNInteractionPane" Title="MNインタラクション" CanClose="False" CanHide="True">
                                 <!--<lvc:CartesianChart Grid.Row="1" AutoUpdateEnabled="True"
                                         Series="{Binding ChartMNSeries, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
                                         XAxes="{Binding ChartNAxes, UpdateSourceTrigger=PreviewLostKeyboardFocus}"

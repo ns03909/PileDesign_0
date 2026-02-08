@@ -93,7 +93,7 @@ namespace PileDesign.FEM
             Nodes[0].SetBoundary(GetActionPointBoundary());
 
             // RigidBodies[0] : 完全剛体（DGB ノード + CapNode 用）
-            RigidBodies.Add(new(actionNode, [true, true, true, true, true, true])); // 
+            RigidBodies.Add(new(actionNode, [true, true, true, true, true, true])); 
         }
 
         // 杭配置により作用点の拘束を返すメソッド
@@ -271,7 +271,7 @@ namespace PileDesign.FEM
             double x = pile.X;
             double y = pile.Y;
             int soilPileAltNo = pile.SoilPileAltNo;
-            double initialRotK = 10e12;
+            double initialRotK = 1e6;  // アーム変換後の条件数を改善するため1e6に低減
 
             if (InputModel.ElementDivision.SoilPiles == null ||
                 soilPileAltNo - 1 < 0 ||
@@ -286,6 +286,9 @@ namespace PileDesign.FEM
             double z0 = soilPile.ZDataItems[0].Z;
             var capNode = new Node();
             capNode.SetNodeInfo($"CapNode-{pile.No}", x, y, z0);
+            // CapNodeはRigidBodyのスレーブとして使用されるため、境界条件を事前に設定
+            // これによりAnaModel構築時に正しく固定DOFとして認識される
+            capNode.SetBoundary(new Boundary(true, true, true, true, true, true));
             result.CapNode = capNode;
 
             Node prevPileNode = null;
@@ -310,7 +313,7 @@ namespace PileDesign.FEM
                         TieUy = true,
                         TieUz = true,
                         TieRz = true,
-                        Kbig = 10e12
+                        Kbig = 1e6  // アーム変換後の条件数を改善するため1e6に低減
                     };
                     result.RotationalSpring = rxy;
                     prevPileNode = pileNode;
@@ -421,7 +424,7 @@ namespace PileDesign.FEM
 
                 int soilPileAltNo = pile.SoilPileAltNo;
 
-                double initialRotK = 10e12;
+                double initialRotK = 1e6;  // アーム変換後の条件数を改善するため1e6に低減
 
                 if (InputModel.ElementDivision.SoilPiles == null ||
                     soilPileAltNo - 1 < 0 ||
@@ -464,7 +467,7 @@ namespace PileDesign.FEM
                             TieUy = true,
                             TieUz = true,
                             TieRz = true, // Rz も一致させたいなら true
-                            Kbig = 10e12
+                            Kbig = 1e6  // アーム変換後の条件数を改善するため1e6に低減
                         };
                         RotationalSprings.Add(rxy);
                         pile.PileTopRotationalSpring = rxy;

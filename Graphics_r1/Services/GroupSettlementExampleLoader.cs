@@ -50,6 +50,11 @@ namespace PileDesign.Services
             GroupSettlementExampleData data,
             MainWindowViewModel viewModel)
         {
+            // 群杭沈下解析結果をクリア
+            inputModel.PileGroupSettlement.SettlementGridData?.Clear();
+            inputModel.PileGroupSettlement.SettlementGridX?.Clear();
+            inputModel.PileGroupSettlement.SettlementGridY?.Clear();
+
             // 慣性力中心点を設定
             if (data.InertiaPoint != null)
             {

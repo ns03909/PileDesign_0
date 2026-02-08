@@ -29,7 +29,7 @@ namespace PileDesign.FEM
         public RigidLink(string name, Node nodeI, Node nodeJ,
                          bool tieUx, bool tieUy, bool tieUz,
                          bool tieRx, bool tieRy, bool tieRz,
-                         double kbig = 1e12)
+                         double kbig = 1e6)  // アーム変換後の条件数を改善するため1e6に低減
         {
             Name = name ?? throw new ArgumentNullException(nameof(name));
             NodeI = nodeI ?? throw new ArgumentNullException(nameof(nodeI));

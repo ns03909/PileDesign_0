@@ -553,8 +553,14 @@ namespace PileDesign.Models.InputData
             return phiC;
         }
 
-        // ある軸力時のM-φ関係を得るメソッド
-        internal (List<double>, List<double>) GetMPhiRelationship(double Ntarget)
+        // IPileSectionCalculation インターフェース実装（親クラスのオーバーライド）
+        public override (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+        {
+            return GetMPhiRelationshipInternal(axialN);
+        }
+
+        // ある軸力時のM-φ関係を得るメソッド（内部実装）
+        internal (List<double>, List<double>) GetMPhiRelationshipInternal(double Ntarget)
         {
             (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
