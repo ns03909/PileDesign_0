@@ -76,12 +76,12 @@ namespace PileDesign.Models.PileLibrary
                 catch (CsvHelper.TypeConversion.TypeConverterException ex)
                 {
                     // 型変換失敗の行はスキップしてデバッグ出力
-                    System.Diagnostics.Debug.WriteLine($"FTCap.LoadFromCsv: skipped row {csv.Context.Parser.Row} - {ex.Message}");
+                    //System.Diagnostics.Debug.WriteLine($"FTCap.LoadFromCsv: skipped row {csv.Context.Parser.Row} - {ex.Message}");
                     continue;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"FTCap.LoadFromCsv: unexpected error row {csv.Context.Parser.Row} - {ex.Message}");
+                    //System.Diagnostics.Debug.WriteLine($"FTCap.LoadFromCsv: unexpected error row {csv.Context.Parser.Row} - {ex.Message}");
                     continue;
                 }
             }

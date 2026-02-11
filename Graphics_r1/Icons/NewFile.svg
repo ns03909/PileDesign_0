@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
-    <g transform="matrix(1,0,0,1,-1424,-1424)">
-        <rect id="NewFile" x="1424" y="1424" width="128" height="128" style="fill:none;"/>
-        <clipPath id="_clip1">
-            <rect id="NewFile1" serif:id="NewFile" x="1424" y="1424" width="128" height="128"/>
-        </clipPath>
-        <g clip-path="url(#_clip1)">
-            <g transform="matrix(1.265657,0,0,1.265657,-395.296989,-394.850902)">
-                <path d="M1523.645,1537.979L1452.355,1537.979L1452.355,1436.855L1503.635,1436.855L1523.645,1466.418C1523.645,1466.418 1522.656,1538.928 1523.645,1537.979Z" style="fill:rgb(204,204,204);"/>
-            </g>
-            <g transform="matrix(1.265657,0,0,1.265657,-395.296989,-394.850902)">
-                <path d="M1523.645,1466.418L1503.052,1436.855L1494.594,1453.327L1523.645,1466.418Z" style="fill:url(#_Linear2);"/>
+    <g transform="matrix(1,0,0,1,-1424,-1780)">
+        <g id="NewFile" transform="matrix(1,0,0,1,0,356)">
+            <rect x="1424" y="1424" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="1424" y="1424" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(1.265657,0,0,1.265657,-395.296989,-394.850902)">
+                    <path d="M1523.645,1537.979L1452.355,1537.979L1452.355,1436.855L1503.635,1436.855L1523.645,1466.418C1523.645,1466.418 1522.656,1538.928 1523.645,1537.979Z" style="fill:rgb(204,204,204);"/>
+                </g>
+                <g transform="matrix(1.265657,0,0,1.265657,-395.296989,-394.850902)">
+                    <path d="M1523.645,1466.418L1503.052,1436.855L1494.594,1453.327L1523.645,1466.418Z" style="fill:url(#_Linear2);"/>
+                </g>
             </g>
         </g>
     </g>

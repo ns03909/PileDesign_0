@@ -136,17 +136,17 @@ namespace PileDesign.Views
 
             if (_viewModel.PileSection.PileSectionType == "PHC杭")
             {
-                ComboBoxPHCPileType.ItemsSource = _viewModel.PileSection.PHCOption;
+                ComboBoxPHCPileType.ItemsSource = PileSection.PHCOption;
                 ComboBoxPHCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
             }
             else if (_viewModel.PileSection.PileSectionType == "PRC杭")
             {
-                ComboBoxPRCPileType.ItemsSource = _viewModel.PileSection.PRCOption;
+                ComboBoxPRCPileType.ItemsSource = PileSection.PRCOption;
                 ComboBoxPRCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
             }
             else if (_viewModel.PileSection.PileSectionType == "SC杭")
             {
-                ComboBoxSCPileType.ItemsSource = _viewModel.PileSection.SCOption;
+                ComboBoxSCPileType.ItemsSource = PileSection.SCOption;
                 ComboBoxSCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
             }
 

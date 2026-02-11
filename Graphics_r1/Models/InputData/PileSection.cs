@@ -62,12 +62,32 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pileBodyNo, value);
         }
 
-        public (List<double> N, List<double> Q) FactoredServiceNQ { get; set; }
-        public (List<double> N, List<double> Q) FactoredDagameNQ { get; set; }
-        public (List<double> N, List<double> Q) FactoredUltimateNQ { get; set; }
-        public (List<double> N, List<double> Q) UnfactoredServiceNQ { get; set; }
-        public (List<double> N, List<double> Q) UnfactoredDagameNQ { get; set; }
-        public (List<double> N, List<double> Q) UnfactoredUltimateNQ { get; set; }
+        // --- NQプロパティ（計算プロパティ） ---
+        // NQ Raw（N[N], Q[N]）を取得し、スケーリング後（kN, kN）を返す
+        public (List<double> N, List<double> Q) UnfactoredServiceNQ =>
+            _unfactoredServiceNQCache ??= GetNQScaled(nameof(UnfactoredServiceNQ));
+        public (List<double> N, List<double> Q) UnfactoredDamageNQ =>
+            _unfactoredDamageNQCache ??= GetNQScaled(nameof(UnfactoredDamageNQ));
+        public (List<double> N, List<double> Q) UnfactoredUltimateNQ =>
+            _unfactoredUltimateNQCache ??= GetNQScaled(nameof(UnfactoredUltimateNQ));
+        public (List<double> N, List<double> Q) FactoredServiceNQ =>
+            _factoredServiceNQCache ??= GetNQScaled(nameof(FactoredServiceNQ));
+        public (List<double> N, List<double> Q) FactoredDamageNQ =>
+            _factoredDamageNQCache ??= GetNQScaled(nameof(FactoredDamageNQ));
+        public (List<double> N, List<double> Q) FactoredUltimateNQ =>
+            _factoredUltimateNQCache ??= GetNQScaled(nameof(FactoredUltimateNQ));
+
+        // 後方互換性のためのエイリアス（Dagame -> Damage）
+        public (List<double> N, List<double> Q) UnfactoredDagameNQ => UnfactoredDamageNQ;
+        public (List<double> N, List<double> Q) FactoredDagameNQ => FactoredDamageNQ;
+
+        // --- NQキャッシュ ---
+        private (List<double> N, List<double> Q)? _unfactoredServiceNQCache;
+        private (List<double> N, List<double> Q)? _unfactoredDamageNQCache;
+        private (List<double> N, List<double> Q)? _unfactoredUltimateNQCache;
+        private (List<double> N, List<double> Q)? _factoredServiceNQCache;
+        private (List<double> N, List<double> Q)? _factoredDamageNQCache;
+        private (List<double> N, List<double> Q)? _factoredUltimateNQCache;
 
         // --- 追加: NMキャッシュ（ウィンドウ起動時の再計算を抑制） ---
         private (List<double> N, List<double> M)? _unfactoredServiceNMCache;
@@ -76,6 +96,13 @@ namespace PileDesign.Models.InputData
         private (List<double> N, List<double> M)? _factoredServiceNMCache;
         private (List<double> N, List<double> M)? _factoredDamageNMCache;
         private (List<double> N, List<double> M)? _factoredUltimateNMCache;
+
+        // --- 追加: M-φキャッシュ（同一断面・同一軸力での再計算を抑制） ---
+        // キーは断面プロパティハッシュ + 軸力(kN)を丸めた値
+        private static readonly Dictionary<string, (List<double> Phis, List<double> Moments)> _mphiCache = [];
+        private static readonly object _mPhiCacheLock = new();
+        private static int _mPhiCacheHitCount = 0;
+        private static int _mPhiCacheMissCount = 0;
 
         /// <summary>
         /// 断面パラメータ変更時にすべてのキャッシュを一括で無効化します。
@@ -266,21 +293,21 @@ namespace PileDesign.Models.InputData
             return filteredN.Any() ? filteredN.Min() : 0.0;
         }
 
-        public double UnfactoredServiceNmax => GetFilteredNMax(UnfactoredServiceNM);
-        public double UnfactoredDamageNmax => GetFilteredNMax(UnfactoredDamageNM);
-        public double UnfactoredUltimateNmax => GetFilteredNMax(UnfactoredUltimateNM);
+        public double UnfactoredServiceNMax => GetFilteredNMax(UnfactoredServiceNM);
+        public double UnfactoredDamageNMax => GetFilteredNMax(UnfactoredDamageNM);
+        public double UnfactoredUltimateNMax => GetFilteredNMax(UnfactoredUltimateNM);
 
-        public double UnfactoredServiceNmin => GetFilteredNMin(UnfactoredServiceNM);
-        public double UnfactoredDamageNmin => GetFilteredNMin(UnfactoredDamageNM);
-        public double UnfactoredUltimateNmin => GetFilteredNMin(UnfactoredUltimateNM);
+        public double UnfactoredServiceNMin => GetFilteredNMin(UnfactoredServiceNM);
+        public double UnfactoredDamageNMin => GetFilteredNMin(UnfactoredDamageNM);
+        public double UnfactoredUltimateNMin => GetFilteredNMin(UnfactoredUltimateNM);
 
-        public double FactoredServiceNmax => GetFilteredNMax(FactoredServiceNM);
-        public double FactoredDamageNmax => GetFilteredNMax(FactoredDamageNM);
-        public double FactoredUltimateNmax => GetFilteredNMax(FactoredUltimateNM);
+        public double FactoredServiceNMax => GetFilteredNMax(FactoredServiceNM);
+        public double FactoredDamageNMax => GetFilteredNMax(FactoredDamageNM);
+        public double FactoredUltimateNMax => GetFilteredNMax(FactoredUltimateNM);
 
-        public double FactoredServiceNmin => GetFilteredNMin(FactoredServiceNM);
-        public double FactoredDamageNmin => GetFilteredNMin(FactoredDamageNM);
-        public double FactoredUltimateNmin => GetFilteredNMin(FactoredUltimateNM);
+        public double FactoredServiceNMin => GetFilteredNMin(FactoredServiceNM);
+        public double FactoredDamageNMin => GetFilteredNMin(FactoredDamageNM);
+        public double FactoredUltimateNMin => GetFilteredNMin(FactoredUltimateNM);
 
         /// <summary>
         /// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。
@@ -296,11 +323,85 @@ namespace PileDesign.Models.InputData
         ///   φ: [1/m] = [rad/m]
         ///   M: [kNm]
         /// </summary>
-        public (List<double> Phis, List<double> Moments) GetMphiRelationship(double axialN)
-            => GetMphiRelationship(axialN, 1.0);
+        public (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN)
+            => GetMPhiRelationship(axialN, 1.0);
 
-        public (List<double> Phis, List<double> Moments) GetMphiRelationship(double axialN, double _)
+        /// <summary>
+        /// M-φキャッシュ用のキーを生成します。
+        /// 断面の種類と主要パラメータ + 軸力を組み合わせた文字列を返します。
+        /// 軸力は1kN単位で丸めてキャッシュヒット率を向上させます。
+        /// 注: このメソッドはGetMPhiRelationshipと同じ単位系（kN）を期待
+        /// </summary>
+        private string GetMPhiCacheKey(double axialN)
         {
+            // 軸力を1kN単位で丸める（同程度の軸力では同じ曲線とみなす）
+            // 注: axialNはkN単位を期待（GetMPhiRelationshipの入力と同じ）
+            long axialNRounded = (long)Math.Round(axialN);
+
+            // 断面タイプに応じて関連パラメータを含める
+            return (PileBodyType, PileSectionType) switch
+            {
+                // 場所打ちRC杭
+                ("場所打ち鉄筋コンクリート杭", _) =>
+                    $"RC|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
+
+                // 場所打ち鋼管RC杭 - RC部
+                ("場所打ち鋼管コンクリート杭", "鉄筋コンクリート部") =>
+                    $"SPRC-RC|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
+
+                // 場所打ち鋼管RC杭 - 鋼管RC部
+                ("場所打ち鋼管コンクリート杭", "鋼管コンクリート部") =>
+                    $"SPRC-SP|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|N={axialNRounded}",
+
+                // PHC杭
+                ("既製コンクリート杭", "PHC杭") =>
+                    $"PHC|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
+                // PRC杭
+                ("既製コンクリート杭", "PRC杭") =>
+                    $"PRC|{PileDiameter}|{ConcreteThickness}|{ConcreteFc}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|{TendonDp}|{TendonAp}|{TendonSigmaPy}|{TendonSigmaPu}|{Prestress}|N={axialNRounded}",
+
+                // SC杭
+                ("既製コンクリート杭", "SC杭") =>
+                    $"SC|{PileDiameter}|{PipeTs}|{ConcreteThickness}|{ConcreteFc}|{PipeGrade}|{PipeDia}|{CorrosionDepth}|N={axialNRounded}",
+
+                // 鋼管杭（未対応）
+                _ => $"OTHER|{PileBodyType}|{PileSectionType}|N={axialNRounded}"
+            };
+        }
+
+        // デバッグ用: GetMPhiRelationship呼び出し回数
+        private static int _getMphiCallCount = 0;
+
+        public (List<double> Phis, List<double> Moments) GetMPhiRelationship(double axialN, double _)
+        {
+            _getMphiCallCount++;
+
+            // キャッシュキーを生成
+            string cacheKey = GetMPhiCacheKey(axialN);
+
+            // 最初の5回は必ずログ出力
+            //if (_getMPhiCallCount <= 5)
+            //{
+            //    System.Diagnostics.Debug.WriteLine($"[GetMPhiRelationship #{_getMphiCallCount}] axialN={axialN:F1} kN, key={cacheKey}");
+            //}
+
+            // キャッシュから取得を試みる
+            lock (_mPhiCacheLock)
+            {
+                if (_mphiCache.TryGetValue(cacheKey, out var cachedResult))
+                {
+                    _mPhiCacheHitCount++;
+                    // 常にヒット時はログ出力（最初の20回）
+                    //if (_mphiCacheHitCount <= 20)
+                    //{
+                    //    System.Diagnostics.Debug.WriteLine($"[M-φ Cache HIT #{_mphiCacheHitCount}] key={cacheKey}, points={cachedResult.Phis.Count}");
+                    //}
+                    // キャッシュされたリストのコピーを返す（元データの変更防止）
+                    return (new List<double>(cachedResult.Phis), new List<double>(cachedResult.Moments));
+                }
+            }
+
             try
             {
                 var section = CreateSectionCalculator();
@@ -308,7 +409,7 @@ namespace PileDesign.Models.InputData
                 // 断面が生成できない場合はフォールバック
                 if (section == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"GetMphiRelationship: CreateSectionCalculator returned null - PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
+                    //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship: CreateSectionCalculator returned null - PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                     return CreateLinearFallback();
                 }
 
@@ -320,7 +421,7 @@ namespace PileDesign.Models.InputData
                 // 結果が不正な場合もフォールバック
                 if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
                 {
-                    System.Diagnostics.Debug.WriteLine($"GetMphiRelationship: Invalid result - phisRaw={phisRaw?.Count}, msRaw={msRaw?.Count}, PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
+                    //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship: Invalid result - phisRaw={phisRaw?.Count}, msRaw={msRaw?.Count}, PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                     return CreateLinearFallback();
                 }
 
@@ -328,13 +429,53 @@ namespace PileDesign.Models.InputData
                 var phis = phisRaw.Select(p => p * 1000.0).ToList();
                 var ms = msRaw.Select(m => m * 1e-6).ToList();
 
-                System.Diagnostics.Debug.WriteLine($"GetMphiRelationship: Success - Points={phis.Count}, phi=[{phis.First():E3}..{phis.Last():E3}], M=[{ms.First():F0}..{ms.Last():F0}], PileBodyType={PileBodyType}");
-                return (phis, ms);
+                // キャッシュに保存
+                lock (_mPhiCacheLock)
+                {
+                    _mPhiCacheMissCount++;
+                    if (!_mphiCache.ContainsKey(cacheKey))
+                    {
+                        _mphiCache[cacheKey] = (phis, ms);
+                    }
+                    // 常にミス時はログ出力（最初の20回）
+                    //if (_mphiCacheMissCount <= 20)
+                    //{
+                    //    System.Diagnostics.Debug.WriteLine($"[M-φ Cache MISS #{_mphiCacheMissCount}] key={cacheKey}, points={phis.Count}, cacheSize={_mphiCache.Count}");
+                    //}
+                }
+
+                //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship: Success - Points={phis.Count}, phi=[{phis.First():E3}..{phis.Last():E3}], M=[{ms.First():F0}..{ms.Last():F0}], PileBodyType={PileBodyType}");
+                return (new List<double>(phis), new List<double>(ms));
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship failed: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship failed: {ex}");
                 return CreateLinearFallback();
+            }
+        }
+
+        /// <summary>
+        /// M-φキャッシュの統計情報を取得します。
+        /// </summary>
+        public static (int hits, int misses, int cacheSize) GetMphiCacheStats()
+        {
+            lock (_mPhiCacheLock)
+            {
+                return (_mPhiCacheHitCount, _mPhiCacheMissCount, _mphiCache.Count);
+            }
+        }
+
+        /// <summary>
+        /// M-φキャッシュをクリアします（断面パラメータ変更時や新規プロジェクト読み込み時）。
+        /// </summary>
+        public static void ClearMphiCache()
+        {
+            lock (_mPhiCacheLock)
+            {
+                _mphiCache.Clear();
+                _mPhiCacheHitCount = 0;
+                _mPhiCacheMissCount = 0;
+                //System.Diagnostics.Debug.WriteLine("[M-φ Cache] Cleared");
             }
         }
 
@@ -370,10 +511,10 @@ namespace PileDesign.Models.InputData
         ///// - φ: ×1000 (1/mm → 1/m) [出力時]
         ///// - M: ×10⁻⁶ (N·mm → kNm) [出力時]
         ///// </summary>
-        //public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN)
-        //    => GetMphiRelationship(axialN, 1.0);
+        //public (IList<double> Phis, IList<double> Moments) GetMPhiRelationship(double axialN)
+        //    => GetMPhiRelationship(axialN, 1.0);
 
-        //public (IList<double> Phis, IList<double> Moments) GetMphiRelationship(double axialN, double _)
+        //public (IList<double> Phis, IList<double> Moments) GetMPhiRelationship(double axialN, double _)
         //{
         //    try
         //    {
@@ -462,7 +603,7 @@ namespace PileDesign.Models.InputData
         //    }
         //    catch (Exception ex)
         //    {
-        //        System.Diagnostics.Debug.WriteLine($"GetMphiRelationship dispatch failed: {ex}");
+        //        System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship dispatch failed: {ex}");
         //        // 最低限の線形フォールバック（FEM単位系で返す）
         //        const double phiSample = 1e-6; // [1/m]
         //        var phs = new List<double> { 0.0, phiSample };
@@ -687,7 +828,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RecalculatePileDia エラー: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"RecalculatePileDia エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭径再計算中にエラーが発生しました。\n{ex.Message}", "杭径再計算エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -761,11 +902,11 @@ namespace PileDesign.Models.InputData
                     RecalculateSelectedSteelPipePipe();
                     RecalculatePileDia();
                 }
-                System.Diagnostics.Debug.WriteLine($"After ResetSectionProperties: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
+                //System.Diagnostics.Debug.WriteLine($"After ResetSectionProperties: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ResetSectionProperties エラー: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"ResetSectionProperties エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"断面プロパティのリセット中にエラーが発生しました。\n{ex.Message}", "断面リセットエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -874,7 +1015,7 @@ namespace PileDesign.Models.InputData
         public SteelPipePile SelectedSteelPipePile = new();
 
         // 鋼管杭リスト（静的キャッシュを参照）
-        private List<SteelPipePile> SteelPipePiles => _cachedSteelPipePiles.Value;
+        private static List<SteelPipePile> SteelPipePiles => _cachedSteelPipePiles.Value;
         readonly PrecastPileLoader precastPileLoader = new();
 
         // クラス PileSection 内に追加するメソッド
@@ -1074,19 +1215,19 @@ namespace PileDesign.Models.InputData
         ];
 
         // PHC（静的キャッシュを参照）
-        public ObservableCollection<string> PHCOption => _cachedPHCOption.Value;
-        public List<PrecastPile> PHCs => _cachedPHCs.Value;
+        public static ObservableCollection<string> PHCOption => _cachedPHCOption.Value;
+        public static List<PrecastPile> PHCs => _cachedPHCs.Value;
 
         // PRC（静的キャッシュを参照）
-        public ObservableCollection<string> PRCOption => _cachedPRCOption.Value;
-        public List<PrecastPile> PRCs => _cachedPRCs.Value;
+        public static ObservableCollection<string> PRCOption => _cachedPRCOption.Value;
+        public static List<PrecastPile> PRCs => _cachedPRCs.Value;
 
         // SC（静的キャッシュを参照）
-        public ObservableCollection<string> SCOption => _cachedSCOption.Value;
-        public List<PrecastPile> SCs => _cachedSCs.Value;
+        public static ObservableCollection<string> SCOption => _cachedSCOption.Value;
+        public static List<PrecastPile> SCs => _cachedSCs.Value;
 
         // 鋼管（静的キャッシュを参照）
-        public ObservableCollection<string> SteelPipeOption => _cachedSteelPipeOption.Value;
+        public static ObservableCollection<string> SteelPipeOption => _cachedSteelPipeOption.Value;
 
 
         // 鉄筋径
@@ -1418,7 +1559,7 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<Spec> SelectedPileSectionSpecification
         {
             //get => _selectedPileSectionSpecification;
-            get => _selectedPileSectionSpecification ??= new ObservableCollection<Spec>();
+            get => _selectedPileSectionSpecification ??= [];
             set => SetProperty(ref _selectedPileSectionSpecification, value);
         }
 
@@ -1629,6 +1770,39 @@ namespace PileDesign.Models.InputData
             };
 
             return (n, m);
+        }
+
+        /// <summary>
+        /// NQ曲線を取得し、スケーリング後（kN, kN）で返す
+        /// </summary>
+        private (List<double> N, List<double> Q) GetNQScaled(string propertyName)
+        {
+            var section = CreateSectionCalculator();
+            if (section is not AbstractPileSection absSection)
+                return ([], []);
+
+            // プロパティ名に応じた NQ を取得
+            // 注意: AbstractPileSection の NQ プロパティは (Q, N) の順で格納されている
+            var (q, n) = propertyName switch
+            {
+                nameof(UnfactoredServiceNQ) => absSection.UnfactoredServiceNQ,
+                nameof(UnfactoredDamageNQ) => absSection.UnfactoredDamageNQ,
+                nameof(UnfactoredUltimateNQ) => absSection.UnfactoredUltimateNQ,
+                nameof(FactoredServiceNQ) => absSection.FactoredServiceNQ,
+                nameof(FactoredDamageNQ) => absSection.FactoredDamageNQ,
+                nameof(FactoredUltimateNQ) => absSection.FactoredUltimateNQ,
+                _ => ((List<double>)[], (List<double>)[])
+            };
+
+            if (n == null || q == null)
+                return ([], []);
+
+            // N[N] -> kN, Q[N] -> kN にスケーリング
+            // 戻り値は (N, Q) の順
+            return (
+                GetMultipliedListValues(n, 1e-3),
+                GetMultipliedListValues(q, 1e-3)
+            );
         }
 
         //private (List<double> N, List<double> M) GetNMRaw(string propertyName)
@@ -1843,7 +2017,7 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                copy.SelectedPileSectionSpecification = new ObservableCollection<Spec>();
+                copy.SelectedPileSectionSpecification = [];
             }
 
             // キャッシュ系はコピーせず再計算させる（安全のため null にしておく）
@@ -1913,13 +2087,13 @@ namespace PileDesign.Models.InputData
                 _ => null
             };
         }
-        public void DebugDumpProperties()
+        public static void DebugDumpProperties()
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, " +
-                $"PileDiameter={PileDiameter}, PipeDia={PipeDia}, PipeTs={PipeTs}, " +
-                $"ConcreteFc={ConcreteFc}, MainBarNum={MainBarNum}, MainBarSize={MainBarSize}, " +
-                $"A0={A0}, Ac={Ac}, HoopPw={HoopPw}");
+            //System.Diagnostics.Debug.WriteLine(
+            //    $"PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, " +
+            //    $"PileDiameter={PileDiameter}, PipeDia={PipeDia}, PipeTs={PipeTs}, " +
+            //    $"ConcreteFc={ConcreteFc}, MainBarNum={MainBarNum}, MainBarSize={MainBarSize}, " +
+            //    $"A0={A0}, Ac={Ac}, HoopPw={HoopPw}");
         }
     }
 }

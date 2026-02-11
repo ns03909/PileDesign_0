@@ -23,69 +23,33 @@ namespace PileDesign.Views
         {
             InitializeComponent();
 
-            // DataContext が既に HorizontalCalculationViewModel の場合は購読
-            if (this.DataContext is HorizontalCalculationViewModel vm)
-            {
-                vm.RequestShowWarning += OnRequestShowWarning;
-            }
-
-            // DataContext が後でセットされる可能性がある場合は、Loaded で確認してもよい
-            this.Loaded += (_, __) =>
-            {
-                if (this.DataContext is HorizontalCalculationViewModel vm2)
-                {
-                    vm2.RequestShowWarning -= OnRequestShowWarning;
-                    vm2.RequestShowWarning += OnRequestShowWarning;
-                }
-            };
-
             this.Loaded += HorizontalCalculationWindow_Loaded;
             this.Unloaded += HorizontalCalculationWindow_Unloaded;
+            this.Closing += HorizontalCalculationWindow_Closing;
+        }
 
-            if (DataContext is HorizontalCalculationViewModel viewModel)
+        /// <summary>
+        /// ウィンドウが閉じられる際に呼び出される
+        /// 実行中の解析をキャンセルし、クリーンアップを行う
+        /// </summary>
+        private async void HorizontalCalculationWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (_isClosingHandled) return;
+            _isClosingHandled = true;  // 最初にフラグを立てて再入を防止
+
+            if (this.DataContext is HorizontalCalculationViewModel vm && vm.IsAnalysisRunning)
             {
-                viewModel.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
-                viewModel.RequestClose += (s, e) =>
-                {
-                    {
-                        // すでにクローズ処理中なら何もしない
-                        if (_isClosingHandled) return;
-                        _isClosingHandled = true;
+                // 解析中なら一旦閉じるのをキャンセルし、クリーンアップ後に再度閉じる
+                e.Cancel = true;
 
-                        // メインウィンドウの TabAnalysisResult を選択
-                        try
-                        {
-                            Application.Current?.Dispatcher?.Invoke(() =>
-                            {
-                                var mainWin = Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.GetType().Name == "MainWindow");
-                                if (mainWin != null)
-                                {
-                                    var tab = mainWin.FindName("TabAnalysisResult") as TabItem;
-                                    if (tab != null)
-                                    {
-                                        tab.IsSelected = true;
-                                    }
-                                }
-                            });
-                        }
-                        catch
-                        {
-                            // 選択失敗しても処理は続行
-                        }
+                // 解析をキャンセルして待機
+                await vm.CleanupAsync();
 
-                        if (this.IsLoaded && this.IsVisible)
-                        {
-                            this.Close();
-                        }
-                    }
-                    ;
-                };
+                // クリーンアップ完了後、ウィンドウを閉じる
+                // _isClosingHandledは既にtrueなので、再度Closingイベントが発生してもスキップされる
+                this.Close();
             }
-            else
-            {
-                // DataContextがまだセットされていない場合、Loadedイベントで購読
-                this.Loaded += HorizontalCalculationWindow_Loaded;
-            }
+            // 解析が実行中でない場合はそのまま閉じる（_isClosingHandledはtrueのまま）
         }
 
         private void CalculationLog_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -103,43 +67,63 @@ namespace PileDesign.Views
 
         private void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            if (DataContext is HorizontalCalculationViewModel viewModel)
-            {
-                viewModel.RequestClose += (s, ev) =>
-                {
-                    // メインウィンドウの TabAnalysisResult を選択
-                    try
-                    {
-                        Application.Current?.Dispatcher?.Invoke(() =>
-                        {
-                            var mainWin = Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.GetType().Name == "MainWindow");
-                            if (mainWin != null)
-                            {
-                                var tab = mainWin.FindName("TabAnalysisResult") as TabItem;
-                                if (tab != null)
-                                {
-                                    tab.IsSelected = true;
-                                }
-                            }
-                        });
-                    }
-                    catch
-                    {
-                        // ignore
-                    }
-
-                    this.Close();
-                };
-            }
             // DataContext が ViewModel の場合はイベントを購読
             if (this.DataContext is HorizontalCalculationViewModel vm)
             {
+                // イベントの多重購読を防ぐため、一度解除してから購読
+                vm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
                 vm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
+
+                vm.RequestShowWarning -= OnRequestShowWarning;
+                vm.RequestShowWarning += OnRequestShowWarning;
+
+                vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
+                vm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
+
+                vm.RequestClose -= OnRequestClose;
+                vm.RequestClose += OnRequestClose;
             }
             else
             {
                 // DataContext が後からセットされる可能性に備えて監視
                 this.DataContextChanged += HorizontalCalculationWindow_DataContextChanged;
+            }
+        }
+
+        /// <summary>
+        /// RequestCloseイベントハンドラ（匿名ラムダの代わりに名前付きメソッドを使用）
+        /// </summary>
+        private void OnRequestClose(object sender, EventArgs e)
+        {
+            // すでにクローズ処理中なら何もしない
+            if (_isClosingHandled) return;
+            // 注: ここでは_isClosingHandledをtrueにしない
+            // Closingイベントハンドラで解析キャンセル後にtrueにする
+
+            // メインウィンドウの TabAnalysisResult を選択
+            try
+            {
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    var mainWin = Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.GetType().Name == "MainWindow");
+                    if (mainWin != null)
+                    {
+                        var tab = mainWin.FindName("TabAnalysisResult") as TabItem;
+                        if (tab != null)
+                        {
+                            tab.IsSelected = true;
+                        }
+                    }
+                });
+            }
+            catch
+            {
+                // 選択失敗しても処理は続行
+            }
+
+            if (this.IsLoaded && this.IsVisible)
+            {
+                this.Close();
             }
         }
 
@@ -149,13 +133,13 @@ namespace PileDesign.Views
             if (this.DataContext is HorizontalCalculationViewModel vm)
             {
                 vm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
-                vm.RequestShowWarning -= OnRequestShowWarning;                // 追加
-                vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged; // 追加
-                                                                                         // RequestClose は匿名ラムダで登録されているため参照が無いと解除できません。
-                                                                                         // もし RequestClose を解除したいなら登録時にハンドラを変数に保持しておくことを検討してください。
+                vm.RequestShowWarning -= OnRequestShowWarning;
+                vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
+                vm.RequestClose -= OnRequestClose;
             }
             this.Loaded -= HorizontalCalculationWindow_Loaded;
             this.Unloaded -= HorizontalCalculationWindow_Unloaded;
+            this.Closing -= HorizontalCalculationWindow_Closing;
             this.DataContextChanged -= HorizontalCalculationWindow_DataContextChanged;
         }
 
@@ -164,14 +148,16 @@ namespace PileDesign.Views
             if (e.OldValue is HorizontalCalculationViewModel oldVm)
             {
                 oldVm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
-                oldVm.RequestShowWarning -= OnRequestShowWarning;                 // 追加
-                oldVm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged; // 追加
+                oldVm.RequestShowWarning -= OnRequestShowWarning;
+                oldVm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
+                oldVm.RequestClose -= OnRequestClose;
             }
             if (e.NewValue is HorizontalCalculationViewModel newVm)
             {
                 newVm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
-                newVm.RequestShowWarning += OnRequestShowWarning;                 // 追加
-                newVm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged; // 追加
+                newVm.RequestShowWarning += OnRequestShowWarning;
+                newVm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
+                newVm.RequestClose += OnRequestClose;
             }
         }
 
@@ -232,18 +218,9 @@ namespace PileDesign.Views
 
         private void ListBox_Loaded(object sender, RoutedEventArgs e)
         {
-
-            var listBox = sender as ListBox;
-            if (DataContext is PileDesign.ViewModels.HorizontalCalculationViewModel vm)
-            {
-                vm.CalculationLog.CollectionChanged += (s, args) =>
-                {
-                    if (listBox.Items.Count > 0)
-                    {
-                        listBox.ScrollIntoView(listBox.Items[^1]);
-                    }
-                };
-            }
+            // 注: CalculationLog.CollectionChangedはHorizontalCalculationWindow_Loadedで
+            //     CalculationLog_CollectionChangedとして購読済みのため、ここでは追加購読しない
+            //     （多重購読によるメモリリークとパフォーマンス低下を防止）
         }
 
 

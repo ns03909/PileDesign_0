@@ -672,7 +672,7 @@ namespace PileDesign.ViewModels
                 }
                 if (Math.Abs(b) < epsilon)
                 {
-                    System.Diagnostics.Debug.WriteLine($"No segment found for Z={zDataTop}～{zDataBtm}");
+                    //System.Diagnostics.Debug.WriteLine($"No segment found for Z={zDataTop}～{zDataBtm}");
                 }
 
                 foreach (GroundLayerInput groundLayer in groundInput.GroundLayers)
@@ -680,7 +680,8 @@ namespace PileDesign.ViewModels
                     double top = groundLayer.LayerThickness + groundLayer.BottomAltitude;
                     double bottom = groundLayer.BottomAltitude;
 
-                    if (bottom <= zDataBtm && zDataTop <= top)
+                    // 浮動小数点誤差を考慮した比較（epsilonを使用）
+                    if (bottom - epsilon <= zDataBtm && zDataTop <= top + epsilon)
                     {
                         cohesive = groundLayer.Cohesive;
                         nValue = groundLayer.NValue;

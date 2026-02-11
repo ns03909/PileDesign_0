@@ -41,21 +41,21 @@ public sealed class UndoManager
     {
         if (_scope != null)
         {
-            Debug.WriteLine($"[Undo] BeginScope ignored (already open): {_scope.Description}");
+            //Debug.WriteLine($"[Undo] BeginScope ignored (already open): {_scope.Description}");
             throw new InvalidOperationException("Scope already started.");
         }
         _scope = new CompositeUndoAction(description);
-        Debug.WriteLine($"[Undo] BeginScope: {description}");
+        //Debug.WriteLine($"[Undo] BeginScope: {description}");
     }
 
     public void EndScope()
     {
         if (_scope == null)
         {
-            Debug.WriteLine("[Undo] EndScope ignored (no scope)");
+            //Debug.WriteLine("[Undo] EndScope ignored (no scope)");
             return;
         }
-        Debug.WriteLine($"[Undo] EndScope: {_scope.Description}");
+        //Debug.WriteLine($"[Undo] EndScope: {_scope.Description}");
         PushCore(_scope);
         _scope = null;
     }
@@ -64,11 +64,11 @@ public sealed class UndoManager
     {
         if (_scope != null)
         {
-            Debug.WriteLine($"[Undo] Push (scoped): {action.Description}");
+            //Debug.WriteLine($"[Undo] Push (scoped): {action.Description}");
             _scope.Add(action);
             return;
         }
-        Debug.WriteLine($"[Undo] Push: {action.Description}");
+        //Debug.WriteLine($"[Undo] Push: {action.Description}");
         PushCore(action);
     }
 
@@ -82,7 +82,7 @@ public sealed class UndoManager
     {
         if (!CanUndo) return;
         var a = _undo.Pop();
-        Debug.WriteLine($"[Undo] Undo: {a.Description}");
+        //Debug.WriteLine($"[Undo] Undo: {a.Description}");
         a.Undo();
         _redo.Push(a);
     }
@@ -91,7 +91,7 @@ public sealed class UndoManager
     {
         if (!CanRedo) return;
         var a = _redo.Pop();
-        Debug.WriteLine($"[Undo] Redo: {a.Description}");
+        //Debug.WriteLine($"[Undo] Redo: {a.Description}");
         a.Redo();
         _undo.Push(a);
     }
@@ -104,7 +104,7 @@ public sealed class UndoManager
         _undo.Clear();
         _redo.Clear();
         _scope = null;
-        Debug.WriteLine("[Undo] Clear");
+        //Debug.WriteLine("[Undo] Clear");
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public sealed class UndoManager
 
         TrimHistory();
 
-        Debug.WriteLine($"[Undo] SaveState: Index={_currentIndex}, Count={_history.Count}");
+        //Debug.WriteLine($"[Undo] SaveState: Index={_currentIndex}, Count={_history.Count}");
     }
 
     /// <summary>
@@ -176,7 +176,7 @@ public sealed class UndoManager
         if (_currentIndex > 0)
         {
             _currentIndex--;
-            Debug.WriteLine($"[Undo] Undo (Snapshot): Index={_currentIndex}");
+            //Debug.WriteLine($"[Undo] Undo (Snapshot): Index={_currentIndex}");
             return;
         }
 
@@ -184,7 +184,7 @@ public sealed class UndoManager
         if (_undo.Count > 0)
         {
             var a = _undo.Pop();
-            Debug.WriteLine($"[Undo] Undo (Action): {a.Description}");
+            //Debug.WriteLine($"[Undo] Undo (Action): {a.Description}");
             a.Undo();
             _redo.Push(a);
         }
@@ -199,7 +199,7 @@ public sealed class UndoManager
         if (_currentIndex >= 0 && _currentIndex < _history.Count - 1)
         {
             _currentIndex++;
-            Debug.WriteLine($"[Undo] Redo (Snapshot): Index={_currentIndex}");
+            //Debug.WriteLine($"[Undo] Redo (Snapshot): Index={_currentIndex}");
             return;
         }
 
@@ -207,7 +207,7 @@ public sealed class UndoManager
         if (_redo.Count > 0)
         {
             var a = _redo.Pop();
-            Debug.WriteLine($"[Undo] Redo (Action): {a.Description}");
+            //Debug.WriteLine($"[Undo] Redo (Action): {a.Description}");
             a.Redo();
             _undo.Push(a);
         }

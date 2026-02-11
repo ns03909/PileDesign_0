@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
@@ -103,8 +104,8 @@ namespace PileDesign.Models.InputData
     // PHC杭断面クラス
     internal class PHCSection : PrecastPileSection ////////////////////////////////////////////////////////////////////////////////////////////
     {
-        public CirclularSolidSection CircularSolidSectionConcreteOut { get; private set; }
-        public CirclularSolidSection CircularSolidSectionConcreteIn { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
         public CircularPipeSection CircularPipeSectionConcrete { get; private set; }
 
@@ -132,8 +133,8 @@ namespace PileDesign.Models.InputData
             SetEpsilonPi(Ac, Ap, 0.0, PrecastConcrete.Ec, Tendons.Ep, 1.0, SigmaE);
             SetEpsilonE(PrecastConcrete.Ec, SigmaE);
 
-            CircularSolidSectionConcreteOut = new CirclularSolidSection(precastConcrete.DO);
-            CircularSolidSectionConcreteIn = new CirclularSolidSection(precastConcrete.DI);
+            CircularSolidSectionConcreteOut = new CircularSolidSection(precastConcrete.DO);
+            CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete.DI);
             CircularPipeSectionTendons = new CircularPipeSection(tendons.PCD, tendons.Ap / Math.PI / tendons.PCD);
 
             PositionCs = [-PileDia * 0.5, -Tendons.PCD * 0.5];
@@ -304,11 +305,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 4 * Ae;
-            double Nmax = 45 * Ae;
+            double NMin = 4 * Ae;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetServiceLimitShear(MonQd, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -323,11 +324,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 0.0;
-            double Nmax = 45 * Ae;
+            double NMin = 0.0;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetDamageLimitShear(MonQd, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -342,11 +343,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 4 * Ae;
-            double Nmax = 45 * Ae;
+            double NMin = 4 * Ae;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetUltimateLimitShear(MonQd, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -387,9 +388,21 @@ namespace PileDesign.Models.InputData
             {
                 double Mu0 = Math.Min(MCf, MY);
                 phiD = phiCr + (phiY - phiCr) * (beta1 * Mu0 - MCr) / (MY - MCr);
-                List<double> phis = [0.0, phiCr, phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr)];
-                List<double> Ms = [0.0, MCr, beta1 * beta2 * Mu0];
-                return (phis, Ms);
+                double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
+
+                // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                if (MCr <= 0 || phiCr <= 0)
+                {
+                    List<double> phis = [0.0, phi_final];
+                    List<double> Ms = [0.0, beta1 * beta2 * Mu0];
+                    return (phis, Ms);
+                }
+                else
+                {
+                    List<double> phis = [0.0, phiCr, phi_final];
+                    List<double> Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                    return (phis, Ms);
+                }
             }
             else
             {
@@ -397,22 +410,31 @@ namespace PileDesign.Models.InputData
 
                 if (MY < beta1 * Mu0) // b. PC鋼材が引張降伏せずに、コンクリートの曲げひび割れと圧壊が発生する場合
                 {
-
                     phiD = phiCr + (phiU0 - phiCr) * (beta1 * Mu0 - MCr) / (Mu0 - MCr);
-                    List<double> phis = [0.0, phiCr, phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr)];
-                    List<double> Ms = [0.0, MCr, beta1 * beta2 * Mu0];
-                    return (phis, Ms);
+                    double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
+
+                    // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                    if (MCr <= 0 || phiCr <= 0)
+                    {
+                        List<double> phis = [0.0, phi_final];
+                        List<double> Ms = [0.0, beta1 * beta2 * Mu0];
+                        return (phis, Ms);
+                    }
+                    else
+                    {
+                        List<double> phis = [0.0, phiCr, phi_final];
+                        List<double> Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                        return (phis, Ms);
+                    }
                 }
                 else // c. コンクリートの圧壊のみが発生する場合
                 {
-                    //(double Mu0, double phiU0) = GetUltimateMomentForSpecificN(Ntarget);
                     phiD = beta1 * Mu0 / (PrecastConcrete.Ec * Ie);
-                    List<double> phis = [0.0, /*beta1 **/ beta2 * phiD];
+                    List<double> phis = [0.0, beta2 * phiD];
                     List<double> Ms = [0.0, beta1 * beta2 * Mu0];
                     return (phis, Ms);
                 }
             }
-
         }
 
         private double GetBeta2(double Ntarget)
@@ -581,7 +603,7 @@ namespace PileDesign.Models.InputData
             }
 
             // 収束しなかった場合は例外を投げずに最良近似を返す（デバッグ出力）
-            System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN: non-converged Ntarget={Ntarget}, iter={iter}, bestDiff={bestDiff}");
+            //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN: non-converged Ntarget={Ntarget}, iter={iter}, bestDiff={bestDiff}");
             return (bestM, bestCurv);
         }
 
@@ -784,8 +806,8 @@ namespace PileDesign.Models.InputData
     // PRCSection杭クラス ////////////////////////////////////////////////////////////////////////////////////////////
     internal class PRCSection : PrecastPileSection
     {
-        public CirclularSolidSection CircularSolidSectionConcreteOut { get; private set; }
-        public CirclularSolidSection CircularSolidSectionConcreteIn { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
         public CircularPipeSection CircularPipeSectionMainBars { get; private set; }
 
@@ -822,8 +844,8 @@ namespace PileDesign.Models.InputData
             SetEpsilonE(PrecastConcrete.Ec, SigmaE);
             SetEpsilonSi(PrecastConcrete.Ec, SigmaE);
 
-            CircularSolidSectionConcreteOut = new CirclularSolidSection(precastConcrete.DO);
-            CircularSolidSectionConcreteIn = new CirclularSolidSection(precastConcrete.DI);
+            CircularSolidSectionConcreteOut = new CircularSolidSection(precastConcrete.DO);
+            CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete.DI);
             CircularPipeSectionTendons = new CircularPipeSection(tendons.PCD, tendons.Ap / Math.PI / tendons.PCD);
             CircularPipeSectionMainBars = new CircularPipeSection(mainBars.PCD, mainBars.Ag / Math.PI / mainBars.PCD);
 
@@ -1008,11 +1030,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 4 * Ae;
-            double Nmax = 45 * Ae;
+            double NMin = 4 * Ae;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetServiceLimitShear(MonQd, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -1027,11 +1049,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 0.0;
-            double Nmax = 45 * Ae;
+            double NMin = 0.0;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetDamageLimitShear(MonQd, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -1046,11 +1068,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 4 * Ae;
-            double Nmax = 45 * Ae;
+            double NMin = 4 * Ae;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetUltimateLimitShear(MonQd, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -1118,25 +1140,54 @@ namespace PileDesign.Models.InputData
             if (phiCr < phiYT && phiYT < phiYC /*&& phiU0 < phiYC*/) // a コンクリートのひび割れの後に軸方向鉄筋の引張降伏が先行する場合
             {
                 phiD = phiCr + (phiYT - phiCr) * (beta1 * Mu0 - MCr) / (MYT - MCr);
+                double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
 
-                phis = [0.0, phiCr, phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr)];
-                Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                if (MCr <= 0 || phiCr <= 0)
+                {
+                    phis = [0.0, phi_final];
+                    Ms = [0.0, beta1 * beta2 * Mu0];
+                }
+                else
+                {
+                    phis = [0.0, phiCr, phi_final];
+                    Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                }
                 return (phis, Ms);
             }
             //else if (phiCr < phiYC && phiYC < phiU0 && phiYC < phiYT) // b コンクリートひび割れ後、軸方向鉄筋の圧縮降伏が先行する場合
             else if (phiCr < phiYC && phiYC < phiYT) // b コンクリートひび割れ後、軸方向鉄筋の圧縮降伏が先行する場合
             {
                 phiD = phiCr + (phiYC - phiCr) * (beta1 * Mu0 - MCr) / (MYC - MCr);
+                double phi_final = phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr);
 
                 if (MCr < beta1 * beta2 * Mu0)
                 {
-                    phis = [0.0, phiCr, phiCr + (phiD - phiCr) / (beta1 * Mu0 - MCr) * (beta1 * beta2 * Mu0 - MCr)];
-                    Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                    // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                    if (MCr <= 0 || phiCr <= 0)
+                    {
+                        phis = [0.0, phi_final];
+                        Ms = [0.0, beta1 * beta2 * Mu0];
+                    }
+                    else
+                    {
+                        phis = [0.0, phiCr, phi_final];
+                        Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                    }
                 }
                 else
                 {
-                    phis = [0.0, phiCr];
-                    Ms = [0.0, MCr];
+                    // MCr <= 0 の場合は空の曲線（原点のみ）
+                    if (MCr <= 0 || phiCr <= 0)
+                    {
+                        phis = [0.0];
+                        Ms = [0.0];
+                    }
+                    else
+                    {
+                        phis = [0.0, phiCr];
+                        Ms = [0.0, MCr];
+                    }
                 }
                 return (phis, Ms);
             }
@@ -1149,9 +1200,9 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        private double GetBeta2(double Ntarget) ///////////////////////////////
+        private double GetBeta2(double nTarget) ///////////////////////////////
         {
-            double sigma0e = Ntarget / Ae;
+            double sigma0e = nTarget / Ae;
             return (SigmaE + sigma0e) < 10 ? 0.75 : 0.65;
         }
 
@@ -1335,7 +1386,7 @@ namespace PileDesign.Models.InputData
             }
 
             // 収束しなかった場合は最良近似を返す
-            System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (PRC): non-converged Ntarget={Ntarget}, bestDiff={bestDiff}, bestCurv={bestCurv}");
+            //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (PRC): non-converged Ntarget={Ntarget}, bestDiff={bestDiff}, bestCurv={bestCurv}");
             return (bestM, bestCurv);
         }
         //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)///////////////////////////
@@ -1428,7 +1479,7 @@ namespace PileDesign.Models.InputData
         //    }
 
         //    // 収束しなかったが例外は投げず最良近似解を返す（デバッグ出力）
-        //    System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (PRC): non-converged Ntarget={Ntarget}, iter={maxIter}, bestDiff={bestDiff}, bestCurv={bestCurv}");
+        //    //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (PRC): non-converged Ntarget={Ntarget}, iter={maxIter}, bestDiff={bestDiff}, bestCurv={bestCurv}");
         //    return (bestM, bestCurv);
         //}
 
@@ -1566,9 +1617,9 @@ namespace PileDesign.Models.InputData
     // SCSection杭クラス
     internal class SCSection : PrecastPileSection
     {
-        public CirclularSolidSection CircularSolidSectionConcreteOut { get; private set; }
-        public CirclularSolidSection CircularSolidSectionConcreteIn { get; private set; }
-        public CircularPipeSection CircularPipeSectioSteelPipe { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
+        public CircularPipeSection CircularPipeSectionSteelPipe { get; private set; }
         //public double Tc { get; private set; }
         public double Asp { get; private set; }
 
@@ -1597,9 +1648,9 @@ namespace PileDesign.Models.InputData
                 Fc = precastConcrete?.Fc ?? 0.0;
 
                 // 最低限の断面オブジェクトは作っておく（他コードの呼び出しに備える）
-                CircularSolidSectionConcreteOut = new CirclularSolidSection(precastConcrete?.DO ?? 0.0);
-                CircularSolidSectionConcreteIn = new CirclularSolidSection(precastConcrete?.DI ?? 0.0);
-                CircularPipeSectioSteelPipe = null;
+                CircularSolidSectionConcreteOut = new CircularSolidSection(precastConcrete?.DO ?? 0.0);
+                CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete?.DI ?? 0.0);
+                CircularPipeSectionSteelPipe = null;
 
                 Console.WriteLine("SCSection: PrecastSteelPipe.T is zero or PrecastSteelPipe is null. SCSection initialization skipped.");
                 return;
@@ -1634,9 +1685,9 @@ namespace PileDesign.Models.InputData
             double pipeCenterDia = PrecastSteelPipe.OutDia - PrecastSteelPipe.T; // 中央径
             double pipeT = PrecastSteelPipe.T;
 
-            CircularSolidSectionConcreteOut = new CirclularSolidSection(precastConcrete.DO);
-            CircularSolidSectionConcreteIn = new CirclularSolidSection(precastConcrete.DI);
-            CircularPipeSectioSteelPipe = new CircularPipeSection(pipeCenterDia, pipeT);
+            CircularSolidSectionConcreteOut = new CircularSolidSection(precastConcrete.DO);
+            CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete.DI);
+            CircularPipeSectionSteelPipe = new CircularPipeSection(pipeCenterDia, pipeT);
 
             PositionCs = [-Ro, -pipeCenterDia * 0.5,];
             PositionTs = [Ro, pipeCenterDia * 0.5,];
@@ -1755,13 +1806,24 @@ namespace PileDesign.Models.InputData
             // 鋼管杭の安全限界せん断
             double beta1 = 1.0;
             double beta2 = 1.0;
-            double sSigmaY = PrecastSteelPipe.F;
-            double sNy = sSigmaY * PrecastSteelPipe.As / 1000.0;
-            double eta = nud / sNy;
+            double sSigmaY = PrecastSteelPipe.F;         // N/mm²
+            double sNy = sSigmaY * PrecastSteelPipe.As;  // N（降伏軸力）
+
+            // sNy が 0 の場合は計算不能
+            if (Math.Abs(sNy) < 1e-10)
+                return 0.0;
+
+            double eta = nud / sNy;  // 軸力比 η = N / Ny
+
+            // η >= 1 の場合、sqrt(1 - η²) が虚数になるため、0 を返す
+            // （軸力が降伏軸力以上のとき、せん断耐力は 0）
+            if (Math.Abs(eta) >= 1.0)
+                return 0.0;
+
             double t = PrecastSteelPipe.T;
             double D = PrecastSteelPipe.OutDia;
 
-            double sQ0 = 2 * t * (D - t) * sSigmaY / Math.Sqrt(3);
+            double sQ0 = 2 * t * (D - t) * sSigmaY / Math.Sqrt(3);  // N
             double unfactoredQu = sQ0 * Math.Sqrt(1 - eta * eta);
 
             return isFactored ? beta1 * beta2 * unfactoredQu : unfactoredQu;
@@ -1774,11 +1836,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 4 * Ae;
-            double Nmax = 45 * Ae;
+            double NMin = 4 * Ae;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetServiceLimitShear(isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -1793,11 +1855,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 0.0;
-            double Nmax = 45 * Ae;
+            double NMin = 0.0;
+            double NMax = 45 * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetDamageLimitShear(isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -1812,11 +1874,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 4 * Ae;
-            double Nmax = 45 * Ae;
+            double NMin = 4 * Ae; // N
+            double NMax = 45 * Ae; // N
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetUltimateLimitShear(n, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -1836,56 +1898,127 @@ namespace PileDesign.Models.InputData
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MYT, double phiYT) = GetMomentCurvatureForN(Ntarget, "SteelPipeTensionYield");
             (double MYC, double phiYC) = GetMomentCurvatureForN(Ntarget, "SteelPipeCompressionYield_b");
-            //double beta2 = GetBeta2(Ntarget);
             (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
+
+            // デバッグ: 特性値を出力
+            string caseType = "";
             double phiD;
             List<double> phis;
             List<double> Ms;
+
             if (phiCr < phiYT && phiYT < phiYC) // a 鋼管が引張降伏する場合
             {
-                //Mu0 = Math.Min(MCf, MY);
-                phiD = phiCr + (phiYT - phiCr) * (beta1 * Mu0 - MCr) / (MYT - MCr);
-                phis = [0.0, phiCr, phiYT, phiD];
-                Ms = [0.0, MCr, MYT, beta1 * Mu0];
-                return (phis, Ms);
+                caseType = "a";
+                // ゼロ除算防止
+                double denom = MYT - MCr;
+                if (Math.Abs(denom) < 1e-6) denom = Math.Sign(denom) * 1e-6;
+                phiD = phiCr + (phiYT - phiCr) * (beta1 * Mu0 - MCr) / denom;
+
+                // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                if (MCr <= 0 || phiCr <= 0)
+                {
+                    phis = [0.0, phiYT, phiD];
+                    Ms = [0.0, MYT, beta1 * Mu0];
+                }
+                else
+                {
+                    phis = [0.0, phiCr, phiYT, phiD];
+                    Ms = [0.0, MCr, MYT, beta1 * Mu0];
+                }
             }
             else if (phiCr < phiYC && phiYC < phiYT) // b 曲げひび割れ後、鋼管が圧縮降伏する場合
             {
-                phiD = phiCr + (phiYC - phiCr) * (beta1 * Mu0 - MCr) / (MYC - MCr);
+                caseType = "b";
+                double denom = MYC - MCr;
+                if (Math.Abs(denom) < 1e-6) denom = Math.Sign(denom) * 1e-6;
+                phiD = phiCr + (phiYC - phiCr) * (beta1 * Mu0 - MCr) / denom;
                 double beta2 = 0.75;
                 if (beta1 * beta2 * Mu0 < MYT)
                 {
-                    phis = [0.0, phiCr, phiCr + (phiYT - phiCr) / (MYT - MCr) * (beta1 * beta2 * Mu0 - MCr)];
-                    Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                    double denom2 = MYT - MCr;
+                    if (Math.Abs(denom2) < 1e-6) denom2 = Math.Sign(denom2) * 1e-6;
+                    double phi2 = phiCr + (phiYT - phiCr) / denom2 * (beta1 * beta2 * Mu0 - MCr);
+
+                    // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                    if (MCr <= 0 || phiCr <= 0)
+                    {
+                        phis = [0.0, phi2];
+                        Ms = [0.0, beta1 * beta2 * Mu0];
+                    }
+                    else
+                    {
+                        phis = [0.0, phiCr, phi2];
+                        Ms = [0.0, MCr, beta1 * beta2 * Mu0];
+                    }
                 }
-                else // (beta1 * beta2 * Mu0 > MYT)
+                else
                 {
-                    phis = [0.0, phiCr, phiYT, phiYT + (phiD - phiYT) / (beta1 * Mu0 - MYT) * (beta1 * beta2 * Mu0 - MYT)];
-                    Ms = [0.0, MCr, MYT, beta1 * beta2 * Mu0];
+                    double denom3 = beta1 * Mu0 - MYT;
+                    if (Math.Abs(denom3) < 1e-6) denom3 = Math.Sign(denom3) * 1e-6;
+                    double phi3 = phiYT + (phiD - phiYT) / denom3 * (beta1 * beta2 * Mu0 - MYT);
+
+                    // MCr <= 0 の場合は (phiCr, MCr) をスキップ
+                    if (MCr <= 0 || phiCr <= 0)
+                    {
+                        phis = [0.0, phiYT, phi3];
+                        Ms = [0.0, MYT, beta1 * beta2 * Mu0];
+                    }
+                    else
+                    {
+                        phis = [0.0, phiCr, phiYT, phi3];
+                        Ms = [0.0, MCr, MYT, beta1 * beta2 * Mu0];
+                    }
                 }
             }
             else if (phiYC < phiCr && phiYC < phiYT) // c 鋼管が圧縮降伏する場合
             {
-                phiD = beta1 * Mu0 / (MYC / phiYC);
+                caseType = "c";
+                double ratioYC = (phiYC > 1e-12) ? MYC / phiYC : 1e6;
+                phiD = beta1 * Mu0 / ratioYC;
                 double beta2 = 0.75;
                 if (beta1 * beta2 * Mu0 < MYC)
                 {
-                    phis = [0.0, phiYC / MYC * beta1 * beta2 * Mu0];
+                    // 元のポリリニア形状を維持（2点の線形曲線）
+                    double phi1 = (MYC > 1e-6) ? phiYC / MYC * beta1 * beta2 * Mu0 : phiYC * 0.5;
+                    phis = [0.0, phi1];
                     Ms = [0.0, beta1 * beta2 * Mu0];
                 }
-                else //  (beta1 * beta2 * Mu0 > MYC)
+                else
                 {
-                    phis = [0.0, phiYC, phiYC + (phiD - phiYC) / (beta1 * Mu0 - MYC) * (beta1 * beta2 * Mu0 - MYC)];
+                    double denom4 = beta1 * Mu0 - MYC;
+                    if (Math.Abs(denom4) < 1e-6) denom4 = Math.Sign(denom4) * 1e-6;
+                    double phi2 = phiYC + (phiD - phiYC) / denom4 * (beta1 * beta2 * Mu0 - MYC);
+                    phis = [0.0, phiYC, phi2];
                     Ms = [0.0, MYC, beta1 * beta2 * Mu0];
                 }
             }
             else // d 軸力のみで鋼管が降伏する場合
             {
-                phiD = beta1 * Mu0 / (PrecastConcrete.Ec * Ie);
+                caseType = "d";
+                double EcIe = PrecastConcrete.Ec * Ie;
+                if (EcIe < 1e-6) EcIe = 1e6; // 最小剛性
+                phiD = beta1 * Mu0 / EcIe;
                 double beta2 = 0.75;
+                // 元のポリリニア形状を維持（2点の線形曲線）
                 phis = [0.0, beta1 * beta2 * phiD];
                 Ms = [0.0, beta1 * beta2 * Mu0];
             }
+
+            // 曲率が単調増加するように補正
+            for (int i = 1; i < phis.Count; i++)
+            {
+                if (phis[i] <= phis[i - 1])
+                {
+                    phis[i] = phis[i - 1] + 1e-9;
+                }
+            }
+
+            // デバッグ出力
+            //System.Diagnostics.Debug.WriteLine($"[SCSection M-φ] N={Ntarget:E3}, case={caseType}, points={phis.Count}, " +
+                //$"phiCr={phiCr:E4}, phiYT={phiYT:E4}, phiYC={phiYC:E4}, MCr={MCr:F0}, MYT={MYT:F0}, MYC={MYC:F0}, Mu0={Mu0:F0}");
+            //System.Diagnostics.Debug.WriteLine($"  -> phis=[{string.Join(", ", phis.Select(p => p.ToString("E4")))}]");
+            //System.Diagnostics.Debug.WriteLine($"  -> Ms=[{string.Join(", ", Ms.Select(m => m.ToString("F1")))}]");
+
             return (phis, Ms);
         }
 
@@ -1981,7 +2114,7 @@ namespace PileDesign.Models.InputData
         //        // 符号変化が見つからなければ最良近似を返す
         //        if (Math.Sign(fLo) == Math.Sign(fHi))
         //        {
-        //            System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (SC) no bracket Ntarget={Ntarget}, bestDiff={bestDiff}");
+        //            //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (SC) no bracket Ntarget={Ntarget}, bestDiff={bestDiff}");
         //            return (bestM, bestCurv);
         //        }
         //    }
@@ -2017,7 +2150,7 @@ namespace PileDesign.Models.InputData
         //    }
 
         //    // 収束しなければ最良近似を返す
-        //    System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (SC) bisection finished iter, mid={mid}, diff={Math.Abs(EvalN(mid, out Mmid) - Ntarget)}");
+        //    //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (SC) bisection finished iter, mid={mid}, diff={Math.Abs(EvalN(mid, out Mmid) - Ntarget)}");
         //    return (Mmid, mid);
         //}
         //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type) ///////////////////////////
@@ -2145,7 +2278,7 @@ namespace PileDesign.Models.InputData
             // 符号変化を見つけられなかった場合 → 最良近似を返す
             if (Math.Abs(phiMax - phiMin) < 1e-12 || phiMin == 0.0 && phiMax == (PrecastSteelPipe.EpsilonY * 3.0) / (PileDia * 0.5))
             {
-                System.Diagnostics.Debug.WriteLine($"[SCSection] GetMomentCurvatureForN: no bracket Ntarget={Ntarget}, bestDiff={bestDiff}");
+                //System.Diagnostics.Debug.WriteLine($"[SCSection] GetMomentCurvatureForN: no bracket Ntarget={Ntarget}, bestDiff={bestDiff}");
                 return (bestM, bestPhi);
             }
 
@@ -2210,7 +2343,7 @@ namespace PileDesign.Models.InputData
                     break;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[SCSection] GetMomentCurvatureForN: non-converged fallback Ntarget={Ntarget}, diff={bestBracketDiff}");
+            //System.Diagnostics.Debug.WriteLine($"[SCSection] GetMomentCurvatureForN: non-converged fallback Ntarget={Ntarget}, diff={bestBracketDiff}");
             return (bestM, bestPhi);
         }
 
@@ -2264,7 +2397,7 @@ namespace PileDesign.Models.InputData
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
-            var result3 = CircularPipeSectioSteelPipe.GetForceAndMoment(type, PrecastSteelPipe, epsilon0, curvature);
+            var result3 = CircularPipeSectionSteelPipe.GetForceAndMoment(type, PrecastSteelPipe, epsilon0, curvature);
 
             N = result1.Item1 - result2.Item1 + result3.Item1;
             M = result1.Item2 - result2.Item2 + result3.Item2;
@@ -2279,7 +2412,7 @@ namespace PileDesign.Models.InputData
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
             var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
-            var result3 = CircularPipeSectioSteelPipe.GetForceAndMoment(type, PrecastSteelPipe, epsilon0, curvature);
+            var result3 = CircularPipeSectionSteelPipe.GetForceAndMoment(type, PrecastSteelPipe, epsilon0, curvature);
 
             N = result1.Item1 - result2.Item1 + result3.Item1;
             M = result1.Item2 - result2.Item2 + result3.Item2;

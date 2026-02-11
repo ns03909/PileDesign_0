@@ -43,7 +43,7 @@ namespace PileDesign.FEM
             {
                 double scaleFactor = maxDispIncrement / maxAbsIncrement;
                 incrementalDispVector = incrementalDispVector * scaleFactor;
-                System.Diagnostics.Debug.WriteLine($"[Solver] Displacement increment limited: max={maxAbsIncrement:E3} -> scaled by {scaleFactor:F4}");
+                //System.Diagnostics.Debug.WriteLine($"[Solver] Displacement increment limited: max={maxAbsIncrement:E3} -> scaled by {scaleFactor:F4}");
             }
 
             anaModel.SetDispVector(incrementalDispVector);

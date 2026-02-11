@@ -1472,17 +1472,28 @@ namespace PileDesign.Views
                 UpdateWhileMouseAction();
             }
 
-            // 沈下マップツールチップの更新（ボタンが押されていない時のみ）
+            // ツールチップの更新（ボタンが押されていない時のみ）
             if (e.LeftButton == MouseButtonState.Released &&
                 e.RightButton == MouseButtonState.Released &&
                 !IsMouseWheelPressed)
             {
                 Point mousePos = e.GetPosition(Canvas3DLayout);
+                // 沈下マップツールチップ
                 UpdateSettlementTooltip(mousePos);
+                // 応力図・変位図ツールチップ
+                try
+                {
+                    UpdateBeamResultTooltip(mousePos);
+                }
+                catch
+                {
+                    // 例外時は無視（描画に影響しないように）
+                }
             }
             else
             {
                 HideSettlementTooltip();
+                try { HideBeamResultTooltip(); } catch { }
             }
         }
 

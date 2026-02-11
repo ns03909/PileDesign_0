@@ -5,7 +5,7 @@ namespace PileDesign.Models.InputData
 {
     class InsituSteelPipeReinforcedConcreteTopSection : AbstractPileSection
     {
-        public CirclularSolidSection CircularSolidSectionConcrete { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcrete { get; private set; }
         public CircularPipeSection CircularPipeSectionMainbars1 { get; private set; }
         public CircularPipeSection CircularPipeSectionMainbars2 { get; private set; }
 
@@ -37,7 +37,7 @@ namespace PileDesign.Models.InputData
             MainBarArea2 = mainBars2.Ag; //mainBarArea;
             MainBarPCD2 = mainBars2.PCD;  //mainBarPcd;
 
-            CircularSolidSectionConcrete = new CirclularSolidSection(PileDia);
+            CircularSolidSectionConcrete = new CircularSolidSection(PileDia);
             CircularPipeSectionMainbars1 = new CircularPipeSection(MainBarPCD1, MainBarArea1 / Math.PI / MainBarPCD1);
             CircularPipeSectionMainbars2 = new CircularPipeSection(MainBarPCD2, MainBarArea2 / Math.PI / MainBarPCD2);
 
@@ -155,15 +155,15 @@ namespace PileDesign.Models.InputData
             int div = DivisionNum > 0 ? DivisionNum : 60;
 
             // 走査する軸力範囲（表示に使っている閾値をそのまま採用）
-            double Nmin = UltimateLimitAxialForceThresholds[0];
-            double Nmax = UltimateLimitAxialForceThresholds[3];
+            double NMin = UltimateLimitAxialForceThresholds[0];
+            double NMax = UltimateLimitAxialForceThresholds[3];
 
             // 断面特性
             double lever = PileDia; // 圧縮縁-引張縁距離（直径）
 
             for (int i = 0; i <= div; i++)
             {
-                double Ntarget = Nmin + (Nmax - Nmin) * i / div;
+                double Ntarget = NMin + (NMax - NMin) * i / div;
 
                 // 平均応力度（軸力による引張側応力度の増減をMcrへ反映）
                 double sigma0e = Ntarget / Ae;

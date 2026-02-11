@@ -103,31 +103,20 @@ namespace PileDesign.Output
 
             try
             {
-                // 主要 API へ適用（存在しなければ無視）
-                SafeSetFont(wpf.Plot?.Axes?.Bottom?.Label, "FontName");
-                SafeSetFont(wpf.Plot?.Axes?.Bottom, "TickLabelFontName");
-                SafeSetFont(wpf.Plot?.Axes?.Left?.Label, "FontName");
-                SafeSetFont(wpf.Plot?.Axes?.Left, "TickLabelFontName");
-                SafeSetFont(wpf.Plot?.Axes?.Top?.Label, "FontName");
-                SafeSetFont(wpf.Plot?.Axes?.Right?.Label, "FontName");
-                SafeSetFont(wpf.Plot?.Legend, "FontName");
+                // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出
+                // 軸ラベルのテキストから適切なフォントを検出
+                string titleText = wpf.Plot?.Axes?.Title?.Label?.Text ?? "メイリオ";
+                string bottomText = wpf.Plot?.Axes?.Bottom?.Label?.Text ?? "メイリオ";
+                string leftText = wpf.Plot?.Axes?.Left?.Label?.Text ?? "メイリオ";
 
-                // 各 Plottable に FontName 等があれば設定（反射で広く）
-                try
-                {
-                    var getPlottables = wpf.Plot.GetType().GetMethod("GetPlottables");
-                    var plottables = getPlottables != null ? getPlottables.Invoke(wpf.Plot, null) as System.Collections.IEnumerable : null;
-                    if (plottables != null)
-                    {
-                        foreach (var p in plottables)
-                        {
-                            SafeSetFont(p, "FontName");
-                            SafeSetFont(p, "LabelFontName");
-                            SafeSetFont(p, "TickLabelFontName");
-                        }
-                    }
-                }
-                catch { /* 無視して続行 */ }
+                if (wpf.Plot?.Axes?.Title?.Label != null)
+                    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titleText);
+                if (wpf.Plot?.Axes?.Bottom?.Label != null)
+                    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(bottomText);
+                if (wpf.Plot?.Axes?.Left?.Label != null)
+                    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(leftText);
+                if (wpf.Plot?.Legend != null)
+                    wpf.Plot.Legend.FontName = ScottPlot.Fonts.Detect("凡例");
             }
             catch
             {
@@ -462,6 +451,9 @@ namespace PileDesign.Output
                             Pen slatePen = new(Brushes.SlateBlue, Math.Max(1.0, lineWidthThick));
                             Pen darkSlatePen = new(Brushes.DarkSlateGray, Math.Max(1.0, lineWidthThick));
 
+                            // 杭頭標高を取得（絶対標高→相対深度変換用）
+                            double pileHeadZ = soilPile.Z;
+
                             void DrawDisp(Func<PileDesign.Models.InputData.PileZDataItem, double> sel, Pen pen)
                             {
                                 var pts = new List<Point>();
@@ -470,7 +462,8 @@ namespace PileDesign.Output
                                     double valMm = sel(z);
                                     double displayMm = valMm * scaleDisplayPtOnMm; // 1500
                                     double xPx = dispBaseX + displayMm;
-                                    var p = new Point(xPx, ToImagePoint(0, z.Z).Y);
+                                    // z.Z（絶対標高）を杭頭からの相対深度に変換
+                                    var p = new Point(xPx, ToImagePoint(0, z.Z - pileHeadZ).Y);
                                     pts.Add(p);
                                 }
 
@@ -509,9 +502,13 @@ namespace PileDesign.Output
                             Pen thinBlack = new(Brushes.Black, Math.Max(1.0, lineWidthThick));
                             Pen springPen = new(Brushes.DarkGray, Math.Max(1.0, lineWidthThin));
 
+                            // 杭頭標高を取得（絶対標高→相対深度変換用）
+                            double pileHeadZ = soilPile.Z;
+
                             foreach (var z in zItems)
                             {
-                                double yPx = ToImagePoint(0, z.Z).Y;
+                                // z.Z（絶対標高）を杭頭からの相対深度に変換
+                                double yPx = ToImagePoint(0, z.Z - pileHeadZ).Y;
                                 // draw horizontal short bar representing spring attachment
                                 dc.DrawLine(thinBlack, new Point(xLeft, yPx), new Point(xCenter - nodeRadius, yPx));
                                 dc.DrawLine(thinBlack, new Point(xCenter + nodeRadius, yPx), new Point(xRight, yPx));
@@ -525,7 +522,7 @@ namespace PileDesign.Output
                                 DrawZigzag(dc, rightStart, rightEnd, zigCount, zigAmp, springPen);
                             }
                             // bottom spring from toe to deeper ground (small representation)
-                            var bottomY = ToImagePoint(0, zItems[^1].Z).Y;
+                            var bottomY = ToImagePoint(0, zItems[^1].Z - pileHeadZ).Y;
                             DrawZigzag(dc, new Point(xCenter, bottomY), new Point(xCenter, bottomY + springLengthPx), zigCount, zigAmp, springPen);
                         }
                     }
@@ -974,10 +971,13 @@ namespace PileDesign.Output
         }
 
         /// <summary>
-        /// 沈下コンター図をPNG出力
+        /// 沈下コンター図をPNG出力（双線形補間ヒートマップ＋杭位置マーカー）
         /// </summary>
         public static byte[] RenderSettlementContourDiagram(
             IEnumerable<SettlementGridDataItem> gridData,
+            List<double>? gridXs = null,
+            List<double>? gridYs = null,
+            List<(double X, double Y)>? pilePositions = null,
             double widthMm = 150,
             double heightMm = 150,
             double dpi = DefaultDpi,
@@ -994,52 +994,156 @@ namespace PileDesign.Output
                 int widthPx = MmToPx(widthMm, dpi, scale);
                 int heightPx = MmToPx(heightMm, dpi, scale);
 
-                // 境界計算
-                double minX = data.Min(d => d.X);
-                double maxX = data.Max(d => d.X);
-                double minY = data.Min(d => d.Y);
-                double maxY = data.Max(d => d.Y);
+                // グリッド座標の決定
+                var xs = gridXs ?? data.Select(d => d.X).Distinct().OrderBy(v => v).ToList();
+                var ys = gridYs ?? data.Select(d => d.Y).Distinct().OrderBy(v => v).ToList();
+
+                double minX = xs.Min();
+                double maxX = xs.Max();
+                double minY = ys.Min();
+                double maxY = ys.Max();
                 double minS = data.Min(d => d.Settlement);
                 double maxS = data.Max(d => d.Settlement);
 
-                var transform = new StaticCoordinateTransform(
-                    widthPx, heightPx,
-                    minX, maxX,
-                    minY, maxY,
-                    0, 1,
-                    StaticCoordinateTransform.ViewDirection.TopDown,
-                    0.1,
-                    1.0
-                );
+                // 2次元配列化
+                var grid = new double?[xs.Count, ys.Count];
+                foreach (var item in data)
+                {
+                    int ix = xs.IndexOf(item.X);
+                    int iy = ys.IndexOf(item.Y);
+                    if (ix >= 0 && iy >= 0) grid[ix, iy] = item.Settlement;
+                }
+
+                // マージン設定（右側にカラーバー用スペース）
+                double marginLeft = 10, marginRight = 80, marginTop = 10, marginBottom = 10;
+                double plotW = widthPx - marginLeft - marginRight;
+                double plotH = heightPx - marginTop - marginBottom;
+
+                // アスペクト比を維持
+                double dataW = maxX - minX;
+                double dataH = maxY - minY;
+                if (dataW < 1e-9) dataW = 1;
+                if (dataH < 1e-9) dataH = 1;
+                double scaleF = Math.Min(plotW / dataW, plotH / dataH);
+                double offsetX = marginLeft + (plotW - dataW * scaleF) * 0.5;
+                double offsetY = marginTop + (plotH - dataH * scaleF) * 0.5;
+
+                // ワールド座標→ピクセル変換
+                double ToPxX(double wx) => offsetX + (wx - minX) * scaleF;
+                double ToPxY(double wy) => offsetY + (maxY - wy) * scaleF; // Y軸反転
 
                 var dv = new DrawingVisual();
                 using (var dc = dv.RenderOpen())
                 {
-                    var size = new Size(widthPx, heightPx);
-                    var target = new DrawingContextTarget(dc, size);
-                    var helper = new DrawingHelper(target, transform);
-
                     // 背景
-                    target.DrawRectangle(new Rect(0, 0, widthPx, heightPx), DrawingStyle.Filled(Colors.White, null, 0));
+                    dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, widthPx, heightPx));
 
-                    // カラーバンド生成
-                    var colorBands = GenerateColorBands(minS, maxS, colorBandCount);
-
-                    // グリッドポイント描画
-                    foreach (var item in data)
+                    // セルごとに双線形補間でヒートマップ描画
+                    int subDiv = 4; // セル内の分割数（高品質化）
+                    for (int ix = 0; ix < xs.Count - 1; ix++)
                     {
-                        var pt = transform.Transform(new Point3D(item.X, item.Y, 0));
-                        double ratio = maxS > minS ? (item.Settlement - minS) / (maxS - minS) : 0.5;
-                        var color = DrawingHelper.GetRainbowColor(ratio);
+                        for (int iy = 0; iy < ys.Count - 1; iy++)
+                        {
+                            double? v00 = grid[ix, iy];
+                            double? v10 = grid[ix + 1, iy];
+                            double? v01 = grid[ix, iy + 1];
+                            double? v11 = grid[ix + 1, iy + 1];
+                            if (v00 == null || v10 == null || v01 == null || v11 == null) continue;
 
-                        helper.DrawNodeMarker(pt, 8, DrawingStyle.Filled(color, Colors.Black, 0.5));
+                            double cellLeft = ToPxX(xs[ix]);
+                            double cellRight = ToPxX(xs[ix + 1]);
+                            double cellTop = ToPxY(ys[iy + 1]);
+                            double cellBottom = ToPxY(ys[iy]);
+
+                            double subW = (cellRight - cellLeft) / subDiv;
+                            double subH = (cellBottom - cellTop) / subDiv;
+
+                            for (int si = 0; si < subDiv; si++)
+                            {
+                                for (int sj = 0; sj < subDiv; sj++)
+                                {
+                                    double tx = (si + 0.5) / subDiv;
+                                    double ty = (sj + 0.5) / subDiv;
+
+                                    // 双線形補間
+                                    double val = (1 - tx) * (1 - ty) * v00.Value
+                                               + tx * (1 - ty) * v10.Value
+                                               + (1 - tx) * ty * v01.Value
+                                               + tx * ty * v11.Value;
+
+                                    double ratio = maxS > minS ? (val - minS) / (maxS - minS) : 0.5;
+                                    var color = DrawingHelper.GetRainbowColor(ratio);
+                                    var brush = new SolidColorBrush(color);
+                                    brush.Freeze();
+
+                                    double rx = cellLeft + si * subW;
+                                    double ry = cellTop + sj * subH;
+                                    dc.DrawRectangle(brush, null, new Rect(rx, ry, subW + 0.5, subH + 0.5));
+                                }
+                            }
+                        }
+                    }
+
+                    // 杭位置マーカー
+                    if (pilePositions != null)
+                    {
+                        double markerR = Math.Max(3.0, 3.0 * scale);
+                        var pilePen = new Pen(Brushes.Black, Math.Max(1.0, 1.0 * scale));
+                        foreach (var (px, py) in pilePositions)
+                        {
+                            double cx = ToPxX(px);
+                            double cy = ToPxY(py);
+                            dc.DrawEllipse(null, pilePen, new Point(cx, cy), markerR, markerR);
+                        }
                     }
 
                     // カラーバー描画
-                    var barBands = colorBands.Select(cb => (cb.Value, cb.Color)).ToList();
-                    helper.DrawColorBar(widthPx - 60, 20, 20, 15, barBands, "沈下量", "mm", 10, 2);
+                    var colorBands = GenerateColorBands(minS, maxS, colorBandCount);
+                    double barX = widthPx - marginRight + 10;
+                    double barY = marginTop + 10;
+                    double barW = 15;
+                    double barCellH = Math.Min(15.0, (heightPx - 2 * marginTop - 40) / (colorBandCount + 1));
+                    var thinPen = new Pen(Brushes.Black, 0.5);
 
-                    target.Flush();
+                    for (int i = colorBands.Count - 1; i >= 0; i--)
+                    {
+                        var (val, bandColor) = colorBands[i];
+                        int drawIdx = colorBands.Count - 1 - i;
+                        var cellBrush = new SolidColorBrush(bandColor);
+                        cellBrush.Freeze();
+                        dc.DrawRectangle(cellBrush, thinPen, new Rect(barX, barY + drawIdx * barCellH, barW, barCellH));
+
+                        var ft = new FormattedText(
+                            $"{val:N2}",
+                            System.Globalization.CultureInfo.CurrentCulture,
+                            FlowDirection.LeftToRight,
+                            new Typeface("Meiryo"),
+                            Math.Max(8.0, 8.0 * scale * 0.5),
+                            Brushes.Black,
+                            1.0);
+                        dc.DrawText(ft, new Point(barX + barW + 3, barY + drawIdx * barCellH + (barCellH - ft.Height) * 0.5));
+                    }
+
+                    // カラーバーのタイトル
+                    var titleFt = new FormattedText(
+                        "沈下量",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Meiryo"),
+                        Math.Max(9.0, 9.0 * scale * 0.5),
+                        Brushes.Black,
+                        1.0);
+                    dc.DrawText(titleFt, new Point(barX, barY - titleFt.Height - 2));
+
+                    var unitFt = new FormattedText(
+                        "(mm)",
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        FlowDirection.LeftToRight,
+                        new Typeface("Meiryo"),
+                        Math.Max(8.0, 8.0 * scale * 0.5),
+                        Brushes.Black,
+                        1.0);
+                    dc.DrawText(unitFt, new Point(barX, barY + colorBands.Count * barCellH + 2));
                 }
 
                 return RenderDrawingVisualToPng(dv, widthPx, heightPx);

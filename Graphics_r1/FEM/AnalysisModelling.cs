@@ -532,7 +532,7 @@ namespace PileDesign.FEM
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("=== DumpRigidBodyAndNodeRelations START ===");
+                //System.Diagnostics.Debug.WriteLine("=== DumpRigidBodyAndNodeRelations START ===");
 
                 // RigidBodies の一覧（存在すれば MasterNode/SlaveNodes を列挙）
                 for (int i = 0; i < RigidBodies.Count; i++)
@@ -540,7 +540,7 @@ namespace PileDesign.FEM
                     var rb = RigidBodies[i];
                     string masterName = rb?.MasterNode?.Name ?? "null";
                     var slaveNames = (rb?.SlaveNodes != null) ? string.Join(", ", rb.SlaveNodes.Select(n => n?.Name ?? "null")) : "<no slaves>";
-                    System.Diagnostics.Debug.WriteLine($"RigidBody[{i}] Master={masterName} Slaves=[{slaveNames}]");
+                    //System.Diagnostics.Debug.WriteLine($"RigidBody[{i}] Master={masterName} Slaves=[{slaveNames}]");
                 }
 
                 // 各 Node の EquationNumber / MasterNodes / TransferMatrix を出力
@@ -549,27 +549,27 @@ namespace PileDesign.FEM
                     var eqNums = node.EquationNumber != null ? string.Join(",", node.EquationNumber) : "<null>";
                     var masterNames = node.MasterNodes != null ? string.Join(",", node.MasterNodes.Select(m => m != null ? m.Name : "null")) : "<null>";
                     string tmat = node.TransferMatrix != null ? $"[{string.Join(";", node.TransferMatrix.EnumerateRows().Select(r => string.Join(",", r)))}]" : "<null>";
-                    System.Diagnostics.Debug.WriteLine($"Node: {node.Name}, Eq=[{eqNums}], Masters=[{masterNames}], Boundary=[Ux{node.Boundary.Ux},Uy{node.Boundary.Uy},Uz{node.Boundary.Uz},Rx{node.Boundary.Rx},Ry{node.Boundary.Ry},Rz{node.Boundary.Rz}], TransferMatrix={tmat}");
+                    //System.Diagnostics.Debug.WriteLine($"Node: {node.Name}, Eq=[{eqNums}], Masters=[{masterNames}], Boundary=[Ux{node.Boundary.Ux},Uy{node.Boundary.Uy},Uz{node.Boundary.Uz},Rx{node.Boundary.Rx},Ry{node.Boundary.Ry},Rz{node.Boundary.Rz}], TransferMatrix={tmat}");
                 }
 
                 // 回転ばねの端点確認
                 for (int i = 0; i < RotationalSprings.Count; i++)
                 {
                     var rs = RotationalSprings[i];
-                    System.Diagnostics.Debug.WriteLine($"RotationalSpring[{i}] Name={rs.Name}, NodeI={(rs.NodeI?.Name ?? "null")}, NodeJ={(rs.NodeJ?.Name ?? "null")}, Mode={rs.Mode}, Ktheta={rs.Ktheta}, KthetaXY={rs.KthetaXY}");
+                    //System.Diagnostics.Debug.WriteLine($"RotationalSpring[{i}] Name={rs.Name}, NodeI={(rs.NodeI?.Name ?? "null")}, NodeJ={(rs.NodeJ?.Name ?? "null")}, Mode={rs.Mode}, Ktheta={rs.Ktheta}, KthetaXY={rs.KthetaXY}");
                 }
 
                 // 杭頭 Beam の簡易チェック（IsPileTop）
                 foreach (var b in Beams.Where(b => b.IsPileTop))
                 {
-                    System.Diagnostics.Debug.WriteLine($"Beam (pile top) Name={b.Name}, NodeI={b.NodeI?.Name}, NodeJ={b.NodeJ?.Name}, Length={b.Length}, PileBodyNo={b.PileBodyNo}, SegmentIndex={b.SegmentIndex}");
+                    //System.Diagnostics.Debug.WriteLine($"Beam (pile top) Name={b.Name}, NodeI={b.NodeI?.Name}, NodeJ={b.NodeJ?.Name}, Length={b.Length}, PileBodyNo={b.PileBodyNo}, SegmentIndex={b.SegmentIndex}");
                 }
 
-                System.Diagnostics.Debug.WriteLine("=== DumpRigidBodyAndNodeRelations END ===");
+                //System.Diagnostics.Debug.WriteLine("=== DumpRigidBodyAndNodeRelations END ===");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("DumpRigidBodyAndNodeRelations ERROR: " + ex);
+                //System.Diagnostics.Debug.WriteLine("DumpRigidBodyAndNodeRelations ERROR: " + ex);
             }
         }
 #endif

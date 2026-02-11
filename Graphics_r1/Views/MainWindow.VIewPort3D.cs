@@ -61,7 +61,7 @@ namespace PileDesign.Views
             else
             {
                 // サポートされていないプラットフォームの場合は何もしない、またはログ出力
-                // 例: System.Diagnostics.Debug.WriteLine("LinesVisual3D is not supported on this platform.");
+                // 例: //System.Diagnostics.Debug.WriteLine("LinesVisual3D is not supported on this platform.");
             }
         }
 
@@ -85,7 +85,7 @@ namespace PileDesign.Views
             else
             {
                 // サポートされていないプラットフォームの場合は何もしない、またはログ出力
-                // 例: System.Diagnostics.Debug.WriteLine("GridLinesVisual3D is not supported on this platform.");
+                // 例: //System.Diagnostics.Debug.WriteLine("GridLinesVisual3D is not supported on this platform.");
             }
         }
 

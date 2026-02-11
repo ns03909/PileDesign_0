@@ -18,6 +18,11 @@
         PreviewKeyDown="Window_PreviewKeyDown"
         Title="杭頭水平力を受ける一様地盤中の長い杭の状態計算" Height="450" Width="800">
 
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+
     <!-- 右寄せ表示・編集中用の共通スタイルを追加 -->
     <Window.Resources>
         <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">

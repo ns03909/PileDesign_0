@@ -158,7 +158,7 @@ namespace PileDesign.Models
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"FTCap.csv not found at: {filePath}");
+                //System.Diagnostics.Debug.WriteLine($"FTCap.csv not found at: {filePath}");
             }
         }
 
@@ -180,13 +180,13 @@ namespace PileDesign.Models
             ObservableCollection<double> Ns = [];
             ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> thetasMs = [];
             int nNum = 10;
-            double nMin = GetNMin();
-            double nMax = GetNMax();
+            double NMin = GetNMin();
+            double NMax = GetNMax();
             double N;
 
             for (int i = 0; i < nNum; i++)
             {
-                N = nMin + (nMax - nMin) * i / nNum;
+                N = NMin + (NMax - NMin) * i / nNum;
                 thetasMs.Add(GetMThetaRelationship(N));
                 Ns.Add(N);
             }

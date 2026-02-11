@@ -7,7 +7,7 @@ namespace PileDesign.Models.InputData
     // 場所打ち鉄筋コンクリート杭断面クラス
     internal class InsituReinforcedConcreteSection : AbstractPileSection
     {
-        public CirclularSolidSection CircularSolidSectionConcrete { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcrete { get; private set; }
         public CircularPipeSection CircularPipeSectionMainbars { get; private set; }
 
         public InsituConcrete InsituConcrete { get; private set; }
@@ -31,7 +31,7 @@ namespace PileDesign.Models.InputData
             MainBarArea = mainBars.Ag; //mainBarArea;
             MainBarPCD = mainBars.PCD;  //mainBarPcd;
 
-            CircularSolidSectionConcrete = new CirclularSolidSection(PileDia);
+            CircularSolidSectionConcrete = new CircularSolidSection(PileDia);
             CircularPipeSectionMainbars = new CircularPipeSection(MainBarPCD, MainBarArea / Math.PI / MainBarPCD);
 
             InsituConcrete = insituConcrete;
@@ -194,11 +194,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
-            double Nmax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetServiceLimitShear(MonQd, n / Ae, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -213,11 +213,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
-            double Nmax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetDamageLimitShear(MonQd, n / Ae, level, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -232,13 +232,13 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = 0.0;
-            double Nmax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = 0.0;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             double pg = MainBarArea / InsituConcrete.Ac;
             double pt = 100 * pg / 4.0;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetUltimateLimitShear(MonQd, n / Ae, pt, pw, sigmaWy, isFactored);
                 ns.Add(n);
                 qs.Add(q);
@@ -272,15 +272,15 @@ namespace PileDesign.Models.InputData
             int div = DivisionNum > 0 ? DivisionNum : 60;
 
             // 走査する軸力範囲（表示に使っている閾値をそのまま採用）
-            double Nmin = UltimateLimitAxialForceThresholds[0];
-            double Nmax = UltimateLimitAxialForceThresholds[3];
+            double NMin = UltimateLimitAxialForceThresholds[0];
+            double NMax = UltimateLimitAxialForceThresholds[3];
 
             // 断面特性
             double lever = PileDia; // 圧縮縁-引張縁距離（直径）
 
             for (int i = 0; i <= div; i++)
             {
-                double Ntarget = Nmin + (Nmax - Nmin) * i / div;
+                double Ntarget = NMin + (NMax - NMin) * i / div;
 
                 // 平均応力度（軸力による引張側応力度の増減をMcrへ反映）
                 double sigma0e = Ntarget / Ae;
@@ -670,7 +670,7 @@ namespace PileDesign.Models.InputData
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
             (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
 
-            System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Ntarget={Ntarget:E3}[N], MCr={MCr:E3}, phiCr={phiCr:E6}, MY={MY:E3}, phiY={phiY:E6}, Mu0={Mu0:E3}");
+            //System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Ntarget={Ntarget:E3}[N], MCr={MCr:E3}, phiCr={phiCr:E6}, MY={MY:E3}, phiY={phiY:E6}, Mu0={Mu0:E3}");
 
             //if (MCr > MY)
             //{
@@ -697,7 +697,7 @@ namespace PileDesign.Models.InputData
                 Ms = [0.0, MCr, beta1 * beta2 * Mu0];
             }
 
-            System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Result phis=[{string.Join(",", phis.Select(p => p.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
+            //System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Result phis=[{string.Join(",", phis.Select(p => p.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
             return (phis, Ms);
         }
 
@@ -724,7 +724,7 @@ namespace PileDesign.Models.InputData
             List<double> thetas = [0.0, thetaCr, thetaY, thetaU];
             List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
 
-            System.Diagnostics.Debug.WriteLine($"InsituRC.GetMThetaRelationship: thetas=[{string.Join(",", thetas.Select(t => t.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
+            //System.Diagnostics.Debug.WriteLine($"InsituRC.GetMThetaRelationship: thetas=[{string.Join(",", thetas.Select(t => t.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
             return (thetas, Ms);
         }
 

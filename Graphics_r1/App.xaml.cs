@@ -20,6 +20,7 @@
 
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
+using PileDesign.Views;
 using System;
 using System.IO;
 using System.Windows;
@@ -70,6 +71,50 @@ namespace PileDesign
             try
             {
                 base.OnStartup(e);
+
+                // WelcomeDialog閉時にアプリが終了しないようにする
+                this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+                // ウェルカムダイアログ表示
+                WelcomeDialogResult welcomeResult = WelcomeDialogResult.None;
+
+                // TODO: サンプルプロジェクト実装後に有効化する
+                //if (PileDesign.Properties.Settings.Default.ShowWelcomeDialog)
+                //{
+                //    var welcomeVm = new WelcomeDialogViewModel();
+                //    var welcomeDialog = new WelcomeDialog { DataContext = welcomeVm };
+                //    welcomeDialog.ShowDialog();
+                //    welcomeResult = welcomeVm.Result;
+                //}
+
+                // MainWindowを手動で生成・表示（StartupUri削除のため）
+                var mainWindow = new MainWindow();
+                this.MainWindow = mainWindow;
+                mainWindow.Show();
+
+                // MainWindow表示後、通常のシャットダウンモードに戻す
+                this.ShutdownMode = ShutdownMode.OnMainWindowClose;
+
+                // ウェルカムダイアログの結果に応じてアクションを実行
+                if (mainWindow.DataContext is MainWindowViewModel vm)
+                {
+                    switch (welcomeResult)
+                    {
+                        case WelcomeDialogResult.OpenExisting:
+                            vm.OpenInputModelFileSimple();
+                            break;
+                        case WelcomeDialogResult.OpenSample:
+                            string examplePath = Path.Combine(
+                                AppDomain.CurrentDomain.BaseDirectory, "Examples", "Example3_2.json");
+                            if (File.Exists(examplePath))
+                                vm.TryLoadInputModelFileUsingInputModelLoader(examplePath);
+                            break;
+                        case WelcomeDialogResult.NewProject:
+                        case WelcomeDialogResult.None:
+                        default:
+                            break;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -85,7 +130,7 @@ namespace PileDesign
             if (e.Exception is System.Runtime.InteropServices.COMException comEx
                 && comEx.HResult == unchecked((int)0x80040206))
             {
-                System.Diagnostics.Debug.WriteLine($"[App] IME/TextStore COMException ignored: {comEx.Message}");
+                //System.Diagnostics.Debug.WriteLine($"[App] IME/TextStore COMException ignored: {comEx.Message}");
                 e.Handled = true;
                 return; // アプリを終了せずに続行
             }
@@ -105,12 +150,12 @@ namespace PileDesign
             catch (UnauthorizedAccessException)
             {
                 // ファイル書き込み権限がない場合は無視（デバッグ出力のみ）
-                System.Diagnostics.Debug.WriteLine("ログファイルへの書き込み権限がありません");
+                //System.Diagnostics.Debug.WriteLine("ログファイルへの書き込み権限がありません");
             }
             catch (IOException)
             {
                 // ファイルI/O例外は無視（デバッグ出力のみ）
-                System.Diagnostics.Debug.WriteLine("ログファイルの書き込みに失敗しました");
+                //System.Diagnostics.Debug.WriteLine("ログファイルの書き込みに失敗しました");
             }
 
             // ユーザーに通知

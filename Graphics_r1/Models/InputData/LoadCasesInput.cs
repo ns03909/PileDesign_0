@@ -1,6 +1,8 @@
 ﻿using PileDesign.ViewModels;
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 
 namespace PileDesign.Models.InputData
@@ -84,14 +86,93 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<LoadCase> LoadCasesLevel1
         {
             get => _loadCasesLevel1;
-            set => SetProperty(ref _loadCasesLevel1, value);
+            set
+            {
+                // 古いコレクションのイベント解除
+                UnsubscribeLoadCaseEvents(_loadCasesLevel1);
+
+                if (SetProperty(ref _loadCasesLevel1, value))
+                {
+                    // 新しいコレクションのイベント購読
+                    SubscribeLoadCaseEvents(_loadCasesLevel1);
+                    RaiseAllLoadCasesChanged();
+                }
+            }
         }
 
         private ObservableCollection<LoadCase> _loadCasesLevel2;
         public ObservableCollection<LoadCase> LoadCasesLevel2
         {
             get => _loadCasesLevel2;
-            set => SetProperty(ref _loadCasesLevel2, value);
+            set
+            {
+                // 古いコレクションのイベント解除
+                UnsubscribeLoadCaseEvents(_loadCasesLevel2);
+
+                if (SetProperty(ref _loadCasesLevel2, value))
+                {
+                    // 新しいコレクションのイベント購読
+                    SubscribeLoadCaseEvents(_loadCasesLevel2);
+                    RaiseAllLoadCasesChanged();
+                }
+            }
+        }
+
+        // LoadCase の IsApplicable 変更を監視するためのヘルパーメソッド
+        private void SubscribeLoadCaseEvents(ObservableCollection<LoadCase> collection)
+        {
+            if (collection == null) return;
+            foreach (var lc in collection)
+            {
+                lc.PropertyChanged += LoadCase_PropertyChanged;
+            }
+            collection.CollectionChanged += LoadCasesCollection_Changed;
+        }
+
+        private void UnsubscribeLoadCaseEvents(ObservableCollection<LoadCase> collection)
+        {
+            if (collection == null) return;
+            foreach (var lc in collection)
+            {
+                lc.PropertyChanged -= LoadCase_PropertyChanged;
+            }
+            collection.CollectionChanged -= LoadCasesCollection_Changed;
+        }
+
+        private void LoadCasesCollection_Changed(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            // 削除されたアイテムのイベント解除
+            if (e.OldItems != null)
+            {
+                foreach (LoadCase lc in e.OldItems)
+                {
+                    lc.PropertyChanged -= LoadCase_PropertyChanged;
+                }
+            }
+            // 追加されたアイテムのイベント購読
+            if (e.NewItems != null)
+            {
+                foreach (LoadCase lc in e.NewItems)
+                {
+                    lc.PropertyChanged += LoadCase_PropertyChanged;
+                }
+            }
+            RaiseAllLoadCasesChanged();
+        }
+
+        private void LoadCase_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            // IsApplicable が変更されたら AllSeismicLoadCases/AllLoadCases の変更を通知
+            if (e.PropertyName == nameof(LoadCase.IsApplicable))
+            {
+                RaiseAllLoadCasesChanged();
+            }
+        }
+
+        private void RaiseAllLoadCasesChanged()
+        {
+            OnPropertyChanged(nameof(AllSeismicLoadCases));
+            OnPropertyChanged(nameof(AllLoadCases));
         }
 
         public ObservableCollection<LoadCase> AllSeismicLoadCases

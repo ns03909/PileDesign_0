@@ -33,14 +33,14 @@ namespace PileDesign.FEM
                 _curveCreateCount++;
                 if (_curveCreateCount <= 10)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[M-θ Curve #{_curveCreateCount}] Points={Points.Count}:");
+                    //System.Diagnostics.Debug.WriteLine($"[M-θ Curve #{_curveCreateCount}] Points={Points.Count}:");
                     for (int i = 0; i < Points.Count; i++)
                     {
                         var pt = Points[i];
-                        System.Diagnostics.Debug.WriteLine($"  [{i}] θ={pt.Theta:E6} [rad], M={pt.Moment:F1} [kNm]");
+                        //System.Diagnostics.Debug.WriteLine($"  [{i}] θ={pt.Theta:E6} [rad], M={pt.Moment:F1} [kNm]");
                     }
                     // 各区間の接線剛性を表示
-                    System.Diagnostics.Debug.WriteLine($"  Segment tangent stiffnesses (dM/dθ = K_rot):");
+                    //System.Diagnostics.Debug.WriteLine($"  Segment tangent stiffnesses (dM/dθ = K_rot):");
                     double prevTheta = 0.0, prevMoment = 0.0;
                     for (int i = 0; i < Points.Count; i++)
                     {
@@ -48,7 +48,7 @@ namespace PileDesign.FEM
                         double dTheta = t - prevTheta;
                         double dM = m - prevMoment;
                         double tangent = dTheta > 1e-12 ? dM / dTheta : 0.0;
-                        System.Diagnostics.Debug.WriteLine($"    Seg[{(i == 0 ? "origin" : (i - 1).ToString())}→{i}]: dM/dθ = {tangent:E3} [kNm/rad]");
+                        //System.Diagnostics.Debug.WriteLine($"    Seg[{(i == 0 ? "origin" : (i - 1).ToString())}→{i}]: dM/dθ = {tangent:E3} [kNm/rad]");
                         prevTheta = t;
                         prevMoment = m;
                     }
@@ -105,18 +105,49 @@ namespace PileDesign.FEM
             }
             else
             {
+                // 改良版: セグメント境界付近でスムーズにブレンドして不連続性を解消
                 int idx = FindSegmentIndex(t);
                 var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
                 var b = Points[idx];
-                result = SafeSlope(a, b);
-                region = $"{(idx == 0 ? "origin" : (idx - 1).ToString())}→{idx}";
+                double slopeCurrent = SafeSlope(a, b);
+
+                // 境界付近のブレンド幅（セグメント長の20%）
+                const double BLEND_RATIO = 0.20;
+                double segLen = b.Theta - a.Theta;
+                double blendWidth = segLen * BLEND_RATIO;
+
+                // セグメント終点付近で次のセグメントとブレンド
+                if (t > b.Theta - blendWidth && idx < Points.Count - 1)
+                {
+                    var c = Points[idx + 1];
+                    double slopeNext = SafeSlope(b, c);
+                    double blendT = (t - (b.Theta - blendWidth)) / blendWidth;
+                    blendT = blendT * blendT * (3 - 2 * blendT); // スムーズステップ
+                    result = slopeCurrent * (1 - blendT) + slopeNext * blendT;
+                    region = $"blend_{idx}→{idx + 1}";
+                }
+                // セグメント始点付近で前のセグメントとブレンド
+                else if (t < a.Theta + blendWidth && idx > 1)
+                {
+                    var prev = (Theta: Points[idx - 2].Theta, Moment: Points[idx - 2].Moment);
+                    double slopePrev = SafeSlope(prev, a);
+                    double blendT = (t - a.Theta) / blendWidth;
+                    blendT = blendT * blendT * (3 - 2 * blendT); // スムーズステップ
+                    result = slopePrev * (1 - blendT) + slopeCurrent * blendT;
+                    region = $"blend_{idx - 1}→{idx}";
+                }
+                else
+                {
+                    result = slopeCurrent;
+                    region = $"{(idx == 0 ? "origin" : (idx - 1).ToString())}→{idx}";
+                }
             }
 
             #if DEBUG
             _evalTangentCount++;
             if (_evalTangentCount <= 30)
             {
-                System.Diagnostics.Debug.WriteLine($"[M-θ EvalTangent #{_evalTangentCount}] θ={theta:E6}, seg={region}, K_tan={result:E3}");
+                //System.Diagnostics.Debug.WriteLine($"[M-θ EvalTangent #{_evalTangentCount}] θ={theta:E6}, seg={region}, K_tan={result:E3}");
             }
             #endif
             return result;
@@ -136,7 +167,7 @@ namespace PileDesign.FEM
                 _evalSecantCount++;
                 if (_evalSecantCount <= 30)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6} (near zero) -> using tangent={tan0:E3}");
+                    //System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6} (near zero) -> using tangent={tan0:E3}");
                 }
                 #endif
                 return tan0;
@@ -147,7 +178,7 @@ namespace PileDesign.FEM
             _evalSecantCount++;
             if (_evalSecantCount <= 30)
             {
-                System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6}, M={M:F1}, K_sec={secant:E3}");
+                //System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6}, M={M:F1}, K_sec={secant:E3}");
             }
             #endif
             return secant;

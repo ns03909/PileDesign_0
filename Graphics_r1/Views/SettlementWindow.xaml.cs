@@ -1,4 +1,5 @@
 ﻿using PileDesign.Common;
+using PileDesign.Models;
 using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
@@ -76,8 +77,14 @@ namespace PileDesign.Views
             // 杭先端沈下グラフを描画（α, nのデフォルト値で）
             viewModel.AddComponent(viewModel.PileBody.SettleAlpha, viewModel.PileBody.SettleN);
 
-            // グラフ描画を実行
-            viewModel.ExecuteAnalysis();
+            // 全SoilPileを一括解析
+            viewModel.AnalyzeAllSoilPiles();
+
+            // 最初に表示されるSoilPileのランプを点灯（ユーザーが確認済み）
+            viewModel.MarkCurrentPileAsConfirmed();
+
+            // 杭姿図を描画
+            viewModel.DrawShapes();
 
             // CSVエクスポートメニューを追加
             PlotHelper.AddCsvExportMenu(wpfPlotSettlement, "杭頭沈下");
@@ -262,6 +269,19 @@ namespace PileDesign.Views
         //    }
 
         //}
+
+        // ランプクリック時に該当SoilPileを選択
+        private void SoilPileLamp_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not SettlementViewModel vm) return;
+            if (sender is not Button btn) return;
+            if (btn.DataContext is LampState lamp)
+            {
+                vm.SelectSoilPileIndex(lamp.Index);
+                // ComboBoxの選択も同期
+                ComboBoxSoilPileNo.SelectedIndex = lamp.Index;
+            }
+        }
 
         // 押込み/引抜き周面抵抗考慮チェックボックス変更時の処理
         private void CircumResistanceCheckBox_Changed(object sender, RoutedEventArgs e)

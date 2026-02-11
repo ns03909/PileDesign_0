@@ -13,6 +13,7 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Windows;
@@ -90,6 +91,136 @@ namespace PileDesign.ViewModels
             var countList = new ObservableCollection<int>(Enumerable.Range(1, SoilPiles.Count));
             SoilPilesCountList = countList;
         }
+
+        // ランプ初期化
+        private void InitializeLamps()
+        {
+            SoilPileLampStates.Clear();
+            for (int i = 0; i < SoilPiles.Count; i++)
+            {
+                var lamp = new PileDesign.Models.LampState(i, false);
+                lamp.PropertyChanged += OnLampPropertyChanged;
+                SoilPileLampStates.Add(lamp);
+            }
+        }
+
+        // ランプPropertyChangedハンドラ
+        private void OnLampPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PileDesign.Models.LampState.IsOn))
+            {
+                OnPropertyChanged(nameof(HasAnyRedLamp));
+            }
+        }
+
+        // 指定SoilPileのランプを点灯
+        private void MarkPileAsAnalyzed(int pileIndex)
+        {
+            if (pileIndex < 0 || SoilPileLampStates == null || pileIndex >= SoilPileLampStates.Count) return;
+            if (!SoilPileLampStates[pileIndex].IsOn)
+            {
+                SoilPileLampStates[pileIndex].IsOn = true;
+            }
+        }
+
+        // ランプクリック時に該当SoilPileを選択（ユーザー確認＝ランプ点灯）
+        public void SelectSoilPileIndex(int index)
+        {
+            if (index < 0 || index >= SoilPiles.Count) return;
+            SoilPileNo = index + 1;
+            SoilPile = SoilPiles[index];
+            PileBody = InputModel.PileBodies[SoilPile.PileBodyNo - 1];
+            OnPropertyChanged(nameof(UsesPileToeEta));
+            OnPropertyChanged(nameof(SettlePileToeDiaM));
+            AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
+            ExecuteAnalysis();
+            DrawShapes();
+            // ユーザーが確認したのでランプを点灯
+            MarkPileAsAnalyzed(index);
+        }
+
+        // ComboBox選択変更時のランプ点灯（ユーザー確認）
+        public void MarkCurrentPileAsConfirmed()
+        {
+            MarkPileAsAnalyzed(SoilPileNo - 1);
+        }
+
+        // 全SoilPile一括解析（ランプは点灯しない＝ユーザー確認待ち）
+        public void AnalyzeAllSoilPiles()
+        {
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                for (int i = 0; i < SoilPiles.Count; i++)
+                {
+                    var soilPile = SoilPiles[i];
+
+                    // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
+                    var vtm = new VerticalLoadTransferMethod(_mainWindowViewModel, soilPile, SelectedAnalysisMode);
+
+                    // SoilPileに計算結果を保存
+                    soilPile.LoadDisplacements = vtm.LoadDisplacements;
+                    soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
+
+                    // 該当するPileLayoutItemの沈下量を計算
+                    int soilPileNo = i + 1;
+                    foreach (var pileLayoutItem in InputModel.PileLayoutItems)
+                    {
+                        if (pileLayoutItem.SoilPileAltNo == soilPileNo)
+                        {
+                            double force = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional;
+                            var settlementVector = vtm.GetDisplacementForGivenLoad(force);
+                            if (settlementVector != null)
+                            {
+                                pileLayoutItem.SinglePileSettlementVL = settlementVector[0];
+                            }
+
+                            for (int j = 0; j < pileLayoutItem.AxialForceLevel1s.Count; j++)
+                            {
+                                var axialForce = pileLayoutItem.AxialForceLevel1s[j];
+                                settlementVector = vtm.GetDisplacementForGivenLoad(axialForce);
+                                if (settlementVector != null)
+                                {
+                                    pileLayoutItem.SinglePileSettlementLevel1s[j] = settlementVector[0];
+                                }
+                            }
+
+                            for (int j = 0; j < pileLayoutItem.AxialForceLevel2s.Count; j++)
+                            {
+                                var axialForce = pileLayoutItem.AxialForceLevel2s[j];
+                                settlementVector = vtm.GetDisplacementForGivenLoad(axialForce);
+                                if (settlementVector != null)
+                                {
+                                    pileLayoutItem.SinglePileSettlementLevel2s[j] = settlementVector[0];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 現在選択中のSoilPileのVerticalLoadTransferMethodも更新
+                VerticalLoadTransferMethod = new VerticalLoadTransferMethod(_mainWindowViewModel, SoilPile, SelectedAnalysisMode);
+                UpdateSettlementChart();
+                UpdateCircumstanceSeries();
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        // ランプ状態（各SoilPileの解析済み/未済を表す）
+        public ObservableCollection<PileDesign.Models.LampState> SoilPileLampStates { get; } = new();
+
+        // 赤ランプが1つでもあるかどうか（IsOn == false が赤）
+        public bool HasAnyRedLamp
+        {
+            get => SoilPileLampStates != null && SoilPileLampStates.Any(lamp => !lamp.IsOn);
+        }
+
+        // 警告メッセージ
+        public string WarningMessage => "すべての土層-杭セットの沈下性状を確認してください。";
 
         // 杭体番号
         private int _soilPileNo = 1;
@@ -220,6 +351,9 @@ namespace PileDesign.ViewModels
             SoilPiles = new ObservableCollection<SoilPile>(soilPilesSnapshot.Select(pile => pile.DeepCopy()));
 
             UpdateSoilPilesCountList();
+
+            // ランプ初期化（各SoilPileに対して赤ランプで作成）
+            InitializeLamps();
 
             // 件数チェックして参照を安全に取得
             SoilPile = SoilPiles.Count > 0 ? SoilPiles[Math.Clamp(SoilPileNo - 1, 0, SoilPiles.Count - 1)] : throw new InvalidOperationException("SoilPiles が空です。");
@@ -447,22 +581,22 @@ namespace PileDesign.ViewModels
             List<double> settlementsLevel2 = [];
 
             // デバッグ: VL値の確認
-            System.Diagnostics.Debug.WriteLine($"=== UpdateSettlementChart VL Debug ===");
-            System.Diagnostics.Debug.WriteLine($"SoilPileNo = {SoilPileNo}");
-            System.Diagnostics.Debug.WriteLine($"_mainWindowViewModel HashCode = {_mainWindowViewModel?.GetHashCode()}");
-            System.Diagnostics.Debug.WriteLine($"InputModel HashCode = {InputModel?.GetHashCode()}");
-            System.Diagnostics.Debug.WriteLine($"PileLayoutItems HashCode = {InputModel?.PileLayoutItems?.GetHashCode()}");
-            System.Diagnostics.Debug.WriteLine($"PileLayoutItems.Count = {InputModel.PileLayoutItems?.Count ?? 0}");
+            //System.Diagnostics.Debug.WriteLine($"=== UpdateSettlementChart VL Debug ===");
+            //System.Diagnostics.Debug.WriteLine($"SoilPileNo = {SoilPileNo}");
+            //System.Diagnostics.Debug.WriteLine($"_mainWindowViewModel HashCode = {_mainWindowViewModel?.GetHashCode()}");
+            //System.Diagnostics.Debug.WriteLine($"InputModel HashCode = {InputModel?.GetHashCode()}");
+            //System.Diagnostics.Debug.WriteLine($"PileLayoutItems HashCode = {InputModel?.PileLayoutItems?.GetHashCode()}");
+            //System.Diagnostics.Debug.WriteLine($"PileLayoutItems.Count = {InputModel.PileLayoutItems?.Count ?? 0}");
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                System.Diagnostics.Debug.WriteLine($"  PileNo={pileLayoutItem.PileNo}, SoilPileAltNo={pileLayoutItem.SoilPileAltNo}, VL0={pileLayoutItem.AxialForceVL0:F1}, VLadd={pileLayoutItem.AxialForceVLAdditional:F1}");
+                //System.Diagnostics.Debug.WriteLine($"  PileNo={pileLayoutItem.PileNo}, SoilPileAltNo={pileLayoutItem.SoilPileAltNo}, VL0={pileLayoutItem.AxialForceVL0:F1}, VLadd={pileLayoutItem.AxialForceVLAdditional:F1}");
 
                 if (pileLayoutItem.SoilPileAltNo == SoilPileNo)
                 {
                     int no = pileLayoutItem.No;
                     double force = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional;
-                    System.Diagnostics.Debug.WriteLine($"    -> Matched! force={force:F1}");
+                    //System.Diagnostics.Debug.WriteLine($"    -> Matched! force={force:F1}");
 
                     Vector<double>? settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(force);
                     if (settlementVector != null)
@@ -470,7 +604,7 @@ namespace PileDesign.ViewModels
                         pileLayoutItem.SinglePileSettlementVL = settlementVector[0];
                         forcesVL.Add(force);
                         settlementsVL.Add(settlementVector[0] * 1000);
-                        System.Diagnostics.Debug.WriteLine($"    -> Added to forcesVL: {force:F1}, settlementsVL: {settlementVector[0] * 1000:F2}");
+                        //System.Diagnostics.Debug.WriteLine($"    -> Added to forcesVL: {force:F1}, settlementsVL: {settlementVector[0] * 1000:F2}");
                     }
 
                     for (int i = 0; i < pileLayoutItem.AxialForceLevel1s.Count; i++)
@@ -895,6 +1029,8 @@ namespace PileDesign.ViewModels
             {
                 SoilPile = SoilPiles[SoilPileNo - 1];
                 OnPropertyChanged(nameof(UsesPileToeEta));
+                // ユーザーが確認したのでランプを点灯
+                MarkPileAsAnalyzed(SoilPileNo - 1);
             }
 
             DrawShapes();

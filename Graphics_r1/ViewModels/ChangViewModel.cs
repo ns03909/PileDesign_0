@@ -434,6 +434,12 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
+        private void Undo() => UndoService.Instance.Undo();
+
+        [RelayCommand]
+        private void Redo() => UndoService.Instance.Redo();
+
+        [RelayCommand]
         private void DeleteChang(Chang? item)
         {
             if (item == null) return;
@@ -766,7 +772,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"RefreshPlots failed: {ex}");
+                //Debug.WriteLine($"RefreshPlots failed: {ex}");
             }
         }
 

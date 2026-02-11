@@ -29,7 +29,7 @@ namespace PileDesign.Models.InputData
 
                 if (!File.Exists(csvFilePath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"プリセットCSVが見つかりません: {csvFilePath}");
+                    //System.Diagnostics.Debug.WriteLine($"プリセットCSVが見つかりません: {csvFilePath}");
                     return (parameters, names);
                 }
 
@@ -55,7 +55,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadPresetSettlementParametersFromCsv エラー: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"LoadPresetSettlementParametersFromCsv エラー: {ex}");
             }
 
             return (parameters, names);
@@ -140,7 +140,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PileBodySegmentsUpdate エラー: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"PileBodySegmentsUpdate エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -406,7 +406,7 @@ namespace PileDesign.Models.InputData
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"PileBodyType セッター エラー: {ex}");
+                    //System.Diagnostics.Debug.WriteLine($"PileBodyType セッター エラー: {ex}");
                     Application.Current?.Dispatcher.Invoke(() =>
                         MessageBox.Show($"杭体タイプ設定中にエラーが発生しました。\n{ex.Message}", "プロパティエラー", MessageBoxButton.OK, MessageBoxImage.Error));
                 }
@@ -465,7 +465,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PileBodySegments_CollectionChanged エラー: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"PileBodySegments_CollectionChanged エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -636,9 +636,9 @@ namespace PileDesign.Models.InputData
                             // (B) なければ既存の M–φ を取り、φ -> θ に変換して曲線を作る
                             try
                             {
-                                // PileSection.GetMphiRelationship は既に単位変換済み:
+                                // PileSection.GetMPhiRelationship は既に単位変換済み:
                                 // phis: [1/m], moments: [kNm]
-                                var mphi = ps.GetMphiRelationship(axialN);
+                                var mphi = ps.GetMPhiRelationship(axialN);
                                 var phis = mphi.Phis?.ToList();
                                 var ms = mphi.Moments?.ToList(); // 既に kNm
                                 if (phis != null && ms != null && phis.Count >= 2 && phis.Count == ms.Count)
@@ -908,7 +908,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PileBodyInput.DeepCopy エラー: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"PileBodyInput.DeepCopy エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭体データのDeepCopy中にエラーが発生しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
                 return null;

@@ -2743,15 +2743,15 @@ namespace PileDesign.ViewModels
                 {
                     var pileSection = CurrentInputModel.PileBodies[pileLayout.PileBodyNo - 1].PileBodySegments[i].PileSection;
 
-                    if (pileSection.FactoredServiceNmax < force)
+                    if (pileSection.FactoredServiceNMax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置・ｽﾔ搾ｿｽ{i + 1} ・ｽﾗ重・ｽP・ｽ[・ｽX:VL:\n ・ｽg・ｽp情報E情報ﾍ適・ｽp・ｽﾍ茨ｿｽMax{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
+                        warningMessage += $"- 杭配置・ｽﾔ搾ｿｽ{i + 1} ・ｽﾗ重・ｽP・ｽ[・ｽX:VL:\n ・ｽg・ｽp情報E情報ﾍ適・ｽp・ｽﾍ茨ｿｽMax{pileSection.FactoredServiceNMax:N0}kN < {force:N0}kN\n";
                     }
-                    if (force < pileSection.FactoredServiceNmin)
+                    if (force < pileSection.FactoredServiceNMin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置・ｽﾔ搾ｿｽ{i + 1} ・ｽﾗ重・ｽP・ｽ[・ｽX:VL:\n {force:N0}kN < ・ｽg・ｽp情報E情報ﾍ適・ｽp・ｽﾍ茨ｿｽMin{pileSection.FactoredServiceNmin:N0}kN\n";
+                        warningMessage += $"- 杭配置・ｽﾔ搾ｿｽ{i + 1} ・ｽﾗ重・ｽP・ｽ[・ｽX:VL:\n {force:N0}kN < ・ｽg・ｽp情報E情報ﾍ適・ｽp・ｽﾍ茨ｿｽMin{pileSection.FactoredServiceNMin:N0}kN\n";
                     }
                 }
             }

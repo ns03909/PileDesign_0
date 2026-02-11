@@ -282,12 +282,13 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public string[] LiquefactionOptions { get; } =
-        [
-            "両方",
-            "液状化考慮",
-            "液状化非考慮",
-            ];
+        // 液状化オプション（解析結果に応じて動的に更新）
+        private ObservableCollection<string> _liquefactionOptions = ["両方", "液状化考慮", "液状化非考慮"];
+        public ObservableCollection<string> LiquefactionOptions
+        {
+            get => _liquefactionOptions;
+            set => SetProperty(ref _liquefactionOptions, value);
+        }
 
         private string _selectedLiquefaction = "両方";
         public string SelectedLiquefaction
@@ -297,23 +298,108 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _selectedLiquefaction, value))
                 {
-                    if (SelectedLiquefaction == LiquefactionOptions[0])
-                    {
-                        SelectedLiquefactionCases = [true, false];
-                    }
-                    else if (SelectedLiquefaction == LiquefactionOptions[1])
-                    {
-                        SelectedLiquefactionCases = [true];
-                    }
-                    else if (SelectedLiquefaction == LiquefactionOptions[2])
-                    {
-                        SelectedLiquefactionCases = [false];
-                    }
-                    else
-                    {
-                        SelectedLiquefactionCases = [true, false];
-                    }
+                    UpdateSelectedLiquefactionCases();
                 }
+            }
+        }
+
+        /// <summary>
+        /// 選択された液状化オプションに基づいてSelectedLiquefactionCasesを更新
+        /// </summary>
+        private void UpdateSelectedLiquefactionCases()
+        {
+            var available = GetAvailableLiquefactionCases();
+
+            if (SelectedLiquefaction == "両方")
+            {
+                // 「両方」でも実際に利用可能なケースのみを設定
+                SelectedLiquefactionCases = new ObservableCollection<bool>(available);
+            }
+            else if (SelectedLiquefaction == "液状化考慮")
+            {
+                // 液状化ケースが存在する場合のみ設定
+                if (available.Contains(true))
+                    SelectedLiquefactionCases = [true];
+                else
+                    SelectedLiquefactionCases = new ObservableCollection<bool>(available);
+            }
+            else if (SelectedLiquefaction == "液状化非考慮")
+            {
+                // 非液状化ケースが存在する場合のみ設定
+                if (available.Contains(false))
+                    SelectedLiquefactionCases = [false];
+                else
+                    SelectedLiquefactionCases = new ObservableCollection<bool>(available);
+            }
+            else
+            {
+                // 単一オプションの場合、利用可能なケースを設定
+                SelectedLiquefactionCases = new ObservableCollection<bool>(available);
+            }
+        }
+
+        /// <summary>
+        /// 解析結果から利用可能な液状化ケースを取得
+        /// </summary>
+        private List<bool> GetAvailableLiquefactionCases()
+        {
+            var available = new List<bool>();
+            if (AnaModel?.AnalysisStepResults == null || AnaModel.AnalysisStepResults.Count == 0)
+                return [true, false]; // デフォルト
+
+            bool hasLiquefaction = AnaModel.AnalysisStepResults.Any(r => r.IsLiquefaction);
+            bool hasNonLiquefaction = AnaModel.AnalysisStepResults.Any(r => !r.IsLiquefaction);
+
+            if (hasLiquefaction) available.Add(true);
+            if (hasNonLiquefaction) available.Add(false);
+
+            return available.Count > 0 ? available : [true, false];
+        }
+
+        /// <summary>
+        /// 解析結果に基づいて液状化オプションを更新
+        /// </summary>
+        private void UpdateLiquefactionOptions()
+        {
+            var available = GetAvailableLiquefactionCases();
+            bool hasLiquefaction = available.Contains(true);
+            bool hasNonLiquefaction = available.Contains(false);
+
+            var newOptions = new ObservableCollection<string>();
+
+            if (hasLiquefaction && hasNonLiquefaction)
+            {
+                newOptions.Add("両方");
+                newOptions.Add("液状化考慮");
+                newOptions.Add("液状化非考慮");
+            }
+            else if (hasLiquefaction)
+            {
+                newOptions.Add("液状化考慮");
+            }
+            else if (hasNonLiquefaction)
+            {
+                newOptions.Add("液状化非考慮");
+            }
+            else
+            {
+                // デフォルト
+                newOptions.Add("両方");
+                newOptions.Add("液状化考慮");
+                newOptions.Add("液状化非考慮");
+            }
+
+            LiquefactionOptions = newOptions;
+
+            // 選択を更新（現在の選択が利用可能でない場合は最初のオプションを選択）
+            if (!LiquefactionOptions.Contains(SelectedLiquefaction))
+            {
+                SelectedLiquefaction = LiquefactionOptions.FirstOrDefault() ?? "両方";
+            }
+            else
+            {
+                // 選択は変わらないがSelectedLiquefactionCasesを更新
+                UpdateSelectedLiquefactionCases();
             }
         }
 
@@ -328,6 +414,39 @@ namespace PileDesign.ViewModels
                     UpdateGraph();
                 }
             }
+        }
+
+        // 限界状態オプション
+        public string[] LimitStateOptions { get; } =
+        [
+            "なし",
+            "低減前使用限界状態",
+            "低減後使用限界状態",
+            "低減前損傷限界状態",
+            "低減後損傷限界状態",
+            "低減前安全限界状態",
+            "低減後安全限界状態",
+        ];
+
+        private string _selectedLimitState = "なし";
+        public string SelectedLimitState
+        {
+            get => _selectedLimitState;
+            set
+            {
+                if (SetProperty(ref _selectedLimitState, value))
+                {
+                    UpdateGraph();
+                }
+            }
+        }
+
+        // 限界状態オプション表示
+        private bool _isLimitStateOptionVisible;
+        public bool IsLimitStateOptionVisible
+        {
+            get => _isLimitStateOptionVisible;
+            set => SetProperty(ref _isLimitStateOptionVisible, value);
         }
 
         // レジェンド描画
@@ -594,7 +713,7 @@ namespace PileDesign.ViewModels
                 //GraphOptions.Add("杭応力M");
                 //GraphOptions.Add("杭変位U");
                 GraphOptions.Add("杭");
-                GraphOptions.Add("NMINT");
+                GraphOptions.Add("NMinT");
                 GraphOptions.Add("杭頭M-θ");
                 GraphOptions.Add("杭体M-φ");
                 GraphOptions.Add("水平地盤反力");
@@ -617,6 +736,9 @@ namespace PileDesign.ViewModels
             {
                 SelectedGraphOption = GraphOptions[0];
             }
+
+            // 解析結果に基づいて液状化オプションを更新
+            UpdateLiquefactionOptions();
         }
 
         [RelayCommand]
@@ -717,7 +839,7 @@ namespace PileDesign.ViewModels
                 else
                 { decimalPlacesX = 1; }
             }
-            else if (SelectedGraphOption.StartsWith("NMINT"))
+            else if (SelectedGraphOption.StartsWith("NMinT"))
             {
                 decimalPlacesX = 1;
                 decimalPlacesY = 1;
@@ -752,6 +874,8 @@ namespace PileDesign.ViewModels
             WpfPlot2.Plot.Clear();
             WpfPlot3.Plot.Clear();
 
+            // 限界状態オプションをデフォルトで非表示
+            IsLimitStateOptionVisible = false;
 
             if (SelectedGraphOption.StartsWith("杭頭応力変形関係"))
             {
@@ -786,6 +910,9 @@ namespace PileDesign.ViewModels
                             foreach (var isLiquefaction in SelectedLiquefactionCases)
                             {
                                 int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                // 解析結果がない場合はスキップ
+                                if (lastStep < 0) continue;
+
                                 // 杭頭
                                 List<double> beamZs = [beams[0].NodeI.Coord.Z];
                                 List<double> beamForces = [0];
@@ -867,6 +994,8 @@ namespace PileDesign.ViewModels
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {
                             int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            // 解析結果がない場合はスキップ
+                            if (lastStep < 0) continue;
 
                             List<double> disps = [0];
                             List<double> forces = [0];
@@ -931,7 +1060,7 @@ namespace PileDesign.ViewModels
                 DrawPileDisp(WpfPlot, MyCrosshair, "CrosshairPositionText", dispType, unit);
             }
 
-            else if (SelectedGraphOption.StartsWith("NMINT"))
+            else if (SelectedGraphOption.StartsWith("NMinT"))
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -947,7 +1076,7 @@ namespace PileDesign.ViewModels
                 var pileBody = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
                 if (pileBody?.PileBodySegments == null || SelectedPileSegmentNo < 1 || SelectedPileSegmentNo > pileBody.PileBodySegments.Count)
                 {
-                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMinT", "軸力(kN)", "曲げモーメント(kNm)");
                     WpfPlot.Refresh();
                     return;
                 }
@@ -955,7 +1084,7 @@ namespace PileDesign.ViewModels
                 var pileSection = pileBody.PileBodySegments[SelectedPileSegmentNo - 1].PileSection;
                 if (pileSection == null)
                 {
-                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMinT", "軸力(kN)", "曲げモーメント(kNm)");
                     WpfPlot.Refresh();
                     return;
                 }
@@ -1068,6 +1197,10 @@ namespace PileDesign.ViewModels
                             {
                                 foreach (var isLiquefaction in SelectedLiquefactionCases)
                                 {
+                                    // 解析結果がない場合はスキップ
+                                    int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                    if (lastStep < 0) continue;
+
                                     double moment = double.MinValue;
 
                                     // PileBodySegmentループ
@@ -1113,7 +1246,7 @@ namespace PileDesign.ViewModels
                         scatterResultLevel2.LegendText = "レベル2地震時";
                         scatterResultLevel2.LineStyle.Width = 0;
 
-                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMinT", "軸力(kN)", "曲げモーメント(kNm)");
                         WpfPlot.Plot.ShowLegend();
                         WpfPlot.Refresh();
                     }
@@ -1128,6 +1261,7 @@ namespace PileDesign.ViewModels
                 IsPileSegmentOptionVisible = false;
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
+                IsLimitStateOptionVisible = true;
 
                 DrawPileForce(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "F", "kN");
                 DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "M", "kNm");
@@ -1225,22 +1359,22 @@ namespace PileDesign.ViewModels
             var selectedLoadCases = GetSelectedLoadCases();
             var selectedCombinations = GetSelectedLoadCombinations();
 
-            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: START - targetPiles={targetPiles.Count}, loadCases={selectedLoadCases.Count}, SelectedPileBodyRef={SelectedPileBodyRef}, SelectedPileSegmentNo={SelectedPileSegmentNo}");
+            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: START - targetPiles={targetPiles.Count}, loadCases={selectedLoadCases.Count}, SelectedPileBodyRef={SelectedPileBodyRef}, SelectedPileSegmentNo={SelectedPileSegmentNo}");
 
             foreach (var pileLayout in targetPiles)
             {
                 // 杭体取得
-                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileLayout.No={pileLayout.No}, PileBodyNo={pileLayout.PileBodyNo}, Beams.Count={pileLayout.Beams?.Count ?? 0}");
+                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileLayout.No={pileLayout.No}, PileBodyNo={pileLayout.PileBodyNo}, Beams.Count={pileLayout.Beams?.Count ?? 0}");
                 if (pileLayout.PileBodyNo <= 0 || pileLayout.PileBodyNo > InputModel.PileBodies.Count)
                 {
-                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyNo out of range");
+                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyNo out of range");
                     continue;
                 }
                 var pileBody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
-                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileBody.PileBodyRef={pileBody.PileBodyRef}, segments={pileBody.PileBodySegments?.Count ?? 0}");
+                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileBody.PileBodyRef={pileBody.PileBodyRef}, segments={pileBody.PileBodySegments?.Count ?? 0}");
                 if (pileBody.PileBodyRef != SelectedPileBodyRef)
                 {
-                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyRef mismatch");
+                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyRef mismatch");
                     continue;
                 }
 
@@ -1248,7 +1382,7 @@ namespace PileDesign.ViewModels
                 Beam targetBeam = null;
                 for (int i = 0; i < pileLayout.Beams.Count && i < pileBody.PileBodySegments.Count; i++)
                 {
-                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: segment[{i}].No={pileBody.PileBodySegments[i].No}");
+                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: segment[{i}].No={pileBody.PileBodySegments[i].No}");
                     if (pileBody.PileBodySegments[i].No == SelectedPileSegmentNo)
                     {
                         targetBeam = pileLayout.Beams[i];
@@ -1257,7 +1391,7 @@ namespace PileDesign.ViewModels
                 }
                 if (targetBeam == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - targetBeam not found");
+                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - targetBeam not found");
                     continue;
                 }
 
@@ -1292,7 +1426,7 @@ namespace PileDesign.ViewModels
                             List<double> moments = null;
                             string curveSource = "none";
 
-                            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Beam={targetBeam.Name}, axialN={axialN}");
+                            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Beam={targetBeam.Name}, axialN={axialN}");
 
                             // 解析結果からM-φ曲線を取得（解析で実際に使用したもの）
                             int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
@@ -1307,8 +1441,8 @@ namespace PileDesign.ViewModels
                                     phis = beamResultForCurve.MPhiCurve_Phis;
                                     moments = beamResultForCurve.MPhiCurve_Moments;
                                     curveSource = "BeamResult";
-                                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using BeamResult curve, Points={phis.Count}, " +
-                                        $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
+                                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using BeamResult curve, Points={phis.Count}, " +
+                                    //    $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
                                 }
                             }
 
@@ -1321,8 +1455,8 @@ namespace PileDesign.ViewModels
                                     phis = [.. cachedCurve.Points.Select(p => p.Phi)];
                                     moments = [.. cachedCurve.Points.Select(p => p.Moment)];
                                     curveSource = "ResolvedCombinedCurve";
-                                    System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using ResolvedCombinedCurve, Points={phis.Count}, " +
-                                        $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
+                                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using ResolvedCombinedCurve, Points={phis.Count}, " +
+                                    //    $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
                                 }
                             }
 
@@ -1336,7 +1470,7 @@ namespace PileDesign.ViewModels
                                 {
                                     try
                                     {
-                                        var mPhi = pileSection.GetMphiRelationship(axialN);
+                                        var mPhi = pileSection.GetMPhiRelationship(axialN);
                                         var rawPhis = mPhi.Phis?.ToList();
                                         var rawMoments = mPhi.Moments?.ToList();
                                         if (rawPhis != null && rawMoments != null && rawPhis.Count >= 2)
@@ -1344,25 +1478,25 @@ namespace PileDesign.ViewModels
                                             phis = rawPhis;
                                             moments = rawMoments;
                                             curveSource = "PileSection(fallback)";
-                                            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using PileSection fallback, Points={phis.Count}, " +
-                                                $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
+                                            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using PileSection fallback, Points={phis.Count}, " +
+                                            //    $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
                                         }
                                     }
                                     catch (Exception ex)
                                     {
-                                        System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: PileSection exception: {ex.Message}");
+                                        //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: PileSection exception: {ex.Message}");
                                     }
                                 }
                             }
 
                             if (phis == null || moments == null || phis.Count < 2)
                             {
-                                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: No curve data available");
+                                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: No curve data available");
                                 continue;
                             }
 
                             // 曲線プロット
-                            System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Plotting curve from {curveSource}, Points={phis.Count}, phi range [{phis.Min():E3}, {phis.Max():E3}], M range [{moments.Min():F1}, {moments.Max():F1}]");
+                            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Plotting curve from {curveSource}, Points={phis.Count}, phi range [{phis.Min():E3}, {phis.Max():E3}], M range [{moments.Min():F1}, {moments.Max():F1}]");
                             string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{SelectedPileSegmentNo}";
                             var scatter = wpfPlot.Plot.Add.Scatter(phis.ToArray(), [.. moments]);
                             scatter.LineStyle.Width = 2;  // 線幅を明示的に設定
@@ -1402,8 +1536,8 @@ namespace PileDesign.ViewModels
                                 double mFem = beamResultForCurve.CumulativeForce?.MabsMax ?? 0;
 
                                 // マーカープロット
-                                System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Marker from {phiSource}: φ={phiFinal:E6} [1/m], " +
-                                    $"M(curve)={mFinal:F1} [kNm], M(FEM)={mFem:F1} [kNm], diff={(mFem-mFinal):F1}");
+                                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Marker from {phiSource}: φ={phiFinal:E6} [1/m], " +
+                                //    $"M(curve)={mFinal:F1} [kNm], M(FEM)={mFem:F1} [kNm], diff={(mFem-mFinal):F1}");
                                 if (double.IsFinite(phiFinal) && double.IsFinite(mFinal) && mFinal > 0)
                                 {
                                     Scatter marker = wpfPlot.Plot.Add.Scatter([phiFinal], new[] { mFinal });
@@ -1528,36 +1662,46 @@ namespace PileDesign.ViewModels
 
                             // 最終ステップの回転角・モーメント取得
                             int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
-                            if (lastStep >= 0 && rs.CumulativeDisp != null && rs.CumulativeForce != null)
+                            if (lastStep >= 0)
                             {
-                                // 回転角（回転ばねの相対回転量から直接取得）
-                                // rs.CumulativeDispはNodeI,NodeJの変位を格納（Rxi=NodeI.Rx, Rxj=NodeJ.Rx）
-                                double dRx = rs.CumulativeDisp.Rxj - rs.CumulativeDisp.Rxi;
-                                double dRy = rs.CumulativeDisp.Ryj - rs.CumulativeDisp.Ryi;
-                                double dRz = rs.CumulativeDisp.Rzj - rs.CumulativeDisp.Rzi;
+                                // RotationalSpringResultから該当する結果を取得（Beam.GetBeamResultと同様のパターン）
+                                var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
+                                    r.LoadCase?.No == loadCase.No &&
+                                    r.LoadCombination?.No == loadCombination.No &&
+                                    r.IsLiquefaction == isLiquefaction &&
+                                    r.Step == lastStep);
 
-                                double thetaFinal = rs.Mode == RotationalSpringMode.CombinedXY
-                                    ? Math.Sqrt(dRx * dRx + dRy * dRy)
-                                    : (rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
-                                        : rs.Dof == RotationalDof.Ry ? Math.Abs(dRy)
-                                        : Math.Abs(dRz));
-
-                                // モーメント（CombinedXYはRx,Ry回転の合成なのでMxi,Myiを使用）
-                                double mFinal = rs.Mode == RotationalSpringMode.CombinedXY
-                                    ? Math.Sqrt(rs.CumulativeForce.Mxi * rs.CumulativeForce.Mxi + rs.CumulativeForce.Myi * rs.CumulativeForce.Myi)
-                                    : (rs.Dof == RotationalDof.Rx ? Math.Abs(rs.CumulativeForce.Mxi)
-                                        : rs.Dof == RotationalDof.Ry ? Math.Abs(rs.CumulativeForce.Myi)
-                                        : Math.Abs(rs.CumulativeForce.Mzi));
-
-                                // マーカープロット
-                                if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
+                                if (rsResult?.CumulativeDisp != null && rsResult.CumulativeForce != null)
                                 {
-                                    var marker = wpfPlot.Plot.Add.Scatter([thetaFinal], new[] { mFinal });
-                                    marker.LineStyle.Width = 0;
-                                    marker.MarkerSize = 12;
-                                    marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
-                                    marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
-                                    marker.LegendText = $"最終:{legend}";
+                                    // 回転角（回転ばねの相対回転量から直接取得）
+                                    // CumulativeDispはNodeI,NodeJの変位を格納（Rxi=NodeI.Rx, Rxj=NodeJ.Rx）
+                                    double dRx = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
+                                    double dRy = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
+                                    double dRz = rsResult.CumulativeDisp.Rzj - rsResult.CumulativeDisp.Rzi;
+
+                                    double thetaFinal = rs.Mode == RotationalSpringMode.CombinedXY
+                                        ? Math.Sqrt(dRx * dRx + dRy * dRy)
+                                        : (rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
+                                            : rs.Dof == RotationalDof.Ry ? Math.Abs(dRy)
+                                            : Math.Abs(dRz));
+
+                                    // モーメント（CombinedXYはRx,Ry回転の合成なのでMxi,Myiを使用）
+                                    double mFinal = rs.Mode == RotationalSpringMode.CombinedXY
+                                        ? Math.Sqrt(rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi + rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi)
+                                        : (rs.Dof == RotationalDof.Rx ? Math.Abs(rsResult.CumulativeForce.Mxi)
+                                            : rs.Dof == RotationalDof.Ry ? Math.Abs(rsResult.CumulativeForce.Myi)
+                                            : Math.Abs(rsResult.CumulativeForce.Mzi));
+
+                                    // マーカープロット
+                                    if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
+                                    {
+                                        var marker = wpfPlot.Plot.Add.Scatter([thetaFinal], new[] { mFinal });
+                                        marker.LineStyle.Width = 0;
+                                        marker.MarkerSize = 12;
+                                        marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
+                                        marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+                                        marker.LegendText = $"最終:{legend}";
+                                    }
                                 }
                             }
                         }
@@ -1726,9 +1870,14 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 限界状態表示が有効かどうか
+            bool showLimitState = SelectedLimitState != "なし" &&
+                (forceType == "M" || forceType == "My" || forceType == "Mz" || forceType == "F" || forceType == "Fy" || forceType == "Fz");
+
             foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
             {
                 var beams = pileLayoutDataItem.Beams;
+                var soilPile = pileLayoutDataItem.SoilPile;
 
                 foreach (LoadCase loadCase in GetSelectedLoadCases())
                 {
@@ -1736,6 +1885,10 @@ namespace PileDesign.ViewModels
                     {
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {
+                            // 解析結果がない場合はスキップ
+                            int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            if (lastStep < 0) continue;
+
                             // 杭頭
                             List<double> beamZs = [beams[0]?.NodeI?.Coord.Z ?? 0];
                             List<double> beamForces = [0];
@@ -1787,12 +1940,75 @@ namespace PileDesign.ViewModels
 
                             var scatter = wpfPlot.Plot.Add.Scatter(beamForces, beamZs);
                             scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+                            var stressColor = scatter.LineStyle.Color; // 応力ラインの色を取得
+
+                            // 限界状態の破線ステップライン描画（同じ色で描画）
+                            if (showLimitState && soilPile?.PileBodySegments != null)
+                            {
+                                // 限界値のステップラインを構築
+                                List<double> limitZs = [];
+                                List<double> limitValues = [];
+
+                                foreach (var beam in beams)
+                                {
+                                    if (beam?.NodeI?.Coord == null || beam?.NodeJ?.Coord == null) continue;
+
+                                    var result = beam.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction);
+                                    if (result?.CumulativeForce == null) continue;
+
+                                    // 軸力を取得（要素中央の平均軸力、X方向が軸方向）
+                                    double axialForceN = (result.CumulativeForce.Fxi + result.CumulativeForce.Fxj) / 2.0;
+
+                                    // 杭断面を取得（SoilPile.PileBodySegmentsを使用）
+                                    int segmentIndex = beam.SegmentIndex ?? 0;
+                                    if (segmentIndex < 0 || segmentIndex >= soilPile.PileBodySegments.Count) continue;
+
+                                    var pileSection = soilPile.PileBodySegments[segmentIndex].PileSection;
+                                    if (pileSection == null) continue;
+
+                                    // 限界値を取得
+                                    double limitValue;
+                                    if (forceType == "M" || forceType == "My" || forceType == "Mz")
+                                    {
+                                        var (nValues, mValues) = GetLimitStateNMCurve(pileSection, SelectedLimitState);
+                                        if (nValues == null || mValues == null || nValues.Count == 0) continue;
+                                        limitValue = InterpolateLimitValue(nValues, mValues, axialForceN);
+                                    }
+                                    else // F, Fy, Fz
+                                    {
+                                        var (nValues, qValues) = GetLimitStateNQCurve(pileSection, SelectedLimitState);
+                                        if (nValues == null || qValues == null || nValues.Count == 0) continue;
+                                        limitValue = InterpolateLimitValue(nValues, qValues, axialForceN);
+                                    }
+
+                                    if (double.IsNaN(limitValue) || limitValue <= 0) continue;
+
+                                    // ステップライン用のデータ（各要素で一定値、正側のみ）
+                                    limitZs.Add(beam.NodeI.Coord.Z);
+                                    limitZs.Add(beam.NodeJ.Coord.Z);
+                                    limitValues.Add(limitValue);
+                                    limitValues.Add(limitValue);
+                                }
+
+                                // 限界値ライン（正側のみ、同じ色で破線）
+                                if (limitZs.Count > 0)
+                                {
+                                    var scatterLimit = wpfPlot.Plot.Add.Scatter(limitValues, limitZs);
+                                    scatterLimit.LineStyle.Pattern = LinePattern.Dashed;
+                                    scatterLimit.LineStyle.Width = 1.5f;
+                                    scatterLimit.LineStyle.Color = stressColor; // 応力と同じ色
+                                    scatterLimit.MarkerStyle.IsVisible = false;
+                                    scatterLimit.LegendText = SelectedLimitState;
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            string axisX = forceType + " " + unit;
+            // せん断力の場合はFをQに置換（Q = Shear Force）
+            string axisLabel = forceType.Replace("F", "Q");
+            string axisX = axisLabel + " " + unit;
 
             ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, SelectedGraphOption, axisX, "Z(m)");
             wpfPlot.Plot.ShowLegend();
@@ -1824,6 +2040,10 @@ namespace PileDesign.ViewModels
                     {
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {
+                            // 解析結果がない場合はスキップ
+                            int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            if (lastStep < 0) continue;
+
                             List<double> pileZs = [];
                             List<double> pileDisps = [];
 
@@ -1886,8 +2106,12 @@ namespace PileDesign.ViewModels
                             }
 
                             var scatterPile = wpfPlot.Plot.Add.Scatter(pileDisps, pileZs);
+                            var pileColor = scatterPile.LineStyle.Color; // 杭変位の色を取得
+
                             var scatterSoil = wpfPlot.Plot.Add.Scatter(soilDisps, soilZs);
                             scatterSoil.LineStyle.Pattern = LinePattern.Dashed;
+                            scatterSoil.LineStyle.Color = pileColor; // 杭変位と同じ色を適用
+                            scatterSoil.MarkerStyle.FillColor = pileColor;
 
                             scatterPile.LegendText = "(PILE), " + GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
                             scatterSoil.LegendText = "(SOIL), " + GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
@@ -1926,6 +2150,10 @@ namespace PileDesign.ViewModels
                     {
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {
+                            // 解析結果がない場合はスキップ
+                            int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            if (lastStep < 0) continue;
+
                             List<double> springZs = [];
                             List<double> springValues = [];
 
@@ -2028,6 +2256,80 @@ namespace PileDesign.ViewModels
         private static string GetSettlementAnleLegendText(double angle)
         {
             return $"傾斜角{angle * 1000:N1}/1000";
+        }
+
+        /// <summary>
+        /// NM/NQ曲線から指定軸力Nに対応する値（M or Q）を線形補間で取得
+        /// </summary>
+        private static double InterpolateLimitValue(List<double> nValues, List<double> mOrQValues, double targetN)
+        {
+            if (nValues == null || mOrQValues == null || nValues.Count == 0 || nValues.Count != mOrQValues.Count)
+                return double.NaN;
+
+            // N値の範囲外チェック
+            double minN = nValues.Min();
+            double maxN = nValues.Max();
+
+            if (targetN <= minN) return mOrQValues[nValues.IndexOf(minN)];
+            if (targetN >= maxN) return mOrQValues[nValues.IndexOf(maxN)];
+
+            // N値でソートされたインデックスを作成
+            var sortedIndices = nValues.Select((n, i) => new { N = n, Index = i })
+                                        .OrderBy(x => x.N)
+                                        .ToList();
+
+            // 線形補間
+            for (int i = 0; i < sortedIndices.Count - 1; i++)
+            {
+                double n1 = sortedIndices[i].N;
+                double n2 = sortedIndices[i + 1].N;
+
+                if (n1 <= targetN && targetN <= n2)
+                {
+                    double m1 = mOrQValues[sortedIndices[i].Index];
+                    double m2 = mOrQValues[sortedIndices[i + 1].Index];
+
+                    // 線形補間
+                    double ratio = (n2 - n1) != 0 ? (targetN - n1) / (n2 - n1) : 0;
+                    return m1 + ratio * (m2 - m1);
+                }
+            }
+
+            return double.NaN;
+        }
+
+        /// <summary>
+        /// 選択された限界状態に対応するNM曲線を取得
+        /// </summary>
+        private static (List<double> N, List<double> M) GetLimitStateNMCurve(PileSection pileSection, string limitState)
+        {
+            return limitState switch
+            {
+                "低減前使用限界状態" => (pileSection.UnfactoredServiceNM.N, pileSection.UnfactoredServiceNM.M),
+                "低減後使用限界状態" => (pileSection.FactoredServiceNM.N, pileSection.FactoredServiceNM.M),
+                "低減前損傷限界状態" => (pileSection.UnfactoredDamageNM.N, pileSection.UnfactoredDamageNM.M),
+                "低減後損傷限界状態" => (pileSection.FactoredDamageNM.N, pileSection.FactoredDamageNM.M),
+                "低減前安全限界状態" => (pileSection.UnfactoredUltimateNM.N, pileSection.UnfactoredUltimateNM.M),
+                "低減後安全限界状態" => (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M),
+                _ => (null, null)
+            };
+        }
+
+        /// <summary>
+        /// 選択された限界状態に対応するNQ曲線を取得
+        /// </summary>
+        private static (List<double> N, List<double> Q) GetLimitStateNQCurve(PileSection pileSection, string limitState)
+        {
+            return limitState switch
+            {
+                "低減前使用限界状態" => (pileSection.UnfactoredServiceNQ.N, pileSection.UnfactoredServiceNQ.Q),
+                "低減後使用限界状態" => (pileSection.FactoredServiceNQ.N, pileSection.FactoredServiceNQ.Q),
+                "低減前損傷限界状態" => (pileSection.UnfactoredDamageNQ.N, pileSection.UnfactoredDamageNQ.Q),
+                "低減後損傷限界状態" => (pileSection.FactoredDamageNQ.N, pileSection.FactoredDamageNQ.Q),
+                "低減前安全限界状態" => (pileSection.UnfactoredUltimateNQ.N, pileSection.UnfactoredUltimateNQ.Q),
+                "低減後安全限界状態" => (pileSection.FactoredUltimateNQ.N, pileSection.FactoredUltimateNQ.Q),
+                _ => (null, null)
+            };
         }
     }
 }

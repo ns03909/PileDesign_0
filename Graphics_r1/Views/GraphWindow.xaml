@@ -11,6 +11,11 @@
         PreviewKeyDown="GroundWindow_PreviewKeyDown"
         >
 
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -81,6 +86,10 @@
                 <ComboBox ItemsSource="{Binding GridOptions}" SelectedItem="{Binding SelectedGridOption}"/>
             </StackPanel>
 
+            <StackPanel Visibility="{Binding IsLimitStateOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="限界状態:" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding LimitStateOptions}" SelectedItem="{Binding SelectedLimitState}"/>
+            </StackPanel>
 
             <Button Content="レジェンド表示切替" Command="{Binding ToggleLegendCommand}" />
 

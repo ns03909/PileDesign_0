@@ -14,11 +14,271 @@
     { "no": 6, "bottomGLDepth": -38.38, "layerThickness": 4.03, "bottomAltitude": -38.38, "name": "砂礫", "granularityClass": "礫質土", "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": true, "nValue": 100.0, "cohesive": 20.0, "vs": 460.0, "es": 7700.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true }
   ],
   "groundMassesData": [
-    { "glDepth": -1.1, "nValue": 12.0, "fc": 5.0, "density": 0.0, "vs0": 130.0 },
-    { "glDepth": -2.1, "nValue": 15.0, "fc": 5.0, "density": 0.0, "vs0": 130.0 },
-    { "glDepth": -3.1, "nValue": 12.0, "fc": 21.0, "density": 0.0, "vs0": 230.0 },
-    { "glDepth": -4.1, "nValue": 16.0, "fc": 20.0, "density": 0.0, "vs0": 230.0 },
-    { "glDepth": -5.1, "nValue": 11.0, "fc": 35.0, "density": 0.0, "vs0": 230.0 },
-    { "glDepth": -6.1, "nValue": 13.0, "fc": 31.0, "density": 0.0, "vs0": 230.0 }
+    {
+      "glDepth": -1.1,
+      "nValue": 12.0,
+      "fc": 5.0,
+      "density": 15.0,
+      "vs0": 130.0
+    },
+    {
+      "glDepth": -2.1,
+      "nValue": 15.0,
+      "fc": 5.0,
+      "density": 15.0,
+      "vs0": 130.0
+    },
+    {
+      "glDepth": -3.1,
+      "nValue": 12.0,
+      "fc": 21.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -4.1,
+      "nValue": 16.0,
+      "fc": 20.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -5.1,
+      "nValue": 11.0,
+      "fc": 35.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -6.1,
+      "nValue": 13.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -7.1,
+      "nValue": 18.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -8.1,
+      "nValue": 20.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -9.1,
+      "nValue": 18.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -10.1,
+      "nValue": 18.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -11.1,
+      "nValue": 16.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -12.1,
+      "nValue": 17.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -13.1,
+      "nValue": 18.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 230.0
+    },
+    {
+      "glDepth": -14.1,
+      "nValue": 4.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -15.1,
+      "nValue": 3.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -16.1,
+      "nValue": 3.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -17.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -18.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -19.1,
+      "nValue": 1.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -20.1,
+      "nValue": 1.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -21.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -22.1,
+      "nValue": 1.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -23.1,
+      "nValue": 1.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -24.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.00
+    },
+    {
+      "glDepth": -25.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -26.1,
+      "nValue": 1.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -27.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 16.0,
+      "vs0": 180.0
+    },
+    {
+      "glDepth": -28.1,
+      "nValue": 2.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 210.0
+    },
+    {
+      "glDepth": -29.1,
+      "nValue": 8.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 210.0
+    },
+    {
+      "glDepth": -30.1,
+      "nValue": 17.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 320.0
+    },
+    {
+      "glDepth": -31.1,
+      "nValue": 12.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 320.0
+    },
+    {
+      "glDepth": -32.1,
+      "nValue": 14.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 320.0
+    },
+    {
+      "glDepth": -33.1,
+      "nValue": 40.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 320.0
+    },
+    {
+      "glDepth": -34.1,
+      "nValue": 30.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 320.0
+    },
+    {
+      "glDepth": -35.1,
+      "nValue": 60.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 460.0
+    },
+    {
+      "glDepth": -36.1,
+      "nValue": 60.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 460.0
+    },
+    {
+      "glDepth": -37.1,
+      "nValue": 60.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 460.0
+    },
+    {
+      "glDepth": -38.1,
+      "nValue": 60.0,
+      "fc": 31.0,
+      "density": 18.0,
+      "vs0": 460.0
+    }
   ]
 }

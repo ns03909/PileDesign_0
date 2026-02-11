@@ -93,7 +93,7 @@ namespace PileDesign.Views
                 catch (System.Runtime.InteropServices.COMException comEx) when (comEx.HResult == unchecked((int)0x80040206))
                 {
                     // 初期化時の COMException は無視して再試行
-                    System.Diagnostics.Debug.WriteLine($"COMException during Initialize: {comEx.Message}");
+                    //System.Diagnostics.Debug.WriteLine($"COMException during Initialize: {comEx.Message}");
                     await System.Threading.Tasks.Task.Delay(100);
                     try
                     {
@@ -227,7 +227,7 @@ namespace PileDesign.Views
             {
                 // IME/TextStore の競合による COMException を無視
                 // 200ms 後に再試行
-                System.Diagnostics.Debug.WriteLine($"COMException caught, will retry: {comEx.Message}");
+                //System.Diagnostics.Debug.WriteLine($"COMException caught, will retry: {comEx.Message}");
                 var retryTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
                 {
                     Interval = TimeSpan.FromMilliseconds(200)

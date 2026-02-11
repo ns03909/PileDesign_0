@@ -16,6 +16,8 @@
         PreviewKeyDown="GroundWindow_PreviewKeyDown">
     
     <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
         <!-- 追加: Ctrl+Enter で OkCommand を実行 -->
         <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
         <!-- 追加: Esc で CancelCommand を実行 -->

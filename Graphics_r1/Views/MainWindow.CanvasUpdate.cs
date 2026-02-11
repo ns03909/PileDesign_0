@@ -346,16 +346,19 @@ namespace PileDesign.Views
 
             if (viewModel.CurrentInputModel == null) return;
 
-            if (viewModel.CurrentInputModel.PileLayoutItems.Count > 0)
+            if (!viewModel.IsCapturingForExport)
             {
-                var visiblepileLocations = viewModel.CurrentInputModel.PileLayoutItems
-                    .Where(pileLocation => pileLocation.IsVisible)
-                    .Select(pileLocation => pileLocation.Point3D)
-                    .ToList();
-
-                if (visiblepileLocations.Count != 0)
+                if (viewModel.CurrentInputModel.PileLayoutItems.Count > 0)
                 {
-                    viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
+                    var visiblepileLocations = viewModel.CurrentInputModel.PileLayoutItems
+                        .Where(pileLocation => pileLocation.IsVisible)
+                        .Select(pileLocation => pileLocation.Point3D)
+                        .ToList();
+
+                    if (visiblepileLocations.Count != 0)
+                    {
+                        viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
+                    }
                 }
             }
 
@@ -552,16 +555,19 @@ namespace PileDesign.Views
 
             if (viewModel.CurrentInputModel == null) return;
 
-            if (viewModel.CurrentInputModel.PileLayoutItems.Count > 0)
+            if (!viewModel.IsCapturingForExport)
             {
-                var visiblepileLocations = viewModel.CurrentInputModel.PileLayoutItems
-                    .Where(pileLocation => pileLocation.IsVisible)
-                    .Select(pileLocation => pileLocation.Point3D)
-                    .ToList();
-
-                if (visiblepileLocations.Count != 0)
+                if (viewModel.CurrentInputModel.PileLayoutItems.Count > 0)
                 {
-                    viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
+                    var visiblepileLocations = viewModel.CurrentInputModel.PileLayoutItems
+                        .Where(pileLocation => pileLocation.IsVisible)
+                        .Select(pileLocation => pileLocation.Point3D)
+                        .ToList();
+
+                    if (visiblepileLocations.Count != 0)
+                    {
+                        viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
+                    }
                 }
             }
 

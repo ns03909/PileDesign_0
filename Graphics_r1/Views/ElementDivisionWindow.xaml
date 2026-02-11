@@ -14,6 +14,11 @@
         Title="要素分割ウィンドウ" Height="650" Width="650"
         Loaded="ElementDivisionWindow_Loaded">
 
+    <Window.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+    </Window.InputBindings>
+
     <Window.Resources>
         <local:DoubleLessThanConverter x:Key="DoubleLessThanConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>

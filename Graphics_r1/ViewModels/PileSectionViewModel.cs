@@ -123,12 +123,12 @@ namespace PileDesign.ViewModels
                             var thresholds = PileSection.UltimateLimitAxialForceThresholds;
                             if (thresholds != null && thresholds.Count >= 2)
                             {
-                                double nMin = thresholds[0];
-                                double nMax = thresholds[^1];
+                                double NMin = thresholds[0];
+                                double NMax = thresholds[^1];
                                 // UI スレッドで安全に描画メソッドを呼ぶ
                                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                                 {
-                                    DrawNQForCurrentPile(nMin, nMax, 10);
+                                    DrawNQForCurrentPile(NMin, NMax, 10);
                                 }));
                             }
                             else
@@ -150,31 +150,31 @@ namespace PileDesign.ViewModels
         }
 
         // 追加: 杭種に応じて適切な N-Q グラフを描くヘルパー
-        private void DrawNQForCurrentPile(double nMin, double nMax, int nDiv)
+        private void DrawNQForCurrentPile(double NMin, double NMax, int nDiv)
         {
             if (PileSection == null) return;
 
             if (PileSection.PileBodyType == "場所打ち鉄筋コンクリート杭" ||
                 (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"))
             {
-                DrawInsituReinforcedConcretePile_NQ(nMin, nMax, nDiv);
+                DrawInsituReinforcedConcretePile_NQ(NMin, NMax, nDiv);
             }
             else if (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鋼管コンクリート部")
             {
-                DrawInsituSteelPipeReinforcedConcretePile_NQ(nMin, nMax, nDiv);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
             }
             else if (PileSection.PileSectionType == "PHC杭")
             {
-                DrawPHC_NQ(nMin, nMax, nDiv);
+                DrawPHC_NQ(NMin, NMax, nDiv);
             }
             else if (PileSection.PileSectionType == "PRC杭")
             {
-                DrawPRC_NQ(nMin, nMax, nDiv);
+                DrawPRC_NQ(NMin, NMax, nDiv);
             }
             else if (PileSection.PileSectionType == "SC杭")
             {
                 if (PileSection.PipeTs > 0)
-                    DrawSC_NQ(nMin, nMax, nDiv);
+                    DrawSC_NQ(NMin, NMax, nDiv);
             }
         }
 
@@ -194,11 +194,11 @@ namespace PileDesign.ViewModels
                             var thresholds = PileSection.UltimateLimitAxialForceThresholds;
                             if (thresholds != null && thresholds.Count >= 2)
                             {
-                                double nMin = thresholds[0];
-                                double nMax = thresholds[^1];
+                                double NMin = thresholds[0];
+                                double NMax = thresholds[^1];
                                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                                 {
-                                    DrawNQForCurrentPile(nMin, nMax, 10);
+                                    DrawNQForCurrentPile(NMin, NMax, 10);
                                 }));
                             }
                             else
@@ -438,7 +438,7 @@ namespace PileDesign.ViewModels
         }
 
         // 場所打ち鉄筋コンクリート杭せん断力
-        private void DrawInsituReinforcedConcretePile_NQ(double nMin, double nMax, int nDiv)
+        private void DrawInsituReinforcedConcretePile_NQ(double NMin, double NMax, int nDiv)
         {
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
@@ -461,7 +461,7 @@ namespace PileDesign.ViewModels
         }
 
         // 場所打ち鉄筋コンクリート杭せん断力
-        private void DrawInsituSteelPipeReinforcedConcretePile_NQ(double nMin, double nMax, int nDiv)
+        private void DrawInsituSteelPipeReinforcedConcretePile_NQ(double NMin, double NMax, int nDiv)
         {
             var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
@@ -482,7 +482,7 @@ namespace PileDesign.ViewModels
         }
 
         // PHC杭せん断力
-        private void DrawPHC_NQ(double nMin, double nMax, int nDiv)
+        private void DrawPHC_NQ(double NMin, double NMax, int nDiv)
         {
             var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
@@ -503,7 +503,7 @@ namespace PileDesign.ViewModels
         }
 
         // PRC杭せん断力
-        private void DrawPRC_NQ(double nMin, double nMax, int nDiv)
+        private void DrawPRC_NQ(double NMin, double NMax, int nDiv)
         {
             var precastConcrete = new PrecastPRCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
@@ -525,7 +525,7 @@ namespace PileDesign.ViewModels
         }
 
         // SC杭せん断力
-        private void DrawSC_NQ(double nMin, double nMax, int nDiv)
+        private void DrawSC_NQ(double NMin, double NMax, int nDiv)
         {
             var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
@@ -682,16 +682,16 @@ namespace PileDesign.ViewModels
         }
 
         // 場所打ち鉄筋コンクリート杭
-        public void DrawInsituReinforcedConcretePile_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
+        public void DrawInsituReinforcedConcretePile_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
             var section = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
 
             // kN -> N
-            nMin *= 1000;
-            nMax *= 1000;
-            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => nMin + (nMax - nMin) * i / nDiv).ToList();
+            NMin *= 1000;
+            NMax *= 1000;
+            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             // M-φ: 場所打ちRC
             PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
@@ -705,14 +705,14 @@ namespace PileDesign.ViewModels
         }
 
         // 場所打ち鋼管コンクリート杭
-        private void DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
+        private void DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
             var insituSteelPipe = new InsituSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
             var insituConcrete = new InsituConcrete(PileSection.ConcreteOutDia, PileSection.ConcreteGsi, PileSection.ConcreteFc);
             var mainBars = new MainBars(PileSection.MainBarDr, PileSection.MainBarNum, PileSection.MainBarSpec, PileSection.MainBarSize);
             var section = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
 
-            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => nMin + (nMax - nMin) * i / nDiv).ToList();
+            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             // 杭中間部 φ の算出（既存式を安全化）
             static List<double>? BuildMiddlePhis(List<double> phis, List<double> Ms)
@@ -736,13 +736,13 @@ namespace PileDesign.ViewModels
         }
 
         // PHC杭
-        private void DrawPHC_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
+        private void DrawPHC_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
             var precastConcrete = new PrecastPHCConcrete(PileSection.PileDiameter, PileSection.PileDiameter - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
             var section = new PHCSection(precastConcrete, tendons, PileSection.Prestress);
 
-            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => nMin + (nMax - nMin) * i / nDiv).ToList();
+            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             // M-φ（beta1 はデフォルト利用）
             PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
@@ -753,7 +753,7 @@ namespace PileDesign.ViewModels
         }
 
         // PRC杭
-        private void DrawPRC_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
+        private void DrawPRC_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
             if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.MainBarSize == null)
             {
@@ -766,7 +766,7 @@ namespace PileDesign.ViewModels
             var tendons = new Tendons(PileSection.TendonDp, PileSection.TendonAp, PileSection.TendonSigmaPy, PileSection.TendonSigmaPu);
             var section = new PRCSection(precastConcrete, mainBars, tendons, PileSection.Prestress);
 
-            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => nMin + (nMax - nMin) * i / nDiv).ToList();
+            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
 
@@ -775,13 +775,13 @@ namespace PileDesign.ViewModels
         }
 
         // SC杭
-        private void DrawSC_MPhiMThetaGraph(double nMin, double nMax, int nDiv)
+        private void DrawSC_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
         {
             var precastConcrete = new PrecastSCConcrete(PileSection.PileDiameter - 2 * PileSection.PipeTs, PileSection.PileDiameter - 2 * PileSection.PipeTs - 2 * PileSection.ConcreteThickness, PileSection.ConcreteFc);
             var steelPipe = new PrecastSteelPipe(PileSection.PipeGrade, PileSection.PipeDia, PileSection.PipeTs, PileSection.CorrosionDepth);
             var section = new SCSection(precastConcrete, steelPipe);
 
-            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => nMin + (nMax - nMin) * i / nDiv).ToList();
+            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
 
             PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n));
 
@@ -915,31 +915,31 @@ namespace PileDesign.ViewModels
                 (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鉄筋コンクリート部"))
             {
                 // M-φグラフの描画
-                double nMin = ns[0];
-                double nMax = ns[^1];
+                double NMin = ns[0];
+                double NMax = ns[^1];
 
-                DrawInsituReinforcedConcretePile_MPhiMThetaGraph(nMin, nMax, 10);
-                DrawInsituReinforcedConcretePile_NQ(nMin, nMax, 10);
+                DrawInsituReinforcedConcretePile_MPhiMThetaGraph(NMin, NMax, 10);
+                DrawInsituReinforcedConcretePile_NQ(NMin, NMax, 10);
             }
 
             else if (PileSection.PileBodyType == "場所打ち鋼管コンクリート杭" && PileSection.PileSectionType == "鋼管コンクリート部")
             {
                 // M-φグラフの描画
-                double nMin = ns[0]; // kN -> N
-                double nMax = ns[^1]; // kN -> N
+                double NMin = ns[0]; // kN -> N
+                double NMax = ns[^1]; // kN -> N
 
-                DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(nMin, nMax, 10);
-                DrawInsituSteelPipeReinforcedConcretePile_NQ(nMin, nMax, 10);
+                DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(NMin, NMax, 10);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
             }
 
             else if (PileSection.PileSectionType == "PHC杭")
             {
                 // M-φグラフの描画
-                double nMin = ns[0]; // kN -> N
-                double nMax = ns[^1]; // kN -> N
+                double NMin = ns[0]; // kN -> N
+                double NMax = ns[^1]; // kN -> N
 
-                DrawPHC_MPhiMThetaGraph(nMin, nMax, 10);
-                DrawPHC_NQ(nMin, nMax, 10);
+                DrawPHC_MPhiMThetaGraph(NMin, NMax, 10);
+                DrawPHC_NQ(NMin, NMax, 10);
             }
 
 
@@ -952,11 +952,11 @@ namespace PileDesign.ViewModels
                 }
 
                 // M-φグラフの描画
-                double nMin = ns[0]; // kN -> N
-                double nMax = ns[^1]; // kN -> N
+                double NMin = ns[0]; // kN -> N
+                double NMax = ns[^1]; // kN -> N
 
-                DrawPRC_MPhiMThetaGraph(nMin, nMax, 10);
-                DrawPRC_NQ(nMin, nMax, 10);
+                DrawPRC_MPhiMThetaGraph(NMin, NMax, 10);
+                DrawPRC_NQ(NMin, NMax, 10);
             }
 
             else if (PileSection.PileSectionType == "SC杭")
@@ -964,11 +964,11 @@ namespace PileDesign.ViewModels
                 if (PileSection.PipeTs > 0)
                 {
                     // M-φグラフの描画
-                    double nMin = ns[0]; // kN -> N
-                    double nMax = ns[^1]; // kN -> N
+                    double NMin = ns[0]; // kN -> N
+                    double NMax = ns[^1]; // kN -> N
 
-                    DrawSC_MPhiMThetaGraph(nMin, nMax, 10);
-                    DrawSC_NQ(nMin, nMax, 10);
+                    DrawSC_MPhiMThetaGraph(NMin, NMax, 10);
+                    DrawSC_NQ(NMin, NMax, 10);
                 }
             }
         }

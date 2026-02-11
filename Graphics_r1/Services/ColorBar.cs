@@ -133,7 +133,7 @@ namespace PileDesign.Services
             double titleFont = 12.0 * scale;
             double unitFont = 11.0 * scale;
             double tickFont = 10.0 * scale;
-            double minMaxFontSize = 10.0 * scale;
+            double miNMaxFontSize = 10.0 * scale;
             double extraVerticalSpacing = 20.0 * scale;
             double labelOffset = 8.0 * scale;
             double smallMargin = 8.0 * scale;
@@ -280,7 +280,7 @@ namespace PileDesign.Services
             {
                 Text = maxText,
                 Foreground = Brushes.Black,
-                FontSize = minMaxFontSize,
+                FontSize = miNMaxFontSize,
                 TextAlignment = TextAlignment.Right
             };
             maxValueBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -291,7 +291,7 @@ namespace PileDesign.Services
             Canvas.SetTop(maxValueBlock, maxY);
             colorBarCanvas.Children.Add(maxValueBlock);
 
-            var maxLabelBlock = new TextBlock { Text = "max", Foreground = Brushes.Black, FontSize = minMaxFontSize };
+            var maxLabelBlock = new TextBlock { Text = "max", Foreground = Brushes.Black, FontSize = miNMaxFontSize };
             maxLabelBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double maxLabelWidth = maxLabelBlock.DesiredSize.Width;
             Canvas.SetLeft(maxLabelBlock, barWidth - maxLabelWidth);
@@ -304,7 +304,7 @@ namespace PileDesign.Services
             {
                 Text = minText,
                 Foreground = Brushes.Black,
-                FontSize = minMaxFontSize,
+                FontSize = miNMaxFontSize,
                 TextAlignment = TextAlignment.Right
             };
             minValueBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -315,7 +315,7 @@ namespace PileDesign.Services
             Canvas.SetTop(minValueBlock, minY);
             colorBarCanvas.Children.Add(minValueBlock);
 
-            var minLabelBlock = new TextBlock { Text = "min", Foreground = Brushes.Black, FontSize = minMaxFontSize };
+            var minLabelBlock = new TextBlock { Text = "min", Foreground = Brushes.Black, FontSize = miNMaxFontSize };
             minLabelBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             double minLabelWidth = minLabelBlock.DesiredSize.Width;
             Canvas.SetLeft(minLabelBlock, barWidth - minLabelWidth);

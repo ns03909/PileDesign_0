@@ -26,7 +26,7 @@ using WpStyle = DocumentFormat.OpenXml.Wordprocessing.Style;
 
 namespace PileDesign.Output
 {
-    internal class WordDocument
+    internal class WordDocument(InputModel _inputModel, AnaModel _anaModel, MainWindowViewModel _mainWindowViewModel)
     {
         private static class Layout
         {
@@ -65,10 +65,10 @@ namespace PileDesign.Output
             public const double DefaultFontSizePt = 10.5;
         }
 
-        private readonly MainWindowViewModel mainWindowViewModel; // 追加
+        private readonly MainWindowViewModel mainWindowViewModel = _mainWindowViewModel; // 追加
 
-        private readonly InputModel inputModel;
-        private readonly AnaModel anaModel;
+        private readonly InputModel inputModel = _inputModel;
+        private readonly AnaModel anaModel = _anaModel;
 
         // FTPile有無判定ヘルパ
         private bool HasFTPile()
@@ -138,14 +138,6 @@ namespace PileDesign.Output
         // TeX パーサ自己テスト有効化フラグ
         private const bool RunTexParserSelfTest = false;
 
-        // コンストラクタ
-        public WordDocument(InputModel _inputModel, AnaModel _anaModel, MainWindowViewModel _mainWindowViewModel)
-        {
-            this.inputModel = _inputModel;
-            this.anaModel = _anaModel;
-            mainWindowViewModel = _mainWindowViewModel;
-        }
-
         // Word文書作成メソッド
         public void CreateWordDocument(InputModel inputModel, string fileName)
         {
@@ -164,7 +156,10 @@ namespace PileDesign.Output
                 Document doc = new();
                 Body body = new();
 
-                AddFrontMatter(mainPart, body, inputModel);
+                // モデル図をキャプチャ（UIスレッド上で実行）
+                byte[]? modelImageBytes = mainWindowViewModel?.CaptureIsometricModelImageBytes();
+
+                AddFrontMatter(mainPart, body, inputModel, modelImageBytes);
                 AddInputDataSection(mainPart, body, inputModel);
 
 
@@ -185,11 +180,42 @@ namespace PileDesign.Output
         }
 
 
-        // FrontMatter: タイトル・目次・基本説明章
-        private static void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model)
+        // FrontMatter: タイトル・モデル図・目次・基本説明章
+        private static void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model, byte[]? modelImageBytes = null)
         {
             AddText(body, "杭検討プログラム ver プレプロト", "center");
             AddTitle(body, "基礎ぐいの検討書");
+
+            // モデル図（アイソメトリック）
+            if (modelImageBytes != null && modelImageBytes.Length > 0)
+            {
+                AddLineBreak(body);
+                // PNGからピクセルサイズを読み取り、アスペクト比を維持して挿入
+                // A4有効領域: 幅160mm(210-25*2), 高さ247mm(297-25*2)
+                // タイトル(~18mm) + 副題(~6mm) + 改行(~5mm) + 図キャプション(~8mm) + 目次(~15mm) + 余白(~35mm) ≈ 87mm
+                double maxWidthMm = 160;
+                double maxHeightMm = 160; // 247 - 87 = 160mm（1ページに収まる上限）
+                double imgWidthMm = maxWidthMm;
+                double imgHeightMm = 100;
+                using (var imgStream = new MemoryStream(modelImageBytes))
+                {
+                    var decoder = new PngBitmapDecoder(imgStream, BitmapCreateOptions.None, BitmapCacheOption.None);
+                    if (decoder.Frames.Count > 0)
+                    {
+                        var frame = decoder.Frames[0];
+                        double aspectRatio = (double)frame.PixelWidth / frame.PixelHeight;
+                        imgHeightMm = imgWidthMm / aspectRatio;
+                        // 高さが上限を超える場合、高さを制限して幅を縮小
+                        if (imgHeightMm > maxHeightMm)
+                        {
+                            imgHeightMm = maxHeightMm;
+                            imgWidthMm = maxHeightMm * aspectRatio;
+                        }
+                    }
+                }
+                WordDrawingBuilder.AddPngBytesToBody(mainPart, body, modelImageBytes, imgWidthMm, imgHeightMm);
+                AddAutoFigureCaption(body, "モデル図（アイソメトリック）", "図");
+            }
 
             // 目次
             AddTableOfContents(body, 3);
@@ -321,7 +347,7 @@ namespace PileDesign.Output
                     AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
 
                     AddPileForceSummaryTable(mainPart, body);
-                    AddNMINT(mainPart, body);
+                    AddNMinT(mainPart, body);
                 }
 
                 // 基礎部材の強度と変形性能
@@ -336,7 +362,7 @@ namespace PileDesign.Output
             { }
             if (mainWindowViewModel.IncludeHorizontal_Shear) // せん断力
             { }
-            if (mainWindowViewModel.IncludeHorizontal_NMINT) // NMINT
+            if (mainWindowViewModel.IncludeHorizontal_NMinT) // NMinT
             { }
             if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
             {
@@ -376,6 +402,7 @@ namespace PileDesign.Output
             if (mainWindowViewModel.IncludeGroupPileSettlement) // 群杭沈下
             {
                 AddGroupPileSettlementContourDiagram(mainPart, body);
+                AddPileSettlementTable(body);
             }
 
             // FT-Pile構法
@@ -420,7 +447,7 @@ namespace PileDesign.Output
 
             //    AddSettlementGraph(mainPart, body);
             //    AddPileForceSummaryTable(mainPart, body);
-            //    AddNMINT(mainPart, body);
+            //    AddNMinT(mainPart, body);
             //}
         }
 
@@ -497,7 +524,7 @@ namespace PileDesign.Output
 
             // $...$ があれば取り除く
             if (tex.Length >= 2 && tex[0] == '$' && tex[^1] == '$')
-                tex = tex.Substring(1, tex.Length - 2);
+                tex = tex[1..^1];
 
             int pos = 0;
             int len = tex.Length;
@@ -513,7 +540,7 @@ namespace PileDesign.Output
             {
                 int s = pos;
                 while (pos < len && char.IsLetter(tex[pos])) pos++;
-                return tex.Substring(s, pos - s);
+                return tex[s..pos];
             }
 
             DocumentFormat.OpenXml.Math.Run CombineRunsToRun(List<DocumentFormat.OpenXml.Math.Run> runs)
@@ -594,7 +621,7 @@ namespace PileDesign.Output
                     if (expectedRightChar != '\0' && pos < len && tex[pos] == '\\')
                     {
                         // match \right (case-insensitive) at current position
-                        var remaining = tex.Substring(pos);
+                        var remaining = tex[pos..];
                         var m = System.Text.RegularExpressions.Regex.Match(remaining, @"^\\right\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                         if (m.Success)
                         {
@@ -633,7 +660,7 @@ namespace PileDesign.Output
                                     while (namePos < len && char.IsLetter(tex[namePos])) namePos++;
                                     if (namePos > nameStart)
                                     {
-                                        string name = tex.Substring(nameStart, namePos - nameStart);
+                                        string name = tex[nameStart..namePos];
                                         var mapping = new Dictionary<string, char>(StringComparer.OrdinalIgnoreCase)
                                         {
                                             ["rbrace"] = '}',
@@ -800,7 +827,7 @@ namespace PileDesign.Output
                         int s = pos;
                         while (pos < len && !"{}^_\\$".Contains(tex[pos]))
                             pos++;
-                        string txt = tex.Substring(s, pos - s);
+                        string txt = tex[s..pos];
                         baseRun = GetRun(txt);
                     }
 
@@ -1176,7 +1203,7 @@ namespace PileDesign.Output
             body.Append(paragraph);
         }
 
-        private void AddNMINT(MainDocumentPart mainPart, Body body)
+        private void AddNMinT(MainDocumentPart mainPart, Body body)
         {
             if (inputModel?.PileBodies == null || inputModel.PileBodies.Count == 0)
                 return;
@@ -1200,44 +1227,43 @@ namespace PileDesign.Output
                     int pileBodySegmentNo = segment.No;
                     var pileSection = segment.PileSection;
 
-                    // ライン（耐力曲線）を kN/kNm に正規化
+                    // ライン（耐力曲線）- NMプロパティは既に kN/kNm 単位
                     List<List<double>> lineListsX = [];
                     List<List<double>> lineListsY = [];
                     List<string> lineListsLegend = [];
 
-                    static List<double> ToKilo(IEnumerable<double>? src) => src?.Select(v => v / 1e3).ToList() ?? [];
-                    static List<double> ToKiloNm(IEnumerable<double>? src) => src?.Select(v => v / 1e6).ToList() ?? [];
+                    static List<double> ToList(IEnumerable<double>? src) => src?.ToList() ?? [];
 
                     try
                     {
                         var nmUUlt = pileSection.UnfactoredUltimateNM;
-                        lineListsX.Add(ToKilo(nmUUlt.N));
-                        lineListsY.Add(ToKiloNm(nmUUlt.M));
+                        lineListsX.Add(ToList(nmUUlt.N));
+                        lineListsY.Add(ToList(nmUUlt.M));
                         lineListsLegend.Add("低減前安全限界");
 
                         var nmFUlt = pileSection.FactoredUltimateNM;
-                        lineListsX.Add(ToKilo(nmFUlt.N));
-                        lineListsY.Add(ToKiloNm(nmFUlt.M));
+                        lineListsX.Add(ToList(nmFUlt.N));
+                        lineListsY.Add(ToList(nmFUlt.M));
                         lineListsLegend.Add("低減後安全限界");
 
                         var nmUDmg = pileSection.UnfactoredDamageNM;
-                        lineListsX.Add(ToKilo(nmUDmg.N));
-                        lineListsY.Add(ToKiloNm(nmUDmg.M));
+                        lineListsX.Add(ToList(nmUDmg.N));
+                        lineListsY.Add(ToList(nmUDmg.M));
                         lineListsLegend.Add("低減前損傷限界");
 
                         var nmFDmg = pileSection.FactoredDamageNM;
-                        lineListsX.Add(ToKilo(nmFDmg.N));
-                        lineListsY.Add(ToKiloNm(nmFDmg.M));
+                        lineListsX.Add(ToList(nmFDmg.N));
+                        lineListsY.Add(ToList(nmFDmg.M));
                         lineListsLegend.Add("低減後損傷限界");
 
                         var nmUSvc = pileSection.UnfactoredServiceNM;
-                        lineListsX.Add(ToKilo(nmUSvc.N));
-                        lineListsY.Add(ToKiloNm(nmUSvc.M));
+                        lineListsX.Add(ToList(nmUSvc.N));
+                        lineListsY.Add(ToList(nmUSvc.M));
                         lineListsLegend.Add("低減前使用限界");
 
                         var nmFSvc = pileSection.FactoredServiceNM;
-                        lineListsX.Add(ToKilo(nmFSvc.N));
-                        lineListsY.Add(ToKiloNm(nmFSvc.M));
+                        lineListsX.Add(ToList(nmFSvc.N));
+                        lineListsY.Add(ToList(nmFSvc.M));
                         lineListsLegend.Add("低減後使用限界");
                     }
                     catch
@@ -1354,7 +1380,7 @@ namespace PileDesign.Output
                     List<List<double>> ysLists = [momentResultsLevel2, momentResultsLevel1, momentResultsVL];
                     List<string> legends = ["レベル2", "レベル1", "常時"];
 
-                    AddNMINTScottPlotGraphToBody(
+                    AddNMinTScottPlotGraphToBody(
                         mainPart,
                         body,
                         lineListsX, lineListsY, lineListsLegend,
@@ -1363,7 +1389,7 @@ namespace PileDesign.Output
                         150, 150);
 
                     AddAutoFigureCaption(body,
-                        $"NMINT　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
+                        $"軸力-モーメント関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
                         "図");
                 }
 
@@ -1441,7 +1467,7 @@ namespace PileDesign.Output
 
                         AddAutoFigureCaption(
                             body,
-                            $"杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重組合せ:{comb.Name} | 液状化: {isLiq}",
+                            $"杭の応力・変位　杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重組合せ:{comb.Name} | 液状化: {isLiq}",
                             "図");
                     }
                 }
@@ -1451,40 +1477,138 @@ namespace PileDesign.Output
         // 荷重沈下関係グラフ挿入メソッド
         private void AddSettlementGraph(MainDocumentPart mainPart, Body body)
         {
-            if (inputModel.ElementDivision.SoilPiles == null) return;
+            if (inputModel.ElementDivision?.SoilPiles == null) return;
             foreach (var soilPile in inputModel.ElementDivision.SoilPiles)
             {
-                if (soilPile.PileCircumVerticals != null) continue;
+                string pileRef = soilPile.PileBodyInput?.PileBodyRef ?? "-";
+                string soilRef = soilPile.GroundInput?.GroundRef ?? "-";
+                double alt = soilPile.Z;
+                string caption = $"杭体:{pileRef}|地盤:{soilRef}|杭頭Z{alt:N1}m";
 
                 var loadDisplacements = soilPile.LoadDisplacements;
-                List<double> d00s = [];
+                if (loadDisplacements == null || loadDisplacements.Count == 0) continue;
+
+                // --- 1. 荷重-杭頭沈下曲線 ---
+                List<double> dd0s = [];
                 List<double> pileTopLoads = [];
                 List<double> rzToes = [];
                 List<double> rzCircums = [];
                 List<double> weights = [];
+                List<double> ddns = [];
 
-                foreach (var loadDisplacement in loadDisplacements)
+                foreach (var ld in loadDisplacements)
                 {
-                    d00s.Add(loadDisplacement.DD0s);
-                    pileTopLoads.Add(loadDisplacement.PileTopLoad);
-                    rzToes.Add(loadDisplacement.RzToe);
-                    rzCircums.Add(loadDisplacement.RzCircum);
-                    weights.Add(loadDisplacement.Weight);
+                    dd0s.Add(ld.DD0s);
+                    ddns.Add(ld.DDns);
+                    pileTopLoads.Add(ld.PileTopLoad);
+                    rzToes.Add(ld.RzToe);
+                    rzCircums.Add(ld.RzCircum);
+                    weights.Add(ld.Weight);
                 }
 
-                List<List<double>> xsLists = [d00s, d00s, d00s, d00s];
-                List<List<double>> ysLists = [pileTopLoads, rzToes, rzCircums, weights];
-                List<string> legends = ["杭頭荷重", "杭先端支持力", "杭周面抵抗力", "杭自重"];
+                AddScottPlotGraphWithMultipleDataToBody(
+                    mainPart, body,
+                    [dd0s, dd0s, dd0s, dd0s],
+                    [pileTopLoads, rzToes, rzCircums, weights],
+                    ["杭頭荷重", "杭先端支持力", "杭周面抵抗力", "杭自重"],
+                    "", "杭頭沈下量(mm)", "荷重(kN)",
+                    150, 150);
+                AddAutoFigureCaption(body, $"{caption}：荷重-杭頭沈下関係", "図");
+
+                // --- 2. 杭頭沈下量の表 ---
+                AddSettlementDetailTable(body, loadDisplacements, caption);
+
+                // --- 3. 杭先端沈下曲線 ---
+                AddScottPlotGraphWithMultipleDataToBody(
+                    mainPart, body,
+                    [ddns, ddns],
+                    [pileTopLoads, rzToes],
+                    ["杭頭荷重", "杭先端支持力"],
+                    "", "杭先端沈下量(mm)", "荷重(kN)",
+                    150, 150);
+                AddAutoFigureCaption(body, $"{caption}：荷重-杭先端沈下関係", "図");
+
+                // --- 4. 杭周面抵抗力グラフ ---
+                if (soilPile.PileCircumVerticals != null && soilPile.PileCircumVerticals.Count > 0)
+                {
+                    AddCircumResistanceGraph(mainPart, body, soilPile, caption);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 杭頭沈下量の表を追加
+        /// </summary>
+        private static void AddSettlementDetailTable(
+            Body body,
+            System.Collections.ObjectModel.ObservableCollection<FEM.VerticalLoadTransferMethod.LoadDisplacement> loadDisplacements,
+            string caption)
+        {
+            AddLineBreak(body);
+            AddAutoFigureCaption(body, $"{caption}：荷重-沈下関係", "表");
+
+            double fontSize = 7;
+            Table table = CreateTableWithBorders();
+
+            TableRow headerRow = CreateHeaderRow(
+                CreateTableCell(["杭頭荷重", "[kN]"], fontSize, "center"),
+                CreateTableCell(["杭頭沈下量", "[mm]"], fontSize, "center"),
+                CreateTableCell(["杭先端沈下量", "[mm]"], fontSize, "center"),
+                CreateTableCell(["杭先端支持力", "[kN]"], fontSize, "center"),
+                CreateTableCell(["杭周面抵抗力", "[kN]"], fontSize, "center"),
+                CreateTableCell(["杭自重", "[kN]"], fontSize, "center")
+            );
+            table.Append(headerRow);
+
+            foreach (var ld in loadDisplacements)
+            {
+                TableRow row = new();
+                row.Append(CreateTableCell([$"{ld.PileTopLoad:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{ld.DD0s:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{ld.DDns:N3}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{ld.RzToe:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{ld.RzCircum:N1}"], fontSize, "right"));
+                row.Append(CreateTableCell([$"{ld.Weight:N1}"], fontSize, "right"));
+                table.Append(row);
+            }
+
+            body.Append(table);
+        }
+
+        /// <summary>
+        /// 杭周面抵抗力グラフを追加
+        /// </summary>
+        private static void AddCircumResistanceGraph(
+            MainDocumentPart mainPart,
+            Body body,
+            Models.InputData.SoilPile soilPile,
+            string caption)
+        {
+            List<List<double>> xsLists = [];
+            List<List<double>> ysLists = [];
+            List<string> legends = [];
+
+            int segNo = 0;
+            foreach (var pcv in soilPile.PileCircumVerticals)
+            {
+                segNo++;
+                // τ-S関係曲線（折線）: 0→S1→S2→延長
+                List<double> sValues = [0, pcv.S1, pcv.S2, pcv.S2 * 1.5];
+                List<double> tauValues = [0, pcv.Tau1, pcv.Tau2, pcv.Tau2];
+
+                xsLists.Add(sValues);
+                ysLists.Add(tauValues);
+                legends.Add($"区間{segNo} (Z={pcv.Bottom:N1}~{pcv.Top:N1}m)");
+            }
+
+            if (xsLists.Count > 0)
+            {
                 AddScottPlotGraphWithMultipleDataToBody(
                     mainPart, body,
                     xsLists, ysLists, legends,
-                    "", "杭頭沈下量(mm)", "荷重(kN)",
+                    "", "相対変位(mm)", "周面抵抗力(kN/m)",
                     150, 150);
-
-                string pileRef = soilPile.PileBodyInput.PileBodyRef;
-                string soilRef = soilPile.GroundInput.GroundRef;
-                double alt = soilPile.Z;
-                AddAutoFigureCaption(body, $"杭体:{pileRef}|地盤:{soilRef}|杭頭Z{alt:N1}m：荷重沈下関係グラフ", "図");
+                AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力-変位関係", "図");
             }
         }
 
@@ -1716,7 +1840,7 @@ namespace PileDesign.Output
             //}
             {
                 AddLineBreak(body);
-                AddAutoFigureCaption(body, $"場所打ちコンクリート杭明細", "表");
+                AddAutoFigureCaption(body, $"杭体明細", "表");
                 //var table = new Table();
                 var table = BuildPileDescriptionTable(inputModel);
                 //var borders = new TableBorders(
@@ -1844,7 +1968,7 @@ namespace PileDesign.Output
 
                         // 鋼管/コンクリート/主筋/フープ筋 は null 安全に
                         string pipeDesc = (section != null && Math.Abs(section.PipeDia) > 1e-6 && Math.Abs(section.PipeTs) > 1e-6)
-                            ? $"{section.PipeDia:N0}-{section.PipeTs:N0}({section.PipeGrade})"
+                            ? $"{section.PipeDia:N0}-{section.PipeTs:N0}\n({section.PipeGrade})"
                             : string.Empty;
                         row.Append(CreateTableCell([pipeDesc], fontSize, "center"));
 
@@ -1853,10 +1977,16 @@ namespace PileDesign.Output
                             : string.Empty;
                         row.Append(CreateTableCell([concreteDesc], fontSize, "center"));
 
-                        string mainBarDesc = section != null ? $"{section.MainBarNum}-{section.MainBarSize}({section.MainBarSpec})" : string.Empty;
+                        // 主筋: 0-0の場合は表示しない、それ以外は改行を入れる
+                        string mainBarDesc = string.Empty;
+                        if (section != null && section.MainBarNum > 0)
+                        {
+                            mainBarDesc = $"{section.MainBarNum}-{section.MainBarSize}\n({section.MainBarSpec})";
+                        }
                         row.Append(CreateTableCell([mainBarDesc], fontSize, "center"));
 
-                        string hoopDesc = section != null ? $"{section.HoopSize}-{section.HoopSpacing}({section.HoopSpec})" : string.Empty;
+                        // フープ筋: 改行を入れる
+                        string hoopDesc = section != null ? $"{section.HoopSize}-{section.HoopSpacing}\n({section.HoopSpec})" : string.Empty;
                         row.Append(CreateTableCell([hoopDesc], fontSize, "center"));
 
                         table.Append(row);
@@ -1876,8 +2006,8 @@ namespace PileDesign.Output
             List<double> selectedSegmentBtm = [];
             List<List<double>> Qmaxs = [];
             List<List<double>> Mmaxs = [];
-            List<List<double>> Nmaxs = [];
-            List<List<double>> Nmins = [];
+            List<List<double>> NMaxs = [];
+            List<List<double>> NMins = [];
             List<List<double>> Dmaxs = [];
 
             // 杭検討結果まとめ一覧
@@ -1893,18 +2023,18 @@ namespace PileDesign.Output
                     selectedSegmentTop.Add(segment.SegmentDepth - segment.SegmentLength);
                     Qmaxs.Add([double.MinValue, double.MinValue]);
                     Mmaxs.Add([double.MinValue, double.MinValue]);
-                    Nmaxs.Add([double.MinValue, double.MinValue]);
-                    Nmins.Add([double.MaxValue, double.MaxValue]);
+                    NMaxs.Add([double.MinValue, double.MinValue]);
+                    NMins.Add([double.MaxValue, double.MaxValue]);
                     Dmaxs.Add([double.MinValue, double.MinValue]);
 
                     //foreach (PileLayoutDataItem pileLayoutDataItem in inputModel.PileLayoutItems)
                     //{
                     //    if (pileLayoutDataItem.PileBodyNo != selectedPileBodyNo) continue;
 
-                    //    Nmaxs[^1][0] = Math.Max(Nmaxs[^1][0], pileLayoutDataItem.AxialForceLevel1s.Max());
-                    //    Nmins[^1][0] = Math.Min(Nmins[^1][0], pileLayoutDataItem.AxialForceLevel1s.Min());
-                    //    Nmaxs[^1][1] = Math.Max(Nmaxs[^1][1], pileLayoutDataItem.AxialForceLevel2s.Max());
-                    //    Nmins[^1][1] = Math.Min(Nmins[^1][1], pileLayoutDataItem.AxialForceLevel2s.Min());
+                    //    NMaxs[^1][0] = Math.Max(NMaxs[^1][0], pileLayoutDataItem.AxialForceLevel1s.Max());
+                    //    NMins[^1][0] = Math.Min(NMins[^1][0], pileLayoutDataItem.AxialForceLevel1s.Min());
+                    //    NMaxs[^1][1] = Math.Max(NMaxs[^1][1], pileLayoutDataItem.AxialForceLevel2s.Max());
+                    //    NMins[^1][1] = Math.Min(NMins[^1][1], pileLayoutDataItem.AxialForceLevel2s.Min());
 
                     //    foreach (LoadCase loadCase in inputModel.LoadCasesInput.AllSeismicLoadCases)
                     //    {
@@ -1947,16 +2077,16 @@ namespace PileDesign.Output
                         if (pileLayoutDataItem == null) continue;
                         if (pileLayoutDataItem.PileBodyNo != selectedPileBodyNo) continue;
 
-                        // Safe update for Nmax/Nmin lists (guard against null or empty axial force lists)
+                        // Safe update for NMax/NMin lists (guard against null or empty axial force lists)
                         if (pileLayoutDataItem.AxialForceLevel1s != null && pileLayoutDataItem.AxialForceLevel1s.Count > 0)
                         {
-                            Nmaxs[^1][0] = Math.Max(Nmaxs[^1][0], pileLayoutDataItem.AxialForceLevel1s.Max());
-                            Nmins[^1][0] = Math.Min(Nmins[^1][0], pileLayoutDataItem.AxialForceLevel1s.Min());
+                            NMaxs[^1][0] = Math.Max(NMaxs[^1][0], pileLayoutDataItem.AxialForceLevel1s.Max());
+                            NMins[^1][0] = Math.Min(NMins[^1][0], pileLayoutDataItem.AxialForceLevel1s.Min());
                         }
                         if (pileLayoutDataItem.AxialForceLevel2s != null && pileLayoutDataItem.AxialForceLevel2s.Count > 0)
                         {
-                            Nmaxs[^1][1] = Math.Max(Nmaxs[^1][1], pileLayoutDataItem.AxialForceLevel2s.Max());
-                            Nmins[^1][1] = Math.Min(Nmins[^1][1], pileLayoutDataItem.AxialForceLevel2s.Min());
+                            NMaxs[^1][1] = Math.Max(NMaxs[^1][1], pileLayoutDataItem.AxialForceLevel2s.Max());
+                            NMins[^1][1] = Math.Min(NMins[^1][1], pileLayoutDataItem.AxialForceLevel2s.Min());
                         }
 
                         foreach (LoadCase loadCase in inputModel.LoadCasesInput.AllSeismicLoadCases)
@@ -2026,6 +2156,10 @@ namespace PileDesign.Output
                 }
             }
 
+            // レベルごとに解析結果が存在するか判定
+            bool hasLevel1Results = inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsApplicable) ?? false;
+            bool hasLevel2Results = inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsApplicable) ?? false;
+
             BuildAnalysisResultSummaryTable(
             body,
             selectedPileBodies,
@@ -2034,9 +2168,11 @@ namespace PileDesign.Output
             selectedSegmentBtm,
             Qmaxs,
             Mmaxs,
-            Nmaxs,
-            Nmins,
-            Dmaxs
+            NMaxs,
+            NMins,
+            Dmaxs,
+            hasLevel1Results,
+            hasLevel2Results
             );
 
         }
@@ -2050,26 +2186,38 @@ namespace PileDesign.Output
 
             List<List<double>> Qmaxs,
             List<List<double>> Mmaxs,
-            List<List<double>> Nmaxs,
-            List<List<double>> Nmins,
-            List<List<double>> Dmaxs
+            List<List<double>> NMaxs,
+            List<List<double>> NMins,
+            List<List<double>> Dmaxs,
+            bool hasLevel1Results,
+            bool hasLevel2Results
             )
         {
             for (int k = 0; k < 2; k++)
             {
+                // 該当レベルの解析結果がない場合はスキップ
+                if (k == 0 && !hasLevel1Results) continue;
+                if (k == 1 && !hasLevel2Results) continue;
+
                 AddLineBreak(body);
                 AddAutoFigureCaption(body, $"杭検討結果まとめ一覧（レベル{k + 1}地震）", "表");
 
                 var table = new Table();
-                var borders = new TableBorders(
-                    new TopBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                    new BottomBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                    new LeftBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                    new RightBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                    new InsideHorizontalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
-                    new InsideVerticalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 }
+                var tableProps = new TableProperties(
+                    // 表の幅を100%（紙面いっぱい）に設定
+                    new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
+                    // 列幅を内容に応じて自動調整
+                    new TableLayout { Type = TableLayoutValues.Autofit },
+                    new TableBorders(
+                        new TopBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                        new BottomBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                        new LeftBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                        new RightBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                        new InsideHorizontalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                        new InsideVerticalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 }
+                    )
                 );
-                table.AppendChild(new TableProperties(borders));
+                table.AppendChild(tableProps);
 
                 for (int rowIdx = 1; rowIdx <= selectedPileBodies.Count + 1; rowIdx++)
                 {
@@ -2088,8 +2236,8 @@ namespace PileDesign.Output
                             else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph("Dmax\n(m)", "center", 8), "center");
                             else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph("Qmax\n(kN)", "center", 8), "center");
                             else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph("Mmax\n(kNm)", "center", 8), "center");
-                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph("Nmax\n(kN)", "center", 8), "center");
-                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph("Nmin\n(kN)", "center", 8), "center");
+                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph("NMax\n(kN)", "center", 8), "center");
+                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph("NMin\n(kN)", "center", 8), "center");
                         }
                         else
                         {
@@ -2101,8 +2249,8 @@ namespace PileDesign.Output
                             else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Dmaxs[i][k]:N3}", "center", 8), "center");
                             else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Qmaxs[i][k]:N1}", "center", 8), "center");
                             else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Mmaxs[i][k]:N1}", "center", 8), "center");
-                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Nmaxs[i][k]:N1}", "center", 8), "center");
-                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Nmins[i][k]:N1}", "center", 8), "center");
+                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph($"{NMaxs[i][k]:N1}", "center", 8), "center");
+                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph($"{NMins[i][k]:N1}", "center", 8), "center");
                         }
 
                         row.Append(cell);
@@ -2770,47 +2918,36 @@ namespace PileDesign.Output
 
                 double[] xsArray = [.. xsLists[i]];
                 double[] ysArray = [.. ysLists[i]];
-                plots[i].Add.ScatterLine(xsArray, ysArray);
+                var scatter = plots[i].Add.ScatterLine(xsArray, ysArray);
 
                 // 変位図に地盤変位を重ねるのは xsLists[3] があるときのみ
                 if (i == 2 && xsLists.Count >= 4)
                 {
+                    scatter.LegendText = "杭変位";
+
                     double[] xsArrayS = [.. xsLists[3]];
                     if (xsArrayS.Length == ysArray.Length)
-                        plots[i].Add.ScatterLine(xsArrayS, ysArray);
+                    {
+                        var soilScatter = plots[i].Add.ScatterLine(xsArrayS, ysArray);
+                        // 杭変位と同じ色で破線にする
+                        var pileColor = scatter.LineStyle.Color;
+                        soilScatter.LineStyle.Color = pileColor;
+                        soilScatter.LineStyle.Pattern = LinePattern.Dashed;
+                        soilScatter.LegendText = "地盤変位";
+                    }
+
+                    plots[i].ShowLegend();
                 }
 
                 plots[i].Axes.Title.Label.Text = titles[i];
                 plots[i].Axes.Bottom.Label.Text = xLabels[i];
                 plots[i].Axes.Left.Label.Text = yLabels[i];
 
-                // 日本語フォントを明示的に設定
-                string[] fontCandidates = ["Meiryo", "Yu Gothic UI", "Yu Gothic", "ＭＳ ゴシック", "MS Gothic"];
-                string useFont = fontCandidates.FirstOrDefault(fn =>
-                {
-                    try { return System.Windows.Media.Fonts.SystemFontFamilies.Any(f => f.Source?.IndexOf(fn, StringComparison.OrdinalIgnoreCase) >= 0); }
-                    catch { return false; }
-                }) ?? "Meiryo";
-
-                void SafeSetFont(object target, string propName)
-                {
-                    if (target == null) return;
-                    try
-                    {
-                        var t = target.GetType();
-                        var pi = t.GetProperty(propName);
-                        if (pi != null && pi.CanWrite && pi.PropertyType == typeof(string))
-                            pi.SetValue(target, useFont);
-                    }
-                    catch { }
-                }
-
-                SafeSetFont(plots[i].Axes.Title.Label, "FontName");
-                SafeSetFont(plots[i].Axes.Bottom.Label, "FontName");
-                SafeSetFont(plots[i].Axes.Bottom, "TickLabelFontName");
-                SafeSetFont(plots[i].Axes.Left.Label, "FontName");
-                SafeSetFont(plots[i].Axes.Left, "TickLabelFontName");
-                SafeSetFont(plots[i].Legend, "FontName");
+                // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出
+                plots[i].Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titles[i] ?? "メイリオ");
+                plots[i].Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabels[i] ?? "メイリオ");
+                plots[i].Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabels[i] ?? "メイリオ");
+                plots[i].Legend.FontName = ScottPlot.Fonts.Detect("凡例");
             }
 
             // apply a custom layout
@@ -2851,6 +2988,11 @@ namespace PileDesign.Output
                     wpf.Plot.Axes.Title.Label.Text = title ?? string.Empty;
                     wpf.Plot.Axes.Bottom.Label.Text = xLabel ?? string.Empty;
                     wpf.Plot.Axes.Left.Label.Text = yLabel ?? string.Empty;
+
+                    // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出
+                    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title ?? "メイリオ");
+                    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel ?? "メイリオ");
+                    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel ?? "メイリオ");
                 }, widthMm, heightMm, dpi: Layout.BaseDpi, scale: Layout.HiResScale);
 
                 if (pngBytes != null && pngBytes.Length > 0)
@@ -2896,7 +3038,7 @@ namespace PileDesign.Output
         //}
 
         // 複数データスコットプロット挿入メソッド
-        //public static void AddNMINTScottPlotGraphToBody(
+        //public static void AddNMinTScottPlotGraphToBody(
         //    MainDocumentPart mainPart, Body body,
         //    List<List<double>> xsLineLists, List<List<double>> ysLineLists, List<string> lineLegends,
         //    List<List<double>> xsScatterLists, List<List<double>> ysScatterLists, List<string> scatterLegends,
@@ -3047,10 +3189,10 @@ namespace PileDesign.Output
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine($"AddNMINTScottPlotGraphToBody: エラー: {ex.Message}");
+        //        Console.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
         //    }
         //}
-        public static void AddNMINTScottPlotGraphToBody(
+        public static void AddNMinTScottPlotGraphToBody(
     MainDocumentPart mainPart, Body body,
     List<List<double>> xsLineLists, List<List<double>> ysLineLists, List<string> lineLegends,
     List<List<double>> xsScatterLists, List<List<double>> ysScatterLists, List<string> scatterLegends,
@@ -3114,27 +3256,11 @@ namespace PileDesign.Output
                     plot.Axes.Bottom.Label.Text = xLabel ?? string.Empty;
                     plot.Axes.Left.Label.Text = yLabel ?? string.Empty;
 
-                    // フォントを設定するヘルパー（リフレクションで安全に適用）
-                    void SafeSetFont(object target, string propName)
-                    {
-                        if (target == null) return;
-                        try
-                        {
-                            var t = target.GetType();
-                            var pi = t.GetProperty(propName);
-                            if (pi != null && pi.CanWrite && pi.PropertyType == typeof(string))
-                                pi.SetValue(target, useFont);
-                        }
-                        catch { }
-                    }
-
-                    // 主要なフォントプロパティに明示的指定（API 互換性を考慮して例外を無視）
-                    SafeSetFont(plot.Axes.Title.Label, "FontName");
-                    SafeSetFont(plot.Axes.Bottom.Label, "FontName");
-                    SafeSetFont(plot.Axes.Bottom, "TickLabelFontName");
-                    SafeSetFont(plot.Axes.Left.Label, "FontName");
-                    SafeSetFont(plot.Axes.Left, "TickLabelFontName");
-                    SafeSetFont(plot.Legend, "FontName");
+                    // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出
+                    plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title ?? "メイリオ");
+                    plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel ?? "メイリオ");
+                    plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel ?? "メイリオ");
+                    plot.Legend.FontName = ScottPlot.Fonts.Detect("凡例");
                 }
                 catch { /* 安全に無視 */ }
 
@@ -3156,7 +3282,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddNMINTScottPlotGraphToBody: エラー: {ex.Message}");
+                Console.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
             }
         }
 
@@ -3234,6 +3360,13 @@ namespace PileDesign.Output
                     wpf.Plot.Axes.Title.Label.Text = title ?? string.Empty;
                     wpf.Plot.Axes.Bottom.Label.Text = xLabel ?? string.Empty;
                     wpf.Plot.Axes.Left.Label.Text = yLabel ?? string.Empty;
+
+                    // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出
+                    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title ?? "メイリオ");
+                    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel ?? "メイリオ");
+                    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel ?? "メイリオ");
+                    wpf.Plot.Legend.FontName = ScottPlot.Fonts.Detect("凡例");
+
                     wpf.Plot.ShowLegend();
                     wpf.Plot.Axes.AutoScale();
                 }, widthMm, heightMm, dpi: Layout.BaseDpi, scale: Layout.HiResScale);
@@ -3936,15 +4069,24 @@ diameterSelector,
         {
             try
             {
-                var settlementData = inputModel?.PileGroupSettlement?.SettlementGridData;
+                var pgs = inputModel?.PileGroupSettlement;
+                var settlementData = pgs?.SettlementGridData;
                 if (settlementData == null || settlementData.Count == 0)
-                {
-                    // データがない場合はスキップ
                     return;
-                }
+
+                var gridXs = pgs?.SettlementGridX?.ToList();
+                var gridYs = pgs?.SettlementGridY?.ToList();
+
+                // 杭位置リスト
+                var pilePositions = inputModel?.PileLayoutItems?
+                    .Select(p => (X: p.Point3D.X, Y: p.Point3D.Y))
+                    .ToList();
 
                 var pngBytes = DiagramRenderer.RenderSettlementContourDiagram(
                     settlementData,
+                    gridXs,
+                    gridYs,
+                    pilePositions,
                     widthMm,
                     heightMm,
                     dpi: Layout.BaseDpi,
@@ -3962,6 +4104,53 @@ diameterSelector,
             {
                 Console.WriteLine($"AddGroupPileSettlementContourDiagram: 図作成エラー: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 各杭位置の沈下量一覧表をWord文書に挿入
+        /// </summary>
+        private void AddPileSettlementTable(Body body)
+        {
+            var pileLayoutItems = inputModel?.PileLayoutItems;
+            if (pileLayoutItems == null || pileLayoutItems.Count == 0) return;
+
+            AddLineBreak(body);
+            AddAutoFigureCaption(body, "各杭位置の沈下量一覧", "表");
+
+            double fontSize = 8;
+            Table table = CreateTableWithBorders();
+
+            // ヘッダー行
+            TableRow headerRow = CreateHeaderRow(
+                CreateTableCell(["No"], fontSize, "center"),
+                CreateTableCell(["X", "[m]"], fontSize, "center"),
+                CreateTableCell(["Y", "[m]"], fontSize, "center"),
+                CreateTableCell(["単杭沈下量", "(常時)", "[mm]"], fontSize, "center"),
+                CreateTableCell(["群杭沈下量", "[mm]"], fontSize, "center"),
+                CreateTableCell(["合計沈下量", "[mm]"], fontSize, "center")
+            );
+            table.Append(headerRow);
+
+            // データ行
+            int no = 0;
+            foreach (var pli in pileLayoutItems)
+            {
+                no++;
+                double singleSettle = pli.SinglePileSettlementVL;
+                double groupSettle = pli.GroupPileSettlement;
+                double totalSettle = singleSettle + groupSettle;
+
+                TableRow dataRow = new();
+                dataRow.Append(CreateTableCell([$"{no}"], fontSize, "center"));
+                dataRow.Append(CreateTableCell([$"{pli.Point3D.X:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{pli.Point3D.Y:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{singleSettle:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{groupSettle:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{totalSettle:N3}"], fontSize, "right"));
+                table.Append(dataRow);
+            }
+
+            body.Append(table);
         }
 
         // 杭伏図ダイヤグラム挿入メソッド
@@ -4115,14 +4304,14 @@ diameterSelector,
             var allCombinations = loadCasesInput.AllLoadCombinations;
 
             var combos = (allCombinations != null && allCombinations.Count > 0)
-                ? new List<LoadCombination?>(allCombinations.Cast<LoadCombination?>())
+                ? [.. allCombinations.Cast<LoadCombination?>()]
                 : new List<LoadCombination?>() { null };
 
             // 各レベルについて先頭4ケース（存在する分）を列挙し、各ケースで値を求める
             void AppendLevelCases(IEnumerable<LoadCase> loadCases, string levelLabel)
             {
                 mark += $"\n{levelLabel}";
-                var lcList = loadCases?.ToList() ?? new List<LoadCase>();
+                var lcList = loadCases?.ToList() ?? [];
                 int casesToShow = Math.Min(4, lcList.Count);
 
                 for (int idx = 0; idx < casesToShow; idx++)
@@ -5175,11 +5364,15 @@ diameterSelector,
 
 
         // 上付き、下付き文字
+        // サポートする記法:
+        //   <^...> または ^{...} : 上付き文字
+        //   <_...> または _{...} : 下付き文字
         public static List<Run> ConvertStringToRunsWithSuperSub(string text, double fontSize = 10.5)
         {
             var runs = new List<Run>();
             int pos = 0;
-            var pattern = @"\<\^(.*?)>|<_(.*?)>";
+            // 既存の <^...>, <_...> に加え、LaTeX形式の ^{...}, _{...} もサポート
+            var pattern = @"\<\^(.*?)\>|<_(.*?)\>|\^{(.*?)}|_{(.*?)}";
 
             var matches = Regex.Matches(text, pattern);
 
@@ -5195,9 +5388,9 @@ diameterSelector,
                     ));
                 }
 
-                if (match.Groups[1].Success) // 上付き
+                if (match.Groups[1].Success || match.Groups[3].Success) // 上付き (<^...> or ^{...})
                 {
-                    string superText = match.Groups[1].Value;
+                    string superText = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[3].Value;
                     runs.Add(new Run(
                         new RunProperties
                         {
@@ -5207,9 +5400,9 @@ diameterSelector,
                         new Text(superText)
                     ));
                 }
-                else if (match.Groups[2].Success) // 下付き
+                else if (match.Groups[2].Success || match.Groups[4].Success) // 下付き (<_...> or _{...})
                 {
-                    string subText = match.Groups[2].Value;
+                    string subText = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[4].Value;
                     runs.Add(new Run(
                         new RunProperties
                         {
@@ -5275,10 +5468,15 @@ diameterSelector,
         }
 
         // テーブルに枠線を追加するメソッド
+        // 表は紙面幅いっぱい（100%）に設定し、列幅は内容に応じて自動調整
         private static Table CreateTableWithBorders()
         {
             Table table = new();
             TableProperties props = new(
+                // 表の幅を100%（紙面いっぱい）に設定
+                new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
+                // 列幅を内容に応じて自動調整
+                new TableLayout { Type = TableLayoutValues.Autofit },
                 new TableBorders(
                     new TopBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
@@ -5293,12 +5491,13 @@ diameterSelector,
         }
 
         private static Table CreateTableWithBordersAndWidths(params int[] columnWidths)
-        // 列幅の合計が8,500前後になるように指定する
+        // 列幅の比率を維持しながら、表は紙面幅いっぱいに設定
         {
             Table table = new();
             TableProperties props = new(
+                // 表の幅を100%（紙面いっぱい）に設定
+                new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct },
                 new TableBorders(
-                    //new TableWidth { Width = "5000", Type = TableWidthUnitValues.Dxa }, // 表全体の幅
                     new TopBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
                     new LeftBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
@@ -5538,8 +5737,8 @@ diameterSelector,
                 TableRow row1 = new();
                 row1.Append(
                     CreateTableCell(["孔口レベル"], fontSize, "center"),
-                    CreateTableCell([$"{ground.GLDepth}"], fontSize, "right"),
-                    CreateTableCell([$"{ground.GroundTopAltitude}"], fontSize, "right")
+                    CreateTableCell([$"{ground.GLDepth:N3}"], fontSize, "right"),
+                    CreateTableCell([$"{ground.GroundTopAltitude:N3}"], fontSize, "right")
                 );
                 table.Append(row1);
 
@@ -5547,8 +5746,8 @@ diameterSelector,
                 TableRow row2 = new();
                 row2.Append(
                     CreateTableCell(["地下水位"], fontSize, "center"),
-                    CreateTableCell([$"{ground.GroundWaterGLDepth}"], fontSize, "right"),
-                    CreateTableCell([$"{ground.GroundWaterTableAltitude}"], fontSize, "right")
+                    CreateTableCell([$"{ground.GroundWaterGLDepth:N3}"], fontSize, "right"),
+                    CreateTableCell([$"{ground.GroundWaterTableAltitude:N3}"], fontSize, "right")
                 );
                 table.Append(row2);
 
@@ -5556,8 +5755,8 @@ diameterSelector,
                 TableRow row3 = new();
                 row3.Append(
                     CreateTableCell(["地中応力検討用レベル"], fontSize, "center"),
-                    CreateTableCell([$"{ground.StressGLDepth}"], fontSize, "right"),
-                    CreateTableCell([$"{ground.StressAltitude}"], fontSize, "right")
+                    CreateTableCell([$"{ground.StressGLDepth:N3}"], fontSize, "right"),
+                    CreateTableCell([$"{ground.StressAltitude:N3}"], fontSize, "right")
                 );
                 table.Append(row3);
 
@@ -5680,7 +5879,7 @@ diameterSelector,
 
             for (int i = 0; i < 2; i++)
             {
-                AddText(body, $"液状化レベル{i + 1}");
+                AddText(body, $"液状化レベル{i + 1}(L{i + 1})");
 
                 Table table0 = CreateTableWithBorders();
 
@@ -5718,11 +5917,11 @@ diameterSelector,
                 CreateTableCell(["N値", "増分", "⊿N<_f>"], fontSize, "center"),
                 CreateTableCell(["補正", "N値", "N<_a>"], fontSize, "center"),
                 CreateTableCell(["液状化", "抵抗比", "τ<_L>/σ<_z>'"], fontSize, "center"),
-                CreateTableCell([$"レベル{i + 1}", "繰返し", "せん断", "応力度", "τ<_d>/σ<_z>'"], fontSize, "center"),
-                CreateTableCell([$"レベル{i + 1}", "液状化", "安全率", "F<_L>"], fontSize, "center"),
-                CreateTableCell([$"レベル{i + 1}", "地盤", "反力", "係数", "低減率", "β<_L>"], fontSize, "center"),
-                CreateTableCell([$"レベル{i + 1}", "繰返し", "せん断", "ひずみ", "γ<_cy>", "[%]"], fontSize, "center"),
-                CreateTableCell([$"レベル{i + 1}", "液状化", "水平", "変位", "∑γ<_cy>H", "[mm]"], fontSize, "center")
+                CreateTableCell([$"L{i + 1}", "繰返し", "せん断", "応力度", "τ<_d>/σ<_z>'"], fontSize, "center"),
+                CreateTableCell([$"L{i + 1}", "液状化", "安全率", "F<_L>"], fontSize, "center"),
+                CreateTableCell([$"L{i + 1}", "地盤", "反力", "係数", "低減率", "β<_L>"], fontSize, "center"),
+                CreateTableCell([$"L{i + 1}", "繰返し", "せん断", "ひずみ", "γ<_cy>", "[%]"], fontSize, "center"),
+                CreateTableCell([$"L{i + 1}", "液状化", "水平", "変位", "∑γ<_cy>H", "[mm]"], fontSize, "center")
                     );
 
                 table.Append(headerRow);
@@ -5864,10 +6063,75 @@ diameterSelector,
         // 杭体の表を追加するメソッド
         public static void AddPileBodiesTables(Body body, ObservableCollection<PileBodyInput> pileBodies)
         {
+            int pileBodyNo = 0;
             foreach (PileBodyInput pileBodyInput in pileBodies)
             {
-                AddPileBodySegmentTable(body, pileBodyInput);
+                pileBodyNo++;
+                AddPileBodyDetailedTable(body, pileBodyInput, pileBodyNo);
             }
+        }
+
+        // 杭体の詳細情報を含む表を追加するメソッド
+        public static void AddPileBodyDetailedTable(Body body, PileBodyInput pileBodyInput, int pileBodyNo)
+        {
+            double fontSize = 8;
+
+            // 杭体No.のヘッダー
+            var headerPara = new Paragraph();
+            headerPara.Append(new Run(
+                new RunProperties { Bold = new Bold(), FontSize = new FontSize { Val = "18" } },
+                new Text($"杭体No.{pileBodyNo}") { Space = SpaceProcessingModeValues.Preserve }));
+            body.Append(headerPara);
+
+            // 杭先端径（最後のセグメントから取得）
+            string tipDiameter = "-";
+            if (pileBodyInput.PileBodySegments != null && pileBodyInput.PileBodySegments.Count > 0)
+            {
+                var lastSegment = pileBodyInput.PileBodySegments[^1];
+                if (lastSegment?.PileSection != null)
+                {
+                    tipDiameter = $"{lastSegment.PileSection.PileDiameter:N0}";
+                }
+            }
+
+            // 杭体基本情報テーブル（杭体符号、杭体タイプ、杭頭接合タイプ、杭工法、杭先端径）
+            Table infoTable = CreateTableWithBorders();
+
+            TableRow refRow = new();
+            refRow.Append(CreateTableCell(["杭体符号"], fontSize, "left"));
+            refRow.Append(CreateTableCell([pileBodyInput.PileBodyRef ?? "-"], fontSize, "left"));
+            infoTable.Append(refRow);
+
+            TableRow typeRow = new();
+            typeRow.Append(CreateTableCell(["杭体タイプ"], fontSize, "left"));
+            typeRow.Append(CreateTableCell([pileBodyInput.PileBodyType ?? "-"], fontSize, "left"));
+            infoTable.Append(typeRow);
+
+            TableRow topTypeRow = new();
+            topTypeRow.Append(CreateTableCell(["杭頭接合タイプ"], fontSize, "left"));
+            topTypeRow.Append(CreateTableCell([pileBodyInput.PileTopType ?? "-"], fontSize, "left"));
+            infoTable.Append(topTypeRow);
+
+            TableRow constructionRow = new();
+            constructionRow.Append(CreateTableCell(["杭工法"], fontSize, "left"));
+            constructionRow.Append(CreateTableCell([pileBodyInput.PileConstructionType ?? "-"], fontSize, "left"));
+            infoTable.Append(constructionRow);
+
+            TableRow tipRow = new();
+            tipRow.Append(CreateTableCell(["杭先端径"], fontSize, "left"));
+            tipRow.Append(CreateTableCell([tipDiameter], fontSize, "left"));
+            infoTable.Append(tipRow);
+
+            body.Append(infoTable);
+
+            // 「杭体区間」ラベル
+            AddText(body, "杭体区間", "left", 9);
+
+            // 杭体区間テーブル
+            AddPileBodySegmentTable(body, pileBodyInput);
+
+            // 杭体間のスペース
+            AddLineBreak(body);
         }
 
         // 杭先端沈下の表を追加するメソッド
@@ -6149,7 +6413,7 @@ diameterSelector,
             body.Append(table);
         }
 
-        private static string FrontMark(IList<bool> src, int idx)
+        private static string FrontMark(ObservableCollection<bool> src, int idx)
             => (src != null && idx >= 0 && idx < src.Count) ? (src[idx] ? "前" : "後") : string.Empty;
 
         // 杭抵抗
@@ -6214,12 +6478,12 @@ diameterSelector,
                 CreateTableCell(["杭頭径", "[mm]"], fontSize, "center"),
                 CreateTableCell(["杭先端径", "[mm]"], fontSize, "center"),
                 CreateTableCell(["杭先端", "Z標高", "[m]"], fontSize, "center"),
-                CreateTableCell(["押込側", "使用", "限界", "R_SLS", "[kN]"], fontSize, "center"),
-                CreateTableCell(["押込側", "損傷", "限界", "R_DLS", "[kN]"], fontSize, "center"),
-                CreateTableCell(["押込側", "終局", "限界", "R_ULS", "[kN]"], fontSize, "center"),
-                CreateTableCell(["引抜側", "使用", "限界", "Rt_SLS", "[kN]"], fontSize, "center"),
-                CreateTableCell(["引抜側", "損傷", "限界", "Rt_DLS", "[kN]"], fontSize, "center"),
-                CreateTableCell(["引抜側", "終局", "限界", "Rt_ULS", "[kN]"], fontSize, "center"));
+                CreateTableCell(["押込側", "使用", "限界", "R_{SLS}", "[kN]"], fontSize, "center"),
+                CreateTableCell(["押込側", "損傷", "限界", "R_{DLS}", "[kN]"], fontSize, "center"),
+                CreateTableCell(["押込側", "終局", "限界", "R_{ULS}", "[kN]"], fontSize, "center"),
+                CreateTableCell(["引抜側", "使用", "限界", "R_{t,SLS}", "[kN]"], fontSize, "center"),
+                CreateTableCell(["引抜側", "損傷", "限界", "R_{t,DLS}", "[kN]"], fontSize, "center"),
+                CreateTableCell(["引抜側", "終局", "限界", "R_{t,ULS}", "[kN]"], fontSize, "center"));
 
             table.Append(headerRow);
 
@@ -6623,14 +6887,14 @@ diameterSelector,
         }
 
         // kh = 3.16 kh0
-        public static void AddEquationkh_1(Body body)
+        public static void AddEquationKh_1(Body body)
         {
             var math = Tex("k_{h}=3.16k_{h0}");
             PutMathInBody(body, math);
         }
 
         // kh = kh0 / sqrt(ybar)
-        public static void AddEquationkh_2(Body body)
+        public static void AddEquationKh_2(Body body)
         {
             var math = Tex(@"k_{h} = \frac{k_{h0}}{\sqrt{\overline{y}}} = \frac{k_{h0}}{\sqrt{\frac{y}{0.01}}}");
             PutMathInBody(body, math);
@@ -7145,11 +7409,11 @@ diameterSelector,
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"- \varepsilon_{y} < \varepsilon \le \varepsilon_{y}"), ": ", Tex(@"\sigma = E_{s}\varepsilon")]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\varepsilon_{y} < \varepsilon"), ": ", Tex(@"\sigma = \sigma_{y}")]);
 
-            static DocumentFormat.OpenXml.Math.OfficeMath mathEpsilonyEq() =>
+            static DocumentFormat.OpenXml.Math.OfficeMath mathEpsilonYEq() =>
                 Tex(@"\varepsilon_{y} = \frac{\sigma_{y}}{E_{s}}");
 
             AddInlineMathParagraph(body, ["ここに、", Tex(@"\sigma_{y}"), "：引張定着筋降伏点強度"]);
-            AddInlineMathParagraph(body, [Tex(@"\varepsilon_{y}"), "：引張定着筋降伏時ひずみ度（", mathEpsilonyEq(), "）"]);
+            AddInlineMathParagraph(body, [Tex(@"\varepsilon_{y}"), "：引張定着筋降伏時ひずみ度（", mathEpsilonYEq(), "）"]);
 
             AddHeader1(body, "降伏時回転角", 4);
             //AddInlineMathParagraph(body, ["d. 降伏時回転角", mathThetau()]);
@@ -7360,10 +7624,10 @@ diameterSelector,
 
             AddText(body, "0m≦$y$≦0.001m", "left");
 
-            AddEquationkh_1(body);
+            AddEquationKh_1(body);
 
             AddText(body, "0.001m≦$y$", "left");
-            AddEquationkh_2(body);
+            AddEquationKh_2(body);
 
             AddText(body, "基準水平地盤反力係数", "left");
             AddEquation_kh0(body);
@@ -7894,25 +8158,25 @@ diameterSelector,
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\H_{i}"), ": i層の層厚(m)"]);
         }
 
-        string a001 = "基礎部材の強度と変形性能";
-        string a002 = "液状化危険度、地盤変形量と液状化程度の予測";
-        string a003 = "沈下";
+        readonly string a001 = "基礎部材の強度と変形性能";
+        readonly string a002 = "液状化危険度、地盤変形量と液状化程度の予測";
+        readonly string a003 = "沈下";
 
-        string a0031 = "単杭の沈下：荷重伝達解析による荷重-沈下量関係の評価（「基礎指針'19」 6.3節、1(2)）を行う。";
-        string a0032 = "群杭の沈下:杭ごとに等価荷重面を設定し、杭先端以深の地盤の圧縮量（沈下量）を直接基礎と" +
+        readonly string a0031 = "単杭の沈下：荷重伝達解析による荷重-沈下量関係の評価（「基礎指針'19」 6.3節、1(2)）を行う。";
+        readonly string a0032 = "群杭の沈下:杭ごとに等価荷重面を設定し、杭先端以深の地盤の圧縮量（沈下量）を直接基礎と" +
             "同じくスタインブレナーの近似解（多層地盤の場合（「基礎指針'19」 5.3節、1(3)(iii)））を用いて求める。";
-        string a004 = "鉛直支持力および引抜き抵抗力：";
-        string a005 = "水平抵抗：「基礎指針'19」6.6節による。";
+        readonly string a004 = "鉛直支持力および引抜き抵抗力：";
+        readonly string a005 = "水平抵抗：「基礎指針'19」6.6節による。";
 
 
-        string b001 = "場所打ちコンクリート杭の曲げモーメントと曲率の関係";
+        readonly string b001 = "場所打ちコンクリート杭の曲げモーメントと曲率の関係";
 
-        string b002 = "断面の平面保持を仮定して、鉄筋とコンクリートの応力度-ひずみ度関係をモデル化し、断面の曲げ解析を行って、M-φ関係を計算する。" +
+        readonly string b002 = "断面の平面保持を仮定して、鉄筋とコンクリートの応力度-ひずみ度関係をモデル化し、断面の曲げ解析を行って、M-φ関係を計算する。" +
             "鉄筋の応力度-ひずみ度関係は、規格降伏店を用いたバイリニアとする。コンクリートの応力度-ひずみ度関係にはe関数法を用いる";
-        string b003 = "a.曲げひび割れモーメントおよび曲げひび割れ時の曲率##は以下による。";
-        string b004 = "b.杭の主筋降伏発生時の曲げモーメント##とその時の曲率##は、断面の曲げ解析による。" +
+        readonly string b003 = "a.曲げひび割れモーメントおよび曲げひび割れ時の曲率##は以下による。";
+        readonly string b004 = "b.杭の主筋降伏発生時の曲げモーメント##とその時の曲率##は、断面の曲げ解析による。" +
             "ただし、最外縁の杭主筋が引張降伏するとき（杭の主筋降伏発生時）の曲げモーメントと曲率とする。";
-        string b005 = "c.安全限界曲げモーメント時の曲率";
+        readonly string b005 = "c.安全限界曲げモーメント時の曲率";
 
 
 

@@ -52,12 +52,12 @@ namespace PileDesign.ViewModels
             }
             catch (FileNotFoundException ex)
             {
-                Debug.WriteLine($"例題ファイルが見つかりません: {ex.Message}");
+                //Debug.WriteLine($"例題ファイルが見つかりません: {ex.Message}");
                 throw new InvalidOperationException($"例題「{displayName}」のデータファイルが見つかりません。\nExamplesフォルダに {jsonFileName}.json が存在することを確認してください。", ex);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"例題データの読み込みエラー: {ex.Message}");
+                //Debug.WriteLine($"例題データの読み込みエラー: {ex.Message}");
                 throw new InvalidOperationException($"例題「{displayName}」のデータ読み込み中にエラーが発生しました。\n{ex.Message}", ex);
             }
         }
@@ -146,11 +146,11 @@ namespace PileDesign.ViewModels
             try
             {
                 GroundExampleLoader.ExportToJson(GroundInput, fileName, displayName);
-                Debug.WriteLine($"エクスポート完了: {fileName}.json");
+                //Debug.WriteLine($"エクスポート完了: {fileName}.json");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"エクスポートエラー: {ex.Message}");
+                //Debug.WriteLine($"エクスポートエラー: {ex.Message}");
             }
         }
 #endif

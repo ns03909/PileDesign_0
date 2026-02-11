@@ -116,55 +116,44 @@ Title="DocxOutputWindow" Height="600" Width="400">
                   Content="地盤情報" 
                   IsChecked="{Binding IncludeGroundInformation, Mode=TwoWay}" 
                   />
-                <CheckBox 
-                  Content="液状化検討" 
-                  IsChecked="{Binding IncludeLiquefaction, Mode=TwoWay}" 
+                <CheckBox
+                  Content="液状化検討"
+                  IsChecked="{Binding IncludeLiquefaction, Mode=TwoWay}"
                   />
 
-                <CheckBox 
-                      Content="支持力検討" 
-                      IsChecked="{Binding IncludeVertical, Mode=TwoWay}" 
-                      />
-                <CheckBox 
-                      Content="水平検討" 
-                      IsChecked="{Binding IncludeHorizontal, Mode=TwoWay}" 
-                      />
-                <CheckBox 
-                      Content="曲げモーメント検討" 
-                      IsChecked="{Binding IncludeHorizontal_Bending, Mode=TwoWay}" 
-                      Margin="15,0,0,0"/>
-                <CheckBox 
-                      Content="せん断力検討" 
-                      IsChecked="{Binding IncludeHorizontal_Shear, Mode=TwoWay}" 
-                      Margin="15,0,0,0"/>
-                <CheckBox 
-                      Content="NMINT" 
-                      IsChecked="{Binding IncludeHorizontal_NMINT, Mode=TwoWay}" 
-                      Margin="15,0,0,0"/>
-                
-                <CheckBox 
-                      Content="杭配置図" 
-                      IsChecked="{Binding IncludepileLocationMap, Mode=TwoWay}" 
-                      Margin="15,0,0,0"/>
-                <CheckBox 
-                      Content="杭軸力図" 
-                      IsChecked="{Binding IncludePileAxialLoadMap, Mode=TwoWay}" 
-                      Margin="15,0,0,0"/>
                 <CheckBox
-                      Content="杭前方杭・後方杭設定図" 
-                      IsChecked="{Binding IncludeIsFrontMap, Mode=TwoWay}" 
-                      Margin="15,0,0,0"/>
-
-
+                      Content="杭配置図"
+                      IsChecked="{Binding IncludepileLocationMap, Mode=TwoWay}"
+                      />
                 <CheckBox
-                      Content="杭頭曲げモーメントマップ" 
-                      IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" 
-                        Margin="15,0,0,0">
+                      Content="杭軸力図"
+                      IsChecked="{Binding IncludePileAxialLoadMap, Mode=TwoWay}"
+                      />
+                <CheckBox
+                      Content="杭前方杭・後方杭設定図"
+                      IsChecked="{Binding IncludeIsFrontMap, Mode=TwoWay}"
+                      />
+
+                <CheckBox Content="支持力検討" IsChecked="{Binding IncludeVertical, Mode=TwoWay}">
                     <CheckBox.Style>
                         <Style TargetType="CheckBox">
                             <Setter Property="IsEnabled" Value="True"/>
                             <Style.Triggers>
-                                <!-- 沈下解析が完了していなければ編集不可かつチェックを外す -->
+                                <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Setter Property="ToolTip" Value="単杭沈下解析が未完了のため選択できません"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+
+                <CheckBox Content="水平検討" IsChecked="{Binding IncludeHorizontal, Mode=TwoWay}">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
                                     <Setter Property="IsEnabled" Value="False"/>
                                     <Setter Property="IsChecked" Value="False"/>
@@ -174,31 +163,86 @@ Title="DocxOutputWindow" Height="600" Width="400">
                         </Style>
                     </CheckBox.Style>
                 </CheckBox>
-
-                <CheckBox
-                      Content="杭頭せん断力マップ" 
-                      IsChecked="{Binding IncludePileHeadShearMap, Mode=TwoWay}" 
-                        Margin="15,0,0,0">
+                <CheckBox Content="軸力-曲げモーメント関係" IsChecked="{Binding IncludeHorizontal_NMinT, Mode=TwoWay}" Margin="15,0,0,0">
                     <CheckBox.Style>
                         <Style TargetType="CheckBox">
                             <Setter Property="IsEnabled" Value="True"/>
                             <Style.Triggers>
-                                <!-- 沈下解析が完了していなければ編集不可かつチェックを外す -->
                                 <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
                                     <Setter Property="IsEnabled" Value="False"/>
                                     <Setter Property="IsChecked" Value="False"/>
-                                    <Setter Property="ToolTip" Value="水平解析が未完了のため選択できません"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+                <CheckBox Content="曲げモーメント検討" IsChecked="{Binding IncludeHorizontal_Bending, Mode=TwoWay}" Margin="15,0,0,0">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+                <CheckBox Content="せん断力検討" IsChecked="{Binding IncludeHorizontal_Shear, Mode=TwoWay}" Margin="15,0,0,0">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+                <CheckBox Content="杭頭曲げモーメントマップ" IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,0,0,0">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+                <CheckBox Content="杭頭せん断力マップ" IsChecked="{Binding IncludePileHeadShearMap, Mode=TwoWay}" Margin="15,0,0,0">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </CheckBox.Style>
                 </CheckBox>
 
-
-                <CheckBox
-                      Content="沈下検討" 
-                      IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" 
-                      />
+                <CheckBox Content="沈下検討" IsChecked="{Binding IncludeSettlement, Mode=TwoWay}">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Setter Property="ToolTip" Value="単杭沈下解析が未完了のため選択できません"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
                 
                 
                 <CheckBox

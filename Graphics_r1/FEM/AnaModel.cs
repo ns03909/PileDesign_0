@@ -78,15 +78,15 @@ namespace PileDesign.FEM
                     .Select(i => $"{n.Name}:{i}")).ToList();
                 if (freeDofs.Count > 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[AnaModel] CapNodes with FREE DOFs ({freeDofs.Count}):");
-                    foreach (var dof in freeDofs.Take(20))
-                        System.Diagnostics.Debug.WriteLine($"  {dof}");
-                    if (freeDofs.Count > 20)
-                        System.Diagnostics.Debug.WriteLine($"  ... and {freeDofs.Count - 20} more");
+                    //System.Diagnostics.Debug.WriteLine($"[AnaModel] CapNodes with FREE DOFs ({freeDofs.Count}):");
+                    //foreach (var dof in freeDofs.Take(20))
+                        //System.Diagnostics.Debug.WriteLine($"  {dof}");
+                    //if (freeDofs.Count > 20)
+                        //System.Diagnostics.Debug.WriteLine($"  ... and {freeDofs.Count - 20} more");
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[AnaModel] All {capNodes.Count} CapNodes have FIXED boundaries (correct)");
+                    //System.Diagnostics.Debug.WriteLine($"[AnaModel] All {capNodes.Count} CapNodes have FIXED boundaries (correct)");
                 }
             }
             #endif
@@ -228,20 +228,20 @@ namespace PileDesign.FEM
                     .GroupBy(x => x.nodeName.Split(':')[0].Split('-')[0].Split('_')[0])
                     .Select(g => $"{g.Key}({g.Count()})")
                     .ToList();
-                System.Diagnostics.Debug.WriteLine($"[MapOnKmat] WARNING: {zeroDiagDofs.Count} DOFs have zero/negative diagonal (regularized to {eps}):");
-                System.Diagnostics.Debug.WriteLine($"  Node types: {string.Join(", ", groupedByPrefix)}");
-                foreach (var (eq, name, val) in zeroDiagDofs.Take(30))
-                    System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
-                if (zeroDiagDofs.Count > 30)
-                    System.Diagnostics.Debug.WriteLine($"  ... and {zeroDiagDofs.Count - 30} more");
+                //System.Diagnostics.Debug.WriteLine($"[MapOnKmat] WARNING: {zeroDiagDofs.Count} DOFs have zero/negative diagonal (regularized to {eps}):");
+                //System.Diagnostics.Debug.WriteLine($"  Node types: {string.Join(", ", groupedByPrefix)}");
+                //foreach (var (eq, name, val) in zeroDiagDofs.Take(30))
+                    //System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
+                //if (zeroDiagDofs.Count > 30)
+                    //System.Diagnostics.Debug.WriteLine($"  ... and {zeroDiagDofs.Count - 30} more");
             }
             if (smallDiagDofs.Count > 0)
             {
-                System.Diagnostics.Debug.WriteLine($"[MapOnKmat] INFO: {smallDiagDofs.Count} DOFs have SMALL diagonal (<{smallThreshold:E0}):");
-                foreach (var (eq, name, val) in smallDiagDofs.Take(20))
-                    System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
-                if (smallDiagDofs.Count > 20)
-                    System.Diagnostics.Debug.WriteLine($"  ... and {smallDiagDofs.Count - 20} more");
+                //System.Diagnostics.Debug.WriteLine($"[MapOnKmat] INFO: {smallDiagDofs.Count} DOFs have SMALL diagonal (<{smallThreshold:E0}):");
+                //foreach (var (eq, name, val) in smallDiagDofs.Take(20))
+                    //System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
+                //if (smallDiagDofs.Count > 20)
+                    //System.Diagnostics.Debug.WriteLine($"  ... and {smallDiagDofs.Count - 20} more");
             }
 
             if (isTan)
@@ -414,6 +414,13 @@ namespace PileDesign.FEM
             VectorDD = incrementalDispVector.Clone();
         }
 
+        // v15: 変位予測器用: 変位増分を累積変位に加算
+        public void ApplyDispIncrement(Vector<double> dispIncrement)
+        {
+            if (VectorD == null || dispIncrement == null) return;
+            VectorD += dispIncrement;
+        }
+
         // 内力ベクトルの計算メソッド
         // Newton-Raphson法: 各要素の構成則から計算された内力を全体ベクトルに組み立て
         public void SetT()
@@ -453,7 +460,7 @@ namespace PileDesign.FEM
                 double T_old_norm = T_old.L2Norm();
                 if (diff > 1e-6 * Math.Max(T_norm, T_old_norm))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[SetT] Assembly vs K*d: ||T_asm||={T_norm:E3}, ||T_old||={T_old_norm:E3}, ||diff||={diff:E3}");
+                    //System.Diagnostics.Debug.WriteLine($"[SetT] Assembly vs K*d: ||T_asm||={T_norm:E3}, ||T_old||={T_old_norm:E3}, ||diff||={diff:E3}");
                 }
             }
             #endif
@@ -646,19 +653,34 @@ namespace PileDesign.FEM
 
         public AnalysisStepResult? GetAnalysisLastStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
+            // 名前ベースで比較（参照比較の代わりに）
             return AnalysisStepResults
-                .Where(r => r.LoadCase == loadCase && r.LoadCombination == loadCombination && r.IsLiquefaction == isLiquefaction)
+                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            r.IsLiquefaction == isLiquefaction)
                 .OrderByDescending(r => r.Step)
                 .FirstOrDefault();
         }
 
         public int GetAnalysisLastStep(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
-            return AnalysisStepResults
-                .Where(r => r.LoadCase == loadCase && r.LoadCombination == loadCombination && r.IsLiquefaction == isLiquefaction)
+            // 名前ベースで比較（参照比較の代わりに）
+            var results = AnalysisStepResults
+                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            r.IsLiquefaction == isLiquefaction)
                 .Select(r => r.Step)
-                .DefaultIfEmpty(-999)
-                .Max();
+                .ToList();
+
+            #if DEBUG
+            if (results.Count == 0)
+            {
+                //System.Diagnostics.Debug.WriteLine($"[GetAnalysisLastStep] No results found for LoadCase={loadCase?.LoadName}, Comb={loadCombination?.Name}, isLiq={isLiquefaction}");
+                //System.Diagnostics.Debug.WriteLine($"[GetAnalysisLastStep] Available: {string.Join(", ", AnalysisStepResults.Take(5).Select(r => $"LC={r.LoadCase?.LoadName},Comb={r.LoadCombination?.Name},isLiq={r.IsLiquefaction}"))}");
+            }
+            #endif
+
+            return results.DefaultIfEmpty(-999).Max();
         }
 
         // 荷重ベクトルの更新メソッド
@@ -676,11 +698,10 @@ namespace PileDesign.FEM
         // 強制変位の更新メソッド
         public void UpdateVectorDOFForcedDisp()
         {
-            VectorDOFForcedDisp = Nodes
+            VectorDOFForcedDisp = [.. Nodes
                 .SelectMany(node => Enumerable.Range(0, 6)
                     .Where(index => !node.GetBoundary(index))
-                    .Select(_ => node.IsForcedDisped))
-                .ToList();
+                    .Select(_ => node.IsForcedDisped))];
         }
 
         public AnaModel DeepCopy()

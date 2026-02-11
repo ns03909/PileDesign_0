@@ -1,28 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-1602,-1246)">
-        <rect id="AxialForceVeirification" x="1602" y="1246" width="128" height="128" style="fill:none;"/>
-        <clipPath id="_clip1">
-            <rect id="AxialForceVeirification1" serif:id="AxialForceVeirification" x="1602" y="1246" width="128" height="128"/>
-        </clipPath>
-        <g clip-path="url(#_clip1)">
-            <g transform="matrix(1.972238,0,0,1.972238,534.890953,481.660083)">
-                <path d="M581.753,420L581.753,452.45" style="fill:none;stroke:rgb(98,176,226);stroke-width:4.23px;"/>
-            </g>
-            <g transform="matrix(0.706522,0,0,1,1241.989899,904.370161)">
-                <ellipse cx="600.137" cy="405.63" rx="22.995" ry="8.248" style="fill:none;stroke:rgb(98,176,226);stroke-width:9.63px;"/>
-            </g>
-            <g transform="matrix(2.064795,0,0,1.972238,448.552029,481.660083)">
-                <path d="M581.753,420L581.753,452.45" style="fill:none;stroke:rgb(98,176,226);stroke-width:4.13px;"/>
-            </g>
-            <g transform="matrix(1,0,0,1,457.166652,1229.421932)">
-                <g transform="matrix(41.666667,0,0,41.666667,1272.854182,128)">
+    <g transform="matrix(1,0,0,1,-1602,-1602)">
+        <g id="AxialForceVeirification" transform="matrix(1,0,0,1,0,356)">
+            <rect x="1602" y="1246" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="1602" y="1246" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(1.972238,0,0,1.972238,534.890953,481.660083)">
+                    <path d="M581.753,420L581.753,452.45" style="fill:none;stroke:rgb(98,176,226);stroke-width:4.23px;"/>
                 </g>
-                <text x="1144.813px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:41.667px;">CHECK</text>
-            </g>
-            <g transform="matrix(0,1,-2.976088,0,2770.277856,653.335933)">
-                <path d="M598,373.479L598,368.622L624.972,368.622L624.972,361.336L653.882,371.05L624.972,380.764L624.972,373.479L598,373.479Z" style="fill:rgb(4,0,0);stroke:black;stroke-width:0.45px;"/>
+                <g transform="matrix(0.706522,0,0,1,1241.989899,904.370161)">
+                    <ellipse cx="600.137" cy="405.63" rx="22.995" ry="8.248" style="fill:none;stroke:rgb(98,176,226);stroke-width:9.63px;"/>
+                </g>
+                <g transform="matrix(2.064795,0,0,1.972238,448.552029,481.660083)">
+                    <path d="M581.753,420L581.753,452.45" style="fill:none;stroke:rgb(98,176,226);stroke-width:4.13px;"/>
+                </g>
+                <g transform="matrix(1,0,0,1,457.166652,1229.421932)">
+                    <g transform="matrix(41.25,0,0,41.25,1272.213973,128)">
+                    </g>
+                    <text x="1145.453px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:41.25px;">CHECK</text>
+                </g>
+                <g transform="matrix(0,1,-2.976088,0,2770.277856,653.335933)">
+                    <path d="M598,373.479L598,368.622L624.972,368.622L624.972,361.336L653.882,371.05L624.972,380.764L624.972,373.479L598,373.479Z" style="fill:rgb(4,0,0);stroke:black;stroke-width:0.45px;"/>
+                </g>
             </g>
         </g>
     </g>

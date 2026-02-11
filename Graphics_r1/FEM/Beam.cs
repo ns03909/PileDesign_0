@@ -575,6 +575,9 @@ namespace PileDesign.FEM
             Curve = Vector<double>.Build.Dense(2, 0.0);
         }
 
+        // デバッグ用: ログ出力回数制限
+        private static int _getBeamResultLogCount = 0;
+
         // 梁要素の解析結果を取得する
         public BeamResult GetBeamResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
         {
@@ -583,12 +586,26 @@ namespace PileDesign.FEM
                 step = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
             }
 
+            // デバッグ: 最初の5回のみログ出力（パフォーマンス改善）
+            //#if DEBUG
+            //if (_getBeamResultLogCount < 5 && BeamResults.Count > 0)
+            //{
+            //    _getBeamResultLogCount++;
+            //    var first = BeamResults[0];
+            //    System.Diagnostics.Debug.WriteLine($"[GetBeamResult #{_getBeamResultLogCount}] Searching: LoadCase={loadCase?.LoadName}, Comb={loadCombination?.Name}, step={step}, isLiq={isLiquefaction}");
+            //    System.Diagnostics.Debug.WriteLine($"[GetBeamResult #{_getBeamResultLogCount}] First result: LoadCase={first.LoadCase?.LoadName}, Comb={first.LoadCombination?.Name}, step={first.Step}, isLiq={first.IsLiquefaction}");
+            //}
+            //#endif
+
             foreach (BeamResult beamResult in BeamResults)
             {
-                if (loadCase == beamResult.LoadCase &&
-                    loadCombination == beamResult.LoadCombination &&
-                    isLiquefaction == beamResult.IsLiquefaction &&
-                    step == beamResult.Step)
+                // 名前ベースで比較（参照比較の代わりに）
+                bool loadCaseMatch = loadCase?.LoadName == beamResult.LoadCase?.LoadName;
+                bool loadCombMatch = loadCombination?.Name == beamResult.LoadCombination?.Name;
+                bool isLiqMatch = isLiquefaction == beamResult.IsLiquefaction;
+                bool stepMatch = step == beamResult.Step;
+
+                if (loadCaseMatch && loadCombMatch && isLiqMatch && stepMatch)
                 { return beamResult; }
             }
 

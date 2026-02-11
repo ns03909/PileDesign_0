@@ -220,7 +220,7 @@
             <!-- ここを既存レイアウトの設定パネル等に挿入 -->
             <StackPanel Orientation="Horizontal" Margin="8" VerticalAlignment="Center" x:Name="DisplacementThresholdPanel">
                 <CheckBox Content="変位閾値で解析中止"
-                      IsChecked="{Binding StopOnMaxDisplacement, Mode=TwoWay}"
+                      IsChecked="{Binding StopONMaxDisplacement, Mode=TwoWay}"
                       VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBlock Text="閾値 (m):" VerticalAlignment="Center" Margin="0,0,4,0"/>
                 <TextBox Width="60" VerticalAlignment="Center"

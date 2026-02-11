@@ -1,29 +1,31 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-1068,-2314)">
-        <rect id="Redo" x="1068" y="2314" width="128" height="128" style="fill:none;"/>
-        <clipPath id="_clip1">
-            <rect id="Redo1" serif:id="Redo" x="1068" y="2314" width="128" height="128"/>
-        </clipPath>
-        <g clip-path="url(#_clip1)">
-            <g transform="matrix(-1,0,0,1,2088.64862,0)">
-                <g transform="matrix(1.042022,0,0,1.630334,-13.495554,-1480.333822)">
-                    <g transform="matrix(-0.959672,0,-0,0.613371,992.439665,2327.335224)">
-                        <path d="M74.557,83.717L124.557,46.217L74.557,8.717L74.557,83.717Z" style="fill:rgb(124,124,124);"/>
-                        <path d="M84.557,46.217L40.055,46.217" style="fill:none;stroke:rgb(124,124,124);stroke-width:16.67px;"/>
+    <g transform="matrix(1,0,0,1,-1068,-2670)">
+        <g id="Redo" transform="matrix(1,0,0,1,0,356)">
+            <rect x="1068" y="2314" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="1068" y="2314" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(-1,0,0,1,2088.64862,0)">
+                    <g transform="matrix(1.042022,0,0,1.630334,-13.495554,-1480.333822)">
+                        <g transform="matrix(-0.959672,0,-0,0.613371,992.439665,2327.335224)">
+                            <path d="M74.557,83.717L124.557,46.217L74.557,8.717L74.557,83.717Z" style="fill:rgb(124,124,124);"/>
+                            <path d="M84.557,46.217L40.055,46.217" style="fill:none;stroke:rgb(124,124,124);stroke-width:16.67px;"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(0.5,0,0,0.5,503.593635,1236.214836)">
+                        <path d="M911.293,2355.683L954,2355.683" style="fill:none;stroke:rgb(124,124,124);stroke-width:33.33px;"/>
+                    </g>
+                    <g transform="matrix(1,0,0,1,-20.921524,9.427948)">
+                        <path d="M1001.515,2350.789C1016.373,2350.789 1028.435,2362.851 1028.435,2377.709C1028.435,2392.566 1016.373,2404.628 1001.515,2404.628" style="fill:none;stroke:rgb(124,124,124);stroke-width:16.67px;"/>
                     </g>
                 </g>
-                <g transform="matrix(0.5,0,0,0.5,503.593635,1236.214836)">
-                    <path d="M911.293,2355.683L954,2355.683" style="fill:none;stroke:rgb(124,124,124);stroke-width:33.33px;"/>
+                <g transform="matrix(1,-0,-0,1,1068,2314)">
+                    <path d="M-193.993,-127.872L-187.502,-65.71L-129.644,-89.347L-193.993,-127.872Z" style="fill:rgb(124,124,124);"/>
+                    <path d="M-166.955,-100.03C-131.408,-159.405 -118.808,-147.686 -98.155,-139.092C-77.502,-130.499 -128.674,-59.014 -57.58,-96.905C13.513,-134.796 -98.155,-139.092 -98.155,-139.092C-98.155,-139.092 -202.502,-40.655 -166.955,-100.03Z" style="fill:none;stroke:rgb(124,124,124);stroke-width:16.67px;"/>
                 </g>
-                <g transform="matrix(1,0,0,1,-20.921524,9.427948)">
-                    <path d="M1001.515,2350.789C1016.373,2350.789 1028.435,2362.851 1028.435,2377.709C1028.435,2392.566 1016.373,2404.628 1001.515,2404.628" style="fill:none;stroke:rgb(124,124,124);stroke-width:16.67px;"/>
-                </g>
-            </g>
-            <g transform="matrix(1,-0,-0,1,1068,2314)">
-                <path d="M-193.993,-127.872L-187.502,-65.71L-129.644,-89.347L-193.993,-127.872Z" style="fill:rgb(124,124,124);"/>
-                <path d="M-166.955,-100.03C-131.408,-159.405 -118.808,-147.686 -98.155,-139.092C-77.502,-130.499 -128.674,-59.014 -57.58,-96.905C13.513,-134.796 -98.155,-139.092 -98.155,-139.092C-98.155,-139.092 -202.502,-40.655 -166.955,-100.03Z" style="fill:none;stroke:rgb(124,124,124);stroke-width:16.67px;"/>
             </g>
         </g>
     </g>

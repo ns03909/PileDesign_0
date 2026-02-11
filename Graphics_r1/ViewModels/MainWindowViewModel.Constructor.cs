@@ -95,11 +95,11 @@ namespace PileDesign.ViewModels
         }
 
         // リボン最小化
-        private bool _isRibbonMinimized;
-        public bool IsRibbonMinimized
+        private bool _isRibboNMinimized;
+        public bool IsRibboNMinimized
         {
-            get => _isRibbonMinimized;
-            set => SetProperty(ref _isRibbonMinimized, value);
+            get => _isRibboNMinimized;
+            set => SetProperty(ref _isRibboNMinimized, value);
         }
 
         // リボン表示/非表示
@@ -352,9 +352,58 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _selectedLoadCaseName, value))
                 {
                     UpdateDirectionOption();
-
+                    AutoDetectLiquefactionState();
                 }
             }
+        }
+
+        /// <summary>
+        /// 選択された荷重ケースと荷重組み合わせに対して、解析結果の液状化状態を自動検出し、IsLiquefaction を設定する
+        /// </summary>
+        private void AutoDetectLiquefactionState()
+        {
+            // CurrentModelが存在しない場合は何もしない
+            if (CurrentModel?.AnalysisStepResults == null || CurrentModel.AnalysisStepResults.Count == 0)
+                return;
+
+            // 選択されたLoadCaseを取得
+            var selectedLoadCase = CurrentInputModel.LoadCasesInput.AllLoadCases
+                .FirstOrDefault(lc => lc.LoadName == SelectedLoadCaseName);
+            if (selectedLoadCase == null)
+                return;
+
+            // 地震荷重ケース（Level 1 または Level 2）でない場合は IsLiquefaction = false
+            if (selectedLoadCase.Level != 1 && selectedLoadCase.Level != 2)
+            {
+                IsLiquefaction = false;
+                return;
+            }
+
+            // 選択されたLoadCaseとLoadCombinationに対応する結果を検索
+            var results = CurrentModel.AnalysisStepResults
+                .Where(r => r.LoadCase?.LoadName == selectedLoadCase.LoadName);
+
+            // 荷重組み合わせが選択されている場合はさらにフィルタリング
+            if (!string.IsNullOrEmpty(SelectedLoadCombinationName))
+            {
+                results = results.Where(r => r.LoadCombination?.Name == SelectedLoadCombinationName);
+            }
+
+            var resultList = results.ToList();
+            bool hasLiquefactionResults = resultList.Any(r => r.IsLiquefaction);
+            bool hasNonLiquefactionResults = resultList.Any(r => !r.IsLiquefaction);
+
+            // 液状化結果のみがある場合は自動的にtrueに設定
+            if (hasLiquefactionResults && !hasNonLiquefactionResults)
+            {
+                IsLiquefaction = true;
+            }
+            // 非液状化結果のみがある場合は自動的にfalseに設定
+            else if (!hasLiquefactionResults && hasNonLiquefactionResults)
+            {
+                IsLiquefaction = false;
+            }
+            // 両方の結果がある場合は現在の設定を維持（ユーザーが選択）
         }
 
         private void UpdateDirectionOption()
@@ -416,7 +465,13 @@ namespace PileDesign.ViewModels
         public string SelectedLoadCombinationName
         {
             get => _selectedLoadCombinationName;
-            set => SetProperty(ref _selectedLoadCombinationName, value);
+            set
+            {
+                if (SetProperty(ref _selectedLoadCombinationName, value))
+                {
+                    AutoDetectLiquefactionState();
+                }
+            }
         }
 
         private ObservableCollection<string> _analysisResultContentOption = []; /*= [*/
@@ -1928,7 +1983,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeVertical = true;
         [ObservableProperty] private bool includeHorizontal_Bending = true;
         [ObservableProperty] private bool includeHorizontal_Shear = true;
-        [ObservableProperty] private bool includeHorizontal_NMINT = true;
+        [ObservableProperty] private bool includeHorizontal_NMinT = true;
 
         [ObservableProperty] private bool includePileLocationMap = false;
         [ObservableProperty] private bool includePileAxialLoadMap = false;
@@ -2003,6 +2058,7 @@ namespace PileDesign.ViewModels
             OpenTableWindowCommand = new ToolkitRelayCommand(
                 OpenTableWindow,
                 () => LatestResultTables != null && LatestResultTables.Count > 0);
+
         }
 
         private void PileLayoutItem_PropertyChanged(object sender, PropertyChangedEventArgs e)

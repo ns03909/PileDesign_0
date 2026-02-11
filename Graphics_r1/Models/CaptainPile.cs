@@ -396,7 +396,7 @@ namespace PileDesign.Models
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Failed to load {squarePath}: {ex}");
+                    //System.Diagnostics.Debug.WriteLine($"Failed to load {squarePath}: {ex}");
                 }
             }
             string circlePath = Path.Combine(baseDir, "Models", "PileLibrary", "CaptainPileTensionBarPCD_circle.csv");
@@ -410,7 +410,7 @@ namespace PileDesign.Models
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Failed to load {circlePath}: {ex}");
+                    //System.Diagnostics.Debug.WriteLine($"Failed to load {circlePath}: {ex}");
                 }
             }
             //CaptainPileTensionBarPCDsSquare = CaptainPileTensionBarPCDLoader.LoadFromCsv(squarePath);
@@ -487,13 +487,13 @@ namespace PileDesign.Models
             ObservableCollection<
                 (ObservableCollection<double>, ObservableCollection<double>)> thetasMs = [];
             int nNum = 10;
-            double nMin = GetNMin();
-            double nMax = GetNMax();
+            double NMin = GetNMin();
+            double NMax = GetNMax();
             double N;
 
             for (int i = 0; i <= nNum; i++)
             {
-                N = nMin + (nMax - nMin) * i / nNum;
+                N = NMin + (NMax - NMin) * i / nNum;
                 thetasMs.Add(GetMThetaRelationship(N));
                 Ns.Add(N);
             }

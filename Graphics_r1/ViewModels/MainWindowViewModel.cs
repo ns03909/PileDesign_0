@@ -285,7 +285,7 @@ namespace PileDesign.ViewModels
         /// <param name="layers">沈下土層のリスト</param>
         /// <param name="loadingPlaneAltitude">載荷面標高</param>
         private static void CalculateLayerThicknesses(
-            IList<SettlementSoilLayer> layers,
+            ObservableCollection<SettlementSoilLayer> layers,
             double loadingPlaneAltitude)
         {
             for (int i = 0; i < layers.Count; i++)
@@ -332,8 +332,7 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    var cmdObj = p.GetValue(this) as ICommand;
-                    if (cmdObj == null) continue;
+                    if (p.GetValue(this) is not ICommand cmdObj) continue;
 
                     // CommunityToolkit の IRelayCommand を優先して扱う
                     if (cmdObj is CommunityToolkit.Mvvm.Input.IRelayCommand toolkitCmd)
@@ -405,6 +404,9 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _canvas3DLayout, value);
         }
 
+        // エクスポート用キャプチャ中フラグ（SetCtの自動上書きをスキップする）
+        public bool IsCapturingForExport { get; set; }
+
         private Action? _updateWindowAction;
 
         // 修正例: アクションをプロパティ化（必要なら）
@@ -431,6 +433,8 @@ namespace PileDesign.ViewModels
         }
 
         private ICommand _dataGridSettlementSoilLayersCellEditEndingCommand;
+        private Action zoomFitAction;
+
         public ICommand DataGridSettlementSoilLayersCellEditEndingCommand
         {
             get
@@ -440,7 +444,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public Action? ZoomFitAction { get; set; }
+        public Action? ZoomFitAction { get => zoomFitAction; set => zoomFitAction = value; }
         public Action<double, double>? AnimateViewAnglesAction { get; set; }
 
         // ズームフィット
@@ -1534,12 +1538,12 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafely: DeepCopy returned null, skipping undo snapshot.");
+                    //System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafely: DeepCopy returned null, skipping undo snapshot.");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"TrySaveUndoSnapshotSafely例外: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"TrySaveUndoSnapshotSafely例外: {ex}");
             }
         }
 
@@ -1552,7 +1556,7 @@ namespace PileDesign.ViewModels
                 if (loaded == null)
                 {
                     MessageBox.Show($"ファイルの読込に失敗しました。\n{filePath}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    System.Diagnostics.Debug.WriteLine($"LoadFromFile returned null: {filePath}");
+                    //System.Diagnostics.Debug.WriteLine($"LoadFromFile returned null: {filePath}");
                     return false;
                 }
 
@@ -1568,6 +1572,9 @@ namespace PileDesign.ViewModels
                 IsVerticalAnalysisDone = false;
                 IsGroupPileSettlementAnalysisDone = false;
 
+                // M-φキャッシュをクリア（新プロジェクト読込時）
+                PileSection.ClearMphiCache();
+
                 // 群杭沈下解析結果をクリア
                 CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
                 CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
@@ -1581,7 +1588,7 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"ファイル読込中にエラーが発生しました。\n{ex.Message}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                System.Diagnostics.Debug.WriteLine($"TryLoadInputModelFileUsingInputModelLoader例外: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"TryLoadInputModelFileUsingInputModelLoader例外: {ex}");
                 return false;
             }
         }
@@ -1644,6 +1651,9 @@ namespace PileDesign.ViewModels
                     IsVerticalAnalysisDone = false;
                     IsGroupPileSettlementAnalysisDone = false;
 
+                    // M-φキャッシュをクリア（新プロジェクト読込時）
+                    PileSection.ClearMphiCache();
+
                     // 群杭沈下解析結果をクリア
                     CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
                     CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
@@ -1675,7 +1685,14 @@ namespace PileDesign.ViewModels
                 {
                     var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
                     doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
-                    MessageBox.Show($"docsファイルが作成されました。\n{saveFileDialog.FileName}\nMSWordでファイルを開き、ctrl + aで全選択した後, F9によりフィールドを更新してください。");
+                    MessageBox.Show($"docxファイルが作成されました。\n{saveFileDialog.FileName}\nMSWordでファイルを開き、ctrl + aで全選択した後, F9によりフィールドを更新してください。");
+
+                    // 作成したdocxファイルを自動的に開く
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = saveFileDialog.FileName,
+                        UseShellExecute = true
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -1872,11 +1889,11 @@ namespace PileDesign.ViewModels
             }
 
             // デバッグ: AnalysisStepResultsの内容を確認
-            System.Diagnostics.Debug.WriteLine($"=== RefreshResultTablesFromLastStep ===");
-            System.Diagnostics.Debug.WriteLine($"AnalysisStepResults.Count = {CurrentModel.AnalysisStepResults.Count}");
+            //System.Diagnostics.Debug.WriteLine($"=== RefreshResultTablesFromLastStep ===");
+            //System.Diagnostics.Debug.WriteLine($"AnalysisStepResults.Count = {CurrentModel.AnalysisStepResults.Count}");
             foreach (var r in CurrentModel.AnalysisStepResults)
             {
-                System.Diagnostics.Debug.WriteLine($"  LoadCase={r.LoadCase?.LoadName}, LoadComb={r.LoadCombination?.Name}, IsLiq={r.IsLiquefaction}, Step={r.Step}");
+                //System.Diagnostics.Debug.WriteLine($"  LoadCase={r.LoadCase?.LoadName}, LoadComb={r.LoadCombination?.Name}, IsLiq={r.IsLiquefaction}, Step={r.Step}");
             }
 
             // 全ての解析結果から一意の組み合わせ（LoadCase, LoadCombination, IsLiquefaction）を取得
@@ -1893,10 +1910,10 @@ namespace PileDesign.ViewModels
                 .Select(g => g.OrderByDescending(r => r.Step).First()) // 各組み合わせの最終ステップを取得
                 .ToList();
 
-            System.Diagnostics.Debug.WriteLine($"uniqueCombinations.Count = {uniqueCombinations.Count}");
+            //System.Diagnostics.Debug.WriteLine($"uniqueCombinations.Count = {uniqueCombinations.Count}");
             foreach (var c in uniqueCombinations)
             {
-                System.Diagnostics.Debug.WriteLine($"  UniqueComb: LoadCase={c.LoadCase?.LoadName}, LoadComb={c.LoadCombination?.Name}, IsLiq={c.IsLiquefaction}, Step={c.Step}");
+                //System.Diagnostics.Debug.WriteLine($"  UniqueComb: LoadCase={c.LoadCase?.LoadName}, LoadComb={c.LoadCombination?.Name}, IsLiq={c.IsLiquefaction}, Step={c.Step}");
             }
 
             foreach (var stepResult in uniqueCombinations)
@@ -1908,14 +1925,14 @@ namespace PileDesign.ViewModels
                     stepResult.IsLiquefaction,
                     stepResult.Step);
 
-                System.Diagnostics.Debug.WriteLine($"  Built {tables.Count} tables for IsLiq={stepResult.IsLiquefaction}");
+                //System.Diagnostics.Debug.WriteLine($"  Built {tables.Count} tables for IsLiq={stepResult.IsLiquefaction}");
                 allTables.AddRange(tables);
             }
 
-            System.Diagnostics.Debug.WriteLine($"Total tables: {allTables.Count}");
+            //System.Diagnostics.Debug.WriteLine($"Total tables: {allTables.Count}");
             foreach (var t in allTables)
             {
-                System.Diagnostics.Debug.WriteLine($"  Table: {t.Name}, IsLiq={t.IsLiquefaction}");
+                //System.Diagnostics.Debug.WriteLine($"  Table: {t.Name}, IsLiq={t.IsLiquefaction}");
             }
 
             LatestResultTables = allTables;
@@ -1946,7 +1963,7 @@ namespace PileDesign.ViewModels
         }
 
         // 再入防止フラグ（原子的に扱う）
-        private int _isChangWindowOpeningFlag = 0;
+        private readonly int _isChangWindowOpeningFlag = 0;
 
         [RelayCommand]
         public void OpenChangWindow()
@@ -2398,15 +2415,15 @@ namespace PileDesign.ViewModels
                 {
                     var pileSection = pileBody.PileBodySegments[i].PileSection;
 
-                    if (pileSection.FactoredServiceNmax < force)
+                    if (pileSection.FactoredServiceNMax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNmax:N0}kN < {force:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNMax:N0}kN < {force:N0}kN\n";
                     }
-                    if (force < pileSection.FactoredServiceNmin)
+                    if (force < pileSection.FactoredServiceNMin)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNmin:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNMin:N0}kN\n";
                     }
                 }
             }
@@ -2735,9 +2752,16 @@ namespace PileDesign.ViewModels
         /// Canvas3D の画像を保存するコマンド
         /// </summary>
         [RelayCommand]
-        private void ImageSave()
+        private void ImageSave(string scaleParam)
         {
             if (Canvas3DLayout == null) return;
+
+            // スケールファクターをパラメータから取得（デフォルト1.0）
+            double scale = 1.0;
+            if (!string.IsNullOrEmpty(scaleParam) && double.TryParse(scaleParam, out double parsedScale))
+            {
+                scale = parsedScale;
+            }
 
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
@@ -2750,19 +2774,28 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
+                    int width = (int)(Canvas3DLayout.ActualWidth * scale);
+                    int height = (int)(Canvas3DLayout.ActualHeight * scale);
+
                     // Canvas を RenderTargetBitmap でキャプチャ
-                    var bounds = VisualTreeHelper.GetDescendantBounds(Canvas3DLayout);
                     var rtb = new RenderTargetBitmap(
-                        (int)Canvas3DLayout.ActualWidth,
-                        (int)Canvas3DLayout.ActualHeight,
-                        96, 96,
+                        width,
+                        height,
+                        96 * scale, 96 * scale,
                         PixelFormats.Pbgra32);
 
+                    // DrawingVisualを使用して背景とCanvasを合成
                     var dv = new DrawingVisual();
                     using (var dc = dv.RenderOpen())
                     {
+                        // 背景を白で塗りつぶし（Canvasの背景がTransparentなため）
+                        dc.DrawRectangle(Brushes.White, null,
+                            new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
+
+                        // VisualBrushでCanvasを描画
                         var vb = new VisualBrush(Canvas3DLayout);
-                        dc.DrawRectangle(vb, null, new Rect(new Point(), new Size(Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight)));
+                        dc.DrawRectangle(vb, null,
+                            new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
                     }
                     rtb.Render(dv);
 
@@ -2779,12 +2812,249 @@ namespace PileDesign.ViewModels
                     using var fs = new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Create);
                     encoder.Save(fs);
 
-                    StatusMessage = $"画像を保存しました: {dialog.FileName}";
+                    StatusMessage = $"画像を保存しました ({width}x{height}): {dialog.FileName}";
                 }
                 catch (Exception ex)
                 {
                     System.Windows.MessageBox.Show($"画像の保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Canvas3D の画像をクリップボードにコピーするコマンド
+        /// </summary>
+        [RelayCommand]
+        private void ImageCopy(string scaleParam)
+        {
+            if (Canvas3DLayout == null) return;
+
+            try
+            {
+                // スケールファクターをパラメータから取得（デフォルト1.0）
+                double scale = 1.0;
+                if (!string.IsNullOrEmpty(scaleParam) && double.TryParse(scaleParam, out double parsedScale))
+                {
+                    scale = parsedScale;
+                }
+                int width = (int)(Canvas3DLayout.ActualWidth * scale);
+                int height = (int)(Canvas3DLayout.ActualHeight * scale);
+
+                // Canvas を RenderTargetBitmap でキャプチャ
+                var rtb = new RenderTargetBitmap(
+                    width,
+                    height,
+                    96 * scale, 96 * scale,
+                    PixelFormats.Pbgra32);
+
+                // DrawingVisualを使用して背景とCanvasを合成
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen())
+                {
+                    // 背景を白で塗りつぶし（Canvasの背景がTransparentなため）
+                    dc.DrawRectangle(Brushes.White, null,
+                        new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
+
+                    // VisualBrushでCanvasを描画
+                    var vb = new VisualBrush(Canvas3DLayout);
+                    dc.DrawRectangle(vb, null,
+                        new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
+                }
+                rtb.Render(dv);
+
+                // クリップボードにコピー
+                System.Windows.Clipboard.SetImage(rtb);
+
+                StatusMessage = $"画像をクリップボードにコピーしました ({width}x{height})";
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// アイソメトリック表示でモデル全体（杭先端含む）をキャプチャし、PNGバイト配列を返す。
+        /// Word出力用。キャプチャ後にカメラ状態は元に戻す。
+        /// </summary>
+        public byte[]? CaptureIsometricModelImageBytes()
+        {
+            if (Canvas3DLayout == null || CurrentInputModel == null || CurrentInputModel.PileLayoutItems.Count == 0)
+                return null;
+
+            // --- 1. 現在の状態を保存 ---
+            var savedTht = CanvasThreeDView.Tht;
+            var savedPhi = CanvasThreeDView.Phi;
+            var savedScale = CanvasThreeDView.Scale;
+            var savedViewTransition = CanvasThreeDView.ViewTransition;
+            var savedCt = CanvasThreeDView.Ct;
+            var savedDv0 = CanvasThreeDView.Dv0;
+            var savedTickMark = IsTickMarkVisible;
+            var savedAxes = IsXYZAxesVisible;
+
+            try
+            {
+                // SetCt自動上書きをスキップするフラグをON
+                IsCapturingForExport = true;
+
+                // --- 2. 杭頭＋杭先端＋地盤範囲を含む全3D点を収集 ---
+                var allPoints = new System.Collections.ObjectModel.ObservableCollection<Point3D>();
+                foreach (var pile in CurrentInputModel.PileLayoutItems)
+                {
+                    allPoints.Add(pile.Point3D); // 杭頭
+
+                    int idx = pile.PileBodyNo - 1;
+                    if (idx >= 0 && CurrentInputModel.PileBodies != null && idx < CurrentInputModel.PileBodies.Count)
+                    {
+                        var pileBody = CurrentInputModel.PileBodies[idx];
+                        if (pileBody.PileBodySegments != null && pileBody.PileBodySegments.Count > 0)
+                        {
+                            double totalLen = pileBody.PileBodySegments.Sum(s => s.SegmentLength);
+                            allPoints.Add(new Point3D(pile.Point3D.X, pile.Point3D.Y, pile.Point3D.Z - totalLen));
+                        }
+                    }
+
+                    int gIdx = pile.GroundNo - 1;
+                    if (gIdx >= 0 && CurrentInputModel.GroundsInput != null && gIdx < CurrentInputModel.GroundsInput.Count)
+                    {
+                        var ground = CurrentInputModel.GroundsInput[gIdx];
+                        allPoints.Add(new Point3D(pile.Point3D.X, pile.Point3D.Y, ground.GroundTopAltitude));
+                        if (ground.GroundLayers != null && ground.GroundLayers.Count > 0)
+                        {
+                            double btmAlt = ground.GroundLayers[^1].BottomAltitude;
+                            allPoints.Add(new Point3D(pile.Point3D.X, pile.Point3D.Y, btmAlt));
+                        }
+                    }
+                }
+
+                // --- 3. 装飾要素を設定（通り芯は残す） ---
+                IsTickMarkVisible = false;
+                IsXYZAxesVisible = false;
+
+                // --- 4. 全点を中心にカメラ設定 ---
+                CanvasThreeDView.SetCt(allPoints);
+                CanvasThreeDView.ViewTransition = new Point(0, 0);
+
+                // --- 5. アイソメ視点に設定（SetCtはスキップされる） ---
+                CanvasThreeDView.Tht = -45;
+                CanvasThreeDView.Phi = 45;
+                Canvas3DLayout.UpdateLayout();
+                Canvas3DLayout.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render, new Action(() => { }));
+
+                // --- 6. 実際のCanvasサイズを取得 ---
+                double canvasW = Canvas3DLayout.ActualWidth;
+                double canvasH = Canvas3DLayout.ActualHeight;
+                if (canvasW <= 0 || canvasH <= 0) return null;
+
+                // --- 7. 全点の2Dバウンディングボックスを計算 ---
+                double xMax = double.MinValue, yMax = double.MinValue;
+                double xMin = double.MaxValue, yMin = double.MaxValue;
+                foreach (var pt3d in allPoints)
+                {
+                    Point pt2d = CanvasThreeDView.Transformation(pt3d);
+                    if (pt2d.X > xMax) xMax = pt2d.X;
+                    if (pt2d.Y > yMax) yMax = pt2d.Y;
+                    if (pt2d.X < xMin) xMin = pt2d.X;
+                    if (pt2d.Y < yMin) yMin = pt2d.Y;
+                }
+                double bbW = xMax - xMin;
+                double bbH = yMax - yMin;
+                if (bbW <= 0 || bbH <= 0) return null;
+
+                // --- 8. スケールをフィットさせ、中央に配置 ---
+                double gridMargin = GridSymbolZoneWidth * 2; // 通り芯符号用マージン
+                double availW = canvasW - gridMargin * 2;
+                double availH = canvasH - gridMargin * 2;
+                double fitRatio = Math.Min(availW / bbW, availH / bbH);
+
+                // 中央補正: スケール変更後のBB中心がCanvas中心に来るようVTを設定
+                double bbCenterX = (xMin + xMax) / 2;
+                double bbCenterY = (yMin + yMax) / 2;
+                double orgX = canvasW / 2;
+                double orgY = canvasH / 2;
+                CanvasThreeDView.ViewTransition = new Point(
+                    (orgX - bbCenterX) * fitRatio,
+                    (orgY - bbCenterY) * fitRatio);
+                CanvasThreeDView.Scale *= fitRatio; // re-render triggered
+
+                Canvas3DLayout.UpdateLayout();
+                Canvas3DLayout.Dispatcher.Invoke(
+                    System.Windows.Threading.DispatcherPriority.Render, new Action(() => { }));
+
+                // --- 9. コンテンツ領域をVisualBrushで切り出してキャプチャ ---
+                // 最終的な2D BBを再計算（スケール・VT適用後）
+                xMax = double.MinValue; yMax = double.MinValue;
+                xMin = double.MaxValue; yMin = double.MaxValue;
+                foreach (var pt3d in allPoints)
+                {
+                    Point pt2d = CanvasThreeDView.Transformation(pt3d);
+                    if (pt2d.X > xMax) xMax = pt2d.X;
+                    if (pt2d.Y > yMax) yMax = pt2d.Y;
+                    if (pt2d.X < xMin) xMin = pt2d.X;
+                    if (pt2d.Y < yMin) yMin = pt2d.Y;
+                }
+
+                // 通り芯符号用のマージンを追加
+                double captureMargin = GridSymbolZoneWidth * 1.5;
+                double cropX = Math.Max(0, xMin - captureMargin);
+                double cropY = Math.Max(0, yMin - captureMargin);
+                double cropR = Math.Min(canvasW, xMax + captureMargin);
+                double cropB = Math.Min(canvasH, yMax + captureMargin);
+                double cropW = cropR - cropX;
+                double cropH = cropB - cropY;
+                if (cropW <= 0 || cropH <= 0) return null;
+
+                double capScale = 2.0;
+                int outW = (int)(cropW * capScale);
+                int outH = (int)(cropH * capScale);
+                var rtb = new RenderTargetBitmap(outW, outH, 96 * capScale, 96 * capScale, PixelFormats.Pbgra32);
+
+                // 白背景
+                var bgVisual = new DrawingVisual();
+                using (var dc = bgVisual.RenderOpen())
+                {
+                    dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, cropW, cropH));
+                }
+                rtb.Render(bgVisual);
+
+                // VisualBrushでコンテンツ領域を切り出し
+                var contentVisual = new DrawingVisual();
+                using (var dc = contentVisual.RenderOpen())
+                {
+                    var vb = new VisualBrush(Canvas3DLayout)
+                    {
+                        Viewbox = new Rect(cropX, cropY, cropW, cropH),
+                        ViewboxUnits = BrushMappingMode.Absolute,
+                        Stretch = Stretch.Uniform
+                    };
+                    dc.DrawRectangle(vb, null, new Rect(0, 0, cropW, cropH));
+                }
+                rtb.Render(contentVisual);
+
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(rtb));
+                using var ms = new System.IO.MemoryStream();
+                encoder.Save(ms);
+                return ms.ToArray();
+            }
+            finally
+            {
+                // --- フラグをOFF ---
+                IsCapturingForExport = false;
+
+                // --- 装飾復元 ---
+                IsTickMarkVisible = savedTickMark;
+                IsXYZAxesVisible = savedAxes;
+
+                // --- カメラ復元 ---
+                CanvasThreeDView.Dv0 = savedDv0;
+                CanvasThreeDView.Ct = savedCt;
+                CanvasThreeDView.ViewTransition = savedViewTransition;
+                CanvasThreeDView.Scale = savedScale;
+                CanvasThreeDView.Tht = savedTht;
+                CanvasThreeDView.Phi = savedPhi;
+                UpdateCanvas3DAction?.Invoke();
             }
         }
     }

@@ -56,7 +56,9 @@ namespace PileDesign.Views
                             IsReadOnly = true,
                             AutoGenerateColumns = true,
                             ItemsSource = dt.DefaultView,
-                            Margin = new Thickness(4)
+                            Margin = new Thickness(4),
+                            ClipboardCopyMode = DataGridClipboardCopyMode.IncludeHeader,
+                            SelectionUnit = DataGridSelectionUnit.CellOrRowHeader
                         };
                         tab.Content = dg;
                         TabControlLibraries.Items.Add(tab);
@@ -93,7 +95,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"FindGraphicsR1Folder 例外: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"FindGraphicsR1Folder 例外: {ex}");
                 MessageBox.Show($"フォルダ探索中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
@@ -124,7 +126,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadCsvToDataTable 例外: {ex}");
+                //System.Diagnostics.Debug.WriteLine($"LoadCsvToDataTable 例外: {ex}");
                 MessageBox.Show($"CSV読込中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 // エラー時は空のDataTableを返す
             }

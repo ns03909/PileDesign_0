@@ -14,7 +14,17 @@
       "WebFetch(domain:github.com)",
       "Bash(dotnet list package:*)",
       "Bash(findstr:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(for:*)",
+      "Bash(do grep -l \"Control.*Z\\\\|UndoCommand\" \"$f\")",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(do if ! grep -q \"UndoCommand\\\\|Control.*Z\" \"$f\")",
+      "Bash(then echo \"$f\")",
+      "Bash(fi)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\keisu\\source\\repos\\PileDesign_0"
     ]
   }
 }

@@ -47,7 +47,7 @@ namespace PileDesign.ViewModels
 
         // GroundInput プロパティ: 購読の付け替えを内包
         private GroundInput _groundInput;
-        public GroundInput GroundInput
+        public GroundInput? GroundInput
         {
             get => _groundInput;
             set
@@ -443,7 +443,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public static Crosshair MyCrosshair_NValue { get; private set; }
+        public static Crosshair? MyCrosshair_NValue { get; private set; }
 
         private string _crosshairPositionText_NValue;
         public string CrosshairPositionText_NValue
@@ -452,7 +452,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_NValue, value);
         }
 
-        public static Crosshair MyCrosshair_Cu { get; private set; }
+        public static Crosshair? MyCrosshair_Cu { get; private set; }
 
         private string _crosshairPositionText_Cu;
         public string CrosshairPositionText_Cu
@@ -461,7 +461,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_Cu, value);
         }
 
-        public static Crosshair MyCrosshair_Vs { get; private set; }
+        public static Crosshair? MyCrosshair_Vs { get; private set; }
 
         private string _crosshairPositionText_Vs;
         public string CrosshairPositionText_Vs
@@ -470,7 +470,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_Vs, value);
         }
 
-        public static Crosshair MyCrosshair_Es { get; private set; }
+        public static Crosshair? MyCrosshair_Es { get; private set; }
 
         private string _crosshairPositionText_Es;
         public string CrosshairPositionText_Es
@@ -479,7 +479,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_Es, value);
         }
 
-        public static Crosshair MyCrosshair_Disp { get; private set; }
+        public static Crosshair? MyCrosshair_Disp { get; private set; }
 
         private string _crosshairPositionText_Disp;
         public string CrosshairPositionText_Disp
@@ -488,7 +488,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_Disp, value);
         }
 
-        public static Crosshair MyCrosshair_FL { get; private set; }
+        public static Crosshair? MyCrosshair_FL { get; private set; }
 
         private string _crosshairPositionText_FL;
         public string CrosshairPositionText_FL
@@ -675,6 +675,7 @@ namespace PileDesign.ViewModels
 
             var wpf = GroundWindowInstance.wpfPlotDisplacement;
 
+            if (wpf?.Plot == null) return;
             wpf.Plot.Clear();
             DrawSoilLayer(wpf);
 

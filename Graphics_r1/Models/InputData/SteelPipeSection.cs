@@ -21,6 +21,7 @@ namespace PileDesign.Models.InputData
         public double SNdc1 { get; protected set; }
         public double SNdt { get; protected set; }
 
+
         // コンストラクタ
         internal SteelPipeSection(double _D, double _T, double _F, double _beta1)
         {
@@ -65,6 +66,34 @@ namespace PileDesign.Models.InputData
         internal double GetDamageLimitMoment(double Ndd)
         {
             return Beta1 * (1.5 * Sfc1 - Math.Abs(Ndd) / SAp) * SZe;
+        }
+
+        /// <summary>
+        /// 安全限界せん断力を返す。
+        /// </summary>
+        private double GetUltimateLimitShear(double nud, bool isFactored)
+        {
+            // 鋼管杭の安全限界せん断
+            double beta1 = 1.0;
+            double beta2 = 1.0;
+            double sSigmaY = F;         // N/mm²
+            double sNy = sSigmaY * SAp;  // N（降伏軸力）
+
+            // sNy が 0 の場合は計算不能
+            if (Math.Abs(sNy) < 1e-10)
+                return 0.0;
+
+            double eta = nud / sNy;  // 軸力比 η = N / Ny
+
+            // η >= 1 の場合、sqrt(1 - η²) が虚数になるため、0 を返す
+            // （軸力が降伏軸力以上のとき、せん断耐力は 0）
+            if (Math.Abs(eta) >= 1.0)
+                return 0.0;
+
+            double sQ0 = 2 * T * (D - T) * sSigmaY / Math.Sqrt(3);  // N
+            double unfactoredQu = sQ0 * Math.Sqrt(1 - eta * eta);
+
+            return isFactored ? beta1 * beta2 * unfactoredQu : unfactoredQu;
         }
     }
 

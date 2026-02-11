@@ -1165,8 +1165,8 @@ namespace PileDesign.Views
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
-                            // 単杭沈下は mm をそのまま使用
-                            values.Add(pileLocation.SinglePileSettlementVL);
+                            // 単杭沈下は m で格納されている → mm に変換
+                            values.Add(pileLocation.SinglePileSettlementVL * 1000);
                             points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                         }
                         else
@@ -1176,7 +1176,7 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i]); // mm
+                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000); // m → mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
@@ -1185,7 +1185,7 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i]); // mm
+                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000); // m → mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
@@ -1208,7 +1208,7 @@ namespace PileDesign.Views
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
                         {
-                            values.Add(pileLocation.SinglePileSettlementVL + pileLocation.GroupPileSettlement); // mm
+                            values.Add(pileLocation.SinglePileSettlementVL * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
                             points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                         }
                         else
@@ -1218,7 +1218,7 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] + pileLocation.GroupPileSettlement); // mm
+                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
@@ -1227,7 +1227,7 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] + pileLocation.GroupPileSettlement); // mm
+                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000 + pileLocation.GroupPileSettlement); // m→mm + mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
@@ -1250,7 +1250,9 @@ namespace PileDesign.Views
             {
                 var anaModel = viewModel.CurrentModel;
                 if (anaModel == null || anaModel.Beams == null)
+                {
                     return;
+                }
 
                 // インデックスと方向ベクトルの決定
                 int[] indices;
@@ -1314,11 +1316,17 @@ namespace PileDesign.Views
 
                 var selectedLoadCase = LoadCases.GetLoadCase(
                     viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
-                if (selectedLoadCase == null) return;
+                if (selectedLoadCase == null)
+                {
+                    return;
+                }
 
                 var selectedLoadCombination = LoadCombinations.GetLoadCombination(
                     viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
-                if (selectedLoadCombination == null) return;
+                if (selectedLoadCombination == null)
+                {
+                    return;
+                }
 
                 // 1回のループで最大値と描画を行う
                 double maxAbsValue = 0;
@@ -1326,10 +1334,14 @@ namespace PileDesign.Views
 
                 ObservableCollection<double> allValues = [];
 
+                int beamCount = 0;
+                int validResultCount = 0;
                 foreach (var beam in anaModel.Beams)
                 {
+                    beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                     if (beamResult == null) continue;
+                    validResultCount++;
 
                     double originalForceI;
                     double originalForceJ;
@@ -1973,8 +1985,11 @@ namespace PileDesign.Views
             if (anaModel.HorizontalSoilSprings == null || anaModel.HorizontalSoilSprings.Count == 0) return;
             if (Canvas3DLayout == null || ColorBarCanvas == null) return;
 
-            // 1) 全ばねの力大きさを収集（カラーバー用）
-            var allForceMags = new ObservableCollection<double>();
+            // 選択されたタイプを取得
+            string springType = viewModel.AnalysisResultSoilSpringType ?? "RH";
+
+            // 1) 全ばねの値を収集（カラーバー用）
+            var allValues = new ObservableCollection<double>();
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
                 try
@@ -1982,12 +1997,9 @@ namespace PileDesign.Views
                     // 最新の要素内力をセット（secant を想定）
                     s.SetBeamDispAndForce(isTan: false);
 
-                    // I端の並進力 (0..2 が I端の Fx,Fy,Fz)
-                    double fx = s.CumulativeForce.GetByIndex(0);
-                    double fy = s.CumulativeForce.GetByIndex(1);
-                    double fz = s.CumulativeForce.GetByIndex(2);
-                    var fv = new System.Windows.Media.Media3D.Vector3D(fx, fy, fz);
-                    allForceMags.Add(fv.Length);
+                    // 選択されたタイプに応じた値を取得
+                    double value = GetSoilSpringValue(s, springType);
+                    allValues.Add(value);
                 }
                 catch
                 {
@@ -1995,15 +2007,18 @@ namespace PileDesign.Views
                 }
             }
 
-            if (allForceMags.Count == 0)
+            if (allValues.Count == 0)
             {
                 ColorBarCanvas.Children.Clear();
                 return;
             }
 
-            // カラーバージオメトリ（力大きさに基づく）
-            //var colorBaredGeometries = GetColorBarGeometries(allForceMags);
-            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allForceMags);
+            // カラーバージオメトリ（選択されたタイプの値に基づく）
+            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+
+            // 単位を決定（モーメント系はkNm、力系はkN）
+            string unit = (springType == "MX" || springType == "MY" || springType == "MZ" || springType == "MH") ? "kNm" : "kN";
+            string colorBarTitle = GetSoilSpringTypeName(springType);
 
             // 2) 各ばねについて、I点（head）と tail ( = head - scaled (dispI - dispJ)) を求めて描画
             foreach (var s in anaModel.HorizontalSoilSprings)
@@ -2015,21 +2030,22 @@ namespace PileDesign.Views
                     // 要素内力を更新（安全）
                     s.SetBeamDispAndForce(isTan: false);
 
-                    // I端の力（並進成分）
-                    double fx = s.CumulativeForce.GetByIndex(0);
-                    double fy = s.CumulativeForce.GetByIndex(1);
-                    double fz = s.CumulativeForce.GetByIndex(2);
-                    var forceVec = new System.Windows.Media.Media3D.Vector3D(fx, fy, fz);
-                    double forceMag = forceVec.Length;
+                    // 選択されたタイプに応じた値を取得
+                    double displayValue = GetSoilSpringValue(s, springType);
 
                     // ノードの変位差 (I - J)（並進成分のみ）
                     var di = s.NodeI.CumulativeDisp;
                     var dj = s.NodeJ.CumulativeDisp;
-                    var dispDiff = new System.Windows.Media.Media3D.Vector3D(
-                        di.Ux - dj.Ux,
-                        di.Uy - dj.Uy,
-                        0
-                    );
+                    double dx = di.Ux - dj.Ux;
+                    double dy = di.Uy - dj.Uy;
+
+                    // 選択されたタイプに応じて変位成分をフィルタリング
+                    var dispDiff = springType switch
+                    {
+                        "RX" => new System.Windows.Media.Media3D.Vector3D(dx, 0, 0),  // X成分のみ
+                        "RY" => new System.Windows.Media.Media3D.Vector3D(0, dy, 0),  // Y成分のみ
+                        _ => new System.Windows.Media.Media3D.Vector3D(dx, dy, 0)     // RH等はXY両方
+                    };
 
                     // 表示スケール: viewModel.DisplacementDiagramMultiplier を使う（必要に応じて調整してください）
                     var scaledDisp = dispDiff * viewModel.ForceDiagramMultiplier * 1000;
@@ -2046,11 +2062,9 @@ namespace PileDesign.Views
                     Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
                     Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
 
-                    // カラー帯の選択（力大きさで色分け）
-                    // midValue として力大きさをそのまま使う
-                    //var picked = PickColorGeometry(forceMag, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(forceMag, colorBaredGeometries) ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
-                    var picked = ColorBarUtils.PickColorGeometry(forceMag, colorBaredGeometries)
-                                 ?? ColorBarUtils.PickColorGeometryInclusiveTop(forceMag, colorBaredGeometries)
+                    // カラー帯の選択（選択されたタイプの値で色分け）
+                    var picked = ColorBarUtils.PickColorGeometry(displayValue, colorBaredGeometries)
+                                 ?? ColorBarUtils.PickColorGeometryInclusiveTop(displayValue, colorBaredGeometries)
                                  ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
                     if (picked == null) continue;
 
@@ -2076,12 +2090,11 @@ namespace PileDesign.Views
                     picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side1));
                     picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side2));
 
-                    // 値ラベル（任意、力の大きさを表示）
+                    // 値ラベル（任意、選択されたタイプの値を表示）
                     if (viewModel.IsResultValueVisible)
                     {
                         string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
-                        //AddText3D(Brushes.Black, string.Format(fmt, forceMag), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", GetAngle(dir));
-                        AddText3D(Brushes.Black, string.Format(fmt, forceMag), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", 0);
+                        AddText3D(Brushes.Black, string.Format(fmt, displayValue), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", 0);
                     }
                 }
                 catch
@@ -2096,16 +2109,16 @@ namespace PileDesign.Views
                 geo.DrawPathes(Canvas3DLayout);
             }
 
-            // 4) カラーバー表示（力の最小/最大）
-            if (allForceMags.Count > 0)
+            // 4) カラーバー表示（選択されたタイプの最小/最大）
+            if (allValues.Count > 0)
             {
                 ColorBar.DrawStepColorBar(
                     ColorBarCanvas,
                     colorBaredGeometries,
-                    "地盤ばね力",
-                    "kN",
-                    allForceMags.Min(),
-                    allForceMags.Max(),
+                    colorBarTitle,
+                    unit,
+                    allValues.Min(),
+                    allValues.Max(),
                     "{0:N" + viewModel.DecimalPlaces + "}",
                     viewModel.LabelSize
                 );
@@ -2113,6 +2126,431 @@ namespace PileDesign.Views
             else
             {
                 ColorBarCanvas.Children.Clear();
+            }
+        }
+
+        /// <summary>
+        /// 地盤ばねから選択されたタイプに応じた値を取得
+        /// </summary>
+        private static double GetSoilSpringValue(FEM.HorizontalSoilSpring spring, string springType)
+        {
+            // I端の力・モーメント成分を取得
+            // Index 0-2: Fx, Fy, Fz (並進力)
+            // Index 3-5: Mx, My, Mz (モーメント)
+            double fx = spring.CumulativeForce.GetByIndex(0);
+            double fy = spring.CumulativeForce.GetByIndex(1);
+            double fz = spring.CumulativeForce.GetByIndex(2);
+            double mx = spring.CumulativeForce.GetByIndex(3);
+            double my = spring.CumulativeForce.GetByIndex(4);
+            double mz = spring.CumulativeForce.GetByIndex(5);
+
+            return springType switch
+            {
+                "RX" => fx,
+                "RY" => fy,
+                "RZ" => fz,
+                "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平反力
+                "MX" => mx,
+                "MY" => my,
+                "MZ" => mz,
+                "MH" => Math.Sqrt(mx * mx + my * my),  // 水平モーメント
+                _ => Math.Sqrt(fx * fx + fy * fy)       // デフォルトはRH
+            };
+        }
+
+        /// <summary>
+        /// 地盤ばねタイプの表示名を取得
+        /// </summary>
+        private static string GetSoilSpringTypeName(string springType)
+        {
+            return springType switch
+            {
+                "RX" => "地盤ばねRX",
+                "RY" => "地盤ばねRY",
+                "RZ" => "地盤ばねRZ",
+                "RH" => "地盤ばねRH",
+                "MX" => "地盤ばねMX",
+                "MY" => "地盤ばねMY",
+                "MZ" => "地盤ばねMZ",
+                "MH" => "地盤ばねMH",
+                _ => "地盤ばねRH"
+            };
+        }
+
+        // ========================================
+        // 応力図・変位図 ツールチップ機能
+        // ========================================
+
+        // ツールチップ用フィールド
+        private System.Windows.Controls.Primitives.Popup? _beamResultTooltipPopup;
+        private System.Windows.Controls.TextBlock? _beamResultTooltipText;
+
+        // サンプル位置マーカー用フィールド
+        private System.Windows.Shapes.Ellipse? _samplePositionMarker;
+
+        /// <summary>
+        /// マウス位置から応力/変位値を取得してツールチップを表示
+        /// </summary>
+        private void UpdateBeamResultTooltip(Point mousePos)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+
+            // 梁応力または節点変位表示が有効かチェック
+            if (viewModel.AnalysisResultContent != "梁応力" && viewModel.AnalysisResultContent != "節点変位")
+            {
+                HideBeamResultTooltip();
+                return;
+            }
+
+            var anaModel = viewModel.CurrentModel;
+            if (anaModel?.Beams == null || anaModel.Beams.Count == 0)
+            {
+                HideBeamResultTooltip();
+                return;
+            }
+
+            // 選択ケース/組合せを取得
+            var selectedLoadCase = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel?.LoadCasesInput?.AllLoadCases, viewModel.SelectedLoadCaseName);
+            var selectedLoadCombination = LoadCombinations.GetLoadCombination(
+                viewModel.CurrentInputModel?.LoadCasesInput?.LoadCombinations, viewModel.SelectedLoadCombinationName);
+            if (selectedLoadCase == null || selectedLoadCombination == null)
+            {
+                HideBeamResultTooltip();
+                return;
+            }
+
+            // 最も近いビーム要素を探す
+            Beam? closestBeam = null;
+            double closestDistance = double.MaxValue;
+            double closestT = 0; // ビーム上の位置（0～1）
+            Point closestNodeI2D = new(), closestNodeJ2D = new();
+            const double hitThreshold = 20.0; // ピクセル単位の許容距離
+
+            foreach (var beam in anaModel.Beams)
+            {
+                if (beam?.NodeI == null || beam.NodeJ == null) continue;
+
+                // ビーム端点を2D座標に変換
+                Point3D nodeI3D = new(beam.NodeI.Coord.X, beam.NodeI.Coord.Y, beam.NodeI.Coord.Z);
+                Point3D nodeJ3D = new(beam.NodeJ.Coord.X, beam.NodeJ.Coord.Y, beam.NodeJ.Coord.Z);
+
+                Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
+                Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
+
+                // マウス位置から線分への最短距離と位置を計算
+                var (distance, t) = PointToLineSegmentDistance(mousePos, nodeI2D, nodeJ2D);
+
+                if (distance < closestDistance && distance < hitThreshold)
+                {
+                    closestDistance = distance;
+                    closestBeam = beam;
+                    closestT = t;
+                    closestNodeI2D = nodeI2D;
+                    closestNodeJ2D = nodeJ2D;
+                }
+            }
+
+            if (closestBeam == null)
+            {
+                HideBeamResultTooltip();
+                return;
+            }
+
+            // 応力/変位値を取得してツールチップを表示
+            var beamResult = closestBeam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            if (beamResult == null)
+            {
+                HideBeamResultTooltip();
+                return;
+            }
+
+            // 深度を計算
+            double depthI = closestBeam.NodeI?.Coord.Z ?? 0;
+            double depthJ = closestBeam.NodeJ?.Coord.Z ?? 0;
+            double depth = depthI * (1 - closestT) + depthJ * closestT;
+
+            // 表示内容を構築
+            string tooltipContent;
+            if (viewModel.AnalysisResultContent == "梁応力")
+            {
+                tooltipContent = BuildBeamForceTooltip(viewModel, beamResult, closestT, depth);
+            }
+            else // 節点変位
+            {
+                tooltipContent = BuildNodeDisplacementTooltip(viewModel, closestBeam, anaModel, selectedLoadCase, selectedLoadCombination, closestT, depth);
+            }
+
+            // サンプル位置を計算（ビーム上の線形補間位置）
+            Point samplePos = new(
+                closestNodeI2D.X * (1 - closestT) + closestNodeJ2D.X * closestT,
+                closestNodeI2D.Y * (1 - closestT) + closestNodeJ2D.Y * closestT);
+
+            ShowBeamResultTooltip(mousePos, tooltipContent, samplePos);
+        }
+
+        /// <summary>
+        /// 梁応力のツールチップテキストを構築
+        /// </summary>
+        private static string BuildBeamForceTooltip(MainWindowViewModel viewModel, BeamResult beamResult, double t, double depth)
+        {
+            var bf = beamResult.CumulativeForce;
+            if (bf == null) return $"深度: {depth:F2} m";
+
+            // I端とJ端の値を取得して線形補間
+            double valueI, valueJ;
+            string unit;
+            string typeName = viewModel.AnalysisResultBeamForceType;
+
+            switch (typeName)
+            {
+                case "Fx":
+                    valueI = bf.GetByIndex(0);
+                    valueJ = bf.GetByIndex(6);
+                    unit = "kN";
+                    break;
+                case "Fy":
+                    valueI = bf.GetByIndex(1);
+                    valueJ = bf.GetByIndex(7);
+                    unit = "kN";
+                    break;
+                case "Fz":
+                    valueI = bf.GetByIndex(2);
+                    valueJ = bf.GetByIndex(8);
+                    unit = "kN";
+                    break;
+                case "Mx":
+                    valueI = bf.GetByIndex(3);
+                    valueJ = bf.GetByIndex(9);
+                    unit = "kNm";
+                    break;
+                case "My":
+                    valueI = bf.GetByIndex(4);
+                    valueJ = bf.GetByIndex(10);
+                    unit = "kNm";
+                    break;
+                case "Mz":
+                    valueI = bf.GetByIndex(5);
+                    valueJ = bf.GetByIndex(11);
+                    unit = "kNm";
+                    break;
+                case "Mh":
+                    double MyI = bf.GetByIndex(4);
+                    double MzI = bf.GetByIndex(5);
+                    double MyJ = bf.GetByIndex(10);
+                    double MzJ = bf.GetByIndex(11);
+                    valueI = Math.Sqrt(MyI * MyI + MzI * MzI);
+                    valueJ = Math.Sqrt(MyJ * MyJ + MzJ * MzJ);
+                    unit = "kNm";
+                    break;
+                case "Fh":
+                    double FyI = bf.GetByIndex(1);
+                    double FzI = bf.GetByIndex(2);
+                    double FyJ = bf.GetByIndex(7);
+                    double FzJ = bf.GetByIndex(8);
+                    valueI = Math.Sqrt(FyI * FyI + FzI * FzI);
+                    valueJ = Math.Sqrt(FyJ * FyJ + FzJ * FzJ);
+                    unit = "kN";
+                    break;
+                default:
+                    return $"深度: {depth:F2} m";
+            }
+
+            // 線形補間
+            double interpolatedValue = valueI * (1 - t) + (-valueJ) * t;
+
+            return $"{typeName}: {interpolatedValue:F1} {unit}\n深度: {depth:F2} m";
+        }
+
+        /// <summary>
+        /// 節点変位のツールチップテキストを構築
+        /// </summary>
+        private string BuildNodeDisplacementTooltip(MainWindowViewModel viewModel, Beam beam, AnaModel anaModel,
+            LoadCase loadCase, LoadCombination loadCombination, double t, double depth)
+        {
+            // I端とJ端の節点結果を取得
+            var nrI = beam.NodeI?.GetNodeResult(anaModel, loadCase, loadCombination, viewModel.IsLiquefaction);
+            var nrJ = beam.NodeJ?.GetNodeResult(anaModel, loadCase, loadCombination, viewModel.IsLiquefaction);
+            if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null)
+                return $"深度: {depth:F2} m";
+
+            var ndI = nrI.CumulativeDisp;
+            var ndJ = nrJ.CumulativeDisp;
+
+            string typeName = viewModel.AnalysisResultNodeDisplacementType;
+            double valueI, valueJ;
+            string unit;
+            double multiplier = 1.0;
+
+            switch (typeName)
+            {
+                case "UH":
+                    valueI = Math.Sqrt(ndI.Ux * ndI.Ux + ndI.Uy * ndI.Uy);
+                    valueJ = Math.Sqrt(ndJ.Ux * ndJ.Ux + ndJ.Uy * ndJ.Uy);
+                    multiplier = 1000;
+                    unit = "mm";
+                    break;
+                case "UX":
+                    valueI = ndI.Ux;
+                    valueJ = ndJ.Ux;
+                    multiplier = 1000;
+                    unit = "mm";
+                    break;
+                case "UY":
+                    valueI = ndI.Uy;
+                    valueJ = ndJ.Uy;
+                    multiplier = 1000;
+                    unit = "mm";
+                    break;
+                case "UZ":
+                    valueI = ndI.Uz;
+                    valueJ = ndJ.Uz;
+                    multiplier = 1000;
+                    unit = "mm";
+                    break;
+                case "θH":
+                    valueI = Math.Sqrt(ndI.Rx * ndI.Rx + ndI.Ry * ndI.Ry);
+                    valueJ = Math.Sqrt(ndJ.Rx * ndJ.Rx + ndJ.Ry * ndJ.Ry);
+                    unit = "rad";
+                    break;
+                case "θX":
+                    valueI = ndI.Rx;
+                    valueJ = ndJ.Rx;
+                    unit = "rad";
+                    break;
+                case "θY":
+                    valueI = ndI.Ry;
+                    valueJ = ndJ.Ry;
+                    unit = "rad";
+                    break;
+                case "θZ":
+                    valueI = ndI.Rz;
+                    valueJ = ndJ.Rz;
+                    unit = "rad";
+                    break;
+                default:
+                    return $"深度: {depth:F2} m";
+            }
+
+            // 線形補間
+            double interpolatedValue = (valueI * (1 - t) + valueJ * t) * multiplier;
+
+            return $"{typeName}: {interpolatedValue:F2} {unit}\n深度: {depth:F2} m";
+        }
+
+        /// <summary>
+        /// 点から線分への最短距離と線分上の位置(0～1)を計算
+        /// </summary>
+        private static (double distance, double t) PointToLineSegmentDistance(Point p, Point a, Point b)
+        {
+            Vector ab = b - a;
+            double abLenSq = ab.LengthSquared;
+
+            if (abLenSq < 1e-10)
+            {
+                // a と b がほぼ同じ点
+                return ((p - a).Length, 0);
+            }
+
+            // 線分上の最近点を求める
+            Vector ap = p - a;
+            double t = (ap.X * ab.X + ap.Y * ab.Y) / abLenSq;
+            t = Math.Clamp(t, 0, 1);
+
+            Point closest = a + t * ab;
+            double distance = (p - closest).Length;
+
+            return (distance, t);
+        }
+
+        /// <summary>
+        /// 応力/変位ツールチップを表示
+        /// </summary>
+        private void ShowBeamResultTooltip(Point mousePos, string content, Point samplePos)
+        {
+            // ポップアップが未作成なら作成
+            if (_beamResultTooltipPopup == null)
+            {
+                _beamResultTooltipText = new System.Windows.Controls.TextBlock
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(230, 50, 50, 50)),
+                    Foreground = Brushes.White,
+                    Padding = new Thickness(8, 4, 8, 4),
+                    FontSize = 12
+                };
+
+                var border = new System.Windows.Controls.Border
+                {
+                    BorderBrush = Brushes.DarkGray,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(3),
+                    Child = _beamResultTooltipText
+                };
+
+                _beamResultTooltipPopup = new System.Windows.Controls.Primitives.Popup
+                {
+                    Child = border,
+                    AllowsTransparency = true,
+                    Placement = System.Windows.Controls.Primitives.PlacementMode.Relative,
+                    PlacementTarget = Canvas3DLayout,
+                    IsHitTestVisible = false
+                };
+            }
+
+            // ツールチップのテキストを更新
+            _beamResultTooltipText!.Text = content;
+
+            // 位置を更新（マウスの右下に表示）
+            _beamResultTooltipPopup.HorizontalOffset = mousePos.X + 15;
+            _beamResultTooltipPopup.VerticalOffset = mousePos.Y + 15;
+            _beamResultTooltipPopup.IsOpen = true;
+
+            // サンプル位置マーカーを表示
+            ShowSamplePositionMarker(samplePos);
+        }
+
+        /// <summary>
+        /// サンプル位置マーカーを表示
+        /// </summary>
+        private void ShowSamplePositionMarker(Point pos)
+        {
+            const double markerSize = 10;
+
+            // マーカーが未作成なら作成
+            if (_samplePositionMarker == null)
+            {
+                _samplePositionMarker = new System.Windows.Shapes.Ellipse
+                {
+                    Width = markerSize,
+                    Height = markerSize,
+                    Fill = new SolidColorBrush(Color.FromArgb(200, 255, 100, 100)),
+                    Stroke = Brushes.DarkRed,
+                    StrokeThickness = 2,
+                    IsHitTestVisible = false
+                };
+                Canvas3DLayout.Children.Add(_samplePositionMarker);
+            }
+
+            // マーカーの位置を更新（中心がサンプル位置になるように）
+            System.Windows.Controls.Canvas.SetLeft(_samplePositionMarker, pos.X - markerSize / 2);
+            System.Windows.Controls.Canvas.SetTop(_samplePositionMarker, pos.Y - markerSize / 2);
+            _samplePositionMarker.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>
+        /// 応力/変位ツールチップを非表示
+        /// </summary>
+        private void HideBeamResultTooltip()
+        {
+            if (_beamResultTooltipPopup != null)
+            {
+                _beamResultTooltipPopup.IsOpen = false;
+            }
+
+            // サンプル位置マーカーも非表示
+            if (_samplePositionMarker != null)
+            {
+                _samplePositionMarker.Visibility = Visibility.Collapsed;
             }
         }
     }

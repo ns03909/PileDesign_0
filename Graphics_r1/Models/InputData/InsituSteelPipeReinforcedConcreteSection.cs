@@ -6,7 +6,7 @@ namespace PileDesign.Models.InputData
     // 場所打ち鋼管コンクリート杭断面クラス
     internal class InsituSteelPipeReinforcedConcreteSection : AbstractPileSection
     {
-        public CirclularSolidSection CircularSolidSectionConcrete { get; private set; }
+        public CircularSolidSection CircularSolidSectionConcrete { get; private set; }
         public CircularPipeSection CircularPipeSectionMainbars { get; private set; }
         public CircularPipeSection CircularPipeSectionSteelPipe { get; private set; }
 
@@ -36,7 +36,7 @@ namespace PileDesign.Models.InputData
             MainBarArea = MainBars.Ag;
             MainBarPCD = MainBars.PCD;
 
-            CircularSolidSectionConcrete = new CirclularSolidSection(PileDia - 2 * PipeT);
+            CircularSolidSectionConcrete = new CircularSolidSection(PileDia - 2 * PipeT);
             CircularPipeSectionMainbars = new CircularPipeSection(MainBarPCD, MainBarArea / Math.PI / MainBarPCD);
             CircularPipeSectionSteelPipe = new CircularPipeSection(PileDia - PipeT, PipeT);
 
@@ -193,11 +193,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
-            double Nmax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetServiceLimitShear();
                 ns.Add(n);
                 qs.Add(q);
@@ -212,11 +212,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
-            double Nmax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetDamageLimitShear(level);
                 ns.Add(n);
                 qs.Add(q);
@@ -231,11 +231,11 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double Nmin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
-            double Nmax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
-                double n = (Nmin * (iCount - i) + Nmax * i) / iCount;
+                double n = (NMin * (iCount - i) + NMax * i) / iCount;
                 double q = GetUltimateLimitShear(n);
                 ns.Add(n);
                 qs.Add(q);

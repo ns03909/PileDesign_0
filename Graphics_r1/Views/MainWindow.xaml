@@ -53,7 +53,11 @@
             <MenuItem Header="プロパティ変更／追加" Command="{Binding EditAddPilesCommand}"/>
             <MenuItem Header="削除" Command="{Binding DeletePilesCommand}"/>
             <MenuItem Header="選択解除" Command="{Binding DeselectPilesCommand}"/>
-            <MenuItem Header="画像保存" Command="{Binding ImageSaveCommand}"/>
+            <Separator/>
+            <MenuItem Header="画像コピー(x1.0)" Command="{Binding ImageCopyCommand}" CommandParameter="1.0"/>
+            <MenuItem Header="画像コピー(x2.0)" Command="{Binding ImageCopyCommand}" CommandParameter="2.0"/>
+            <MenuItem Header="画像保存(x1.0)" Command="{Binding ImageSaveCommand}" CommandParameter="1.0"/>
+            <MenuItem Header="画像保存(x2.0)" Command="{Binding ImageSaveCommand}" CommandParameter="2.0"/>
         </ContextMenu>
 
         <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">
@@ -436,6 +440,78 @@
             </Style.Triggers>
         </Style>
 
+        <!-- 水平解析ボタン専用: 動的アイコン切替 -->
+        <Style x:Key="LateralLoadAnalysisButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource LargeIconToolTipButtonStyle}">
+            <Setter Property="Content">
+                <Setter.Value>
+                    <svgc:SvgViewbox Source="/Icons/LateralLoadAnalysisWindow.svg"
+                                     Style="{StaticResource SvgIconStyle16}"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Tag" Value="水平解析(未)"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
+                    <Setter Property="Content">
+                        <Setter.Value>
+                            <svgc:SvgViewbox Source="/Icons/LateralLoadAnalysisWindowDone.svg"
+                                             Style="{StaticResource SvgIconStyle16}"/>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Tag" Value="水平解析(済)"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 単杭沈下解析ボタン専用: 動的アイコン切替 -->
+        <Style x:Key="SettlementAnalysisButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource LargeIconToolTipButtonStyle}">
+            <Setter Property="Content">
+                <Setter.Value>
+                    <svgc:SvgViewbox Source="/Icons/SettlementWindow.svg"
+                                     Style="{StaticResource SvgIconStyle16}"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Tag" Value="単杭沈下解析(未)"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
+                    <Setter Property="Content">
+                        <Setter.Value>
+                            <svgc:SvgViewbox Source="/Icons/SettlementWindowDone.svg"
+                                             Style="{StaticResource SvgIconStyle16}"/>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Tag" Value="単杭沈下解析(済)"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 群杭沈下解析ボタン専用: 動的アイコン切替 -->
+        <Style x:Key="GroupPileSettlementButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource LargeIconToolTipButtonStyle}">
+            <Setter Property="Content">
+                <Setter.Value>
+                    <svgc:SvgViewbox Source="/Icons/GroupPileSettlement.svg"
+                                     Style="{StaticResource SvgIconStyle16}"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Tag" Value="群杭沈下解析(未)"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
+                    <Setter Property="Content">
+                        <Setter.Value>
+                            <svgc:SvgViewbox Source="/Icons/GroupPileSettlementDone.svg"
+                                             Style="{StaticResource SvgIconStyle16}"/>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Tag" Value="群杭沈下解析(済)"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <ribbon:RibbonQuickAccessToolBar x:Key="MainQAT" x:Shared="False">
             <ribbon:RibbonButton ToolTip="元に戻す (Ctrl+Z)"
                            Command="{Binding UndoCommand}"
@@ -459,15 +535,15 @@
                Margin="0"
                Padding="0"
                BorderThickness="0"
-               IsMinimized="{Binding IsRibbonMinimized}"
+               IsMinimized="{Binding IsRibboNMinimized}"
                Visibility="{Binding IsRibbonVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
 
             <ribbon:Ribbon.HelpPaneContent>
                 <StackPanel Orientation="Horizontal">
                     <ribbon:RibbonToggleButton ToolTip="リボン最小化 (タブのみ表示)"
-                                               IsChecked="{Binding IsRibbonMinimized}"
+                                               IsChecked="{Binding IsRibboNMinimized}"
                                                Visibility="{Binding IsRibbonVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                               SmallImageSource="pack://application:,,,/Icons/RibbonMinimize.png"/>
+                                               SmallImageSource="pack://application:,,,/Icons/RibboNMinimize.png"/>
                     <ribbon:RibbonToggleButton ToolTip="リボン表示/非表示"
                                                IsChecked="{Binding IsRibbonVisible}"
                                                SmallImageSource="pack://application:,,,/Icons/RibbonVisible.png"/>
@@ -624,8 +700,8 @@
                 </ribbon:RibbonApplicationMenu>
             </ribbon:Ribbon.ApplicationMenu>
 
-            <ribbon:RibbonTab Header="設定・解析(S)" KeyTip="S">
-                <ribbon:RibbonGroup Header="設定">
+            <ribbon:RibbonTab Header="解析(S)" KeyTip="S">
+                <ribbon:RibbonGroup Header="解析条件設定">
                     <ribbon:RibbonButton x:Name="ButtonFundamental"
                          Label="基本設定"
                          Command="{Binding OpenFundamentalWindowCommand}"
@@ -633,7 +709,7 @@
                          SmallImageSource="pack://application:,,,/Icons/FundamentalWindow.png"/>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonLoadCase"
-                         Label="荷重条件"
+                         Label="荷重"
                          Command="{Binding OpenLoadCaseWindowCommand}"
                          LargeImageSource="pack://application:,,,/Icons/LoadCaseWindow.png"
                          SmallImageSource="pack://application:,,,/Icons/LoadCaseWindow.png"/>
@@ -679,27 +755,60 @@
                     </ribbon:RibbonButton>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="解析">
+                <ribbon:RibbonGroup Header="解析実行">
                     <ribbon:RibbonButton x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          Label="{Binding IsHorizontalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='水平解析(済),水平解析(未)'}"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
-                         IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}"
-                         LargeImageSource="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
+                         IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ribbon:RibbonButton.Style>
+                            <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
+                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
+                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ribbon:RibbonButton.Style>
+                    </ribbon:RibbonButton>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonSettlement"
                          Label="{Binding IsVerticalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='単杭沈下解析(済),単杭沈下解析(未)'}"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
-                         IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}"
-                         LargeImageSource="pack://application:,,,/Icons/SettlementWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/SettlementWindow.png"/>
+                         IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ribbon:RibbonButton.Style>
+                            <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
+                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
+                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ribbon:RibbonButton.Style>
+                    </ribbon:RibbonButton>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
                      Label="{Binding IsGroupPileSettlementAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='群杭沈下解析(済),群杭沈下解析(未)'}"
-                     Click="ButtonGroupPileSettlement_Click"
-                     LargeImageSource="pack://application:,,,/Icons/GroupPileSettlement.png"
-                     SmallImageSource="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                     Click="ButtonGroupPileSettlement_Click">
+                        <ribbon:RibbonButton.Style>
+                            <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
+                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ribbon:RibbonButton.Style>
+                    </ribbon:RibbonButton>
                 </ribbon:RibbonGroup>
 
 
@@ -1005,23 +1114,6 @@
                                    IsChecked="{Binding IsDeformedElementVisible}"
                                    SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"/>
                 </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="ウィンドウ表示">
-                    <ribbon:RibbonButton x:Name="RibbonButtonGraph"
-                             Label="グラフ出力"
-                             Command="{Binding OpenGraphWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Graph.png"
-                             SmallImageSource="pack://application:,,,/Icons/Graph.png"/>
-                    <ribbon:RibbonButton x:Name="RibbonButtonTable"
-                             Label="テーブル出力"
-                             Command="{Binding OpenTableWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Table.png"
-                             SmallImageSource="pack://application:,,,/Icons/Table.png"/>
-                    <ribbon:RibbonButton x:Name="RibbonButtonLog"
-                             Label="ログ表示"
-                             Command="{Binding OpenLogWindowCommand}"
-                             LargeImageSource="pack://application:,,,/Icons/Log.png"
-                             SmallImageSource="pack://application:,,,/Icons/Log.png"/>
-                </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
             <!-- 頻用操作を QuickAccessToolBar に（隙間削減＋操作性向上） -->
@@ -1036,72 +1128,109 @@
 
 
             <ribbon:RibbonTab Header="表示(V)" KeyTip="V">
+                <!-- よく使う: 荷重ケース -->
+                <ribbon:RibbonGroup Header="荷重ケース" SmallImageSource="pack://application:,,,/Icons/LoadCaseWindow.png">
+                    <ComboBox Width="120"
+                          ItemsSource="{Binding LoadCaseNameOption}"
+                          SelectedItem="{Binding SelectedLoadCaseName}"
+                          ribbon:RibbonControlService.Label="荷重ケース">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+                    <TextBlock Margin="0,4,0,0">
+                        <TextBlock.Visibility>
+                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                <Binding Path="SelectedLoadCaseName"/>
+                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                            </MultiBinding>
+                        </TextBlock.Visibility>
+                        <Run Text="組み合わせケース α"/>
+                        <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
+                        <Run Text="/β"/>
+                        <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
+                        <Run Text="/β"/>
+                        <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
+                    </TextBlock>
+                    <ComboBox Width="140"
+                          ItemsSource="{Binding LoadCombinationNameOption}"
+                          SelectedItem="{Binding SelectedLoadCombinationName}"
+                          ribbon:RibbonControlService.Label="組み合わせ">
+                        <ComboBox.Visibility>
+                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                <Binding Path="SelectedLoadCaseName"/>
+                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                            </MultiBinding>
+                        </ComboBox.Visibility>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+                    <ribbon:RibbonToggleButton
+                           ToolTip="液状化状態"
+                           IsChecked="{Binding IsLiquefaction}">
+                        <ribbon:RibbonToggleButton.Visibility>
+                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                <Binding Path="SelectedLoadCaseName"/>
+                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                            </MultiBinding>
+                        </ribbon:RibbonToggleButton.Visibility>
+                        <ribbon:RibbonToggleButton.Style>
+                            <Style TargetType="ribbon:RibbonToggleButton">
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Label" Value="液状化"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/Liquefaction.png"/>
+                                    </Trigger>
+                                    <Trigger Property="IsChecked" Value="False">
+                                        <Setter Property="Label" Value="非液状化"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/NonLiquefaction.png"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ribbon:RibbonToggleButton.Style>
+                    </ribbon:RibbonToggleButton>
+                </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="形状関連">
+                <!-- 目盛・通り心 -->
+                <ribbon:RibbonGroup Header="目盛・通り心" SmallImageSource="pack://application:,,,/Icons/GridVisible.png">
+                    <ribbon:RibbonToggleButton Label="目盛" IsChecked="{Binding IsTickMarkVisible}"
+                                               LargeImageSource="pack://application:,,,/Icons/TickMarkVisible.png"
+                                               SmallImageSource="pack://application:,,,/Icons/TickMarkVisible.png"
+                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。"/>
+                    <ribbon:RibbonToggleButton Label="通り心" IsChecked="{Binding IsGridLineVisible}"
+                                               LargeImageSource="pack://application:,,,/Icons/GridVisible.png"
+                                               SmallImageSource="pack://application:,,,/Icons/GridVisible.png"
+                                               ToolTip="定義した通り心の表示／非表示を切り替えます。"/>
+                </ribbon:RibbonGroup>
+
+                <!-- 形状関連 -->
+                <ribbon:RibbonGroup Header="形状関連" SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png">
                     <ribbon:RibbonToggleButton Label="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsActionPointVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"/>
-
-                    <!--<ribbon:RibbonToggleButton
-                        Style="{StaticResource LargeIconToolTipRibbonToggleButtonStyle}"
-                        Label="慣性力作用点"
-                        IsChecked="{Binding IsActionPointVisible}"
-                        LargeImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"
-                        SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"
-                        Tag="慣性力作用点の表示／非表示を切り替えます。"/>-->
                     <ribbon:RibbonToggleButton Label="剛体連結" ToolTip="剛体連結の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsRigidFloorVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsRigidConnectionVisible.png"/>
-
                     <ribbon:RibbonToggleButton Label="節点" IsChecked="{Binding IsNodeVisible}" SmallImageSource="pack://application:,,,/Icons/NodeVisible.png"/>
-                    <!--<ribbon:RibbonToggleButton Label="要素" IsChecked="{Binding IsElementVisible}" SmallImageSource="pack://application:,,,/Icons/ElementVisible.png"/>-->
-
-                    <!--<ribbon:RibbonToggleButton Label="要素縮小表示" ToolTip="要素の縮小表示／通常表示を切り替えます。（未）"
-                                               IsChecked="{Binding IsShrinkElementMode}" SmallImageSource="pack://application:,,,/Icons/ShrinkElementMode.png"/>-->
-
                     <ribbon:RibbonToggleButton Label="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsPileSectionVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭要素軸" ToolTip="梁要素座標軸の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsBeamLocalAxesVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
-
                     <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsEmbedmentBoxVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
-
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="目盛・通り心">
-                    <ribbon:RibbonToggleButton Label="目盛" IsChecked="{Binding IsTickMarkVisible}" SmallImageSource="pack://application:,,,/Icons/TickMarkVisible.png"
-                                               ToolTip="Z軸に平行なビュー、Z軸に垂直なビューのときの5m間隔の目盛の表示／非表示を切り替えます。"/>
-                    <ribbon:RibbonToggleButton Label="通り心" IsChecked="{Binding IsGridLineVisible}" SmallImageSource="pack://application:,,,/Icons/GridVisible.png"
-                                               ToolTip="定義した通り心の表示／非表示を切り替えます。"/>
-                </ribbon:RibbonGroup>
-
-                <ribbon:RibbonGroup Header="荷重">
-                    <ribbon:RibbonToggleButton Label="慣性力"
-                                               ToolTip="慣性力の表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsMassLoadingVisible}"
-                                               SmallImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭軸力"
-                                               ToolTip="杭軸力の表示／非表示を切り替えます。"
-                                               IsChecked="{Binding IsAxialLoadingVisible}"
-                                               SmallImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"/>
-                </ribbon:RibbonGroup>
-                
-                
-                <!-- 変位 / 作用点 -->
-                <!--
-                <ribbon:RibbonGroup Header="変位・作用点">
-
-
-                </ribbon:RibbonGroup>-->
-
-                <!-- ラベル -->
-                <ribbon:RibbonGroup Header="杭節点ラベル">
+                <!-- 杭節点ラベル -->
+                <ribbon:RibbonGroup Header="杭節点ラベル" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png">
                     <ribbon:RibbonToggleButton Label="節点番号" IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
-                    <!--<ribbon:RibbonToggleButton Label="要素番号" IsChecked="{Binding IsElementNoVisible}" SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>-->
                     <ribbon:RibbonToggleButton Label="杭番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭頭Z" IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
@@ -1118,85 +1247,55 @@
                                SmallImageSource="pack://application:,,,/Icons/IsGroupPileFactorVisible.png"/>
                 </ribbon:RibbonGroup>
 
-
-                <!-- 土層物理量表示グループ内: 置換前 RibbonComboBox を削除し ComboBox へ変更 -->
-                <ribbon:RibbonGroup Header="土層・土質点関連">
-                    <ribbon:RibbonToggleButton Label="杭周辺土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
+                <!-- 荷重 -->
+                <ribbon:RibbonGroup Header="荷重" SmallImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png">
+                    <ribbon:RibbonToggleButton Label="慣性力"
+                                               ToolTip="慣性力の表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsMassLoadingVisible}"
+                                               LargeImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png"
+                                               SmallImageSource="pack://application:,,,/Icons/IsActionPointLoadVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="杭軸力"
+                                               ToolTip="杭軸力の表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsAxialLoadingVisible}"
+                                               LargeImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"
+                                               SmallImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"/>
+                </ribbon:RibbonGroup>
+                
+                <!-- 土層・土質点関連 -->
+                <ribbon:RibbonGroup Header="土層・土質点" SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png">
+                    <ribbon:RibbonToggleButton Label="杭周土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsGroundVisible}"
                                                    SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"/>
                     <ribbon:RibbonToggleButton Label="土層パラメータ"
                                ToolTip="土層の密度(kN/m3)、粘着力(kN/m2)、せん断波速度Vs(m/s)、または変形係数Es(kN/m2)の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
                                SmallImageSource="pack://application:,,,/Icons/GroundLayerParametersVisible.png"/>
-                    
-
-                    <!-- 置換後: 土層項目選択 -->
-                    <!--<ComboBox 
-                          ItemsSource="{Binding SoilParamDisplayOptions}"
-                          SelectedItem="{Binding SelectedSoilParamDisplay}"
-                          IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"
-                          Visibility="{Binding IsSoilLayerParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
-                          ribbon:RibbonControlService.Label="土層項目"/>-->
-                    <ComboBox 
+                    <ComboBox
                         ItemsSource="{Binding SoilParamDisplayOptions}"
                         SelectedItem="{Binding SelectedSoilParamDisplay}"
                         IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"
                         ribbon:RibbonControlService.Label="土層項目"/>
-
                     <ribbon:RibbonToggleButton Label="土質点パラメータ"
                                ToolTip="N値、せん断波速度Vs0(m/s)、または細粒分含有率Fc(%)の表示／非表示を切り替えます。"
                                IsChecked="{Binding IsSoilMassParamDisplayEnabled}"
                                SmallImageSource="pack://application:,,,/Icons/GroundPointParametersVisible.png"/>
-
-                    <!-- 置換後: 土質点項目選択 -->
-                    <!--<ComboBox 
-                          ItemsSource="{Binding SoilMassParamDisplayOptions}"
-                          SelectedItem="{Binding SelectedSoilMassParamDisplay}"
-                          IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
-                          Visibility="{Binding IsSoilMassParamDisplayEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
-                          ribbon:RibbonControlService.Label="土質点項目"/>-->
-                    <ComboBox 
+                    <ComboBox
                           ItemsSource="{Binding SoilMassParamDisplayOptions}"
                           SelectedItem="{Binding SelectedSoilMassParamDisplay}"
                           IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
                           ribbon:RibbonControlService.Label="土質点項目"/>
-
-                    <!--<ribbon:RibbonToggleButton Label="パラメータ値表示"
-                               ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
-                               IsChecked="{Binding IsSoilValueVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png">
-                        <ribbon:RibbonToggleButton.Visibility>
-                            <MultiBinding Converter="{StaticResource AnyBoolToVisibilityConverter}">
-                                <Binding Path="IsSoilLayerParamDisplayEnabled"/>
-                                <Binding Path="IsSoilMassParamDisplayEnabled"/>
-                            </MultiBinding>
-                        </ribbon:RibbonToggleButton.Visibility>
-                    </ribbon:RibbonToggleButton>-->
                     <ribbon:RibbonToggleButton Label="パラメータ値表示"
                         ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
                         IsChecked="{Binding IsSoilValueVisible}"
-                        SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png">
-                        <!--<ribbon:RibbonToggleButton.Visibility>
-                            <MultiBinding Converter="{StaticResource AnyBoolToVisibilityConverter}">
-                                <Binding Path="IsSoilLayerParamDisplayEnabled"/>
-                                <Binding Path="IsSoilMassParamDisplayEnabled"/>
-                            </MultiBinding>
-                        </ribbon:RibbonToggleButton.Visibility>-->
-                        <!--<ribbon:RibbonToggleButton.IsEnabled>
-                            <MultiBinding Converter="{StaticResource AnyBoolToVisibilityConverter}">
-                                <Binding Path="IsSoilLayerParamDisplayEnabled"/>
-                                <Binding Path="IsSoilMassParamDisplayEnabled"/>
-                            </MultiBinding>
-                        </ribbon:RibbonToggleButton.IsEnabled>-->
-                    </ribbon:RibbonToggleButton>
+                        SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png"/>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="地盤変位">
-
+                <!-- 地盤変位 -->
+                <ribbon:RibbonGroup Header="地盤変位" SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png">
                     <ribbon:RibbonToggleButton Label="地盤変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
+                                                   LargeImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"
                                                    SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
-
                     <StackPanel Orientation="Horizontal">
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
@@ -1222,8 +1321,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-
-                        <Slider Width="50" Minimum="0" Maximum="1000.0" 
+                        <Slider Width="50" Minimum="0" Maximum="1000.0"
                             Value="{Binding DisplacementDiagramMultiplier, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBox Width="45" HorizontalContentAlignment="Right"
                          Text="{Binding DisplacementDiagramMultiplier, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
@@ -1232,145 +1330,36 @@
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
-
-                <!-- ビュータブ内（「ラベル」グループの次、あるいは末尾） -->
-                <ribbon:RibbonGroup Header="テキスト">
-                    <ribbon:RibbonButton SmallImageSource="pack://application:,,,/Icons/LabelSize.png"
-                     ToolTip="テキストサイズを変更します。"
-                     IsHitTestVisible="False" Focusable="False"/>
-                    <ComboBox Width="50"
-                      ItemsSource="{Binding LabelSizeOption}"
-                      SelectedItem="{Binding LabelSize}"
-                      ribbon:RibbonControlService.Label="サイズ">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="SelectionChanged">
-                                <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </ComboBox>
+                <!-- 群杭沈下ビュー -->
+                <ribbon:RibbonGroup Header="群杭沈下ビュー" SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png">
+                    <ribbon:RibbonToggleButton Label="沈下グリッド" ToolTip="群杭沈下グリッド表示"
+                               IsChecked="{Binding IsGroupPileGridVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="沈下土層" ToolTip="群杭沈下用土層表示"
+                               IsChecked="{Binding IsSettlementGroundVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/SoilLayerVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="沈下荷重面" ToolTip="群杭沈下用荷重面表示"
+                               IsChecked="{Binding IsSettlementLoadVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="表示:杭頭" ToolTip="杭頭位置表示"
+                               IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}"
+                               SmallImageSource="pack://application:,,,/Icons/PileTopSelected.png"/>
+                    <ribbon:RibbonToggleButton Label="表示:荷重面" ToolTip="沈下荷重面位置表示"
+                               IsChecked="{Binding IsElementShownAtSettlementPlane}"
+                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneSelected.png"/>
+                    <ribbon:RibbonToggleButton Label="グリッド変位"
+                               ToolTip="群杭グリッド変位表示"
+                               IsChecked="{Binding IsGroupPileGridDeformationVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
                 </ribbon:RibbonGroup>
 
-
-            </ribbon:RibbonTab>
-
-            <ribbon:RibbonTab Header="表示（荷重ケース）">
-                <!-- メインタブ内: 解析グループの前後など好みの位置に -->
-                <ribbon:RibbonGroup Header="荷重ケース">
-                    <ComboBox Width="120"
-                          ItemsSource="{Binding LoadCaseNameOption}"
-                          SelectedItem="{Binding SelectedLoadCaseName}"
-                          ribbon:RibbonControlService.Label="荷重ケース">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="SelectionChanged">
-                                <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </ComboBox>
-
-                    <!-- 組み合わせケース表示タイトル -->
-                    <!-- TextBlock (組み合わせケースタイトル) -->
-                    <TextBlock Margin="0,4,0,0">
-                        <TextBlock.Visibility>
-                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                <Binding Path="SelectedLoadCaseName"/>
-                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                            </MultiBinding>
-                        </TextBlock.Visibility>
-                        <Run Text="組み合わせケース α"/>
-                        <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
-                        <Run Text="/β"/>
-                        <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
-                        <Run Text="/β"/>
-                        <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
-                    </TextBlock>
-
-                    <!-- 組み合わせケース ComboBox -->
-                    <ComboBox Width="140"
-                          ItemsSource="{Binding LoadCombinationNameOption}"
-                          SelectedItem="{Binding SelectedLoadCombinationName}"
-                          ribbon:RibbonControlService.Label="組み合わせ">
-                        <ComboBox.Visibility>
-                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                <Binding Path="SelectedLoadCaseName"/>
-                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                            </MultiBinding>
-                        </ComboBox.Visibility>
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="SelectionChanged">
-                                <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </ComboBox>
-
-                    <!-- 非液状化トグル -->
-                    <!--
-                    <ribbon:RibbonToggleButton Label="非液状化"
-                           ToolTip="非液状化状態"
-                           IsChecked="{Binding IsLiquefaction, Converter={StaticResource BooleanNegationConverter}}"
-                           SmallImageSource="pack://application:,,,/Icons/NonLiquefaction.png">
-                        <ribbon:RibbonToggleButton.Visibility>
-                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                <Binding Path="SelectedLoadCaseName"/>
-                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                            </MultiBinding>
-                        </ribbon:RibbonToggleButton.Visibility>
-                    </ribbon:RibbonToggleButton>
-
-                    -->
-                    <!-- 液状化トグル -->
-                    <!--
-                    <ribbon:RibbonToggleButton Label="液状化"
-                           ToolTip="液状化状態"
-                           IsChecked="{Binding IsLiquefaction}"
-                           SmallImageSource="pack://application:,,,/Icons/Liquefaction.png">
-                        <ribbon:RibbonToggleButton.Visibility>
-                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                <Binding Path="SelectedLoadCaseName"/>
-                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                            </MultiBinding>
-                        </ribbon:RibbonToggleButton.Visibility>
-                    </ribbon:RibbonToggleButton>-->
-
-                    <!-- 液状化/非液状化 切替（単一トグル） -->
-                    <ribbon:RibbonToggleButton x:Name="LiquefactionToggle"
-                           ToolTip="液状化状態"
-                           IsChecked="{Binding IsLiquefaction}">
-                        <ribbon:RibbonToggleButton.Visibility>
-                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                <Binding Path="SelectedLoadCaseName"/>
-                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                            </MultiBinding>
-                        </ribbon:RibbonToggleButton.Visibility>
-                        <ribbon:RibbonToggleButton.Style>
-                            <Style TargetType="ribbon:RibbonToggleButton">
-                                <Style.Triggers>
-                                    <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Label" Value="液状化"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/Liquefaction.png"/>
-                                    </Trigger>
-                                    <Trigger Property="IsChecked" Value="False">
-                                        <Setter Property="Label" Value="非液状化"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/NonLiquefaction.png"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ribbon:RibbonToggleButton.Style>
-                    </ribbon:RibbonToggleButton>
-
-
-                </ribbon:RibbonGroup>
-
-
-                <ribbon:RibbonGroup Header="XYZ平行軸">
+                <!-- XYZ平行軸 -->
+                <ribbon:RibbonGroup Header="XYZ平行軸" SmallImageSource="pack://application:,,,/Icons/AxesVisible.png">
                     <ribbon:RibbonToggleButton Label="XYZ平行軸" IsChecked="{Binding IsXYZAxesVisible}" LargeImageSource="pack://application:,,,/Icons/AxesVisible.png"/>
-
-                    <!-- 追加: 中心座標編集パネル開閉トグル -->
-                    <ribbon:RibbonToggleButton x:Name="CenterEditToggle"
+                    <ribbon:RibbonToggleButton
                            Label="🔽"
                            ToolTip="中心座標の編集パネルを開閉"
                            IsChecked="{Binding IsCenterCoordEditorVisible}"/>
-                    <!--SmallImageSource="pack://application:,,,/Icons/CenterCoords.png"/>-->
-                    <!-- 折りたたみ対象 -->
                     <StackPanel Orientation="Horizontal"
                             Visibility="{Binding IsCenterCoordEditorVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ribbon:RibbonTextBox Label="X0"
@@ -1392,24 +1381,10 @@
                               PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                               KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
-
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="ビュー切替">
-                    <ribbon:RibbonButton Label="ズームフィット" Command="{Binding ZoomFitCommand}" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"
-                                         ToolTip="ズームフィット (ctrl + 0)"/>
-                    <ribbon:RibbonButton Label="平面" Command="{Binding ViewXYPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/TopView.png"
-                                         ToolTip="平面 (Ctrl + Shift + T)"/>
-                    <ribbon:RibbonButton Label="正面" Command="{Binding ViewXZPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/FrontView.png"
-                                         ToolTip="正面 (Ctrl + Shift + F)"/>
-                    <ribbon:RibbonButton Label="右面" Command="{Binding ViewYZPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/RightView.png"
-                                         ToolTip="右面 (Ctrl + Shift + R)"/>
-                    <ribbon:RibbonButton Label="アイソメ" Command="{Binding ViewIsometricCommand}" SmallImageSource="pack://application:,,,/Icons/IsometricView.png"
-                                         ToolTip="アイソメ (Ctrl + Shift + I)"/>
-                </ribbon:RibbonGroup>
-
-
-                <ribbon:RibbonGroup Header="アクティブ">
+                <!-- アクティブ -->
+                <ribbon:RibbonGroup Header="アクティブ" SmallImageSource="pack://application:,,,/Icons/ActiveAll.png">
                     <ribbon:RibbonButton ToolTip="すべてアクティブ (Ctrl + A)"
                              Click="ShowAllNodesButton_Click"
                              SmallImageSource="pack://application:,,,/Icons/ActiveAll.png"/>
@@ -1423,35 +1398,92 @@
                              Click="InvertActiveNodesButton_click"
                              SmallImageSource="pack://application:,,,/Icons/InvertActive.png"/>
                 </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="選択">
+
+                <!-- 選択 -->
+                <ribbon:RibbonGroup Header="選択" SmallImageSource="pack://application:,,,/Icons/SelectAll.png">
                     <ribbon:RibbonButton ToolTip="すべて選択 (Ctrl + Shift + A)"
                              Click="SelectAllNodesButton_Click"
+                             LargeImageSource="pack://application:,,,/Icons/SelectAll.png"
                              SmallImageSource="pack://application:,,,/Icons/SelectAll.png"/>
                     <ribbon:RibbonButton ToolTip="全選択解除 (Esc)"
                              Click="DeselectAllNodesButton_Click"
+                             LargeImageSource="pack://application:,,,/Icons/DeselectAll.png"
                              SmallImageSource="pack://application:,,,/Icons/DeselectAll.png"/>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="群杭沈下ビュー">
-                    <ribbon:RibbonToggleButton Label="沈下グリッド" ToolTip="群杭沈下グリッド表示"
-                               IsChecked="{Binding IsGroupPileGridVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="沈下土層" ToolTip="群杭沈下用土層表示"
-                               IsChecked="{Binding IsSettlementGroundVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/SoilLayerVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="沈下荷重面" ToolTip="群杭沈下用荷重面表示"
-                               IsChecked="{Binding IsSettlementLoadVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="表示:杭頭" ToolTip="杭頭位置表示"
-                               IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}"
-                               SmallImageSource="pack://application:,,,/Icons/PileTopSelected.png"/>
-                    <ribbon:RibbonToggleButton Label="表示:荷重面" ToolTip="沈下荷重面位置表示"
-                               IsChecked="{Binding IsElementShownAtSettlementPlane}"
-                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneSelected.png"/>
-                    <ribbon:RibbonToggleButton Label="グリッド変位"
-                               ToolTip="群杭グリッド変位表示"
-                               IsChecked="{Binding IsGroupPileGridDeformationVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
+
+                <!-- ビュー切替 -->
+                <ribbon:RibbonGroup Header="ビュー切替" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png">
+                    <ribbon:RibbonButton Label="ズームフィット" Command="{Binding ZoomFitCommand}" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"
+                                         ToolTip="ズームフィット (ctrl + 0)"/>
+                    <ribbon:RibbonButton Label="平面" Command="{Binding ViewXYPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/TopView.png"
+                                         ToolTip="平面 (Ctrl + Shift + T)"/>
+                    <ribbon:RibbonButton Label="正面" Command="{Binding ViewXZPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/FrontView.png"
+                                         ToolTip="正面 (Ctrl + Shift + F)"/>
+                    <ribbon:RibbonButton Label="右面" Command="{Binding ViewYZPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/RightView.png"
+                                         ToolTip="右面 (Ctrl + Shift + R)"/>
+                    <ribbon:RibbonButton Label="アイソメ" Command="{Binding ViewIsometricCommand}" SmallImageSource="pack://application:,,,/Icons/IsometricView.png"
+                                         ToolTip="アイソメ (Ctrl + Shift + I)"/>
+                </ribbon:RibbonGroup>
+
+
+                <!-- テキスト -->
+                <ribbon:RibbonGroup Header="テキスト" SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
+                    <ribbon:RibbonButton
+                     LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
+                     SmallImageSource="pack://application:,,,/Icons/LabelSize.png"
+                     ToolTip="テキストサイズを変更します。"
+                     IsHitTestVisible="False" Focusable="False"/>
+                    <ComboBox Width="50"
+                      ItemsSource="{Binding LabelSizeOption}"
+                      SelectedItem="{Binding LabelSize}"
+                      ribbon:RibbonControlService.Label="サイズ">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+                </ribbon:RibbonGroup>
+
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="出力(O)" KeyTip="O">
+                <ribbon:RibbonGroup Header="グラフ・テーブル">
+                    <ribbon:RibbonButton Label="グラフ出力"
+                             Command="{Binding OpenGraphWindowCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/Graph.png"
+                             SmallImageSource="pack://application:,,,/Icons/Graph.png"/>
+                    <ribbon:RibbonButton Label="テーブル出力"
+                             Command="{Binding OpenTableWindowCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/Table.png"
+                             SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="画像">
+                    <ribbon:RibbonButton Label="画像コピー(x1.0)"
+                             ToolTip="現在の画面を画像としてクリップボードにコピー（等倍）"
+                             Command="{Binding ImageCopyCommand}"
+                             CommandParameter="1.0"/>
+                    <ribbon:RibbonButton Label="画像コピー(x2.0)"
+                             ToolTip="現在の画面を画像としてクリップボードにコピー（2倍解像度）"
+                             Command="{Binding ImageCopyCommand}"
+                             CommandParameter="2.0"/>
+                    <ribbon:RibbonButton Label="画像保存(x1.0)"
+                             ToolTip="現在の画面を画像ファイルとして保存（等倍）"
+                             Command="{Binding ImageSaveCommand}"
+                             CommandParameter="1.0"/>
+                    <ribbon:RibbonButton Label="画像保存(x2.0)"
+                             ToolTip="現在の画面を画像ファイルとして保存（2倍解像度）"
+                             Command="{Binding ImageSaveCommand}"
+                             CommandParameter="2.0"/>
+                </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="ログ">
+                    <ribbon:RibbonButton Label="ログ表示"
+                             Command="{Binding OpenLogWindowCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/Log.png"
+                             SmallImageSource="pack://application:,,,/Icons/Log.png"/>
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
@@ -1624,7 +1656,7 @@
                                                         AllowsTransparency="True"
                                                        PopupAnimation="Fade"
                                                        >
-                                                    <views:QuickHintBubble HintText="クイックヒント(Shift+F1)　最短の実行手順" FontSize="20"
+                                                    <views:QuickHintBubble HintText="最短の実行手順　（ヘルプ／クイックヒント ※Shift+F1）" FontSize="42"
                                                     FontWeight="Bold"/>
                                                 </Popup>
 
@@ -4423,37 +4455,25 @@
                                                         Style="{StaticResource ElementDivisionButtonStyle}"
                                                         Command="{Binding OpenElementDivisionWindowCommand}"/>
 
-                                                    <!-- 行1: 水平解析 -->
+                                                    <!-- 行1: 水平解析（状態でアイコン切替） -->
                                                     <Button Grid.Row="1" Grid.Column="1"
                                                         Padding="0"
-                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="水平解析"
+                                                        Style="{StaticResource LateralLoadAnalysisButtonStyle}"
                                                         Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
-                                                        IsEnabled="{Binding IsElementSplit}">
-                                                        <svgc:SvgViewbox Source="/Icons/LateralLoadAnalysisWindow.svg"
-                                                        Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>
+                                                        IsEnabled="{Binding IsElementSplit}"/>
 
-                                                    <!-- 行1: 単杭沈下解析 -->
+                                                    <!-- 行1: 単杭沈下解析（状態でアイコン切替） -->
                                                     <Button Grid.Row="1" Grid.Column="2"
                                                         Padding="0"
-                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="単杭沈下解析"
+                                                        Style="{StaticResource SettlementAnalysisButtonStyle}"
                                                         Command="{Binding OpenSettlementWindowCommand}"
-                                                        IsEnabled="{Binding IsElementSplit}">
-                                                        <svgc:SvgViewbox Source="/Icons/SettlementWindow.svg"
-                                                        Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>
+                                                        IsEnabled="{Binding IsElementSplit}"/>
 
-                                                    <!-- 行1: 群杭沈下解析 -->
+                                                    <!-- 行1: 群杭沈下解析（状態でアイコン切替） -->
                                                     <Button Grid.Row="1" Grid.Column="3"
                                                         Padding="0"
-                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="群杭沈下解析"
-                                                        Command="{Binding PileGroupSettlementAnalysisCommand}">
-                                                        <svgc:SvgViewbox Source="/Icons/GroupPileSettlement.svg"
-                                                            Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>
+                                                        Style="{StaticResource GroupPileSettlementButtonStyle}"
+                                                        Command="{Binding PileGroupSettlementAnalysisCommand}"/>
 
                                                 </Grid>
                                             </Border>
@@ -4710,9 +4730,9 @@
                    VerticalAlignment="Center" Width="40"  Margin="4,0,4,0" TextAlignment="Right"/>
 
                 <ToggleButton Style="{StaticResource LargeIconToolTipToggleButtonStyle}"
-                              Tag="リボンメニュー最小化" IsChecked="{Binding IsRibbonMinimized}"
+                              Tag="リボンメニュー最小化" IsChecked="{Binding IsRibboNMinimized}"
                                   Visibility="{Binding IsRibbonVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <svgc:SvgViewbox Source="/Icons/RibbonMinimize.svg" Style="{StaticResource SvgIconStyle24}"/>
+                    <svgc:SvgViewbox Source="/Icons/RibboNMinimize.svg" Style="{StaticResource SvgIconStyle24}"/>
                 </ToggleButton>
                 <ToggleButton Style="{StaticResource LargeIconToolTipToggleButtonStyle}"
                               Tag="リボン表示/非表示" IsChecked="{Binding IsRibbonVisible}">

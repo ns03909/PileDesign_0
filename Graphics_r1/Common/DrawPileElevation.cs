@@ -335,9 +335,10 @@ namespace PileDesign.Common
                 };
                 text.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
                 double textWidth = text.DesiredSize.Width;
+                double textHeight = text.DesiredSize.Height;
 
                 Canvas.SetLeft(text, canvasWidth - textWidth); // 文字の位置を調整
-                Canvas.SetTop(text, y); // 文字の位置を調整
+                Canvas.SetTop(text, y - textHeight / 2); // 文字の中央を深度位置に配置
                 canvas.Children.Add(text);
             }
             var symbol = new TextBlock

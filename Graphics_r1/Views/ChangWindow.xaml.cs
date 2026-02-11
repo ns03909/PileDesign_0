@@ -69,7 +69,7 @@ namespace PileDesign.Views
             catch (Exception ex)
             {
                 MessageBox.Show($"Chang 初期化中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                Debug.WriteLine(ex);
+                //Debug.WriteLine(ex);
             }
         }
 

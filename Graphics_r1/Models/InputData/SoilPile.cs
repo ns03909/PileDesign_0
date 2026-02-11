@@ -567,7 +567,7 @@ namespace PileDesign.Models.InputData
                     "粘性土" => Math.Min(6 * PileToeCohesive, 7500),
                     _ => Qpu
                 },
-                "埋込み杭（プレポーリング）" => PileToeGranularityClass switch
+                "埋込み杭（プレボーリング）" or "埋込み杭（プレボーリング杭）" or "埋込み杭（プレポーリング）" => PileToeGranularityClass switch
                 {
                     "砂質土" => Math.Min(150 * PileToeNValue, 9000),
                     "礫質土" => Math.Min(150 * PileToeNValue, 9000),
@@ -621,7 +621,7 @@ namespace PileDesign.Models.InputData
                         "粘性土" => Math.Min(cohesive, 100),
                         _ => pileCircumVertical.Tau2
                     },
-                    "埋込み杭（プレポーリング）" => granularityClass switch
+                    "埋込み杭（プレボーリング）" or "埋込み杭（プレボーリング杭）" or "埋込み杭（プレポーリング）" => granularityClass switch
                     {
                         "砂質土" => Math.Min(2.5 * nValue, 125),
                         "礫質土" => Math.Min(2.5 * nValue, 125),
@@ -660,16 +660,9 @@ namespace PileDesign.Models.InputData
                     _ => (pileCircumVertical.Tau1, pileCircumVertical.S1, pileCircumVertical.S2, pileCircumVertical.TauT)
                 };
 
-                if (!pileCircumVertical.IsPositiveCircumResistance)
-                {
-                    pileCircumVertical.Tau1 = 0.0;
-                    pileCircumVertical.Tau2 = 0.0;
-                }
-
-                if (!pileCircumVertical.IsNegativeCircumResistance)
-                {
-                    pileCircumVertical.TauT = 0.0;
-                }
+                // 注: τ1、τ2、τTはフラグに関係なく計算する
+                // IsPositiveCircumResistance/IsNegativeCircumResistanceフラグは
+                // CalculateResistances()での抵抗力集計時にのみ使用する
             }
         }
 
@@ -735,11 +728,11 @@ namespace PileDesign.Models.InputData
                     {
                         //if (pileBodySegment.PileSection == null)
                         //{
-                        //    System.Diagnostics.Debug.WriteLine("PileSection is null");
+                        //    //System.Diagnostics.Debug.WriteLine("PileSection is null");
                         //}
                         //else
                         //{
-                        //    System.Diagnostics.Debug.WriteLine($"B={pileBodySegment.PileSection.PileDiameter}");
+                        //    //System.Diagnostics.Debug.WriteLine($"B={pileBodySegment.PileSection.PileDiameter}");
                         //}
                         b = pileBodySegment.PileSection?.PileDiameter / 1000.0 ?? 0;
                         break;
@@ -748,7 +741,7 @@ namespace PileDesign.Models.InputData
 
                 if (Math.Abs(b) < epsilon)
                 {
-                    System.Diagnostics.Debug.WriteLine($"No segment found for Z={zDataTop}～{zDataBtm}");
+                    //System.Diagnostics.Debug.WriteLine($"No segment found for Z={zDataTop}～{zDataBtm}");
                 }
 
                 foreach (GroundLayerInput groundLayer in GroundLayers)
