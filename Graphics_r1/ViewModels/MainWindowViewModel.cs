@@ -2391,6 +2391,13 @@ namespace PileDesign.ViewModels
             OpenDialogWindowWithUndo<GroundLayerViewModel, GroundWindow>();
         }
 
+        // 基礎梁ウィンドウを開くメソッド
+        [RelayCommand]
+        public void OpenFoundationBeamWindow()
+        {
+            OpenDialogWindowWithUndo<FoundationBeamViewModel, FoundationBeamWindow>();
+        }
+
         // 杭体ウィンドウを開くメソッド
         [RelayCommand]
         public void OpenPileBodyWindow()

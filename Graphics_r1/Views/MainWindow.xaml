@@ -738,6 +738,12 @@
                          LargeImageSource="pack://application:,,,/Icons/GroundWindow.png"
                          SmallImageSource="pack://application:,,,/Icons/GroundWindow.png"/>
 
+                    <ribbon:RibbonButton x:Name="RibbonButtonFoundationBeam"
+                         Label="基礎梁"
+                         Command="{Binding OpenFoundationBeamWindowCommand}"
+                         LargeImageSource="pack://application:,,,/Icons/GroundWindow.png"
+                         SmallImageSource="pack://application:,,,/Icons/GroundWindow.png"/>
+
                     <ribbon:RibbonButton x:Name="RibbonButtonPileBody"
                          Label="杭体"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"

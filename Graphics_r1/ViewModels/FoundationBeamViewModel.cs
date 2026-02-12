@@ -1,0 +1,174 @@
+using CommunityToolkit.Mvvm.Input;
+using PileDesign.Models.InputData;
+using System;
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+
+namespace PileDesign.ViewModels
+{
+    public class FoundationBeamViewModel : BaseViewModel
+    {
+        private readonly MainWindowViewModel _mainWindowViewModel;
+        public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+
+        // 基礎梁節点コレクション
+        private ObservableCollection<FoundationNode> _nodes = [];
+        public ObservableCollection<FoundationNode> Nodes
+        {
+            get => _nodes;
+            set => SetProperty(ref _nodes, value);
+        }
+
+        // 基礎梁要素コレクション
+        private ObservableCollection<FoundationBeamElement> _beams = [];
+        public ObservableCollection<FoundationBeamElement> Beams
+        {
+            get => _beams;
+            set => SetProperty(ref _beams, value);
+        }
+
+        // 接続モード
+        private FoundationBeamConnectionMode _connectionMode = FoundationBeamConnectionMode.RigidBody;
+        public FoundationBeamConnectionMode ConnectionMode
+        {
+            get => _connectionMode;
+            set => SetProperty(ref _connectionMode, value);
+        }
+
+        // RequestClose イベント
+        public event EventHandler? RequestClose;
+
+        // コマンド
+        public ICommand OkCommand { get; }
+        public ICommand CancelCommand { get; }
+        public ICommand AddNodeCommand { get; }
+        public ICommand AddBeamCommand { get; }
+
+        // 選択された節点・要素
+        private FoundationNode? _selectedNode;
+        public FoundationNode? SelectedNode
+        {
+            get => _selectedNode;
+            set => SetProperty(ref _selectedNode, value);
+        }
+
+        private FoundationBeamElement? _selectedBeam;
+        public FoundationBeamElement? SelectedBeam
+        {
+            get => _selectedBeam;
+            set => SetProperty(ref _selectedBeam, value);
+        }
+
+        // コンストラクタ
+        public FoundationBeamViewModel(MainWindowViewModel mainWindowViewModel)
+        {
+            _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
+
+            OkCommand = new RelayCommand(_ => OnOk());
+            CancelCommand = new RelayCommand(_ => OnCancel());
+            AddNodeCommand = new RelayCommand(_ => OnAddNode());
+            AddBeamCommand = new RelayCommand(_ => OnAddBeam());
+        }
+
+        public void Initialize()
+        {
+            // InputModel から基礎梁データを読み込む
+            if (InputModel.FoundationBeamInput == null)
+            {
+                InputModel.FoundationBeamInput = new FoundationBeamInput();
+            }
+
+            var fbInput = InputModel.FoundationBeamInput;
+
+            // 参照をコピー（直接編集）
+            Nodes = fbInput.Nodes;
+            Beams = fbInput.Beams;
+            ConnectionMode = fbInput.ConnectionMode;
+
+            // 節点番号・要素番号を自動更新
+            RenumberNodes();
+            RenumberBeams();
+        }
+
+        private void OnOk()
+        {
+            // データを InputModel に保存
+            if (InputModel.FoundationBeamInput != null)
+            {
+                InputModel.FoundationBeamInput.Nodes = Nodes;
+                InputModel.FoundationBeamInput.Beams = Beams;
+                InputModel.FoundationBeamInput.ConnectionMode = ConnectionMode;
+            }
+
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnCancel()
+        {
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void OnAddNode()
+        {
+            var newNode = new FoundationNode
+            {
+                No = Nodes.Count + 1,
+                X = 0.0,
+                Y = 0.0,
+                Z = 0.0,
+                Name = $"Node-{Nodes.Count + 1}"
+            };
+            Nodes.Add(newNode);
+        }
+
+        public void DeleteSelectedNode()
+        {
+            if (SelectedNode != null && Nodes.Contains(SelectedNode))
+            {
+                Nodes.Remove(SelectedNode);
+                RenumberNodes();
+            }
+        }
+
+        private void OnAddBeam()
+        {
+            var newBeam = new FoundationBeamElement
+            {
+                No = Beams.Count + 1,
+                NodeI_No = 1,
+                NodeJ_No = 2,
+                SectionName = $"Beam-{Beams.Count + 1}",
+                Width = 0.5,
+                Height = 0.8,
+                YoungModulus = 2.5e7,
+                ShearModulus = 1.04e7
+            };
+            Beams.Add(newBeam);
+        }
+
+        public void DeleteSelectedBeam()
+        {
+            if (SelectedBeam != null && Beams.Contains(SelectedBeam))
+            {
+                Beams.Remove(SelectedBeam);
+                RenumberBeams();
+            }
+        }
+
+        private void RenumberNodes()
+        {
+            for (int i = 0; i < Nodes.Count; i++)
+            {
+                Nodes[i].No = i + 1;
+            }
+        }
+
+        private void RenumberBeams()
+        {
+            for (int i = 0; i < Beams.Count; i++)
+            {
+                Beams[i].No = i + 1;
+            }
+        }
+    }
+}
