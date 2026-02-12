@@ -4,9 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime" d:DataContext="{d:DesignInstance Type=local:AutoOverturningMomentViewModel}"
         mc:Ignorable="d"
-        Title="剛盤を仮定した転倒モーメントによる変動軸力の自動入力" Height="450" Width="600">
+        Title="剛盤を仮定した転倒モーメントによる変動軸力の自動入力" Height="450" Width="600"
+        common:EscapeKeyBehavior.Enable="True">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>

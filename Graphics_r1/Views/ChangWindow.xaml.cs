@@ -316,7 +316,7 @@ namespace PileDesign.Views
                     sp.IsHollow,
                     sp.Thickness,
                     sp.SteelThickness,
-                    sp.Es,
+                    ChangSoilPile.Es,
                     sp.Fc,
                     sp.Gamma,
                     sp.Ec,

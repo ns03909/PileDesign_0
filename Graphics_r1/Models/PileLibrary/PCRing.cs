@@ -22,13 +22,13 @@ namespace PileDesign.Models.PileLibrary
         public double Tc { get; set; }
         public double Hr { get; set; }
         public int BarNum { get; set; }
-        public string BarSize { get; set; }
+        public string? BarSize { get; set; }
         public double L1 { get; set; }
         public double L2 { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
         public double RingSteelTs { get; set; }
-        public string RingSteelGrade { get; set; }
-        public string SpiralDia { get; set; }
+        public string? RingSteelGrade { get; set; }
+        public string? SpiralDia { get; set; }
         public int SpiralNum { get; set; }
         public double PCD { get; set; }
 
@@ -36,7 +36,7 @@ namespace PileDesign.Models.PileLibrary
         {
             ObservableCollection<Spec> specs =
             [
-                new Spec("PCリングタイプ", "", Name, ""),
+                new Spec("PCリングタイプ", "", Name ?? "", ""),
                 new Spec("杭径", "D", $"{D:N0}", "mm"),
                 new Spec("PCリング内径", "RD1", $"{RD1:N0}", "mm"),
                 new Spec("PCリング外径", "RD2", $"{RD2:N0}", "mm"),
@@ -47,7 +47,7 @@ namespace PileDesign.Models.PileLibrary
                 new Spec("PCリング定着筋定着長さ", "L1", $"{L1:N0}", "mm"),
                 new Spec("PCリング定着筋長さ", "L2", $"{L2:N0}", "mm"),
                 new Spec("PCリング鋼管厚", "", $"{RingSteelTs:N1}", "mm"),
-                new Spec("PCリング鋼管鋼種", "", RingSteelGrade, ""),
+                new Spec("PCリング鋼管鋼種", "", RingSteelGrade ?? "", ""),
                 new Spec("PCリングスパイラル筋", "", SpiralDia + "(" + $"{SpiralNum:N0}" + "巻)", ""),
                 //new Spec("PCリングスパイラル巻数", "", SpiralNum.ToString(), "")
             ];
@@ -127,13 +127,13 @@ namespace PileDesign.Models.PileLibrary
                     csv.TryGetField(2, out double tc);
                     csv.TryGetField(3, out double hr);
                     csv.TryGetField(4, out int barNum);
-                    csv.TryGetField(5, out string barSize);
+                    csv.TryGetField(5, out string? barSize);
                     csv.TryGetField(6, out double l1);
                     csv.TryGetField(7, out double l2);
-                    csv.TryGetField(8, out string name);
+                    csv.TryGetField(8, out string? name);
                     csv.TryGetField(9, out double ts);
-                    csv.TryGetField(10, out string ringSteelGrade);
-                    csv.TryGetField(11, out string spiralDia);
+                    csv.TryGetField(10, out string? ringSteelGrade);
+                    csv.TryGetField(11, out string? spiralDia);
                     csv.TryGetField(12, out int spiralNum);
 
                     var _PCRing = new PCRing

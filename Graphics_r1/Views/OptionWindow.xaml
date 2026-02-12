@@ -4,12 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
-        Title="OptionWindow" Height="450" Width="400">
+        Title="OptionWindow" Height="450" Width="400"
+        common:EscapeKeyBehavior.Enable="True">
 
     <Window.DataContext>
         <local:MainWindowViewModel/>

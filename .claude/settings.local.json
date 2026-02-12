@@ -26,7 +26,9 @@
       "Bash(Select-Object -First 80)",
       "Bash(python3:*)",
       "Bash(Select-String -Pattern \"error CS|Build succeeded|Build FAILED\")",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Bash(do basename \"$f\")",
+      "Bash(ls:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0"

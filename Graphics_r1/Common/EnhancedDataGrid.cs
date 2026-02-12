@@ -434,7 +434,7 @@ namespace PileDesign.Common
 
                 if (!string.IsNullOrEmpty(propName))
                 {
-                    PropertyInfo prop = current!.GetType().GetProperty(propName!,
+                    PropertyInfo? prop = current!.GetType().GetProperty(propName!,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     if (prop == null) return false;
 

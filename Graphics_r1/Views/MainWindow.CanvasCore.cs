@@ -9,10 +9,6 @@ namespace PileDesign.Views
     /// 根入れ部のコードビハインド
     /// </summary>
     /// 
-
-
-
-
     public partial class MainWindow : Window
     {
         // 追加: ビュー操作中フラグ
@@ -141,7 +137,6 @@ namespace PileDesign.Views
                 TextBlockInfos.Clear();
             }
         }
-
 
         public void UpdateCanvas3D()
         {

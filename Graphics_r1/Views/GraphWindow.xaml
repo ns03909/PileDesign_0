@@ -5,10 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:conv="clr-namespace:PileDesign.Converters" d:DataContext="{d:DesignInstance Type=local:GraphViewModel}"
         mc:Ignorable="d"
         Title="GraphWindow" Height="450" Width="800"
         PreviewKeyDown="GroundWindow_PreviewKeyDown"
+        common:EscapeKeyBehavior.Enable="True"
         >
 
     <Window.InputBindings>

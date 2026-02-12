@@ -10,6 +10,11 @@ public partial class MainWindowViewModel
         (UndoCommand as IRelayCommand)?.NotifyCanExecuteChanged();
         (RedoCommand as IRelayCommand)?.NotifyCanExecuteChanged();
 
+        // ステータスバー情報の更新
+        OnPropertyChanged(nameof(UndoRedoStatusText));
+        OnPropertyChanged(nameof(PileCountText));
+        OnPropertyChanged(nameof(AnalysisStatusText));
+
         // 画面の再描画など
         UpdateViewCommand?.Execute(null);
     }

@@ -94,6 +94,32 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _labelSizeOption, value);
         }
 
+        // MRUリスト
+        public ObservableCollection<MruItem> MruItems { get; } = new();
+
+        // Undo/Redo状態表示
+        public string UndoRedoStatusText => _undoManager != null
+            ? $"元に戻す: {(_undoManager.CanUndo ? "可能" : "不可")} | やり直し: {(_undoManager.CanRedo ? "可能" : "不可")}"
+            : "";
+
+        // 杭本数表示
+        public string PileCountText => CurrentInputModel?.PileLayoutItems != null
+            ? $"杭本数: {CurrentInputModel.PileLayoutItems.Count}本"
+            : "杭本数: 0本";
+
+        // 解析状態表示
+        public string AnalysisStatusText
+        {
+            get
+            {
+                var statuses = new List<string>();
+                if (IsHorizontalAnalysisDone) statuses.Add("水平解析完了");
+                if (IsVerticalAnalysisDone) statuses.Add("沈下解析完了");
+                if (IsElementSplit) statuses.Add("要素分割済み");
+                return statuses.Count > 0 ? string.Join(" | ", statuses) : "未解析";
+            }
+        }
+
         // リボン最小化
         private bool _isRibboNMinimized;
         public bool IsRibboNMinimized
@@ -2002,6 +2028,14 @@ namespace PileDesign.ViewModels
             _fileOperationService = new FileOperationService(_jsonOptions);
             _pileLayoutService = new PileLayoutService();
             _settlementAnalysisService = new SettlementAnalysisService();
+            _autoSaveService = new AutoSaveService(_fileOperationService);
+            _mruService = new MruService();
+
+            // 自動保存イベントの購読
+            _autoSaveService.AutoSaveCompleted += OnAutoSaveCompleted;
+
+            // MRUリスト変更イベントの購読
+            _mruService.MruListChanged += OnMruListChanged;
 
             CurrentInputModel = new InputModel();
             CurrentInputModel.SetMainWindowViewModel(this);

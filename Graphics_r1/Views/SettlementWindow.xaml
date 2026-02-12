@@ -520,6 +520,7 @@
                                 SelectionChanged="DataGridCircum_SelecitonChanged"
                                 PreviewMouseDown="DataGridCircum_PreviewMouseDown"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                common:DataGridNavigationBehavior.Enable="True"
                                   ColumnHeaderStyle="{StaticResource CenterHeaderStyle}" IsReadOnly="True" Foreground="Gray">
                             <common:EnhancedDataGrid.AlternatingRowBackground>
                                 <ImageBrush/>
@@ -772,6 +773,7 @@
                                 HorizontalScrollBarVisibility="Auto"
                                 Grid.Row="3"
                                 Grid.Column="0"
+                                common:DataGridNavigationBehavior.Enable="True"
                                 Grid.ColumnSpan="2"
                                 SelectionUnit="FullRow"
                                 SelectionChanged="DataGridLoadDisplacement_SelecitonChanged"

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
         d:DataContext="{d:DesignInstance Type=local:FundamentalViewModel}"
         mc:Ignorable="d"
         Title="基本設定" Height="300" Width="400">
@@ -32,10 +33,11 @@
                 
                 <TextBlock Text="プロジェクト番号" VerticalAlignment="Top" Grid.Column="0"
                        />
-                <TextBox x:Name="textBoxProjectNo" Text="{Binding ProjectNo}" 
+                <TextBox x:Name="textBoxProjectNo" Text="{Binding ProjectNo}"
                     TextWrapping="Wrap" VerticalAlignment="Top" Grid.Column="1"
                     GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                    KeyDown="TextBox_KeyDown">
+                    KeyDown="TextBox_KeyDown"
+                    common:TextBoxNavigationBehavior.Enable="True">
                 </TextBox>
             </Grid>
 
@@ -49,7 +51,8 @@
                 <TextBox x:Name="textBoxProjectName" Text="{Binding ProjectName}"
                     TextWrapping="Wrap" Grid.Column="1"
                     GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                    KeyDown="TextBox_KeyDown">
+                    KeyDown="TextBox_KeyDown"
+                    common:TextBoxNavigationBehavior.Enable="True">
                 </TextBox>
             </Grid>
 

@@ -17,6 +17,7 @@ namespace PileDesign.Views
         private void UpdateAxes3D()
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
+            if (viewModel.CurrentInputModel?.FundamentalInput == null || viewModel.CanvasThreeDView == null) return;
 
             double length = 300;
             Point3D point3D0 = viewModel.CurrentInputModel.FundamentalInput.Point3D0;
@@ -104,6 +105,9 @@ namespace PileDesign.Views
         private void UpdateTickMarks3DYofYZ()
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
+            // 追加: 安全なアクセスを保証するためのチェック
+            if (viewModel.CurrentInputModel?.FundamentalInput == null || viewModel.CanvasThreeDView == null) return;
+
             double tickLength = 35;
             double textPos = tickLength - 5;
             SolidColorBrush solidColorBrush = Brushes.Gray;
@@ -120,6 +124,7 @@ namespace PileDesign.Views
         private void UpdateTickMarks3DXofXZ()
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
+            if (viewModel.CurrentInputModel?.FundamentalInput == null || viewModel.CanvasThreeDView == null) return;
             double tickLength = 35;
             double textPos = tickLength - 5;
             SolidColorBrush solidColorBrush = Brushes.Gray;
@@ -181,6 +186,7 @@ namespace PileDesign.Views
             )
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+            if (viewModel.CurrentInputModel?.FundamentalInput == null || viewModel.CanvasThreeDView == null) return;
 
             Point3D[] locs =
             [
@@ -260,7 +266,7 @@ namespace PileDesign.Views
         }
 
         // TickMarkの位置を計算するメソッド
-        private double CalculateTickPosition(Point coord1, Point coord2, double targetValue, char axis)
+        private static double CalculateTickPosition(Point coord1, Point coord2, double targetValue, char axis)
         {
             double delta;
             if (axis == 'Y')
@@ -291,7 +297,7 @@ namespace PileDesign.Views
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
             //CurrentInputModel inputModel = CurrentInputModel.Instance;
-
+            if (viewModel.CurrentInputModel == null || viewModel.CanvasThreeDView == null) return;
             SolidColorBrush solidColorBrush = Brushes.Purple;
             double SymbolPos = 50;
             double LineEndPos = 50 + 15 * viewModel.LabelSize / 10.0;
@@ -364,7 +370,8 @@ namespace PileDesign.Views
         private void UpdateGridLinesAndDimensionsYforYZ()
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-
+            if (viewModel == null) return;
+            if (viewModel.CurrentInputModel?.FundamentalInput == null || viewModel.CanvasThreeDView == null) return;
             SolidColorBrush solidColorBrush = Brushes.Purple;
             double SymbolPos = 50;
             double LineEndPos = 50 + 15 * viewModel.LabelSize / 10.0;
@@ -573,6 +580,7 @@ namespace PileDesign.Views
         private void UpdateGridLines3DPlan()
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+            if (viewModel.CurrentInputModel == null || viewModel.CanvasThreeDView == null) return;
             SolidColorBrush solidColorBrush = Brushes.Purple;
 
             double SymbolPos = 50;
@@ -690,6 +698,7 @@ namespace PileDesign.Views
         {
             if (DataContext == null) { return; }
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+            if (viewModel.CurrentInputModel == null || viewModel.CanvasThreeDView == null) return;
             SolidColorBrush solidColorBrush = Brushes.Purple;
             double LineEndPos = 50 + 15 * viewModel.LabelSize / 10.0;
 

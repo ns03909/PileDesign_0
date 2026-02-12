@@ -12,7 +12,8 @@
         d:DataContext="{d:DesignInstance Type=local:ElementDivisionViewModel}"
         mc:Ignorable="d"
         Title="要素分割ウィンドウ" Height="650" Width="650"
-        Loaded="ElementDivisionWindow_Loaded">
+        Loaded="ElementDivisionWindow_Loaded"
+        common:EscapeKeyBehavior.Enable="True">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -241,6 +242,7 @@
                                                         BeginningEdit="DataGridZs_BeginningEdit"
                                                         SelectionChanged="DataGridZs_SelectionChanged"
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
+                                                        common:DataGridNavigationBehavior.Enable="True"
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
                                                         ScrollViewer.HorizontalScrollBarVisibility="Visible"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
@@ -392,6 +394,7 @@
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                         Grid.Row="2"
+                                                        common:DataGridNavigationBehavior.Enable="True"
                                                         SelectedCellsChanged="Horizon_SelectedCellsChanged"
                                                         CurrentCellChanged="Horizon_CurrentCellChanged">
 
@@ -693,6 +696,7 @@
                                                         BeginningEdit="DataGridZs_BeginningEdit"
                                                         PreviewMouseDown="DataGrid_PreviewMouseDown"
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                                        common:DataGridNavigationBehavior.Enable="True"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridEmbedmentZs_RowEditEnding"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}"
@@ -834,6 +838,7 @@
                                                         ScrollViewer.VerticalScrollBarVisibility="Visible"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         RowEditEnding="DataGridZs_RowEditEnding"
+                                                        common:DataGridNavigationBehavior.Enable="True"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                                     <DataGrid.AlternatingRowBackground>

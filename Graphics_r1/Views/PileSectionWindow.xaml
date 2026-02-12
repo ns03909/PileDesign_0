@@ -561,7 +561,8 @@
                                                   ItemsSource="{Binding PileSection.SelectedPileSectionSpecification}"
                                                   AutoGenerateColumns="False"
                                                   CanUserSortColumns="False"
-                                                  CellStyle="{StaticResource CustomDataGridCellStyle}">
+                                                  CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                                  common:DataGridNavigationBehavior.Enable="True">
 
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">

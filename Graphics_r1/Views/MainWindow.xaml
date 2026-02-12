@@ -19,6 +19,9 @@
         Loaded="Window_Loaded"
         Closing="Window_Closing"
         Closed="Window_Closed"
+        AllowDrop="True"
+        DragEnter="Window_DragEnter"
+        Drop="Window_Drop"
         Title="杭基礎検討プログラム" Height="800" Width="1200" WindowState="Maximized"
         x:Name="MainWin"
         >
@@ -576,6 +579,20 @@
                             </StackPanel>
                         </ribbon:RibbonApplicationMenuItem.Header>
                     </ribbon:RibbonApplicationMenuItem>
+
+                    <!-- 最近使ったファイル -->
+                    <ribbon:RibbonSeparator/>
+                    <ribbon:RibbonApplicationMenuItem Header="最近使ったファイル" ItemsSource="{Binding MruItems}">
+                        <ribbon:RibbonApplicationMenuItem.ItemContainerStyle>
+                            <Style TargetType="ribbon:RibbonApplicationMenuItem">
+                                <Setter Property="Header" Value="{Binding DisplayName}"/>
+                                <Setter Property="ToolTip" Value="{Binding FilePath}"/>
+                                <Setter Property="Command" Value="{Binding DataContext.OpenFromMruCommand, RelativeSource={RelativeSource AncestorType=ribbon:Ribbon}}"/>
+                                <Setter Property="CommandParameter" Value="{Binding FilePath}"/>
+                            </Style>
+                        </ribbon:RibbonApplicationMenuItem.ItemContainerStyle>
+                    </ribbon:RibbonApplicationMenuItem>
+                    <ribbon:RibbonSeparator/>
 
                     <ribbon:RibbonApplicationMenuItem Command="{Binding SaveInputModelFileCommand}" ImageSource="pack://application:,,,/Icons/SaveFile.png">
                         <ribbon:RibbonApplicationMenuItem.Header>
@@ -1703,6 +1720,12 @@
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     CellEditEnding="DataGridPileLayout_CellEditEnding"
                                                     BeginningEdit="DataGridPileLayout_BeginningEdit"
+                                                    common:DataGridNavigationBehavior.Enable="True"
+                                                    EnableRowVirtualization="True"
+                                                    EnableColumnVirtualization="True"
+                                                    VirtualizingPanel.IsVirtualizing="True"
+                                                    VirtualizingPanel.VirtualizationMode="Recycling"
+                                                    ScrollViewer.CanContentScroll="True"
                                                     FrozenColumnCount="2"
                                                     Grid.Row="1"
                                                     VerticalAlignment="Top"
@@ -2178,6 +2201,12 @@
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
                                                     CellEditEnding="DataGridPileAxialForce_CellEditEnding"
+                                                    common:DataGridNavigationBehavior.Enable="True"
+                                                    EnableRowVirtualization="True"
+                                                    EnableColumnVirtualization="True"
+                                                    VirtualizingPanel.IsVirtualizing="True"
+                                                    VirtualizingPanel.VirtualizationMode="Recycling"
+                                                    ScrollViewer.CanContentScroll="True"
                                                     BeginningEdit="DataGridPileAxialForce_BeginningEdit"
                                                     FrozenColumnCount="2"
                                                     Grid.Row="1"
@@ -2680,17 +2709,22 @@
                                                 <CheckBox IsChecked="False" Content="後方杭" IsHitTestVisible="False" Focusable="False" />
                                             </StackPanel>
 
-                                            <common:EnhancedDataGrid x:Name="DataGridIsFrontPile" 
+                                            <common:EnhancedDataGrid x:Name="DataGridIsFrontPile"
                                                                      ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
-        
+
                                                     SelectionChanged="DataGridIsFrontPile_SelectionChanged"
                                                     AutoGenerateColumns="False"
                                                     CanUserAddRows="False"
                                                     CanUserSortColumns="False"
-                                                    
+
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     CellEditEnding="DataGridIsFrontPile_CellEditEnding"
                                                     BeginningEdit="DataGridIsFrontPile_BeginningEdit"
+                                                    EnableRowVirtualization="True"
+                                                    EnableColumnVirtualization="True"
+                                                    VirtualizingPanel.IsVirtualizing="True"
+                                                    VirtualizingPanel.VirtualizationMode="Recycling"
+                                                    ScrollViewer.CanContentScroll="True"
                                                     FrozenColumnCount="2"
                                                     Grid.Row="2"
                                                     VerticalAlignment="Top"
@@ -2871,12 +2905,17 @@
                                         HorizontalAlignment="Left"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="False"
-                                        CanUserSortColumns="False"  
+                                        CanUserSortColumns="False"
                                         VerticalScrollBarVisibility="Auto"
-                                        HorizontalScrollBarVisibility="Auto" 
+                                        HorizontalScrollBarVisibility="Auto"
                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                         CellEditEnding="DataGridEmbedment_CellEditEnding"
                                         BeginningEdit="DataGridEmbedment_BeginningEdit"
+                                        EnableRowVirtualization="True"
+                                        EnableColumnVirtualization="True"
+                                        VirtualizingPanel.IsVirtualizing="True"
+                                        VirtualizingPanel.VirtualizationMode="Recycling"
+                                        ScrollViewer.CanContentScroll="True"
                                         FrozenColumnCount="2"
                                         Grid.Row="1"
                                         VerticalAlignment="Top"
@@ -3097,8 +3136,13 @@
                                             AutoGenerateColumns="False"
                                             CanUserAddRows="False"
                                             LoadingRow="DataGrid_LoadingRow_Numbering"
-                                               
-                                            CellStyle="{StaticResource CustomDataGridCellStyle}">
+                                            EnableRowVirtualization="True"
+                                            EnableColumnVirtualization="True"
+                                            VirtualizingPanel.IsVirtualizing="True"
+                                            VirtualizingPanel.VirtualizationMode="Recycling"
+                                            ScrollViewer.CanContentScroll="True"
+                                            CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                            common:DataGridNavigationBehavior.Enable="True">
 
                                         <DataGrid.AlternatingRowBackground>
                                             <ImageBrush/>
@@ -3198,6 +3242,11 @@
                                             PreviewKeyDown="DataGridGridX_PreviewKeyDown"
                                               CellEditEnding="DataGridGrid_CellEditEnding"
                                               BeginningEdit="DataGridGrid_BeginningEdit"
+                                              EnableRowVirtualization="True"
+                                              EnableColumnVirtualization="True"
+                                              VirtualizingPanel.IsVirtualizing="True"
+                                              VirtualizingPanel.VirtualizationMode="Recycling"
+                                              ScrollViewer.CanContentScroll="True"
                                               CellStyle="{StaticResource CustomDataGridCellStyle}">
                                         <DataGrid.AlternatingRowBackground>
                                             <ImageBrush/>
@@ -3302,6 +3351,11 @@
                                         PreviewKeyDown="DataGridGridY_PreviewKeyDown"
                                         CellEditEnding="DataGridGrid_CellEditEnding"
                                         BeginningEdit="DataGridGrid_BeginningEdit"
+                                        EnableRowVirtualization="True"
+                                        EnableColumnVirtualization="True"
+                                        VirtualizingPanel.IsVirtualizing="True"
+                                        VirtualizingPanel.VirtualizationMode="Recycling"
+                                        ScrollViewer.CanContentScroll="True"
                                         CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                         <DataGrid.AlternatingRowBackground>
@@ -3550,6 +3604,11 @@
                                                         CanUserSortColumns="False"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         CellEditEnding="DataGridRectLoads_CellEditEnding"
+                                                        EnableRowVirtualization="True"
+                                                        EnableColumnVirtualization="True"
+                                                        VirtualizingPanel.IsVirtualizing="True"
+                                                        VirtualizingPanel.VirtualizationMode="Recycling"
+                                                        ScrollViewer.CanContentScroll="True"
                                                         CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                                         <DataGrid.AlternatingRowBackground>
@@ -3723,6 +3782,11 @@
                                                             LoadingRow="DataGrid_LoadingRow_Numbering"
                                                             CellEditEnding="DataGridSoilPile_CellEditEnding"
                                                               BeginningEdit="DataGridGrid_BeginningEdit"
+                                                              EnableRowVirtualization="True"
+                                                              EnableColumnVirtualization="True"
+                                                              VirtualizingPanel.IsVirtualizing="True"
+                                                              VirtualizingPanel.VirtualizationMode="Recycling"
+                                                              ScrollViewer.CanContentScroll="True"
                                                             CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                                         <DataGrid.AlternatingRowBackground>
@@ -3902,12 +3966,17 @@
                                                             HorizontalAlignment="Left"
                                                             AutoGenerateColumns="False"
                                                             CanUserAddRows="False"
-                                                            CanUserSortColumns="False"  
+                                                            CanUserSortColumns="False"
                                                             VerticalScrollBarVisibility="Auto"
-                                                            HorizontalScrollBarVisibility="Auto" 
+                                                            HorizontalScrollBarVisibility="Auto"
                                                             LoadingRow="DataGrid_LoadingRow_Numbering"
                                                             CellEditEnding="DataGridSettlementSoilLayers_CellEditEnding"
                                                             BeginningEdit="DataGridGrid_BeginningEdit"
+                                                            EnableRowVirtualization="True"
+                                                            EnableColumnVirtualization="True"
+                                                            VirtualizingPanel.IsVirtualizing="True"
+                                                            VirtualizingPanel.VirtualizationMode="Recycling"
+                                                            ScrollViewer.CanContentScroll="True"
                                                             CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                                         <DataGrid.AlternatingRowBackground>
@@ -4073,6 +4142,11 @@
                                                         CellEditEnding="DataGridPileAxialForce_CellEditEnding"
                                                         MouseRightButtonDown="DataGridPileLayout_MouseRightButtonDown"
                                                         AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
+                                                        EnableRowVirtualization="True"
+                                                        EnableColumnVirtualization="True"
+                                                        VirtualizingPanel.IsVirtualizing="True"
+                                                        VirtualizingPanel.VirtualizationMode="Recycling"
+                                                        ScrollViewer.CanContentScroll="True"
                                                         FrozenColumnCount="2"
                                                         Grid.Row="1"
                                                         VerticalAlignment="Top"
@@ -4713,8 +4787,12 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" Margin="4,0,0,0"
-               Foreground="{Binding StatusMessageColor}" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusMessageColor}" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding PileCountText}" Foreground="DarkBlue" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding AnalysisStatusText}" Foreground="DarkGreen" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding UndoRedoStatusText}" Foreground="Gray" Margin="0,0,0,0"/>
+            </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
 
                 <!-- 入力ビジュアライザー（マウス・キーボード状態表示） -->

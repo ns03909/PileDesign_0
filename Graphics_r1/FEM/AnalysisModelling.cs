@@ -32,9 +32,9 @@ namespace PileDesign.FEM
         private static readonly Boundary PileTipBoundary = new(false, false, true, false, false, false);
 
         // コンストラクタ
-        public AnalysisModelling(InputModel inputModel)
+        public  AnalysisModelling(InputModel inputModel)
         {
-            InputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
+            _inputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
             Initialize();
         }
 
@@ -102,13 +102,13 @@ namespace PileDesign.FEM
             if (InputModel.PileLayoutItems == null || !InputModel.PileLayoutItems.Any())
                 throw new InvalidOperationException("杭配置が存在しません。");
 
-            double xmax = InputModel.PileLayoutItems.Max(p => p.X);
-            double xmin = InputModel.PileLayoutItems.Min(p => p.X);
-            double ymax = InputModel.PileLayoutItems.Max(p => p.Y);
-            double ymin = InputModel.PileLayoutItems.Min(p => p.Y);
+            double xMax = InputModel.PileLayoutItems.Max(p => p.X);
+            double xMin = InputModel.PileLayoutItems.Min(p => p.X);
+            double yMax = InputModel.PileLayoutItems.Max(p => p.Y);
+            double yMin = InputModel.PileLayoutItems.Min(p => p.Y);
 
             // 杭配置がX、Y方向いずれかにスタンスがない場合、回転拘束をする
-            if (xmax - xmin < 1e-6 || ymax - ymin < 1e-6)
+            if (xMax - xMin < 1e-6 || yMax - yMin < 1e-6)
                 return new Boundary(false, false, false, true, true, true);
 
             // 杭配置がX、Y方向ともにスタンスがある場合、拘束しない
@@ -161,7 +161,8 @@ namespace PileDesign.FEM
                     (prevEmbedmentNode, prevSoilNode, prevSpring) = CreateDGBNodesAndSpring(x, y, item.ZTop);
                     AddDGBNodesAndSpring(prevEmbedmentNode, prevSoilNode, prevSpring);
                 }
-                item.SetTopNodesAndSpring(prevEmbedmentNode, prevSoilNode, prevSpring);
+                // i > 0 の場合は前回の反復で prevSpring が設定されているため null ではない
+                item.SetTopNodesAndSpring(prevEmbedmentNode!, prevSoilNode!, prevSpring!);
 
                 // 下端
                 (Node embedmentNode, Node soilNode, HorizontalSoilSpring spring) = CreateDGBNodesAndSpring(x, y, item.ZBtm);
@@ -243,13 +244,13 @@ namespace PileDesign.FEM
         // 単一杭の処理結果を格納する構造体
         private class PileProcessingResult
         {
-            public PileLayoutDataItem Pile { get; set; }
-            public Node CapNode { get; set; }
+            public PileLayoutDataItem? Pile { get; set; }
+            public Node? CapNode { get; set; }
             public List<Node> PileNodes { get; } = [];
             public List<Node> SoilNodes { get; } = [];
             public List<Beam> Beams { get; } = [];
             public List<HorizontalSoilSpring> HorizontalSoilSprings { get; } = [];
-            public RotationalSpring RotationalSpring { get; set; }
+            public RotationalSpring? RotationalSpring { get; set; }
         }
 
         // 単一杭を処理（スレッドセーフ）
@@ -280,7 +281,7 @@ namespace PileDesign.FEM
             capNode.SetBoundary(new Boundary(true, true, true, true, true, true));
             result.CapNode = capNode;
 
-            Node prevPileNode = null;
+            Node? prevPileNode = null;
             int nodeCount = soilPile.ZDataItems.Count;
 
             for (int i = 0; i < nodeCount; i++)
@@ -310,7 +311,7 @@ namespace PileDesign.FEM
                 else if (i != nodeCount - 1)
                 {
                     // 杭中間
-                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode, pileNode);
+                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode!, pileNode);
                     beam.PileBodyNo = soilPile.PileBodyNo;
                     beam.SegmentIndex = i - 1;
                     if (i == 1) beam.SetPileTopFlag(true);
@@ -320,7 +321,7 @@ namespace PileDesign.FEM
                 else
                 {
                     // 先端
-                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode, pileNode);
+                    var beam = CreatePileElement(soilPile, i - 1, prevPileNode!, pileNode);
                     beam.PileBodyNo = soilPile.PileBodyNo;
                     beam.SegmentIndex = i - 1;
                     result.Beams.Add(beam);
@@ -348,6 +349,7 @@ namespace PileDesign.FEM
             foreach (var result in results)
             {
                 var pile = result.Pile;
+                if (pile == null) return;
 
                 // クリア
                 pile.PileNodes.Clear();
@@ -356,8 +358,11 @@ namespace PileDesign.FEM
                 pile.HorizontalSoilSprings.Clear();
 
                 // Cap Node
-                Nodes.Add(result.CapNode);
-                RigidBodies[0].AddSlaveNode(result.CapNode);
+                if (result.CapNode != null)
+                {
+                    Nodes.Add(result.CapNode);
+                    RigidBodies[0].AddSlaveNode(result.CapNode);
+                }
 
                 // Pile Nodes
                 foreach (var pileNode in result.PileNodes)

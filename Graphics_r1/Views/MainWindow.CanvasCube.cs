@@ -132,7 +132,7 @@ namespace PileDesign.Views
             static PathFigure BuildClosedFigure(IReadOnlyList<Point> pts)
             {
                 var fig = new PathFigure { StartPoint = pts[0], IsClosed = true, IsFilled = true };
-                fig.Segments.Add(new PolyLineSegment(pts.Skip(1).ToList(), true));
+                fig.Segments.Add(new PolyLineSegment([.. pts.Skip(1)], true));
                 return fig;
             }
 
@@ -236,9 +236,9 @@ namespace PileDesign.Views
                 IsClosed = true,
                 IsFilled = true
             };
-            triFig.Segments.Add(new PolyLineSegment(new[] { pBase2, pB }, true));
+            triFig.Segments.Add(new PolyLineSegment([.. new[] { pBase2, pB }], true));
 
-            var triGeom = new PathGeometry(new[] { triFig });
+            var triGeom = new PathGeometry([triFig]);
 
             var trianglePath = new Path
             {

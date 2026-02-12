@@ -10,7 +10,8 @@ xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
 xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
 xmlns:common="clr-namespace:PileDesign.Common"
 mc:Ignorable="d"
-Title="DocxOutputWindow" Height="600" Width="400">
+Title="DocxOutputWindow" Height="600" Width="400"
+common:EscapeKeyBehavior.Enable="True">
 
     <Window.DataContext>
         <local:MainWindowViewModel/>

@@ -4,10 +4,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
-        xmlns:sys="clr-namespace:System;assembly=mscorlib" 
+        xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         d:DataContext="{d:DesignInstance Type=local:EditPileLayoutViewModel}"
         mc:Ignorable="d"
-        Title="選択杭の一括変換" Height="450" Width="400">
+        Title="選択杭の一括変換" Height="450" Width="400"
+        common:EscapeKeyBehavior.Enable="True">
     <!--<Window.DataContext>
         <local:EditPileLayoutViewModel/>
     </Window.DataContext>-->

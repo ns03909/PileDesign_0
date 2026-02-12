@@ -11,6 +11,7 @@ using PileDesign.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -55,6 +56,8 @@ namespace PileDesign.ViewModels
         private readonly FileOperationService _fileOperationService;
         private readonly PileLayoutService _pileLayoutService;
         private readonly SettlementAnalysisService _settlementAnalysisService;
+        private readonly AutoSaveService _autoSaveService;
+        private readonly MruService _mruService;
 
         private System.Windows.Threading.DispatcherTimer? _generateSoilPilesDebounceTimer;
         private bool _soilPilesGenerationPending = false;
@@ -1475,6 +1478,12 @@ namespace PileDesign.ViewModels
                 {
                     _fileOperationService.SaveProjectData(CurrentFilePath, CurrentInputModel, CurrentModel);
                     MessageBox.Show("保存が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // MRUに追加
+                    _mruService.AddFile(CurrentFilePath);
+
+                    // 自動保存を開始
+                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel);
                 }
                 catch (Exception ex)
                 {
@@ -1515,6 +1524,9 @@ namespace PileDesign.ViewModels
                 return;
             else if (result == MessageBoxResult.Yes)
                 SaveInputModelFile();
+
+            // 自動保存を停止
+            _autoSaveService.Stop();
 
             CurrentInputModel.Reset();
             this.CurrentModel = null; // AnaModelもリセット
@@ -1657,6 +1669,12 @@ namespace PileDesign.ViewModels
 
                     UpdateWindowImmediate();
                     MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // MRUに追加
+                    _mruService.AddFile(CurrentFilePath);
+
+                    // 自動保存を開始
+                    _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel);
                 }
                 catch (Exception ex)
                 {
@@ -3043,6 +3061,178 @@ namespace PileDesign.ViewModels
                 CanvasThreeDView.Tht = savedTht;
                 CanvasThreeDView.Phi = savedPhi;
                 UpdateCanvas3DAction?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 自動保存完了時のイベントハンドラ
+        /// </summary>
+        private void OnAutoSaveCompleted(object? sender, AutoSaveEventArgs e)
+        {
+            if (e.Success)
+            {
+                StatusMessage = $"自動保存完了 ({e.Timestamp:HH:mm:ss})";
+            }
+            else
+            {
+                StatusMessage = $"自動保存失敗: {e.ErrorMessage}";
+            }
+        }
+
+        /// <summary>
+        /// MRUリスト変更時のイベントハンドラ
+        /// </summary>
+        private void OnMruListChanged(object? sender, EventArgs e)
+        {
+            // ObservableCollectionを更新
+            MruItems.Clear();
+            foreach (var item in _mruService.Items)
+            {
+                MruItems.Add(item);
+            }
+        }
+
+        /// <summary>
+        /// MRUからファイルを開く
+        /// </summary>
+        /// <param name="filePath">ファイルパス</param>
+        [RelayCommand]
+        public void OpenFromMru(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
+                MessageBox.Show($"ファイルが見つかりません。\n{filePath}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                _mruService.RemoveFile(filePath);
+                return;
+            }
+
+            try
+            {
+                // Undoポイントを追加
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+                var projectData = _fileOperationService.LoadProjectData(filePath);
+
+                if (projectData != null)
+                {
+                    CurrentInputModel = projectData.InputModel;
+                    CurrentModel = projectData.AnaModel;
+
+                    _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
+                    OnPropertyChanged(nameof(CurrentInputModel));
+                }
+                else
+                {
+                    var ok = TryLoadInputModelFileUsingInputModelLoader(filePath);
+                    if (!ok)
+                        throw new InvalidOperationException("ファイル形式が不正です。");
+                    return;
+                }
+
+                CurrentInputModel.AttachViewModel(this);
+                CurrentFilePath = filePath;
+
+                // MRUに追加
+                _mruService.AddFile(filePath);
+
+                IsElementSplit = false;
+                IsHorizontalAnalysisDone = false;
+                IsVerticalAnalysisDone = false;
+                IsGroupPileSettlementAnalysisDone = false;
+
+                PileSection.ClearMphiCache();
+
+                CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
+                CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
+                CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
+
+                UpdateWindowImmediate();
+                MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // 自動保存を開始
+                _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"読込に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 起動時に自動保存ファイルの復元を確認
+        /// </summary>
+        public void CheckAutoSaveRestore()
+        {
+            var latestAutoSave = _autoSaveService.GetLatestAutoSaveFile();
+            if (string.IsNullOrEmpty(latestAutoSave))
+                return;
+
+            var fileInfo = new System.IO.FileInfo(latestAutoSave);
+            var timeSinceAutoSave = DateTime.Now - fileInfo.CreationTime;
+
+            // 24時間以内の自動保存ファイルのみ復元提案
+            if (timeSinceAutoSave.TotalHours > 24)
+                return;
+
+            var result = MessageBox.Show(
+                $"自動保存されたファイルが見つかりました。\n\n" +
+                $"保存日時: {fileInfo.CreationTime:yyyy/MM/dd HH:mm:ss}\n" +
+                $"ファイル: {System.IO.Path.GetFileName(latestAutoSave)}\n\n" +
+                $"このファイルを復元しますか？",
+                "自動保存ファイルの復元",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    var projectData = _fileOperationService.LoadProjectData(latestAutoSave);
+                    if (projectData != null)
+                    {
+                        CurrentInputModel = projectData.InputModel;
+                        CurrentModel = projectData.AnaModel;
+
+                        _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
+                        OnPropertyChanged(nameof(CurrentInputModel));
+
+                        CurrentInputModel.AttachViewModel(this);
+
+                        // ファイルパスは元のファイル名から推測（自動保存ファイル名から取得）
+                        var originalFileName = System.IO.Path.GetFileNameWithoutExtension(latestAutoSave);
+                        var autoSaveIndex = originalFileName.IndexOf("_autosave_");
+                        if (autoSaveIndex > 0)
+                        {
+                            originalFileName = originalFileName[..autoSaveIndex];
+                            // 元のファイルパスを推測（未保存ならnull）
+                            CurrentFilePath = originalFileName != "Untitled" ? originalFileName + ".json" : null;
+                        }
+
+                        IsElementSplit = false;
+                        IsHorizontalAnalysisDone = false;
+                        IsVerticalAnalysisDone = false;
+                        IsGroupPileSettlementAnalysisDone = false;
+
+                        PileSection.ClearMphiCache();
+
+                        CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
+                        CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
+                        CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
+
+                        UpdateWindowImmediate();
+                        MessageBox.Show("自動保存ファイルの復元が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                        // 復元後は自動保存を開始
+                        if (!string.IsNullOrEmpty(CurrentFilePath))
+                        {
+                            _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"自動保存ファイルの復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }

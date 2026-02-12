@@ -18,7 +18,7 @@ namespace PileDesign.Views
         public void UpdateLoading3D()
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
-
+            if (viewModel.CurrentInputModel == null) return;
             ObservableCollection<Point3D> points = [];
             ObservableCollection<Vector3D> valueVectors = [];
             ObservableCollection<double> values = [];
@@ -377,6 +377,5 @@ namespace PileDesign.Views
 
             return orthogonalVector;
         }
-
     }
 }

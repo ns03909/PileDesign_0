@@ -578,7 +578,11 @@
                                      KeyDown="TextBox_Common_KeyDown"
                                      PreviewKeyDown="TextBox_PreviewKeyDown"
                                      PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
-                                     LostFocus="TextBox_Common_LostFocus"/>
+                                     LostFocus="TextBox_Common_LostFocus"
+                                     common:TextBoxNavigationBehavior.Enable="True"
+                                     common:NumericUpDownBehavior.Enable="True"
+                                     common:NumericUpDownBehavior.Increment="0.01"
+                                     common:NumericUpDownBehavior.LargeIncrement="0.1"/>
 
                                 <TextBlock Text="地下水位Z" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
                                     Width="100"/>
@@ -587,7 +591,11 @@
                                          Text="{Binding GroundInput.GroundWaterTableAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
-                                         LostFocus="TextBox_Common_LostFocus">
+                                         LostFocus="TextBox_Common_LostFocus"
+                                         common:TextBoxNavigationBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Increment="0.01"
+                                         common:NumericUpDownBehavior.LargeIncrement="0.1">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -605,9 +613,13 @@
                                 <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50"  HorizontalContentAlignment="Right" IsEnabled="False"/>
                                 <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
                                          Text="{Binding GroundInput.StressAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}"
-                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
+                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
-                                         LostFocus="TextBox_Common_LostFocus">
+                                         LostFocus="TextBox_Common_LostFocus"
+                                         common:TextBoxNavigationBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Increment="0.01"
+                                         common:NumericUpDownBehavior.LargeIncrement="0.1">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -980,7 +992,11 @@
                                          Text="{Binding GroundInput.GroundWaterTableAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
-                                         LostFocus="TextBox_Common_LostFocus">
+                                         LostFocus="TextBox_Common_LostFocus"
+                                         common:TextBoxNavigationBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Increment="0.01"
+                                         common:NumericUpDownBehavior.LargeIncrement="0.1">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -998,9 +1014,13 @@
                                 <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50"  HorizontalContentAlignment="Right" IsEnabled="False"/>
                                 <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
                                          Text="{Binding GroundInput.StressAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}"
-                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
+                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
-                                         LostFocus="TextBox_Common_LostFocus">
+                                         LostFocus="TextBox_Common_LostFocus"
+                                         common:TextBoxNavigationBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Enable="True"
+                                         common:NumericUpDownBehavior.Increment="0.01"
+                                         common:NumericUpDownBehavior.LargeIncrement="0.1">
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -1412,15 +1432,16 @@
                                                 CanUserAddRows="False"
                                                 CanUserSortColumns="False"
                                                 FrozenColumnCount="6"
-                                                
+
                                                 EnableRowVirtualization="True"
                                                 EnableColumnVirtualization="True"
                                                 VirtualizingPanel.IsVirtualizing="True"
                                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                                 ScrollViewer.CanContentScroll="True"
-                                                  
+
                                                 ItemsSource="{Binding GroundInput.GroundLayers}"
                                                 SelectedItem="{Binding SelectedGroundLayerOnDataGrid, Mode=TwoWay}"
+                                                common:DataGridNavigationBehavior.Enable="True"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
                                                 CellEditEnding="DataGridGroundLayer_CellEditEnding"
                                                 BeginningEdit="DataGrid_BeginningEdit"
@@ -1766,22 +1787,23 @@
                                         </ToolBar>
                                     </ToolBarTray>
 
-                                    <common:EnhancedDataGrid x:Name="DataGridGroundMass" 
-                                              AutoGenerateColumns="False"  
+                                    <common:EnhancedDataGrid x:Name="DataGridGroundMass"
+                                              AutoGenerateColumns="False"
                                               HorizontalAlignment="Left"
-                                            CanUserAddRows="False" 
+                                            CanUserAddRows="False"
                                               CanUserSortColumns="False"
                                                FrozenColumnCount="6"
-                                              
-                                                                                              
+
+
                                                 EnableRowVirtualization="True"
                                                 EnableColumnVirtualization="True"
                                                 VirtualizingPanel.IsVirtualizing="True"
                                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                                 ScrollViewer.CanContentScroll="True"
-                                              
+
                                             ItemsSource="{Binding GroundInput.GroundMassesData}"
                                             SelectedItem="{Binding SelectedGroundMassOnDataGrid, Mode=TwoWay}"
+                                            common:DataGridNavigationBehavior.Enable="True"
                                             LoadingRow="DataGrid_LoadingRow_Numbering"
                                               CellEditEnding="DataGridGroundMass_CellEditEnding"
                                             BeginningEdit="DataGrid_BeginningEdit"

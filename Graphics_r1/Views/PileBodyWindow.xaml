@@ -240,7 +240,8 @@
                               LoadingRow="DataGridPileBody_LoadingRow" HorizontalAlignment="Left"
                               CellEditEnding="DataGridPileBody_CellEditEnding"
                               CellStyle="{StaticResource CustomDataGridCellStyle}"
-                              BeginningEdit="DataGrid_BeginningEdit">
+                              BeginningEdit="DataGrid_BeginningEdit"
+                              common:DataGridNavigationBehavior.Enable="True">
 
                         <common:EnhancedDataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">

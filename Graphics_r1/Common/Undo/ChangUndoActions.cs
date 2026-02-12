@@ -55,17 +55,11 @@ namespace PileDesign.Common.Undo
     }
 
     // コレクション追加アクション（IList を扱う）
-    public sealed class CollectionAddAction<T> : IUndoAction
+    public sealed class CollectionAddAction<T>(IList<T> collection, T item) : IUndoAction
     {
-        private readonly IList<T> _collection;
-        private readonly T _item;
+        private readonly IList<T> _collection = collection ?? throw new ArgumentNullException(nameof(collection));
+        private readonly T _item = item!;
         private int _index = -1;
-
-        public CollectionAddAction(IList<T> collection, T item)
-        {
-            _collection = collection ?? throw new ArgumentNullException(nameof(collection));
-            _item = item!;
-        }
 
         public string? Description => $"Add {typeof(T).Name}";
 
@@ -85,17 +79,11 @@ namespace PileDesign.Common.Undo
     }
 
     // コレクション削除アクション（削除時に元の位置を保存して復元）
-    public sealed class CollectionRemoveAction<T> : IUndoAction
+    public sealed class CollectionRemoveAction<T>(IList<T> collection, T item) : IUndoAction
     {
-        private readonly IList<T> _collection;
-        private readonly T _item;
+        private readonly IList<T> _collection = collection ?? throw new ArgumentNullException(nameof(collection));
+        private readonly T _item = item!;
         private int _index = -1;
-
-        public CollectionRemoveAction(IList<T> collection, T item)
-        {
-            _collection = collection ?? throw new ArgumentNullException(nameof(collection));
-            _item = item!;
-        }
 
         public string? Description => $"Remove {typeof(T).Name}";
 

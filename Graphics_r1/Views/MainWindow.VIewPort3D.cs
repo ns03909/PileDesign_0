@@ -19,7 +19,8 @@ namespace PileDesign.Views
     public partial class MainWindow : Window
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
-        public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+        
+        public InputModel? InputModel => _mainWindowViewModel.CurrentInputModel;
 
 
         // Perspective Viewの更新メソッド
@@ -126,13 +127,9 @@ namespace PileDesign.Views
         // 杭更新メソッド
         private void UpdatePile3D()
         {
-            var viewModel = DataContext as MainWindowViewModel;
-            if (InputModel == null || InputModel.LoadCasesInput.LoadCaseLevel1Common == null)
-            {
-                return;
-            }
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (InputModel == null || InputModel.LoadCasesInput.LoadCaseLevel1Common == null) return;
 
-            //var inputModel = viewModel.InputModel;
             if (viewModel.IsActionPointVisible)
             {
                 double x = InputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointX;
@@ -186,10 +183,10 @@ namespace PileDesign.Views
         //// 拡底形状更新メソッド
         //private void AddConeShapePileToe(Brush brush, Point3D origin, double baseDia, double topDia, double height = 0.3)
         //{
-        //    Point3D coneBottoom = new(origin.X, origin.Y, origin.Z + height);
-        //    AddCylinder(brush, origin, coneBottoom, baseDia);
+        //    Point3D coneBottom = new(origin.X, origin.Y, origin.Z + height);
+        //    AddCylinder(brush, origin, coneBottom, baseDia);
         //    double coneHeight = (baseDia - topDia) * 0.5 / Math.Tan(12 * Math.PI / 180);
-        //    AddCone(brush, coneBottoom, new Vector3D(0, 0, 1), baseDia * 0.5, topDia * 0.5, coneHeight);
+        //    AddCone(brush, coneBottom, new Vector3D(0, 0, 1), baseDia * 0.5, topDia * 0.5, coneHeight);
         //}
 
         // 拡底形状更新メソッド (下向きに修正 & 直径統一)
@@ -239,6 +236,8 @@ namespace PileDesign.Views
         // 球更新メソッド
         private void AddSphere(Brush brush, Point3D position, double radius)
         {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(7)) return;
+
             var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
             meshBuilder.AddSphere(
                 ToVector3(position),
@@ -257,6 +256,8 @@ namespace PileDesign.Views
         // 立方体更新メソッド
         private void AddCube(Brush brush, Point3D center, double x, double y, double z)
         {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(7)) return;
+
             var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
             meshBuilder.AddBox(ToVector3(center), (float)x, (float)y, (float)z);
 
@@ -288,6 +289,8 @@ namespace PileDesign.Views
         //}
         private void AddCylinder(Brush brush, Point3D p1, Point3D p2, double diameter, int thetaDiv = 25, bool cap1 = true, bool cap2 = true)
         {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(7)) return;
+
             var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
             double radius = diameter * 0.5;
             meshBuilder.AddCylinder(
@@ -334,6 +337,8 @@ namespace PileDesign.Views
             bool topCap = true,
             int thetaDiv = 25)
         {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(7)) return;
+
             var dir = axis;
             if (dir.Length == 0) dir = new Vector3D(0, 0, -1);
             dir.Normalize();
@@ -376,7 +381,8 @@ namespace PileDesign.Views
             Microsoft.Win32.SaveFileDialog saveFileDialog = new()
             {
                 Filter = "PNGファイル (*.png)|*.png|すべてのファイル (*.*)|*.*",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                FileName = filename
             };
             if (saveFileDialog.ShowDialog() == true)
             {
@@ -418,7 +424,7 @@ namespace PileDesign.Views
             {
                 if (HelixViewComboBox.SelectedItem is ComboBoxItem selectedItem)
                 {
-                    string selectedView = selectedItem.Content.ToString();
+                    string? selectedView = selectedItem.Content.ToString();
                     if (selectedView == "透視図法")
                     {
                         SetPerspectiveCamera();
@@ -450,6 +456,7 @@ namespace PileDesign.Views
         // 平行ビューの設定メソッド
         private void SetOrthographicCamera()
         {
+            if (HelixViewport.Camera == null) return;
             var orthographicCamera = new OrthographicCamera
             {
                 Position = HelixViewport.Camera.Position,
@@ -477,8 +484,8 @@ namespace PileDesign.Views
         /////
         ///
 
-        private readonly HashSet<GeometryModel3D> _selectedClassic = new();
-        private readonly Dictionary<GeometryModel3D, (Media3DMaterial Front, Media3DMaterial? Back)> _origMatClassic = new();
+        private readonly HashSet<GeometryModel3D> _selectedClassic = [];
+        private readonly Dictionary<GeometryModel3D, (Media3DMaterial Front, Media3DMaterial? Back)> _origMatClassic = [];
         private DiffuseMaterial? _highlightClassic;
 
         private void EnsureHighlightClassic()
@@ -523,9 +530,8 @@ namespace PileDesign.Views
 
         private void ToggleSelectClassic(GeometryModel3D g)
         {
-            if (_selectedClassic.Contains(g))
+            if (_selectedClassic.Remove(g))
             {
-                _selectedClassic.Remove(g);
                 RemoveHighlightClassic(g);
             }
             else

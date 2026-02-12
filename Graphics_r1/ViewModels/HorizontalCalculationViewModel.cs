@@ -687,20 +687,37 @@ namespace PileDesign.ViewModels
 
             IsAnalysisRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
-            
+
             // ボタン押下直後にログを表示
             await AddLogAsync("計算モデル作成開始");
-            
+
+            // 進捗ウィンドウを作成
+            Views.ProgressWindow progressWindow = null;
+            var progress = new Progress<Models.AnalysisProgress>(p =>
+            {
+                progressWindow?.UpdateProgress(p);
+            });
+
             try
             {
+                // 進捗ウィンドウを表示（非モーダル）
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    progressWindow = new Views.ProgressWindow(_cancellationTokenSource)
+                    {
+                        Owner = Application.Current.MainWindow
+                    };
+                    progressWindow.Show();
+                });
+
                 // モデル作成と解析実行を非同期で行う
                 await Task.Run(async () => {
                     // UIスレッドでのモデル作成が必要なため、一度Dispatcher経由で実行
                     await Application.Current.Dispatcher.InvokeAsync(() => OnAnalysisModeling());
-                    
-                    await RunAsync(_cancellationTokenSource.Token);
+
+                    await RunAsync(_cancellationTokenSource.Token, progress);
                 });
-                
+
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
             }
             catch (OperationCanceledException)
@@ -712,10 +729,14 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                // ログ出力
+                // ログ出力（詳細なエラー情報を記録）
+                await AddLogAsync($"解析中にエラーが発生しました: {ex.Message}");
+                await AddLogAsync($"スタックトレース: {ex.StackTrace}");
+
                 // ユーザー通知
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+
                 // 必要なら状態リセット
                 IsAnalysisExecuted = false;
                 RequestClearProgressAnimation?.Invoke();
@@ -723,6 +744,16 @@ namespace PileDesign.ViewModels
             finally
             {
                 IsAnalysisRunning = false;
+
+                // 進捗ウィンドウを閉じる（アプリケーションシャットダウン中の場合を考慮）
+                if (Application.Current != null)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        progressWindow?.Close();
+                    });
+                }
+
                 // CancellationTokenSourceをDisposeしてリソース解放
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
@@ -1200,11 +1231,14 @@ namespace PileDesign.ViewModels
         private double _lastSpringKMin = double.NaN;
         private double _lastSpringKMax = double.NaN;
 
-        public async Task RunAsync(CancellationToken token)
+        public async Task RunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress = null)
         {
             // 既に「計算モデル作成開始」が出ているので、ここでは「計算開始」を追記する
             await AddLogAsync("解析計算処理開始");
             await Task.Yield();
+
+            // 進捗報告用の開始時刻を記録
+            var startTime = DateTime.Now;
 
             // 計算対象モデルを決定（編集用があればそれ、なければ本体）
             var targetModel = AnaModels.Count > 1 ? AnaModels[1] : AnaModels[0];
@@ -1216,6 +1250,16 @@ namespace PileDesign.ViewModels
 
             targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
             int calcNo = 0;
+
+            // 初期進捗を報告
+            progress?.Report(new Models.AnalysisProgress
+            {
+                Percentage = 0,
+                CurrentStep = "解析計算を開始しています...",
+                CurrentStepNumber = 0,
+                TotalSteps = TotalCalculationCount,
+                StartTime = startTime
+            });
 
             const double alpha = 1e-6;
             foreach (var loadCaseItem in InputModel.LoadCasesInput.AllSeismicLoadCases)
@@ -1281,6 +1325,18 @@ namespace PileDesign.ViewModels
 
                             calcNo += 1;
                             CurrentProgress = calcNo; // 進捗を更新
+
+                            // 進捗を報告
+                            progress?.Report(new Models.AnalysisProgress
+                            {
+                                Percentage = TotalCalculationCount > 0 ? (calcNo * 100.0 / TotalCalculationCount) : 0,
+                                CurrentStep = $"レベル{level}-{iLC + 1}, {(isLiquefaction ? "液状化考慮" : "液状化非考慮")}, " +
+                                             $"組合せ[{iLCOM + 1}], ステップ{step + 1}/{nStep}",
+                                CurrentStepNumber = calcNo,
+                                TotalSteps = TotalCalculationCount,
+                                StartTime = startTime
+                            });
+
                             await AddLogAsync($"[{calcNo}/{TotalCalculationCount}]" + "荷重ケース：" + level + "-" + $"{iLC + 1}" + ", " + "液状化" + (isLiquefaction ? "考慮, " : "非考慮, ") +
                                 $"[{iLCOM + 1}]" +
                                 "αL:" + $"{loadCombination.Alpha1:N2}" +
@@ -1671,6 +1727,16 @@ namespace PileDesign.ViewModels
 
             token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
+
+            // 最終進捗を報告（100%完了）
+            progress?.Report(new Models.AnalysisProgress
+            {
+                Percentage = 100,
+                CurrentStep = "解析計算が完了しました",
+                CurrentStepNumber = TotalCalculationCount,
+                TotalSteps = TotalCalculationCount,
+                StartTime = startTime
+            });
 
             // Pass logs to MainWindowViewModel & Ribbon Tab selection
             try

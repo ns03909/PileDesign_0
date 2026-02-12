@@ -10,7 +10,8 @@
         d:DataContext="{d:DesignInstance Type=local:VerticalCalculationViewModel}"
         mc:Ignorable="d"
         Title="VerticalCalculationWindow" Height="450" Width="800"
-        x:Name="VerticalCalcWin">
+        x:Name="VerticalCalcWin"
+        common:EscapeKeyBehavior.Enable="True">
     <Window.Resources>
         <FrameworkElement x:Key="ProxyElement" DataContext="{Binding ElementName=MainWin, Path=DataContext}"/>
         

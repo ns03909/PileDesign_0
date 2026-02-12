@@ -659,7 +659,8 @@
                                             FrozenColumnCount="2"
                                             Grid.Row="1"
                                             VerticalAlignment="Top"
-                                              CellStyle="{StaticResource CustomDataGridCellStyle}">
+                                              CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                            common:DataGridNavigationBehavior.Enable="True">
 
                                         <common:EnhancedDataGrid.AlternatingRowBackground>
                                             <ImageBrush/>

@@ -1,0 +1,65 @@
+<Window x:Class="PileDesign.Views.ProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        Title="計算中..."
+        Height="200"
+        Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        common:EscapeKeyBehavior.Enable="False">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="15"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 現在のステップ表示 -->
+        <TextBlock Grid.Row="0"
+                   Text="{Binding CurrentStep}"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"/>
+
+        <!-- プログレスバー -->
+        <ProgressBar Grid.Row="2"
+                     Height="30"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="{Binding Percentage, Mode=OneWay}"/>
+
+        <!-- 進捗率とステップ数 -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="{Binding PercentageText}"
+                       VerticalAlignment="Center"
+                       Foreground="Gray"/>
+
+            <TextBlock Grid.Column="1"
+                       Text="{Binding EstimatedRemainingTimeText}"
+                       VerticalAlignment="Center"
+                       Foreground="DarkBlue"/>
+        </Grid>
+
+        <!-- キャンセルボタン -->
+        <Button Grid.Row="6"
+                Content="キャンセル"
+                Width="100"
+                Height="30"
+                HorizontalAlignment="Right"
+                Click="CancelButton_Click"
+                IsEnabled="{Binding CanCancel}"/>
+    </Grid>
+</Window>

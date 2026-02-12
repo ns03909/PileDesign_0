@@ -1289,7 +1289,7 @@ namespace PileDesign.Views
 
             else // 節点が選択範囲内にない場合の処理 >> 要素と節点の距離
             {
-                Element nearestElement = null;
+                Element? nearestElement = null;
                 foreach (Element element in viewModel.CurrentInputModel.Elements)
                 {
                     Point3D node0_3D = element.Nodes[0].Point3D;

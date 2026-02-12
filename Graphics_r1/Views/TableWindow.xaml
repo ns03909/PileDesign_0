@@ -8,7 +8,8 @@
         d:DataContext="{d:DesignInstance Type=viewmodels:TableWindowViewModel}"
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
-        Title="解析結果テーブル" Width="1150" Height="680">
+        Title="解析結果テーブル" Width="1150" Height="680"
+        common:EscapeKeyBehavior.Enable="True">
     
     <Window.Resources>
         <ContextMenu x:Key="CommonDataGridContextMenu" Opened="ContextMenu_Opened">

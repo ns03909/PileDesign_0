@@ -1,23 +1,33 @@
 ﻿using Microsoft.Xaml.Behaviors;
+using System;
+using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 
 namespace PileDesign.Common
 {
+    [SupportedOSPlatform("windows7.0")]
     public class DataGridSingleClickEditBehavior : Behavior<EnhancedDataGrid>
     {
         protected override void OnAttached()
         {
             base.OnAttached();
-            AssociatedObject.PreviewMouseLeftButtonDown += OnPreviewMouseLeftButtonDown;
+            if (AssociatedObject != null)
+            {
+                AssociatedObject.PreviewMouseLeftButtonDown += OnPreviewMouseLeftButtonDown;
+            }
         }
 
         protected override void OnDetaching()
         {
             base.OnDetaching();
-            AssociatedObject.PreviewMouseLeftButtonDown -= OnPreviewMouseLeftButtonDown;
+            if (AssociatedObject != null)
+            {
+                AssociatedObject.PreviewMouseLeftButtonDown -= OnPreviewMouseLeftButtonDown;
+            }
         }
 
         private void OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -39,13 +49,28 @@ namespace PileDesign.Common
             }
         }
 
-        private static T FindParent<T>(DependencyObject child) where T : DependencyObject
+        private static T? FindParent<T>(DependencyObject? child) where T : DependencyObject
         {
-            if (child == null) return null;
+            while (child != null)
+            {
+                if (child is T target) return target;
 
-            if (child is T parent) return parent;
-
-            return FindParent<T>(VisualTreeHelper.GetParent(child));
+                // VisualTreeHelper.GetParent は Visual ではない要素（Run など）で例外を投げるためガードが必要
+                if (child is Visual or Visual3D)
+                {
+                    child = VisualTreeHelper.GetParent(child);
+                }
+                // Run などの FrameworkContentElement の場合は論理ツリーの Parent を参照する
+                else if (child is FrameworkContentElement fce)
+                {
+                    child = fce.Parent;
+                }
+                else
+                {
+                    child = null;
+                }
+            }
+            return null;
         }
     }
 }

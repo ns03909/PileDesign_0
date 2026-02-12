@@ -449,7 +449,7 @@ namespace PileDesign.Common
 
                     if (indexer != null)
                     {
-                        indexer.SetValue(collection, value, new object[] { index });
+                        indexer.SetValue(collection, value, [index]);
                         return true;
                     }
                     break;
@@ -574,7 +574,7 @@ namespace PileDesign.Common
                 {
                     string idxStr = segment.Substring(b + 1, e - b - 1);
                     if (int.TryParse(idxStr, out int i)) index = i;
-                    propName = b > 0 ? segment.Substring(0, b) : null;
+                    propName = b > 0 ? segment[..b] : null;
                     return;
                 }
             }

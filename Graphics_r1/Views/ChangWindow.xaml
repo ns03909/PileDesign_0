@@ -304,6 +304,7 @@
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
+                                                                 common:DataGridNavigationBehavior.Enable="True"
                                                                     CellEditEnding="DataGrid_CellEditEnding">
                                             <DataGrid.AlternatingRowBackground>
                                                 <ImageBrush/>
@@ -750,7 +751,8 @@
                                                                  LoadingRow="DataGrid_LoadingRow"
                                                                  Grid.Row="1"
                                                                  PreparingCellForEdit="DataGrid_PreparingCellForEdit"
-                                                                CellEditEnding="DataGrid_CellEditEnding">
+                                                                CellEditEnding="DataGrid_CellEditEnding"
+                                                                 common:DataGridNavigationBehavior.Enable="True">
                                             <DataGrid.AlternatingRowBackground>
                                                 <ImageBrush/>
                                             </DataGrid.AlternatingRowBackground>

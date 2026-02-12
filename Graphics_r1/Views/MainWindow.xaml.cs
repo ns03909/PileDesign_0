@@ -72,6 +72,7 @@ namespace PileDesign.Views
         private OptionWindow _optionWindow;
 
         private bool _startupQuickHintShown = false;
+        private readonly Services.LayoutService _layoutService = new();
 
         // MainWindowクラスコンストラクタ
         public MainWindow()
@@ -251,8 +252,57 @@ namespace PileDesign.Views
                 case MessageBoxResult.Cancel:
                     // 閉じるのをキャンセル
                     e.Cancel = true;
-                    break;
+                    return; // レイアウト保存しない
             }
+
+            // レイアウトを保存（キャンセル時以外）
+            _layoutService.SaveDockLayout(dockingManager);
+        }
+
+        /// <summary>
+        /// ドラッグエンター時の処理
+        /// </summary>
+        private void Window_DragEnter(object sender, DragEventArgs e)
+        {
+            // .jsonファイルのドラッグを受け入れる
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files != null && files.Length > 0 && files[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    e.Effects = DragDropEffects.Copy;
+                }
+                else
+                {
+                    e.Effects = DragDropEffects.None;
+                }
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// ドロップ時の処理
+        /// </summary>
+        private void Window_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files != null && files.Length > 0)
+                {
+                    var filePath = files[0];
+                    if (filePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // ViewModelのOpenFromMruメソッドを使用してファイルを開く
+                        _mainWindowViewModel.OpenFromMru(filePath);
+                    }
+                }
+            }
+            e.Handled = true;
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -330,6 +380,12 @@ namespace PileDesign.Views
                 });
             }
             // --- 追加ここまで ---
+
+            // 自動保存ファイルの復元チェック
+            viewModel.CheckAutoSaveRestore();
+
+            // レイアウトを復元
+            _layoutService.RestoreDockLayout(dockingManager);
         }
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {

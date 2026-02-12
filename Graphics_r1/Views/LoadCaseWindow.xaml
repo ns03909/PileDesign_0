@@ -80,7 +80,7 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="3*"/>
                     </Grid.ColumnDefinitions>
 
                     <Grid.RowDefinitions>
@@ -721,7 +721,8 @@
                                     LoadingRow="DataGrid_LoadingRow_Numbering"
                                     CellStyle="{StaticResource CustomDataGridCellStyle}"
                                     CellEditEnding="DataGridLoadCasesLevel1_CellEditEnding"
-                                    Grid.Row="3" Grid.Column="0">
+                                    Grid.Row="3" Grid.Column="0"
+                                    common:DataGridNavigationBehavior.Enable="True">
                                 <i:Interaction.Behaviors>
                                     <common:DataGridSingleClickEditBehavior />
                                 </i:Interaction.Behaviors>
@@ -1369,7 +1370,8 @@
                               ScrollViewer.VerticalScrollBarVisibility="Visible"
                               LoadingRow="DataGrid_LoadingRow_Numbering"
                               CellStyle="{StaticResource CustomDataGridCellStyle}"
-                              CellEditEnding="DataGridLoadCasesLevel2_CellEditEnding" Grid.Row="3" Grid.Column="0">
+                              CellEditEnding="DataGridLoadCasesLevel2_CellEditEnding" Grid.Row="3" Grid.Column="0"
+                              common:DataGridNavigationBehavior.Enable="True">
                                 <i:Interaction.Behaviors>
                                     <common:DataGridSingleClickEditBehavior />
                                 </i:Interaction.Behaviors>

@@ -4,10 +4,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
         mc:Ignorable="d"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
-        Title="HelpWindow" Height="500" Width="800">
+        Title="HelpWindow" Height="500" Width="800"
+        common:EscapeKeyBehavior.Enable="True">
     <Window.Resources>
         <!-- Paragraphに適用するスタイルを定義 -->
         <Style TargetType="Paragraph">
