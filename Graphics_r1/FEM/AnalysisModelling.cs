@@ -42,8 +42,11 @@ namespace PileDesign.FEM
         {
             PreallocateCollections();
             AddActionPointNode();
+            AddFoundationBeamNodes();      // 基礎梁節点を追加
             AddDoatsuGoryokuBane();
             AddPileOptimized();
+            AddFoundationBeams();          // 基礎梁要素を追加
+            ConnectCapsToFoundation();     // CapNode と基礎梁節点を接続
         }
 
         // 最適化: リストの事前割り当て
@@ -346,6 +349,8 @@ namespace PileDesign.FEM
         // 処理結果をメインコレクションにマージ
         private void MergePileResults(PileProcessingResult[] results)
         {
+            var mode = InputModel.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
+
             foreach (var result in results)
             {
                 var pile = result.Pile;
@@ -361,7 +366,20 @@ namespace PileDesign.FEM
                 if (result.CapNode != null)
                 {
                     Nodes.Add(result.CapNode);
-                    RigidBodies[0].AddSlaveNode(result.CapNode);
+
+                    // 剛体連結の判定
+                    bool addToRigidBody = mode switch
+                    {
+                        FoundationBeamConnectionMode.RigidBody => true,
+                        FoundationBeamConnectionMode.FoundationBeam => false,
+                        FoundationBeamConnectionMode.Mixed => pile.UseRigidConnection,
+                        _ => true
+                    };
+
+                    if (addToRigidBody)
+                    {
+                        RigidBodies[0].AddSlaveNode(result.CapNode);
+                    }
                 }
 
                 // Pile Nodes
@@ -398,6 +416,135 @@ namespace PileDesign.FEM
                     HorizontalSoilSprings.Add(hspring);
                     pile.HorizontalSoilSprings.Add(hspring);
                 }
+            }
+        }
+
+        // 基礎梁節点の追加
+        private void AddFoundationBeamNodes()
+        {
+            if (InputModel.FoundationBeamInput == null)
+                return;
+
+            var mode = InputModel.FoundationBeamInput.ConnectionMode;
+            if (mode == FoundationBeamConnectionMode.RigidBody)
+                return;  // 剛体連結モードでは基礎梁節点を作成しない
+
+            if (InputModel.FoundationBeamInput.Nodes == null)
+                return;
+
+            foreach (var fbNode in InputModel.FoundationBeamInput.Nodes)
+            {
+                var node = new Node();
+                node.SetNodeInfo($"FoundationNode-{fbNode.No}", fbNode.X, fbNode.Y, fbNode.Z);
+                // 基礎梁節点は自由（RigidBody のスレーブにはしない）
+                node.SetBoundary(new Boundary(false, false, false, false, false, false));
+                Nodes.Add(node);
+            }
+        }
+
+        // 基礎梁要素の追加
+        private void AddFoundationBeams()
+        {
+            if (InputModel.FoundationBeamInput == null)
+                return;
+
+            var mode = InputModel.FoundationBeamInput.ConnectionMode;
+            if (mode == FoundationBeamConnectionMode.RigidBody)
+                return;
+
+            if (InputModel.FoundationBeamInput.Beams == null)
+                return;
+
+            foreach (var fbBeam in InputModel.FoundationBeamInput.Beams)
+            {
+                // 節点を検索
+                var nodeI = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-{fbBeam.NodeI_No}");
+                var nodeJ = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-{fbBeam.NodeJ_No}");
+
+                if (nodeI == null || nodeJ == null)
+                    throw new InvalidOperationException($"基礎梁の節点が見つかりません: {fbBeam.No}");
+
+                // Section を作成
+                var section = CreateFoundationBeamSection(fbBeam);
+
+                // Beam 要素を作成
+                var beam = new Beam($"FoundationBeam-{fbBeam.No}", section, nodeI, nodeJ, 1.0, 1.0);
+                Beams.Add(beam);
+            }
+        }
+
+        // 基礎梁断面の作成
+        private Section CreateFoundationBeamSection(FoundationBeamElement fbBeam)
+        {
+            double youngsModulus = fbBeam.YoungModulus;
+            double shearModulus = fbBeam.ShearModulus;
+            double b = fbBeam.Width;
+            double h = fbBeam.Height;
+
+            // 断面諸元
+            double area = b * h;
+            double iy = b * h * h * h / 12.0;  // bending about Y-axis (in XZ plane)
+            double iz = h * b * b * b / 12.0;  // bending about Z-axis (in XY plane)
+
+            // 矩形断面のねじり定数（近似式）
+            double a = Math.Max(b, h);
+            double c = Math.Min(b, h);
+            double j = a * c * c * c * (1.0 / 3.0 - 0.21 * c / a * (1 - c * c * c * c / (12 * a * a * a * a)));
+
+            // Material キャッシュ
+            var material = _materialCache.GetOrAdd(youngsModulus, y => new Material(y, 0.2));
+
+            // Section キャッシュ
+            var sectionKey = (
+                Math.Round(area, 5),
+                Math.Round(j, 5),
+                Math.Round(iy, 5),
+                Math.Round(youngsModulus, 0),
+                Math.Round(shearModulus, 0)
+            );
+            var section = _sectionCache.GetOrAdd(sectionKey, _ => new Section(material, area, area, area, j, iy, iz));
+
+            return section;
+        }
+
+        // CapNode と基礎梁節点の接続
+        private void ConnectCapsToFoundation()
+        {
+            if (InputModel.FoundationBeamInput == null)
+                return;
+
+            var mode = InputModel.FoundationBeamInput.ConnectionMode;
+
+            if (mode == FoundationBeamConnectionMode.RigidBody)
+                return;  // 既に MergePileResults() で RigidBodies[0] に追加済み
+
+            if (InputModel.PileLayoutItems == null)
+                return;
+
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                // Mixed モードで剛体連結の杭はスキップ
+                if (mode == FoundationBeamConnectionMode.Mixed && pile.UseRigidConnection)
+                    continue;
+
+                // 接続先の基礎梁節点が指定されているかチェック
+                if (pile.ConnectedFoundationNodeNo == null)
+                    throw new InvalidOperationException($"杭 {pile.No} の接続先基礎梁節点が指定されていません");
+
+                // CapNode と FoundationNode を検索
+                var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
+                var foundationNode = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-{pile.ConnectedFoundationNodeNo}");
+
+                if (capNode == null)
+                    throw new InvalidOperationException($"杭 {pile.No} の CapNode が見つかりません");
+                if (foundationNode == null)
+                    throw new InvalidOperationException($"杭 {pile.No} の接続先 FoundationNode-{pile.ConnectedFoundationNodeNo} が見つかりません");
+
+                // 剛体リンクで接続（CapNode をマスター、FoundationNode をスレーブ）
+                var rigidLink = new RigidBody(capNode, [true, true, true, true, true, true]);
+                rigidLink.AddSlaveNode(foundationNode);
+                rigidLink.SetSlaveNodeRelations();
+                RigidBodies.Add(rigidLink);
             }
         }
 
