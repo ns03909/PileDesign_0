@@ -942,6 +942,20 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 基礎梁描画
+        private bool _isFoundationBeamVisible = true;
+        public bool IsFoundationBeamVisible
+        {
+            get => _isFoundationBeamVisible;
+            set
+            {
+                if (SetProperty(ref _isFoundationBeamVisible, value))
+                {
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                }
+            }
+        }
+
         // ラベル描画
         private bool _isLabelVisible = true;
         public bool IsLabelVisible

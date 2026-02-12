@@ -208,6 +208,8 @@ namespace PileDesign.Views
 
                 if (viewModel.IsElementVisible) UpdateGeneralElement3D(); // 要素描画の更新
 
+                if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁描画の更新
+
                 if ((MainWindowViewModel)DataContext == null) return;
 
                 // 平面図の場合

@@ -370,5 +370,51 @@ namespace PileDesign.Views
             }
         }
 
+        // 基礎梁描画の更新
+        private void UpdateFoundationBeams3D()
+        {
+            if (Canvas3DLayout == null) return;
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (viewModel.CurrentInputModel?.FoundationBeamInput == null) return;
+
+            var fbInput = viewModel.CurrentInputModel.FoundationBeamInput;
+
+            // 剛体連結モードでは描画しない
+            if (fbInput.ConnectionMode == FoundationBeamConnectionMode.RigidBody)
+                return;
+
+            var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
+
+            // 基礎梁要素を描画
+            foreach (var beam in fbInput.Beams)
+            {
+                if (!nodeDict.TryGetValue(beam.NodeI_No, out var nodeI)) continue;
+                if (!nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ)) continue;
+
+                Point3D loc0 = new(nodeI.X, nodeI.Y, nodeI.Z);
+                Point3D loc1 = new(nodeJ.X, nodeJ.Y, nodeJ.Z);
+
+                // 3D -> 2D 変換
+                Point coord0 = viewModel.CanvasThreeDView.Transformation(loc0);
+                Point coord1 = viewModel.CanvasThreeDView.Transformation(loc1);
+
+                // 梁の中心線を追加
+                LineGeometry lineGeometry = new() { StartPoint = coord0, EndPoint = coord1 };
+                viewModel.CanvasGeometry.PathGeoFoundationBeams.AddGeometry(lineGeometry);
+            }
+
+            // 基礎梁節点を描画
+            foreach (var node in fbInput.Nodes)
+            {
+                Point3D loc = new(node.X, node.Y, node.Z);
+                Point coord = viewModel.CanvasThreeDView.Transformation(loc);
+
+                // 節点を円として追加
+                double radius = 0.3; // 2D表示での半径（ピクセル単位相当）
+                EllipseGeometry ellipse = new(coord, radius, radius);
+                viewModel.CanvasGeometry.PathGeoFoundationNodes.AddGeometry(ellipse);
+            }
+        }
+
     }
 }

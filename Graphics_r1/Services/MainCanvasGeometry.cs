@@ -74,6 +74,10 @@ namespace PileDesign.Services
         // 剛床仮定
         public PathGeometry PathGeoRigidFloor { get; set; } = new();
 
+        // 基礎梁
+        public PathGeometry PathGeoFoundationBeams { get; set; } = new();
+        public PathGeometry PathGeoFoundationNodes { get; set; } = new();
+
         // クリアメソッド
         public void Clear()
         {
@@ -122,6 +126,8 @@ namespace PileDesign.Services
             PathGeoRectLoads.Figures.Clear();
             PathGeoSettlementGrid.Figures.Clear();
             PathGeoRigidFloor.Figures.Clear();
+            PathGeoFoundationBeams.Figures.Clear();
+            PathGeoFoundationNodes.Figures.Clear();
         }
 
 
@@ -446,6 +452,24 @@ namespace PileDesign.Services
                 Name = "Elements",
             });
 
+            // 基礎梁要素
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.DarkOrange,
+                StrokeThickness = 2.0,
+                Data = PathGeoFoundationBeams,
+                Name = "FoundationBeam"
+            });
+
+            // 基礎梁節点
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Orange,
+                Fill = Brushes.Orange,
+                StrokeThickness = 0.5,
+                Data = PathGeoFoundationNodes,
+                Name = "FoundationNode"
+            });
 
             //通り心X
             canvas.Children.Add(new Path()
