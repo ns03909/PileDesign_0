@@ -521,15 +521,37 @@ namespace PileDesign.FEM
             if (InputModel.PileLayoutItems == null)
                 return;
 
+            // 基礎梁節点のリストを取得（自動割り当て用）
+            var foundationNodes = InputModel.FoundationBeamInput.Nodes?.ToList();
+            if (foundationNodes == null || foundationNodes.Count == 0)
+                throw new InvalidOperationException("基礎梁節点が定義されていません");
+
             foreach (var pile in InputModel.PileLayoutItems)
             {
                 // Mixed モードで剛体連結の杭はスキップ
                 if (mode == FoundationBeamConnectionMode.Mixed && pile.UseRigidConnection)
                     continue;
 
-                // 接続先の基礎梁節点が指定されているかチェック
+                // 接続先の基礎梁節点が未指定の場合、最も近い節点を自動割り当て
                 if (pile.ConnectedFoundationNodeNo == null)
-                    throw new InvalidOperationException($"杭 {pile.No} の接続先基礎梁節点が指定されていません");
+                {
+                    var pileX = pile.X;
+                    var pileY = pile.Y;
+
+                    // 最も近い基礎梁節点を検索（X-Y平面での距離）
+                    var nearestNode = foundationNodes
+                        .OrderBy(fn => Math.Sqrt(Math.Pow(fn.X - pileX, 2) + Math.Pow(fn.Y - pileY, 2)))
+                        .FirstOrDefault();
+
+                    if (nearestNode != null)
+                    {
+                        pile.ConnectedFoundationNodeNo = nearestNode.No;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"杭 {pile.No} の接続先基礎梁節点を自動割り当てできません");
+                    }
+                }
 
                 // CapNode と FoundationNode を検索
                 var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
