@@ -102,6 +102,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _embedmentInput, value);
         }
 
+        // 基礎梁
+        private FoundationBeamInput _foundationBeamInput;
+        public FoundationBeamInput FoundationBeamInput
+        {
+            get => _foundationBeamInput;
+            set => SetProperty(ref _foundationBeamInput, value);
+        }
+
         // クラス内フィールドに追加
         private bool _suppressSoilPileNotify;
 

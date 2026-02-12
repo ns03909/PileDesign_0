@@ -139,6 +139,23 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // 基礎梁接続設定
+        // true: 剛体連結, false: 基礎梁
+        private bool _useRigidConnection = true;
+        public bool UseRigidConnection
+        {
+            get => _useRigidConnection;
+            set => SetProperty(ref _useRigidConnection, value);
+        }
+
+        // 接続先の基礎梁節点番号（基礎梁接続の場合）
+        private int? _connectedFoundationNodeNo;
+        public int? ConnectedFoundationNodeNo
+        {
+            get => _connectedFoundationNodeNo;
+            set => SetProperty(ref _connectedFoundationNodeNo, value);
+        }
+
         //群杭係数
         private double _groupPileFactor;
         public double GroupPileFactor
