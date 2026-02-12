@@ -158,7 +158,6 @@ namespace PileDesign.Models
             }
             else
             {
-                //System.Diagnostics.Debug.WriteLine($"FTCap.csv not found at: {filePath}");
             }
         }
 

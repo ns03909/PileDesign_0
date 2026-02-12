@@ -605,25 +605,6 @@ namespace PileDesign.ViewModels
         }
 
 
-        // 追加：初期ランプ点灯を確実に行うヘルパー（クラス内に追加）
-        //private void EnsureLampInitialState()
-        //{
-        //    try
-        //    {
-        //        // コレクションが構築済みかつ SelectedSoilPileNo が有効なら、そのインデックスを点灯
-        //        if (SoilPileLampStates != null && SoilPileLampStates.Count > 0)
-        //        {
-        //            int idx = Math.Max(0, Math.Min(SoilPileLampStates.Count - 1, SelectedSoilPileNo - 1));
-        //            SoilPileLampStates[idx].IsOn = true;
-        //            Debug.WriteLine($"EnsureLampInitialState: set lamp[{idx}] = true");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Debug.WriteLine($"EnsureLampInitialState error: {ex}");
-        //    }
-        //}
-
         // 水平地盤反力係数のセットメソッド
         public void SetHorizontalSoilReaction()
         {
@@ -669,10 +650,6 @@ namespace PileDesign.ViewModels
                         b = pileBodySegment.PileSection.PileDiameter / 1000.0;
                         break;
                     }
-                }
-                if (Math.Abs(b) < epsilon)
-                {
-                    //System.Diagnostics.Debug.WriteLine($"No segment found for Z={zDataTop}～{zDataBtm}");
                 }
 
                 foreach (GroundLayerInput groundLayer in groundInput.GroundLayers)

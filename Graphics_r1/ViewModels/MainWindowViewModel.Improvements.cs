@@ -103,7 +103,6 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"RaiseAllCommandsCanExecuteOptimized: {ex}");
             }
         }
 
@@ -118,7 +117,6 @@ namespace PileDesign.ViewModels
                 var snapshot = CurrentInputModel?.DeepCopy();
                 if (snapshot == null)
                 {
-                    //System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafelyOptimized: DeepCopy returned null, skipping undo snapshot.");
                     return;
                 }
 
@@ -135,7 +133,6 @@ namespace PileDesign.ViewModels
                 if (hash == _lastUndoSnapshotHash)
                 {
                     // 以前に取得したハッシュと同一なら重複保存をスキップ
-                    //System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafelyOptimized: snapshot unchanged, skip saving.");
                     return;
                 }
 
@@ -145,15 +142,12 @@ namespace PileDesign.ViewModels
             }
             catch (Newtonsoft.Json.JsonException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"Undo snapshot serialization failed: {ex.Message}");
             }
             catch (System.Security.Cryptography.CryptographicException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"Undo snapshot hash failed: {ex.Message}");
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"Unexpected undo snapshot error: {ex}");
             }
         }
 

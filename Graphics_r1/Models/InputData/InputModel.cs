@@ -751,12 +751,10 @@ namespace PileDesign.Models.InputData
             }
             catch (InvalidOperationException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetSumVLメソッド - 無効な操作例外: {ex}");
                 return 0.0;
             }
             catch (ArgumentNullException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetSumVLメソッド - null参照: {ex}");
                 return 0.0;
             }
         }
@@ -770,12 +768,10 @@ namespace PileDesign.Models.InputData
             }
             catch (InvalidOperationException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetSumVLaddメソッド - 無効な操作例外: {ex}");
                 return 0.0;
             }
             catch (ArgumentNullException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetSumVLaddメソッド - null参照: {ex}");
                 return 0.0;
             }
         }
@@ -788,27 +784,9 @@ namespace PileDesign.Models.InputData
             }
             catch (OverflowException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetSumVLplusVLaddメソッド - オーバーフロー例外: {ex}");
                 return 0.0;
             }
         }
-        //}
-        //public double GetSumVL()
-        //{
-        //    return PileLayoutItems.Sum(item => item.AxialForceVL0);
-        //}
-
-        //public double GetSumVLadd()
-        //{
-        //    return PileLayoutItems.Sum(item => item.AxialForceVLAdditional);
-        //}
-
-        //public double GetSumVLplusVLadd()
-        //{
-        //    return GetSumVL() + GetSumVLadd();
-        //}
-
-
 
         // VLadd重心を返すメソッド
         public Point3D GetVLaddGravityCenter()
@@ -903,12 +881,10 @@ namespace PileDesign.Models.InputData
             }
             catch (DivideByZeroException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetCentroidメソッド - ゼロ除算: {ex}");
                 return new Point3D(0, 0, 0);
             }
             catch (InvalidOperationException ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetCentroidメソッド - 無効な操作: {ex}");
                 return new Point3D(0, 0, 0);
             }
         }
@@ -988,7 +964,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetReactionForUnitMomentメソッド: {ex}");
                 return new List<double>();
             }
         }
@@ -1276,7 +1251,6 @@ namespace PileDesign.Models.InputData
             {
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"DeepCopyに失敗しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
-                //System.Diagnostics.Debug.WriteLine($"DeepCopyエラー: {ex}");
                 return null;
             }
         }

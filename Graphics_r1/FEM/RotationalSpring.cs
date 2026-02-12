@@ -11,12 +11,6 @@ namespace PileDesign.FEM
     // M-θ曲線（タプル名の有無に依存しない実装）
     public sealed class MomentRotationCurve
     {
-        // デバッグ用カウンタ
-        private static int _curveCreateCount = 0;
-        private static int _evalTangentCount = 0;
-        private static int _evalSecantCount = 0;
-        private static readonly object _logLock = new();
-
         public List<(double Theta, double Moment)> Points { get; } = [];
 
         public MomentRotationCurve() { }
@@ -25,36 +19,6 @@ namespace PileDesign.FEM
             if (points == null) return;
             foreach (var (t, m) in points) Points.Add((t, m));
             Points.Sort((a, b) => a.Theta.CompareTo(b.Theta));
-
-            // デバッグ: 曲線の点と各区間の接線剛性を出力（最初の10曲線のみ）
-            #if DEBUG
-            lock (_logLock)
-            {
-                _curveCreateCount++;
-                if (_curveCreateCount <= 10)
-                {
-                    //System.Diagnostics.Debug.WriteLine($"[M-θ Curve #{_curveCreateCount}] Points={Points.Count}:");
-                    for (int i = 0; i < Points.Count; i++)
-                    {
-                        var pt = Points[i];
-                        //System.Diagnostics.Debug.WriteLine($"  [{i}] θ={pt.Theta:E6} [rad], M={pt.Moment:F1} [kNm]");
-                    }
-                    // 各区間の接線剛性を表示
-                    //System.Diagnostics.Debug.WriteLine($"  Segment tangent stiffnesses (dM/dθ = K_rot):");
-                    double prevTheta = 0.0, prevMoment = 0.0;
-                    for (int i = 0; i < Points.Count; i++)
-                    {
-                        var (t, m) = Points[i];
-                        double dTheta = t - prevTheta;
-                        double dM = m - prevMoment;
-                        double tangent = dTheta > 1e-12 ? dM / dTheta : 0.0;
-                        //System.Diagnostics.Debug.WriteLine($"    Seg[{(i == 0 ? "origin" : (i - 1).ToString())}→{i}]: dM/dθ = {tangent:E3} [kNm/rad]");
-                        prevTheta = t;
-                        prevMoment = m;
-                    }
-                }
-            }
-            #endif
         }
 
         public double EvaluateMoment(double theta)
@@ -143,13 +107,6 @@ namespace PileDesign.FEM
                 }
             }
 
-            #if DEBUG
-            _evalTangentCount++;
-            if (_evalTangentCount <= 30)
-            {
-                //System.Diagnostics.Debug.WriteLine($"[M-θ EvalTangent #{_evalTangentCount}] θ={theta:E6}, seg={region}, K_tan={result:E3}");
-            }
-            #endif
             return result;
         }
 
@@ -163,24 +120,10 @@ namespace PileDesign.FEM
             if (t < 1e-9)
             {
                 double tan0 = EvaluateTangent(0.0);
-                #if DEBUG
-                _evalSecantCount++;
-                if (_evalSecantCount <= 30)
-                {
-                    //System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6} (near zero) -> using tangent={tan0:E3}");
-                }
-                #endif
                 return tan0;
             }
             double M = EvaluateMoment(theta);
             double secant = M / t;
-            #if DEBUG
-            _evalSecantCount++;
-            if (_evalSecantCount <= 30)
-            {
-                //System.Diagnostics.Debug.WriteLine($"[M-θ EvalSecant #{_evalSecantCount}] θ={theta:E6}, M={M:F1}, K_sec={secant:E3}");
-            }
-            #endif
             return secant;
         }
 

@@ -56,7 +56,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"InsituConcrete初期化エラー: {ex}");
                 Ec = 0.0;
                 Ac = 0.0;
                 SigmaCr = 0.0;
@@ -77,7 +76,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PrecastPRCConcrete.SetAllowableStrain計算エラー: {ex}");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -201,7 +199,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetEFuncEpsilon計算エラー: {ex}");
                 return 0.0;
             }
         }
@@ -296,7 +293,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"SetAg計算エラー: {ex}");
                 Ag = 0.0;
             }
         }
@@ -447,7 +443,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PrecastPRCConcrete.GetStress計算エラー: {ex}");
                 return 0.0;
             }
         }
@@ -483,7 +478,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"SetAllowableStrain計算エラー: {ex}");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -524,7 +518,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PrecastPRCConcrete.SetAllowableStrain計算エラー: {ex}");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -580,7 +573,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PrecastSCConcrete.SetAllowableStrain計算エラー: {ex}");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -699,7 +691,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PrecastSteelPipe.SetMaterialProperties計算エラー: {ex}");
                 F = 0.0;
                 As = 0.0;
                 Ftsp = 0.0;
@@ -726,7 +717,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PrecastSteelPipe.SetAllowableStrain計算エラー: {ex}");
                 ServiceLimitStrainC = 0.0;
                 DamageLimitStrainC = 0.0;
                 UltimateLimitStrainC = 0.0;
@@ -901,7 +891,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetAllowableMomentForSpecificN計算エラー: {ex}");
                 return 0.0;
             }
         }
@@ -961,7 +950,6 @@ namespace PileDesign.Models.InputData
                 // 収束しなかった場合の対策
                 if (iter >= maxIter)
                 {
-                    //System.Diagnostics.Debug.WriteLine("Newton-Raphson法が収束しませんでした。");
                     // 必要に応じて例外通知やデフォルト値
                 }
 
@@ -969,7 +957,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetUltimateMomentForSpecificN計算エラー: {ex}");
                 return (0.0, 0.0);
             }
         }
@@ -995,7 +982,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetAllowableMaxCurvature計算エラー: {ex}");
                 return 0.0;
             }
         }
@@ -1034,7 +1020,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetAllowableCompressionEdgeStrain計算エラー: {ex}");
                 return 0.0;
             }
         }
@@ -1224,7 +1209,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetForceAndMoment計算エラー: {ex}");
                 return (0.0, 0.0);
             }
         }
@@ -1261,7 +1245,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"CircularPipeSection.GetForceAndMoment計算エラー: {ex}");
                 return (0.0, 0.0);
             }
         }

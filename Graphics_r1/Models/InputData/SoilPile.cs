@@ -726,14 +726,6 @@ namespace PileDesign.Models.InputData
 
                     if (segmentBtm - epsilon <= lower && upper <= segmentTop + epsilon)
                     {
-                        //if (pileBodySegment.PileSection == null)
-                        //{
-                        //    //System.Diagnostics.Debug.WriteLine("PileSection is null");
-                        //}
-                        //else
-                        //{
-                        //    //System.Diagnostics.Debug.WriteLine($"B={pileBodySegment.PileSection.PileDiameter}");
-                        //}
                         b = pileBodySegment.PileSection?.PileDiameter / 1000.0 ?? 0;
                         break;
                     }
@@ -741,12 +733,10 @@ namespace PileDesign.Models.InputData
 
                 if (Math.Abs(b) < epsilon)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"No segment found for Z={zDataTop}～{zDataBtm}");
                 }
 
                 foreach (GroundLayerInput groundLayer in GroundLayers)
                 {
-                    //var groundInput = inputModel.GroundsInput[GroundNo - 1];
                     var groundInput = GroundInput;
                     double top = groundLayer.LayerThickness + groundLayer.BottomAltitude;
                     double bottom = groundLayer.BottomAltitude;

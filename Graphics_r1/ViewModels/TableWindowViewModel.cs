@@ -78,17 +78,12 @@ namespace PileDesign.ViewModels
 
         public void LoadTables(IReadOnlyList<ResultTable> list)
         {
-            //System.Diagnostics.Debug.WriteLine($"=== LoadTables called ===");
-            //System.Diagnostics.Debug.WriteLine($"Input list.Count = {list.Count}");
             foreach (var t in list)
             {
-                //System.Diagnostics.Debug.WriteLine($"  Table: {t.Name}, IsLiq={t.IsLiquefaction}, LoadCase={t.LoadCaseName}");
             }
 
             AllTables.Clear();
             foreach (var t in list) AllTables.Add(t);
-
-            //System.Diagnostics.Debug.WriteLine($"AllTables.Count after load = {AllTables.Count}");
 
             BuildFilterOptions();
 
@@ -120,10 +115,6 @@ namespace PileDesign.ViewModels
 
         private void ApplyFilters()
         {
-            //System.Diagnostics.Debug.WriteLine($"=== ApplyFilters ===");
-            //System.Diagnostics.Debug.WriteLine($"  SelectedLiquefactionFilter = '{SelectedLiquefactionFilter}'");
-            //System.Diagnostics.Debug.WriteLine($"  AllTables.Count = {AllTables.Count}");
-
             FilteredTables.Clear();
             var filtered = AllTables.Where(t =>
                 (SelectedLoadCaseFilter == "ALL" || t.LoadCaseName == SelectedLoadCaseFilter) &&
@@ -132,10 +123,8 @@ namespace PileDesign.ViewModels
                  (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction))
             ).ToList();
 
-            //System.Diagnostics.Debug.WriteLine($"  Filtered count = {filtered.Count}");
             foreach (var t in filtered)
             {
-                //System.Diagnostics.Debug.WriteLine($"    Filtered: {t.Name}, IsLiq={t.IsLiquefaction}");
                 FilteredTables.Add(t);
             }
 
@@ -236,7 +225,6 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"CopyDataGridSelection failed: {ex}");
             }
         }
     }

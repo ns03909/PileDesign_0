@@ -380,23 +380,13 @@ namespace PileDesign.Models.InputData
             // キャッシュキーを生成
             string cacheKey = GetMPhiCacheKey(axialN);
 
-            // 最初の5回は必ずログ出力
-            //if (_getMPhiCallCount <= 5)
-            //{
-            //    System.Diagnostics.Debug.WriteLine($"[GetMPhiRelationship #{_getMphiCallCount}] axialN={axialN:F1} kN, key={cacheKey}");
-            //}
-
             // キャッシュから取得を試みる
             lock (_mPhiCacheLock)
             {
                 if (_mphiCache.TryGetValue(cacheKey, out var cachedResult))
                 {
                     _mPhiCacheHitCount++;
-                    // 常にヒット時はログ出力（最初の20回）
-                    //if (_mphiCacheHitCount <= 20)
-                    //{
-                    //    System.Diagnostics.Debug.WriteLine($"[M-φ Cache HIT #{_mphiCacheHitCount}] key={cacheKey}, points={cachedResult.Phis.Count}");
-                    //}
+
                     // キャッシュされたリストのコピーを返す（元データの変更防止）
                     return (new List<double>(cachedResult.Phis), new List<double>(cachedResult.Moments));
                 }
@@ -409,7 +399,6 @@ namespace PileDesign.Models.InputData
                 // 断面が生成できない場合はフォールバック
                 if (section == null)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship: CreateSectionCalculator returned null - PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                     return CreateLinearFallback();
                 }
 
@@ -421,7 +410,6 @@ namespace PileDesign.Models.InputData
                 // 結果が不正な場合もフォールバック
                 if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship: Invalid result - phisRaw={phisRaw?.Count}, msRaw={msRaw?.Count}, PileBodyType={PileBodyType}, PileSectionType={PileSectionType}");
                     return CreateLinearFallback();
                 }
 
@@ -437,19 +425,12 @@ namespace PileDesign.Models.InputData
                     {
                         _mphiCache[cacheKey] = (phis, ms);
                     }
-                    // 常にミス時はログ出力（最初の20回）
-                    //if (_mphiCacheMissCount <= 20)
-                    //{
-                    //    System.Diagnostics.Debug.WriteLine($"[M-φ Cache MISS #{_mphiCacheMissCount}] key={cacheKey}, points={phis.Count}, cacheSize={_mphiCache.Count}");
-                    //}
                 }
 
-                //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship: Success - Points={phis.Count}, phi=[{phis.First():E3}..{phis.Last():E3}], M=[{ms.First():F0}..{ms.Last():F0}], PileBodyType={PileBodyType}");
                 return (new List<double>(phis), new List<double>(ms));
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship failed: {ex}");
                 return CreateLinearFallback();
             }
         }
@@ -475,7 +456,6 @@ namespace PileDesign.Models.InputData
                 _mphiCache.Clear();
                 _mPhiCacheHitCount = 0;
                 _mPhiCacheMissCount = 0;
-                //System.Diagnostics.Debug.WriteLine("[M-φ Cache] Cleared");
             }
         }
 
@@ -491,127 +471,6 @@ namespace PileDesign.Models.InputData
             );
         }
 
-
-        ///// <summary>
-        ///// PileSection に各断面型の GetMPhiRelationship を仲介するメソッド。
-        ///// 
-        ///// 単位系変換の説明:
-        ///// - 呼び出し側（FEM解析）の入力:
-        /////   axialN (軸力): [kN]
-        ///// - 断面計算側（InsituReinforcedConcreteSection等）の期待入力/出力:
-        /////   axialN: [N]
-        /////   φ (曲率): [1/mm] - 内部で PileDia [mm] を使った断面計算のため
-        /////   M (曲げモーメント): [N·mm]
-        ///// - FEM解析側（MomentCurvatureCurve）の期待値:
-        /////   φ: [1/m] = [rad/m]
-        /////   M: [kNm]
-        ///// 
-        ///// 変換係数:
-        ///// - axialN: ×1000 (kN → N) [入力時]
-        ///// - φ: ×1000 (1/mm → 1/m) [出力時]
-        ///// - M: ×10⁻⁶ (N·mm → kNm) [出力時]
-        ///// </summary>
-        //public (IList<double> Phis, IList<double> Moments) GetMPhiRelationship(double axialN)
-        //    => GetMPhiRelationship(axialN, 1.0);
-
-        //public (IList<double> Phis, IList<double> Moments) GetMPhiRelationship(double axialN, double _)
-        //{
-        //    try
-        //    {
-        //        // 単位変換: 軸力 kN → N
-        //        double axialN_inN = axialN * 1000.0;
-
-        //        // 各ケースで内部の断面クラスを生成して GetMPhiRelationship を呼ぶ（GetNMRaw と同様の分岐）
-        //        List<double> phisRaw = new();
-        //        List<double> msRaw = new();
-
-        //        if (PileBodyType == "場所打ち鉄筋コンクリート杭")
-        //        {
-        //            var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //            var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //            var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-        //            (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-        //        }
-        //        else if (PileBodyType == "場所打ち鋼管コンクリート杭")
-        //        {
-        //            if (PileSectionType == "鉄筋コンクリート部")
-        //            {
-        //                var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //                var sect = new InsituReinforcedConcreteSection(insituConcrete, mainBars);
-        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-        //            }
-        //            else // 鋼管コンクリート部
-        //            {
-        //                var insituSteelPipe = new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-        //                var insituConcrete = new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc);
-        //                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //                var sect = new InsituSteelPipeReinforcedConcreteSection(insituSteelPipe, insituConcrete, mainBars);
-        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-        //            }
-        //        }
-        //        else if (PileBodyType == "既製コンクリート杭")
-        //        {
-        //            if (PileSectionType == "PHC杭")
-        //            {
-        //                var precastConcrete = new PrecastPHCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-        //                var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-        //                var sect = new PHCSection(precastConcrete, tendons, Prestress);
-        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-        //            }
-        //            else if (PileSectionType == "PRC杭")
-        //            {
-        //                var precastConcrete = new PrecastPRCConcrete(PileDiameter, PileDiameter - 2 * ConcreteThickness, ConcreteFc);
-        //                var mainBars = new MainBars(MainBarDr, MainBarNum, MainBarSpec, MainBarSize);
-        //                var tendons = new Tendons(TendonDp, TendonAp, TendonSigmaPy, TendonSigmaPu);
-        //                var sect = new PRCSection(precastConcrete, mainBars, tendons, Prestress);
-        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-        //            }
-        //            else if (PileSectionType == "SC杭")
-        //            {
-        //                var precastConcrete = new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc);
-        //                var steelPipe = new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth);
-        //                var sect = new SCSection(precastConcrete, steelPipe);
-        //                (phisRaw, msRaw) = sect.GetMPhiRelationship(axialN_inN);
-        //            }
-        //        }
-        //        else if (PileBodyType == "鋼管杭")
-        //        {
-        //            // もし鋼管杭向けの断面クラスがあれば同様に呼ぶ（なければフォールバック）
-        //            // ここではフォールバックを利用
-        //        }
-
-        //        // 取得できなければフォールバック（線形近似: EI を使う）
-        //        // フォールバック時は既に FEM 単位系 (phi:[1/m], M:[kNm]) で返す
-        //        if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)
-        //        {
-        //            const double phiSample = 1e-6; // [1/m]
-        //            var phs = new List<double> { 0.0, phiSample };
-        //            var m0 = 0.0;
-        //            var m1 = this.EI * phiSample; // EI [kNm²] × phi [1/m] = M [kNm]
-        //            return (phs, new List<double> { m0, m1 });
-        //        }
-
-        //        // 単位変換:
-        //        // 断面計算側: φ [1/mm], M [N·mm]
-        //        // FEM解析側:  φ [1/m],  M [kNm]
-        //        // 変換: φ ×1000, M ×10⁻⁶
-        //        var phis = phisRaw.Select(p => p * 1000.0).ToList();  // 1/mm → 1/m
-        //        var ms = msRaw.Select(m => m * 1e-6).ToList();        // N·mm → kNm
-
-        //        return (phis, ms);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        System.Diagnostics.Debug.WriteLine($"GetMPhiRelationship dispatch failed: {ex}");
-        //        // 最低限の線形フォールバック（FEM単位系で返す）
-        //        const double phiSample = 1e-6; // [1/m]
-        //        var phs = new List<double> { 0.0, phiSample };
-        //        var m0 = 0.0;
-        //        var m1 = this.EI * phiSample;
-        //        return (phs, new List<double> { m0, m1 });
-        //    }
-        //}
 
 
         public string PileDescription
@@ -824,11 +683,9 @@ namespace PileDesign.Models.InputData
                 {
                     PileDiameter = PipeDia;
                 }
-                //System.Diagnostics.Debug.WriteLine($"RecalculatePileDia finished. after: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"RecalculatePileDia エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭径再計算中にエラーが発生しました。\n{ex.Message}", "杭径再計算エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -839,7 +696,6 @@ namespace PileDesign.Models.InputData
         {
             try
             {
-                //System.Diagnostics.Debug.WriteLine($"ResetSectionProperties called. PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, Hash={this.GetHashCode()}");
 
 
                 // 表示の即時更新用にクリア（後で GetNMRaw が再計算して再設定）
@@ -902,11 +758,9 @@ namespace PileDesign.Models.InputData
                     RecalculateSelectedSteelPipePipe();
                     RecalculatePileDia();
                 }
-                //System.Diagnostics.Debug.WriteLine($"After ResetSectionProperties: PileDiameter={PileDiameter}, ConcreteOutDia={ConcreteOutDia}");
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"ResetSectionProperties エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"断面プロパティのリセット中にエラーが発生しました。\n{ex.Message}", "断面リセットエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -1088,7 +942,6 @@ namespace PileDesign.Models.InputData
                         Es = pipe.Es,
                         PsSigmaY = pipe.PsSigmaY
                     };
-                    //SelectedPrecastPileName = pipe.Name;
                     PileDiameter = pipe.PileDiameter;
                     ConcreteOutDia = pipe.PileDiameter - pipe.Ts * 2.0;
                     ConcreteThickness = pipe.PileThickness - pipe.Ts;
@@ -2089,11 +1942,6 @@ namespace PileDesign.Models.InputData
         }
         public static void DebugDumpProperties()
         {
-            //System.Diagnostics.Debug.WriteLine(
-            //    $"PileBodyType={PileBodyType}, PileSectionType={PileSectionType}, " +
-            //    $"PileDiameter={PileDiameter}, PipeDia={PipeDia}, PipeTs={PipeTs}, " +
-            //    $"ConcreteFc={ConcreteFc}, MainBarNum={MainBarNum}, MainBarSize={MainBarSize}, " +
-            //    $"A0={A0}, Ac={Ac}, HoopPw={HoopPw}");
         }
     }
 }

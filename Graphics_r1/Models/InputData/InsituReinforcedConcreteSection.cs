@@ -670,8 +670,6 @@ namespace PileDesign.Models.InputData
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
             (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
 
-            //System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Ntarget={Ntarget:E3}[N], MCr={MCr:E3}, phiCr={phiCr:E6}, MY={MY:E3}, phiY={phiY:E6}, Mu0={Mu0:E3}");
-
             //if (MCr > MY)
             //{
             //    phiCr *= MY / MCr;
@@ -697,7 +695,6 @@ namespace PileDesign.Models.InputData
                 Ms = [0.0, MCr, beta1 * beta2 * Mu0];
             }
 
-            //System.Diagnostics.Debug.WriteLine($"InsituRC.GetMPhiRelationship: Result phis=[{string.Join(",", phis.Select(p => p.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
             return (phis, Ms);
         }
 
@@ -724,7 +721,6 @@ namespace PileDesign.Models.InputData
             List<double> thetas = [0.0, thetaCr, thetaY, thetaU];
             List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
 
-            //System.Diagnostics.Debug.WriteLine($"InsituRC.GetMThetaRelationship: thetas=[{string.Join(",", thetas.Select(t => t.ToString("E6")))}], Ms=[{string.Join(",", Ms.Select(m => m.ToString("E3")))}]");
             return (thetas, Ms);
         }
 

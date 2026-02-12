@@ -1,6 +1,5 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 using PileDesign.Models.InputData;
-using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +8,8 @@ namespace PileDesign.FEM
 {
     public class AnaModel
     {
-        private readonly MainWindowViewModel _mainWindowViewModel;
-        public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+        private readonly InputModel _inputModel;
+        public InputModel InputModel => _inputModel;
 
         public List<Node> Nodes { get; set; }
         public List<Beam> Beams { get; set; }
@@ -46,7 +45,7 @@ namespace PileDesign.FEM
 
         // コンストラクタ
         public AnaModel(
-            MainWindowViewModel mainWindowViewModel,
+            InputModel inputModel,
             List<Node> nodes,
             List<Beam> beams,
             List<DummyBeam> dummyBeams,
@@ -55,7 +54,7 @@ namespace PileDesign.FEM
             List<RotationalSpring> rotationalSprings
             )
         {
-            _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
+            _inputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
 
             Nodes = nodes; // 節点リスト
             Beams = beams; // 要素リスト
@@ -67,29 +66,6 @@ namespace PileDesign.FEM
             int countFree = 0;
             int countFix = 0;
             var dofForcedDispList = new List<bool>();
-
-            #if DEBUG
-            // 診断: CapNodeの境界状態を確認
-            var capNodes = Nodes.Where(n => n.Name != null && n.Name.StartsWith("CapNode")).ToList();
-            if (capNodes.Count > 0)
-            {
-                var freeDofs = capNodes.SelectMany(n => Enumerable.Range(0, 6)
-                    .Where(i => n.GetBoundary(i) == false)
-                    .Select(i => $"{n.Name}:{i}")).ToList();
-                if (freeDofs.Count > 0)
-                {
-                    //System.Diagnostics.Debug.WriteLine($"[AnaModel] CapNodes with FREE DOFs ({freeDofs.Count}):");
-                    //foreach (var dof in freeDofs.Take(20))
-                        //System.Diagnostics.Debug.WriteLine($"  {dof}");
-                    //if (freeDofs.Count > 20)
-                        //System.Diagnostics.Debug.WriteLine($"  ... and {freeDofs.Count - 20} more");
-                }
-                else
-                {
-                    //System.Diagnostics.Debug.WriteLine($"[AnaModel] All {capNodes.Count} CapNodes have FIXED boundaries (correct)");
-                }
-            }
-            #endif
 
             foreach (var node in Nodes)
             {
@@ -228,20 +204,6 @@ namespace PileDesign.FEM
                     .GroupBy(x => x.nodeName.Split(':')[0].Split('-')[0].Split('_')[0])
                     .Select(g => $"{g.Key}({g.Count()})")
                     .ToList();
-                //System.Diagnostics.Debug.WriteLine($"[MapOnKmat] WARNING: {zeroDiagDofs.Count} DOFs have zero/negative diagonal (regularized to {eps}):");
-                //System.Diagnostics.Debug.WriteLine($"  Node types: {string.Join(", ", groupedByPrefix)}");
-                //foreach (var (eq, name, val) in zeroDiagDofs.Take(30))
-                    //System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
-                //if (zeroDiagDofs.Count > 30)
-                    //System.Diagnostics.Debug.WriteLine($"  ... and {zeroDiagDofs.Count - 30} more");
-            }
-            if (smallDiagDofs.Count > 0)
-            {
-                //System.Diagnostics.Debug.WriteLine($"[MapOnKmat] INFO: {smallDiagDofs.Count} DOFs have SMALL diagonal (<{smallThreshold:E0}):");
-                //foreach (var (eq, name, val) in smallDiagDofs.Take(20))
-                    //System.Diagnostics.Debug.WriteLine($"  eq={eq}: {name}, val={val:E3}");
-                //if (smallDiagDofs.Count > 20)
-                    //System.Diagnostics.Debug.WriteLine($"  ... and {smallDiagDofs.Count - 20} more");
             }
 
             if (isTan)
@@ -450,20 +412,6 @@ namespace PileDesign.FEM
                 }
             }
 
-            // デバッグ: 組み立て方式と K_sec*d の差を確認（初回のみ出力）
-            #if DEBUG
-            if (KAA_sec != null && VectorD != null)
-            {
-                var T_old = KAA_sec * VectorD;
-                double diff = (VectorT - T_old).L2Norm();
-                double T_norm = VectorT.L2Norm();
-                double T_old_norm = T_old.L2Norm();
-                if (diff > 1e-6 * Math.Max(T_norm, T_old_norm))
-                {
-                    //System.Diagnostics.Debug.WriteLine($"[SetT] Assembly vs K*d: ||T_asm||={T_norm:E3}, ||T_old||={T_old_norm:E3}, ||diff||={diff:E3}");
-                }
-            }
-            #endif
         }
 
         // 梁要素の内力を全体ベクトルに組み立て（要素座標系→全体座標系変換＋マスター節点変換を含む）
@@ -672,14 +620,6 @@ namespace PileDesign.FEM
                 .Select(r => r.Step)
                 .ToList();
 
-            #if DEBUG
-            if (results.Count == 0)
-            {
-                //System.Diagnostics.Debug.WriteLine($"[GetAnalysisLastStep] No results found for LoadCase={loadCase?.LoadName}, Comb={loadCombination?.Name}, isLiq={isLiquefaction}");
-                //System.Diagnostics.Debug.WriteLine($"[GetAnalysisLastStep] Available: {string.Join(", ", AnalysisStepResults.Take(5).Select(r => $"LC={r.LoadCase?.LoadName},Comb={r.LoadCombination?.Name},isLiq={r.IsLiquefaction}"))}");
-            }
-            #endif
-
             return results.DefaultIfEmpty(-999).Max();
         }
 
@@ -714,7 +654,7 @@ namespace PileDesign.FEM
             var horizontalSoilSprings = this.HorizontalSoilSprings.Select(s => s.DeepCopy()).ToList();
             var rotationalSprings = this.RotationalSprings.Select(rs => rs.DeepCopy()).ToList();
 
-            var copy = new AnaModel(_mainWindowViewModel, nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings, rotationalSprings);
+            var copy = new AnaModel(_inputModel, nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings, rotationalSprings);
 
             // AnalysisStepResultsもDeepCopy
             foreach (var result in this.AnalysisStepResults)

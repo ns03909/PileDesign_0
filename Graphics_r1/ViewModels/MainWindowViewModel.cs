@@ -1538,12 +1538,10 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    //System.Diagnostics.Debug.WriteLine("TrySaveUndoSnapshotSafely: DeepCopy returned null, skipping undo snapshot.");
                 }
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"TrySaveUndoSnapshotSafely例外: {ex}");
             }
         }
 
@@ -1556,7 +1554,6 @@ namespace PileDesign.ViewModels
                 if (loaded == null)
                 {
                     MessageBox.Show($"ファイルの読込に失敗しました。\n{filePath}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    //System.Diagnostics.Debug.WriteLine($"LoadFromFile returned null: {filePath}");
                     return false;
                 }
 
@@ -1588,7 +1585,6 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"ファイル読込中にエラーが発生しました。\n{ex.Message}", "読込エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                //System.Diagnostics.Debug.WriteLine($"TryLoadInputModelFileUsingInputModelLoader例外: {ex}");
                 return false;
             }
         }
@@ -1889,11 +1885,8 @@ namespace PileDesign.ViewModels
             }
 
             // デバッグ: AnalysisStepResultsの内容を確認
-            //System.Diagnostics.Debug.WriteLine($"=== RefreshResultTablesFromLastStep ===");
-            //System.Diagnostics.Debug.WriteLine($"AnalysisStepResults.Count = {CurrentModel.AnalysisStepResults.Count}");
             foreach (var r in CurrentModel.AnalysisStepResults)
             {
-                //System.Diagnostics.Debug.WriteLine($"  LoadCase={r.LoadCase?.LoadName}, LoadComb={r.LoadCombination?.Name}, IsLiq={r.IsLiquefaction}, Step={r.Step}");
             }
 
             // 全ての解析結果から一意の組み合わせ（LoadCase, LoadCombination, IsLiquefaction）を取得
@@ -1910,10 +1903,8 @@ namespace PileDesign.ViewModels
                 .Select(g => g.OrderByDescending(r => r.Step).First()) // 各組み合わせの最終ステップを取得
                 .ToList();
 
-            //System.Diagnostics.Debug.WriteLine($"uniqueCombinations.Count = {uniqueCombinations.Count}");
             foreach (var c in uniqueCombinations)
             {
-                //System.Diagnostics.Debug.WriteLine($"  UniqueComb: LoadCase={c.LoadCase?.LoadName}, LoadComb={c.LoadCombination?.Name}, IsLiq={c.IsLiquefaction}, Step={c.Step}");
             }
 
             foreach (var stepResult in uniqueCombinations)
@@ -1925,14 +1916,11 @@ namespace PileDesign.ViewModels
                     stepResult.IsLiquefaction,
                     stepResult.Step);
 
-                //System.Diagnostics.Debug.WriteLine($"  Built {tables.Count} tables for IsLiq={stepResult.IsLiquefaction}");
                 allTables.AddRange(tables);
             }
 
-            //System.Diagnostics.Debug.WriteLine($"Total tables: {allTables.Count}");
             foreach (var t in allTables)
             {
-                //System.Diagnostics.Debug.WriteLine($"  Table: {t.Name}, IsLiq={t.IsLiquefaction}");
             }
 
             LatestResultTables = allTables;

@@ -1,9 +1,5 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace PileDesign.FEM
 {
@@ -43,7 +39,6 @@ namespace PileDesign.FEM
             {
                 double scaleFactor = maxDispIncrement / maxAbsIncrement;
                 incrementalDispVector = incrementalDispVector * scaleFactor;
-                //System.Diagnostics.Debug.WriteLine($"[Solver] Displacement increment limited: max={maxAbsIncrement:E3} -> scaled by {scaleFactor:F4}");
             }
 
             anaModel.SetDispVector(incrementalDispVector);
@@ -110,45 +105,5 @@ namespace PileDesign.FEM
             }
         }
 
-        // 出力
-        private static void OutputResult(AnaModel anaModel)
-        {
-            string outFilePath = "Result/result.csv";
-            CheckDirectory(outFilePath);
-            List<string> lines =
-            [
-                // 節点変位
-                "*Node\n",
-                "Name,UX,UY,UZ,TX,TY,TZ\n",
-            ];
-            foreach (Node node in anaModel.Nodes)
-            {
-                List<string> tmp = [node.Name, .. node.CumulativeDisp.GetVector().Select(d => d.ToString())];
-                lines.Add(string.Join(",", tmp) + "\n");
-            }
-            lines.Add("\n");
-
-            // 梁要素応力
-            lines.Add("*Beam\n");
-            lines.Add("Name,UXI,UYI,UZI,TXI,TYI,TZI,UXJ,UYJ,UZJ,TXJ,TYJ,TZJ\n");
-            foreach (Beam beam in anaModel.Beams)
-            {
-                List<string> tmp = [beam.Name, .. beam.CumulativeForce.GetVector().Select(s => s.ToString())];
-                lines.Add(string.Join(",", tmp) + "\n");
-            }
-            lines.Add("\n");
-
-            File.WriteAllLines(outFilePath, lines, Encoding.UTF8);
-        }
-
-        // 出力先ディレクトリの確認
-        private static void CheckDirectory(string path)
-        {
-            string filePath = System.IO.Path.GetDirectoryName(path);
-            if (!Directory.Exists(filePath))
-            {
-                Directory.CreateDirectory(filePath);
-            }
-        }
     }
 }

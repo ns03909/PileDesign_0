@@ -29,11 +29,9 @@ namespace PileDesign.ViewModels
         {
             if (_isExampleRunning)
             {
-                //Debug.WriteLine($"{exampleName}: reentrancy prevented.");
                 return false;
             }
             _isExampleRunning = true;
-            //Debug.WriteLine($"{exampleName}: start");
             return true;
         }
 
@@ -41,7 +39,6 @@ namespace PileDesign.ViewModels
         private void EndExample(string exampleName)
         {
             _isExampleRunning = false;
-            //Debug.WriteLine($"{exampleName}: end");
         }
 
         /// <summary>

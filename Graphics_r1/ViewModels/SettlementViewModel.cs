@@ -157,7 +157,7 @@ namespace PileDesign.ViewModels
                     var soilPile = SoilPiles[i];
 
                     // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
-                    var vtm = new VerticalLoadTransferMethod(_mainWindowViewModel, soilPile, SelectedAnalysisMode);
+                    var vtm = new VerticalLoadTransferMethod(InputModel, soilPile, SelectedAnalysisMode);
 
                     // SoilPileに計算結果を保存
                     soilPile.LoadDisplacements = vtm.LoadDisplacements;
@@ -200,7 +200,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // 現在選択中のSoilPileのVerticalLoadTransferMethodも更新
-                VerticalLoadTransferMethod = new VerticalLoadTransferMethod(_mainWindowViewModel, SoilPile, SelectedAnalysisMode);
+                VerticalLoadTransferMethod = new VerticalLoadTransferMethod(InputModel, SoilPile, SelectedAnalysisMode);
                 UpdateSettlementChart();
                 UpdateCircumstanceSeries();
             }
@@ -454,7 +454,7 @@ namespace PileDesign.ViewModels
                 Mouse.OverrideCursor = Cursors.Wait;
 
                 // コンストラクタで保存した_mainWindowViewModelを使用
-                VerticalLoadTransferMethod = new(_mainWindowViewModel, SoilPile, SelectedAnalysisMode);
+                VerticalLoadTransferMethod = new(InputModel, SoilPile, SelectedAnalysisMode);
 
                 // チャートの更新
                 UpdateSettlementChart();
@@ -581,22 +581,14 @@ namespace PileDesign.ViewModels
             List<double> settlementsLevel2 = [];
 
             // デバッグ: VL値の確認
-            //System.Diagnostics.Debug.WriteLine($"=== UpdateSettlementChart VL Debug ===");
-            //System.Diagnostics.Debug.WriteLine($"SoilPileNo = {SoilPileNo}");
-            //System.Diagnostics.Debug.WriteLine($"_mainWindowViewModel HashCode = {_mainWindowViewModel?.GetHashCode()}");
-            //System.Diagnostics.Debug.WriteLine($"InputModel HashCode = {InputModel?.GetHashCode()}");
-            //System.Diagnostics.Debug.WriteLine($"PileLayoutItems HashCode = {InputModel?.PileLayoutItems?.GetHashCode()}");
-            //System.Diagnostics.Debug.WriteLine($"PileLayoutItems.Count = {InputModel.PileLayoutItems?.Count ?? 0}");
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                //System.Diagnostics.Debug.WriteLine($"  PileNo={pileLayoutItem.PileNo}, SoilPileAltNo={pileLayoutItem.SoilPileAltNo}, VL0={pileLayoutItem.AxialForceVL0:F1}, VLadd={pileLayoutItem.AxialForceVLAdditional:F1}");
 
                 if (pileLayoutItem.SoilPileAltNo == SoilPileNo)
                 {
                     int no = pileLayoutItem.No;
                     double force = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional;
-                    //System.Diagnostics.Debug.WriteLine($"    -> Matched! force={force:F1}");
 
                     Vector<double>? settlementVector = VerticalLoadTransferMethod.GetDisplacementForGivenLoad(force);
                     if (settlementVector != null)
@@ -604,7 +596,6 @@ namespace PileDesign.ViewModels
                         pileLayoutItem.SinglePileSettlementVL = settlementVector[0];
                         forcesVL.Add(force);
                         settlementsVL.Add(settlementVector[0] * 1000);
-                        //System.Diagnostics.Debug.WriteLine($"    -> Added to forcesVL: {force:F1}, settlementsVL: {settlementVector[0] * 1000:F2}");
                     }
 
                     for (int i = 0; i < pileLayoutItem.AxialForceLevel1s.Count; i++)

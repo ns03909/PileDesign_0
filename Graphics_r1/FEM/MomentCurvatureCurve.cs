@@ -11,10 +11,6 @@ namespace PileDesign.FEM
 
         public MomentCurvatureCurve() { }
 
-        // デバッグ用: 曲線生成回数のカウンタ（過剰なログを抑制）
-        private static int _curveCreateCount = 0;
-        private static readonly object _logLock = new();
-
         public MomentCurvatureCurve(IEnumerable<(double phi, double moment)> points)
         {
             if (points == null) throw new ArgumentNullException(nameof(points));
@@ -51,34 +47,6 @@ namespace PileDesign.FEM
 
             // 最低でも2点が必要（1点なら EvaluateTangent で 0 を返す）
             Points = merged;
-
-            // デバッグ: 曲線の点と各区間の接線剛性を出力（最初の10曲線のみ）
-            //#if DEBUG
-            //lock (_logLock)
-            //{
-            //    _curveCreateCount++;
-            //    if (_curveCreateCount <= 10)
-            //    {
-            //        System.Diagnostics.Debug.WriteLine($"[M-φ Curve #{_curveCreateCount}] Points={Points.Count}:");
-            //        for (int i = 0; i < Points.Count; i++)
-            //        {
-            //            var pt = Points[i];
-            //            System.Diagnostics.Debug.WriteLine($"  [{i}] φ={pt.Phi:E6} [1/m], M={pt.Moment:F1} [kNm]");
-            //        }
-            //        // 各区間の接線剛性を表示
-            //        System.Diagnostics.Debug.WriteLine($"  Segment tangent stiffnesses (dM/dφ = EI_eff):");
-            //        for (int i = 0; i < Points.Count - 1; i++)
-            //        {
-            //            var (p0, m0) = Points[i];
-            //            var (p1, m1) = Points[i + 1];
-            //            double dPhi = p1 - p0;
-            //            double dM = m1 - m0;
-            //            double tangent = dPhi > 1e-12 ? dM / dPhi : 0.0;
-            //            System.Diagnostics.Debug.WriteLine($"    Seg[{i}→{i + 1}]: dM/dφ = {tangent:E3} [kNm²]");
-            //        }
-            //    }
-            //}
-            //#endif
         }
 
         public double EvaluateMoment(double phi)
@@ -120,17 +88,12 @@ namespace PileDesign.FEM
             }
         }
 
-        // デバッグ用: 評価回数カウンタ（過剰なログを抑制）
-        private static int _evalTangentCount = 0;
-        private static int _evalSecantCount = 0;
-
         // dM/dφ（接線剛性）: EI_eff として扱える
         // 改良版: セグメント境界付近でスムーズにブレンドして不連続性を解消
         public double EvaluateTangent(double phi)
         {
             if (Points == null || Points.Count <= 1)
             {
-                //System.Diagnostics.Debug.WriteLine($"EvaluateTangent: phi={phi:E6}, returning 0.0 (no points)");
                 return 0.0;
             }
 
@@ -159,13 +122,6 @@ namespace PileDesign.FEM
                     // セグメント中央付近: そのセグメントの傾きをそのまま使用
                     if (phi >= p0 + blendWidth && phi <= p1 - blendWidth)
                     {
-                        //#if DEBUG
-                        //_evalTangentCount++;
-                        //if (_evalTangentCount <= 50)
-                        //{
-                        //    System.Diagnostics.Debug.WriteLine($"[EvalTangent #{_evalTangentCount}] φ={phi:E6}, seg={i}→{i + 1}, center, EI_tan={slopes[i]:E3}");
-                        //}
-                        //#endif
                         return slopes[i];
                     }
 
@@ -175,13 +131,6 @@ namespace PileDesign.FEM
                         double t = (phi - p0) / blendWidth; // 0→1
                         t = t * t * (3 - 2 * t); // スムーズステップ補間
                         double blended = slopes[i - 1] * (1 - t) + slopes[i] * t;
-                        //#if DEBUG
-                        //_evalTangentCount++;
-                        //if (_evalTangentCount <= 50)
-                        //{
-                        //    System.Diagnostics.Debug.WriteLine($"[EvalTangent #{_evalTangentCount}] φ={phi:E6}, seg={i}→{i + 1}, blend_start t={t:F3}, EI_tan={blended:E3}");
-                        //}
-                        //#endif
                         return blended;
                     }
 
@@ -191,38 +140,16 @@ namespace PileDesign.FEM
                         double t = (phi - (p1 - blendWidth)) / blendWidth; // 0→1
                         t = t * t * (3 - 2 * t); // スムーズステップ補間
                         double blended = slopes[i] * (1 - t) + slopes[i + 1] * t;
-                        //#if DEBUG
-                        //_evalTangentCount++;
-                        //if (_evalTangentCount <= 50)
-                        //{
-                        //    System.Diagnostics.Debug.WriteLine($"[EvalTangent #{_evalTangentCount}] φ={phi:E6}, seg={i}→{i + 1}, blend_end t={t:F3}, EI_tan={blended:E3}");
-                        //}
-                        //#endif
                         return blended;
                     }
 
                     // ブレンド対象がない場合（最初・最後のセグメント端）
-                    //#if DEBUG
-                    //_evalTangentCount++;
-                    //if (_evalTangentCount <= 50)
-                    //{
-                    //    System.Diagnostics.Debug.WriteLine($"[EvalTangent #{_evalTangentCount}] φ={phi:E6}, seg={i}→{i + 1}, edge, EI_tan={slopes[i]:E3}");
-                    //}
-                    //#endif
                     return slopes[i];
                 }
             }
 
             // 範囲外の場合は端部の傾きを使用
             double result = (phi < Points[0].Phi) ? slopes[0] : slopes[^1];
-            //#if DEBUG
-            //_evalTangentCount++;
-            //if (_evalTangentCount <= 50)
-            //{
-            //    string region = (phi < Points[0].Phi) ? "below_first" : "above_last";
-            //    System.Diagnostics.Debug.WriteLine($"[EvalTangent #{_evalTangentCount}] φ={phi:E6}, region={region}, EI_tan={result:E3}");
-            //}
-            //#endif
             return result;
         }
 
@@ -236,31 +163,10 @@ namespace PileDesign.FEM
             if (p < 1e-9)
             {
                 double tan0 = EvaluateTangent(0.0);
-                //#if DEBUG
-                //_evalSecantCount++;
-                //if (_evalSecantCount <= 50)
-                //{
-                //    System.Diagnostics.Debug.WriteLine($"[EvalSecant #{_evalSecantCount}] φ={phi:E6} (near zero) -> using tangent={tan0:E3}");
-                //}
-                //#endif
                 return tan0;
             }
             double M = EvaluateMoment(phi);
             double secant = M / p;
-            //#if DEBUG
-            //_evalSecantCount++;
-            //if (_evalSecantCount <= 50)
-            //{
-            //    // どの区間にいるか判定
-            //    int seg = -1;
-            //    for (int i = 0; i < Points.Count - 1; i++)
-            //    {
-            //        if (p >= Points[i].Phi && p <= Points[i + 1].Phi) { seg = i; break; }
-            //    }
-            //    string segStr = seg >= 0 ? $"{seg}→{seg + 1}" : (p < Points[0].Phi ? "below" : "above");
-            //    System.Diagnostics.Debug.WriteLine($"[EvalSecant #{_evalSecantCount}] φ={phi:E6}, seg={segStr}, M={M:F1}, EI_sec={secant:E3}");
-            //}
-            //#endif
             return secant;
         }
     }

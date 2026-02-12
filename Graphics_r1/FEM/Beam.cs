@@ -23,7 +23,7 @@ namespace PileDesign.FEM
 
         // M-φ 非線形（N依存の曲線ファミリを保持：合成 or 個別）
         // 例: family の各要素 { double N; IEnumerable<(double Phi,double Moment)> Points; } など
-        public object? Mphi_ByN { get; set; }   // 合成: Mres-φres 用
+        public object? MPhi_ByN { get; set; }   // 合成: Mres-φres 用
         public object? MphiY_ByN { get; set; }  // 個別: My-φy
         public object? MphiZ_ByN { get; set; }  // 個別: Mz-φz
 
@@ -41,7 +41,7 @@ namespace PileDesign.FEM
         // 追加: PileSection.GetMPhiRelationship で得た曲線（合成）を直接設定
         // 注: 入力はFEM解析の単位系（φ: 1/m, M: kN·m）を期待
         //     PHC/PRC/SC杭のGetMPhiRelationshipは既にFEM単位で値を返すため、単位変換は不要
-        public void SetResolvedCombinedMphi(System.Collections.Generic.IEnumerable<double> phis,
+        public void SetResolvedCombinedMPhi(System.Collections.Generic.IEnumerable<double> phis,
                                             System.Collections.Generic.IEnumerable<double> moments)
         {
             // 入力を検査・正規化して不正値や重複phiを除去/集約する
@@ -52,7 +52,7 @@ namespace PileDesign.FEM
             if (pList.Count != mList.Count || pList.Count < 2) { _combinedCurve = null; return; }
 
             // デバッグ: 入力値を出力（単位変換なし：入力はFEM単位系を期待）
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] SetResolvedCombinedMphi: Beam={Name}, Points={pList.Count}, " +
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] SetResolvedCombinedMPhi: Beam={Name}, Points={pList.Count}, " +
                 $"phi[0]={pList[0]:E6} [1/m], phi[last]={pList[^1]:E6} [1/m], M[0]={mList[0]:F1} [kNm], M[last]={mList[^1]:F1} [kNm]");
 
             // フィルタ: 有限値のみ
@@ -120,29 +120,29 @@ namespace PileDesign.FEM
             {
                 var first = cleanPts.First();
                 var last = cleanPts.Last();
-                System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMphi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
+                System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
             catch { }
         }
 
         // 荷重ケースの代表軸力 N を与えて、そのケース用の曲線を解決（線形補間）
-        public void ResolveMphiForAxial(double axialN)
+        public void ResolveMPhiForAxial(double axialN)
         {
-            // 旧: _combinedCurve = (Mphi_ByN != null) ? AxialCurveFamily.ResolveMPhi(Mphi_ByN, axialN) : null;
-            if (Mphi_ByN == null)
+            // 旧: _combinedCurve = (MPhi_ByN != null) ? AxialCurveFamily.ResolveMPhi(MPhi_ByN, axialN) : null;
+            if (MPhi_ByN == null)
             {
                 _combinedCurve = null;
-                System.Diagnostics.Debug.WriteLine($"ResolveMphiForAxial: Beam={Name}, Mphi_ByN=null");
+                System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, MPhi_ByN=null");
                 return;
             }
 
             try
             {
-                var resolved = AxialCurveFamily.ResolveMPhi(Mphi_ByN, axialN);
+                var resolved = AxialCurveFamily.ResolveMPhi(MPhi_ByN, axialN);
                 _combinedCurve = resolved;
                 if (resolved == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ResolveMphiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
+                    System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
                 }
                 else
                 {
@@ -164,7 +164,7 @@ namespace PileDesign.FEM
                                 int cnt = list.Count;
                                 var first5 = string.Join(", ", list.Take(5).Select(t => $"{t.Phi:E6}/{t.Moment:E6}"));
                                 var last = list.Last();
-                                System.Diagnostics.Debug.WriteLine($"ResolveMphiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
+                                System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
                             }
                         }
                     }
@@ -174,7 +174,7 @@ namespace PileDesign.FEM
             catch (Exception ex)
             {
                 _combinedCurve = null;
-                System.Diagnostics.Debug.WriteLine($"ResolveMphiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
+                System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
             }
         }
 
@@ -267,10 +267,10 @@ namespace PileDesign.FEM
         public double Ryj_sec { get; set; }
         public double Rzj_sec { get; set; }
         // 曲げ剛性調整係数
-        public double Ktan_y { get; set; }
-        public double Ktan_z { get; set; }
-        public double Ksec_y { get; set; }
-        public double Ksec_z { get; set; }
+        public double KTan_y { get; set; }
+        public double KTan_z { get; set; }
+        public double KSec_y { get; set; }
+        public double KSec_z { get; set; }
         public double EA_multiplier { get; set; }
 
         public BeamDisp IncrementalDisp { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -316,10 +316,10 @@ namespace PileDesign.FEM
             Rzj_tan = rj;
             Ryj_sec = rj;
             Rzj_sec = rj;
-            Ktan_y = 1.0;
-            Ktan_z = 1.0;
-            Ksec_y = 1.0;
-            Ksec_z = 1.0;
+            KTan_y = 1.0;
+            KTan_z = 1.0;
+            KSec_y = 1.0;
+            KSec_z = 1.0;
             EA_multiplier = 1.0;
             SetKe(true);
             SetKe(false);
@@ -332,8 +332,8 @@ namespace PileDesign.FEM
         // 梁端部回転剛性をセットする。
         public void SetRotStiffness(float ky, float kz, bool isTan, bool isEndI)
         {
-            double _ky = isTan ? Ktan_y : Ksec_y;
-            double _kz = isTan ? Ktan_z : Ksec_z;
+            double _ky = isTan ? KTan_y : KSec_y;
+            double _kz = isTan ? KTan_z : KSec_z;
 
             double eIy_per_L1 = Section.Material.E * Section.IY / Length * ky;
             double eIz_per_L1 = Section.Material.E * Section.IZ / Length * kz;
@@ -375,8 +375,8 @@ namespace PileDesign.FEM
         // 要素剛性を取得する
         public void SetKe(bool isTan)
         {
-            double k_y = isTan ? Ktan_y : Ksec_y;
-            double k_z = isTan ? Ktan_z : Ksec_z;
+            double k_y = isTan ? KTan_y : KSec_y;
+            double k_z = isTan ? KTan_z : KSec_z;
             double ryi = isTan ? Ryi_tan : Ryi_sec;
             double ryj = isTan ? Ryj_tan : Ryj_sec;
             double rzi = isTan ? Rzi_tan : Rzi_sec;
@@ -587,15 +587,6 @@ namespace PileDesign.FEM
             }
 
             // デバッグ: 最初の5回のみログ出力（パフォーマンス改善）
-            //#if DEBUG
-            //if (_getBeamResultLogCount < 5 && BeamResults.Count > 0)
-            //{
-            //    _getBeamResultLogCount++;
-            //    var first = BeamResults[0];
-            //    System.Diagnostics.Debug.WriteLine($"[GetBeamResult #{_getBeamResultLogCount}] Searching: LoadCase={loadCase?.LoadName}, Comb={loadCombination?.Name}, step={step}, isLiq={isLiquefaction}");
-            //    System.Diagnostics.Debug.WriteLine($"[GetBeamResult #{_getBeamResultLogCount}] First result: LoadCase={first.LoadCase?.LoadName}, Comb={first.LoadCombination?.Name}, step={first.Step}, isLiq={first.IsLiquefaction}");
-            //}
-            //#endif
 
             foreach (BeamResult beamResult in BeamResults)
             {
@@ -609,7 +600,6 @@ namespace PileDesign.FEM
                 { return beamResult; }
             }
 
-            //MessageBox.Show("Analysis result Not found.");
             return null;
         }
 
@@ -638,10 +628,10 @@ namespace PileDesign.FEM
                 Rzj_tan = this.Rzj_tan,
                 Ryj_sec = this.Ryj_sec,
                 Rzj_sec = this.Rzj_sec,
-                Ktan_y = this.Ktan_y,
-                Ktan_z = this.Ktan_z,
-                Ksec_y = this.Ksec_y,
-                Ksec_z = this.Ksec_z,
+                KTan_y = this.KTan_y,
+                KTan_z = this.KTan_z,
+                KSec_y = this.KSec_y,
+                KSec_z = this.KSec_z,
                 EA_multiplier = this.EA_multiplier,
                 EA_Multiplier = this.EA_Multiplier,
                 IncrementalDisp = this.IncrementalDisp?.Clone(),
@@ -652,7 +642,7 @@ namespace PileDesign.FEM
                 KeSec = this.KeSec?.Clone(),
                 Curve = this.Curve?.Clone(),
                 HorizontalSoilReactionItem = soilReactionCopy,
-                BeamResults = new System.Collections.Generic.List<BeamResult>(this.BeamResults.Select(r => r.DeepCopy()))
+                BeamResults = [.. this.BeamResults.Select(r => r.DeepCopy())]
             };
             return copy;
         }

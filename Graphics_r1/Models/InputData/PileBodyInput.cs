@@ -29,7 +29,6 @@ namespace PileDesign.Models.InputData
 
                 if (!File.Exists(csvFilePath))
                 {
-                    //System.Diagnostics.Debug.WriteLine($"プリセットCSVが見つかりません: {csvFilePath}");
                     return (parameters, names);
                 }
 
@@ -55,18 +54,10 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"LoadPresetSettlementParametersFromCsv エラー: {ex}");
             }
 
             return (parameters, names);
         }
-
-        //private ObservableCollection<PileBodySegment> _pileBodySegments;
-        //public ObservableCollection<PileBodySegment> PileBodySegments
-        //{
-        //    get => _pileBodySegments;
-        //    set => SetProperty(ref _pileBodySegments, value);
-        //}
 
         // 追加: セクション既定値リセット抑止フラグ
         private bool _suppressSectionReset = false;
@@ -140,7 +131,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PileBodySegmentsUpdate エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭区間情報の更新中にエラーが発生しました。\n{ex.Message}", "区間更新エラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -406,7 +396,6 @@ namespace PileDesign.Models.InputData
                 }
                 catch (Exception ex)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"PileBodyType セッター エラー: {ex}");
                     Application.Current?.Dispatcher.Invoke(() =>
                         MessageBox.Show($"杭体タイプ設定中にエラーが発生しました。\n{ex.Message}", "プロパティエラー", MessageBoxButton.OK, MessageBoxImage.Error));
                 }
@@ -465,7 +454,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PileBodySegments_CollectionChanged エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭区間コレクション変更時にエラーが発生しました。\n{ex.Message}", "コレクションエラー", MessageBoxButton.OK, MessageBoxImage.Error));
             }
@@ -908,7 +896,6 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"PileBodyInput.DeepCopy エラー: {ex}");
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"杭体データのDeepCopy中にエラーが発生しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
                 return null;

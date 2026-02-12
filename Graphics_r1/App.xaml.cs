@@ -130,7 +130,6 @@ namespace PileDesign
             if (e.Exception is System.Runtime.InteropServices.COMException comEx
                 && comEx.HResult == unchecked((int)0x80040206))
             {
-                //System.Diagnostics.Debug.WriteLine($"[App] IME/TextStore COMException ignored: {comEx.Message}");
                 e.Handled = true;
                 return; // アプリを終了せずに続行
             }
@@ -150,12 +149,10 @@ namespace PileDesign
             catch (UnauthorizedAccessException)
             {
                 // ファイル書き込み権限がない場合は無視（デバッグ出力のみ）
-                //System.Diagnostics.Debug.WriteLine("ログファイルへの書き込み権限がありません");
             }
             catch (IOException)
             {
                 // ファイルI/O例外は無視（デバッグ出力のみ）
-                //System.Diagnostics.Debug.WriteLine("ログファイルの書き込みに失敗しました");
             }
 
             // ユーザーに通知

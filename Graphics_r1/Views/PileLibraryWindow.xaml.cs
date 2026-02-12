@@ -95,7 +95,6 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"FindGraphicsR1Folder 例外: {ex}");
                 MessageBox.Show($"フォルダ探索中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return null;
             }
@@ -126,7 +125,6 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"LoadCsvToDataTable 例外: {ex}");
                 MessageBox.Show($"CSV読込中にエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 // エラー時は空のDataTableを返す
             }

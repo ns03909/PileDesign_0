@@ -603,7 +603,6 @@ namespace PileDesign.Models.InputData
             }
 
             // 収束しなかった場合は例外を投げずに最良近似を返す（デバッグ出力）
-            //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN: non-converged Ntarget={Ntarget}, iter={iter}, bestDiff={bestDiff}");
             return (bestM, bestCurv);
         }
 
@@ -1386,102 +1385,8 @@ namespace PileDesign.Models.InputData
             }
 
             // 収束しなかった場合は最良近似を返す
-            //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (PRC): non-converged Ntarget={Ntarget}, bestDiff={bestDiff}, bestCurv={bestCurv}");
             return (bestM, bestCurv);
         }
-        //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)///////////////////////////
-        //{
-        //    double Nnext = double.MaxValue;
-        //    double Mnext = double.MaxValue;
-        //    double Nnext1;
-
-        //    // 初期曲率（ゼロ近傍を回避）
-        //    double curvature = Math.Max(1e-12, MainBars.RSigmaY / MainBars.Er / (PileDia * 0.5 + MainBars.PCD * 0.5));
-        //    double deltaCurvature = Math.Max(1e-12, curvature / 100.0);
-        //    int maxIter = 200;
-
-        //    // 最良解を記憶
-        //    double bestDiff = double.MaxValue;
-        //    double bestN = Nnext;
-        //    double bestM = Mnext;
-        //    double bestCurv = curvature;
-
-        //    for (int iter = 0; iter < maxIter; iter++)
-        //    {
-        //        if (type == "RebarTensionYield")
-        //        {
-        //            (Nnext, Mnext) = GetMainBarTensionYieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetMainBarTensionYieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else if (type == "ReBarCompressionYield")
-        //        {
-        //            (Nnext, Mnext) = GetMainBarCompressionYieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetMainBarCompressionYieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else if (type == "ConcreteCompressiveFailure")
-        //        {
-        //            (Nnext, Mnext) = GetConcreteCompressiveFailureForceAndMoment(curvature);
-        //            (Nnext1, _) = GetConcreteCompressiveFailureForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else // "TendonTensileFailure"
-        //        {
-        //            (Nnext, Mnext) = GetTendonTensileFailureForceAndMoment(curvature);
-        //            (Nnext1, _) = GetTendonTensileFailureForceAndMoment(curvature + deltaCurvature);
-        //        }
-
-        //        double diff = Math.Abs(Ntarget - Nnext);
-        //        if (diff < bestDiff)
-        //        {
-        //            bestDiff = diff;
-        //            bestN = Nnext;
-        //            bestM = Mnext;
-        //            bestCurv = curvature;
-        //        }
-
-        //        // 十分近ければ完了
-        //        if (diff <= 0.1)
-        //        {
-        //            return (Mnext, curvature);
-        //        }
-
-        //        double deltaN = Nnext1 - Nnext;
-
-        //        // deltaN が小さいまたは NaN の場合はフォールバックステップ
-        //        if (double.IsNaN(deltaN) || Math.Abs(deltaN) < 1e-12)
-        //        {
-        //            // deltaCurvature を拡張して数値感度を改善
-        //            deltaCurvature = Math.Min(Math.Max(deltaCurvature * 10.0, 1e-12), Math.Max(Math.Abs(curvature) * 0.5, 1e-6));
-        //            double fallbackStep = Math.Sign(Ntarget - Nnext) * Math.Max(Math.Abs(curvature) * 1e-3, 1e-6);
-        //            curvature += fallbackStep;
-        //            curvature = Math.Max(curvature, 0.0);
-        //            continue;
-        //        }
-
-        //        // Newton 風ステップ
-        //        double step = deltaCurvature / deltaN * (Ntarget - Nnext);
-
-        //        // ステップ幅制限（安全側）
-        //        double maxStep = Math.Max(Math.Abs(curvature) * 0.5, 1e-6);
-        //        if (Math.Abs(step) > maxStep)
-        //            step = Math.Sign(step) * maxStep;
-
-        //        curvature += step;
-
-        //        // 数値破綻検出
-        //        if (double.IsNaN(curvature) || double.IsInfinity(curvature))
-        //            break;
-
-        //        // 曲率は負にしない
-        //        curvature = Math.Max(curvature, 0.0);
-
-        //        // 適応的に deltaCurvature を更新
-        //        deltaCurvature = Math.Max(Math.Abs(curvature) * 1e-4, 1e-12);
-        //    }
-
-        //    // 収束しなかったが例外は投げず最良近似解を返す（デバッグ出力）
-        //    //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (PRC): non-converged Ntarget={Ntarget}, iter={maxIter}, bestDiff={bestDiff}, bestCurv={bestCurv}");
-        //    return (bestM, bestCurv);
-        //}
 
         // 鉄筋が引張降伏するときのN、Mを返すメソッド
         internal (double, double) GetMainBarTensionYieldForceAndMoment(double curvature) /////////////////////
@@ -2013,20 +1918,8 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            // デバッグ出力
-            //System.Diagnostics.Debug.WriteLine($"[SCSection M-φ] N={Ntarget:E3}, case={caseType}, points={phis.Count}, " +
-                //$"phiCr={phiCr:E4}, phiYT={phiYT:E4}, phiYC={phiYC:E4}, MCr={MCr:F0}, MYT={MYT:F0}, MYC={MYC:F0}, Mu0={Mu0:F0}");
-            //System.Diagnostics.Debug.WriteLine($"  -> phis=[{string.Join(", ", phis.Select(p => p.ToString("E4")))}]");
-            //System.Diagnostics.Debug.WriteLine($"  -> Ms=[{string.Join(", ", Ms.Select(m => m.ToString("F1")))}]");
-
             return (phis, Ms);
         }
-
-        //private double GetBeta2(double Ntarget)///////////////////////////////
-        //{
-        //    double sigma0e = Ntarget / Ae;
-        //    return (SigmaE + sigma0e) < 10 ? 0.75 : 0.65;
-        //}
 
         // ひび割れモーメント、ひび割れ曲率を返すメソッド
         internal (double, double) GetCrackMoment(double Ntarget)
@@ -2037,181 +1930,6 @@ namespace PileDesign.Models.InputData
             return (Mcr, phiCr);
         }
 
-        // 最外縁のPC鋼材が引張降伏するときの曲げモーメント、曲率を返すメソッド
-        //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
-        //{
-        //    // N(curvature) を評価するヘルパ
-        //    double EvalN(double curv, out double M)
-        //    {
-        //        (double Nval, double Mval) res;
-        //        if (type == "SteelPipeTensionYield")
-        //            res = GetSteelPipeTensionYieldYieldForceAndMoment(curv);
-        //        else if (type == "SteelPipeCompressionYield_b")
-        //            res = GetSteelPipeCompressionYield_b_YieldForceAndMoment(curv);
-        //        else if (type == "SteelPipeCompressionYield_c")
-        //            res = GetSteelPipeCompressionYield_c_YieldForceAndMoment(curv);
-        //        else // "SteelPipeCompressionYield_d"
-        //            res = GetSteelPipeCompressionYield_d_YieldForceAndMoment(curv);
-
-        //        M = res.Item2;
-        //        return res.Item1;
-        //    }
-
-        //    // 探索上限（既存コードで使っている目安を再利用）
-        //    double maxCurvature = (0.003 + 0.0025) * 20.0 / Math.Max(1.0, PileDia);
-        //    maxCurvature = Math.Max(maxCurvature, 1e-6);
-
-        //    double tolN = 0.1; // 軸力の許容差 [N]
-        //    double lo = 0.0;
-        //    double hi = maxCurvature;
-
-        //    // 初期評価
-        //    double Mlo; double Mhi;
-        //    double Nlo = EvalN(lo, out Mlo);
-        //    double Nhi = EvalN(hi, out Mhi);
-
-        //    // 目標に既に近ければ返す
-        //    if (Math.Abs(Nlo - Ntarget) <= tolN) return (Mlo, lo);
-        //    if (Math.Abs(Nhi - Ntarget) <= tolN) return (Mhi, hi);
-
-        //    // 符号（差の向き）を確認してブラケット探索
-        //    double fLo = Nlo - Ntarget;
-        //    double fHi = Nhi - Ntarget;
-
-        //    // スキャンして符号変化区間を探す（ヒューリスティック）
-        //    if (Math.Sign(fLo) == Math.Sign(fHi))
-        //    {
-        //        int scanSteps = 50;
-        //        double bestDiff = Math.Abs(fLo);
-        //        double bestCurv = lo;
-        //        double bestM = Mlo;
-
-        //        for (int i = 1; i <= scanSteps; i++)
-        //        {
-        //            double curv = lo + (hi - lo) * i / scanSteps;
-        //            double Mtmp;
-        //            double Ntmp = EvalN(curv, out Mtmp);
-        //            double diff = Math.Abs(Ntmp - Ntarget);
-        //            if (diff < bestDiff)
-        //            {
-        //                bestDiff = diff;
-        //                bestCurv = curv;
-        //                bestM = Mtmp;
-        //            }
-        //            // 符号変化を見つけたらブラケットにする
-        //            double fPrev = EvalN(lo + (hi - lo) * (i - 1) / scanSteps, out _) - Ntarget;
-        //            double fCur = Ntmp - Ntarget;
-        //            if (Math.Sign(fPrev) != Math.Sign(fCur))
-        //            {
-        //                lo = lo + (hi - lo) * (i - 1) / scanSteps;
-        //                hi = curv;
-        //                fLo = fPrev;
-        //                fHi = fCur;
-        //                break;
-        //            }
-        //        }
-
-        //        // 符号変化が見つからなければ最良近似を返す
-        //        if (Math.Sign(fLo) == Math.Sign(fHi))
-        //        {
-        //            //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (SC) no bracket Ntarget={Ntarget}, bestDiff={bestDiff}");
-        //            return (bestM, bestCurv);
-        //        }
-        //    }
-
-        //    // 二分法で解を絞る
-        //    double Mmid = 0.0;
-        //    double mid = 0.0;
-        //    int maxIter = 100;
-        //    for (int iter = 0; iter < maxIter; iter++)
-        //    {
-        //        mid = 0.5 * (lo + hi);
-        //        double Nmid = EvalN(mid, out Mmid);
-        //        double fMid = Nmid - Ntarget;
-
-        //        if (Math.Abs(fMid) <= tolN)
-        //            return (Mmid, mid);
-
-        //        // どちらの半分に根があるかを判定
-        //        if (Math.Sign(fMid) == Math.Sign(fLo))
-        //        {
-        //            lo = mid;
-        //            fLo = fMid;
-        //        }
-        //        else
-        //        {
-        //            hi = mid;
-        //            fHi = fMid;
-        //        }
-
-        //        // 終了条件（区間が小さい）
-        //        if (Math.Abs(hi - lo) < 1e-12 * Math.Max(1.0, mid))
-        //            break;
-        //    }
-
-        //    // 収束しなければ最良近似を返す
-        //    //System.Diagnostics.Debug.WriteLine($"GetMomentCurvatureForN (SC) bisection finished iter, mid={mid}, diff={Math.Abs(EvalN(mid, out Mmid) - Ntarget)}");
-        //    return (Mmid, mid);
-        //}
-        //internal (double, double) GetMomentCurvatureForN(double Ntarget, string type) ///////////////////////////
-        //{
-        //    double Nnext = double.MaxValue;
-        //    double Mnext = double.MaxValue;
-        //    double Nnext1;
-        //    double curvature = PrecastSteelPipe.EpsilonY / (PileDia);
-        //    double deltaCurvature = curvature / 100.0;
-        //    int maxIter = 50;
-        //    int iter = 0;
-
-        //    while (Math.Abs(Ntarget - Nnext) > 0.1 && iter < maxIter)
-        //    {
-        //        if (type == "SteelPipeTensionYield") // a ///////////////////////////////////
-        //        {
-        //            (Nnext, Mnext) = GetSteelPipeTensionYieldYieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetSteelPipeTensionYieldYieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else if (type == "SteelPipeCompressionYield_b") // b ///////////////////////////////////
-        //        {
-        //            (Nnext, Mnext) = GetSteelPipeCompressionYield_b_YieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetSteelPipeCompressionYield_b_YieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else if (type == "SteelPipeCompressionYield_c") // c ///////////////////////////////////
-        //        {
-        //            (Nnext, Mnext) = GetSteelPipeCompressionYield_c_YieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetSteelPipeCompressionYield_c_YieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-        //        else // (type == "SteelPipeCompressionYield_d") ///////////////////////////////////
-        //        {
-        //            (Nnext, Mnext) = GetSteelPipeCompressionYield_d_YieldForceAndMoment(curvature);
-        //            (Nnext1, _) = GetSteelPipeCompressionYield_d_YieldForceAndMoment(curvature + deltaCurvature);
-        //        }
-
-        //        double deltaN = Nnext1 - Nnext;
-        //        if (Math.Abs(deltaN) < 1e-8 || double.IsNaN(deltaN))
-        //            break; // 収束不能・異常値
-
-        //        double step = deltaCurvature / deltaN * (Ntarget - Nnext);
-
-        //        // ステップ幅制限
-        //        if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
-        //            step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
-
-        //        curvature += step;
-
-        //        // NaNチェック
-        //        if (double.IsNaN(curvature) || double.IsNaN(Nnext) || double.IsNaN(Mnext))
-        //            break;
-
-        //        iter++;
-        //    }
-        //    // 収束しなかった場合の対策
-        //    if (iter >= maxIter)
-        //    {
-        //        // 必要なら例外や警告
-        //        throw new InvalidOperationException("Newton-Raphson法が収束しませんでした。");
-        //    }
-        //    return (Mnext, curvature);
-        //}
         internal (double, double) GetMomentCurvatureForN(double Ntarget, string type)
         {
             // 1. 評価用ローカル関数（N(φ), M(φ) を返す）
@@ -2278,7 +1996,6 @@ namespace PileDesign.Models.InputData
             // 符号変化を見つけられなかった場合 → 最良近似を返す
             if (Math.Abs(phiMax - phiMin) < 1e-12 || phiMin == 0.0 && phiMax == (PrecastSteelPipe.EpsilonY * 3.0) / (PileDia * 0.5))
             {
-                //System.Diagnostics.Debug.WriteLine($"[SCSection] GetMomentCurvatureForN: no bracket Ntarget={Ntarget}, bestDiff={bestDiff}");
                 return (bestM, bestPhi);
             }
 
@@ -2343,7 +2060,6 @@ namespace PileDesign.Models.InputData
                     break;
             }
 
-            //System.Diagnostics.Debug.WriteLine($"[SCSection] GetMomentCurvatureForN: non-converged fallback Ntarget={Ntarget}, diff={bestBracketDiff}");
             return (bestM, bestPhi);
         }
 

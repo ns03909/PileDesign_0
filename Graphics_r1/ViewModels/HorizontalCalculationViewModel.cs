@@ -28,27 +28,23 @@ namespace PileDesign.ViewModels
             }
             catch (NotSupportedException nse)
             {
-                ////System.Diagnostics.Debug.WriteLine($"MathNet provider selection failed (NotSupported): {nse}");
                 try
                 {
                     Control.UseManaged();
                 }
                 catch (Exception inner)
                 {
-                    ////System.Diagnostics.Debug.WriteLine($"MathNet fallback to managed failed: {inner}");
                 }
             }
             catch (Exception ex)
             {
                 // 想定外の例外も捕捉して管理実装にフォールバック
-                ////System.Diagnostics.Debug.WriteLine($"MathNet provider selection unexpected error: {ex}");
                 try
                 {
                     Control.UseManaged();
                 }
                 catch (Exception inner)
                 {
-                    ////System.Diagnostics.Debug.WriteLine($"MathNet fallback to managed failed: {inner}");
                 }
             }
 
@@ -542,7 +538,7 @@ namespace PileDesign.ViewModels
 
             // 編集用モデルを新規作成
             var editModel = new AnaModel(
-                _mainWindowViewModel,
+                InputModel,
                 AnalysisModelling.Nodes,
                 AnalysisModelling.Beams,
                 AnalysisModelling.DummyBeams,
@@ -717,7 +713,6 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 // ログ出力
-                ////System.Diagnostics.Debug.WriteLine($"解析中に例外: {ex}");
                 // ユーザー通知
                 Application.Current?.Dispatcher.Invoke(() =>
                     MessageBox.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error));
@@ -742,7 +737,6 @@ namespace PileDesign.ViewModels
         {
             if (IsAnalysisRunning && _cancellationTokenSource != null)
             {
-                ////System.Diagnostics.Debug.WriteLine("[Cleanup] キャンセル要求を発行します");
                 _cancellationTokenSource.Cancel();
 
                 // 解析が終了するまで少し待機（最大3秒）
@@ -755,11 +749,9 @@ namespace PileDesign.ViewModels
 
                 if (IsAnalysisRunning)
                 {
-                    ////System.Diagnostics.Debug.WriteLine("[Cleanup] 警告: 解析タスクがタイムアウト前に終了しませんでした");
                 }
                 else
                 {
-                    ////System.Diagnostics.Debug.WriteLine("[Cleanup] 解析タスクが正常に終了しました");
                 }
             }
         }
@@ -769,16 +761,13 @@ namespace PileDesign.ViewModels
         // v6: InputModel.PileBodies ではなく SoilPile.PileBodySegments を使用
         private void SetupMPhiFromPileSectionForLoadCase(AnaModel model, LoadCase loadCase)
         {
-            ////System.Diagnostics.Debug.WriteLine($"[SetupMPhi] Called for LoadCase={loadCase?.LoadName}, IsPileNonLinear={loadCase?.IsPileNonLinear}");
 
             if (model == null)
             {
-                ////System.Diagnostics.Debug.WriteLine($"[SetupMPhi] model is null, returning");
                 return;
             }
             if (!loadCase.IsPileNonLinear)
             {
-                ////System.Diagnostics.Debug.WriteLine($"[SetupMPhi] IsPileNonLinear=false, skipping M-φ setup");
                 return;
             }
 
@@ -865,19 +854,14 @@ namespace PileDesign.ViewModels
                 // デバッグ: TryCallMPhiRelationshipの戻り値を確認
                 if (curve.Value.Phis.Count > 0 && curve.Value.Moments.Count > 0)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"[DEBUG] TryCallMPhiRelationship result for Beam={beam.Name}: " +
-                        //$"Phis[0]={curve.Value.Phis[0]:E6}, Phis[last]={curve.Value.Phis[^1]:E6}, " +
-                        //$"Moments[0]={curve.Value.Moments[0]:E6}, Moments[last]={curve.Value.Moments[^1]:E6}");
                 }
 
-                beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
+                beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
                 successCount++;
             }
 
             // キャッシュ統計を出力
             var (hits, misses, cacheSize) = PileSection.GetMphiCacheStats();
-            //System.Diagnostics.Debug.WriteLine($"[v7] SetupMPhiFromPileSectionForLoadCase: totalBeams={totalBeams}, success={successCount}, skippedNoPileBody={skippedNoPileBody}, skippedNoSoilPile={skippedNoSoilPile}, skippedInvalidSeg={skippedInvalidSeg}, skippedNoSection={skippedNoSection}, skippedNoCurve={skippedNoCurve}");
-            //System.Diagnostics.Debug.WriteLine($"[M-φ Cache Stats] Hits={hits}, Misses={misses}, CacheSize={cacheSize}");
         }
 
         // M-φ関係
@@ -885,7 +869,6 @@ namespace PileDesign.ViewModels
         {
             if (pileSection == null)
             {
-                //System.Diagnostics.Debug.WriteLine("TryCallMPhiRelationship: pileSection is null");
                 return null;
             }
 
@@ -920,7 +903,6 @@ namespace PileDesign.ViewModels
                 return null;
 
             foundName = methodInfo.Name;
-            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: type={t.FullName}, foundMethod={foundName}, params={methodInfo.GetParameters().Length}");
 
             // 呼び出し
             object? ret;
@@ -935,7 +917,6 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: invoking {foundName} threw: {ex}");
                 return null;
             }
 
@@ -952,7 +933,6 @@ namespace PileDesign.ViewModels
             bool hasProperty = itm1Prop != null && itm2Prop != null;
             bool hasField = itm1Field != null && itm2Field != null;
 
-            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: hasProperty={hasProperty}, hasField={hasField}");
 
             if (hasProperty || hasField)
             {
@@ -972,14 +952,11 @@ namespace PileDesign.ViewModels
                         v2 = itm2Prop!.GetValue(ret);
                     }
 
-                    //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: v1 type={v1?.GetType().FullName}, v2 type={v2?.GetType().FullName}");
-
                     // List<double> を直接処理（最優先）
                     if (v1 is List<double> concreteList1 && v2 is List<double> concreteList2)
                     {
                         if (concreteList1.Count >= 2 && concreteList1.Count == concreteList2.Count)
                         {
-                            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: List<double> parsed, count={concreteList1.Count}");
                             return (concreteList1, concreteList2);
                         }
                     }
@@ -989,7 +966,6 @@ namespace PileDesign.ViewModels
                     {
                         if (list1.Count >= 2 && list1.Count == list2.Count)
                         {
-                            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: IList<double> parsed, count={list1.Count}");
                             return (list1.ToList(), list2.ToList());
                         }
                     }
@@ -1001,7 +977,6 @@ namespace PileDesign.ViewModels
                         var ms2 = enum2.ToList();
                         if (phis2.Count >= 2 && phis2.Count == ms2.Count)
                         {
-                            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: IEnumerable<double> parsed, count={phis2.Count}");
                             return (phis2, ms2);
                         }
                     }
@@ -1023,14 +998,12 @@ namespace PileDesign.ViewModels
                         }
                         if (phis.Count >= 2 && phis.Count == ms.Count)
                         {
-                            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: IEnumerable fallback parsed, count={phis.Count}");
                             return (phis, ms);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: Tuple parsing exception: {ex.Message}");
                 }
             }
 
@@ -1104,7 +1077,6 @@ namespace PileDesign.ViewModels
                 catch { /* fallthrough */ }
             }
 
-            //System.Diagnostics.Debug.WriteLine($"TryCallMPhiRelationship: unable to parse return type {rtype.FullName}");
             return null;
         }
 
@@ -1136,7 +1108,6 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                //System.Diagnostics.Debug.WriteLine($"SetupNonlinearMThetaForLoadCase: spring={spring.Name}, axialN={axialN:E3}");
 
                 var pileBody = InputModel.PileBodies[pb - 1];
                 var def = pileBody.GetMThetaRelationship(axialN);
@@ -1218,14 +1189,9 @@ namespace PileDesign.ViewModels
                         break;
                 }
 
-                // デバッグ出力: 杭頭回転バネのM-θ設定状況
-                //System.Diagnostics.Debug.WriteLine($"SetMThetaCurves: spring={spring.Name}, Mode={spring.Mode}, " +
-                    //$"CurveXY={(spring.CurveXY != null ? $"Points={spring.CurveXY.Points.Count}" : "null")}, " +
-                    //$"KthetaXY={spring.KthetaXY:E3}");
                 if (spring.CurveXY != null && spring.CurveXY.Points.Count > 0)
                 {
                     var pts = spring.CurveXY.Points;
-                    //System.Diagnostics.Debug.WriteLine($"  M-θ curve: first=({pts[0].Theta:E6},{pts[0].Moment:E6}), last=({pts[^1].Theta:E6},{pts[^1].Moment:E6})");
                 }
             }
         }
@@ -1236,7 +1202,6 @@ namespace PileDesign.ViewModels
 
         public async Task RunAsync(CancellationToken token)
         {
-            // CalculationLog.Clear(); // OnExecuteAnalysis呼び出し時の状態を維持するため、ここではクリアしない方が良いかもしれないが、計算開始ログとの兼ね合いで検討が必要
             // 既に「計算モデル作成開始」が出ているので、ここでは「計算開始」を追記する
             await AddLogAsync("解析計算処理開始");
             await Task.Yield();
@@ -1334,7 +1299,6 @@ namespace PileDesign.ViewModels
 
                                 // 節点変位も更新（既存のラインサーチ用メソッドを流用）
                                 UpdateNodeDisplacementsForLineSearch(targetModel, predictorIncrement);
-                                //System.Diagnostics.Debug.WriteLine($"[v15 Predictor] step={step}, applied {predictorFactor:P0} of prev increment (max={prevStepDispIncrement.AbsoluteMaximum():E3})");
                             }
 
                             targetModel.InitializeNormsqR_onNormsqFint();
@@ -1376,9 +1340,6 @@ namespace PileDesign.ViewModels
                             int slowDivergenceCount = 0;            // 連続増加回数
                             const int SLOW_DIVERGENCE_LIMIT = 10;   // この回数連続増加で緩やかな発散と判定
 
-                            // デバッグ: ループ条件を出力
-                            //System.Diagnostics.Debug.WriteLine($"[v12] Pre-iteration: SkipIteration={SkipIteration}, maxIter={maxIterations}, initialResidual={initialResidual:E3}");
-
                             // v16: 診断値をループ外に宣言（Modified NRフェーズでスキップしても前回値を保持）
                             double diagKMin = double.NaN, diagKMax = double.NaN;
 
@@ -1405,18 +1366,15 @@ namespace PileDesign.ViewModels
                                     const int FULL_NR_ITERATIONS = 3;
                                     bool useFullNR = !UseModifiedNewtonRaphson || n_iteration <= FULL_NR_ITERATIONS;
 
-                                    //System.Diagnostics.Debug.WriteLine($"[v17] Iteration: n={n_iteration}, IsPileNonLinear={loadCase.IsPileNonLinear}, useFullNR={useFullNR}, UseModifiedNR={UseModifiedNewtonRaphson}");
 
                                     if (loadCase.IsPileNonLinear && useFullNR)
                                     {
                                         // Full Newton-Raphson: 毎反復で接線剛性を更新
-                                        //System.Diagnostics.Debug.WriteLine($"[v17] -> Calling UpdateBeamMPhiTangent (Full NR, iter {n_iteration})");
                                         UpdateBeamMPhiTangent(targetModel);
                                     }
                                     else if (loadCase.IsPileNonLinear && UseModifiedNewtonRaphson && n_iteration > FULL_NR_ITERATIONS)
                                     {
                                         // Modified NRモード: 適応的切り替え後
-                                        //System.Diagnostics.Debug.WriteLine($"[v17] -> Skipping UpdateBeamMPhiTangent (Modified NR adaptive phase, iter {n_iteration})");
                                     }
 
                                     // KTan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
@@ -1424,11 +1382,9 @@ namespace PileDesign.ViewModels
                                     if (useFullNR || !loadCase.IsPileNonLinear || n_iteration == 1)
                                     {
                                         FindK(iLC, targetModel);
-                                        //System.Diagnostics.Debug.WriteLine($"[v17] -> FindK executed (iter {n_iteration})");
                                     }
                                     else
                                     {
-                                        //System.Diagnostics.Debug.WriteLine($"[v17] -> FindK SKIPPED (Modified NR adaptive phase, iter {n_iteration}) - reusing K from iter {FULL_NR_ITERATIONS}");
                                     }
 
                                     // ラインサーチ or 通常の更新
@@ -1603,7 +1559,6 @@ namespace PileDesign.ViewModels
                                         autoSwitchedToLineSearch = true;
                                         currentRelaxFactor = 1.0;  // ライン探索時は緩和係数をリセット
                                         await AddLogAsync($"  ⚠ 発散検出: 残差が大幅に増加しました (初期:{initialResidual:E2} → 現在:{currentResidual:E2})。ライン探索に自動切り替えします。");
-                                        //System.Diagnostics.Debug.WriteLine($"[v12] Auto-switched to LineSearch due to divergence: initial={initialResidual:E3}, current={currentResidual:E3}");
                                     }
                                 }
                                 else if (!isDiverging)
@@ -1690,7 +1645,6 @@ namespace PileDesign.ViewModels
                             if (vectorDAtStepStart != null && targetModel.VectorD != null)
                             {
                                 prevStepDispIncrement = targetModel.VectorD - vectorDAtStepStart;
-                                //System.Diagnostics.Debug.WriteLine($"[v15 Predictor] step={step} converged, recorded increment (max={prevStepDispIncrement.AbsoluteMaximum():E3})");
                             }
 
                             targetModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iteration, targetModel.NormsROnNormsFint));
@@ -1795,7 +1749,6 @@ namespace PileDesign.ViewModels
         // 統合されたM-φ更新メソッド: 接線剛性と割線剛性の両方に対応
         private static void UpdateBeamMPhi(AnaModel model, bool isTangent)
         {
-            //System.Diagnostics.Debug.WriteLine($"[v2] UpdateBeamMPhi: isTangent={isTangent}, beam count={model.Beams.Count}");
             int beamIdx = 0;
             foreach (var beam in model.Beams)
             {
@@ -1804,7 +1757,6 @@ namespace PileDesign.ViewModels
                 bool hasMaterial = beam.Section?.Material != null;
                 if (beamIdx <= 3)  // 最初の3本だけ詳細出力
                 {
-                    //System.Diagnostics.Debug.WriteLine($"  Beam[{beamIdx}]={beam.Name}, hasCurve={hasCurve}, hasMaterial={hasMaterial}, Section={beam.Section?.GetType().Name}");
                 }
                 // 端部変位（全体）→要素座標系
                 var dI = beam.NodeI.CumulativeDisp.GetVector();
@@ -1847,7 +1799,6 @@ namespace PileDesign.ViewModels
                 // デバッグ: E*I と EI_base の比較（初回のみ）
                 if (beamIdx == 0 && isTangent)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"[v10] EI comparison: E*Iy={EI0y:E6}, E*Iz={EI0z:E6}, EI_base(curve)={EI_base:E6}, ratio={EI_base/EI0y:F4}");
                 }
 
                 // v10: 常にE*Iを基準にしてratioを計算
@@ -1870,27 +1821,26 @@ namespace PileDesign.ViewModels
                 {
                     // v10: 緩和係数0.3で安定性を確保（振動防止）
                     const double RELAXATION = 0.3;
-                    double prevKy = beam.Ktan_y;
-                    double prevKz = beam.Ktan_z;
+                    double prevKy = beam.KTan_y;
+                    double prevKz = beam.KTan_z;
                     // 初回（prevK=0）は緩和なしで設定
                     double newKy = (prevKy > 0.01) ? prevKy * (1 - RELAXATION) + ratioY * RELAXATION : ratioY;
                     double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION) + ratioZ * RELAXATION : ratioZ;
 
-                    //System.Diagnostics.Debug.WriteLine($"[v10] UpdateBeamMPhiTangent: Beam={beam.Name}, phiRes={phiRes:E6}, EIy_eff={EIy_eff:E6}, EI0y={EI0y:E6}, ratioY={ratioY:E6}, prevKy={prevKy:E6}, newKy={newKy:E6}");
-                    beam.Ktan_y = newKy;
-                    beam.Ktan_z = newKz;
+                    beam.KTan_y = newKy;
+                    beam.KTan_z = newKz;
                     beam.SetKe(true); // KeTan 再構築
                 }
                 else
                 {
                     // v10: 割線剛性にも緩和を追加して振動を防止
                     const double RELAXATION_SEC = 0.5;
-                    double prevKy = beam.Ksec_y;
-                    double prevKz = beam.Ksec_z;
+                    double prevKy = beam.KSec_y;
+                    double prevKz = beam.KSec_z;
                     double newKy = (prevKy > 0.01) ? prevKy * (1 - RELAXATION_SEC) + ratioY * RELAXATION_SEC : ratioY;
                     double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION_SEC) + ratioZ * RELAXATION_SEC : ratioZ;
-                    beam.Ksec_y = newKy;
-                    beam.Ksec_z = newKz;
+                    beam.KSec_y = newKy;
+                    beam.KSec_z = newKz;
                     beam.SetKe(false); // KeSec 再構築
                 }
             }
@@ -1965,7 +1915,6 @@ namespace PileDesign.ViewModels
                     var curve = TryCallMPhiRelationship(pileSection, axialN);
                     if (curve is null)
                     {
-                        //System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForMiddleBeam: Beam={beam.Name}, pileNo={pile.No}, seg={seg}, axialN={axialN:E} -> curve=null");
                         continue;
                     }
                     // ログ: 点数と先頭数点を出力
@@ -1976,14 +1925,12 @@ namespace PileDesign.ViewModels
                         int cnt = phisArr.Length;
                         var first5 = string.Join(", ", phisArr.Take(5).Select(x => x.ToString("E6")));
                         var first5m = string.Join(", ", msArr.Take(5).Select(x => x.ToString("E6")));
-                        //System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForMiddleBeam: Beam={beam.Name}, pileNo={pile.No}, seg={seg}, axialN={axialN:E}, Points={cnt}, phis_first5=[{first5}], moms_first5=[{first5m}]");
                     }
                     catch (Exception ex)
                     {
-                        //System.Diagnostics.Debug.WriteLine($"SetupMPhiByCurrentAxialForMiddleBeam: Beam={beam.Name} logging error: {ex}");
                     }
 
-                    beam.SetResolvedCombinedMphi(curve.Value.Phis, curve.Value.Moments);
+                    beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
                 }
             }
         }
@@ -2058,7 +2005,6 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                //System.Diagnostics.Debug.WriteLine($"[GetKDiagonalMiNMax] SMALL diag: eq={minIdx}, {minDofName}, val={min:E3}");
             }
 
             if (double.IsInfinity(min)) min = double.NaN;
@@ -2128,7 +2074,6 @@ namespace PileDesign.ViewModels
             {
                 double scaleFactor = maxDispIncrement / maxAbsIncrement;
                 newtonDirection *= scaleFactor;
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch] Newton direction limited: max={maxAbsIncrement:E3} -> scaled by {scaleFactor:F4}");
             }
 
             return newtonDirection;
@@ -2268,12 +2213,9 @@ namespace PileDesign.ViewModels
             // α=1.0で残差が減少すれば即採用
             if (f1 <= currentResidual)
             {
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch] α=1.0 accepted, residual: {currentResidual:E3} -> {f1:E3}");
                 _lastAcceptedAlpha = 1.0;
                 return alpha1;
             }
-
-            //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] α=1.0 rejected ({currentResidual:E3} -> {f1:E3}), using quadratic interpolation...");
 
             // Step 2: α=0.5で軽量評価
             RestoreNodeDisplacements(targetModel, savedNodeDisps);
@@ -2281,15 +2223,12 @@ namespace PileDesign.ViewModels
             double f2 = EvaluateResidualAtAlpha(
                 targetModel, savedVectorD, newtonDirection, alpha2, iLC, isPileNonLinear, isLightweight: true);
 
-            //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] α=0.5: residual={f2:E3}");
-
             // α=0.5で残差が減少すれば採用
             if (f2 < currentResidual)
             {
                 RestoreNodeDisplacements(targetModel, savedNodeDisps);
                 double finalResidual = EvaluateResidualAtAlpha(
                     targetModel, savedVectorD, newtonDirection, alpha2, iLC, isPileNonLinear, isLightweight: false);
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] α=0.5 accepted, final residual: {currentResidual:E3} -> {finalResidual:E3}");
                 _lastAcceptedAlpha = alpha2;
                 return alpha2;
             }
@@ -2313,13 +2252,11 @@ namespace PileDesign.ViewModels
             {
                 alphaOpt = -b / (2 * a);
                 alphaOpt = Math.Clamp(alphaOpt, 0.05, 0.95);  // 範囲制限
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] Quadratic fit: a={a:E3}, b={b:E3}, α*={alphaOpt:F4}");
             }
             else
             {
                 // 2次係数が小さい/負の場合は線形補間でα=0.25を試す
                 alphaOpt = 0.25;
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] Quadratic fit failed (a={a:E3}), using α=0.25");
             }
 
             // Step 4: 最適αで評価
@@ -2327,21 +2264,16 @@ namespace PileDesign.ViewModels
             double fOpt = EvaluateResidualAtAlpha(
                 targetModel, savedVectorD, newtonDirection, alphaOpt, iLC, isPileNonLinear, isLightweight: true);
 
-            //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] α={alphaOpt:F4}: residual={fOpt:E3}");
-
             if (fOpt < currentResidual)
             {
                 RestoreNodeDisplacements(targetModel, savedNodeDisps);
                 double finalResidual = EvaluateResidualAtAlpha(
                     targetModel, savedVectorD, newtonDirection, alphaOpt, iLC, isPileNonLinear, isLightweight: false);
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] α={alphaOpt:F4} accepted, final residual: {currentResidual:E3} -> {finalResidual:E3}");
                 _lastAcceptedAlpha = alphaOpt;
                 return alphaOpt;
             }
 
             // Step 5: 補間が失敗した場合、フォールバックとして幾何縮小
-            //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] Interpolation failed, falling back to geometric search...");
-
             double bestAlpha = (f1 < f2) ? alpha1 : alpha2;
             double bestResidual = Math.Min(f1, f2);
             if (fOpt < bestResidual)
@@ -2360,8 +2292,6 @@ namespace PileDesign.ViewModels
                 double trialResidual = EvaluateResidualAtAlpha(
                     targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: true);
 
-                //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] fallback α={alpha:F4}: residual={trialResidual:E3}");
-
                 if (trialResidual < bestResidual)
                 {
                     bestResidual = trialResidual;
@@ -2373,15 +2303,12 @@ namespace PileDesign.ViewModels
                     RestoreNodeDisplacements(targetModel, savedNodeDisps);
                     double finalResidual = EvaluateResidualAtAlpha(
                         targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: false);
-                    //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] α={alpha:F4} accepted, final residual: {currentResidual:E3} -> {finalResidual:E3}");
                     _lastAcceptedAlpha = alpha;
                     return alpha;
                 }
             }
 
             // すべて失敗した場合、最良のαを使用
-            //System.Diagnostics.Debug.WriteLine($"[LineSearch v14] Using best α={bestAlpha:F4} with residual={bestResidual:E3}");
-
             RestoreNodeDisplacements(targetModel, savedNodeDisps);
             EvaluateResidualAtAlpha(targetModel, savedVectorD, newtonDirection, bestAlpha, iLC, isPileNonLinear, isLightweight: false);
             _lastAcceptedAlpha = bestAlpha;
@@ -2703,8 +2630,6 @@ namespace PileDesign.ViewModels
 
                     // 変更: RotationalSpring は回転成分のみ設定（並進/その他を巨大値で固定しない）
                     // 引数は (kx, ky, kz, kxx(Rx), kyy(Ry), kzz(Rz), isTan)
-                    //System.Diagnostics.Debug.WriteLine($"PrepareKmat: RotSpring={rxy.Name}, Mode={rxy.Mode}, dRx={dRx:E3}, dRy={dRy:E3}, set_kRx={kRx:E3}, set_kRy={kRy:E3}, isTan={isTan}");
-
                     const double KBig = 1e6; // アーム変換後の条件数を改善するため1e6に低減
                     double kx = rxy.TieUx ? KBig : 0.0;
                     double ky = rxy.TieUy ? KBig : 0.0;

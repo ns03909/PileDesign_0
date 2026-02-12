@@ -1147,6 +1147,29 @@ namespace PileDesign.Views
 
             string unit; // 単位
 
+            // アクティブ（IsVisible）な杭のビーム・節点セットを構築
+            // 非アクティブ杭のダイアグラムを非表示にするためのフィルタ
+            var visibleBeams = new HashSet<Beam>();
+            var visibleFemNodes = new HashSet<Node>();
+            var visibleSoilSprings = new HashSet<HorizontalSoilSpring>();
+            bool hasInvisiblePile = false;
+            if (viewModel.CurrentInputModel?.PileLayoutItems != null)
+            {
+                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                {
+                    if (pile.IsVisible)
+                    {
+                        foreach (var beam in pile.Beams) visibleBeams.Add(beam);
+                        foreach (var node in pile.PileNodes) visibleFemNodes.Add(node);
+                        foreach (var spring in pile.HorizontalSoilSprings) visibleSoilSprings.Add(spring);
+                    }
+                    else
+                    {
+                        hasInvisiblePile = true;
+                    }
+                }
+            }
+
             if (viewModel.AnalysisResultContent != "沈下")
             {
                 ColorBarCanvas.Children.Clear();
@@ -1338,6 +1361,9 @@ namespace PileDesign.Views
                 int validResultCount = 0;
                 foreach (var beam in anaModel.Beams)
                 {
+                    // 非アクティブ杭のビームはスキップ（非アクティブ杭が存在する場合のみフィルタリング）
+                    if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
+
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                     if (beamResult == null) continue;
@@ -1446,32 +1472,22 @@ namespace PileDesign.Views
                     Vector<double> rawJ = GetEnd3Vector(beamResult.CumulativeForce, isMomentType, false, derivedTypeLocal);
 
                     // 正規化（ゼロ長は既定方向を使う）
+                    // 個別成分（Fx,Fy,Fz,Mx,My,Mz）は固定の forceDirection を使用
+                    // 合成量（Fh,Mh）のみ実際の力方向ベクトルを使用
                     Vector<double> dirI;
-                    if (viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
-                    {
-                        dirI = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
-                    }
-                    else if (rawI.L2Norm() > 1e-12)
+                    if (isDerivedMagnitude && rawI.L2Norm() > 1e-12)
                         dirI = rawI / rawI.L2Norm();
                     else
-                        dirI = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
+                        dirI = forceDirection;
 
                     Vector<double> dirJ;
-                    if (viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
-                    {
-                        dirJ = forceDirection; // 既定の方向ベクトル（switch で決めたもの）
-                    }
-                    else if (rawJ.L2Norm() > 1e-12)
+                    if (isDerivedMagnitude && rawJ.L2Norm() > 1e-12)
                         dirJ = rawJ / rawJ.L2Norm();
                     else
                         dirJ = forceDirection;
 
-                    // ここを追加: 派生量が"Fh"または "Mh" のときだけ I端を反転する（Mh のみ逆向きにしたい場合）
-                    if (!string.IsNullOrEmpty(derivedTypeLocal) && (derivedTypeLocal == "Fh" || derivedTypeLocal == "Mh"))
-                    {
-                        dirI = -dirI;
-                    }
-                    else if (viewModel.AnalysisResultBeamForceType == "Fx" || viewModel.AnalysisResultBeamForceType == "Mx")
+                    // 派生量（Fh,Mh）はI端方向を反転（絶対値のため符号規約の影響なし）
+                    if (isDerivedMagnitude)
                     {
                         dirI = -dirI;
                     }
@@ -1484,39 +1500,30 @@ namespace PileDesign.Views
                     double forceI = maxAbsValue == 0 ? 0 : originalForceI / maxAbsValue * viewModel.ForceDiagramMultiplier;
                     double forceJ = maxAbsValue == 0 ? 0 : originalForceJ / maxAbsValue * viewModel.ForceDiagramMultiplier;
 
-                    if (originalForceI < 0)
-                    {
-                        transformedForceDirectionI *= -1;
-                    }
-                    if (-originalForceJ < 0)
-                    {
-                        transformedForceDirectionJ *= -1;
-                    }
-
                     Point3D nodeI3D = beam.NodeI.Coord;
                     Point3D nodeIForce3D = new(
                         nodeI3D.X + forceI * transformedForceDirectionI[0],
                         nodeI3D.Y + forceI * transformedForceDirectionI[1],
                         nodeI3D.Z + forceI * transformedForceDirectionI[2]);
-                    Point3D nodeJ3D = beam.NodeJ.Coord;
-                    Point3D nodeJForce3D; //= new(
-                    //    nodeJ3D.X + -forceJ * transformedForceDirectionJ[0],
-                    //    nodeJ3D.Y + -forceJ * transformedForceDirectionJ[1],
-                    //    nodeJ3D.Z + -forceJ * transformedForceDirectionJ[2]);
 
-                    if (!string.IsNullOrEmpty(derivedTypeLocal) && (derivedTypeLocal == "Fh" || derivedTypeLocal == "Mh"))
+                    Point3D nodeJ3D = beam.NodeJ.Coord;
+                    Point3D nodeJForce3D;
+                    if (isDerivedMagnitude)
                     {
+                        // 派生量（Fh,Mh）: 絶対値なので方向ベクトルで描画、J端も符号反転
                         nodeJForce3D = new(
-                        nodeJ3D.X + -forceJ * transformedForceDirectionJ[0],
-                        nodeJ3D.Y + -forceJ * transformedForceDirectionJ[1],
-                        nodeJ3D.Z + -forceJ * transformedForceDirectionJ[2]);
+                            nodeJ3D.X + -forceJ * transformedForceDirectionJ[0],
+                            nodeJ3D.Y + -forceJ * transformedForceDirectionJ[1],
+                            nodeJ3D.Z + -forceJ * transformedForceDirectionJ[2]);
                     }
                     else
                     {
+                        // 個別成分（Fx,Fy,Fz,Mx,My,Mz）: 力値の符号でダイアグラムの側を決定
+                        // J端は符号規約（I端とJ端で符号反転）に対応して-forceJで描画
                         nodeJForce3D = new(
-                        nodeJ3D.X + forceJ * transformedForceDirectionJ[0],
-                        nodeJ3D.Y + forceJ * transformedForceDirectionJ[1],
-                        nodeJ3D.Z + forceJ * transformedForceDirectionJ[2]);
+                            nodeJ3D.X + -forceJ * transformedForceDirectionJ[0],
+                            nodeJ3D.Y + -forceJ * transformedForceDirectionJ[1],
+                            nodeJ3D.Z + -forceJ * transformedForceDirectionJ[2]);
                     }
 
                     // 以下、既存の描画コード（投影→色分け→テキスト等）をそのまま使う
@@ -1649,10 +1656,15 @@ namespace PileDesign.Views
                 if (selectedLoadCase == null || selectedLoadCombination == null) return;
 
                 // 1) 全節点（Dummy含むBeams端点）を一意に取り、必要な「表示値」を収集する
+                //    非アクティブ杭の節点はフィルタで除外する
                 var nodeSet = new HashSet<Node>();
                 if (anaModel?.Nodes != null && anaModel.Nodes.Count > 0)
                 {
-                    foreach (var n in anaModel.Nodes) if (n != null) nodeSet.Add(n);
+                    foreach (var n in anaModel.Nodes)
+                    {
+                        if (n != null && (!hasInvisiblePile || visibleFemNodes.Count == 0 || visibleFemNodes.Contains(n)))
+                            nodeSet.Add(n);
+                    }
                 }
                 else
                 {
@@ -1660,11 +1672,12 @@ namespace PileDesign.Views
                     {
                         foreach (var b in anaModel.Beams)
                         {
+                            if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(b)) continue;
                             if (b?.NodeI != null) nodeSet.Add(b.NodeI);
                             if (b?.NodeJ != null) nodeSet.Add(b.NodeJ);
                         }
                     }
-                    if (anaModel?.DummyBeams != null)
+                    if (!hasInvisiblePile && anaModel?.DummyBeams != null)
                     {
                         foreach (var db in anaModel.DummyBeams)
                         {
@@ -1713,8 +1726,8 @@ namespace PileDesign.Views
                     // Beam/DummyBeam 毎に端点の変位を取得してポリライン描画
                     double maxAbsValue = allValues.Count > 0 ? Math.Max(Math.Abs(allValues.Min()), Math.Abs(allValues.Max())) : 0.0;
 
-                    // DummyBeams（根入れ部）描画（従来通り）
-                    if (viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
+                    // DummyBeams（根入れ部）描画 — 非アクティブ杭が存在する場合はスキップ
+                    if (!hasInvisiblePile && viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
                     {
                         foreach (var dummyBeam in anaModel.DummyBeams)
                         {
@@ -1771,9 +1784,11 @@ namespace PileDesign.Views
                         }
                     }
 
-                    // Beams（杭要素）描画
+                    // Beams（杭要素）描画 — 非アクティブ杭のビームはスキップ（非アクティブ杭が存在する場合のみフィルタリング）
                     foreach (var beam in anaModel.Beams)
                     {
+                        if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
+
                         var nrI = beam.NodeI?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                         var nrJ = beam.NodeJ?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                         if (nrI == null || nrJ == null) continue;
@@ -1947,7 +1962,7 @@ namespace PileDesign.Views
                 var anaModel = viewModel.CurrentModel;
                 if (anaModel == null || anaModel.Beams == null)
                     return;
-                DrawHorizontalSoilSpringsResult3D(viewModel, anaModel);
+                DrawHorizontalSoilSpringsResult3D(viewModel, anaModel, hasInvisiblePile ? visibleSoilSprings : null);
             }
         }
 
@@ -1979,7 +1994,7 @@ namespace PileDesign.Views
         }
 
         // 追加: 地盤ばね描画ヘルパー（UpdateAnalysisResult3D 内から呼び出してください）
-        private void DrawHorizontalSoilSpringsResult3D(MainWindowViewModel viewModel, AnaModel anaModel)
+        private void DrawHorizontalSoilSpringsResult3D(MainWindowViewModel viewModel, AnaModel anaModel, HashSet<HorizontalSoilSpring> visibleSoilSprings = null)
         {
             if (viewModel == null || anaModel == null) return;
             if (anaModel.HorizontalSoilSprings == null || anaModel.HorizontalSoilSprings.Count == 0) return;
@@ -1988,10 +2003,12 @@ namespace PileDesign.Views
             // 選択されたタイプを取得
             string springType = viewModel.AnalysisResultSoilSpringType ?? "RH";
 
-            // 1) 全ばねの値を収集（カラーバー用）
+            // 1) 全ばねの値を収集（カラーバー用） — 非アクティブ杭のばねはスキップ
             var allValues = new ObservableCollection<double>();
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
+                if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
+
                 try
                 {
                     // 最新の要素内力をセット（secant を想定）
@@ -2023,6 +2040,7 @@ namespace PileDesign.Views
             // 2) 各ばねについて、I点（head）と tail ( = head - scaled (dispI - dispJ)) を求めて描画
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
+                if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
                 if (s?.NodeI == null || s.NodeJ == null) continue;
 
                 try

@@ -1359,22 +1359,17 @@ namespace PileDesign.ViewModels
             var selectedLoadCases = GetSelectedLoadCases();
             var selectedCombinations = GetSelectedLoadCombinations();
 
-            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: START - targetPiles={targetPiles.Count}, loadCases={selectedLoadCases.Count}, SelectedPileBodyRef={SelectedPileBodyRef}, SelectedPileSegmentNo={SelectedPileSegmentNo}");
 
             foreach (var pileLayout in targetPiles)
             {
                 // 杭体取得
-                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileLayout.No={pileLayout.No}, PileBodyNo={pileLayout.PileBodyNo}, Beams.Count={pileLayout.Beams?.Count ?? 0}");
                 if (pileLayout.PileBodyNo <= 0 || pileLayout.PileBodyNo > InputModel.PileBodies.Count)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyNo out of range");
                     continue;
                 }
                 var pileBody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
-                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: pileBody.PileBodyRef={pileBody.PileBodyRef}, segments={pileBody.PileBodySegments?.Count ?? 0}");
                 if (pileBody.PileBodyRef != SelectedPileBodyRef)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - PileBodyRef mismatch");
                     continue;
                 }
 
@@ -1382,7 +1377,6 @@ namespace PileDesign.ViewModels
                 Beam targetBeam = null;
                 for (int i = 0; i < pileLayout.Beams.Count && i < pileBody.PileBodySegments.Count; i++)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: segment[{i}].No={pileBody.PileBodySegments[i].No}");
                     if (pileBody.PileBodySegments[i].No == SelectedPileSegmentNo)
                     {
                         targetBeam = pileLayout.Beams[i];
@@ -1391,7 +1385,6 @@ namespace PileDesign.ViewModels
                 }
                 if (targetBeam == null)
                 {
-                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: SKIP - targetBeam not found");
                     continue;
                 }
 
@@ -1426,8 +1419,6 @@ namespace PileDesign.ViewModels
                             List<double> moments = null;
                             string curveSource = "none";
 
-                            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Beam={targetBeam.Name}, axialN={axialN}");
-
                             // 解析結果からM-φ曲線を取得（解析で実際に使用したもの）
                             int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
                             BeamResult beamResultForCurve = null;
@@ -1441,8 +1432,6 @@ namespace PileDesign.ViewModels
                                     phis = beamResultForCurve.MPhiCurve_Phis;
                                     moments = beamResultForCurve.MPhiCurve_Moments;
                                     curveSource = "BeamResult";
-                                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using BeamResult curve, Points={phis.Count}, " +
-                                    //    $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
                                 }
                             }
 
@@ -1455,8 +1444,6 @@ namespace PileDesign.ViewModels
                                     phis = [.. cachedCurve.Points.Select(p => p.Phi)];
                                     moments = [.. cachedCurve.Points.Select(p => p.Moment)];
                                     curveSource = "ResolvedCombinedCurve";
-                                    //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using ResolvedCombinedCurve, Points={phis.Count}, " +
-                                    //    $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
                                 }
                             }
 
@@ -1478,25 +1465,20 @@ namespace PileDesign.ViewModels
                                             phis = rawPhis;
                                             moments = rawMoments;
                                             curveSource = "PileSection(fallback)";
-                                            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Using PileSection fallback, Points={phis.Count}, " +
-                                            //    $"phi_range=[{phis.Min():E3}, {phis.Max():E3}], M_range=[{moments.Min():F1}, {moments.Max():F1}]");
                                         }
                                     }
                                     catch (Exception ex)
                                     {
-                                        //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: PileSection exception: {ex.Message}");
                                     }
                                 }
                             }
 
                             if (phis == null || moments == null || phis.Count < 2)
                             {
-                                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: No curve data available");
                                 continue;
                             }
 
                             // 曲線プロット
-                            //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Plotting curve from {curveSource}, Points={phis.Count}, phi range [{phis.Min():E3}, {phis.Max():E3}], M range [{moments.Min():F1}, {moments.Max():F1}]");
                             string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{SelectedPileSegmentNo}";
                             var scatter = wpfPlot.Plot.Add.Scatter(phis.ToArray(), [.. moments]);
                             scatter.LineStyle.Width = 2;  // 線幅を明示的に設定
@@ -1536,8 +1518,6 @@ namespace PileDesign.ViewModels
                                 double mFem = beamResultForCurve.CumulativeForce?.MabsMax ?? 0;
 
                                 // マーカープロット
-                                //System.Diagnostics.Debug.WriteLine($"DrawMPhiCurves: Marker from {phiSource}: φ={phiFinal:E6} [1/m], " +
-                                //    $"M(curve)={mFinal:F1} [kNm], M(FEM)={mFem:F1} [kNm], diff={(mFem-mFinal):F1}");
                                 if (double.IsFinite(phiFinal) && double.IsFinite(mFinal) && mFinal > 0)
                                 {
                                     Scatter marker = wpfPlot.Plot.Add.Scatter([phiFinal], new[] { mFinal });
@@ -1807,12 +1787,10 @@ namespace PileDesign.ViewModels
                 double[] xArray = [midxs[^1]];
                 double[] yArray = [midys[^1]];
                 var scatterAngle = WpfPlot.Plot.Add.Scatter(xArray, yArray);
-                scatterAngle.LegendText = GetSettlementAnleLegendText(angle);
+                scatterAngle.LegendText = GetSettlementAngleLegendText(angle);
                 scatterAngle.MarkerSize = 0;
                 scatterAngle.LineWidth = 0;
             }
-
-            //InputModel.PileGroupSettlement.GetSpecificSettlementDataItems();
 
             if (SelectedGraphOption == "群杭沈下" || SelectedGraphOption == "単杭+群杭沈下")
             {
@@ -1845,7 +1823,7 @@ namespace PileDesign.ViewModels
                     double[] xArrayGround = [midxsGround[^1]];
                     double[] yArrayGround = [midysGround[^1]];
                     var scatterAngleGround = WpfPlot.Plot.Add.Scatter(xArrayGround, yArrayGround);
-                    scatterAngleGround.LegendText = GetSettlementAnleLegendText(angle);
+                    scatterAngleGround.LegendText = GetSettlementAngleLegendText(angle);
                     scatterAngleGround.MarkerSize = 0;
                     scatterAngleGround.LineWidth = 0;
                 }
@@ -2246,14 +2224,9 @@ namespace PileDesign.ViewModels
             return loadCase.LoadName + "|" + loadCombination.No + "|LIQ:" + isLiquefaction;
         }
 
-        // 沈下傾斜レジェンド取得メソッド
-        //private static string GetSettlementLegendText(double settlement)
-        //{
-        //    return $"沈下量{settlement * 1000:N1}mm";
-        //}
 
         // 沈下傾斜レジェンド取得メソッド
-        private static string GetSettlementAnleLegendText(double angle)
+        private static string GetSettlementAngleLegendText(double angle)
         {
             return $"傾斜角{angle * 1000:N1}/1000";
         }

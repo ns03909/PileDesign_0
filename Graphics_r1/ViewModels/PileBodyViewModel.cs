@@ -267,26 +267,20 @@ namespace PileDesign.ViewModels
 
 
             // 例: PileBodyViewModel コンストラクタ末尾など
-            //Debug.WriteLine($"PileBody.PileBodyType='{PileBody.PileBodyType}'");
-            //Debug.WriteLine("PileBodyTypeOption:");
             foreach (var s in PileBodyInput.PileBodyTypeOption) //Debug.WriteLine("  >" + s);
 
             // デバッグ：InputModel と ViewModel の PileBodyType を確認
-            //Debug.WriteLine($"InputModel.PileBodies.Count={(InputModel?.PileBodies?.Count ?? -1)}");
             if (InputModel?.PileBodies != null)
             {
                 for (int i = 0; i < InputModel.PileBodies.Count; i++)
                 {
-                    //Debug.WriteLine($"InputModel.PileBodies[{i}].PileBodyType='{InputModel.PileBodies[i].PileBodyType}'");
                 }
             }
 
-            //Debug.WriteLine($"PileBodies (VM) Count={(PileBodies?.Count ?? -1)}");
             if (PileBodies != null)
             {
                 for (int i = 0; i < PileBodies.Count; i++)
                 {
-                    //Debug.WriteLine($"PileBodies[{i}].PileBodyType='{PileBodies[i].PileBodyType}'");
                 }
 
                 // 安全措置：もし null/空 の要素があれば既定値で埋める（UIが空になるのを防ぐ）
@@ -298,7 +292,6 @@ namespace PileDesign.ViewModels
                 {
                     if (string.IsNullOrWhiteSpace(pb.PileBodyType))
                     {
-                        //Debug.WriteLine("Warning: PileBodyType is empty — filling default.");
                         pb.PileBodyType = defaultType;
                     }
                 }
@@ -915,11 +908,9 @@ namespace PileDesign.ViewModels
                 // 諸元表示を更新
                 pileBody.PileTop.SelectedPileTopSpecification = targetPCRing.GetSpecs();
 
-                //Debug.WriteLine($"AutoSelectPCRing: 杭径={pileDia}mm → PCリング={targetPCRingName}");
             }
             else
             {
-                //Debug.WriteLine($"AutoSelectPCRing: 杭径={pileDia}mm に対応するPCリング {targetPCRingName} が見つかりません");
             }
         }
 
@@ -993,11 +984,9 @@ namespace PileDesign.ViewModels
                 // 諸元表示を更新
                 pileBody.PileTop.SelectedPileTopSpecification = targetFTCap.GetSpecs();
 
-                //Debug.WriteLine($"AutoSelectFTCap: 杭径={pileDia}mm → FTキャップ={targetFTCap.Phi}mm");
             }
             else
             {
-                //Debug.WriteLine($"AutoSelectFTCap: 杭径={pileDia}mm に対応するFTキャップが見つかりません");
             }
         }
 

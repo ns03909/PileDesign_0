@@ -772,7 +772,6 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                //Debug.WriteLine($"RefreshPlots failed: {ex}");
             }
         }
 

@@ -205,14 +205,7 @@ namespace PileDesign.FEM
             return beam;
         }
 
-        // 旧メソッド（互換性のため残す）
-        private void SetPileElement(SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
-        {
-            var beam = CreatePileElement(soilPile, segIndex, upperNode, lowerNode);
-            Beams.Add(beam);
-        }
-
-        // 杭の追加（最適化版：並列処理対応）
+        // 杭の追加（並列処理対応）
         private void AddPileOptimized()
         {
             if (InputModel.PileLayoutItems == null) return;
@@ -245,10 +238,6 @@ namespace PileDesign.FEM
             {
                 rb.SetSlaveNodeRelations();
             }
-
-#if DEBUG
-            DumpRigidBodyAndNodeRelationsForDebug();
-#endif
         }
 
         // 単一杭の処理結果を格納する構造体
@@ -407,171 +396,5 @@ namespace PileDesign.FEM
             }
         }
 
-        // 旧メソッド（互換性のため残す）
-        private void AddPile()
-        {
-            if (InputModel.PileLayoutItems == null) return;
-
-            foreach (var pile in InputModel.PileLayoutItems)
-            {
-                pile.PileNodes.Clear();
-                pile.SoilNodes.Clear();
-                pile.Beams.Clear();
-                pile.HorizontalSoilSprings.Clear();
-
-                double x = pile.X;
-                double y = pile.Y;
-
-                int soilPileAltNo = pile.SoilPileAltNo;
-
-                double initialRotK = 1e6;  // アーム変換後の条件数を改善するため1e6に低減
-
-                if (InputModel.ElementDivision.SoilPiles == null ||
-                    soilPileAltNo - 1 < 0 ||
-                    soilPileAltNo - 1 >= InputModel.ElementDivision.SoilPiles.Count)
-                {
-                    throw new InvalidOperationException("対応するSoilPileが存在しません。");
-                }
-
-                SoilPile soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
-
-                // 剛床側（キャップ側）節点を同一点に生成し、剛体へスレーブ
-                Node capNode = new();
-                double z0 = soilPile.ZDataItems[0].Z;
-                capNode.SetNodeInfo($"CapNode-{pile.No}", x, y, z0);
-                Nodes.Add(capNode);
-                RigidBodies[0].AddSlaveNode(capNode); // Cap Nodeをスレーブにする。
-
-                Node? prevPileNode = null; // 直前の杭節点
-                for (int i = 0; i < soilPile.ZDataItems.Count; i++)
-                {
-                    double z = soilPile.ZDataItems[i].Z;
-
-                    Node pileNode = new();
-                    pileNode.SetNodeInfo($"PileNode-{pile.No}-{i}", x, y, z);
-                    Nodes.Add(pileNode);
-                    pile.PileNodes.Add(pileNode);
-
-
-                    if (i == 0)
-                    {
-                        // 杭頭回転ばね（初期剛性を与える）
-                        var rxy = new RotationalSpring($"RθXY-{pile.No}", capNode, pileNode, initialRotK)
-                        {
-                            PileBodyNo = pile.PileBodyNo,
-                            //TieUx = false,
-                            //TieUy = false,
-                            //TieUz = false,
-                            //TieRz = false,
-                            TieUx = true,
-                            TieUy = true,
-                            TieUz = true,
-                            TieRz = true, // Rz も一致させたいなら true
-                            Kbig = 1e6  // アーム変換後の条件数を改善するため1e6に低減
-                        };
-                        RotationalSprings.Add(rxy);
-                        pile.PileTopRotationalSpring = rxy;
-
-                        // pileNode を RigidBodies[1] にスレーブ登録（並進＋Rz を剛結、Rx,Ry は自由）
-                        //RigidBodies[0].AddSlaveNode(pileNode); // pile_0をスレーブにする。
-
-                        prevPileNode = pileNode; // 上端ノードはここで初期化
-                    }
-                    else if (i != soilPile.ZDataItems.Count - 1)
-                    {
-                        // 杭中間：上端(prevPileNode) と 下端(pileNode) で要素を作る
-                        if (prevPileNode == null) throw new InvalidOperationException("prevPileNode is null");
-                        SetPileElement(soilPile, i - 1, prevPileNode, pileNode);
-                        Beams[^1].PileBodyNo = soilPile.PileBodyNo;
-                        Beams[^1].SegmentIndex = i - 1;
-                        pile.Beams.Add(Beams[^1]);
-                        if (i == 1) Beams[^1].SetPileTopFlag(true);
-
-                        prevPileNode = pileNode; // 次要素の上端に更新
-                    }
-                    else // 先端
-                    {
-                        // 先端処理（同様に prevPileNode を利用）
-                        if (prevPileNode == null) throw new InvalidOperationException("prevPileNode is null for tip");
-                        SetPileElement(soilPile, i - 1, prevPileNode, pileNode);
-                        Beams[^1].PileBodyNo = soilPile.PileBodyNo;
-                        Beams[^1].SegmentIndex = i - 1;
-                        pile.Beams.Add(Beams[^1]);
-                        pileNode.SetBoundary(PileTipBoundary);
-                    }
-
-                    // 土節点
-                    Node soilNode = new();
-                    soilNode.SetNodeInfo($"SoilNode-{pile.No}-{i}", x, y, z);
-                    soilNode.SetIsForcedDisped(true);
-                    soilNode.SetBoundary(SoilNodeBoundary);
-                    Nodes.Add(soilNode);
-                    pile.SoilNodes.Add(soilNode);
-
-                    // 水平土ばね（杭節点−土節点）
-                    var hspring = new HorizontalSoilSpring($"HorizontalSoilSpring-{pile.No}-{i}", pileNode, soilNode);
-                    HorizontalSoilSprings.Add(hspring);
-                    pile.HorizontalSoilSprings.Add(hspring);
-                }
-            }
-
-            foreach (var rb in RigidBodies)
-            {
-                rb.SetSlaveNodeRelations();
-            }
-
-#if DEBUG
-            // デバッグ出力を追加
-            DumpRigidBodyAndNodeRelationsForDebug();
-#endif
-        }
-
-#if DEBUG
-        // デバッグ用: 剛体／節点／回転ばねの関係を出力
-        private void DumpRigidBodyAndNodeRelationsForDebug()
-        {
-            try
-            {
-                //System.Diagnostics.Debug.WriteLine("=== DumpRigidBodyAndNodeRelations START ===");
-
-                // RigidBodies の一覧（存在すれば MasterNode/SlaveNodes を列挙）
-                for (int i = 0; i < RigidBodies.Count; i++)
-                {
-                    var rb = RigidBodies[i];
-                    string masterName = rb?.MasterNode?.Name ?? "null";
-                    var slaveNames = (rb?.SlaveNodes != null) ? string.Join(", ", rb.SlaveNodes.Select(n => n?.Name ?? "null")) : "<no slaves>";
-                    //System.Diagnostics.Debug.WriteLine($"RigidBody[{i}] Master={masterName} Slaves=[{slaveNames}]");
-                }
-
-                // 各 Node の EquationNumber / MasterNodes / TransferMatrix を出力
-                foreach (var node in Nodes)
-                {
-                    var eqNums = node.EquationNumber != null ? string.Join(",", node.EquationNumber) : "<null>";
-                    var masterNames = node.MasterNodes != null ? string.Join(",", node.MasterNodes.Select(m => m != null ? m.Name : "null")) : "<null>";
-                    string tmat = node.TransferMatrix != null ? $"[{string.Join(";", node.TransferMatrix.EnumerateRows().Select(r => string.Join(",", r)))}]" : "<null>";
-                    //System.Diagnostics.Debug.WriteLine($"Node: {node.Name}, Eq=[{eqNums}], Masters=[{masterNames}], Boundary=[Ux{node.Boundary.Ux},Uy{node.Boundary.Uy},Uz{node.Boundary.Uz},Rx{node.Boundary.Rx},Ry{node.Boundary.Ry},Rz{node.Boundary.Rz}], TransferMatrix={tmat}");
-                }
-
-                // 回転ばねの端点確認
-                for (int i = 0; i < RotationalSprings.Count; i++)
-                {
-                    var rs = RotationalSprings[i];
-                    //System.Diagnostics.Debug.WriteLine($"RotationalSpring[{i}] Name={rs.Name}, NodeI={(rs.NodeI?.Name ?? "null")}, NodeJ={(rs.NodeJ?.Name ?? "null")}, Mode={rs.Mode}, Ktheta={rs.Ktheta}, KthetaXY={rs.KthetaXY}");
-                }
-
-                // 杭頭 Beam の簡易チェック（IsPileTop）
-                foreach (var b in Beams.Where(b => b.IsPileTop))
-                {
-                    //System.Diagnostics.Debug.WriteLine($"Beam (pile top) Name={b.Name}, NodeI={b.NodeI?.Name}, NodeJ={b.NodeJ?.Name}, Length={b.Length}, PileBodyNo={b.PileBodyNo}, SegmentIndex={b.SegmentIndex}");
-                }
-
-                //System.Diagnostics.Debug.WriteLine("=== DumpRigidBodyAndNodeRelations END ===");
-            }
-            catch (Exception ex)
-            {
-                //System.Diagnostics.Debug.WriteLine("DumpRigidBodyAndNodeRelations ERROR: " + ex);
-            }
-        }
-#endif
     }
 }
