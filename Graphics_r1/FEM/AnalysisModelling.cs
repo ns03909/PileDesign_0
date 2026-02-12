@@ -540,9 +540,10 @@ namespace PileDesign.FEM
                 if (foundationNode == null)
                     throw new InvalidOperationException($"杭 {pile.No} の接続先 FoundationNode-{pile.ConnectedFoundationNodeNo} が見つかりません");
 
-                // 剛体リンクで接続（CapNode をマスター、FoundationNode をスレーブ）
-                var rigidLink = new RigidBody(capNode, [true, true, true, true, true, true]);
-                rigidLink.AddSlaveNode(foundationNode);
+                // 剛体リンクで接続（FoundationNode をマスター、CapNode をスレーブ）
+                // 基礎梁節点を制御点とし、杭頭がそれに従う（鉛直オフセットを考慮）
+                var rigidLink = new RigidBody(foundationNode, [true, true, true, true, true, true]);
+                rigidLink.AddSlaveNode(capNode);
                 rigidLink.SetSlaveNodeRelations();
                 RigidBodies.Add(rigidLink);
             }
