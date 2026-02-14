@@ -224,9 +224,19 @@ namespace PileDesign.ViewModels
         [ObservableProperty]
         private int beamsCount;
 
-        // 剛体連結数
-        [ObservableProperty]
-        private int rigidBodiesCount;
+        // 接続モード（剛体連結 / 剛床連結）
+        public FoundationBeamConnectionMode ConnectionMode
+        {
+            get => InputModel.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
+            set
+            {
+                if (InputModel.FoundationBeamInput != null && InputModel.FoundationBeamInput.ConnectionMode != value)
+                {
+                    InputModel.FoundationBeamInput.ConnectionMode = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public AnalysisModelling AnalysisModelling { get; set; }
 
@@ -526,15 +536,49 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
-        // 水平解析モデルの作成
-        [RelayCommand]
-        private void OnAnalysisModeling()
+        // 水平解析モデルの作成（成功時 true、失敗時 false を返す）
+        private bool TryCreateAnalysisModel()
         {
-            AnalysisModelling = new AnalysisModelling(InputModel);
+            // 剛床連結モードの事前バリデーション（例外を投げずにメッセージ表示）
+            if (ConnectionMode == FoundationBeamConnectionMode.RigidFloor)
+            {
+                var fbInput = InputModel.FoundationBeamInput;
+                if (fbInput == null)
+                {
+                    MessageBox.Show("剛床連結モードでは基礎梁入力が必要です。",
+                        "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+                if (fbInput.Beams == null || fbInput.Beams.Count == 0)
+                {
+                    MessageBox.Show("剛床連結モードでは基礎梁要素が必要です。\n基礎梁入力で梁要素を定義してください。",
+                        "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+                // 専用節点が無い場合、梁要素が杭参照（PileLayout）を使っているか確認
+                bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
+                bool hasPileReferences = fbInput.Beams.Any(b =>
+                    b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
+                if (!hasFoundationNodes && !hasPileReferences)
+                {
+                    MessageBox.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
+                        "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+            }
+
+            try
+            {
+                AnalysisModelling = new AnalysisModelling(InputModel);
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(ex.Message, "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
 
             NodesCount = AnalysisModelling.Nodes.Count;
             BeamsCount = AnalysisModelling.Beams.Count;
-            RigidBodiesCount = AnalysisModelling.RigidBodies.Count;
 
             // 編集用モデルを新規作成
             var editModel = new AnaModel(
@@ -564,7 +608,13 @@ namespace PileDesign.ViewModels
                 // 本体モデルとしても追加
                 AnaModels.Add(editModel);
             }
+
+            return true;
         }
+
+        // コマンド用ラッパー（コンストラクタ・手動呼び出し用）
+        [RelayCommand]
+        private void OnAnalysisModeling() => TryCreateAnalysisModel();
 
         // 水平解析の実行
         [RelayCommand]
@@ -685,36 +735,22 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // モデル作成（進捗ウィンドウ表示前に実施。失敗時はここで中止）
+            if (!TryCreateAnalysisModel())
+                return;
+
             IsAnalysisRunning = true;
             _cancellationTokenSource = new CancellationTokenSource();
 
             // ボタン押下直後にログを表示
             await AddLogAsync("計算モデル作成開始");
 
-            // 進捗ウィンドウを作成
-            Views.ProgressWindow progressWindow = null;
-            var progress = new Progress<Models.AnalysisProgress>(p =>
-            {
-                progressWindow?.UpdateProgress(p);
-            });
+            var progress = new Progress<Models.AnalysisProgress>();
 
             try
             {
-                // 進捗ウィンドウを表示（非モーダル）
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    progressWindow = new Views.ProgressWindow(_cancellationTokenSource)
-                    {
-                        Owner = Application.Current.MainWindow
-                    };
-                    progressWindow.Show();
-                });
-
-                // モデル作成と解析実行を非同期で行う
+                // 解析実行を非同期で行う
                 await Task.Run(async () => {
-                    // UIスレッドでのモデル作成が必要なため、一度Dispatcher経由で実行
-                    await Application.Current.Dispatcher.InvokeAsync(() => OnAnalysisModeling());
-
                     await RunAsync(_cancellationTokenSource.Token, progress);
                 });
 
@@ -744,15 +780,6 @@ namespace PileDesign.ViewModels
             finally
             {
                 IsAnalysisRunning = false;
-
-                // 進捗ウィンドウを閉じる（アプリケーションシャットダウン中の場合を考慮）
-                if (Application.Current != null)
-                {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        progressWindow?.Close();
-                    });
-                }
 
                 // CancellationTokenSourceをDisposeしてリソース解放
                 _cancellationTokenSource?.Dispose();
@@ -1438,6 +1465,12 @@ namespace PileDesign.ViewModels
                                     if (useFullNR || !loadCase.IsPileNonLinear || n_iteration == 1)
                                     {
                                         FindK(iLC, targetModel);
+
+                                        // 初回反復時のみ剛性マトリクスの安定性チェック
+                                        if (n_iteration == 1)
+                                        {
+                                            targetModel.ValidateStability(useEigenvalueCheck: false);
+                                        }
                                     }
                                     else
                                     {

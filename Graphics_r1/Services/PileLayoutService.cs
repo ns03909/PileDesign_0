@@ -94,6 +94,10 @@ namespace PileDesign.Services
             public bool IsAddPileTopLevel { get; set; }
             public double PileTopLevel { get; set; }
 
+            public bool ApplyFoundationBeamDeltaZc { get; set; }
+            public bool IsAddFoundationBeamDeltaZc { get; set; }
+            public double FoundationBeamDeltaZc { get; set; }
+
             public bool ApplyPileGroupFactor { get; set; }
             public bool IsAddPileGroupFactor { get; set; }
             public double PileGroupFactor { get; set; }
@@ -155,6 +159,17 @@ namespace PileDesign.Services
                     item.Z = options.IsAddPileTopLevel
                         ? item.Point3D.Z + options.PileTopLevel
                         : options.PileTopLevel;
+                }
+            }
+
+            // 接合節点ΔZc
+            if (options.ApplyFoundationBeamDeltaZc)
+            {
+                foreach (var item in selectedItems)
+                {
+                    item.FoundationBeamDeltaZc = options.IsAddFoundationBeamDeltaZc
+                        ? item.FoundationBeamDeltaZc + options.FoundationBeamDeltaZc
+                        : options.FoundationBeamDeltaZc;
                 }
             }
 

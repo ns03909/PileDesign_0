@@ -234,11 +234,11 @@ namespace PileDesign.ViewModels
 
                 if (SetProperty(ref _isForcedDisplacementVisible, value))
                 {
-                    // 変位表示ONで倍率が未設定(0.0)なら、見やすい初期値にブートストラップ
-                    if (value && DisplacementDiagramMultiplier == 0.0)
+                    // 変位表示ONで比率が未設定(0.0)なら、見やすい初期値にブートストラップ
+                    if (value && DisplacementDiagramRatio == 0.0)
                     {
-                        IsDisplacementDiagramMultiplierApplicable = true;
-                        DisplacementDiagramMultiplier = 10.0;
+                        IsDisplacementDiagramRatioApplicable = true;
+                        DisplacementDiagramRatio = 0.3;
                     }
 
                     UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
@@ -706,46 +706,59 @@ namespace PileDesign.ViewModels
         }
 
 
-        // 力結果表示倍率
-        private double _forceDiagramMultiplier = 1.0;
-        public double ForceDiagramMultiplier
+        // 力ダイアグラム表示比率（モデル範囲に対する最大ダイアグラム長の比率）
+        private double _forceDiagramRatio = 0.3;
+        public double ForceDiagramRatio
         {
-            get => _forceDiagramMultiplier;
+            get => _forceDiagramRatio;
             set
             {
-                if (SetProperty(ref _forceDiagramMultiplier, value))
+                if (SetProperty(ref _forceDiagramRatio, value))
                 {
-                    UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新
-                }
-            }
-        }
-
-        // 変位結果倍率適用
-        private bool _isDisplacementDiagramMultiplierApplicable = true; // trueにしっぱなし
-        public bool IsDisplacementDiagramMultiplierApplicable
-        {
-            get => _isDisplacementDiagramMultiplierApplicable;
-            set
-            {
-                if (SetProperty(ref _isDisplacementDiagramMultiplierApplicable, value))
-                {
-                    if (!value) DisplacementDiagramMultiplier = 0.0;
                     UpdateCanvas3DAction?.Invoke();
                 }
             }
         }
 
-        // 変位結果表示倍率
-        private double _displacementDiagramMultiplier = 0.0;
-        public double DisplacementDiagramMultiplier
+        // 変位ダイアグラム表示比率適用
+        private bool _isDisplacementDiagramRatioApplicable = true;
+        public bool IsDisplacementDiagramRatioApplicable
         {
-            get => _displacementDiagramMultiplier;
+            get => _isDisplacementDiagramRatioApplicable;
             set
             {
-                if (SetProperty(ref _displacementDiagramMultiplier, value))
+                if (SetProperty(ref _isDisplacementDiagramRatioApplicable, value))
                 {
-                    UpdateCanvas3DAction?.Invoke(); // 3Dキャンバス更新
+                    if (!value) DisplacementDiagramRatio = 0.0;
+                    UpdateCanvas3DAction?.Invoke();
                 }
+            }
+        }
+
+        // 変位ダイアグラム表示比率（モデル範囲に対する最大ダイアグラム長の比率）
+        private double _displacementDiagramRatio = 0.3;
+        public double DisplacementDiagramRatio
+        {
+            get => _displacementDiagramRatio;
+            set
+            {
+                if (SetProperty(ref _displacementDiagramRatio, value))
+                {
+                    UpdateCanvas3DAction?.Invoke();
+                }
+            }
+        }
+
+        // モデル範囲（杭配置の max(maxX-minX, maxY-minY)、最小1.0m）
+        public double ModelExtent
+        {
+            get
+            {
+                var items = CurrentInputModel?.PileLayoutItems;
+                if (items == null || items.Count == 0) return 1.0;
+                double dx = items.Max(p => p.X) - items.Min(p => p.X);
+                double dy = items.Max(p => p.Y) - items.Min(p => p.Y);
+                return Math.Max(Math.Max(dx, dy), 1.0);
             }
         }
 
@@ -956,6 +969,74 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 接続用節点表示（杭頭+ΔZc位置）
+        private bool _isConnectingNodeVisible = true;
+        public bool IsConnectingNodeVisible
+        {
+            get => _isConnectingNodeVisible;
+            set
+            {
+                if (SetProperty(ref _isConnectingNodeVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // キャンバス編集モード
+        private CanvasEditMode _currentEditMode = CanvasEditMode.None;
+        public CanvasEditMode CurrentEditMode
+        {
+            get => _currentEditMode;
+            set
+            {
+                if (SetProperty(ref _currentEditMode, value))
+                {
+                    // ステータスバーにモード表示
+                    StatusMessage = value switch
+                    {
+                        CanvasEditMode.AddNode => "ノード追加モード（画面上をクリック、杭位置に自動スナップ）",
+                        CanvasEditMode.AddElement => "要素追加モード（2つのノードをクリック）",
+                        CanvasEditMode.Delete => "削除モード（ノードまたは要素をクリック）",
+                        _ => string.Empty
+                    };
+
+                    // 編集モードに入ったときに自動的に接続モードを基礎梁に変更
+                    if (value != CanvasEditMode.None)
+                    {
+                        if (CurrentInputModel?.FoundationBeamInput == null)
+                        {
+                            CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
+                        }
+
+                        if (CurrentInputModel.FoundationBeamInput.ConnectionMode == FoundationBeamConnectionMode.RigidBody)
+                        {
+                            CurrentInputModel.FoundationBeamInput.ConnectionMode = FoundationBeamConnectionMode.RigidFloor;
+                        }
+                    }
+
+                    // 画面更新
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 基礎梁ノード追加時のデフォルトZ座標（杭頭の平均高さなど）
+        private double _defaultFoundationBeamZ = 1.0;
+        public double DefaultFoundationBeamZ
+        {
+            get => _defaultFoundationBeamZ;
+            set => SetProperty(ref _defaultFoundationBeamZ, value);
+        }
+
+        // 要素接続時の一時的な開始ノード参照
+        private NodeReference? _tempStartNode = null;
+        public NodeReference? TempStartNode
+        {
+            get => _tempStartNode;
+            set => SetProperty(ref _tempStartNode, value);
+        }
+
         // ラベル描画
         private bool _isLabelVisible = true;
         public bool IsLabelVisible
@@ -1081,6 +1162,20 @@ namespace PileDesign.ViewModels
             set
             {
                 if (SetProperty(ref _isPileSectionVisible, value))
+                {
+                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                }
+            }
+        }
+
+        // 一般梁要素形状描画
+        private bool _isBeamElementSectionVisible = false;
+        public bool IsBeamElementSectionVisible
+        {
+            get => _isBeamElementSectionVisible;
+            set
+            {
+                if (SetProperty(ref _isBeamElementSectionVisible, value))
                 {
                     RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
@@ -1510,19 +1605,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 要素追加モード
-        private bool _isElementAddMode = false;
-        public bool IsElementAddMode
-        {
-            get => _isElementAddMode;
-            set
-            {
-                if (SetProperty(ref _isElementAddMode, value))
-                {
-                    StatusMessage = value ? "要素追加モード(解除: [Esc], [Alt]+[1])" : "通常モード";
-                }
-            }
-        }
 
         // 要素レベル
         private bool _isElementShownAtSettlementPlane = false;
@@ -1597,6 +1679,9 @@ namespace PileDesign.ViewModels
                     {
                         IsForcedDisplacementVisible = false;
                     }
+
+                    // ステータスバー更新
+                    OnPropertyChanged(nameof(AnalysisStatusText));
                 }
             }
         }
@@ -1626,6 +1711,9 @@ namespace PileDesign.ViewModels
                     AnalysisResultContentOption.Remove(settlementLabel);
                     AnalysisResultSettlementOption.Remove(singlePileLabel);
                 }
+
+                // ステータスバー更新
+                OnPropertyChanged(nameof(AnalysisStatusText));
 
                 Both(); // 単杭+群杭 の表示制御
             }
@@ -1725,6 +1813,9 @@ namespace PileDesign.ViewModels
                         AnalysisResultContentOption.Remove(nodeDisplacementLabel);
                         AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
                     }
+
+                    // ステータスバー更新
+                    OnPropertyChanged(nameof(AnalysisStatusText));
                 }
             }
         }
@@ -2221,6 +2312,8 @@ namespace PileDesign.ViewModels
 
             // 一括通知
             UpdateSumAndOTM();
+            OnPropertyChanged(nameof(PileCountText));
+            OnPropertyChanged(nameof(ModelExtent));
         }
 
 

@@ -48,13 +48,10 @@
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding}" Value="RigidBody">
-                                                <Setter Property="Text" Value="全て剛体連結"/>
+                                                <Setter Property="Text" Value="剛体連結"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding}" Value="FoundationBeam">
-                                                <Setter Property="Text" Value="全て基礎梁"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding}" Value="Mixed">
-                                                <Setter Property="Text" Value="混在"/>
+                                            <DataTrigger Binding="{Binding}" Value="RigidFloor">
+                                                <Setter Property="Text" Value="剛床連結"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -113,6 +110,7 @@
                         <DataGridTextColumn Header="高さ (m)" Binding="{Binding Height, StringFormat=N3}" Width="80"/>
                         <DataGridTextColumn Header="ヤング係数 (kN/m²)" Binding="{Binding YoungModulus, StringFormat=E2}" Width="*"/>
                         <DataGridTextColumn Header="せん断係数 (kN/m²)" Binding="{Binding ShearModulus, StringFormat=E2}" Width="*"/>
+                        <DataGridTextColumn Header="アングルβ (°)" Binding="{Binding AngleBeta, StringFormat=N1}" Width="80"/>
                     </DataGrid.Columns>
                 </DataGrid>
 

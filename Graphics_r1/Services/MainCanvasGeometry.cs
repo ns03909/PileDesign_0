@@ -77,6 +77,11 @@ namespace PileDesign.Services
         // 基礎梁
         public PathGeometry PathGeoFoundationBeams { get; set; } = new();
         public PathGeometry PathGeoFoundationNodes { get; set; } = new();
+        public PathGeometry PathGeoConnectingNodes { get; set; } = new(); // 接続用節点（杭頭+ΔZc）
+        public PathGeometry PathGeoRigidConnections { get; set; } = new(); // 杭頭と接続用節点を結ぶ剛体連結線
+        public PathGeometry PathGeoInputNodesPile { get; set; } = new(); // 一般節点（Pile型・青）
+        public PathGeometry PathGeoInputNodesGeneral { get; set; } = new(); // 一般節点（General型・オレンジ）
+        public PathGeometry PathGeoBeamSections { get; set; } = new(); // 梁要素断面形状
 
         // クリアメソッド
         public void Clear()
@@ -128,6 +133,11 @@ namespace PileDesign.Services
             PathGeoRigidFloor.Figures.Clear();
             PathGeoFoundationBeams.Figures.Clear();
             PathGeoFoundationNodes.Figures.Clear();
+            PathGeoConnectingNodes.Figures.Clear();
+            PathGeoRigidConnections.Figures.Clear();
+            PathGeoInputNodesPile.Figures.Clear();
+            PathGeoInputNodesGeneral.Figures.Clear();
+            PathGeoBeamSections.Figures.Clear();
         }
 
 
@@ -456,9 +466,18 @@ namespace PileDesign.Services
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.DarkOrange,
-                StrokeThickness = 2.0,
+                StrokeThickness = 1.0,
                 Data = PathGeoFoundationBeams,
                 Name = "FoundationBeam"
+            });
+
+            // 梁要素断面形状
+            canvas.Children.Add(new Path()
+            {
+                Stroke = new SolidColorBrush(Color.FromArgb(180, 139, 69, 19)), // 半透明の茶色
+                StrokeThickness = 0.8,
+                Data = PathGeoBeamSections,
+                Name = "BeamSection"
             });
 
             // 基礎梁節点
@@ -469,6 +488,47 @@ namespace PileDesign.Services
                 StrokeThickness = 0.5,
                 Data = PathGeoFoundationNodes,
                 Name = "FoundationNode"
+            });
+
+            // 接続用節点（杭頭+ΔZc位置）
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] DrawAllPaths: PathGeoConnectingNodes.Figures.Count={PathGeoConnectingNodes.Figures.Count}");
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Red,
+                Fill = Brushes.Red, // 塗りつぶし
+                StrokeThickness = 1.0,
+                Data = PathGeoConnectingNodes,
+                Name = "ConnectingNode"
+            });
+
+            // 杭頭と接続用節点を結ぶ剛体連結線（細い灰色破線）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Gray,
+                StrokeThickness = 0.5,
+                StrokeDashArray = [2, 2], // 破線パターン
+                Data = PathGeoRigidConnections,
+                Name = "RigidConnection"
+            });
+
+            // 一般節点（Pile型・青）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Blue,
+                Fill = Brushes.LightBlue,
+                StrokeThickness = 2.0,
+                Data = PathGeoInputNodesPile,
+                Name = "InputNodePile"
+            });
+
+            // 一般節点（General型・オレンジ）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = Brushes.Orange,
+                Fill = Brushes.LightYellow,
+                StrokeThickness = 2.0,
+                Data = PathGeoInputNodesGeneral,
+                Name = "InputNodeGeneral"
             });
 
             //通り心X

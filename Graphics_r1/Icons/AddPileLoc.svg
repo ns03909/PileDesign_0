@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,0,-1068)">
-        <g id="AddPileLoc" transform="matrix(1,0,0,1,178,356)">
+    <g transform="matrix(1,0,0,1,-178,-1068)">
+        <g id="AddPileLoc" transform="matrix(1,0,0,1,356,356)">
             <rect x="-178" y="712" width="128" height="128" style="fill:none;"/>
-            <g transform="matrix(1,0,0,1,-1258.833348,634.203707)">
-                <text x="1157.833px" y="138.096px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">+</text>
-            </g>
-            <g transform="matrix(0.553852,0,0,0.553852,-148.457541,733.515798)">
-                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+            <clipPath id="_clip1">
+                <rect x="-178" y="712" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(1,0,0,1,-1258.833348,634.203707)">
+                    <text x="1157.833px" y="138.096px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">+</text>
+                </g>
+                <g transform="matrix(1.690292,0,0,3.860152,-229.868664,62.336698)">
+                    <rect x="64" y="187.47" width="9.099" height="15.794" style="fill:rgb(247,181,21);fill-opacity:0;stroke:rgb(247,181,21);stroke-width:2.8px;"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,-148.457541,733.515798)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+                </g>
             </g>
         </g>
     </g>

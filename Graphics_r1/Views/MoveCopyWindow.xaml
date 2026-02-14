@@ -7,7 +7,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MoveCopyViewModel}"
-        Title="MoveCopyWindow" Height="150" Width="350"
+        Title="MoveCopyWindow" Height="200" Width="350"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
@@ -43,12 +43,20 @@
         <StackPanel  Grid.Row="0">
             <GroupBox Header="コピー/移動" HorizontalAlignment="Left" VerticalAlignment="Top">
                 <StackPanel Orientation="Horizontal">
-                    <RadioButton Content="コピー" HorizontalAlignment="Left" Width="50" GroupName="Operation" 
+                    <RadioButton Content="コピー" HorizontalAlignment="Left" Width="50" GroupName="Operation"
                         IsChecked="{Binding IsCopySelected}" Checked="RadioButton_Checked" Style="{StaticResource EmphasizedRadioButtonStyle}"/>
-                    <RadioButton Content="移動" HorizontalAlignment="Left" Width="50" GroupName="Operation" 
+                    <RadioButton Content="移動" HorizontalAlignment="Left" Width="50" GroupName="Operation"
                         IsChecked="{Binding IsMoveSelected}" Checked="RadioButton_Checked" Style="{StaticResource EmphasizedRadioButtonStyle}"/>
                 </StackPanel>
             </GroupBox>
+
+            <GroupBox Header="対象" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="一般節点" IsChecked="{Binding IsInputNodesIncluded}" Margin="5,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="杭配置" IsChecked="{Binding IsPileLayoutIncluded}" Margin="5,0" VerticalAlignment="Center"/>
+                </StackPanel>
+            </GroupBox>
+
             <StackPanel Orientation="Horizontal">
                 <Label Content="dX" Width="50" HorizontalContentAlignment="Right"/>
                 <TextBox Text="{Binding DX, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"

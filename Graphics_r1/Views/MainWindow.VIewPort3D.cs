@@ -4,6 +4,7 @@ using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -31,6 +32,7 @@ namespace PileDesign.Views
             HelixViewport.Children.Clear();
             UpdateHelixEmbedment();
             UpdatePile3D();
+            UpdateBeamElements3D();
 
             HelixViewport.Children.Add(new SunLight());
 
@@ -180,6 +182,70 @@ namespace PileDesign.Views
             }
         }
 
+        // 一般梁要素更新メソッド
+        private void UpdateBeamElements3D()
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (!viewModel.IsBeamElementSectionVisible) return;
+            if (InputModel?.FoundationBeamInput == null) return;
+
+            var fbInput = InputModel.FoundationBeamInput;
+
+            // 断面番号から断面情報を取得する辞書（空でも続行）
+            var sectionDict = fbInput.Sections?.ToDictionary(s => s.No, s => s)
+                              ?? new Dictionary<int, BeamSection>();
+
+            foreach (var beam in fbInput.Beams)
+            {
+                // 節点座標を解決
+                Point3D? loc0 = null;
+                Point3D? loc1 = null;
+
+                // NodeI の座標を解決
+                if (beam.NodeI_Id != Guid.Empty)
+                {
+                    var coordsI = InputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                    if (coordsI.HasValue)
+                        loc0 = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                }
+                else if (beam.NodeI_No > 0 && fbInput.Nodes.FirstOrDefault(n => n.No == beam.NodeI_No) is var nodeI && nodeI != null)
+                {
+                    // 旧方式（後方互換性）
+                    loc0 = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
+                }
+
+                // NodeJ の座標を解決
+                if (beam.NodeJ_Id != Guid.Empty)
+                {
+                    var coordsJ = InputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                    if (coordsJ.HasValue)
+                        loc1 = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                }
+                else if (beam.NodeJ_No > 0 && fbInput.Nodes.FirstOrDefault(n => n.No == beam.NodeJ_No) is var nodeJ && nodeJ != null)
+                {
+                    // 旧方式（後方互換性）
+                    loc1 = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                }
+
+                // 座標が両方とも解決できた場合のみ描画
+                if (!loc0.HasValue || !loc1.HasValue) continue;
+
+                // 断面寸法を取得（断面テーブル優先、なければ要素の直接値にフォールバック）
+                double width = beam.Width;
+                double height = beam.Height;
+                if (sectionDict.TryGetValue(beam.SectionNo, out var section))
+                {
+                    width = section.Width;
+                    height = section.Height;
+                }
+
+                // 3D 直方体として描画
+                Brush brush = new SolidColorBrush(Color.FromArgb(180, 139, 69, 19));  // 半透明の茶色
+                brush.Freeze();
+                AddBeamElement(brush, loc0.Value, loc1.Value, width, height, beam.AngleBeta);
+            }
+        }
+
         //// 拡底形状更新メソッド
         //private void AddConeShapePileToe(Brush brush, Point3D origin, double baseDia, double topDia, double height = 0.3)
         //{
@@ -266,6 +332,98 @@ namespace PileDesign.Views
             var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
             var semiTransparentMaterial = new DiffuseMaterial(brush);
             var model = new GeometryModel3D(wpfMesh, semiTransparentMaterial);
+            var modelVisual = new ModelVisual3D { Content = model };
+            HelixViewport.Children.Add(modelVisual);
+        }
+
+        // 梁要素（直方体）更新メソッド - 2点間に幅・高さを持つ直方体を描画
+        // angleBetaDeg: 要素座標系の回転角 β（度）。梁軸周りに断面を回転する。
+        private void AddBeamElement(Brush brush, Point3D p1, Point3D p2, double width, double height, double angleBetaDeg = 0.0)
+        {
+            if (!OperatingSystem.IsWindowsVersionAtLeast(7)) return;
+
+            // 梁の中心点
+            Point3D center = new(
+                (p1.X + p2.X) / 2,
+                (p1.Y + p2.Y) / 2,
+                (p1.Z + p2.Z) / 2
+            );
+
+            // 梁の方向ベクトル
+            Vector3D direction = new(p2.X - p1.X, p2.Y - p1.Y, p2.Z - p1.Z);
+            double length = direction.Length;
+            if (length < 1e-9) return;
+            direction.Normalize();
+
+            // HelixToolkit の MeshBuilder を使用して回転した直方体を作成
+            var meshBuilder = new HelixToolkit.Geometry.MeshBuilder();
+
+            // Z軸（上方向）のベクトル
+            Vector3D up = new(0, 0, 1);
+
+            // 梁の局所座標系を計算
+            // 局所X軸 = 梁の軸方向
+            Vector3D localX = direction;
+
+            // 局所Z軸 = グローバルZ軸に最も近い方向
+            // （梁が鉛直の場合は別の基準が必要だが、基礎梁は通常水平）
+            Vector3D localZ;
+            if (Math.Abs(Vector3D.DotProduct(localX, up)) > 0.999)
+            {
+                // 梁がほぼ鉛直の場合はY軸を基準にする
+                localZ = new Vector3D(0, 1, 0);
+            }
+            else
+            {
+                // 局所Z軸 = グローバルZ軸から梁軸方向成分を除去して正規化
+                localZ = up - Vector3D.DotProduct(up, localX) * localX;
+                localZ.Normalize();
+            }
+
+            // 局所Y軸 = Z × X（右手系）
+            Vector3D localY = Vector3D.CrossProduct(localZ, localX);
+            localY.Normalize();
+
+            // AngleBeta による梁軸周りの回転を適用
+            if (Math.Abs(angleBetaDeg) > 1e-9)
+            {
+                double rad = angleBetaDeg * Math.PI / 180.0;
+                double cosB = Math.Cos(rad);
+                double sinB = Math.Sin(rad);
+
+                // localY, localZ を梁軸（localX）周りに回転
+                Vector3D newLocalY = cosB * localY + sinB * localZ;
+                Vector3D newLocalZ = -sinB * localY + cosB * localZ;
+                localY = newLocalY;
+                localZ = newLocalZ;
+            }
+
+            // 回転行列を作成（局所座標系 → グローバル座標系）
+            Matrix3D transform = new(
+                localX.X, localX.Y, localX.Z, 0,
+                localY.X, localY.Y, localY.Z, 0,
+                localZ.X, localZ.Y, localZ.Z, 0,
+                center.X, center.Y, center.Z, 1
+            );
+
+            // 局所座標系で直方体を作成（長さ×幅×高さ）
+            // 局所X軸方向に長さ、Y軸方向に幅、Z軸方向に高さ
+            meshBuilder.AddBox(
+                new System.Numerics.Vector3(0, 0, 0),  // 局所座標系の原点
+                (float)length,   // X方向（梁軸方向）
+                (float)width,    // Y方向（幅）
+                (float)height    // Z方向（高さ）
+            );
+
+            var mesh = meshBuilder.ToMesh();
+            var wpfMesh = ConverterExtensions.ToWndMeshGeometry3D(mesh);
+
+            var material = new DiffuseMaterial(brush);
+            var model = new GeometryModel3D(wpfMesh, material);
+
+            // 変換行列を適用
+            model.Transform = new MatrixTransform3D(transform);
+
             var modelVisual = new ModelVisual3D { Content = model };
             HelixViewport.Children.Add(modelVisual);
         }

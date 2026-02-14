@@ -43,6 +43,10 @@ namespace PileDesign.FEM
 
         public double NormsROnNormsFint { get; private set; }
 
+        // 安定性チェック用: ゼロ/負の対角成分を持つ自由度のリスト
+        public List<(int eq, string nodeName, double val)> ZeroDiagDofs { get; private set; } = [];
+        public List<(int eq, string nodeName, double val)> SmallDiagDofs { get; private set; } = [];
+
         // コンストラクタ
         public AnaModel(
             InputModel inputModel,
@@ -163,8 +167,8 @@ namespace PileDesign.FEM
             // 正則化（ゼロ/負の対角値を診断）+ 小さい対角値の診断
             const double eps = 1e-9;
             const double smallThreshold = 1e-6; // この値以下の対角値を警告
-            var zeroDiagDofs = new List<(int eq, string nodeName, double val)>();
-            var smallDiagDofs = new List<(int eq, string nodeName, double val)>();
+            ZeroDiagDofs = [];
+            SmallDiagDofs = [];
 
             for (int i = 0; i < CountFree; i++)
             {
@@ -188,22 +192,13 @@ namespace PileDesign.FEM
 
                 if (!double.IsFinite(v) || v <= 0.0)
                 {
-                    zeroDiagDofs.Add((i, nodeDofName ?? $"eq{i}", v));
+                    ZeroDiagDofs.Add((i, nodeDofName ?? $"eq{i}", v));
                     matrixKAA[i, i] = eps;
                 }
                 else if (v < smallThreshold)
                 {
-                    smallDiagDofs.Add((i, nodeDofName ?? $"eq{i}", v));
+                    SmallDiagDofs.Add((i, nodeDofName ?? $"eq{i}", v));
                 }
-            }
-
-            if (zeroDiagDofs.Count > 0)
-            {
-                // ノード名のプレフィックスでグループ化して出力
-                var groupedByPrefix = zeroDiagDofs
-                    .GroupBy(x => x.nodeName.Split(':')[0].Split('-')[0].Split('_')[0])
-                    .Select(g => $"{g.Key}({g.Count()})")
-                    .ToList();
             }
 
             if (isTan)
@@ -219,6 +214,53 @@ namespace PileDesign.FEM
                 KBA_sec = matrixKBA;
                 KAB_sec = matrixKAB;
                 KBB_sec = matrixKBB;
+            }
+        }
+
+        /// <summary>
+        /// 剛性マトリクスの安定性を検証する。
+        /// 対角チェック（常時）と固有値チェック（オプション）の2段階。
+        /// 不安定な場合は InvalidOperationException をスローする。
+        /// </summary>
+        public void ValidateStability(bool useEigenvalueCheck = false)
+        {
+            // 1. 対角チェック（MapOnKmat で既に計算済み）
+            // ActionPointのUz/Rx/Ryは水平解析では常にゼロ剛性（正常）なので除外
+            var expectedZeroDofs = new HashSet<string> { "ActionPoint:Uz", "ActionPoint:Rx", "ActionPoint:Ry" };
+            var problematicDofs = ZeroDiagDofs
+                .Where(d => !expectedZeroDofs.Contains(d.nodeName))
+                .ToList();
+
+            if (problematicDofs.Count > 0)
+            {
+                var details = problematicDofs
+                    .Select(d => $"  {d.nodeName} (対角値={d.val:E2})")
+                    .Take(20);
+                var msg = $"剛性マトリクスにゼロ/負の対角成分が{problematicDofs.Count}個検出されました。\n" +
+                          $"モデルが不安定です（剛体移動が拘束されていない自由度があります）。\n\n" +
+                          $"問題のある自由度:\n{string.Join("\n", details)}";
+                if (problematicDofs.Count > 20)
+                    msg += $"\n  ...他{problematicDofs.Count - 20}件";
+                throw new InvalidOperationException(msg);
+            }
+
+            // 2. 固有値チェック（オプション: CountFree ≤ 2000 の場合のみ実行）
+            if (useEigenvalueCheck && CountFree > 0 && CountFree <= 2000 && KAA_tan != null)
+            {
+                var dense = Matrix<double>.Build.DenseOfMatrix(KAA_tan);
+                var evd = dense.Evd();
+                var eigenvalues = evd.EigenValues.Real();
+                double minEig = eigenvalues.Minimum();
+
+                if (minEig <= 0.0)
+                {
+                    int negCount = eigenvalues.Count(e => e <= 0.0);
+                    throw new InvalidOperationException(
+                        $"固有値解析により不安定と判定されました。\n" +
+                        $"最小固有値: {minEig:E3}\n" +
+                        $"非正固有値の数: {negCount}\n" +
+                        $"（不足拘束 = {negCount} 自由度分の剛体モードが存在します）");
+                }
             }
         }
 
@@ -602,10 +644,20 @@ namespace PileDesign.FEM
         public AnalysisStepResult? GetAnalysisLastStepResult(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
             // 名前ベースで比較（参照比較の代わりに）
-            return AnalysisStepResults
+            var result = AnalysisStepResults
                 .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
                             r.LoadCombination?.Name == loadCombination?.Name &&
                             r.IsLiquefaction == isLiquefaction)
+                .OrderByDescending(r => r.Step)
+                .FirstOrDefault();
+
+            if (result != null) return result;
+
+            // フォールバック: 逆の液状化状態で検索
+            return AnalysisStepResults
+                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            r.IsLiquefaction == !isLiquefaction)
                 .OrderByDescending(r => r.Step)
                 .FirstOrDefault();
         }
@@ -620,7 +672,18 @@ namespace PileDesign.FEM
                 .Select(r => r.Step)
                 .ToList();
 
-            return results.DefaultIfEmpty(-999).Max();
+            if (results.Count > 0)
+                return results.Max();
+
+            // フォールバック: 逆の液状化状態で検索
+            var fallback = AnalysisStepResults
+                .Where(r => r.LoadCase?.LoadName == loadCase?.LoadName &&
+                            r.LoadCombination?.Name == loadCombination?.Name &&
+                            r.IsLiquefaction == !isLiquefaction)
+                .Select(r => r.Step)
+                .ToList();
+
+            return fallback.DefaultIfEmpty(-999).Max();
         }
 
         // 荷重ベクトルの更新メソッド

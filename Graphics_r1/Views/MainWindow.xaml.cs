@@ -97,9 +97,6 @@ namespace PileDesign.Views
             };
 
 
-            // TextBoxElementNodeInput を ViewModel にバインド
-            _mainWindowViewModel.TextBoxElementNodeInput = TextBoxElementNodeInput;
-
             InitializeViewModels();
             SetupEventHandlers();
             UpdatePerspectiveView();
@@ -129,9 +126,11 @@ namespace PileDesign.Views
             // inputDataAnchorable を ViewModel に渡す
             viewModel.InputDataAnchorable = inputDataAnchorable;
 
-            viewModel.TextBoxElementNodeInput = TextBoxElementNodeInput;
             // Window の KeyDown イベントを設定
             this.KeyDown += MainWindow_KeyDown;
+
+            // Window の PreviewKeyDown イベントを設定（Alt+数字キー等のグローバルショートカット用）
+            this.PreviewKeyDown += MainWindow_PreviewKeyDown;
 
             // Canvas3DLayout の PreviewKeyDown イベントを設定
             Canvas3DLayout.PreviewKeyDown += Canvas3DLayout_PreviewKeyDown;
@@ -385,7 +384,7 @@ namespace PileDesign.Views
             viewModel.CheckAutoSaveRestore();
 
             // レイアウトを復元
-            _layoutService.RestoreDockLayout(dockingManager);
+            //_layoutService.RestoreDockLayout(dockingManager);
         }
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -1114,15 +1113,10 @@ namespace PileDesign.Views
         // マウス左ボタンが押された時のメソッド
         private void Canvas3DLayout_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-
-            if (_mainWindowViewModel.IsElementAddMode)
+            // 基礎梁ビジュアル編集モードの処理
+            if (HandleFoundationBeamEditMode(e))
             {
-                var pos = e.GetPosition(Canvas3DLayout);
-                int? nodeIndex = FindNearestNodeIndex(pos);
-                if (nodeIndex != null)
-                {
-                    elementAddStartNodeIndex = nodeIndex;
-                }
+                return; // 編集モードで処理された場合は早期リターン
             }
 
             startPoint = e.GetPosition(Canvas3DLayout);
@@ -1212,6 +1206,14 @@ namespace PileDesign.Views
             // マウスキャプチャを解除
             Canvas3DLayout.ReleaseMouseCapture();
 
+            // 編集モード中は選択処理を抑制
+            if (DataContext is MainWindowViewModel vm && vm.CurrentEditMode != CanvasEditMode.None)
+            {
+                Canvas3DLayout.Children.Remove(selectionRectangle);
+                selectionRectangle = null;
+                return;
+            }
+
             // マウスの左ボタンが離された時の処理
             endPoint = e.GetPosition(Canvas3DLayout);
 
@@ -1234,58 +1236,6 @@ namespace PileDesign.Views
             selectionRectangle = null;
         }
 
-        // 
-        private void RemoveEditingElement()
-        {
-            var elementsToRemove = Canvas3DLayout.Children.OfType<Path>()
-                .Where(p => p.Name == "EditingElement")
-                .ToList();
-
-            foreach (var element in elementsToRemove)
-            {
-                Canvas3DLayout.Children.Remove(element);
-            }
-        }
-        // 編集中要素の更新
-        private void UpdateEditingElement3D(MouseEventArgs e)
-        {
-            if (DataContext is not MainWindowViewModel viewModel) return;
-            List<int> nodeNos = GetTextBoxElementNodeNos();
-
-            // 既存の EditingElement を削除
-            RemoveEditingElement();
-
-            // PathGeometry を作成
-            PathGeometry pathGeometry = new();
-            PathFigure pathFigure = new() { StartPoint = e.GetPosition(Canvas3DLayout) };
-            // ポリラインのセグメントを追加
-            PolyLineSegment polyLineSegment = new();
-
-            foreach (int nodeNo in nodeNos)
-            {
-                Point3D point3D = new(
-                    viewModel.CurrentInputModel.PileLayoutItems[nodeNo - 1].Point3D.X,
-                    viewModel.CurrentInputModel.PileLayoutItems[nodeNo - 1].Point3D.Y,
-                    viewModel.CurrentInputModel.PileLayoutItems[nodeNo - 1].Point3D.Z);
-                Point coord = viewModel.CanvasThreeDView.Transformation(point3D);
-                polyLineSegment.Points.Add(coord);
-            }
-
-            pathFigure.Segments.Add(polyLineSegment);
-            pathGeometry.Figures.Add(pathFigure);
-
-            // Path を作成し、PathGeometry を設定
-            Path path = new()
-            {
-                Data = pathGeometry,
-                Stroke = Brushes.Pink,
-                StrokeThickness = 2,
-                StrokeDashArray = [4, 2],
-                Name = "EditingElement"
-            };
-
-            Canvas3DLayout.Children.Add(path);
-        }
 
         // 追加フィールド（クラス内に追加）
         private Point _rightDragAnchorPoint;
@@ -1390,6 +1340,12 @@ namespace PileDesign.Views
         {
             var viewModel = (MainWindowViewModel)DataContext;
 
+            // 基礎梁要素追加モード: プレビュー線を描画
+            if (viewModel.CurrentEditMode == CanvasEditMode.AddElement && viewModel.TempStartNode != null)
+            {
+                DrawFoundationBeamPreview(e.GetPosition(Canvas3DLayout));
+            }
+
             // Shift+右でのパン中は中ボタンパンと同様の処理
             if (_isPanningWithRight && e.RightButton == MouseButtonState.Pressed)
             {
@@ -1475,11 +1431,6 @@ namespace PileDesign.Views
             // 以降は既存の処理（左ドラッグ・中ドラッグ・スロットリング等）
             if ((DateTime.Now - lastUpdate) < UpdateInterval) return;
             lastUpdate = DateTime.Now;
-
-            if (viewModel.IsElementAddMode)
-            {
-                UpdateEditingElement3D(e);
-            }
 
             if (e.LeftButton == MouseButtonState.Pressed)
             {
@@ -1983,7 +1934,22 @@ namespace PileDesign.Views
             // 右クリックメニューは「ドラッグしていない場合のみ」表示
             if (IsRightButtonClicked && !_rightDragged)
             {
-                if (FindResource("NodeContextMenu") is ContextMenu contextMenu)
+                // 何が選択されているかに応じて適切なコンテキストメニューを表示
+                string menuKey = "NodeContextMenu"; // デフォルトは杭のメニュー
+
+                // 一般梁要素が選択されているかチェック
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    bool hasSelectedBeams = vm.CurrentInputModel?.FoundationBeamInput?.Beams?
+                        .Any(b => b.IsSelected) ?? false;
+
+                    if (hasSelectedBeams)
+                    {
+                        menuKey = "BeamElementContextMenu";
+                    }
+                }
+
+                if (FindResource(menuKey) is ContextMenu contextMenu)
                 {
                     contextMenu.PlacementTarget = sender as UIElement;
                     contextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
@@ -2104,24 +2070,27 @@ namespace PileDesign.Views
             )
             {
                 // Alt + 1が押されたときの処理
-                // 要素追加モード
+                // 要素追加モードに切り替え（トグルではない）
                 MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-                if (viewModel.IsElementAddMode)
-                {
-                    viewModel.IsElementAddMode = false;
-                    RemoveEditingElement();
-                }
-                else
-                {
-                    viewModel.IsElementAddMode = true;
+                viewModel.CurrentEditMode = CanvasEditMode.AddElement;
 
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        var mainWindow = (MainWindow)Application.Current.MainWindow;
-                        mainWindow.ElementDocument.IsSelected = true;
-                    });
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var mainWindow = (MainWindow)Application.Current.MainWindow;
+                    mainWindow.GeneralBeamElementDocument.IsSelected = true;
+                });
+                e.Handled = true;
+            }
 
-                }
+            else if (
+                ((e.Key == Key.D0 || e.Key == Key.NumPad0) && Keyboard.Modifiers == ModifierKeys.Alt)
+                || (e.Key == Key.System && e.SystemKey == Key.D0 && Keyboard.Modifiers == ModifierKeys.Alt)
+            )
+            {
+                // Alt + 0が押されたときの処理
+                // 選択モード（None）に切り替え
+                MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+                viewModel.CurrentEditMode = CanvasEditMode.None;
                 e.Handled = true;
             }
 
@@ -2151,11 +2120,8 @@ namespace PileDesign.Views
             }
             else if (e.Key == Key.Delete)
             {
-                // Deleteが押されたときの処理
-                DeleteSelectedPileLayouts();
-                DeleteSelectedElements();
-
-                UpdateWindow();
+                // Deleteが押されたときの処理（Undo対応）
+                DeleteSelectedItems();
                 e.Handled = true;
             }
             else if (e.Key == Key.Escape)
@@ -2163,8 +2129,16 @@ namespace PileDesign.Views
                 // Escapeが押されたときの処理
                 ClearCanvasSelection();
                 var viewModel = DataContext as MainWindowViewModel;
-                viewModel.IsElementAddMode = false;
-                RemoveEditingElement();
+
+                // 要素追加モードで1点目が選択されている場合、それもキャンセル
+                if (viewModel.TempStartNode != null)
+                {
+                    viewModel.TempStartNode = null;
+                    viewModel.StatusMessage = string.Empty;
+                    ClearFoundationBeamPreview(); // プレビュー線をクリア
+                }
+
+                viewModel.CurrentEditMode = CanvasEditMode.None;
                 //e.Handled = true;
             }
 
@@ -2357,22 +2331,95 @@ namespace PileDesign.Views
             vm.UpdatePileLayoutNo();
         }
 
-        // 選択された要素を削除するメソッド
-        private void DeleteSelectedElements()
+        /// <summary>
+        /// 選択された杭・節点・要素をまとめて削除（Undo対応）
+        /// 節点を削除する場合、接続された要素も自動削除
+        /// </summary>
+        private void DeleteSelectedItems()
         {
-            var viewModel = _mainWindowViewModel;
-            InputModel InputModel = viewModel.CurrentInputModel;
+            var vm = _mainWindowViewModel;
+            var input = vm.CurrentInputModel;
 
-            // 削除するアイテムのリストを作成
-            var itemsToRemove = viewModel.CurrentInputModel.Elements
-                .Where(element => element.IsSelected)
-                .ToList();
+            // 削除対象の収集
+            var pilesToRemove = input.PileLayoutItems.Where(x => x.IsSelected).ToList();
+            var inputNodesToRemove = input.InputNodes?.Where(x => x.IsSelected && x.Type == NodeType.General).ToList() ?? [];
+            var elementsToRemove = input.Elements?.Where(x => x.IsSelected).ToList() ?? [];
+            var beamsToRemove = input.FoundationBeamInput?.Beams?.Where(x => x.IsSelected).ToList() ?? [];
 
-            // リストを列挙してアイテムを削除
-            foreach (var element in itemsToRemove)
+            // 削除対象の一般節点のUniqueIdを収集（接続要素の検索用）
+            var deletedNodeIds = new HashSet<Guid>(inputNodesToRemove.Select(n => n.UniqueId));
+            // 削除対象の杭のUniqueIdも収集
+            var deletedPileIds = new HashSet<Guid>(pilesToRemove.Select(p => p.UniqueId));
+
+            // 削除される節点に接続された一般要素を追加
+            if (input.Elements != null && deletedNodeIds.Count > 0)
             {
-                InputModel.Elements.Remove(element);
+                foreach (var element in input.Elements)
+                {
+                    if (elementsToRemove.Contains(element)) continue;
+                    if (element.Nodes.Any(n => deletedNodeIds.Contains(n.UniqueId)))
+                        elementsToRemove.Add(element);
+                }
             }
+
+            // 削除される節点/杭に接続された基礎梁要素を追加
+            if (input.FoundationBeamInput?.Beams != null && (deletedNodeIds.Count > 0 || deletedPileIds.Count > 0))
+            {
+                foreach (var beam in input.FoundationBeamInput.Beams)
+                {
+                    if (beamsToRemove.Contains(beam)) continue;
+
+                    bool connected = false;
+                    // 一般節点参照のチェック
+                    if (beam.NodeI_Type == NodeReferenceType.GeneralNode && deletedNodeIds.Contains(beam.NodeI_Id))
+                        connected = true;
+                    if (beam.NodeJ_Type == NodeReferenceType.GeneralNode && deletedNodeIds.Contains(beam.NodeJ_Id))
+                        connected = true;
+                    // 杭参照のチェック
+                    if (beam.NodeI_Type == NodeReferenceType.PileLayout && deletedPileIds.Contains(beam.NodeI_Id))
+                        connected = true;
+                    if (beam.NodeJ_Type == NodeReferenceType.PileLayout && deletedPileIds.Contains(beam.NodeJ_Id))
+                        connected = true;
+
+                    if (connected) beamsToRemove.Add(beam);
+                }
+            }
+
+            // 削除するものがなければ何もしない
+            if (pilesToRemove.Count == 0 && inputNodesToRemove.Count == 0 &&
+                elementsToRemove.Count == 0 && beamsToRemove.Count == 0)
+                return;
+
+            // Undoスナップショットを保存（削除前の状態）
+            vm.SaveUndoState();
+
+            // 実削除
+            foreach (var item in pilesToRemove)
+                input.PileLayoutItems.Remove(item);
+
+            if (input.InputNodes != null)
+            {
+                foreach (var node in inputNodesToRemove)
+                    input.InputNodes.Remove(node);
+            }
+
+            if (input.Elements != null)
+            {
+                foreach (var element in elementsToRemove)
+                    input.Elements.Remove(element);
+            }
+
+            if (input.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in beamsToRemove)
+                    input.FoundationBeamInput.Beams.Remove(beam);
+            }
+
+            // 杭番号を更新
+            if (pilesToRemove.Count > 0)
+                vm.UpdatePileLayoutNo();
+
+            UpdateWindow();
         }
 
         private void TextBox_GotFocus(object sender, RoutedEventArgs e)
@@ -2667,7 +2714,8 @@ namespace PileDesign.Views
             var viewModel = DataContext as MainWindowViewModel;
             var input = viewModel.CurrentInputModel;
 
-            if (DataGridPileLayout.SelectedItem is PileLayoutDataItem selectedItem)
+            // ボタンのTagから対象アイテムを取得
+            if (sender is Button button && button.Tag is PileLayoutDataItem selectedItem)
             {
                 var col = input.PileLayoutItems;
                 int index = col.IndexOf(selectedItem);
@@ -2685,7 +2733,36 @@ namespace PileDesign.Views
             }
             else
             {
-                MessageBox.Show("選択されたアイテムの型が正しくありません。");
+                MessageBox.Show("削除対象のアイテムが正しく取得できませんでした。");
+            }
+        }
+
+        private void ButtonInputNodeDelete_Click(object sender, RoutedEventArgs e)
+        {
+            var viewModel = DataContext as MainWindowViewModel;
+            var input = viewModel.CurrentInputModel;
+
+            // ボタンのTagから対象アイテムを取得
+            if (sender is Button button && button.Tag is InputNode selectedItem)
+            {
+                var col = input.InputNodes;
+                if (col == null) return;
+
+                int index = col.IndexOf(selectedItem);
+                if (index < 0) return;
+
+                // Undo: Remove の逆操作を保持
+                UndoService.Instance.Push(
+                    PileDesign.Common.Undo.CollectionChangeAction<InputNode>
+                        .ForRemove(col, selectedItem, index, "Delete input node")
+                );
+
+                col.RemoveAt(index);
+                UpdateWindow();
+            }
+            else
+            {
+                MessageBox.Show("削除対象のアイテムが正しく取得できませんでした。");
             }
         }
         //{
@@ -2865,6 +2942,87 @@ namespace PileDesign.Views
                 }
         }
 
+        // InputNode用イベントハンドラ
+        private void DataGridInputNodes_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (isSelectionChanging) return;
+            UpdateSelectedInputNodes(DataGridInputNodes);
+        }
+
+        private void DataGridInputNodes_LoadingRow_Numbering(object sender, DataGridRowEventArgs e)
+        {
+            e.Row.Header = (e.Row.GetIndex() + 1).ToString();
+        }
+
+        private void DataGridInputNodes_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+        {
+            var path = GetBindingPath(e.Column);
+            if (string.IsNullOrEmpty(path)) return;
+            var item = e.Row.Item;
+            var (ok, oldVal) = TryGetPropertyValue(item, path);
+            if (ok) _dgOldValues[(item, path)] = oldVal;
+        }
+
+        private void DataGridInputNodes_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            // Commitのみ処理
+            if (e.EditAction != DataGridEditAction.Commit) return;
+
+            var path = GetBindingPath(e.Column);
+            if (string.IsNullOrEmpty(path)) return;
+            var item = e.Row.Item;
+
+            // Commit後の新値をリフレッシュして取得
+            Dispatcher.BeginInvoke(() =>
+            {
+                var key = (item, path);
+                _dgOldValues.TryGetValue(key, out var oldVal);
+                var (ok2, newVal) = TryGetPropertyValue(item, path);
+                _dgOldValues.Remove(key);
+
+                if (!ok2) return;
+                if (Equals(oldVal, newVal)) return;
+
+                // Undo登録
+                UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
+            }, System.Windows.Threading.DispatcherPriority.Background);
+
+            var viewModel = DataContext as MainWindowViewModel;
+            viewModel?.DataGridInputNodes_OnCellEditEndingCommand.Execute(e);
+        }
+
+        private void UpdateSelectedInputNodes(DataGrid dataGrid)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (viewModel.CurrentInputModel?.InputNodes == null) return;
+
+            isSelectionChanging = true;
+
+            try
+            {
+                // すべての選択を解除
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    node.IsSelected = false;
+                }
+
+                // DataGridで選択された項目を選択状態に
+                foreach (var selectedItem in dataGrid.SelectedItems)
+                {
+                    if (selectedItem is InputNode node)
+                    {
+                        node.IsSelected = true;
+                    }
+                }
+
+                UpdateCanvas3D();
+            }
+            finally
+            {
+                isSelectionChanging = false;
+            }
+        }
+
         private void CheckBoxAnalysisResult_Unchecked(object sender, RoutedEventArgs e)
         {
             UpdateWindow();
@@ -2945,6 +3103,12 @@ namespace PileDesign.Views
                 e.Handled = true;
             }
 
+            // 自動梁要素生成
+            else if (e.Key == Key.B && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+            {
+                viewModel?.AutoGenerateFoundationBeamsCommand.Execute(null);
+                e.Handled = true;
+            }
             // 杭体編集
             else if (e.Key == Key.B && Keyboard.Modifiers == ModifierKeys.Control)
             {
@@ -3020,72 +3184,6 @@ namespace PileDesign.Views
         }
 
 
-        private void TextBoxElementNodeInput_GotFocus(object sender, RoutedEventArgs e)
-        {
-            TextBoxElementNodeInput = sender as TextBox;
-        }
-
-        private void TextBoxElementNodeInput_LostFocus(object sender, RoutedEventArgs e)
-        {
-            TextBoxElementNodeInput.Text = string.Empty;
-            TextBoxElementNodeInput = null;
-        }
-
-        private void TextBoxElementNodeInput_Changed(object sender, TextChangedEventArgs e)
-        {
-            var viewModel = DataContext as MainWindowViewModel;
-            var inputModel = viewModel.CurrentInputModel;
-            if (viewModel.ElementType == "ダミー")
-            {
-                if (TextBoxElementNodeInput.Text.Count(c => c == ',') == 2)
-                {
-                    var parts = TextBoxElementNodeInput.Text.Split(',');
-                    if (parts.Length == 3)
-                    {
-                        int.TryParse(parts[0], out int value1);
-                        int.TryParse(parts[1], out int value2);
-
-                        inputModel.Elements.Add(new Element(viewModel.ElementType,
-                            inputModel.PileLayoutItems[value1 - 1], inputModel.PileLayoutItems[value2 - 1]));
-
-                        TextBoxElementNodeInput.Text = string.Empty;
-
-                        ClearCanvasSelection();
-                        //UpdateCanvas3D();
-                    }
-                }
-            }
-        }
-
-        // TextBoxElementNodeInputに入力されたnodeNoを返すメソッド
-        private List<int> GetTextBoxElementNodeNos()
-        {
-            // nullチェックを追加
-            if (TextBoxElementNodeInput == null || string.IsNullOrEmpty(TextBoxElementNodeInput.Text))
-                return [];
-
-            var parts = TextBoxElementNodeInput.Text.Split(',');
-            List<int> nodeNos = [];
-            for (int i = 0; i < TextBoxElementNodeInput.Text.Count(c => c == ','); i++)
-            {
-                int.TryParse(parts[i], out int nodeNo);
-                nodeNos.Add(nodeNo);
-            }
-            return nodeNos;
-        }
-
-        private void LayoutDocumentElement_IsActiveChanged(object sender, EventArgs e)
-        {
-            var viewModel = DataContext as MainWindowViewModel;
-            viewModel.IsElementAddMode = false;
-        }
-
-        private void LayoutDocumentElement_IsSelectedChanged(object sender, EventArgs e)
-        {
-            var viewModel = DataContext as MainWindowViewModel;
-            viewModel.IsElementAddMode = false;
-        }
-
         private void SelectAllNodesButton_Click(object sender, RoutedEventArgs e)
         {
             SelectAllNodes();
@@ -3124,11 +3222,6 @@ namespace PileDesign.Views
         private void ZoomFitButton_Click(object sender, RoutedEventArgs e)
         {
             ZoomFit();
-        }
-
-        private void ToggleButtonElementAddMode_Unchecked(object sender, RoutedEventArgs e)
-        {
-            TextBoxElementNodeInput.Text = string.Empty;
         }
 
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -3370,6 +3463,510 @@ namespace PileDesign.Views
             Canvas3DLayout.Width = usable;
             Canvas3DLayout.Clip = null; // Clip不要
         }
+
+        #region 基礎梁ビジュアル編集 - イベントハンドラ
+
+        /// <summary>
+        /// 基礎梁要素追加のプレビュー線を描画
+        /// </summary>
+        private void DrawFoundationBeamPreview(Point mousePos)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+
+            if (vm.TempStartNode == null) return;
+
+            // 既存のプレビュー線を削除
+            ClearFoundationBeamPreview();
+
+            // 開始ノードの座標を解決
+            var coords = vm.CurrentInputModel.GetNodeCoordinates(vm.TempStartNode.Type, vm.TempStartNode.Id);
+            if (coords == null) return; // 座標が見つからない場合は何もしない
+
+            // 開始ノードの画面座標を取得
+            var startNodeLoc3D = new Point3D(coords.Value.X, coords.Value.Y, coords.Value.Z);
+            var startScreenPos = vm.CanvasThreeDView.Transformation(startNodeLoc3D);
+
+            // プレビュー線を作成（破線スタイル）
+            var previewLine = new Line
+            {
+                X1 = startScreenPos.X,
+                Y1 = startScreenPos.Y,
+                X2 = mousePos.X,
+                Y2 = mousePos.Y,
+                Stroke = Brushes.Orange,
+                StrokeThickness = 2.0,
+                StrokeDashArray = new DoubleCollection { 4, 2 },
+                Tag = "FoundationBeamPreview",
+                IsHitTestVisible = false // マウスイベントに反応しない
+            };
+
+            Canvas3DLayout.Children.Add(previewLine);
+        }
+
+        /// <summary>
+        /// プレビュー線をクリア
+        /// </summary>
+        private void ClearFoundationBeamPreview()
+        {
+            var existingPreview = Canvas3DLayout.Children.OfType<Line>()
+                .FirstOrDefault(l => l.Tag?.ToString() == "FoundationBeamPreview");
+            if (existingPreview != null)
+            {
+                Canvas3DLayout.Children.Remove(existingPreview);
+            }
+        }
+
+        /// <summary>
+        /// 基礎梁編集モードのマウスクリック処理
+        /// </summary>
+        /// <returns>処理された場合はtrue、何もしなかった場合はfalse</returns>
+        private bool HandleFoundationBeamEditMode(MouseButtonEventArgs e)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+
+            // 編集モードがNoneの場合は何もしない
+            if (vm.CurrentEditMode == CanvasEditMode.None)
+            {
+                return false;
+            }
+
+            Point mousePos = e.GetPosition(Canvas3DLayout);
+
+            switch (vm.CurrentEditMode)
+            {
+                case CanvasEditMode.AddNode:
+                    HandleAddNode(mousePos);
+                    break;
+
+                case CanvasEditMode.AddElement:
+                    HandleAddElement(mousePos);
+                    break;
+
+                case CanvasEditMode.Delete:
+                    HandleDelete(mousePos);
+                    break;
+            }
+
+            // 編集モード中は常にtrueを返して選択処理を抑制
+            return true;
+        }
+
+        /// <summary>
+        /// ノード追加処理
+        /// </summary>
+        /// <returns>常にtrue（必ず処理を行う）</returns>
+        private bool HandleAddNode(Point mousePos)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+
+            // 基礎梁入力データの初期化
+            if (vm.CurrentInputModel.FoundationBeamInput == null)
+            {
+                vm.CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
+            }
+
+            var nodes = vm.CurrentInputModel.FoundationBeamInput.Nodes;
+
+            // 一点目の場合は(0, 0, ΔZc=1.0)に固定
+            if (nodes.Count == 0)
+            {
+                var firstNode = new FoundationNode
+                {
+                    No = 1,
+                    X = 0,
+                    Y = 0,
+                    Z = 1.0, // デフォルトΔZc
+                    Name = "Node-1"
+                };
+                nodes.Add(firstNode);
+                vm.RequestUpdateWindow();
+                return true;
+            }
+
+            // 二点目以降: マウス位置→3D座標変換
+            Point3D? rawPos = GetXYFromMousePosition(mousePos);
+            if (rawPos == null) return true; // 座標変換に失敗しても処理したとみなす
+
+            // 杭位置にスナップ
+            Point3D finalPos = ApplyPileSnap(rawPos.Value);
+
+            // スナップした杭を見つけて、ΔZcを適用
+            var piles = vm.CurrentInputModel.PileLayoutItems;
+            double finalZ = finalPos.Z; // デフォルトはrawPosのZ
+
+            foreach (var pile in piles)
+            {
+                double dx = pile.X - finalPos.X;
+                double dy = pile.Y - finalPos.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                // スナップした杭が見つかった場合（XY座標が一致）
+                if (dist < 0.01) // 1cm以内なら一致とみなす
+                {
+                    finalZ = pile.Z + pile.FoundationBeamDeltaZc;
+                    break;
+                }
+            }
+
+            // 新しいノードを作成
+            var newNode = new FoundationNode
+            {
+                No = nodes.Count + 1,
+                X = finalPos.X,
+                Y = finalPos.Y,
+                Z = finalZ,
+                Name = $"Node-{nodes.Count + 1}"
+            };
+
+            nodes.Add(newNode);
+
+            // Undo登録（今後実装）
+            // _undoManager.RegisterAction(new AddNodeAction(newNode));
+
+            // 3D更新
+            vm.RequestUpdateWindow();
+            return true;
+        }
+
+        /// <summary>
+        /// 要素追加処理（2クリック方式）
+        /// </summary>
+        /// <returns>処理した場合はtrue、何もしなかった場合はfalse</returns>
+        private bool HandleAddElement(Point mousePos)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+
+            // 基礎梁入力データの初期化
+            if (vm.CurrentInputModel.FoundationBeamInput == null)
+            {
+                vm.CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
+            }
+
+            var nodes = vm.CurrentInputModel.FoundationBeamInput.Nodes;
+
+            // ヒットテストして節点参照を取得
+            NodeReference? hitRef = null;
+            string hitNodeName = "";
+
+            // まず既存の基礎梁ノードをヒットテスト
+            FoundationNode? hitFoundationNode = HitTestNode(mousePos);
+            if (hitFoundationNode != null)
+            {
+                hitRef = new NodeReference(NodeReferenceType.FoundationNode, hitFoundationNode.Id);
+                hitNodeName = hitFoundationNode.Name;
+            }
+
+            // 既存ノードがない場合、InputNode（一般節点）をヒットテスト
+            if (hitRef == null)
+            {
+                var hitInputNode = HitTestInputNode(mousePos);
+                if (hitInputNode != null)
+                {
+                    // Pile型のInputNodeはクリック不可（無視）
+                    if (hitInputNode.Type == NodeType.Pile)
+                    {
+                        return false; // Pile型は無視するが、処理していないのでfalse
+                    }
+
+                    // General型のInputNodeを直接参照
+                    hitRef = new NodeReference(NodeReferenceType.GeneralNode, hitInputNode.UniqueId);
+                    hitNodeName = $"一般節点-{hitInputNode.No}";
+                }
+            }
+
+            // 既存ノードがない場合、接続用節点をヒットテスト
+            if (hitRef == null && vm.IsConnectingNodeVisible)
+            {
+                var hitPile = HitTestConnectingNode(mousePos);
+                if (hitPile != null)
+                {
+                    // 杭配置を直接参照
+                    hitRef = new NodeReference(NodeReferenceType.PileLayout, hitPile.UniqueId);
+                    hitNodeName = $"杭配置-{hitPile.PileNo}";
+                }
+            }
+
+            if (hitRef == null)
+            {
+                // ノードがクリックされていない場合は何もしない
+                return false;
+            }
+
+            if (vm.TempStartNode == null)
+            {
+                // 1回目のクリック: 開始ノードを記録
+                vm.TempStartNode = hitRef;
+                vm.StatusMessage = $"開始ノード: {hitNodeName} → 終了ノードをクリック";
+            }
+            else
+            {
+                // 2回目のクリック: 要素を作成
+                if (hitRef.Type == vm.TempStartNode.Type && hitRef.Id == vm.TempStartNode.Id)
+                {
+                    MessageBox.Show("同じノードは接続できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    vm.TempStartNode = null;
+                    vm.StatusMessage = string.Empty;
+                    ClearFoundationBeamPreview(); // プレビュー線をクリア
+                    return true; // 処理したのでtrue
+                }
+
+                var beams = vm.CurrentInputModel.FoundationBeamInput.Beams;
+
+                // デフォルトの材料・断面番号を取得
+                int defaultMaterialNo = 1;
+                int defaultSectionNo = 1;
+                if (vm.CurrentInputModel.FoundationBeamInput.Materials.Count > 0)
+                    defaultMaterialNo = vm.CurrentInputModel.FoundationBeamInput.Materials[0].No;
+                if (vm.CurrentInputModel.FoundationBeamInput.Sections.Count > 0)
+                    defaultSectionNo = vm.CurrentInputModel.FoundationBeamInput.Sections[0].No;
+
+                var newBeam = new FoundationBeamElement
+                {
+                    No = beams.Count + 1,
+                    // 新方式: Type + Guid で参照
+                    NodeI_Type = vm.TempStartNode.Type,
+                    NodeI_Id = vm.TempStartNode.Id,
+                    NodeJ_Type = hitRef.Type,
+                    NodeJ_Id = hitRef.Id,
+                    // 材料・断面番号
+                    MaterialNo = defaultMaterialNo,
+                    SectionNo = defaultSectionNo,
+                    // 旧方式（後方互換性）
+                    NodeI_No = 0,
+                    NodeJ_No = 0,
+                    SectionName = $"Beam-{beams.Count + 1}",
+                    Width = 0.5,
+                    Height = 0.8,
+                    YoungModulus = 2.5e7,
+                    ShearModulus = 1.04e7
+                };
+
+                beams.Add(newBeam);
+
+                // リセット
+                vm.TempStartNode = null;
+                vm.StatusMessage = string.Empty;
+                ClearFoundationBeamPreview(); // プレビュー線をクリア
+
+                // Undo登録（今後実装）
+
+                // 3D更新
+                vm.RequestUpdateWindow();
+            }
+
+            return true; // 処理したのでtrue
+        }
+
+        /// <summary>
+        /// 削除処理
+        /// </summary>
+        /// <returns>削除した場合はtrue、何もしなかった場合はfalse</returns>
+        private bool HandleDelete(Point mousePos)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+
+            // ノードをヒットテスト
+            FoundationNode? hitNode = HitTestNode(mousePos);
+
+            if (hitNode == null) return false;
+
+            // 確認ダイアログ
+            var result = MessageBox.Show(
+                $"ノード '{hitNode.Name}' を削除しますか？\n接続されている要素も削除されます。",
+                "削除確認",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes) return false;
+
+            var nodes = vm.CurrentInputModel.FoundationBeamInput.Nodes;
+            var beams = vm.CurrentInputModel.FoundationBeamInput.Beams;
+
+            // 接続されている要素を削除（カスケード削除）
+            var beamsToRemove = beams.Where(b => b.NodeI_No == hitNode.No || b.NodeJ_No == hitNode.No).ToList();
+            foreach (var beam in beamsToRemove)
+            {
+                beams.Remove(beam);
+            }
+
+            // ノードを削除
+            nodes.Remove(hitNode);
+
+            // 番号を振り直し
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodes[i].No = i + 1;
+            }
+            for (int i = 0; i < beams.Count; i++)
+            {
+                beams[i].No = i + 1;
+            }
+
+            // Undo登録（今後実装）
+
+            // 3D更新
+            vm.RequestUpdateWindow();
+            return true;
+        }
+
+        #endregion
+
+        #region 基礎梁ビジュアル編集 - 座標変換
+
+        /// <summary>
+        /// 現在のビューが平面図（Phi≒90°）かどうかを判定
+        /// </summary>
+        private bool IsPlanView()
+        {
+            var vm = (MainWindowViewModel)DataContext;
+            // Phi=90°±5°を平面図とみなす
+            return Math.Abs(vm.CanvasThreeDView.Phi - 90.0) < 5.0;
+        }
+
+        /// <summary>
+        /// マウス位置（ピクセル座標）から3D座標（XY）を取得（平面図専用、Z固定）
+        /// </summary>
+        /// <param name="mousePos">Canvas上のマウス位置</param>
+        /// <returns>3D座標（Z=DefaultFoundationBeamZ）</returns>
+        private Point3D? GetXYFromMousePosition(Point mousePos)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+
+            // 既存のInverseTransformation()を使用
+            Point3D worldPos = vm.CanvasThreeDView.InverseTransformation(mousePos);
+
+            // Z座標は常にDefaultFoundationBeamZを使用（どのビューでも）
+            // 杭位置にスナップする場合は、HandleAddNode内でΔZcが適用される
+            return new Point3D(worldPos.X, worldPos.Y, vm.DefaultFoundationBeamZ);
+        }
+
+        /// <summary>
+        /// 杭位置に自動スナップ（tolerance以内の杭があればその位置に補正）
+        /// </summary>
+        /// <param name="rawPos">生の3D座標</param>
+        /// <param name="tolerance">スナップ許容距離（m）</param>
+        /// <returns>スナップ後の3D座標</returns>
+        private Point3D ApplyPileSnap(Point3D rawPos, double tolerance = 0.5)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+            var piles = vm.CurrentInputModel.PileLayoutItems;
+
+            // 最も近い杭を検索
+            double minDist = double.MaxValue;
+            Point3D? snapPos = null;
+
+            foreach (var pile in piles)
+            {
+                double dx = pile.X - rawPos.X;
+                double dy = pile.Y - rawPos.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                if (dist < minDist && dist < tolerance)
+                {
+                    minDist = dist;
+                    snapPos = new Point3D(pile.X, pile.Y, rawPos.Z);
+                }
+            }
+
+            return snapPos ?? rawPos;
+        }
+
+        /// <summary>
+        /// マウス位置（ピクセル座標）で基礎梁ノードをヒットテスト
+        /// </summary>
+        /// <param name="mousePos">Canvas上のマウス位置</param>
+        /// <param name="hitRadius">ヒット半径（ピクセル）</param>
+        /// <returns>ヒットしたノード（なければnull）</returns>
+        private FoundationNode? HitTestNode(Point mousePos, double hitRadius = 10.0)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+            var nodes = vm.CurrentInputModel.FoundationBeamInput?.Nodes;
+
+            if (nodes == null || nodes.Count == 0) return null;
+
+            // 各ノードの画面座標を計算してヒットテスト
+            foreach (var node in nodes)
+            {
+                var nodeLoc3D = new Point3D(node.X, node.Y, node.Z);
+                var screenPos = vm.CanvasThreeDView.Transformation(nodeLoc3D);
+
+                double dx = screenPos.X - mousePos.X;
+                double dy = screenPos.Y - mousePos.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                if (dist <= hitRadius)
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// マウス位置（ピクセル座標）で接続用節点（杭頭+ΔZc）をヒットテスト
+        /// </summary>
+        /// <returns>ヒットした杭のPileLayoutDataItem（なければnull）</returns>
+        private PileLayoutDataItem? HitTestConnectingNode(Point mousePos, double hitRadius = 10.0)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+            var piles = vm.CurrentInputModel?.PileLayoutItems;
+
+            if (piles == null || piles.Count == 0) return null;
+
+            // 各杭の接続用節点位置でヒットテスト
+            foreach (var pile in piles)
+            {
+                double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
+                var nodeLoc3D = new Point3D(pile.X, pile.Y, connectingZ);
+                var screenPos = vm.CanvasThreeDView.Transformation(nodeLoc3D);
+
+                double dx = screenPos.X - mousePos.X;
+                double dy = screenPos.Y - mousePos.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                if (dist <= hitRadius)
+                {
+                    return pile;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// マウス位置（ピクセル座標）でInputNode（一般節点）をヒットテスト
+        /// </summary>
+        /// <returns>ヒットしたInputNode（なければnull）</returns>
+        private InputNode? HitTestInputNode(Point mousePos, double hitRadius = 10.0)
+        {
+            var vm = (MainWindowViewModel)DataContext;
+            var nodes = vm.CurrentInputModel?.InputNodes;
+
+            if (nodes == null || nodes.Count == 0) return null;
+
+            // 各InputNodeの画面座標を計算してヒットテスト
+            foreach (var node in nodes)
+            {
+                if (!node.IsVisible) continue;
+
+                var nodeLoc3D = new Point3D(node.X, node.Y, node.Z);
+                var screenPos = vm.CanvasThreeDView.Transformation(nodeLoc3D);
+
+                double dx = screenPos.X - mousePos.X;
+                double dy = screenPos.Y - mousePos.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+
+                if (dist <= hitRadius)
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        #endregion
     }
 }
 

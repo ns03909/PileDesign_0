@@ -81,6 +81,8 @@
     <None Remove="Icons\ActiveAll.svg" />
     <None Remove="Icons\AddElementMode.png" />
     <None Remove="Icons\AddElementMode.svg" />
+    <None Remove="Icons\AddGeneralNode.png" />
+    <None Remove="Icons\AddGeneralNode.svg" />
     <None Remove="Icons\AddPileLoc.png" />
     <None Remove="Icons\AddPileLoc.svg" />
     <None Remove="Icons\AddRectLoad.png" />
@@ -95,6 +97,8 @@
     <None Remove="Icons\AdjustEmbedmentPlan.svg" />
     <None Remove="Icons\AdjustTextPositions.png" />
     <None Remove="Icons\AdjustTextPositions.svg" />
+    <None Remove="Icons\AnalysisResult.png" />
+    <None Remove="Icons\AnalysisResult.svg" />
     <None Remove="Icons\AnalysisResultVisilbe.svg" />
     <None Remove="Icons\AnyFormPressure.png" />
     <None Remove="Icons\AnyFormPressure.svg" />
@@ -103,12 +107,15 @@
     <None Remove="Icons\ArrowLength.svg" />
     <None Remove="Icons\ArrowVisible.png" />
     <None Remove="Icons\ArrowVisible.svg" />
+    <None Remove="Icons\AutoBeamGeneration.svg" />
     <None Remove="Icons\AutoFrontRear.png" />
     <None Remove="Icons\AutoFrontRear.svg" />
     <None Remove="Icons\AxesVisible.png" />
     <None Remove="Icons\AxesVisible.svg" />
     <None Remove="Icons\AxialForceVeirification.png" />
     <None Remove="Icons\AxialForceVeirification.svg" />
+    <None Remove="Icons\BeamVisible.png" />
+    <None Remove="Icons\BeamVisible.svg" />
     <None Remove="Icons\BoundaryCondition.svg" />
     <None Remove="Icons\BubbleDia.svg" />
     <None Remove="Icons\BubbleVisible.png" />
@@ -120,6 +127,8 @@
     <None Remove="Icons\ChangPile.svg" />
     <None Remove="Icons\CollapseRibbon.png" />
     <None Remove="Icons\CollapseRibbon.svg" />
+    <None Remove="Icons\ConnectionNodeVisible.png" />
+    <None Remove="Icons\ConnectionNodeVisible.svg" />
     <None Remove="Icons\CopySoilLayer.png" />
     <None Remove="Icons\CopySoilLayer.svg" />
     <None Remove="Icons\cover.png" />
@@ -167,6 +176,8 @@
     <None Remove="Icons\GroundPointParametersVisible.svg" />
     <None Remove="Icons\GroundWindow.png" />
     <None Remove="Icons\GroundWindow.svg" />
+    <None Remove="Icons\GroupPileContorVisible.png" />
+    <None Remove="Icons\GroupPileContorVisible.svg" />
     <None Remove="Icons\GroupPileGraph.png" />
     <None Remove="Icons\GroupPileGraph.svg" />
     <None Remove="Icons\GroupPileSettlement.png" />
@@ -238,6 +249,8 @@
     <None Remove="Icons\LoadingPlaneVisible.svg" />
     <None Remove="Icons\log.png" />
     <None Remove="Icons\log.svg" />
+    <None Remove="Icons\MaterialWizard.png" />
+    <None Remove="Icons\MaterialWizard.svg" />
     <None Remove="Icons\MergeElements.png" />
     <None Remove="Icons\MergeElements.svg" />
     <None Remove="Icons\MergeNodes.png" />
@@ -561,6 +574,12 @@
     <Resource Include="Icons\AddElementMode.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AddGeneralNode.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AddGeneralNode.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\AddPileLoc.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -603,6 +622,12 @@
     <Resource Include="Icons\AdjustTextPositions.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AnalysisResult.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AnalysisResult.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\AnalysisResultVisilbe.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -627,6 +652,9 @@
     <Resource Include="Icons\ArrowVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AutoBeamGeneration.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\AutoFrontRear.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -643,6 +671,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AxialForceVeirification.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BoundaryCondition.svg">
@@ -676,6 +710,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CollapseRibbon.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ConnectionNodeVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ConnectionNodeVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CopySoilLayer.png">
@@ -817,6 +857,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroundWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileContorVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\GroupPileContorVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\GroupPileGraph.png">
@@ -1030,6 +1076,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\log.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MaterialWizard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MaterialWizard.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MergeElements.png">

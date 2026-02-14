@@ -586,8 +586,6 @@ namespace PileDesign.FEM
                 step = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
             }
 
-            // デバッグ: 最初の5回のみログ出力（パフォーマンス改善）
-
             foreach (BeamResult beamResult in BeamResults)
             {
                 // 名前ベースで比較（参照比較の代わりに）
@@ -595,6 +593,19 @@ namespace PileDesign.FEM
                 bool loadCombMatch = loadCombination?.Name == beamResult.LoadCombination?.Name;
                 bool isLiqMatch = isLiquefaction == beamResult.IsLiquefaction;
                 bool stepMatch = step == beamResult.Step;
+
+                if (loadCaseMatch && loadCombMatch && isLiqMatch && stepMatch)
+                { return beamResult; }
+            }
+
+            // フォールバック: 逆の液状化状態で検索（液状化トグルの状態と解析結果が異なる場合の救済）
+            int fallbackStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, !isLiquefaction);
+            foreach (BeamResult beamResult in BeamResults)
+            {
+                bool loadCaseMatch = loadCase?.LoadName == beamResult.LoadCase?.LoadName;
+                bool loadCombMatch = loadCombination?.Name == beamResult.LoadCombination?.Name;
+                bool isLiqMatch = !isLiquefaction == beamResult.IsLiquefaction;
+                bool stepMatch = fallbackStep == beamResult.Step;
 
                 if (loadCaseMatch && loadCombMatch && isLiqMatch && stepMatch)
                 { return beamResult; }

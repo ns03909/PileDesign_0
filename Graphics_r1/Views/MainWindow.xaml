@@ -14,6 +14,7 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:views="clr-namespace:PileDesign.Views"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:models="clr-namespace:PileDesign.Models.InputData"
         xmlns:ribbon="clr-namespace:System.Windows.Controls.Ribbon;assembly=System.Windows.Controls.Ribbon"
         mc:Ignorable="d"
         Loaded="Window_Loaded"
@@ -50,12 +51,29 @@
         <conv:OutOfRangeToBoolConverter x:Key="OutOfRangeToBoolConverter"/>
         <conv:AnyBoolToVisibilityConverter x:Key="AnyBoolToVisibilityConverter"/>
         <conv:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
+        <conv:EnumToBooleanConverter x:Key="EnumToBoolConverter"/>
+        <conv:NodeReferenceDisplayConverter x:Key="NodeReferenceDisplayConverter"/>
+        <conv:StressUnitConverter x:Key="StressUnitConverter"/>
 
         <ContextMenu x:Key="NodeContextMenu">
             <MenuItem Header="コピー／平面移動" Command="{Binding MoveCopyPilesCommand}"/>
-            <MenuItem Header="プロパティ変更／追加" Command="{Binding EditAddPilesCommand}"/>
+            <MenuItem Header="杭プロパティ変更／追加" Command="{Binding EditAddPilesCommand}"/>
             <MenuItem Header="削除" Command="{Binding DeletePilesCommand}"/>
             <MenuItem Header="選択解除" Command="{Binding DeselectPilesCommand}"/>
+            <Separator/>
+            <MenuItem Header="画像コピー(x1.0)" Command="{Binding ImageCopyCommand}" CommandParameter="1.0"/>
+            <MenuItem Header="画像コピー(x2.0)" Command="{Binding ImageCopyCommand}" CommandParameter="2.0"/>
+            <MenuItem Header="画像保存(x1.0)" Command="{Binding ImageSaveCommand}" CommandParameter="1.0"/>
+            <MenuItem Header="画像保存(x2.0)" Command="{Binding ImageSaveCommand}" CommandParameter="2.0"/>
+        </ContextMenu>
+
+        <ContextMenu x:Key="InputNodeContextMenu">
+            <MenuItem Header="コピー" Command="{Binding CopyInputNodeCommand}" CommandParameter="{Binding SelectedInputNode}"/>
+            <MenuItem Header="削除" Command="{Binding DeleteInputNodeCommand}" CommandParameter="{Binding SelectedInputNode}"/>
+        </ContextMenu>
+
+        <ContextMenu x:Key="BeamElementContextMenu">
+            <MenuItem Header="一般梁要素プロパティの変更" Command="{Binding EditBeamElementsCommand}"/>
             <Separator/>
             <MenuItem Header="画像コピー(x1.0)" Command="{Binding ImageCopyCommand}" CommandParameter="1.0"/>
             <MenuItem Header="画像コピー(x2.0)" Command="{Binding ImageCopyCommand}" CommandParameter="2.0"/>
@@ -80,6 +98,12 @@
         <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <Style x:Key="ReadOnlyRightAlignedTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="Foreground" Value="Gray"/>
         </Style>
 
         <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
@@ -393,6 +417,44 @@
             </Setter>
         </Style>
 
+        <!-- セグメントボタン風RadioButtonスタイル（液状化切替用） -->
+        <Style x:Key="SegmentedButtonStyle" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border"
+                                BorderBrush="#999"
+                                BorderThickness="1"
+                                Padding="6,2"
+                                Background="#F0F0F0"
+                                CornerRadius="2">
+                            <TextBlock x:Name="text"
+                                       Text="{TemplateBinding Content}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="11"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0078D7"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#005A9E"/>
+                                <Setter TargetName="text" Property="Foreground" Value="White"/>
+                                <Setter TargetName="text" Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#E0E0E0"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- LoadingType 用アイコン付きアイテムテンプレート -->
         <DataTemplate x:Key="LoadingTypeItemTemplate">
             <StackPanel Orientation="Horizontal">
@@ -662,43 +724,43 @@
                                 <StackPanel Margin="0" VerticalAlignment="Top">
                                     <TextBlock Text="計算例" FontWeight="Bold" Margin="0,0,0,0"/>
                                     <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例5 直接基礎の即時沈下量"
-                                              KeyTip="1"
+                                              KeyTip="E1"
                                               Command="{Binding Example5Command}"
                                               ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
                                               ImageSource="pack://application:,,,/Icons/cover.png"/>
                                     <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例9 地下室下の杭"
-                                              KeyTip="2"
+                                              KeyTip="E2"
                                               Command="{Binding Example9Command}"
                                               ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
                                               ImageSource="pack://application:,,,/Icons/cover.png"/>
 
                                     <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 7. 直接基礎の設計例"
-                                              KeyTip="3"
+                                              KeyTip="E3"
                                               Command="{Binding ExampleK7Command}"
                                               ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例7を実行"
                                               ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
                                     <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 8. 杭基礎の設計例"
-                                              KeyTip="4"
+                                              KeyTip="E4"
                                               Command="{Binding ExampleK8Command}"
                                               ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"
                                               ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
                                     <ribbon:RibbonApplicationMenuItem Header="設計例集3.1　SC杭, PRC杭"
-                                              KeyTip="5"
+                                              KeyTip="E5"
                                               Command="{Binding Example3_1Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
                                     <ribbon:RibbonApplicationMenuItem Header="設計例集3.2　PHC杭"
-                                              KeyTip="6"
+                                              KeyTip="E6"
                                               Command="{Binding Example3_2Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.2　砂地盤に建つ建物のPHC節杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
                                     <ribbon:RibbonApplicationMenuItem Header="設計例集3.3　場所打ち杭"
-                                              KeyTip="7"
+                                              KeyTip="E7"
                                               Command="{Binding Example3_3Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
                                     <ribbon:RibbonApplicationMenuItem Header="設計例集3.4　SC杭"
-                                              KeyTip="7"
+                                              KeyTip="E8"
                                               Command="{Binding Example3_4Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
@@ -735,12 +797,6 @@
                          Label="地盤"
                          PreviewMouseDown="ButtonGround_PreviewMouseDown"
                          Command="{Binding OpenGroundWindowCommand}"
-                         LargeImageSource="pack://application:,,,/Icons/GroundWindow.png"
-                         SmallImageSource="pack://application:,,,/Icons/GroundWindow.png"/>
-
-                    <ribbon:RibbonButton x:Name="RibbonButtonFoundationBeam"
-                         Label="基礎梁"
-                         Command="{Binding OpenFoundationBeamWindowCommand}"
                          LargeImageSource="pack://application:,,,/Icons/GroundWindow.png"
                          SmallImageSource="pack://application:,,,/Icons/GroundWindow.png"/>
 
@@ -840,8 +896,17 @@
             <ribbon:RibbonTab x:Name="AnalysisResultRibbonTab" Header="解析結果(R)" KeyTip="R">
                 <ribbon:RibbonGroup Header="メイン画面表示">
                     <ribbon:RibbonToggleButton Label="解析結果表示"
-                               ToolTip="解析結果全体の表示/非表示"
-                               IsChecked="{Binding IsAnalysisResultVisible}"/>
+                        ToolTip="解析結果全体の表示/非表示"
+                        IsChecked="{Binding IsAnalysisResultVisible}"
+                        LargeImageSource="pack://application:,,,/Icons/AnalysisResult.png"
+                        SmallImageSource="pack://application:,,,/Icons/AnalysisResult.png"/>
+
+
+                    <ribbon:RibbonToggleButton Label="接続用節点表示"
+                        ToolTip="基礎梁接続用節点（杭頭+ΔZc位置）の表示/非表示"
+                        IsChecked="{Binding IsConnectingNodeVisible}"
+                        LargeImageSource="pack://application:,,,/Icons/ConnectionNodeVisible.png"
+                        SmallImageSource="pack://application:,,,/Icons/ConnectionNodeVisible.png"/>
 
                     <ComboBox Width="120"
                           ItemsSource="{Binding AnalysisResultContentOption}"
@@ -964,52 +1029,49 @@
                 <ribbon:RibbonGroup Header="値表示">
                     <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}"/>
                     <CheckBox Content="中間のみ"
-          IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
-          IsEnabled="{Binding IsResultValueVisible}"/>
+                          IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
+                          IsEnabled="{Binding IsResultValueVisible}"/>
                     <CheckBox Content="杭頭のみ"
-          IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
-          IsEnabled="{Binding IsResultValueVisible}"/>
+                          IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
+                          IsEnabled="{Binding IsResultValueVisible}"/>
 
                     <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsResultValueVisible}">
                         <TextBlock Text="位置" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <Slider Width="50" Minimum="0" Maximum="20"
-            Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
+                            Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBox Width="45" HorizontalContentAlignment="Right"
-             Text="{Binding TextPositionAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
-             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-             KeyDown="TextBox_KeyDown"/>
+                             Text="{Binding TextPositionAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                             KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsResultValueVisible}">
                         <TextBlock Text="小数" VerticalAlignment="Center" Margin="0,0,4,0"/>
                         <Slider Width="50" Minimum="0" Maximum="5"
-            Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
+                            Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBox Width="45" HorizontalContentAlignment="Right"
-             Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
-             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-             KeyDown="TextBox_KeyDown"/>
+                             Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
+                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                             KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="ダイアグラムスケール">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="応力" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="50" Minimum="0.5" Maximum="10.0"
-                            Value="{Binding ForceDiagramMultiplier, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="45" HorizontalContentAlignment="Right"
-                             Text="{Binding ForceDiagramMultiplier, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Width="50" HorizontalContentAlignment="Right"
+                             Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
+                             KeyDown="TextBox_KeyDown"
+                             ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
                     </StackPanel>
-                    <!--<CheckBox Content="変位スケール適用" IsChecked="{Binding IsDisplacementDiagramMultiplierApplicable}"/>-->
                     <StackPanel Orientation="Horizontal"
-                            Visibility="{Binding IsDisplacementDiagramMultiplierApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Text="変位" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="50" Minimum="0" Maximum="1000.0"
-                            Value="{Binding DisplacementDiagramMultiplier, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="45" HorizontalContentAlignment="Right"
-                             Text="{Binding DisplacementDiagramMultiplier, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Width="50" HorizontalContentAlignment="Right"
+                             Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
+                             KeyDown="TextBox_KeyDown"
+                             ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
@@ -1193,30 +1255,23 @@
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                     </ComboBox>
-                    <ribbon:RibbonToggleButton
-                           ToolTip="液状化状態"
-                           IsChecked="{Binding IsLiquefaction}">
-                        <ribbon:RibbonToggleButton.Visibility>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                ToolTip="液状化・非液状化の切替">
+                        <StackPanel.Visibility>
                             <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
                                 <Binding Path="SelectedLoadCaseName"/>
                                 <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
                             </MultiBinding>
-                        </ribbon:RibbonToggleButton.Visibility>
-                        <ribbon:RibbonToggleButton.Style>
-                            <Style TargetType="ribbon:RibbonToggleButton">
-                                <Style.Triggers>
-                                    <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Label" Value="液状化"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/Liquefaction.png"/>
-                                    </Trigger>
-                                    <Trigger Property="IsChecked" Value="False">
-                                        <Setter Property="Label" Value="非液状化"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/NonLiquefaction.png"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ribbon:RibbonToggleButton.Style>
-                    </ribbon:RibbonToggleButton>
+                        </StackPanel.Visibility>
+                        <RadioButton Content="非液状化" GroupName="RibbonLiquefaction"
+                                     Style="{StaticResource SegmentedButtonStyle}"
+                                     IsChecked="{Binding IsLiquefaction, Converter={StaticResource BooleanNegationConverter}}"
+                                     Margin="2,0,1,0"/>
+                        <RadioButton Content="液状化" GroupName="RibbonLiquefaction"
+                                     Style="{StaticResource SegmentedButtonStyle}"
+                                     IsChecked="{Binding IsLiquefaction}"
+                                     Margin="1,0,2,0"/>
+                    </StackPanel>
                 </ribbon:RibbonGroup>
 
                 <!-- 目盛・通り心 -->
@@ -1236,19 +1291,25 @@
                     <ribbon:RibbonToggleButton Label="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsActionPointVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="剛体連結" ToolTip="剛体連結の表示／非表示を切り替えます。"
+                    <ribbon:RibbonToggleButton Label="連結" ToolTip="連結線の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsRigidFloorVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsRigidConnectionVisible.png"/>
                     <ribbon:RibbonToggleButton Label="節点" IsChecked="{Binding IsNodeVisible}" SmallImageSource="pack://application:,,,/Icons/NodeVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsPileSectionVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="一般梁要素形状" ToolTip="一般梁要素の断面形状の表示／非表示を切り替えます。"
+                                                IsChecked="{Binding IsBeamElementSectionVisible}"
+                                                SmallImageSource="pack://application:,,,/Icons/BeamVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭要素軸" ToolTip="梁要素座標軸の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsBeamLocalAxesVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
                     <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsEmbedmentBoxVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="要素縮小表示" ToolTip="要素の端点を縮小して節点が見やすくします。"
+                                                IsChecked="{Binding IsShrinkElementMode}"
+                                                SmallImageSource="pack://application:,,,/Icons/ShrinkElementMode.png"/>
                 </ribbon:RibbonGroup>
 
                 <!-- 杭節点ラベル -->
@@ -1268,6 +1329,9 @@
                     <ribbon:RibbonToggleButton Label="群杭係数" ToolTip="群杭係数ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGroupPileFactorLabelVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsGroupPileFactorVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="要素番号" ToolTip="要素番号ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsElementNoVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
                 </ribbon:RibbonGroup>
 
                 <!-- 荷重 -->
@@ -1328,7 +1392,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding DataContext.IsForcedDisplacementVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
-                                            <Condition Binding="{Binding DataContext.IsDisplacementDiagramMultiplierApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
+                                            <Condition Binding="{Binding DataContext.IsDisplacementDiagramRatioApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                         <Setter Property="IsEnabled" Value="True"/>
@@ -1336,7 +1400,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding DataContext.IsForcedDisplacementVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="False"/>
-                                            <Condition Binding="{Binding DataContext.IsDisplacementDiagramMultiplierApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
+                                            <Condition Binding="{Binding DataContext.IsDisplacementDiagramRatioApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                         <Setter Property="IsEnabled" Value="False"/>
@@ -1344,12 +1408,11 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <Slider Width="50" Minimum="0" Maximum="1000.0"
-                            Value="{Binding DisplacementDiagramMultiplier, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="45" HorizontalContentAlignment="Right"
-                         Text="{Binding DisplacementDiagramMultiplier, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
-                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                         KeyDown="TextBox_KeyDown"/>
+                        <TextBox Width="50" HorizontalContentAlignment="Right"
+                             Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                             KeyDown="TextBox_KeyDown"
+                             ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
@@ -1373,7 +1436,7 @@
                     <ribbon:RibbonToggleButton Label="グリッド変位"
                                ToolTip="群杭グリッド変位表示"
                                IsChecked="{Binding IsGroupPileGridDeformationVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
+                               SmallImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
                 </ribbon:RibbonGroup>
 
                 <!-- XYZ平行軸 -->
@@ -1601,9 +1664,564 @@
 
                     <avalonDock:LayoutDocumentPaneGroup DockWidth="1*">
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutDocument Title="杭"
-                                                       CanClose="False"
-                                                       x:Name="PileLayoutDocument">
+
+                            <!-- 一般節点タブ -->
+                            <avalonDock:LayoutDocument Title="一般節点" CanClose="False" x:Name="InputNodeLayoutDocument">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- ツールバー -->
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5">
+                                        <Button 
+                                                Command="{Binding AddInputNodeCommand}"
+                                                ToolTip="新しい一般節点を追加します">
+                                                <svgc:SvgViewbox Source="/Icons/AddGeneralNode.svg"
+                                                Style="{StaticResource SvgIconStyle24}"/>
+                                        </Button>
+
+                                    </StackPanel>
+
+                                    <!-- DataGrid -->
+                                    <common:EnhancedDataGrid x:Name="DataGridInputNodes"
+                                              Grid.Row="1"
+                                              ItemsSource="{Binding CurrentInputModel.InputNodes, UpdateSourceTrigger=LostFocus}"
+                                              SelectionChanged="DataGridInputNodes_SelectionChanged"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              CanUserSortColumns="False"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Auto"
+                                              LoadingRow="DataGridInputNodes_LoadingRow_Numbering"
+                                              CellEditEnding="DataGridInputNodes_CellEditEnding"
+                                              BeginningEdit="DataGridInputNodes_BeginningEdit"
+                                              common:DataGridNavigationBehavior.Enable="True"
+                                              EnableRowVirtualization="True"
+                                              EnableColumnVirtualization="True"
+                                              VirtualizingPanel.IsVirtualizing="True"
+                                              VirtualizingPanel.VirtualizationMode="Recycling"
+                                              ScrollViewer.CanContentScroll="True"
+                                              FrozenColumnCount="2"
+                                              VerticalAlignment="Top"
+                                              CellStyle="{StaticResource CustomDataGridCellStyle}">
+                                        <DataGrid.AlternatingRowBackground>
+                                            <ImageBrush/>
+                                        </DataGrid.AlternatingRowBackground>
+
+                                        <!--CSVファイル出力等-->
+                                        <DataGrid.ContextMenu>
+                                            <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+                                        </DataGrid.ContextMenu>
+
+                                        <DataGrid.ColumnHeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                            </Style>
+                                        </DataGrid.ColumnHeaderStyle>
+
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="X" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Width="*" Binding="{Binding Y, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Y" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Width="*" Binding="{Binding Z, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Z" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Width="*" Binding="{Binding Type}" IsReadOnly="True" MinWidth="60">
+                                                <DataGridTextColumn.Header>
+                                                    <TextBlock Text="タイプ" TextAlignment="Center"/>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridTextColumn Width="*" Binding="{Binding LinkedPileNo}" MinWidth="80">
+                                                <DataGridTextColumn.Header>
+                                                    <TextBlock Text="杭No" TextAlignment="Center"/>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <DataGridCheckBoxColumn Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="*" MinWidth="50">
+                                                <DataGridCheckBoxColumn.Header>
+                                                    <TextBlock Text="選択" TextAlignment="Center"/>
+                                                </DataGridCheckBoxColumn.Header>
+                                            </DataGridCheckBoxColumn>
+
+                                            <DataGridTemplateColumn Width="*" Header="削除" MinWidth="50">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button
+                                                            x:Name="ButtonInputNodeDelete"
+                                                            Click="ButtonInputNodeDelete_Click"
+                                                            Content="削除"
+                                                            Tag="{Binding}" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </common:EnhancedDataGrid>
+                                </Grid>
+                            </avalonDock:LayoutDocument>
+
+                            <avalonDock:LayoutDocument Title="一般梁要素"
+                                                       x:Name="GeneralBeamElementDocument"
+                                                       CanClose="False">
+                                <TabControl>
+                                    <!-- 材料タブ -->
+                                    <TabItem Header="材料" ToolTip="梁材料を編集します">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+
+                                            <!-- ツールバー -->
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2">
+                                                <Button 
+                                                        Command="{Binding OpenMaterialWizardCommand}"
+                                                        ToolTip="コンクリート強度から材料特性を自動計算します">
+                                                        <svgc:SvgViewbox Source="/Icons/MaterialWizard.svg"
+                                                        Style="{StaticResource SvgIconStyle24}"/>
+                                                     </Button>
+                                            </StackPanel>
+
+
+                                            <!-- 材料一覧DataGrid -->
+                                            <GroupBox Grid.Row="1" Header="材料一覧" Margin="2">
+                                        <common:EnhancedDataGrid x:Name="DataGridBeamMaterials"
+                                                ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Materials, UpdateSourceTrigger=PropertyChanged}"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="True"
+                                                LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                                common:DataGridNavigationBehavior.Enable="True">
+
+                                            <DataGrid.ContextMenu>
+                                                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+                                            </DataGrid.ContextMenu>
+
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding No, StringFormat=N0}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="No" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
+                                                                Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="名称" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding YoungModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="ヤング係数 (N/mm²)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding ShearModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="せん断弾性係数 (N/mm²)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding PoissonRatio, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="ポアソン比" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTemplateColumn Width="60" Header="削除">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="削除"
+                                                                Command="{Binding DataContext.DeleteBeamMaterialCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </common:EnhancedDataGrid>
+                                    </GroupBox>
+                                </Grid>
+                            </TabItem>
+
+                            <!-- 断面タブ -->
+                            <TabItem Header="断面" ToolTip="梁断面を編集します">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- ツールバー -->
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2">
+                                        <Button Content="断面ウィザード"
+                                                Command="{Binding OpenSectionWizardCommand}"
+                                                ToolTip="断面寸法から断面性能を自動計算します"
+                                                Margin="2"
+                                                Padding="5,2"/>
+                                        <Button Content="全断面ねじれ剛性無視"
+                                                Command="{Binding ClearAllTorsionalStiffnessCommand}"
+                                                ToolTip="すべての断面のIxx係数を0.0に設定し、ねじれ剛性を無視します"
+                                                Margin="2"
+                                                Padding="5,2"/>
+                                    </StackPanel>
+
+                                    <GroupBox Grid.Row="1" Header="断面一覧" Margin="2">
+                                        <common:EnhancedDataGrid x:Name="DataGridBeamSections"
+                                                ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Sections, UpdateSourceTrigger=PropertyChanged}"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="True"
+                                                LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                                common:DataGridNavigationBehavior.Enable="True"
+                                                HorizontalScrollBarVisibility="Auto"
+                                                VerticalScrollBarVisibility="Auto">
+
+                                            <DataGrid.ContextMenu>
+                                                <StaticResource ResourceKey="CommonDataGridContextMenu"/>
+                                            </DataGrid.ContextMenu>
+
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding No, StringFormat=N0}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="35" MinWidth="35">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="No" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
+                                                                Width="80" MinWidth="60">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="名称" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Width, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="幅(m)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Height, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="高さ(m)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <!-- 増減係数 -->
+                                                <DataGridTextColumn Binding="{Binding AFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="係数A" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding AyFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="係数Ay" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding AzFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="係数Az" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding IxxFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="係数Ixx" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding IyyFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="係数Iyy" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding IzzFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="係数Izz" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <!-- 断面諸元（読み取り専用） -->
+                                                <DataGridTextColumn Binding="{Binding Area, StringFormat=E3}" IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="75" MinWidth="70">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="A(m²)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding ShearAreaY, StringFormat=E3}" IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="75" MinWidth="70">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="Ay(m²)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding ShearAreaZ, StringFormat=E3}" IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="75" MinWidth="70">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="Az(m²)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding TorsionalMoment, StringFormat=E3}" IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="75" MinWidth="70">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="Ixx(m⁴)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding MomentOfInertiaYY, StringFormat=E3}" IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="75" MinWidth="70">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="Iyy(m⁴)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding MomentOfInertiaZZ, StringFormat=E3}" IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="75" MinWidth="70">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="Izz(m⁴)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTemplateColumn Width="60" Header="削除">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="削除"
+                                                                Command="{Binding DataContext.DeleteBeamSectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </common:EnhancedDataGrid>
+                                    </GroupBox>
+                                </Grid>
+                            </TabItem>
+
+                                <!-- 梁要素タブ -->
+                                <TabItem Header="梁要素" ToolTip="梁要素を編集します">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- 梁要素一覧DataGrid -->
+                                        <GroupBox Grid.Row="0" Header="梁要素一覧" Margin="2">
+                                        <common:EnhancedDataGrid x:Name="DataGridFoundationBeams"
+                                                ItemsSource="{Binding CurrentInputModel.FoundationBeamInput.Beams, UpdateSourceTrigger=PropertyChanged}"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                EnableRowVirtualization="True"
+                                                EnableColumnVirtualization="True"
+                                                VirtualizingPanel.IsVirtualizing="True"
+                                                VirtualizingPanel.VirtualizationMode="Recycling"
+                                                ScrollViewer.CanContentScroll="True"
+                                                CellStyle="{StaticResource CustomDataGridCellStyle}"
+                                                common:DataGridNavigationBehavior.Enable="True">
+
+                                            <DataGrid.ContextMenu>
+                                                <StaticResource ResourceKey="BeamElementContextMenu"/>
+                                            </DataGrid.ContextMenu>
+
+                                            <DataGrid.ColumnHeaderStyle>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                </Style>
+                                            </DataGrid.ColumnHeaderStyle>
+
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Binding="{Binding No, StringFormat=N0}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="50">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="No" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTemplateColumn Width="*">
+                                                    <DataGridTemplateColumn.Header>
+                                                        <TextBlock Text="節点I" TextAlignment="Center"/>
+                                                    </DataGridTemplateColumn.Header>
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock TextAlignment="Right">
+                                                                <TextBlock.Text>
+                                                                    <MultiBinding Converter="{StaticResource NodeReferenceDisplayConverter}">
+                                                                        <Binding Path="NodeI_Type"/>
+                                                                        <Binding Path="NodeI_Id"/>
+                                                                        <Binding Path="DataContext.CurrentInputModel" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Text>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTemplateColumn Width="*">
+                                                    <DataGridTemplateColumn.Header>
+                                                        <TextBlock Text="節点J" TextAlignment="Center"/>
+                                                    </DataGridTemplateColumn.Header>
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock TextAlignment="Right">
+                                                                <TextBlock.Text>
+                                                                    <MultiBinding Converter="{StaticResource NodeReferenceDisplayConverter}">
+                                                                        <Binding Path="NodeJ_Type"/>
+                                                                        <Binding Path="NodeJ_Id"/>
+                                                                        <Binding Path="DataContext.CurrentInputModel" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Text>
+                                                            </TextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+                                                <DataGridTextColumn Binding="{Binding MaterialNo, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="材料No" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding SectionNo, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="断面No" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding AngleBeta, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                    <DataGridTextColumn.Header>
+                                                        <TextBlock Text="&#x03B2;(&#x00B0;)" TextAlignment="Center"/>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridCheckBoxColumn Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="*" MinWidth="50">
+                                                    <DataGridCheckBoxColumn.Header>
+                                                        <TextBlock Text="選択" TextAlignment="Center"/>
+                                                    </DataGridCheckBoxColumn.Header>
+                                                </DataGridCheckBoxColumn>
+
+                                                <DataGridTemplateColumn Width="60" Header="削除">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="削除"
+                                                                Command="{Binding DataContext.DeleteFoundationBeamCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </common:EnhancedDataGrid>
+                                    </GroupBox>
+
+                                    <!-- 操作ボタン -->
+                                    <Grid Grid.Row="1">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Margin="2">
+                                            <Button ToolTip="要素の節点分割 (Alt + 7)" Command="{Binding SplitElementsByNodesCommand}">
+                                                <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                            </Button>
+                                            <TextBlock Text="要素の節点分割" VerticalAlignment="Center" Margin="5,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Margin="2">
+                                            <TextBlock Text="分割距離(m)" VerticalAlignment="Center" Margin="2"/>
+                                            <TextBox Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=LostFocus}"
+                                                     Width="60"
+                                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                     KeyDown="TextBox_KeyDown"
+                                                     HorizontalContentAlignment="Right"
+                                                     VerticalAlignment="Center">
+                                                <TextBox.ToolTip>
+                                                    <TextBlock>
+                                                        <Run Text="選択要素を、重なる節点で分割します。"/>
+                                                        <LineBreak/>
+                                                        <Run Text="点と直線の重なりの判定は、その距離が分割節点最大距離以下か否かで行います。"/>
+                                                    </TextBlock>
+                                                </TextBox.ToolTip>
+                                            </TextBox>
+                                        </StackPanel>
+
+                                        <Button Grid.Row="0" Grid.Column="1" Margin="2"
+                                                Content="重複要素の削除" Command="{Binding DeleteDupulicateElementsCommand}"/>
+
+                                        <!-- 自動梁要素生成ボタンは編集ビューツールバーに移動 (Ctrl+Shift+B) -->
+                                    </Grid>
+                                </Grid>
+                            </TabItem>
+                        </TabControl>
+                    </avalonDock:LayoutDocument>
+
+                            <avalonDock:LayoutDocument Title="杭" CanClose="False" x:Name="PileLayoutDocument">
                                 <TabControl x:Name="PileTabControl">
                                     <TabItem Header="配置" ToolTip="杭配置を編集します">
                                         <Grid>
@@ -1802,6 +2420,21 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Binding="{Binding FoundationBeamDeltaZc, StringFormat=N3, Mode=TwoWay}"
+                                                            Width="*"
+                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                            MinWidth="50">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="基礎梁" TextAlignment="Center"/>
+                                                                <TextBlock Text="ΔZc" TextAlignment="Center"
+                                                                    HorizontalAlignment="Center"/>
+                                                                <TextBlock Text="(m)" TextAlignment="Center"
+                                                                   HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridComboBoxColumn Width="*" x:Name="ColumnPileBodyNo" SelectedItemBinding="{Binding PileBodyNo}" MinWidth="50">
                                                         <DataGridComboBoxColumn.ElementStyle>
                                                             <Style TargetType="ComboBox">
@@ -1890,6 +2523,8 @@
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
+
+                                                    <DataGridCheckBoxColumn Width="*" Header="選択" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" MinWidth="50"/>
 
                                                     <DataGridTemplateColumn Width="*" Header="削除"
                                                                     MinWidth="50">
@@ -2716,25 +3351,23 @@
                                             </StackPanel>
 
                                             <common:EnhancedDataGrid x:Name="DataGridIsFrontPile"
-                                                                     ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
-
-                                                    SelectionChanged="DataGridIsFrontPile_SelectionChanged"
-                                                    AutoGenerateColumns="False"
-                                                    CanUserAddRows="False"
-                                                    CanUserSortColumns="False"
-
-                                                    LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
-                                                    CellEditEnding="DataGridIsFrontPile_CellEditEnding"
-                                                    BeginningEdit="DataGridIsFrontPile_BeginningEdit"
-                                                    EnableRowVirtualization="True"
-                                                    EnableColumnVirtualization="True"
-                                                    VirtualizingPanel.IsVirtualizing="True"
-                                                    VirtualizingPanel.VirtualizationMode="Recycling"
-                                                    ScrollViewer.CanContentScroll="True"
-                                                    FrozenColumnCount="2"
-                                                    Grid.Row="2"
-                                                    VerticalAlignment="Top"
-                                                        CellStyle="{StaticResource CustomDataGridCellStyle}">
+                                                                    ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
+                                                                    SelectionChanged="DataGridIsFrontPile_SelectionChanged"
+                                                                    AutoGenerateColumns="False"
+                                                                    CanUserAddRows="False"
+                                                                    CanUserSortColumns="False"
+                                                                    LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
+                                                                    CellEditEnding="DataGridIsFrontPile_CellEditEnding"
+                                                                    BeginningEdit="DataGridIsFrontPile_BeginningEdit"
+                                                                    EnableRowVirtualization="True"
+                                                                    EnableColumnVirtualization="True"
+                                                                    VirtualizingPanel.IsVirtualizing="True"
+                                                                    VirtualizingPanel.VirtualizationMode="Recycling"
+                                                                    ScrollViewer.CanContentScroll="True"
+                                                                    FrozenColumnCount="2"
+                                                                    Grid.Row="2"
+                                                                    VerticalAlignment="Top"
+                                                                    CellStyle="{StaticResource CustomDataGridCellStyle}">
 
                                                 <DataGrid.AlternatingRowBackground>
                                                     <ImageBrush/>
@@ -2781,10 +3414,8 @@
                                                     <DataGridCheckBoxColumn Header="方向2" Width="50" Binding="{Binding IsFrontPiles[1]}" MinWidth="50"/>
                                                     <DataGridCheckBoxColumn Header="方向3" Width="50" Binding="{Binding IsFrontPiles[2]}" MinWidth="50"/>
                                                     <DataGridCheckBoxColumn Header="方向4" Width="50" Binding="{Binding IsFrontPiles[3]}" MinWidth="50"/>
-
                                                 </DataGrid.Columns>
                                             </common:EnhancedDataGrid>
-
                                         </Grid>
                                     </TabItem>
                                 </TabControl>
@@ -3048,167 +3679,6 @@
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <TextBlock Text="{Binding DY, StringFormat={}{0:0.000}}" Foreground="Gray"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
-                                        </DataGrid.Columns>
-                                    </common:EnhancedDataGrid>
-                                </Grid>
-                            </avalonDock:LayoutDocument>
-
-                            <avalonDock:LayoutDocument Title="要素" 
-                                                       x:Name="ElementDocument"
-                                                       CanClose="False"
-                                                       IsSelectedChanged="LayoutDocumentElement_IsSelectedChanged">
-                                <!--IsActiveChanged="LayoutDocumentElement_IsActiveChanged"-->
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0">
-
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
-
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="要素は未整備です。" Foreground="Red"/>
-                                        <TextBlock Text="要素タイプ" Grid.Row="1" Grid.Column="0"/>
-
-                                        <ComboBox  Grid.Row="1" Grid.Column="1" ItemsSource="{Binding ElementTypeOption}"
-                                            SelectedItem="{Binding ElementType, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                        <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <ToggleButton ToolTip="要素追加モード (Alt + 1)" IsChecked="{Binding IsElementAddMode}" Unchecked="ToggleButtonElementAddMode_Unchecked">
-                                                    <svgc:SvgViewbox Source="/Icons/AddElementMode.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                                </ToggleButton>
-                                                <TextBlock Text="要素追加モード (Alt + 1)" 
-                                                           ToolTip="要素追加方法：2つの節点位置を順にクリック"/>
-                                            </StackPanel>
-                                        </StackPanel>
-
-                                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="TextBoxElementNodeInput"
-                                            MinWidth="100"
-                                            IsReadOnly="True"
-                                            Foreground="Gray"
-                                            Background="LightGray"
-                                            GotFocus="TextBoxElementNodeInput_GotFocus"
-                                            LostFocus="TextBoxElementNodeInput_LostFocus"
-                                            TextChanged="TextBoxElementNodeInput_Changed"
-                                        />
-                                        <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0">
-                                            <Button ToolTip="要素の節点分割 (Alt + 7)" Command="{Binding SplitElementsByNodesCommand}">
-                                                <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                            </Button>
-                                            <TextBlock Text="要素の節点分割"/>
-                                        </StackPanel>
-
-                                        <TextBlock Text="分割節点最大距離(m)" Grid.Row="5" Grid.Column="0"/>
-                                        <TextBox Grid.Row="5" Grid.Column="1" 
-                                                 Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=LostFocus}"
-                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                 KeyDown="TextBox_KeyDown"
-                                                 HorizontalContentAlignment="Right">
-                                            <TextBox.ToolTip>
-                                                <TextBlock>
-                                                    <Run Text="選択要素を、重なる節点で分割します。"/>
-                                                    <LineBreak/>
-                                                    <Run Text="点と直線の重なりの判定は、その距離が分割節点最大距離以下か否かで行います。"/>
-                                                </TextBlock>
-                                            </TextBox.ToolTip>
-                                        </TextBox>
-
-                                        <Button Grid.Row="6" Grid.Column="0"
-                                                Content="重複要素の削除" Command="{Binding DeleteDupulicateElementsCommand}"/>
-
-                                    </Grid>
-
-                                    <common:EnhancedDataGrid  x:Name="DataGridElements" ItemsSource="{Binding CurrentInputModel.Elements, UpdateSourceTrigger=LostFocus}"
-                                            Grid.Row="1"
-                                            Grid.Column="0"
-                                            Grid.ColumnSpan="2"
-                                            AutoGenerateColumns="False"
-                                            CanUserAddRows="False"
-                                            LoadingRow="DataGrid_LoadingRow_Numbering"
-                                            EnableRowVirtualization="True"
-                                            EnableColumnVirtualization="True"
-                                            VirtualizingPanel.IsVirtualizing="True"
-                                            VirtualizingPanel.VirtualizationMode="Recycling"
-                                            ScrollViewer.CanContentScroll="True"
-                                            CellStyle="{StaticResource CustomDataGridCellStyle}"
-                                            common:DataGridNavigationBehavior.Enable="True">
-
-                                        <DataGrid.AlternatingRowBackground>
-                                            <ImageBrush/>
-                                        </DataGrid.AlternatingRowBackground>
-
-                                        <DataGrid.Style>
-                                            <Style/>
-                                        </DataGrid.Style>
-
-                                        <!--CSVファイル出力等-->
-                                        <DataGrid.ContextMenu>
-                                            <StaticResource ResourceKey="CommonDataGridContextMenu"/>
-                                        </DataGrid.ContextMenu>
-
-                                        <DataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
-                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
-                                            </Style>
-                                        </DataGrid.ColumnHeaderStyle>
-
-                                        <DataGrid.Columns>
-
-                                            <DataGridTextColumn Binding="{Binding ElementType}"
-                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*" MinWidth="50">
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="要素タイプ" TextAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
-                                            <DataGridTextColumn Binding="{Binding Nodes[0].No, StringFormat=N0}"
-                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*" MinWidth="50">
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="節点1番号" TextAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
-                                            <DataGridTextColumn Binding="{Binding Nodes[1].No, StringFormat=N0}"
-                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*" MinWidth="50">
-                                                <DataGridTextColumn.Header>
-                                                    <StackPanel>
-                                                        <TextBlock Text="節点2番号" TextAlignment="Center"/>
-                                                    </StackPanel>
-                                                </DataGridTextColumn.Header>
-
-                                            </DataGridTextColumn>
-
-                                            <DataGridTemplateColumn Width="*" Header="削除" MinWidth="50">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Button
-                                                    x:Name="ButtonGridXDelete"
-                                                    Content="削除"
-                                                    Tag="{Binding}"
-                                                    Command="{Binding DataContext.DeleteElementCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
@@ -4239,13 +4709,41 @@
                                             <ColumnDefinition Width="120"/>
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="100"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="100"/>
                                             <RowDefinition Height="*"/>
                                         </Grid.RowDefinitions>
 
+                                        <!-- 基礎梁編集ツールバー -->
+                                        <ToolBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                                                 Background="LightGray" Margin="0,0,0,2">
+                                            <Border BorderBrush="DarkGray" BorderThickness="1" CornerRadius="3" Padding="5,2" Margin="5,0">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <RadioButton Content="選択" GroupName="EditMode"
+                                                                 IsChecked="{Binding CurrentEditMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=None}"
+                                                                 VerticalAlignment="Center" Margin="5,0"/>
+                                                    <RadioButton Content="要素追加" GroupName="EditMode"
+                                                                 IsChecked="{Binding CurrentEditMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=AddElement}"
+                                                                 VerticalAlignment="Center" Margin="5,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Separator/>
+                                            <Button
+                                                    Command="{Binding AutoGenerateFoundationBeamsCommand}"
+                                                    ToolTip=" 自動梁要素生成(Ctrl+Shift+B)選択中の杭配置について、x成分が同一の杭配置、y成分が同一の杭配置を基礎梁（材料No.1、断面No.1）で連結します。"
+                                                    VerticalAlignment="Center" Margin="5,0" Padding="8,2">
+                                            <svgc:SvgViewbox Source="/Icons/AutoBeamGeneration.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                            </Button>
+
+                                            <Separator/>
+                                            <TextBlock Text="デフォルトΔZc:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                                            <TextBox Text="{Binding DefaultFoundationBeamZ, StringFormat=N2}"
+                                                     Width="60" VerticalAlignment="Center"/>
+                                            <TextBlock Text="m" VerticalAlignment="Center" Margin="2,0,5,0"/>
+                                        </ToolBar>
+
                                         <Canvas x:Name="Canvas3DLayout"
-                                                Grid.Row="0"
+                                                Grid.Row="1"
                                                 Grid.RowSpan="3"
                                                 Grid.Column="0"
                                                 Grid.ColumnSpan="3"
@@ -4271,7 +4769,7 @@
                                         </Canvas>
 
                                         <Canvas x:Name="ColorBarCanvas"
-                                                Grid.Row="0"
+                                                Grid.Row="1"
                                                 Grid.Column="1"
                                                 Visibility="Visible"
                                                 Margin="10"
@@ -4282,8 +4780,9 @@
                                         </Canvas>
 
                                         <Canvas x:Name="CanvasCube"
-                                            Grid.Column="2" Grid.Row="0"
-                                            VerticalAlignment="Center"
+                                            Grid.Column="2"
+                                            Grid.Row="1"
+                                            VerticalAlignment="Top"
                                             HorizontalAlignment="Center"
                                             Background="Transparent"
                                             Visibility="Visible"
@@ -4295,25 +4794,27 @@
                                             MouseLeftButtonUp="CanvasCube_MouseLeftButtonUp">
                                         </Canvas>
 
-                                        <Slider Grid.Column="2" Grid.Row="0"
+                                        <Slider Grid.Column="2" Grid.Row="1"
                                                 HorizontalAlignment="Center"
-                                                VerticalAlignment="Bottom"
+                                                VerticalAlignment="Top"
                                                 Minimum="-180" Maximum="180" ToolTip="左右回転θ(°)" Orientation="Horizontal" Width="80"
                                                Value="{Binding CanvasThreeDView.Tht, UpdateSourceTrigger=PropertyChanged}"
                                                 Panel.ZIndex="10" />
-
-                                        <Grid Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3"
+                                        <Slider Grid.Column="2" Grid.Row="1"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Minimum="-90" Maximum="90" ToolTip="上下回転φ(°)" Orientation="Vertical" Height="80"
+                                                Value="{Binding CanvasThreeDView.Phi, UpdateSourceTrigger=PropertyChanged}"
+                                                Panel.ZIndex="10"/>
+                                        
+                                        <Grid Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="3"
                                              HorizontalAlignment="Left"
-                                             VerticalAlignment="Center"
+                                             VerticalAlignment="Top"
                                              Margin="0"
                                              Panel.ZIndex="10">
                                             <!-- 行高さに合わせて明示 -->
 
                                             <Grid.RowDefinitions>
-                                                <RowDefinition/>
-                                                <RowDefinition/>
-                                                <RowDefinition/>
-                                                <RowDefinition/>
                                                 <RowDefinition/>
                                                 <RowDefinition/>
                                                 <RowDefinition/>
@@ -4331,7 +4832,7 @@
                                                 Margin="4,2,0,0"
                                                 Padding="4"
                                                 Background="#12DCDCDC"
-                                             
+                                                
                                                 BorderThickness="1"
                                                 CornerRadius="4"
                                                 Panel.ZIndex="12">
@@ -4526,7 +5027,6 @@
                                                         <svgc:SvgViewbox Source="/Icons/AxialForceVeirification.svg" Style="{StaticResource SvgIconStyle16}"/>
                                                     </Button>
 
-
                                                     <!-- 追加: 要素分割（状態でアイコン切替） -->
 
                                                     <!-- 行1: 要素分割 -->
@@ -4554,7 +5054,6 @@
                                                         Padding="0"
                                                         Style="{StaticResource GroupPileSettlementButtonStyle}"
                                                         Command="{Binding PileGroupSettlementAnalysisCommand}"/>
-
                                                 </Grid>
                                             </Border>
 
@@ -4576,59 +5075,17 @@
                                                         <RowDefinition Height="Auto"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <Grid Grid.Row="0">
-                                                        <!-- 荷重ケース -->
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <ComboBox Grid.Column="0"
-                                                              ItemsSource="{Binding LoadCaseNameOption}"
-                                                              SelectedItem="{Binding SelectedLoadCaseName}"
-                                                              ToolTip="荷重ケース">
-                                                            <i:Interaction.Triggers>
-                                                                <i:EventTrigger EventName="SelectionChanged">
-                                                                    <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
-                                                                </i:EventTrigger>
-                                                            </i:Interaction.Triggers>
-                                                        </ComboBox>
-                                                        
-                                                        <!-- 置換前の2つの液状化/非液状化トグルを削除し、この単一トグルを配置 -->
-                                                        <ToggleButton x:Name="LiquefactionStateToggle"
-                                                            Grid.Column="1"
-                                                            IsChecked="{Binding IsLiquefaction}">
-                                                            <ToggleButton.Visibility>
-                                                                <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
-                                                                    <Binding Path="SelectedLoadCaseName"/>
-                                                                    <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
-                                                                </MultiBinding>
-                                                            </ToggleButton.Visibility>
-                                                            <ToggleButton.Style>
-                                                                <Style TargetType="ToggleButton"
-                                                                        BasedOn="{StaticResource LargeIconToolTipToggleButtonStyle}">
-                                                                    <!-- 初期(非液状化) -->
-                                                                    <Setter Property="Content">
-                                                                        <Setter.Value>
-                                                                            <svgc:SvgViewbox Source="/Icons/NonLiquefaction.svg"
-                                                                                Style="{StaticResource SvgIconStyle16}"/>
-                                                                        </Setter.Value>
-                                                                    </Setter>
-                                                                    <Setter Property="Tag" Value="非液状化状態"/>
-                                                                    <Style.Triggers>
-                                                                        <Trigger Property="IsChecked" Value="True">
-                                                                            <Setter Property="Content">
-                                                                                <Setter.Value>
-                                                                                    <svgc:SvgViewbox Source="/Icons/Liquefaction.svg"
-                                                                                        Style="{StaticResource SvgIconStyle16}"/>
-                                                                                </Setter.Value>
-                                                                            </Setter>
-                                                                            <Setter Property="Tag" Value="液状化状態"/>
-                                                                        </Trigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </ToggleButton.Style>
-                                                        </ToggleButton>
-                                                    </Grid>
+                                                    <!-- 荷重ケース -->
+                                                    <ComboBox Grid.Row="0"
+                                                          ItemsSource="{Binding LoadCaseNameOption}"
+                                                          SelectedItem="{Binding SelectedLoadCaseName}"
+                                                          ToolTip="荷重ケース">
+                                                        <i:Interaction.Triggers>
+                                                            <i:EventTrigger EventName="SelectionChanged">
+                                                                <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
+                                                            </i:EventTrigger>
+                                                        </i:Interaction.Triggers>
+                                                    </ComboBox>
 
                                                     <!-- 組み合わせケース -->
                                                     <ComboBox Grid.Row="1"
@@ -4657,10 +5114,23 @@
                                                         </i:Interaction.Triggers>
                                                     </ComboBox>
 
-                                                    <!-- 液状化トグル群 -->
-                                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,0">
-
-
+                                                    <!-- 液状化・非液状化 セグメントボタン -->
+                                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,2,0,0"
+                                                                ToolTip="液状化・非液状化の切替">
+                                                        <StackPanel.Visibility>
+                                                            <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
+                                                                <Binding Path="SelectedLoadCaseName"/>
+                                                                <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
+                                                            </MultiBinding>
+                                                        </StackPanel.Visibility>
+                                                        <RadioButton Content="非液状化" GroupName="PaneLiquefaction"
+                                                                     Style="{StaticResource SegmentedButtonStyle}"
+                                                                     IsChecked="{Binding IsLiquefaction, Converter={StaticResource BooleanNegationConverter}}"
+                                                                     Margin="0,0,1,0"/>
+                                                        <RadioButton Content="液状化" GroupName="PaneLiquefaction"
+                                                                     Style="{StaticResource SegmentedButtonStyle}"
+                                                                     IsChecked="{Binding IsLiquefaction}"
+                                                                     Margin="1,0,0,0"/>
                                                     </StackPanel>
 
                                                     <!-- 解析結果表示トグル -->
@@ -4739,12 +5209,7 @@
 
                                         </Grid>
 
-                                        <Slider Grid.Column="2" Grid.Row="0"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                Minimum="-90" Maximum="90" ToolTip="上下回転φ(°)" Orientation="Vertical" Height="80"
-                                                Value="{Binding CanvasThreeDView.Phi, UpdateSourceTrigger=PropertyChanged}"
-                                                Panel.ZIndex="10"/>
+
 
                                     </Grid>
                                 </Grid>

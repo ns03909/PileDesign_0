@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-1602,-1424)">
-        <g id="AddXGrid" transform="matrix(1,0,0,1,0,356)">
+    <g transform="matrix(1,0,0,1,-1780,-1424)">
+        <g id="AddXGrid" transform="matrix(1,0,0,1,178,356)">
             <rect x="1602" y="1068" width="128" height="128" style="fill:none;"/>
             <clipPath id="_clip1">
                 <rect x="1602" y="1068" width="128" height="128"/>
@@ -14,7 +14,7 @@
                 <g transform="matrix(1,0,0,1,1109.838982,893.165931)">
                     <path d="M556.306,267.035L556.306,178" style="fill:none;stroke:rgb(98,0,226);stroke-width:8.33px;"/>
                 </g>
-                <g transform="matrix(1,0,0,1,521.166652,990.203707)">
+                <g transform="matrix(1,0,0,1,521.166652,977.273271)">
                     <g transform="matrix(75,0,0,75,1208.833348,138.096293)">
                     </g>
                     <text x="1157.833px" y="138.096px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">+</text>

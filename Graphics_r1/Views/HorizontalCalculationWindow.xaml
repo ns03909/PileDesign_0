@@ -129,15 +129,15 @@
                          Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
             </Grid>
 
-            <Grid >
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="剛体連結節点数" Width="100" HorizontalAlignment="Left"/>
-                <TextBox Text="{Binding RigidBodiesCount, UpdateSourceTrigger=PropertyChanged}" 
-                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
-            </Grid>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
+                <TextBlock Text="接続方式" Width="100" VerticalAlignment="Center"/>
+                <RadioButton Content="剛体連結" GroupName="ConnectionMode" Margin="0,0,10,0" VerticalAlignment="Center"
+                             IsChecked="{Binding ConnectionMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=RigidBody}"
+                             ToolTip="全杭を代表点に全6DOFで剛体連結"/>
+                <RadioButton Content="剛床連結" GroupName="ConnectionMode" VerticalAlignment="Center"
+                             IsChecked="{Binding ConnectionMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=RigidFloor}"
+                             ToolTip="Ux,Uy,Rz拘束、Uz,Rx,Ry自由。基礎梁が剛性を負担"/>
+            </StackPanel>
 
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="液状化" Width="100"/>

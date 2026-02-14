@@ -201,7 +201,7 @@ namespace PileDesign.Views
                         Vector3D normalizedVector = valueVectors[i];
 
                         // 尾の長さ
-                        double tailLength2D = absMaxValue == 0 ? 0 : maxArrowLength3D * value / absMaxValue * viewModel.CanvasThreeDView.Scale * viewModel.ForceDiagramMultiplier;
+                        double tailLength2D = absMaxValue == 0 ? 0 : maxArrowLength3D * value / absMaxValue * viewModel.CanvasThreeDView.Scale * viewModel.ForceDiagramRatio * viewModel.ModelExtent;
 
                         if (isPointAtHead)
                         {

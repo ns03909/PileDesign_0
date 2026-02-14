@@ -28,7 +28,11 @@
       "Bash(Select-String -Pattern \"error CS|Build succeeded|Build FAILED\")",
       "Bash(Select-Object -First 20)",
       "Bash(do basename \"$f\")",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(Select-String -Pattern \"\\(error|warning|succeeded|failed\\)\")",
+      "Bash(Select-String -Pattern \"\\(エラー|警告|成功|失敗|error|warning|succeeded|failed\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0"

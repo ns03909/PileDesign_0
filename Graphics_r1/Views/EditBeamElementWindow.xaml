@@ -1,0 +1,48 @@
+<Window x:Class="PileDesign.Views.EditBeamElementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        xmlns:common="clr-namespace:PileDesign.Common"
+        d:DataContext="{d:DesignInstance Type=local:EditBeamElementViewModel}"
+        mc:Ignorable="d"
+        Title="選択一般梁要素のプロパティ変更" Height="250" Width="400"
+        common:EscapeKeyBehavior.Enable="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="10">
+            <TextBlock Text="{Binding SelectionInfo}" Margin="0,0,0,10" FontWeight="Bold"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,5">
+                <CheckBox x:Name="CheckBoxMaterialNo" Content="材料No" Width="150"
+                          IsChecked="{Binding IsApplicableMaterialNo}"/>
+                <ComboBox x:Name="ComboBoxMaterialNo"
+                          ItemsSource="{Binding Materials}"
+                          SelectedItem="{Binding SelectedMaterial}"
+                          DisplayMemberPath="No"
+                          Width="100"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="0,5">
+                <CheckBox x:Name="CheckBoxSectionNo" Content="断面No" Width="150"
+                          IsChecked="{Binding IsApplicableSectionNo}"/>
+                <ComboBox x:Name="ComboBoxSectionNo"
+                          ItemsSource="{Binding Sections}"
+                          SelectedItem="{Binding SelectedSection}"
+                          DisplayMemberPath="No"
+                          Width="100"/>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="OK" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"/>
+            <Button Content="Cancel" Width="80" Click="CancelButton_Click" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

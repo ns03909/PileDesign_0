@@ -31,6 +31,21 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 namespace PileDesign.ViewModels
 {
     /// <summary>
+    /// キャンバス編集モード（基礎梁ビジュアル編集）
+    /// </summary>
+    public enum CanvasEditMode
+    {
+        /// <summary>通常モード（編集なし）</summary>
+        None,
+        /// <summary>ノード追加モード</summary>
+        AddNode,
+        /// <summary>要素追加モード（2クリック方式）</summary>
+        AddElement,
+        /// <summary>削除モード</summary>
+        Delete
+    }
+
+    /// <summary>
     /// MainWindowViewModel (メインファイル)
     ///
     /// 責任範囲:
@@ -53,6 +68,15 @@ namespace PileDesign.ViewModels
     public partial class MainWindowViewModel : ObservableObject
     {
         private readonly UndoManager _undoManager = new();
+
+        /// <summary>
+        /// 現在のInputModelのスナップショットをUndo履歴に保存します。
+        /// 破壊的な操作（削除など）の前に呼び出してください。
+        /// </summary>
+        public void SaveUndoState()
+        {
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+        }
         private readonly FileOperationService _fileOperationService;
         private readonly PileLayoutService _pileLayoutService;
         private readonly SettlementAnalysisService _settlementAnalysisService;
@@ -375,10 +399,19 @@ namespace PileDesign.ViewModels
                     // VM 再アタッチなどはここで一度だけ行う
                     _currentInputModel?.AttachViewModel(this);
 
+                    // PileLayoutItems の CollectionChanged を再購読
+                    if (_currentInputModel?.PileLayoutItems != null)
+                    {
+                        _currentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
+                        _currentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+                    }
+
                     UpdateWindowImmediate();
                     RaiseAllCommandsCanExecute();
 
                     OnPropertyChanged(nameof(CurrentInputModel));
+                    OnPropertyChanged(nameof(PileCountText));
+                    OnPropertyChanged(nameof(AnalysisStatusText));
                 }
             }
         }
@@ -574,6 +607,13 @@ namespace PileDesign.ViewModels
         // 前後杭更新メソッド
         [RelayCommand]
         private void DataGridIsFrontPile_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
+        {
+            HandleDataGridCellEditEnding(e);
+        }
+
+        // 一般節点更新メソッド
+        [RelayCommand]
+        private void DataGridInputNodes_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
             HandleDataGridCellEditEnding(e);
         }
@@ -1161,63 +1201,138 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OnSplitElementsByNodes()
         {
+            if (CurrentInputModel?.FoundationBeamInput?.Beams == null ||
+                CurrentInputModel?.FoundationBeamInput?.Nodes == null) return;
+
             // Undoポイントを追加
             TrySaveUndoSnapshotSafely();
 
-            var newElements = new ObservableCollection<Element>();
+            var beams = CurrentInputModel.FoundationBeamInput.Beams;
+            var nodes = CurrentInputModel.FoundationBeamInput.Nodes;
+            var newBeams = new List<FoundationBeamElement>();
+            var toRemove = new List<FoundationBeamElement>();
 
-            foreach (var element in CurrentInputModel.Elements)
+            int originalCount = beams.Count;
+
+            foreach (var beam in beams.ToList())
             {
-                if (element.IsSelected)
+                if (beam.IsSelected)
                 {
-                    var splitElements = SplitTwoNodeElementByNodes(element);
-                    foreach (var splitElement in splitElements)
-                        newElements.Add(splitElement);
+                    var splitBeams = SplitBeamByNodes(beam, nodes);
+                    if (splitBeams.Count > 1)
+                    {
+                        toRemove.Add(beam);
+                        newBeams.AddRange(splitBeams);
+                    }
                 }
-                else
-                    newElements.Add(element);
             }
 
-            CurrentInputModel.Elements = newElements;
-            // 変更後（以下の箇所で適用）
+            foreach (var beam in toRemove)
+                beams.Remove(beam);
+
+            foreach (var beam in newBeams)
+                beams.Add(beam);
+
+            RenumberFoundationBeams();
             RequestUpdateWindow();
+
+            int newCount = beams.Count;
+            System.Windows.MessageBox.Show(
+                $"{toRemove.Count} 個の要素を {newCount - originalCount + toRemove.Count} 個に分割しました。",
+                "節点分割完了",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
         }
 
-        // 要素を分割するメソッド
-        public ObservableCollection<Element> SplitTwoNodeElementByNodes(Element element, double threshold = 0.005)
+        // 梁要素を節点で分割するメソッド
+        private List<FoundationBeamElement> SplitBeamByNodes(FoundationBeamElement beam, ObservableCollection<FoundationNode> allNodes)
         {
-            var newElements = new ObservableCollection<Element>();
-            var splitNodes = element.Nodes;
-            Point3D pointS = element.Nodes[0].Point3D;
-            Point3D pointE = element.Nodes[1].Point3D;
+            var result = new List<FoundationBeamElement>();
 
-            Point nodeS = CanvasThreeDView.Transformation(pointS);
-            Point nodeE = CanvasThreeDView.Transformation(pointE);
+            // 始点・終点の節点を取得
+            var nodeI = allNodes.FirstOrDefault(n => n.No == beam.NodeI_No);
+            var nodeJ = allNodes.FirstOrDefault(n => n.No == beam.NodeJ_No);
 
-            foreach (var pileLayout in CurrentInputModel.PileLayoutItems)
+            if (nodeI == null || nodeJ == null) return [beam]; // 節点が見つからない場合は分割しない
+
+            Point3D pointI = new(nodeI.X, nodeI.Y, nodeI.Z);
+            Point3D pointJ = new(nodeJ.X, nodeJ.Y, nodeJ.Z);
+
+            // 線上にある中間節点を探す
+            var intermediateNodes = new List<(FoundationNode node, double distance)>();
+
+            foreach (var node in allNodes)
             {
-                Point3D point3D = pileLayout.Point3D;
-                Point node = CanvasThreeDView.Transformation(point3D);
+                if (node.No == beam.NodeI_No || node.No == beam.NodeJ_No) continue; // 始点・終点は除外
 
-                if (GetDistance.BetweenNodeAndLine(nodeS, nodeE, node) <= threshold && !splitNodes.Contains(pileLayout))
-                    splitNodes.Add(pileLayout);
+                Point3D point = new(node.X, node.Y, node.Z);
+                double dist = PointToLineDistance(point, pointI, pointJ);
+
+                if (dist <= EditDistanceThreshold)
+                {
+                    double alongDist = DistanceAlongLine(point, pointI, pointJ);
+                    if (alongDist > 0 && alongDist < (pointJ - pointI).Length)
+                    {
+                        intermediateNodes.Add((node, alongDist));
+                    }
+                }
             }
 
-            var distances = new List<double>();
-            for (int i = 0; i < splitNodes.Count; i++)
-                distances.Add(GetDistance.BetweenTwoPoint3Ds(splitNodes[0].Point3D, splitNodes[i].Point3D));
+            // 中間節点がない場合は分割しない
+            if (intermediateNodes.Count == 0) return [beam];
 
-            var indeces = new List<int>();
-            for (int i = 0; i < distances.Count; i++)
-                indeces.Add(GetIndexOfNthSmallestValue(distances, i));
+            // 距離順にソート
+            var sortedNodes = intermediateNodes.OrderBy(n => n.distance).Select(n => n.node).ToList();
 
-            for (int i = 0; i < splitNodes.Count - 1; i++)
+            // 始点から各中間節点、最後の中間節点から終点まで梁を作成
+            var allSplitNodes = new List<FoundationNode> { nodeI };
+            allSplitNodes.AddRange(sortedNodes);
+            allSplitNodes.Add(nodeJ);
+
+            for (int i = 0; i < allSplitNodes.Count - 1; i++)
             {
-                newElements.Add(new Element(element.ElementType,
-                    (PileLayoutDataItem)splitNodes[indeces[i]],
-                    (PileLayoutDataItem)splitNodes[indeces[i + 1]]));
+                result.Add(new FoundationBeamElement
+                {
+                    NodeI_No = allSplitNodes[i].No,
+                    NodeJ_No = allSplitNodes[i + 1].No,
+                    Width = beam.Width,
+                    Height = beam.Height,
+                    YoungModulus = beam.YoungModulus,
+                    ShearModulus = beam.ShearModulus,
+                    SectionName = beam.SectionName
+                });
             }
-            return newElements;
+
+            return result;
+        }
+
+        // 点から線分への距離を計算
+        private static double PointToLineDistance(Point3D point, Point3D lineStart, Point3D lineEnd)
+        {
+            Vector3D line = lineEnd - lineStart;
+            Vector3D pointVector = point - lineStart;
+
+            double lineLength = line.Length;
+            if (lineLength == 0) return (point - lineStart).Length;
+
+            double t = Vector3D.DotProduct(pointVector, line) / (lineLength * lineLength);
+            t = Math.Max(0, Math.Min(1, t)); // clamp to [0, 1]
+
+            Point3D projection = lineStart + t * line;
+            return (point - projection).Length;
+        }
+
+        // 線分に沿った距離を計算
+        private static double DistanceAlongLine(Point3D point, Point3D lineStart, Point3D lineEnd)
+        {
+            Vector3D line = lineEnd - lineStart;
+            Vector3D pointVector = point - lineStart;
+
+            double lineLength = line.Length;
+            if (lineLength == 0) return 0;
+
+            double t = Vector3D.DotProduct(pointVector, line) / (lineLength * lineLength);
+            return t * lineLength;
         }
 
         private static int GetIndexOfNthSmallestValue(List<double> distances, int n)
@@ -1228,6 +1343,203 @@ namespace PileDesign.ViewModels
                 .ToList();
 
             return indexedDistances[n].Index;
+        }
+
+        // 基礎梁節点削除
+        [RelayCommand]
+        private void DeleteFoundationNode(FoundationNode node)
+        {
+            if (CurrentInputModel?.FoundationBeamInput?.Nodes == null) return;
+
+            // 使用中かチェック（この節点を参照する梁要素があるか）
+            bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b =>
+                b.NodeI_No == node.No || b.NodeJ_No == node.No);
+
+            if (isUsed)
+            {
+                System.Windows.MessageBox.Show(
+                    $"節点 {node.No} は梁要素で使用されているため削除できません。\n先に関連する梁要素を削除してください。",
+                    "削除エラー",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            TrySaveUndoSnapshotSafely();
+            CurrentInputModel.FoundationBeamInput.Nodes.Remove(node);
+            RenumberFoundationNodes();
+            RequestUpdateWindow();
+        }
+
+        // 基礎梁要素削除
+        [RelayCommand]
+        private void DeleteFoundationBeam(FoundationBeamElement beam)
+        {
+            if (CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
+
+            TrySaveUndoSnapshotSafely();
+            CurrentInputModel.FoundationBeamInput.Beams.Remove(beam);
+            RenumberFoundationBeams();
+            RequestUpdateWindow();
+        }
+
+        // 重複要素削除
+        [RelayCommand]
+        private void OnDeleteDupulicateElements()
+        {
+            if (CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
+
+            TrySaveUndoSnapshotSafely();
+
+            var beams = CurrentInputModel.FoundationBeamInput.Beams;
+            var toRemove = new List<FoundationBeamElement>();
+
+            for (int i = 0; i < beams.Count; i++)
+            {
+                for (int j = i + 1; j < beams.Count; j++)
+                {
+                    // 順序を考慮しない重複チェック (1-2 と 2-1 は同じ)
+                    if ((beams[i].NodeI_No == beams[j].NodeI_No && beams[i].NodeJ_No == beams[j].NodeJ_No) ||
+                        (beams[i].NodeI_No == beams[j].NodeJ_No && beams[i].NodeJ_No == beams[j].NodeI_No))
+                    {
+                        if (!toRemove.Contains(beams[j]))
+                            toRemove.Add(beams[j]);
+                    }
+                }
+            }
+
+            foreach (var beam in toRemove)
+                beams.Remove(beam);
+
+            RenumberFoundationBeams();
+            RequestUpdateWindow();
+
+            System.Windows.MessageBox.Show(
+                $"{toRemove.Count} 個の重複要素を削除しました。",
+                "重複削除完了",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+        }
+
+        // 自動梁要素生成（X同一・Y同一の杭配置を基礎梁で連結）
+        [RelayCommand]
+        private void OnAutoGenerateFoundationBeams()
+        {
+            if (CurrentInputModel?.PileLayoutItems == null ||
+                CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
+
+            var piles = CurrentInputModel.PileLayoutItems;
+            if (piles.Count < 2) return;
+
+            TrySaveUndoSnapshotSafely();
+
+            var beams = CurrentInputModel.FoundationBeamInput.Beams;
+            int addedCount = 0;
+            const double tolerance = 1e-3; // 座標一致の許容誤差 (m)
+
+            // 既存ビームのペアセット（重複チェック用）
+            var existingPairs = new HashSet<(Guid, Guid)>();
+            foreach (var b in beams)
+            {
+                if (b.NodeI_Type == NodeReferenceType.PileLayout && b.NodeJ_Type == NodeReferenceType.PileLayout)
+                {
+                    var pair1 = (b.NodeI_Id, b.NodeJ_Id);
+                    var pair2 = (b.NodeJ_Id, b.NodeI_Id);
+                    existingPairs.Add(pair1);
+                    existingPairs.Add(pair2);
+                }
+            }
+
+            // X座標が同一の杭をグルーピング → Y座標昇順でソートし隣接杭間にビーム生成
+            var xGroups = piles
+                .GroupBy(p => Math.Round(p.X / tolerance) * tolerance)
+                .Where(g => g.Count() >= 2);
+
+            foreach (var group in xGroups)
+            {
+                var sorted = group.OrderBy(p => p.Y).ToList();
+                for (int i = 0; i < sorted.Count - 1; i++)
+                {
+                    var p1 = sorted[i];
+                    var p2 = sorted[i + 1];
+                    var pair = (p1.UniqueId, p2.UniqueId);
+                    if (existingPairs.Contains(pair)) continue;
+
+                    beams.Add(new FoundationBeamElement
+                    {
+                        No = beams.Count + 1,
+                        NodeI_Type = NodeReferenceType.PileLayout,
+                        NodeI_Id = p1.UniqueId,
+                        NodeJ_Type = NodeReferenceType.PileLayout,
+                        NodeJ_Id = p2.UniqueId,
+                        MaterialNo = 1,
+                        SectionNo = 1,
+                        AngleBeta = 0.0
+                    });
+                    existingPairs.Add(pair);
+                    existingPairs.Add((p2.UniqueId, p1.UniqueId));
+                    addedCount++;
+                }
+            }
+
+            // Y座標が同一の杭をグルーピング → X座標昇順でソートし隣接杭間にビーム生成
+            var yGroups = piles
+                .GroupBy(p => Math.Round(p.Y / tolerance) * tolerance)
+                .Where(g => g.Count() >= 2);
+
+            foreach (var group in yGroups)
+            {
+                var sorted = group.OrderBy(p => p.X).ToList();
+                for (int i = 0; i < sorted.Count - 1; i++)
+                {
+                    var p1 = sorted[i];
+                    var p2 = sorted[i + 1];
+                    var pair = (p1.UniqueId, p2.UniqueId);
+                    if (existingPairs.Contains(pair)) continue;
+
+                    beams.Add(new FoundationBeamElement
+                    {
+                        No = beams.Count + 1,
+                        NodeI_Type = NodeReferenceType.PileLayout,
+                        NodeI_Id = p1.UniqueId,
+                        NodeJ_Type = NodeReferenceType.PileLayout,
+                        NodeJ_Id = p2.UniqueId,
+                        MaterialNo = 1,
+                        SectionNo = 1,
+                        AngleBeta = 0.0
+                    });
+                    existingPairs.Add(pair);
+                    existingPairs.Add((p2.UniqueId, p1.UniqueId));
+                    addedCount++;
+                }
+            }
+
+            RenumberFoundationBeams();
+            RequestUpdateWindow();
+
+            MessageBox.Show(
+                $"{addedCount} 本の基礎梁要素を自動生成しました。",
+                "自動梁要素生成完了",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        // 基礎梁節点番号振り直し
+        private void RenumberFoundationNodes()
+        {
+            if (CurrentInputModel?.FoundationBeamInput?.Nodes == null) return;
+
+            for (int i = 0; i < CurrentInputModel.FoundationBeamInput.Nodes.Count; i++)
+                CurrentInputModel.FoundationBeamInput.Nodes[i].No = i + 1;
+        }
+
+        // 基礎梁要素番号振り直し
+        private void RenumberFoundationBeams()
+        {
+            if (CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
+
+            for (int i = 0; i < CurrentInputModel.FoundationBeamInput.Beams.Count; i++)
+                CurrentInputModel.FoundationBeamInput.Beams[i].No = i + 1;
         }
 
         // 杭配置番号の更新
@@ -2056,11 +2368,13 @@ namespace PileDesign.ViewModels
             try
             {
                 // 選択節点がない場合は処理を中止してメッセージ表示
-                if (CurrentInputModel == null ||
-                CurrentInputModel.PileLayoutItems == null ||
-                !CurrentInputModel.PileLayoutItems.Any(p => p.IsSelected))
+                // 杭配置または一般節点のいずれかが選択されていればOK
+                bool hasPileLayoutSelected = CurrentInputModel?.PileLayoutItems?.Any(p => p.IsSelected) ?? false;
+                bool hasGeneralNodesSelected = CurrentInputModel?.InputNodes?.Any(n => n.Type == NodeType.General && n.IsSelected) ?? false;
+
+                if (!hasPileLayoutSelected && !hasGeneralNodesSelected)
                 {
-                    MessageBox.Show("杭配置が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show("杭配置または一般節点が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
 
@@ -2126,16 +2440,21 @@ namespace PileDesign.ViewModels
         {
             // 新しいウィンドウでの操作の結果を処理する
             if (e.IsMove)
-                MoveNodes(e.DX, e.DY);// 移動操作の処理
+                MoveNodes(e.DX, e.DY, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);// 移動操作の処理
             else if (e.IsCopy)
-                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber); // 複製操作の処理
+                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber, e.IsInputNodesIncluded, e.IsPileLayoutIncluded); // 複製操作の処理
         }
 
-        private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber)
+        private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber, bool isInputNodesIncluded, bool isPileLayoutIncluded)
         {
             // 変更を行う前に、選択されたアイテムのリストを作成
-            var selectedItems = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
-            int totalCount = selectedItems.Count * repetitionNumber;
+            var selectedItems = isPileLayoutIncluded
+                ? CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList()
+                : new List<PileLayoutDataItem>();
+            var selectedInputNodes = isInputNodesIncluded
+                ? (CurrentInputModel.InputNodes?.Where(n => n.IsSelected).ToList() ?? new List<InputNode>())
+                : new List<InputNode>();
+            int totalCount = (selectedItems.Count + selectedInputNodes.Count) * repetitionNumber;
 
             // ★ 大量コピー時は待機カーソルを表示
             bool showWaitCursor = totalCount > 10;
@@ -2152,11 +2471,40 @@ namespace PileDesign.ViewModels
                     repetitionNumber,
                     item => item.SetMainWindowViewModel(this));
 
+                // InputNodes（一般節点）のコピー
+                var newInputNodes = new List<InputNode>();
+                foreach (var selectedNode in selectedInputNodes)
+                {
+                    for (int i = 0; i < repetitionNumber; i++)
+                    {
+                        var newNode = new InputNode
+                        {
+                            No = CurrentInputModel.InputNodes.Count + newInputNodes.Count + 1,
+                            Type = selectedNode.Type,
+                            X = selectedNode.X + dX * (i + 1),
+                            Y = selectedNode.Y + dY * (i + 1),
+                            Z = selectedNode.Z,
+                            LinkedPileNo = selectedNode.LinkedPileNo,
+                            IsVisible = selectedNode.IsVisible
+                        };
+                        newInputNodes.Add(newNode);
+                    }
+                }
+
                 // ★ UIスレッドで一括置換（CollectionChangedを1回だけ発火）
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     // コレクション全体を置換（CollectionChangedは1回のみ）
                     CurrentInputModel.PileLayoutItems = combined;
+                    CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
+                    CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+                    OnPropertyChanged(nameof(PileCountText));
+
+                    // InputNodes を追加
+                    foreach (var newNode in newInputNodes)
+                    {
+                        CurrentInputModel.InputNodes.Add(newNode);
+                    }
 
                     // SoilPiles を1回だけ再生成
                     if (!IsElementSplit)
@@ -2174,9 +2522,27 @@ namespace PileDesign.ViewModels
         }
 
         // 移動操作を行う
-        private void MoveNodes(double dX, double dY)
+        private void MoveNodes(double dX, double dY, bool isInputNodesIncluded, bool isPileLayoutIncluded)
         {
-            _pileLayoutService.MoveSelectedPiles(CurrentInputModel.PileLayoutItems, dX, dY);
+            // 杭配置の移動
+            if (isPileLayoutIncluded)
+            {
+                _pileLayoutService.MoveSelectedPiles(CurrentInputModel.PileLayoutItems, dX, dY);
+            }
+
+            // InputNodes（一般節点）の移動
+            if (isInputNodesIncluded)
+            {
+                var selectedInputNodes = CurrentInputModel.InputNodes?.Where(n => n.IsSelected).ToList();
+                if (selectedInputNodes != null && selectedInputNodes.Count > 0)
+                {
+                    foreach (var node in selectedInputNodes)
+                    {
+                        node.X += dX;
+                        node.Y += dY;
+                    }
+                }
+            }
         }
 
         // コピーを作成して操作を行う
@@ -2188,6 +2554,9 @@ namespace PileDesign.ViewModels
                 dY,
                 repetitionNumber,
                 item => item.SetMainWindowViewModel(this));
+            CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
+            CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+            OnPropertyChanged(nameof(PileCountText));
 
             UpdatePileLayoutNo();
         }
@@ -2218,6 +2587,10 @@ namespace PileDesign.ViewModels
                 ApplyPileTopLevel = e.IsApplicablePileTopLevel,
                 IsAddPileTopLevel = e.IsAddPileTopLevel,
                 PileTopLevel = e.PileTopLevel,
+
+                ApplyFoundationBeamDeltaZc = e.IsApplicableFoundationBeamDeltaZc,
+                IsAddFoundationBeamDeltaZc = e.IsAddFoundationBeamDeltaZc,
+                FoundationBeamDeltaZc = e.FoundationBeamDeltaZc,
 
                 ApplyPileGroupFactor = e.IsApplicablePileGroupFactor,
                 IsAddPileGroupFactor = e.IsAddPileGroupFactor,
@@ -2326,6 +2699,9 @@ namespace PileDesign.ViewModels
             }
 
             CurrentInputModel.PileLayoutItems = uniquePileLayoutDataItems;
+            CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
+            CurrentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
+            OnPropertyChanged(nameof(PileCountText));
             // 変更: ダイアログ後は即時実行
             UpdateWindowImmediate();
         }
@@ -3240,6 +3616,397 @@ namespace PileDesign.ViewModels
                 {
                     MessageBox.Show($"自動保存ファイルの復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+
+        // ==================== InputNode 管理機能 ====================
+
+        /// <summary>
+        /// 選択中の一般節点
+        /// </summary>
+        private InputNode? _selectedInputNode;
+        public InputNode? SelectedInputNode
+        {
+            get => _selectedInputNode;
+            set => SetProperty(ref _selectedInputNode, value);
+        }
+
+        /// <summary>
+        /// 一般節点を追加
+        /// </summary>
+        [RelayCommand]
+        private void AddInputNode()
+        {
+            if (CurrentInputModel?.InputNodes == null) return;
+
+            // 次の節点位置を決定
+            Point3D nextPoint3D;
+            if (CurrentInputModel.InputNodes.Count == 0)
+            {
+                // 一点目は(0, 0, ΔZc=1.0)に配置
+                nextPoint3D = new Point3D(0, 0, 1.0);
+            }
+            else
+            {
+                // 二点目以降は直前の一般節点からX方向に7.2mオフセット
+                var lastNode = CurrentInputModel.InputNodes.Last();
+                nextPoint3D = new Point3D(lastNode.X, lastNode.Y, lastNode.Z) + new Vector3D() { X = 7.2 };
+            }
+
+            var newNode = new InputNode
+            {
+                No = CurrentInputModel.InputNodes.Count + 1,
+                Type = NodeType.General,
+                X = nextPoint3D.X,
+                Y = nextPoint3D.Y,
+                Z = nextPoint3D.Z
+            };
+
+            CurrentInputModel.InputNodes.Add(newNode);
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 選択した一般節点をコピー
+        /// </summary>
+        [RelayCommand]
+        private void CopyInputNode(InputNode? sourceNode)
+        {
+            if (sourceNode == null) return;
+
+            var newNode = new InputNode
+            {
+                No = CurrentInputModel.InputNodes.Count + 1,
+                Type = sourceNode.Type,
+                X = sourceNode.X,
+                Y = sourceNode.Y,
+                Z = sourceNode.Z,
+                LinkedPileNo = sourceNode.LinkedPileNo
+            };
+
+            CurrentInputModel.InputNodes.Add(newNode);
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 一般節点を削除
+        /// </summary>
+        [RelayCommand]
+        private void DeleteInputNode(InputNode? node)
+        {
+            if (node == null) return;
+
+            var result = MessageBox.Show(
+                $"節点 No.{node.No} を削除してもよろしいですか？",
+                "確認",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.OK)
+            {
+                CurrentInputModel.InputNodes.Remove(node);
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                RequestUpdateWindow();
+            }
+        }
+
+        // 材料ウィザードコマンド
+        [RelayCommand]
+        private void OpenMaterialWizard()
+        {
+            if (CurrentInputModel.FoundationBeamInput == null)
+            {
+                CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
+            }
+
+            var wizard = new Views.BeamMaterialWizardWindow(CurrentInputModel.FoundationBeamInput.Materials);
+
+            bool continueEditing = true;
+            while (continueEditing)
+            {
+                if (wizard.ShowDialog() == true)
+                {
+                    int? addedMaterialNo = null;
+
+                    if (wizard.SelectedMaterialNo.HasValue)
+                    {
+                        // 既存材料の編集
+                        var material = CurrentInputModel.FoundationBeamInput.Materials.FirstOrDefault(m => m.No == wizard.SelectedMaterialNo.Value);
+                        if (material != null)
+                        {
+                            material.Name = wizard.Result.Name;
+                            material.YoungModulus = wizard.Result.YoungModulus;
+                            material.ShearModulus = wizard.Result.ShearModulus;
+                            material.PoissonRatio = wizard.Result.PoissonRatio;
+                        }
+                    }
+                    else
+                    {
+                        // 新規材料の追加
+                        var newMaterial = new BeamMaterial
+                        {
+                            No = (CurrentInputModel.FoundationBeamInput.Materials.Count > 0)
+                                ? CurrentInputModel.FoundationBeamInput.Materials.Max(m => m.No) + 1
+                                : 1,
+                            Name = wizard.Result.Name,
+                            YoungModulus = wizard.Result.YoungModulus,
+                            ShearModulus = wizard.Result.ShearModulus,
+                            PoissonRatio = wizard.Result.PoissonRatio
+                        };
+                        CurrentInputModel.FoundationBeamInput.Materials.Add(newMaterial);
+                        addedMaterialNo = newMaterial.No;
+                    }
+
+                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                    RequestUpdateWindow();
+
+                    // Applyボタンが押された場合は編集を継続
+                    if (wizard.IsApplyClicked)
+                    {
+                        // 新規作成の場合、作成された材料を選択状態にする
+                        if (addedMaterialNo.HasValue)
+                        {
+                            wizard = new Views.BeamMaterialWizardWindow(CurrentInputModel.FoundationBeamInput.Materials);
+                            // 追加された材料を選択（ComboBoxのインデックスは「新規」の分だけオフセット）
+                            var addedMaterial = CurrentInputModel.FoundationBeamInput.Materials.FirstOrDefault(m => m.No == addedMaterialNo.Value);
+                            if (addedMaterial != null)
+                            {
+                                wizard.SelectMaterial(addedMaterial);
+                            }
+                        }
+                        continueEditing = true;
+                    }
+                    else
+                    {
+                        continueEditing = false;
+                    }
+                }
+                else
+                {
+                    // キャンセルされた
+                    continueEditing = false;
+                }
+            }
+        }
+
+        // 全断面ねじれ剛性無視コマンド
+        [RelayCommand]
+        private void ClearAllTorsionalStiffness()
+        {
+            if (CurrentInputModel?.FoundationBeamInput?.Sections == null ||
+                CurrentInputModel.FoundationBeamInput.Sections.Count == 0) return;
+
+            TrySaveUndoSnapshotSafely();
+
+            foreach (var section in CurrentInputModel.FoundationBeamInput.Sections)
+            {
+                section.IxxFactor = 0.0;
+                // Ixx係数=0 に合わせて TorsionalMoment も再計算
+                section.TorsionalMoment = 0.0;
+            }
+
+            RequestUpdateWindow();
+        }
+
+        // 断面ウィザードコマンド
+        [RelayCommand]
+        private void OpenSectionWizard()
+        {
+            if (CurrentInputModel.FoundationBeamInput == null)
+            {
+                CurrentInputModel.FoundationBeamInput = new FoundationBeamInput();
+            }
+
+            var wizard = new Views.BeamSectionWizardWindow(CurrentInputModel.FoundationBeamInput.Sections);
+
+            bool continueEditing = true;
+            while (continueEditing)
+            {
+                if (wizard.ShowDialog() == true)
+                {
+                    int? addedSectionNo = null;
+
+                    if (wizard.SelectedSectionNo.HasValue)
+                    {
+                        // 既存断面の編集
+                        var section = CurrentInputModel.FoundationBeamInput.Sections.FirstOrDefault(s => s.No == wizard.SelectedSectionNo.Value);
+                        if (section != null)
+                        {
+                            section.Name = wizard.Result.Name;
+                            section.Width = wizard.Result.Width;
+                            section.Height = wizard.Result.Height;
+                            section.Area = wizard.Result.Area;
+                            section.ShearAreaY = wizard.Result.ShearAreaY;
+                            section.ShearAreaZ = wizard.Result.ShearAreaZ;
+                            section.TorsionalMoment = wizard.Result.TorsionalMoment;
+                            section.MomentOfInertiaYY = wizard.Result.MomentOfInertiaYY;
+                            section.MomentOfInertiaZZ = wizard.Result.MomentOfInertiaZZ;
+                            section.AFactor = wizard.Result.AFactor;
+                            section.AyFactor = wizard.Result.AyFactor;
+                            section.AzFactor = wizard.Result.AzFactor;
+                            section.IxxFactor = wizard.Result.IxxFactor;
+                            section.IyyFactor = wizard.Result.IyyFactor;
+                            section.IzzFactor = wizard.Result.IzzFactor;
+                        }
+                    }
+                    else
+                    {
+                        // 新規断面の追加
+                        var newSection = new BeamSection
+                        {
+                            No = (CurrentInputModel.FoundationBeamInput.Sections.Count > 0)
+                                ? CurrentInputModel.FoundationBeamInput.Sections.Max(s => s.No) + 1
+                                : 1,
+                            Name = wizard.Result.Name,
+                            Width = wizard.Result.Width,
+                            Height = wizard.Result.Height,
+                            Area = wizard.Result.Area,
+                            ShearAreaY = wizard.Result.ShearAreaY,
+                            ShearAreaZ = wizard.Result.ShearAreaZ,
+                            TorsionalMoment = wizard.Result.TorsionalMoment,
+                            MomentOfInertiaYY = wizard.Result.MomentOfInertiaYY,
+                            MomentOfInertiaZZ = wizard.Result.MomentOfInertiaZZ,
+                            AFactor = wizard.Result.AFactor,
+                            AyFactor = wizard.Result.AyFactor,
+                            AzFactor = wizard.Result.AzFactor,
+                            IxxFactor = wizard.Result.IxxFactor,
+                            IyyFactor = wizard.Result.IyyFactor,
+                            IzzFactor = wizard.Result.IzzFactor
+                        };
+                        CurrentInputModel.FoundationBeamInput.Sections.Add(newSection);
+                        addedSectionNo = newSection.No;
+                    }
+
+                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                    RequestUpdateWindow();
+
+                    // Applyボタンが押された場合は編集を継続
+                    if (wizard.IsApplyClicked)
+                    {
+                        // 新規作成の場合、作成された断面を選択状態にする
+                        if (addedSectionNo.HasValue)
+                        {
+                            wizard = new Views.BeamSectionWizardWindow(CurrentInputModel.FoundationBeamInput.Sections);
+                            var addedSection = CurrentInputModel.FoundationBeamInput.Sections.FirstOrDefault(s => s.No == addedSectionNo.Value);
+                            if (addedSection != null)
+                            {
+                                wizard.SelectSection(addedSection);
+                            }
+                        }
+                        continueEditing = true;
+                    }
+                    else
+                    {
+                        continueEditing = false;
+                    }
+                }
+                else
+                {
+                    // キャンセルされた
+                    continueEditing = false;
+                }
+            }
+        }
+
+        // 材料削除コマンド
+        [RelayCommand]
+        private void DeleteBeamMaterial(object parameter)
+        {
+            // DataGridの新規行からの呼び出しを無視
+            if (parameter is not BeamMaterial material) return;
+
+            if (CurrentInputModel.FoundationBeamInput?.Materials == null) return;
+
+            // 使用中かチェック
+            bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b => b.MaterialNo == material.No);
+            if (isUsed)
+            {
+                System.Windows.MessageBox.Show(
+                    $"材料No.{material.No}は梁要素で使用されているため削除できません。",
+                    "削除不可",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentInputModel.FoundationBeamInput.Materials.Remove(material);
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            RequestUpdateWindow();
+        }
+
+        // 断面削除コマンド
+        [RelayCommand]
+        private void DeleteBeamSection(object parameter)
+        {
+            // DataGridの新規行からの呼び出しを無視
+            if (parameter is not BeamSection section) return;
+
+            if (CurrentInputModel.FoundationBeamInput?.Sections == null) return;
+
+            // 使用中かチェック
+            bool isUsed = CurrentInputModel.FoundationBeamInput.Beams.Any(b => b.SectionNo == section.No);
+            if (isUsed)
+            {
+                System.Windows.MessageBox.Show(
+                    $"断面No.{section.No}は梁要素で使用されているため削除できません。",
+                    "削除不可",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            CurrentInputModel.FoundationBeamInput.Sections.Remove(section);
+            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            RequestUpdateWindow();
+        }
+
+        // 一般梁要素プロパティ変更コマンド
+        [RelayCommand]
+        private void EditBeamElements()
+        {
+            // 選択された一般梁要素がない場合はメッセージを表示
+            var selectedBeams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
+            if (selectedBeams == null || selectedBeams.Count == 0)
+            {
+                MessageBox.Show("一般梁要素が選択されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (CurrentInputModel.FoundationBeamInput == null)
+            {
+                return;
+            }
+
+            // ViewModelを作成
+            var viewModel = new EditBeamElementViewModel(
+                selectedBeams.Count,
+                CurrentInputModel.FoundationBeamInput.Materials,
+                CurrentInputModel.FoundationBeamInput.Sections);
+
+            // ウィンドウを表示
+            var window = new Views.EditBeamElementWindow(viewModel);
+            if (window.ShowDialog() == true)
+            {
+                var result = window.Result;
+
+                // 選択された梁要素のプロパティを一括変更
+                foreach (var beam in selectedBeams)
+                {
+                    if (result.IsApplicableMaterialNo && result.MaterialNo.HasValue)
+                    {
+                        beam.MaterialNo = result.MaterialNo.Value;
+                    }
+
+                    if (result.IsApplicableSectionNo && result.SectionNo.HasValue)
+                    {
+                        beam.SectionNo = result.SectionNo.Value;
+                    }
+                }
+
+                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                RequestUpdateWindow();
             }
         }
     }

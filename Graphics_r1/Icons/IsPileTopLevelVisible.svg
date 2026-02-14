@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-534,-534)">
-        <g id="IsPileTopLevelVisible" transform="matrix(1,0,0,1,534,712)">
+    <g transform="matrix(1,0,0,1,-712,-534)">
+        <g id="IsPileTopLevelVisible" transform="matrix(1,0,0,1,712,712)">
             <rect x="0" y="-178" width="128" height="128" style="fill:none;"/>
             <clipPath id="_clip1">
                 <rect x="0" y="-178" width="128" height="128"/>
             </clipPath>
             <g clip-path="url(#_clip1)">
+                <g transform="matrix(1.690292,0,0,3.772138,-51.868664,-811.950947)">
+                    <rect x="64" y="187.47" width="9.099" height="15.794" style="fill:rgb(247,181,21);fill-opacity:0;stroke:rgb(247,181,21);stroke-width:2.85px;"/>
+                </g>
                 <g transform="matrix(0.553852,0,0,0.553852,29.542459,-156.484202)">
                     <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
                 </g>
@@ -22,7 +25,7 @@
                         <circle cx="922.395" cy="817.998" r="5.578" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;stroke-linecap:square;stroke-linejoin:miter;"/>
                     </g>
                 </g>
-                <g transform="matrix(1,0,0,1,-1132.081391,-182)">
+                <g transform="matrix(1,0,0,1,-1138.45737,-186.791077)">
                     <g transform="matrix(62.5,0,0,62.5,1260.081391,132)">
                     </g>
                     <text x="1223.894px" y="132px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:62.5px;fill:rgb(50,173,91);">Z</text>

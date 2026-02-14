@@ -45,6 +45,11 @@ namespace PileDesign.Views
             public bool IsReplacePileTopLevel = true;
             public bool IsAddPileTopLevel = false;
 
+            public bool IsApplicableFoundationBeamDeltaZc = false;
+            public double FoundationBeamDeltaZc = 1.0;
+            public bool IsReplaceFoundationBeamDeltaZc = true;
+            public bool IsAddFoundationBeamDeltaZc = false;
+
             public bool IsApplicablePileGroupFactor = false;
             public double PileGroupFactor = 1;
             public bool IsReplacePileGroupFactor = true;
@@ -143,6 +148,11 @@ namespace PileDesign.Views
                 PileTopLevel = viewModel.PileTopLevel,
                 IsReplacePileTopLevel = viewModel.IsReplacePileTopLevel,
                 IsAddPileTopLevel = viewModel.IsAddPileTopLevel,
+
+                IsApplicableFoundationBeamDeltaZc = viewModel.IsApplicableFoundationBeamDeltaZc,
+                FoundationBeamDeltaZc = viewModel.FoundationBeamDeltaZc,
+                IsReplaceFoundationBeamDeltaZc = viewModel.IsReplaceFoundationBeamDeltaZc,
+                IsAddFoundationBeamDeltaZc = viewModel.IsAddFoundationBeamDeltaZc,
 
                 IsApplicablePileGroupFactor = viewModel.IsApplicablePileGroupFactor,
                 PileGroupFactor = viewModel.PileGroupFactor,
@@ -270,6 +280,12 @@ namespace PileDesign.Views
         {
             if (!_isInitialized) return; // 初期化中は無視
             CheckBoxPileTopLevel.IsChecked = true;
+        }
+
+        private void TextBoxFoundationBeamDeltaZc_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!_isInitialized) return; // 初期化中は無視
+            CheckBoxFoundationBeamDeltaZc.IsChecked = true;
         }
 
         private void TextBoxGroupPileFactor_TextChanged(object sender, TextChangedEventArgs e)

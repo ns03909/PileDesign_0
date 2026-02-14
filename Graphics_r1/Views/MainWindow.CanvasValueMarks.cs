@@ -31,7 +31,7 @@ namespace PileDesign.Views
             {
                 double valueMm = values[i];
                 // 直径(px) = mm → m → px
-                double bubbleDia2D = Math.Abs(valueMm) / 1000.0 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
+                double bubbleDia2D = Math.Abs(valueMm) / 1000.0 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
 
                 if (bubbleDia2D <= 0) continue;
 
@@ -74,7 +74,7 @@ namespace PileDesign.Views
         //        }
         //        else
         //        {
-        //            bubbleDia2D = Math.Abs(value) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
+        //            bubbleDia2D = Math.Abs(value) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
         //        }
 
         //        Point center2D = viewModel.CanvasThreeDView.Transformation(points[i]);
@@ -119,7 +119,7 @@ namespace PileDesign.Views
         //            if (colorBaredGeometry.BottomRange <= value && value <= colorBaredGeometry.TopRange)
         //            {
         //                // 尾
-        //                double tailLength2D = value * 0.01 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
+        //                double tailLength2D = value * 0.01 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
 
         //                // 頂点
         //                Point arrowEnd2D = viewModel.CanvasThreeDView.Transformation(points[i]);
@@ -183,7 +183,7 @@ namespace PileDesign.Views
                     if (colorBaredGeometry.BottomRange <= valueMm && valueMm <= colorBaredGeometry.TopRange)
                     {
                         // 尾の長さ(px) = mm → m → px
-                        double tailLength2D = Math.Abs(valueMm) / 1000.0 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
+                        double tailLength2D = Math.Abs(valueMm) / 1000.0 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
 
                         Point arrowEnd2D = viewModel.CanvasThreeDView.Transformation(points[i]); // 頂点
                         Point arrowHead2D = viewModel.CanvasThreeDView.Transformation(points[i] - new Vector3D(0, 0, tailLength2D)); // 下向き

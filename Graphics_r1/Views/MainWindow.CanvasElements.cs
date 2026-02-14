@@ -15,113 +15,6 @@ namespace PileDesign.Views
 {
     public partial class MainWindow : Window
     {
-        // 要素描画の更新
-        private void UpdateGeneralElement3D()
-        {
-            if (Canvas3DLayout == null) return;
-
-            if (DataContext is not MainWindowViewModel viewModel) return;
-
-            if (viewModel.CurrentInputModel == null) return;
-
-            foreach (Element element in viewModel.CurrentInputModel.Elements)
-            {
-                if (element.Nodes.Count == 0 || element.Nodes.Count == 1) { continue; }
-
-                Point3D loc0;
-                Point3D loc1;
-                double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-
-                if (viewModel.IsElementShownAtSettlementPlane)
-                {
-                    loc0 = new(element.Nodes[0].Point3D.X, element.Nodes[0].Point3D.Y, loadingPlaneAlt);
-                    loc1 = new(element.Nodes[1].Point3D.X, element.Nodes[1].Point3D.Y, loadingPlaneAlt);
-                }
-                else
-                {
-                    loc0 = element.Nodes[0].Point3D;
-                    loc1 = element.Nodes[1].Point3D;
-                }
-
-                if (viewModel.IsShrinkElementMode)
-                {
-                    (loc0, loc1) = GetShrinkElementPoints(loc0, loc1);
-                }
-
-                Point coord0 = viewModel.CanvasThreeDView.Transformation(loc0);
-                Point coord1 = viewModel.CanvasThreeDView.Transformation(loc1);
-
-                LineGeometry lineGeometry = new() { StartPoint = coord0, EndPoint = coord1 };
-                viewModel.CanvasGeometry.PathElements.AddGeometry(lineGeometry);
-
-                // 要素番号
-                if (viewModel.IsElementNoVisible)
-                {
-                    double x = (coord0.X + coord1.X) * 0.5;
-                    double y = (coord0.Y + coord1.Y) * 0.5;
-                    double theta;
-                    if (coord1.X != coord0.X)
-                    {
-                        theta = 180 / Math.PI * Math.Atan((coord1.Y - coord0.Y) / (coord1.X - coord0.X));
-                    }
-                    else
-                    {
-                        theta = 90;
-                    }
-                    AddText3D(Brushes.SaddleBrown, GetElementNoText(element), x, y, "C", "B", theta);
-                }
-            }
-        }
-
-        // 変形後の要素描画の更新
-        private void UpdateDeformedGeneralElement3D(
-            ObservableCollection<double> values)
-        {
-            MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-            double maxArrowLength2D = viewModel.ArrowLength;
-
-            if (viewModel == null || values.Count == 0)
-            { return; }
-
-            double flattening = viewModel.CanvasThreeDView.Flattening;
-            double flattening0 = Math.Sqrt(1 - Math.Pow(flattening, 2));
-            double absMaxValue = Math.Max(Math.Abs(values.Max()), Math.Abs(values.Min()));
-
-            if (absMaxValue == 0.0) return;
-
-            if (Canvas3DLayout == null) return;
-
-            if (viewModel.CurrentInputModel == null) return;
-
-            Point3D loc0;
-            Point3D loc1;
-            double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
-
-            foreach (Element element in viewModel.CurrentInputModel.Elements)
-            {
-                if (element.Nodes.Count == 0 || element.Nodes.Count == 1) { continue; }
-
-                if (viewModel.IsElementShownAtSettlementPlane)
-                {
-                    loc0 = new(element.Nodes[0].Point3D.X, element.Nodes[0].Point3D.Y, loadingPlaneAlt);
-                    loc1 = new(element.Nodes[1].Point3D.X, element.Nodes[1].Point3D.Y, loadingPlaneAlt);
-                }
-                else
-                {
-                    loc0 = element.Nodes[0].Point3D;
-                    loc1 = element.Nodes[1].Point3D;
-                }
-
-                double y0 = maxArrowLength2D * values[element.Nodes[0].No - 1] / absMaxValue;
-                double y1 = maxArrowLength2D * values[element.Nodes[1].No - 1] / absMaxValue;
-
-                Point coord0 = viewModel.CanvasThreeDView.Transformation(loc0) + new Vector(0, y0 * flattening0);
-                Point coord1 = viewModel.CanvasThreeDView.Transformation(loc1) + new Vector(0, y1 * flattening0);
-
-                LineGeometry lineGeometry = new() { StartPoint = coord0, EndPoint = coord1 };
-                viewModel.CanvasGeometry.PathElements.AddGeometry(lineGeometry);
-            }
-        }
 
         // 短縮要素の節点を返すメソッド
         private static (Point3D, Point3D) GetShrinkElementPoints(Point3D point0, Point3D point1, double factor = 0.8)
@@ -375,12 +268,52 @@ namespace PileDesign.Views
         {
             if (Canvas3DLayout == null) return;
             if (DataContext is not MainWindowViewModel viewModel) return;
+
+            // 接続用節点を描画（杭頭+ΔZc位置） - FoundationBeamInputとは独立
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateFoundationBeams3D: IsConnectingNodeVisible={viewModel.IsConnectingNodeVisible}");
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateFoundationBeams3D: PileLayoutItems count={viewModel.CurrentInputModel?.PileLayoutItems?.Count ?? 0}");
+
+            if (viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            {
+                int nodeCount = 0;
+                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                {
+                    // 各杭の接続用節点位置（杭頭Z + ΔZc）
+                    double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
+                    Point3D locConnecting = new(pile.X, pile.Y, connectingZ);
+                    Point coordConnecting = viewModel.CanvasThreeDView.Transformation(locConnecting);
+
+                    // 接続用節点を円として追加（杭節点と同じサイズ）
+                    double radius = actualNodeSize * 0.5;
+                    EllipseGeometry ellipse = new(coordConnecting, radius, radius);
+                    viewModel.CanvasGeometry.PathGeoConnectingNodes.AddGeometry(ellipse);
+
+                    // 杭頭から接続用節点への剛体連結線を追加（細い灰色破線）
+                    Point3D locPileTop = new(pile.X, pile.Y, pile.Z);
+                    Point coordPileTop = viewModel.CanvasThreeDView.Transformation(locPileTop);
+                    LineGeometry rigidLine = new() { StartPoint = coordPileTop, EndPoint = coordConnecting };
+                    viewModel.CanvasGeometry.PathGeoRigidConnections.AddGeometry(rigidLine);
+
+                    nodeCount++;
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] Added connecting node {nodeCount}: Pile({pile.X},{pile.Y},{pile.Z}) ΔZc={pile.FoundationBeamDeltaZc} -> ConnectingZ={connectingZ} Screen=({coordConnecting.X},{coordConnecting.Y})");
+                }
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Total connecting nodes added: {nodeCount}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Connecting nodes NOT drawn - IsVisible={viewModel.IsConnectingNodeVisible}, PileItems null={viewModel.CurrentInputModel?.PileLayoutItems == null}");
+            }
+
+            // 基礎梁要素・節点の描画（FoundationBeamInputが必要）
             if (viewModel.CurrentInputModel?.FoundationBeamInput == null) return;
 
             var fbInput = viewModel.CurrentInputModel.FoundationBeamInput;
 
-            // 剛体連結モードでは描画しない
-            if (fbInput.ConnectionMode == FoundationBeamConnectionMode.RigidBody)
+            // 剛体連結モードでも梁要素が存在すれば描画する（自動生成含む）
+            // 梁要素がなく、かつ編集モードでもない場合のみスキップ
+            if (fbInput.ConnectionMode == FoundationBeamConnectionMode.RigidBody &&
+                viewModel.CurrentEditMode == CanvasEditMode.None &&
+                fbInput.Beams.Count == 0)
                 return;
 
             var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
@@ -388,24 +321,88 @@ namespace PileDesign.Views
             // 基礎梁要素を描画
             foreach (var beam in fbInput.Beams)
             {
-                if (!nodeDict.TryGetValue(beam.NodeI_No, out var nodeI)) continue;
-                if (!nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ)) continue;
+                // 選択された梁はUpdateSelectedNodesAndElements3D()で描画するのでスキップ
+                if (beam.IsSelected) continue;
 
-                Point3D loc0 = new(nodeI.X, nodeI.Y, nodeI.Z);
-                Point3D loc1 = new(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                // 新方式: Type + Guid から座標を解決
+                Point3D? loc0 = null;
+                Point3D? loc1 = null;
+
+                // NodeI の座標を解決
+                if (beam.NodeI_Id != Guid.Empty)
+                {
+                    var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                    if (coordsI.HasValue)
+                        loc0 = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                }
+                else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nodeI))
+                {
+                    // 旧方式（後方互換性）
+                    loc0 = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
+                }
+
+                // NodeJ の座標を解決
+                if (beam.NodeJ_Id != Guid.Empty)
+                {
+                    var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                    if (coordsJ.HasValue)
+                        loc1 = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                }
+                else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ))
+                {
+                    // 旧方式（後方互換性）
+                    loc1 = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                }
+
+                // 座標が両方とも解決できた場合のみ描画
+                if (!loc0.HasValue || !loc1.HasValue) continue;
+
+                Point3D point0 = loc0.Value;
+                Point3D point1 = loc1.Value;
+
+                // 要素縮小モードの場合は端点を縮小
+                if (viewModel.IsShrinkElementMode)
+                {
+                    (point0, point1) = GetShrinkElementPoints(point0, point1);
+                }
 
                 // 3D -> 2D 変換
-                Point coord0 = viewModel.CanvasThreeDView.Transformation(loc0);
-                Point coord1 = viewModel.CanvasThreeDView.Transformation(loc1);
+                Point coord0 = viewModel.CanvasThreeDView.Transformation(point0);
+                Point coord1 = viewModel.CanvasThreeDView.Transformation(point1);
 
                 // 梁の中心線を追加
                 LineGeometry lineGeometry = new() { StartPoint = coord0, EndPoint = coord1 };
                 viewModel.CanvasGeometry.PathGeoFoundationBeams.AddGeometry(lineGeometry);
+
+                // 梁断面形状を描画
+                if (viewModel.IsBeamElementSectionVisible)
+                {
+                    var fbSections = fbInput.Sections?.ToDictionary(s => s.No, s => s);
+                    double bw = beam.Width;
+                    double bh = beam.Height;
+                    if (fbSections != null && fbSections.TryGetValue(beam.SectionNo, out var sec))
+                    {
+                        bw = sec.Width;
+                        bh = sec.Height;
+                    }
+                    AddBeamSectionGeometry2D(viewModel, point0, point1, bw, bh, beam.AngleBeta);
+                }
+
+                // 要素番号表示
+                if (viewModel.IsElementNoVisible)
+                {
+                    // 梁の中心点に要素番号を表示
+                    Point midPoint = new((coord0.X + coord1.X) / 2, (coord0.Y + coord1.Y) / 2);
+                    AddText3D(Brushes.DarkOrange, beam.No.ToString(), midPoint.X, midPoint.Y, "C", "C", 0);
+                }
             }
 
             // 基礎梁節点を描画
             foreach (var node in fbInput.Nodes)
             {
+                // 選択された節点はUpdateSelectedNodesAndElements3D()で描画するのでスキップ
+                if (node.IsSelected) continue;
+
                 Point3D loc = new(node.X, node.Y, node.Z);
                 Point coord = viewModel.CanvasThreeDView.Transformation(loc);
 
@@ -413,6 +410,128 @@ namespace PileDesign.Views
                 double radius = 0.3; // 2D表示での半径（ピクセル単位相当）
                 EllipseGeometry ellipse = new(coord, radius, radius);
                 viewModel.CanvasGeometry.PathGeoFoundationNodes.AddGeometry(ellipse);
+            }
+
+            // プレビュー線のクリーンアップ（AddElementモードでない、またはTempStartNodeがnullの場合）
+            if (viewModel.CurrentEditMode != CanvasEditMode.AddElement || viewModel.TempStartNode == null)
+            {
+                ClearFoundationBeamPreview();
+            }
+        }
+
+        /// <summary>
+        /// 梁断面形状を2Dキャンバスに描画（3D座標の4隅を投影して矩形を描く）
+        /// </summary>
+        private void AddBeamSectionGeometry2D(MainWindowViewModel viewModel, Point3D p0, Point3D p1, double width, double height, double angleBetaDeg)
+        {
+            // 梁軸方向
+            Vector3D dir = new(p1.X - p0.X, p1.Y - p0.Y, p1.Z - p0.Z);
+            double len = dir.Length;
+            if (len < 1e-9) return;
+            dir.Normalize();
+
+            // 局所座標系（3D AddBeamElement と同じロジック）
+            Vector3D up = new(0, 0, 1);
+            Vector3D localZ;
+            if (Math.Abs(Vector3D.DotProduct(dir, up)) > 0.999)
+                localZ = new Vector3D(0, 1, 0);
+            else
+            {
+                localZ = up - Vector3D.DotProduct(up, dir) * dir;
+                localZ.Normalize();
+            }
+            Vector3D localY = Vector3D.CrossProduct(localZ, dir);
+            localY.Normalize();
+
+            // AngleBeta 回転
+            if (Math.Abs(angleBetaDeg) > 1e-9)
+            {
+                double rad = angleBetaDeg * Math.PI / 180.0;
+                double cosB = Math.Cos(rad);
+                double sinB = Math.Sin(rad);
+                Vector3D newY = cosB * localY + sinB * localZ;
+                Vector3D newZ = -sinB * localY + cosB * localZ;
+                localY = newY;
+                localZ = newZ;
+            }
+
+            double hw = width / 2.0;
+            double hh = height / 2.0;
+
+            // 各端の4隅を3D座標で計算し、2Dに投影
+            var path = viewModel.CanvasGeometry.PathGeoBeamSections;
+            var transform = viewModel.CanvasThreeDView;
+
+            Point3D[] ends = [p0, p1];
+            Point[][] corners2D = new Point[2][];
+
+            for (int e = 0; e < 2; e++)
+            {
+                var c = ends[e];
+                corners2D[e] =
+                [
+                    transform.Transformation(new Point3D(c.X - hw * localY.X - hh * localZ.X, c.Y - hw * localY.Y - hh * localZ.Y, c.Z - hw * localY.Z - hh * localZ.Z)),
+                    transform.Transformation(new Point3D(c.X + hw * localY.X - hh * localZ.X, c.Y + hw * localY.Y - hh * localZ.Y, c.Z + hw * localY.Z - hh * localZ.Z)),
+                    transform.Transformation(new Point3D(c.X + hw * localY.X + hh * localZ.X, c.Y + hw * localY.Y + hh * localZ.Y, c.Z + hw * localY.Z + hh * localZ.Z)),
+                    transform.Transformation(new Point3D(c.X - hw * localY.X + hh * localZ.X, c.Y - hw * localY.Y + hh * localZ.Y, c.Z - hw * localY.Z + hh * localZ.Z)),
+                ];
+            }
+
+            // 端面の矩形（I端, J端）
+            for (int e = 0; e < 2; e++)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    path.AddGeometry(new LineGeometry(corners2D[e][i], corners2D[e][(i + 1) % 4]));
+                }
+            }
+
+            // 4本の稜線（I端→J端）
+            for (int i = 0; i < 4; i++)
+            {
+                path.AddGeometry(new LineGeometry(corners2D[0][i], corners2D[1][i]));
+            }
+        }
+
+        // 一般節点（InputNode）描画の更新
+        private void UpdateInputNodes3D()
+        {
+            if (Canvas3DLayout == null) return;
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (viewModel.CurrentInputModel?.InputNodes == null) return;
+
+            foreach (var node in viewModel.CurrentInputModel.InputNodes)
+            {
+                if (!node.IsVisible) continue;
+                // 選択されたノードはUpdateSelectedNodesAndElements3D()で描画するのでスキップ
+                if (node.IsSelected) continue;
+
+                // 3D座標を2Dスクリーン座標に変換
+                Point3D loc = new(node.X, node.Y, node.Z);
+                Point coord = viewModel.CanvasThreeDView.Transformation(loc);
+
+                // 杭節点と同じサイズ（actualNodeSize * 0.5）
+                double radius = actualNodeSize * 0.5;
+
+                // 円として追加
+                EllipseGeometry ellipse = new(coord, radius, radius);
+
+                // ノードタイプに応じて適切な PathGeometry に追加
+                if (node.Type == NodeType.Pile)
+                {
+                    viewModel.CanvasGeometry.PathGeoInputNodesPile.AddGeometry(ellipse);
+                }
+                else
+                {
+                    viewModel.CanvasGeometry.PathGeoInputNodesGeneral.AddGeometry(ellipse);
+                }
+
+                // ノード番号表示（オプション）
+                // TODO: ノード番号表示フラグを追加する場合はここに実装
+                // if (viewModel.IsInputNodeNoVisible)
+                // {
+                //     AddText3D(Brushes.Black, $"N{node.No}", coord.X, coord.Y + 10, "C", "T", 0);
+                // }
             }
         }
 

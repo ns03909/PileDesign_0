@@ -44,7 +44,16 @@
                 <RadioButton Content="変更" GroupName="PileTopLevel" IsChecked="{Binding IsReplacePileTopLevel}"></RadioButton>
                 <RadioButton Content="追加" GroupName="PileTopLevel" IsChecked="{Binding IsAddPileTopLevel}"></RadioButton>
             </StackPanel>
-            
+
+            <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="CheckBoxFoundationBeamDeltaZc" Content="接合節点ΔZc (m)" Width="150" IsChecked="{Binding IsApplicableFoundationBeamDeltaZc}"></CheckBox>
+                <TextBox x:Name="TextBoxFoundationBeamDeltaZc" Text="{Binding FoundationBeamDeltaZc, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         TextChanged="TextBoxFoundationBeamDeltaZc_TextChanged"></TextBox>
+                <RadioButton Content="変更" GroupName="FoundationBeamDeltaZc" IsChecked="{Binding IsReplaceFoundationBeamDeltaZc}"></RadioButton>
+                <RadioButton Content="追加" GroupName="FoundationBeamDeltaZc" IsChecked="{Binding IsAddFoundationBeamDeltaZc}"></RadioButton>
+            </StackPanel>
+
             <StackPanel Orientation="Horizontal">
                 <CheckBox x:Name="CheckBoxGroupPileFactor" Content="群杭係数" Width="150" IsChecked="{Binding IsApplicablePileGroupFactor}"></CheckBox>
                 <TextBox x:Name="TextBoxGroupPileFactor" Text="{Binding PileGroupFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"

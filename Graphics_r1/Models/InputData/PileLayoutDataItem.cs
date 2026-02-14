@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace PileDesign.Models.InputData
 {
-    public class PileLayoutDataItem : Node
+    public class PileLayoutDataItem : InputNode
     {
         private MainWindowViewModel _mainWindowViewModel;
 
@@ -139,21 +139,20 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 基礎梁接続設定
-        // true: 剛体連結, false: 基礎梁
-        private bool _useRigidConnection = true;
-        public bool UseRigidConnection
-        {
-            get => _useRigidConnection;
-            set => SetProperty(ref _useRigidConnection, value);
-        }
-
-        // 接続先の基礎梁節点番号（基礎梁接続の場合）
+        // 接続先の基礎梁節点番号（剛床連結の場合）
         private int? _connectedFoundationNodeNo;
         public int? ConnectedFoundationNodeNo
         {
             get => _connectedFoundationNodeNo;
             set => SetProperty(ref _connectedFoundationNodeNo, value);
+        }
+
+        // 基礎梁接続節点の相対高さ（杭頭からの鉛直オフセット）
+        private double _foundationBeamDeltaZc = 1.0;
+        public double FoundationBeamDeltaZc
+        {
+            get => _foundationBeamDeltaZc;
+            set => SetProperty(ref _foundationBeamDeltaZc, value);
         }
 
         //群杭係数

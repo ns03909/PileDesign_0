@@ -74,11 +74,27 @@ namespace PileDesign.ViewModels
             }
         }
 
+        private bool _isInputNodesIncluded = true;
+        public bool IsInputNodesIncluded
+        {
+            get => _isInputNodesIncluded;
+            set => SetProperty(ref _isInputNodesIncluded, value);
+        }
+
+        private bool _isPileLayoutIncluded = true;
+        public bool IsPileLayoutIncluded
+        {
+            get => _isPileLayoutIncluded;
+            set => SetProperty(ref _isPileLayoutIncluded, value);
+        }
+
         internal void ResetStatus()
         {
             DX = 0;
             DY = 0;
             RepetitionNumber = 1;
+            IsInputNodesIncluded = true;
+            IsPileLayoutIncluded = true;
         }
 
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 
 namespace PileDesign.Models.InputData
@@ -12,6 +13,20 @@ namespace PileDesign.Models.InputData
         {
             get => _connectionMode;
             set => SetProperty(ref _connectionMode, value);
+        }
+
+        private ObservableCollection<BeamMaterial> _materials = [];
+        public ObservableCollection<BeamMaterial> Materials
+        {
+            get => _materials;
+            set => SetProperty(ref _materials, value);
+        }
+
+        private ObservableCollection<BeamSection> _sections = [];
+        public ObservableCollection<BeamSection> Sections
+        {
+            get => _sections;
+            set => SetProperty(ref _sections, value);
         }
 
         private ObservableCollection<FoundationNode> _nodes = [];
@@ -30,6 +45,8 @@ namespace PileDesign.Models.InputData
 
         public FoundationBeamInput()
         {
+            Materials = [];
+            Sections = [];
             Nodes = [];
             Beams = [];
         }
@@ -40,14 +57,41 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public enum FoundationBeamConnectionMode
     {
-        /// <summary>全て剛体連結（現状モデル）</summary>
+        /// <summary>剛体連結（全杭を代表点に全6DOFで剛体連結）</summary>
         RigidBody,
 
-        /// <summary>全て基礎梁で接続</summary>
-        FoundationBeam,
+        /// <summary>剛床連結（Ux,Uy,Rz拘束、Uz,Rx,Ry自由。基礎梁が剛性を負担）</summary>
+        RigidFloor
+    }
 
-        /// <summary>混在（杭単位で指定）</summary>
-        Mixed
+    /// <summary>
+    /// 節点参照タイプ
+    /// </summary>
+    public enum NodeReferenceType
+    {
+        /// <summary>専用節点（FoundationNode）</summary>
+        FoundationNode = 0,
+
+        /// <summary>一般節点（InputNode）</summary>
+        GeneralNode = 1,
+
+        /// <summary>杭配置（杭頭+ΔZc位置）</summary>
+        PileLayout = 2
+    }
+
+    /// <summary>
+    /// 節点参照情報（Type + Guid のペア）
+    /// </summary>
+    public class NodeReference
+    {
+        public NodeReferenceType Type { get; set; }
+        public Guid Id { get; set; }
+
+        public NodeReference(NodeReferenceType type, Guid id)
+        {
+            Type = type;
+            Id = id;
+        }
     }
 
     /// <summary>
@@ -55,6 +99,14 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class FoundationNode : BaseModel
     {
+        // ユニークID（削除・挿入に影響されない内部識別子）
+        private Guid _id = Guid.NewGuid();
+        public Guid Id
+        {
+            get => _id;
+            set => SetProperty(ref _id, value);
+        }
+
         private int _no;
         public int No
         {
@@ -89,6 +141,14 @@ namespace PileDesign.Models.InputData
             get => _name;
             set => SetProperty(ref _name, value);
         }
+
+        // 選択状態
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
     }
 
     /// <summary>
@@ -103,6 +163,37 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _no, value);
         }
 
+        // 節点I参照（新方式）
+        private NodeReferenceType _nodeI_Type = NodeReferenceType.FoundationNode;
+        public NodeReferenceType NodeI_Type
+        {
+            get => _nodeI_Type;
+            set => SetProperty(ref _nodeI_Type, value);
+        }
+
+        private Guid _nodeI_Id = Guid.Empty;
+        public Guid NodeI_Id
+        {
+            get => _nodeI_Id;
+            set => SetProperty(ref _nodeI_Id, value);
+        }
+
+        // 節点J参照（新方式）
+        private NodeReferenceType _nodeJ_Type = NodeReferenceType.FoundationNode;
+        public NodeReferenceType NodeJ_Type
+        {
+            get => _nodeJ_Type;
+            set => SetProperty(ref _nodeJ_Type, value);
+        }
+
+        private Guid _nodeJ_Id = Guid.Empty;
+        public Guid NodeJ_Id
+        {
+            get => _nodeJ_Id;
+            set => SetProperty(ref _nodeJ_Id, value);
+        }
+
+        // 旧方式（後方互換性のため残す）
         private int _nodeI_No;
         public int NodeI_No
         {
@@ -117,14 +208,29 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _nodeJ_No, value);
         }
 
-        private string _sectionName = "";
+        // 材料・断面参照（新規）
+        private int _materialNo = 1;  // 材料番号（デフォルト1）
+        public int MaterialNo
+        {
+            get => _materialNo;
+            set => SetProperty(ref _materialNo, value);
+        }
+
+        private int _sectionNo = 1;  // 断面番号（デフォルト1）
+        public int SectionNo
+        {
+            get => _sectionNo;
+            set => SetProperty(ref _sectionNo, value);
+        }
+
+        private string _sectionName = "";  // 後方互換性のため残す
         public string SectionName
         {
             get => _sectionName;
             set => SetProperty(ref _sectionName, value);
         }
 
-        // 断面諸元
+        // 断面諸元（後方互換性のため残す）
         private double _width = 0.5;  // デフォルト 0.5m
         public double Width
         {
@@ -151,6 +257,30 @@ namespace PileDesign.Models.InputData
         {
             get => _shearModulus;
             set => SetProperty(ref _shearModulus, value);
+        }
+
+        // 要素座標系の向き β (度)
+        private double _angleBeta = 0.0;
+        public double AngleBeta
+        {
+            get => _angleBeta;
+            set => SetProperty(ref _angleBeta, value);
+        }
+
+        // 解析結果: 部材角（水平解析完了後に設定）
+        private double? _memberAngle;
+        public double? MemberAngle
+        {
+            get => _memberAngle;
+            set => SetProperty(ref _memberAngle, value);
+        }
+
+        // 選択状態
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
         }
     }
 }

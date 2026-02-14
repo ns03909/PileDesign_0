@@ -8,7 +8,7 @@ namespace PileDesign.Models.InputData
 {
     public class Element : BaseModel
     {
-        public ObservableCollection<Node> Nodes { get; set; } = [];
+        public ObservableCollection<InputNode> Nodes { get; set; } = [];
 
         private static int _nextId = 1; // 次のIDを保持する静的フィールド
         private static List<int> _availableIds = []; // 利用可能なIDのリスト

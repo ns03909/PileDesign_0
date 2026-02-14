@@ -18,10 +18,19 @@ namespace PileDesign.FEM
                 var x = CsparseLinearSolver.Solve(anaModel.KAA_tan, anaModel.VectorR, isSpd: false);
                 incrementalDispVector = Vector<double>.Build.DenseOfArray(x);
             }
-            catch
+            catch (Exception csparseEx)
             {
                 // フォールバック（MathNet と完全同等の経路）
-                incrementalDispVector = anaModel.KAA_tan.Solve(anaModel.VectorR);
+                try
+                {
+                    incrementalDispVector = anaModel.KAA_tan.Solve(anaModel.VectorR);
+                }
+                catch (Exception mathnetEx)
+                {
+                    throw new InvalidOperationException(
+                        $"連立方程式の求解に失敗しました。モデルが不安定な可能性があります。\n" +
+                        $"CSparse: {csparseEx.Message}\nMathNet: {mathnetEx.Message}", mathnetEx);
+                }
             }
 
             // 緩和係数を適用（1.0未満で収束を安定化）

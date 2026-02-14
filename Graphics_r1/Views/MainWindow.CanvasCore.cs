@@ -170,6 +170,9 @@ namespace PileDesign.Views
                 {
                     // 軽量描画（ラベルなし）
                     UpdateNodes3D();
+                    UpdateInputNodes3D(); // 一般節点も描画
+                    if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素も描画
+                    UpdateSelectedNodesAndElements3D(); // 選択要素も描画
                     if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
                     UpdateCanvasCube();
                     viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
@@ -206,9 +209,9 @@ namespace PileDesign.Views
 
                 if (viewModel.IsSettlementLoadVisible) UpdateSettlementLoad3D(); // 荷重面描画の更新
 
-                if (viewModel.IsElementVisible) UpdateGeneralElement3D(); // 要素描画の更新
+                if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素描画の更新
 
-                if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁描画の更新
+                UpdateInputNodes3D(); // 一般節点描画の更新
 
                 if ((MainWindowViewModel)DataContext == null) return;
 

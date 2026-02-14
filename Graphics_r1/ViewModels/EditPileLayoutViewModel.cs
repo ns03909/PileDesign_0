@@ -91,6 +91,35 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isAddPileTopLevel, value);
         }
 
+        // FoundationBeamDeltaZc
+        private bool _isApplicableFoundationBeamDeltaZc;
+        public bool IsApplicableFoundationBeamDeltaZc
+        {
+            get => _isApplicableFoundationBeamDeltaZc;
+            set => SetProperty(ref _isApplicableFoundationBeamDeltaZc, value);
+        }
+
+        private double _foundationBeamDeltaZc = 1.0;
+        public double FoundationBeamDeltaZc
+        {
+            get => _foundationBeamDeltaZc;
+            set => SetProperty(ref _foundationBeamDeltaZc, value);
+        }
+
+        private bool _isReplaceFoundationBeamDeltaZc = true;
+        public bool IsReplaceFoundationBeamDeltaZc
+        {
+            get => _isReplaceFoundationBeamDeltaZc;
+            set => SetProperty(ref _isReplaceFoundationBeamDeltaZc, value);
+        }
+
+        private bool _isAddFoundationBeamDeltaZc;
+        public bool IsAddFoundationBeamDeltaZc
+        {
+            get => _isAddFoundationBeamDeltaZc;
+            set => SetProperty(ref _isAddFoundationBeamDeltaZc, value);
+        }
+
         // PileGroupFactor
         private bool _isApplicablePileGroupFactor;
         public bool IsApplicablePileGroupFactor
@@ -508,6 +537,16 @@ namespace PileDesign.ViewModels
 
             IsApplicableGroundRefNo = false;
             SelectedGroundRefNo = 1;
+
+            IsApplicablePileTopLevel = false;
+            PileTopLevel = 0;
+            IsReplacePileTopLevel = true;
+            IsAddPileTopLevel = false;
+
+            IsApplicableFoundationBeamDeltaZc = false;
+            FoundationBeamDeltaZc = 1.0;
+            IsReplaceFoundationBeamDeltaZc = true;
+            IsAddFoundationBeamDeltaZc = false;
 
             IsApplicablePileGroupFactor = false;
             PileGroupFactor = 1;

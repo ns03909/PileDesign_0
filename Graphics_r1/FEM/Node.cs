@@ -77,6 +77,19 @@ namespace PileDesign.FEM
                 }
             }
 
+            // フォールバック: 逆の液状化状態で検索（液状化トグルの状態と解析結果が異なる場合の救済）
+            int fallbackStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, !isLiquefaction);
+            foreach (NodeResult nodeResult in NodeResults)
+            {
+                if (loadCase == nodeResult.LoadCase &&
+                    loadCombination == nodeResult.LoadCombination &&
+                    !isLiquefaction == nodeResult.IsLiquefaction &&
+                    fallbackStep == nodeResult.Step)
+                {
+                    return nodeResult;
+                }
+            }
+
             return null;
         }
 

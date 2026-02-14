@@ -1,27 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-miterlimit:1.5;">
-    <g transform="matrix(1,0,0,1,-890,-2492)">
-        <g id="RibbonVisible" transform="matrix(1,0,0,1,0,356)">
+    <g transform="matrix(1,0,0,1,-1068,-2492)">
+        <g id="RibbonVisible" transform="matrix(1,0,0,1,178,356)">
             <rect x="890" y="2136" width="128" height="128" style="fill:none;"/>
             <clipPath id="_clip1">
                 <rect x="890" y="2136" width="128" height="128"/>
             </clipPath>
             <g clip-path="url(#_clip1)">
-                <g transform="matrix(1.465116,0,0,1,-435.253712,-35.148739)">
-                    <rect x="939.155" y="2206.297" width="33.594" height="57.703" style="fill:rgb(98,176,226);"/>
+                <g transform="matrix(2.078125,0,0,0.808663,-260.013062,821.659383)">
+                    <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
                 </g>
-                <g transform="matrix(0.616279,0,0,1,418.515544,-35.148739)">
+                <g transform="matrix(3.810245,0,0,1,-2688.409687,-35.148739)">
                     <rect x="939.155" y="2206.297" width="33.594" height="57.703" style="fill:rgb(98,176,226);"/>
-                </g>
-                <g transform="matrix(1.242284,0,0,1,-276.696684,-35.148739)">
-                    <rect x="939.155" y="2206.297" width="33.594" height="57.703" style="fill:rgb(98,176,226);"/>
-                </g>
-                <g transform="matrix(1,0,0,1,-254.833348,2093.352446)">
-                    <text x="1146.296px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(6,0,4);">M</text>
-                    <g transform="matrix(41.666667,0,0,41.666667,1271.370848,128)">
-                    </g>
-                    <text x="1189.996px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:41.667px;fill:rgb(6,0,4);">ENU</text>
                 </g>
                 <g transform="matrix(1,0,0,1,712,2131.665189)">
                     <g transform="matrix(0.745781,0,0,0.745781,-461.229345,-583.126279)">
@@ -33,6 +24,14 @@
                     <g transform="matrix(0.745781,0,0,0.745781,-410.424194,-586.256374)">
                         <circle cx="922.395" cy="817.998" r="5.578" style="fill:white;stroke:black;stroke-width:11.17px;"/>
                     </g>
+                </g>
+                <g transform="matrix(2.078125,0,0,0.808663,-260.013062,914.510644)">
+                    <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
+                </g>
+                <g transform="matrix(1,0,0,1,-254.833348,2093.352446)">
+                    <g transform="matrix(41.666667,0,0,41.666667,1267.729182,128)">
+                    </g>
+                    <text x="1149.938px" y="128px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:41.667px;fill:rgb(6,0,4);">MENU</text>
                 </g>
             </g>
         </g>

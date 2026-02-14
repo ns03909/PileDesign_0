@@ -201,7 +201,7 @@ namespace PileDesign.Views
                         break;
                     case "My":
                         indices = [4, 10];
-                        forceDirection = Vector<double>.Build.DenseOfArray([0, 0, 1]);
+                        forceDirection = Vector<double>.Build.DenseOfArray([0, 0, -1]);
                         unit = "kNm";
                         break;
                     case "Mz":
@@ -256,7 +256,10 @@ namespace PileDesign.Views
                 foreach (var beam in anaModel.Beams)
                 {
                     // 非アクティブ杭のビームはスキップ（非アクティブ杭が存在する場合のみフィルタリング）
-                    if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
+                    // 基礎梁・RigidLinkは杭の可視フィルタ対象外（常に描画）
+                    if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)
+                        && !beam.Name.StartsWith("FoundationBeam-")
+                        && !beam.Name.StartsWith("RigidLink-")) continue;
 
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -314,10 +317,8 @@ namespace PileDesign.Views
                 //var colorBaredGeometries = GetColorBarGeometries(allValues);
                 var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
 
-                //Matrix<double> t = Utils.GetNodeTransformMatrix(new Vector3D(0, 0, -1));
-                //var transformedForceDirection = t.Transpose() * forceDirection;
-                // 変換行列（要素局所系→表示系）
-                Matrix<double> t = Utils.GetNodeTransformMatrix(new Vector3D(0, 0, -1));
+                // 変換行列は各ビームの方向に応じて個別に計算する（per-beam）
+                // （水平基礎梁の応力図を正しく描画するため）
 
                 // ヘルパ: ビーム結果から端点ごとの 3 成分ベクトルを取得する
                 static Vector<double> GetEnd3Vector(BeamForce bf, bool isMoment, bool isIend, string derivedType)
@@ -336,8 +337,8 @@ namespace PileDesign.Views
                         // 派生タイプ別の比率設定
                         if (derivedType == "Mh")
                         {
-                            // 曲げ合成: My, Mz の比率を使う（Mxは無視）
-                            return Vector<double>.Build.DenseOfArray([0.0, mz, my]);
+                            // 曲げ合成: -Mz, My の比率を使う（Mxは無視）
+                            return Vector<double>.Build.DenseOfArray([0.0, -mz, my]);
                         }
                         else if (derivedType == "Fh")
                         {
@@ -357,6 +358,13 @@ namespace PileDesign.Views
                 {
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                     if (beamResult == null) continue;
+
+                    // ビームの方向ベクトルから変換行列を計算（各ビーム固有）
+                    var beamDir = new Vector3D(
+                        beam.NodeJ.Coord.X - beam.NodeI.Coord.X,
+                        beam.NodeJ.Coord.Y - beam.NodeI.Coord.Y,
+                        beam.NodeJ.Coord.Z - beam.NodeI.Coord.Z);
+                    Matrix<double> t = Utils.GetNodeTransformMatrix(beamDir);
 
                     // 端点ごとに raw ベクトルを取得（派生表示フラグ/タイプを考慮）
                     bool isMomentType = viewModel.AnalysisResultBeamForceType.StartsWith('M');
@@ -386,13 +394,14 @@ namespace PileDesign.Views
                         dirI = -dirI;
                     }
 
-                    // 表示座標系に変換
+                    // 表示座標系に変換（ビーム固有の変換行列を使用）
                     var transformedForceDirectionI = t.Transpose() * dirI;
                     var transformedForceDirectionJ = t.Transpose() * dirJ;
 
                     // 元のスケーリング処理（maxAbsValue 等に応じたスケールは既存ロジックを使う）
-                    double forceI = maxAbsValue == 0 ? 0 : originalForceI / maxAbsValue * viewModel.ForceDiagramMultiplier;
-                    double forceJ = maxAbsValue == 0 ? 0 : originalForceJ / maxAbsValue * viewModel.ForceDiagramMultiplier;
+                    double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+                    double forceI = maxAbsValue == 0 ? 0 : originalForceI / maxAbsValue * forceScale;
+                    double forceJ = maxAbsValue == 0 ? 0 : originalForceJ / maxAbsValue * forceScale;
 
                     Point3D nodeI3D = beam.NodeI.Coord;
                     Point3D nodeIForce3D = new(
@@ -600,8 +609,8 @@ namespace PileDesign.Views
                         Math.Pow(nd.Rz * effectiveVector[5], 2));
                     if (isThetaLocal)
                     {
-                        // θ 系は表示上の値領域とカラーバーを揃えるため DisplacementDiagramMultiplier を乗ずる
-                        allValues.Add(Math.Abs(val) * multiplier * viewModel.DisplacementDiagramMultiplier);
+                        // θ 系は表示上の値領域とカラーバーを揃えるため比率×ModelExtentを乗ずる
+                        allValues.Add(Math.Abs(val) * multiplier * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent);
                     }
                     else
                     {
@@ -619,6 +628,12 @@ namespace PileDesign.Views
                     // U 系（従来の変形ポリライン / 値ラベル描画に近い処理）
                     // Beam/DummyBeam 毎に端点の変位を取得してポリライン描画
                     double maxAbsValue = allValues.Count > 0 ? Math.Max(Math.Abs(allValues.Min()), Math.Abs(allValues.Max())) : 0.0;
+
+                    // 変位ダイアグラムのスケール: 最大変位で正規化し、比率×ModelExtentを適用
+                    double maxRawDisp = multiplier > 0 ? maxAbsValue / multiplier : 0;
+                    double dispScale = maxRawDisp > 1e-15
+                        ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxRawDisp
+                        : 0;
 
                     // DummyBeams（根入れ部）描画 — 非アクティブ杭が存在する場合はスキップ
                     if (!hasInvisiblePile && viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
@@ -646,17 +661,17 @@ namespace PileDesign.Views
                                 Math.Pow(ndJ.Ry * effectiveVector[4], 2) +
                                 Math.Pow(ndJ.Rz * effectiveVector[5], 2));
 
-                            // 変位量をモデル座標でスケール（multiplier はユーザー単位 -> 描画には DisplacementDiagramMultiplier を使う）
+                            // 変位量をモデル座標でスケール（最大変位で正規化、比率×ModelExtentを適用）
                             Point3D nI = dummyBeam.NodeI.Coord;
                             Point3D nJ = dummyBeam.NodeJ.Coord;
                             Point3D nIDisp3D = new(
-                                nI.X + ndI.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
-                                nI.Y + ndI.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
-                                nI.Z + ndI.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
+                                nI.X + ndI.Ux * effectiveVector[0] * dispScale,
+                                nI.Y + ndI.Uy * effectiveVector[1] * dispScale,
+                                nI.Z + ndI.Uz * effectiveVector[2] * dispScale);
                             Point3D nJDisp3D = new(
-                                nJ.X + ndJ.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
-                                nJ.Y + ndJ.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
-                                nJ.Z + ndJ.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
+                                nJ.X + ndJ.Ux * effectiveVector[0] * dispScale,
+                                nJ.Y + ndJ.Uy * effectiveVector[1] * dispScale,
+                                nJ.Z + ndJ.Uz * effectiveVector[2] * dispScale);
 
                             Point pI = viewModel.CanvasThreeDView.Transformation(nI);
                             Point pIDisp = viewModel.CanvasThreeDView.Transformation(nIDisp3D);
@@ -708,13 +723,13 @@ namespace PileDesign.Views
                         Point3D nodeI3D = beam.NodeI.Coord;
                         Point3D nodeJ3D = beam.NodeJ.Coord;
                         Point3D nodeIDisp3D = new(
-                            nodeI3D.X + ndI.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
-                            nodeI3D.Y + ndI.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
-                            nodeI3D.Z + ndI.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
+                            nodeI3D.X + ndI.Ux * effectiveVector[0] * dispScale,
+                            nodeI3D.Y + ndI.Uy * effectiveVector[1] * dispScale,
+                            nodeI3D.Z + ndI.Uz * effectiveVector[2] * dispScale);
                         Point3D nodeJDisp3D = new(
-                            nodeJ3D.X + ndJ.Ux * effectiveVector[0] * viewModel.DisplacementDiagramMultiplier,
-                            nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * viewModel.DisplacementDiagramMultiplier,
-                            nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * viewModel.DisplacementDiagramMultiplier);
+                            nodeJ3D.X + ndJ.Ux * effectiveVector[0] * dispScale,
+                            nodeJ3D.Y + ndJ.Uy * effectiveVector[1] * dispScale,
+                            nodeJ3D.Z + ndJ.Uz * effectiveVector[2] * dispScale);
 
                         Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
                         Point nodeIDisp2D = viewModel.CanvasThreeDView.Transformation(nodeIDisp3D);
@@ -747,7 +762,7 @@ namespace PileDesign.Views
                     // θ 系：全節点に対して楕円を描く（ProjectionUtils を利用）
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
-                    // カラーバー用 allValues は既に「rot * multiplier * DisplacementDiagramMultiplier」で作成済み（上で）
+                    // カラーバー用 allValues は既に「rot * multiplier * ratio * modelExtent」で作成済み（上で）
                     // colorBaredGeometries を使って楕円を色分けする
                     foreach (var node in nodeSet)
                     {
@@ -781,7 +796,7 @@ namespace PileDesign.Views
                         if (rot <= 1e-15) continue;
 
                         double displayedMagnitude = rot * multiplier;
-                        double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramMultiplier;
+                        double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
                         if (targetPixelDiameter <= 0) continue;
 
                         var proj = ProjectionUtils.ProjectCircleAsEllipseExact(node.Coord, axis, 1.0, viewModel.CanvasThreeDView.Transformation);
@@ -808,7 +823,7 @@ namespace PileDesign.Views
                         }
 
                         // midValue はカラーバーに合わせたスケール（同じスケールで allValues を作っているのでそれを使う）
-                        double midValue = Math.Abs(displayedMagnitude) * viewModel.DisplacementDiagramMultiplier;
+                        double midValue = Math.Abs(displayedMagnitude) * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
 
                         //var picked = PickColorGeometry(midValue, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(midValue, colorBaredGeometries);
                         var picked = ColorBarUtils.PickColorGeometry(midValue, colorBaredGeometries)
@@ -930,7 +945,24 @@ namespace PileDesign.Views
             string unit = (springType == "MX" || springType == "MY" || springType == "MZ" || springType == "MH") ? "kNm" : "kN";
             string colorBarTitle = GetSoilSpringTypeName(springType);
 
-            // 2) 各ばねについて、I点（head）と tail ( = head - scaled (dispI - dispJ)) を求めて描画
+            // 2) 最大変位差を求める（正規化用プレパス）
+            double maxDispDiffLen = 0;
+            foreach (var s in anaModel.HorizontalSoilSprings)
+            {
+                if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
+                if (s?.NodeI == null || s.NodeJ == null) continue;
+                var di2 = s.NodeI.CumulativeDisp;
+                var dj2 = s.NodeJ.CumulativeDisp;
+                double dx2 = di2.Ux - dj2.Ux;
+                double dy2 = di2.Uy - dj2.Uy;
+                double len = Math.Sqrt(dx2 * dx2 + dy2 * dy2);
+                if (len > maxDispDiffLen) maxDispDiffLen = len;
+            }
+            double springForceScale = maxDispDiffLen > 1e-15
+                ? viewModel.ForceDiagramRatio * viewModel.ModelExtent / maxDispDiffLen
+                : 0;
+
+            // 3) 各ばねについて、I点（head）と tail ( = head - scaled (dispI - dispJ)) を求めて描画
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
                 if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
@@ -958,8 +990,8 @@ namespace PileDesign.Views
                         _ => new System.Windows.Media.Media3D.Vector3D(dx, dy, 0)     // RH等はXY両方
                     };
 
-                    // 表示スケール: viewModel.DisplacementDiagramMultiplier を使う（必要に応じて調整してください）
-                    var scaledDisp = dispDiff * viewModel.ForceDiagramMultiplier * 1000;
+                    // 表示スケール: 最大変位差で正規化し、比率×ModelExtentを適用
+                    var scaledDisp = dispDiff * springForceScale;
 
                     // 矢印の頂点（I点）と尾（頂点 - scaledDisp）
                     var head3D = s.NodeI.Coord;

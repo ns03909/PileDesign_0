@@ -238,7 +238,7 @@ namespace PileDesign.Views
 
         // 以降: ヘルパー関数群を同クラス内に追加
         private static double ScaleDispMmToModel(double dispMm, LoadCombination comb, MainWindowViewModel vm)
-            => dispMm * 0.001 * comb.Alpha1 * vm.DisplacementDiagramMultiplier;
+            => dispMm * 0.001 * comb.Alpha1 * vm.DisplacementDiagramRatio * vm.ModelExtent;
 
         private static double GetDispFromZDataItem(ZDataItem item, int level, bool isLiquefaction)
         {
@@ -395,10 +395,11 @@ namespace PileDesign.Views
                     {
                         if (!pileLocation.IsVisible) continue;
 
-                        Point3D loc = pileLocation.Point3D;
+                        // ConnectionNode（杭頭Z + ΔZc）
+                        double connectingZ = pileLocation.Z + pileLocation.FoundationBeamDeltaZc;
+                        Point3D loc = new(pileLocation.X, pileLocation.Y, connectingZ);
                         Point coordinate = viewModel.CanvasThreeDView.Transformation(loc);
 
-                        // 杭頭節点
                         LineGeometry lineGeometry = new(new Point(coordinate.X, coordinate.Y), new Point(coordinate0.X, coordinate0.Y));
                         viewModel.CanvasGeometry.PathGeoRigidFloor.AddGeometry(lineGeometry);
                     }
@@ -858,7 +859,8 @@ namespace PileDesign.Views
             bool fillAreasEnabled = vm?.IsAreaPainted ?? false;
             if (!fillAreasEnabled)
             {
-                // 色分割線だけ必要なら AddColorPolyLineGeometry を使ってください（ここは塗り領域処理専用）
+                // 塗り領域が無効の場合は色分割線で描画（ダイアグラムの輪郭線）
+                AddColorPolyLineGeometry(points, values, colorBaredGeometries, isClosed);
                 return;
             }
 
@@ -1061,6 +1063,49 @@ namespace PileDesign.Views
                 }
             }
 
+            // 一般節点の選択描画
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (InputNode node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    if (node.IsVisible && node.IsSelected)
+                    {
+                        Point3D loc = new(node.X, node.Y, node.Z);
+                        Point coordinate = viewModel.CanvasThreeDView.Transformation(loc);
+
+                        // 杭節点と同じ選択時サイズ
+                        EllipseGeometry ellipse = new(new Point(coordinate.X, coordinate.Y), actualNodeSize * 1, actualNodeSize * 1);
+
+                        // ノードタイプに応じて適切な PathGeometry に追加
+                        if (node.Type == NodeType.Pile)
+                        {
+                            viewModel.CanvasGeometry.PathGeoInputNodesPile.AddGeometry(ellipse);
+                        }
+                        else
+                        {
+                            viewModel.CanvasGeometry.PathGeoInputNodesGeneral.AddGeometry(ellipse);
+                        }
+                    }
+                }
+            }
+
+            // 基礎梁節点の選択描画
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (FoundationNode node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                {
+                    if (node.IsSelected)
+                    {
+                        Point3D loc = new(node.X, node.Y, node.Z);
+                        Point coordinate = viewModel.CanvasThreeDView.Transformation(loc);
+
+                        // 杭節点と同じ選択時サイズ（PathGeoFoundationNodesは選択時には使わず、専用のパスを使う）
+                        EllipseGeometry ellipse = new(new Point(coordinate.X, coordinate.Y), actualNodeSize * 1, actualNodeSize * 1);
+                        viewModel.CanvasGeometry.PathGeoSelectedPileNodes.AddGeometry(ellipse);
+                    }
+                }
+            }
+
             foreach (Element element in viewModel.CurrentInputModel.Elements)
             {
                 if (element.IsVisible && element.IsSelected)
@@ -1078,6 +1123,66 @@ namespace PileDesign.Views
 
                     LineGeometry lineGeometry = new() { StartPoint = coordinate0, EndPoint = coordinate1 };
                     viewModel.CanvasGeometry.PathGeoSelectedElements.AddGeometry(lineGeometry);
+                }
+            }
+
+            // 一般梁要素の選択描画
+            if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+            {
+                var nodeDict = viewModel.CurrentInputModel.FoundationBeamInput.Nodes.ToDictionary(n => n.No, n => n);
+
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    if (beam.IsSelected)
+                    {
+                        // 新方式: Type + Guid から座標を解決
+                        Point3D? loc0 = null;
+                        Point3D? loc1 = null;
+
+                        // NodeI の座標を解決
+                        if (beam.NodeI_Id != Guid.Empty)
+                        {
+                            var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                            if (coordsI.HasValue)
+                                loc0 = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                        }
+                        else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nodeI))
+                        {
+                            // 旧方式（後方互換性）
+                            loc0 = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
+                        }
+
+                        // NodeJ の座標を解決
+                        if (beam.NodeJ_Id != Guid.Empty)
+                        {
+                            var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                            if (coordsJ.HasValue)
+                                loc1 = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                        }
+                        else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ))
+                        {
+                            // 旧方式（後方互換性）
+                            loc1 = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                        }
+
+                        // 座標が両方とも解決できた場合のみ描画
+                        if (!loc0.HasValue || !loc1.HasValue) continue;
+
+                        Point3D point0 = loc0.Value;
+                        Point3D point1 = loc1.Value;
+
+                        // 要素縮小モードの場合は端点を縮小
+                        if (viewModel.IsShrinkElementMode)
+                        {
+                            (point0, point1) = GetShrinkElementPoints(point0, point1);
+                        }
+
+                        Point coordinate0 = viewModel.CanvasThreeDView.Transformation(point0);
+                        Point coordinate1 = viewModel.CanvasThreeDView.Transformation(point1);
+
+                        LineGeometry lineGeometry = new() { StartPoint = coordinate0, EndPoint = coordinate1 };
+                        viewModel.CanvasGeometry.PathGeoSelectedElements.AddGeometry(lineGeometry);
+                    }
                 }
             }
         }
@@ -1233,6 +1338,30 @@ namespace PileDesign.Views
             {
                 element.IsSelected = false;
             }
+
+            // 一般節点の選択解除
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (InputNode node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    node.IsSelected = false;
+                }
+            }
+
+            // 基礎梁節点・要素の選択解除
+            if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                {
+                    node.IsSelected = false;
+                }
+
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    beam.IsSelected = false;
+                }
+            }
+
             //UpdateCanvas3D();
             RequestUpdateCanvas3D();
             MatchDataGridSelectedItems();
@@ -1244,17 +1373,20 @@ namespace PileDesign.Views
             var viewModel = _mainWindowViewModel;
 
             ObservableCollection<PileLayoutDataItem> pileLayoutCollection = viewModel.CurrentInputModel.PileLayoutItems;
-            if (pileLayoutCollection.Count == 0) { return false; }
             double nearestDistance = double.MaxValue;
             bool hasSelected = false;
             int nearestNo = 9999;
-            PileLayoutDataItem nearestPileLayoutDataItem = pileLayoutCollection[0];
+            PileLayoutDataItem? nearestPileLayoutDataItem = null;
+            InputNode? nearestInputNode = null;
+            FoundationNode? nearestFoundationNode = null;
+            string nearestType = ""; // "Pile", "InputNode", or "FoundationNode"
 
             if (isAdd == false)
             {
                 ClearCanvasSelection();
             }
 
+            // 杭節点の距離をチェック
             int no = 0;
             foreach (PileLayoutDataItem pileLayout in pileLayoutCollection)
             {
@@ -1268,28 +1400,76 @@ namespace PileDesign.Views
                     nearestDistance = distance;
                     nearestPileLayoutDataItem = pileLayout;
                     nearestNo = no;
+                    nearestType = "Pile";
                 }
             }
 
-            // 節点が選択範囲内にある場合の処理
+            // 一般節点の距離をチェック
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (InputNode node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    if (!node.IsVisible) continue;
+
+                    Point3D loc = new(node.X, node.Y, node.Z);
+                    Point canvasCoordinate = viewModel.CanvasThreeDView.Transformation(loc);
+                    double distance = GetDistanceBetweenTwoNodes(clickPosition, canvasCoordinate);
+
+                    if (distance <= nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearestInputNode = node;
+                        nearestType = "InputNode";
+                    }
+                }
+            }
+
+            // 基礎梁節点の距離をチェック
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (FoundationNode node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                {
+                    Point3D loc = new(node.X, node.Y, node.Z);
+                    Point canvasCoordinate = viewModel.CanvasThreeDView.Transformation(loc);
+                    double distance = GetDistanceBetweenTwoNodes(clickPosition, canvasCoordinate);
+
+                    if (distance <= nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearestFoundationNode = node;
+                        nearestType = "FoundationNode";
+                    }
+                }
+            }
+
+            // 最も近い節点が選択範囲内にある場合の処理
             if (nearestDistance < SelectionTolerance)
             {
-                if (viewModel.IsElementAddMode)
-                {
-                    TextBoxElementNodeInput.Text += nearestNo.ToString() + ", ";
-                }
-                else
+                if (nearestType == "Pile" && nearestPileLayoutDataItem != null)
                 {
                     nearestPileLayoutDataItem.IsSelected = true;
+                    hasSelected = true;
+                }
+                else if (nearestType == "InputNode" && nearestInputNode != null)
+                {
+                    nearestInputNode.IsSelected = true;
+                    hasSelected = true;
+                }
+                else if (nearestType == "FoundationNode" && nearestFoundationNode != null)
+                {
+                    nearestFoundationNode.IsSelected = true;
                     hasSelected = true;
                 }
                 RequestUpdateCanvas3D(); // UpdateCanvas3D();
                 MatchDataGridSelectedItems();
             }
-
             else // 節点が選択範囲内にない場合の処理 >> 要素と節点の距離
             {
                 Element? nearestElement = null;
+                FoundationBeamElement? nearestBeam = null;
+                string nearestElementType = ""; // "Element" or "FoundationBeam"
+
+                // 旧形式の要素をチェック
                 foreach (Element element in viewModel.CurrentInputModel.Elements)
                 {
                     Point3D node0_3D = element.Nodes[0].Point3D;
@@ -1302,14 +1482,48 @@ namespace PileDesign.Views
                     {
                         nearestDistance = distance;
                         nearestElement = element;
+                        nearestElementType = "Element";
+                    }
+                }
+
+                // 一般梁要素をチェック
+                if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+                {
+                    var nodeDict = viewModel.CurrentInputModel.FoundationBeamInput.Nodes.ToDictionary(n => n.No, n => n);
+
+                    foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    {
+                        if (!nodeDict.TryGetValue(beam.NodeI_No, out var nodeI)) continue;
+                        if (!nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ)) continue;
+
+                        Point3D loc0 = new(nodeI.X, nodeI.Y, nodeI.Z);
+                        Point3D loc1 = new(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                        Point node0 = viewModel.CanvasThreeDView.Transformation(loc0);
+                        Point node1 = viewModel.CanvasThreeDView.Transformation(loc1);
+                        double distance = GetDistanceBetweenNodeAndLine(node0, node1, clickPosition);
+
+                        if (distance <= nearestDistance)
+                        {
+                            nearestDistance = distance;
+                            nearestBeam = beam;
+                            nearestElementType = "FoundationBeam";
+                        }
                     }
                 }
 
                 // 要素が選択範囲内にある場合の処理
                 if (nearestDistance < SelectionTolerance)
                 {
-                    nearestElement.IsSelected = true;
-                    hasSelected = true;
+                    if (nearestElementType == "Element" && nearestElement != null)
+                    {
+                        nearestElement.IsSelected = true;
+                        hasSelected = true;
+                    }
+                    else if (nearestElementType == "FoundationBeam" && nearestBeam != null)
+                    {
+                        nearestBeam.IsSelected = true;
+                        hasSelected = true;
+                    }
                     RequestUpdateCanvas3D(); // UpdateCanvas3D();
                 }
             }
@@ -1333,6 +1547,32 @@ namespace PileDesign.Views
                     DataGridPileLayout.SelectedItems.Add(pileLocation);
                     DataGridPileAxialForce.SelectedItems.Add(pileLocation);
                     DataGridIsFrontPile.SelectedItems.Add(pileLocation);
+                }
+            }
+
+            // 一般節点DataGridの選択を同期
+            if (DataGridInputNodes != null && viewModel.CurrentInputModel.InputNodes != null)
+            {
+                DataGridInputNodes.SelectedItems.Clear();
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    if (node.IsSelected)
+                    {
+                        DataGridInputNodes.SelectedItems.Add(node);
+                    }
+                }
+            }
+
+            // 一般梁要素DataGridの選択を同期
+            if (DataGridFoundationBeams != null && viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                DataGridFoundationBeams.SelectedItems.Clear();
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    if (beam.IsSelected)
+                    {
+                        DataGridFoundationBeams.SelectedItems.Add(beam);
+                    }
                 }
             }
 
@@ -1400,6 +1640,29 @@ namespace PileDesign.Views
                 {
                     element.IsSelected = false;
                 }
+
+                // 一般節点の選択状態をリセット
+                if (viewModel.CurrentInputModel.InputNodes != null)
+                {
+                    foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                    {
+                        node.IsSelected = false;
+                    }
+                }
+
+                // 基礎梁節点・要素の選択状態をリセット
+                if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+                {
+                    foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                    {
+                        node.IsSelected = false;
+                    }
+
+                    foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    {
+                        beam.IsSelected = false;
+                    }
+                }
             }
 
             // 選択範囲内のアイテムを選択状態にする
@@ -1414,6 +1677,41 @@ namespace PileDesign.Views
             foreach (var pileLocation in selectedPileLocations)
             {
                 pileLocation.IsSelected = true;
+            }
+
+            // 一般節点の選択
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                var selectedInputNodes = viewModel.CurrentInputModel.InputNodes
+                    .Where(node => node.IsVisible)
+                    .Where(node =>
+                    {
+                        Point3D loc = new(node.X, node.Y, node.Z);
+                        Point coordinate = viewModel.CanvasThreeDView.Transformation(loc);
+                        return x1 <= coordinate.X && coordinate.X < x2 && y1 <= coordinate.Y && coordinate.Y < y2;
+                    });
+
+                foreach (var node in selectedInputNodes)
+                {
+                    node.IsSelected = true;
+                }
+            }
+
+            // 基礎梁節点の選択
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                var selectedFoundationNodes = viewModel.CurrentInputModel.FoundationBeamInput.Nodes
+                    .Where(node =>
+                    {
+                        Point3D loc = new(node.X, node.Y, node.Z);
+                        Point coordinate = viewModel.CanvasThreeDView.Transformation(loc);
+                        return x1 <= coordinate.X && coordinate.X < x2 && y1 <= coordinate.Y && coordinate.Y < y2;
+                    });
+
+                foreach (var node in selectedFoundationNodes)
+                {
+                    node.IsSelected = true;
+                }
             }
 
             // 選択窓交差選択モード
@@ -1431,6 +1729,56 @@ namespace PileDesign.Views
                         element.IsSelected = true;
                     }
                 }
+
+                // 一般梁要素の交差選択
+                if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+                {
+                    var nodeDict = viewModel.CurrentInputModel.FoundationBeamInput.Nodes.ToDictionary(n => n.No, n => n);
+
+                    foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    {
+                        // 新方式: Type + Guid から座標を解決
+                        Point3D? locS = null;
+                        Point3D? locE = null;
+
+                        // NodeI の座標を解決
+                        if (beam.NodeI_Id != Guid.Empty)
+                        {
+                            var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                            if (coordsI.HasValue)
+                                locS = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                        }
+                        else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nodeI))
+                        {
+                            // 旧方式（後方互換性）
+                            locS = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
+                        }
+
+                        // NodeJ の座標を解決
+                        if (beam.NodeJ_Id != Guid.Empty)
+                        {
+                            var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                            if (coordsJ.HasValue)
+                                locE = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                        }
+                        else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ))
+                        {
+                            // 旧方式（後方互換性）
+                            locE = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                        }
+
+                        // 座標が両方とも解決できた場合のみ選択判定
+                        if (!locS.HasValue || !locE.HasValue) continue;
+
+                        Point coordinateS = viewModel.CanvasThreeDView.Transformation(locS.Value);
+                        Point coordinateE = viewModel.CanvasThreeDView.Transformation(locE.Value);
+
+                        if (IsLineIntersectingRectangle(coordinateS, coordinateE, x1, y1, x2, y2) || IsLineInsideRectangle(coordinateS, coordinateE, x1, y1, x2, y2))
+                        {
+                            beam.IsSelected = true;
+                        }
+                    }
+                }
             }
             else // 選択窓包絡選択モード
             {
@@ -1444,6 +1792,56 @@ namespace PileDesign.Views
                     if (IsLineInsideRectangle(coordinateS, coordinateE, x1, y1, x2, y2))
                     {
                         element.IsSelected = true;
+                    }
+                }
+
+                // 一般梁要素の包絡選択
+                if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+                {
+                    var nodeDict = viewModel.CurrentInputModel.FoundationBeamInput.Nodes.ToDictionary(n => n.No, n => n);
+
+                    foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    {
+                        // 新方式: Type + Guid から座標を解決
+                        Point3D? locS = null;
+                        Point3D? locE = null;
+
+                        // NodeI の座標を解決
+                        if (beam.NodeI_Id != Guid.Empty)
+                        {
+                            var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                            if (coordsI.HasValue)
+                                locS = new Point3D(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                        }
+                        else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nodeI))
+                        {
+                            // 旧方式（後方互換性）
+                            locS = new Point3D(nodeI.X, nodeI.Y, nodeI.Z);
+                        }
+
+                        // NodeJ の座標を解決
+                        if (beam.NodeJ_Id != Guid.Empty)
+                        {
+                            var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                            if (coordsJ.HasValue)
+                                locE = new Point3D(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                        }
+                        else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nodeJ))
+                        {
+                            // 旧方式（後方互換性）
+                            locE = new Point3D(nodeJ.X, nodeJ.Y, nodeJ.Z);
+                        }
+
+                        // 座標が両方とも解決できた場合のみ選択判定
+                        if (!locS.HasValue || !locE.HasValue) continue;
+
+                        Point coordinateS = viewModel.CanvasThreeDView.Transformation(locS.Value);
+                        Point coordinateE = viewModel.CanvasThreeDView.Transformation(locE.Value);
+
+                        if (IsLineInsideRectangle(coordinateS, coordinateE, x1, y1, x2, y2))
+                        {
+                            beam.IsSelected = true;
+                        }
                     }
                 }
             }

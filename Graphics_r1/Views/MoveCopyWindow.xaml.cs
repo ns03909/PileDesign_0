@@ -30,12 +30,21 @@ namespace PileDesign.Views
             public double DX { get; set; }
             public double DY { get; set; }
             public int RepetitionNumber { get; set; }
+            public bool IsInputNodesIncluded { get; set; }
+            public bool IsPileLayoutIncluded { get; set; }
         }
 
         public event EventHandler<MoveCopyEventArgs> MoveCopyCompleted;
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            // 一般節点と杭配置の両方が選択されていない場合のチェック
+            if (!viewModel.IsInputNodesIncluded && !viewModel.IsPileLayoutIncluded)
+            {
+                MessageBox.Show("転記量が提供されていません。", "確認", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             // DX/DY の検証
             if (viewModel.DX == 0 && viewModel.DY == 0)
             {
@@ -134,7 +143,9 @@ namespace PileDesign.Views
                 IsCopy = viewModel.IsCopySelected,
                 DX = viewModel.DX,
                 DY = viewModel.DY,
-                RepetitionNumber = viewModel.RepetitionNumber
+                RepetitionNumber = viewModel.RepetitionNumber,
+                IsInputNodesIncluded = viewModel.IsInputNodesIncluded,
+                IsPileLayoutIncluded = viewModel.IsPileLayoutIncluded
             };
 
             MoveCopyCompleted?.Invoke(this, args);

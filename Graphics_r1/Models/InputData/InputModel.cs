@@ -110,6 +110,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _foundationBeamInput, value);
         }
 
+        // 一般節点
+        private ObservableCollection<InputNode> _inputNodes;
+        public ObservableCollection<InputNode> InputNodes
+        {
+            get => _inputNodes;
+            set => SetProperty(ref _inputNodes, value);
+        }
+
         // クラス内フィールドに追加
         private bool _suppressSoilPileNotify;
 
@@ -609,6 +617,7 @@ namespace PileDesign.Models.InputData
             GroundsInput = [new GroundInput()];
             PileBodies = [new PileBodyInput()];
             PileLayoutItems = [];
+            InputNodes = [];
             EmbedmentInput = new EmbedmentInput();
             ElementDivision = new ElementDivision()
             {
@@ -619,6 +628,24 @@ namespace PileDesign.Models.InputData
             Elements = [];
             GridXItems = [];
             GridYItems = [];
+
+            // 基礎梁入力データの初期化（デフォルト材料・断面を作成）
+            FoundationBeamInput = new FoundationBeamInput();
+            FoundationBeamInput.Materials.Add(new BeamMaterial
+            {
+                No = 1,
+                Name = "C24",
+                YoungModulus = 2.5e7,
+                ShearModulus = 1.04e7,
+                PoissonRatio = 0.2
+            });
+            FoundationBeamInput.Sections.Add(new BeamSection
+            {
+                No = 1,
+                Name = "500x800",
+                Width = 0.5,
+                Height = 0.8
+            });
 
             // 初期コレクションにも購読を張る
             AttachElementDivisionHandlers();
@@ -1006,6 +1033,15 @@ namespace PileDesign.Models.InputData
                 var loaded = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
                 ?? throw new InvalidOperationException("ファイルの内容をデシリアライズできませんでした。");
 
+                // 旧データとの互換性: InputNodesがnullの場合は空のコレクションを作成
+                loaded.InputNodes ??= [];
+
+                // 旧データとの互換性: Element → FoundationBeamElement への自動変換
+                loaded.MigrateElementsToFoundationBeams();
+
+                // 旧データとの互換性: Materials/Sections の初期化
+                loaded.EnsureFoundationBeamDefaults();
+
                 // MainWindowViewModelをセット
                 loaded.SetMainWindowViewModel(mainWindowViewModel);
                 return loaded;
@@ -1024,6 +1060,15 @@ namespace PileDesign.Models.InputData
                     var loaded = JsonConvert.DeserializeObject<InputModel>(json, settings)
                     ?? throw new InvalidOperationException("Newtonsoft によるデシリアライズで失敗しました。");
 
+                    // 旧データとの互換性: InputNodesがnullの場合は空のコレクションを作成
+                    loaded.InputNodes ??= [];
+
+                    // 旧データとの互換性: Element → FoundationBeamElement への自動変換
+                    loaded.MigrateElementsToFoundationBeams();
+
+                    // 旧データとの互換性: Materials/Sections の初期化
+                    loaded.EnsureFoundationBeamDefaults();
+
                     // MainWindowViewModelをセット
                     loaded.SetMainWindowViewModel(mainWindowViewModel);
                     return loaded;
@@ -1034,6 +1079,138 @@ namespace PileDesign.Models.InputData
                     throw new InvalidOperationException("ファイル読み込みに失敗しました（System.Text.Json + Newtonsoft.Json 両方で失敗）。", ex2);
                 }
 
+            }
+        }
+
+        /// <summary>
+        /// FoundationBeamInputのデフォルト値を確保する
+        /// </summary>
+        private void EnsureFoundationBeamDefaults()
+        {
+            // FoundationBeamInputがnullの場合は作成
+            FoundationBeamInput ??= new FoundationBeamInput();
+
+            // Materialsが空の場合はデフォルトを追加
+            if (FoundationBeamInput.Materials == null || FoundationBeamInput.Materials.Count == 0)
+            {
+                FoundationBeamInput.Materials ??= [];
+                FoundationBeamInput.Materials.Add(new BeamMaterial
+                {
+                    No = 1,
+                    Name = "C24",
+                    YoungModulus = 2.5e7,
+                    ShearModulus = 1.04e7,
+                    PoissonRatio = 0.2
+                });
+            }
+
+            // Sectionsが空の場合はデフォルトを追加
+            if (FoundationBeamInput.Sections == null || FoundationBeamInput.Sections.Count == 0)
+            {
+                FoundationBeamInput.Sections ??= [];
+                FoundationBeamInput.Sections.Add(new BeamSection
+                {
+                    No = 1,
+                    Name = "500x800",
+                    Width = 0.5,
+                    Height = 0.8
+                });
+            }
+
+            // NodesとBeamsも初期化
+            FoundationBeamInput.Nodes ??= [];
+            FoundationBeamInput.Beams ??= [];
+        }
+
+        /// <summary>
+        /// 旧形式のElementデータをFoundationBeamInputに自動変換する
+        /// </summary>
+        private void MigrateElementsToFoundationBeams()
+        {
+            // 変換条件チェック: Elementsが存在し、FoundationBeamInputが空の場合のみ変換
+            if (Elements == null || Elements.Count == 0) return;
+            if (FoundationBeamInput == null) FoundationBeamInput = new FoundationBeamInput();
+            if (FoundationBeamInput.Nodes.Count > 0 || FoundationBeamInput.Beams.Count > 0) return;
+
+            try
+            {
+                var nodeDict = new Dictionary<string, FoundationNode>(); // 座標をキーにノードを管理
+                int nodeCounter = 1;
+
+                // Elementから節点と梁要素を変換
+                foreach (var element in Elements)
+                {
+                    if (element.Nodes == null || element.Nodes.Count < 2) continue;
+
+                    // 始点ノード変換
+                    var startNode = element.Nodes[0];
+                    string startKey = $"{startNode.X:F6},{startNode.Y:F6},{startNode.Z:F6}";
+                    if (!nodeDict.ContainsKey(startKey))
+                    {
+                        var newNode = new FoundationNode
+                        {
+                            No = nodeCounter++,
+                            X = startNode.X,
+                            Y = startNode.Y,
+                            Z = startNode.Z,
+                            Name = $"Node_{startNode.No}"
+                        };
+                        nodeDict[startKey] = newNode;
+                        FoundationBeamInput.Nodes.Add(newNode);
+                    }
+
+                    // 終点ノード変換
+                    var endNode = element.Nodes[1];
+                    string endKey = $"{endNode.X:F6},{endNode.Y:F6},{endNode.Z:F6}";
+                    if (!nodeDict.ContainsKey(endKey))
+                    {
+                        var newNode = new FoundationNode
+                        {
+                            No = nodeCounter++,
+                            X = endNode.X,
+                            Y = endNode.Y,
+                            Z = endNode.Z,
+                            Name = $"Node_{endNode.No}"
+                        };
+                        nodeDict[endKey] = newNode;
+                        FoundationBeamInput.Nodes.Add(newNode);
+                    }
+
+                    // 梁要素変換
+                    var beam = new FoundationBeamElement
+                    {
+                        No = FoundationBeamInput.Beams.Count + 1,
+                        NodeI_No = nodeDict[startKey].No,
+                        NodeJ_No = nodeDict[endKey].No,
+                        Width = 0.5,  // デフォルト値
+                        Height = 0.8, // デフォルト値
+                        SectionName = "Default"
+                    };
+                    FoundationBeamInput.Beams.Add(beam);
+                }
+
+                // 変換成功メッセージ
+                if (FoundationBeamInput.Nodes.Count > 0)
+                {
+                    System.Windows.MessageBox.Show(
+                        $"旧形式のデータを新しい形式に変換しました。\n" +
+                        $"節点: {FoundationBeamInput.Nodes.Count} 個\n" +
+                        $"梁要素: {FoundationBeamInput.Beams.Count} 個",
+                        "データ変換完了",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                }
+
+                // 変換後、Elementsをクリア（ただしコレクション自体は残す）
+                Elements.Clear();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    $"データ変換中にエラーが発生しました: {ex.Message}",
+                    "変換エラー",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
             }
         }
 
@@ -1368,6 +1545,61 @@ namespace PileDesign.Models.InputData
             }
             Scan(this, "InputModel", 0);
             return list;
+        }
+
+        /// <summary>
+        /// 節点参照（Type + Guid）から座標を解決します。
+        /// </summary>
+        /// <returns>座標が見つかった場合は (X, Y, Z)、見つからない場合は null</returns>
+        public (double X, double Y, double Z)? GetNodeCoordinates(NodeReferenceType type, Guid id)
+        {
+            switch (type)
+            {
+                case NodeReferenceType.GeneralNode:
+                    var node = InputNodes?.FirstOrDefault(n => n.UniqueId == id);
+                    return node != null ? (node.X, node.Y, node.Z) : null;
+
+                case NodeReferenceType.PileLayout:
+                    var pile = PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
+                    if (pile != null)
+                    {
+                        // 杭頭 + FoundationBeamDeltaZc の位置
+                        double z = pile.Z + pile.FoundationBeamDeltaZc;
+                        return (pile.X, pile.Y, z);
+                    }
+                    return null;
+
+                case NodeReferenceType.FoundationNode:
+                    var fnode = FoundationBeamInput?.Nodes.FirstOrDefault(n => n.Id == id);
+                    return fnode != null ? (fnode.X, fnode.Y, fnode.Z) : null;
+
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// 節点参照（Type + Guid）から表示用の文字列を生成します（例: "G:3", "P:5", "F:2"）。
+        /// </summary>
+        public string GetNodeReferenceDisplayString(NodeReferenceType type, Guid id)
+        {
+            switch (type)
+            {
+                case NodeReferenceType.GeneralNode:
+                    var node = InputNodes?.FirstOrDefault(n => n.UniqueId == id);
+                    return node != null ? $"G:{node.No}" : "G:?";
+
+                case NodeReferenceType.PileLayout:
+                    var pile = PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
+                    return pile != null ? $"P:{pile.PileNo}" : "P:?";
+
+                case NodeReferenceType.FoundationNode:
+                    var fnode = FoundationBeamInput?.Nodes.FirstOrDefault(n => n.Id == id);
+                    return fnode != null ? $"F:{fnode.No}" : "F:?";
+
+                default:
+                    return "?";
+            }
         }
 
         // 追加: Ground / PileBody の番号リストを更新するユーティリティ
