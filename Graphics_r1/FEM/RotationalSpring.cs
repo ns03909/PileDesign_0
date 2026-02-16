@@ -196,7 +196,7 @@ namespace PileDesign.FEM
         public bool TieUz { get; set; } = true;
         public bool TieRz { get; set; } = true;
         [System.Text.Json.Serialization.JsonIgnore]  // JSONから古い値が読み込まれないようにする
-        public double Kbig { get; set; } = 1e6;  // アーム変換後の条件数を改善するため1e6に低減
+        public double Kbig { get; set; } = 1e8;  // CapNode-PileNode間のペナルティ剛性
 
         public RotationalSpringMode Mode { get; set; } = RotationalSpringMode.CombinedXY;
         public RotationalDof Dof { get; set; } = RotationalDof.Rx;

@@ -12,7 +12,7 @@
         mc:Ignorable="d"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
         d:DataContext="{d:DesignInstance Type=local:PileSectionViewModel}"
-        Title="PileSectionWindow" Height="800" Width="1300" WindowState="Maximized"
+        Title="杭断面" Height="800" Width="1300" WindowState="Maximized"
         Closing="Window_Closing">
     <!--Loaded="PileSectionWindow_Loaded"-->
     <!---->

@@ -14,8 +14,5 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(UndoRedoStatusText));
         OnPropertyChanged(nameof(PileCountText));
         OnPropertyChanged(nameof(AnalysisStatusText));
-
-        // 画面の再描画など
-        UpdateViewCommand?.Execute(null);
     }
 }

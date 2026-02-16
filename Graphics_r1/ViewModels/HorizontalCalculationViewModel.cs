@@ -238,6 +238,10 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 基礎梁要素が存在するか（剛床連結の選択可否）
+        public bool HasFoundationBeamElements =>
+            InputModel.FoundationBeamInput?.Beams?.Count > 0;
+
         public AnalysisModelling AnalysisModelling { get; set; }
 
         // 液状化の考慮
@@ -2727,13 +2731,26 @@ namespace PileDesign.ViewModels
                         }
                     }
 
-                    // 変更: RotationalSpring は回転成分のみ設定（並進/その他を巨大値で固定しない）
-                    // 引数は (kx, ky, kz, kxx(Rx), kyy(Ry), kzz(Rz), isTan)
-                    const double KBig = 1e6; // アーム変換後の条件数を改善するため1e6に低減
-                    double kx = rxy.TieUx ? KBig : 0.0;
-                    double ky = rxy.TieUy ? KBig : 0.0;
-                    double kz = rxy.TieUz ? KBig : 0.0;
-                    double kRz = rxy.TieRz ? KBig : 0.0;
+                    // Ux, Uy, Uz, Rz の拘束方式を判定:
+                    // PileNode（NodeJ）が master-slave 設定済みの場合はペナルティ不要
+                    // （両端が同一DOFにマッピングされるため自動的に相殺するが、明示的にゼロにする）
+                    // master-slave 未設定の場合（基礎梁なし等）は従来のペナルティ剛性を使用
+                    bool useMasterSlave = pileHeadNode.MasterNodes?[0] != null;
+                    double kx, ky, kz, kRz;
+                    if (useMasterSlave)
+                    {
+                        // master-slave: 並進・Rz のペナルティ不要
+                        kx = 0.0; ky = 0.0; kz = 0.0; kRz = 0.0;
+                    }
+                    else
+                    {
+                        // ペナルティ方式: 十分大きい剛性で拘束
+                        const double KBig = 1e8;
+                        kx = rxy.TieUx ? KBig : 0.0;
+                        ky = rxy.TieUy ? KBig : 0.0;
+                        kz = rxy.TieUz ? KBig : 0.0;
+                        kRz = rxy.TieRz ? KBig : 0.0;
+                    }
                     // Rx/Ry は M–θ に基づき算出した kRx/kRy を用いる
                     rxy.SetKe(kx, ky, kz, kRx, kRy, kRz, isTan);
 

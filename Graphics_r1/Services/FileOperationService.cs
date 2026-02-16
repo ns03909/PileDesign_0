@@ -85,6 +85,7 @@ namespace PileDesign.Services
 
             // トップレベルのコレクション変換
             inputModel.PileLayoutItems = EnsureObservableCollection(inputModel.PileLayoutItems);
+            inputModel.InputNodes = EnsureObservableCollection(inputModel.InputNodes);
             inputModel.Elements = EnsureObservableCollection(inputModel.Elements);
             inputModel.GridXItems = EnsureObservableCollection(inputModel.GridXItems);
             inputModel.GridYItems = EnsureObservableCollection(inputModel.GridYItems);
@@ -123,6 +124,19 @@ namespace PileDesign.Services
                 {
                     pileBody.PileBodySegments = EnsureObservableCollection(pileBody.PileBodySegments);
                 }
+            }
+
+            // FoundationBeamInput のコレクション変換
+            if (inputModel.FoundationBeamInput != null)
+            {
+                inputModel.FoundationBeamInput.Materials =
+                    EnsureObservableCollection(inputModel.FoundationBeamInput.Materials);
+                inputModel.FoundationBeamInput.Sections =
+                    EnsureObservableCollection(inputModel.FoundationBeamInput.Sections);
+                inputModel.FoundationBeamInput.Nodes =
+                    EnsureObservableCollection(inputModel.FoundationBeamInput.Nodes);
+                inputModel.FoundationBeamInput.Beams =
+                    EnsureObservableCollection(inputModel.FoundationBeamInput.Beams);
             }
 
             // Null チェック・空コレクション初期化

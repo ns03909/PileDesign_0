@@ -32,7 +32,7 @@ namespace PileDesign.FEM
         private static readonly Boundary PileTipBoundary = new(false, false, true, false, false, false);
 
         // コンストラクタ
-        public  AnalysisModelling(InputModel inputModel)
+        public AnalysisModelling(InputModel inputModel)
         {
             _inputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
             Initialize();
@@ -310,7 +310,7 @@ namespace PileDesign.FEM
                         TieUy = true,
                         TieUz = true,
                         TieRz = true,
-                        Kbig = 1e6  // アーム変換後の条件数を改善するため1e6に低減
+                        Kbig = 1e8  // CapNode-PileNode間のペナルティ剛性（1e6では変位差が生じるため増加）
                     };
                     result.RotationalSpring = rxy;
                     prevPileNode = pileNode;
@@ -353,7 +353,7 @@ namespace PileDesign.FEM
         // 処理結果をメインコレクションにマージ
         private void MergePileResults(PileProcessingResult[] results)
         {
-            var mode = InputModel.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
+            //var mode = InputModel.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
 
             foreach (var result in results)
             {
@@ -443,7 +443,7 @@ namespace PileDesign.FEM
         // ConnectionNodeがRigidBodyのslaveとなるため、両モードで必要
         private void AddFoundationBeamNodes()
         {
-            _pileGuidToFemName = new Dictionary<Guid, string>();
+            _pileGuidToFemName = [];
 
             if (InputModel.FoundationBeamInput == null)
                 return;
@@ -489,7 +489,7 @@ namespace PileDesign.FEM
         }
 
         // Type+GuidからFEM節点名を生成
-        private string GetFemNodeName(NodeReferenceType type, Guid id)
+        private string? GetFemNodeName(NodeReferenceType type, Guid id)
         {
             switch (type)
             {
@@ -513,7 +513,7 @@ namespace PileDesign.FEM
             if (InputModel.FoundationBeamInput == null)
                 return;
 
-            var mode = InputModel.FoundationBeamInput.ConnectionMode;
+            //var mode = InputModel.FoundationBeamInput.ConnectionMode;
 
             // 梁要素が存在しない場合はスキップ
             if (InputModel.FoundationBeamInput.Beams == null || InputModel.FoundationBeamInput.Beams.Count == 0)
@@ -543,11 +543,11 @@ namespace PileDesign.FEM
         }
 
         // Type+Guid方式でFEM節点を検索（辞書＋座標ベースフォールバック付き）
-        private Node ResolveFemNode(NodeReferenceType type, Guid id, int fallbackNo)
+        private Node? ResolveFemNode(NodeReferenceType type, Guid id, int fallbackNo)
         {
             // 方法1a: 杭参照 → 構築済み辞書から直接引く（Guid不一致に強い）
             if (type == NodeReferenceType.PileLayout && id != Guid.Empty &&
-                _pileGuidToFemName != null && _pileGuidToFemName.TryGetValue(id, out string dictName))
+                _pileGuidToFemName != null && _pileGuidToFemName.TryGetValue(id, out var dictName))
             {
                 var node = Nodes.FirstOrDefault(n => n.Name == dictName);
                 if (node != null) return node;
@@ -596,7 +596,7 @@ namespace PileDesign.FEM
         }
 
         // 座標に最も近い FoundationNode-* / InputNode-* ノードを検索
-        private Node FindClosestFoundationNode(double x, double y, double z)
+        private Node? FindClosestFoundationNode(double x, double y, double z)
         {
             Node closest = null;
             double minDist = double.MaxValue;
@@ -635,7 +635,7 @@ namespace PileDesign.FEM
             if (type == NodeReferenceType.PileLayout && femNode != null &&
                 femNode.Name.StartsWith("FoundationNode-P"))
             {
-                if (int.TryParse(femNode.Name.Substring("FoundationNode-P".Length), out int pileNo))
+                if (int.TryParse(femNode.Name["FoundationNode-P".Length..], out int pileNo))
                     pileNos.Add(pileNo);
             }
         }
@@ -787,8 +787,28 @@ namespace PileDesign.FEM
                     // パターン1: RigidLinkビームで接続
                     // CapNodeの境界を自由に変更（RigidLinkビーム＋回転ばねで拘束される）
                     capNode.SetBoundary(new Boundary(false, false, false, false, false, false));
-                    var rigidBeam = new Beam($"RigidLink-{pile.No}", rigidLinkSec, capNode, connectionNode, 1.0, 1.0);
+                    var rigidBeam = new Beam($"RigidLink-{pile.No}", rigidLinkSec, connectionNode, capNode, 1.0, 1.0);
                     Beams.Add(rigidBeam);
+                    pile.Beams.Add(rigidBeam); // 可視フィルタ用に杭のBeamsにも追加
+
+                    // ★ PileNode-0 を capNode の master-slave として設定（Ux, Uy, Uz, Rz）
+                    // capNode が自由節点（パターン1）の場合のみ適用。
+                    // 同一座標のためアームベクトル=0、ペナルティ剛性不要で厳密な拘束を実現。
+                    // Rx, Ry は M-θ回転ばね（RotationalSpring）で接続するため free のまま。
+                    var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
+                    if (pileHeadNode != null)
+                    {
+                        // Ux, Uy, Uz, Rz = slave（固定）、Rx, Ry = free
+                        pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
+
+                        // capNode を master に設定
+                        pileHeadNode.SetMasterNode(0, capNode); // Ux
+                        pileHeadNode.SetMasterNode(1, capNode); // Uy
+                        pileHeadNode.SetMasterNode(2, capNode); // Uz
+                        pileHeadNode.SetMasterNode(5, capNode); // Rz
+                        // ArmVector = (0,0,0): 同一座標のためデフォルトのまま
+                        pileHeadNode.SetTransferMatrix();
+                    }
                 }
                 else
                 {

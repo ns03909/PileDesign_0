@@ -231,14 +231,14 @@ namespace PileDesign.Models.InputData
         }
 
         // 断面諸元（後方互換性のため残す）
-        private double _width = 0.5;  // デフォルト 0.5m
+        private double _width = 0.8;  // デフォルト 0.8m
         public double Width
         {
             get => _width;
             set => SetProperty(ref _width, value);
         }
 
-        private double _height = 0.8;  // デフォルト 0.8m
+        private double _height = 2.0;  // デフォルト 2.0m
         public double Height
         {
             get => _height;

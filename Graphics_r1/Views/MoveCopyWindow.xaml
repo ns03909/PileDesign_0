@@ -7,7 +7,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MoveCopyViewModel}"
-        Title="MoveCopyWindow" Height="200" Width="350"
+        Title="MoveCopyWindow" Height="200" Width="450"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
@@ -63,6 +63,9 @@
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
                 <Label Content="dY" Width="50" HorizontalContentAlignment="Right"/>
                 <TextBox Text="{Binding DY, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
+                       GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                <Label Content="dZ" Width="50" HorizontalContentAlignment="Right"/>
+                <TextBox Text="{Binding DZ, StringFormat={}{0:+0.00;-0.00;+0.00}}" Width="50" HorizontalContentAlignment="Right"
                        GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
 
                 <StackPanel Orientation="Horizontal" Visibility="{Binding IsCopySelected, 

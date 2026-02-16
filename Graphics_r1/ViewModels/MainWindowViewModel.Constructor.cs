@@ -45,7 +45,12 @@ namespace PileDesign.ViewModels
             }
         }
 
-        public AnaModel CurrentModel { get; set; }
+        private AnaModel _currentModel;
+        public AnaModel CurrentModel
+        {
+            get => _currentModel;
+            set => SetProperty(ref _currentModel, value);
+        }
 
         private Brush _statusMessageColor = Brushes.Black;
         public Brush StatusMessageColor
@@ -379,6 +384,8 @@ namespace PileDesign.ViewModels
                 {
                     UpdateDirectionOption();
                     AutoDetectLiquefactionState();
+                    OnPropertyChanged(nameof(IsCurrentNonLiquefactionAnalyzed));
+                    OnPropertyChanged(nameof(IsCurrentLiquefactionAnalyzed));
                 }
             }
         }
@@ -941,6 +948,15 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 液状化解析済みインジケータ用
+        public bool IsCurrentNonLiquefactionAnalyzed =>
+            CurrentModel?.AnalysisStepResults?.Any(r =>
+                r.LoadCase?.LoadName == SelectedLoadCaseName && !r.IsLiquefaction) == true;
+
+        public bool IsCurrentLiquefactionAnalyzed =>
+            CurrentModel?.AnalysisStepResults?.Any(r =>
+                r.LoadCase?.LoadName == SelectedLoadCaseName && r.IsLiquefaction) == true;
+
         // 剛床描画
         private bool _isRigidFloorVisible = true;
         public bool IsRigidFloorVisible
@@ -1169,7 +1185,7 @@ namespace PileDesign.ViewModels
         }
 
         // 一般梁要素形状描画
-        private bool _isBeamElementSectionVisible = false;
+        private bool _isBeamElementSectionVisible = true;
         public bool IsBeamElementSectionVisible
         {
             get => _isBeamElementSectionVisible;
@@ -1177,7 +1193,12 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isBeamElementSectionVisible, value))
                 {
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    // 梁要素形状をONにしたとき、梁要素表示もONにする
+                    if (value && !IsFoundationBeamVisible)
+                    {
+                        IsFoundationBeamVisible = true;
+                    }
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -1696,6 +1717,8 @@ namespace PileDesign.ViewModels
                 if (!SetProperty(ref _isVerticalAnalysisDone, value))
                     return;
 
+                OnPropertyChanged(nameof(HasAnyAnalysisResult));
+
                 const string settlementLabel = "沈下";
                 const string singlePileLabel = "単杭";
 
@@ -1747,6 +1770,8 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isGroupPileSettlementAnalysisDone, value))
                 {
+                    OnPropertyChanged(nameof(HasAnyAnalysisResult));
+
                     // "梁応力"の表示制御
                     const string settlementLabel = "沈下";
                     if (value)
@@ -1792,6 +1817,8 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isHorizontalAnalysisDone, value))
                 {
+                    OnPropertyChanged(nameof(HasAnyAnalysisResult));
+
                     // "梁応力"の表示制御
                     const string beamForceLabel = "梁応力";
                     const string nodeDisplacementLabel = "節点変位";
@@ -1813,6 +1840,11 @@ namespace PileDesign.ViewModels
                         AnalysisResultContentOption.Remove(nodeDisplacementLabel);
                         AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
                     }
+
+                    // 解析済みインジケータ更新
+                    OnPropertyChanged(nameof(CurrentModel));
+                    OnPropertyChanged(nameof(IsCurrentNonLiquefactionAnalyzed));
+                    OnPropertyChanged(nameof(IsCurrentLiquefactionAnalyzed));
 
                     // ステータスバー更新
                     OnPropertyChanged(nameof(AnalysisStatusText));
@@ -1850,6 +1882,14 @@ namespace PileDesign.ViewModels
         {
             get => _editDistanceThreshold;
             set => SetProperty(ref _editDistanceThreshold, value);
+        }
+
+        // 等分割数
+        private int _equalDivisionCount = 2;
+        public int EqualDivisionCount
+        {
+            get => _equalDivisionCount;
+            set => SetProperty(ref _equalDivisionCount, Math.Max(2, value));
         }
 
 

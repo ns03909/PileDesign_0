@@ -11,7 +11,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         d:DataContext="{d:DesignInstance Type=local:HorizontalCalculationViewModel}"
         mc:Ignorable="d"
-        Title="HorizontalCalculationWindow" Height="700" Width="1200"
+        Title="水平解析" Height="700" Width="1200"
         x:Name="LateralCalcWin">
     
     <Window.CommandBindings>
@@ -136,6 +136,7 @@
                              ToolTip="全杭を代表点に全6DOFで剛体連結"/>
                 <RadioButton Content="剛床連結" GroupName="ConnectionMode" VerticalAlignment="Center"
                              IsChecked="{Binding ConnectionMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=RigidFloor}"
+                             IsEnabled="{Binding HasFoundationBeamElements}"
                              ToolTip="Ux,Uy,Rz拘束、Uz,Rx,Ry自由。基礎梁が剛性を負担"/>
             </StackPanel>
 

@@ -10,7 +10,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         d:DataContext="{d:DesignInstance Type=local:GroundLayerViewModel}"
         mc:Ignorable="d"
-        Title="地盤入力" WindowState="Maximized"
+        Title="地盤" WindowState="Maximized"
         Closing="Window_Closing"
         xmlns:common="clr-namespace:PileDesign.Common"
         PreviewKeyDown="GroundWindow_PreviewKeyDown">

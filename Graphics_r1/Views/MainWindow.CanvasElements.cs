@@ -278,6 +278,9 @@ namespace PileDesign.Views
                 int nodeCount = 0;
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
+                    // 非アクティブ杭の接合節点・Rigid link線はスキップ
+                    if (!pile.IsVisible) continue;
+
                     // 各杭の接続用節点位置（杭頭Z + ΔZc）
                     double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
                     Point3D locConnecting = new(pile.X, pile.Y, connectingZ);
@@ -394,6 +397,52 @@ namespace PileDesign.Views
                     // 梁の中心点に要素番号を表示
                     Point midPoint = new((coord0.X + coord1.X) / 2, (coord0.Y + coord1.Y) / 2);
                     AddText3D(Brushes.DarkOrange, beam.No.ToString(), midPoint.X, midPoint.Y, "C", "C", 0);
+                }
+
+                // 要素座標系
+                if (viewModel.IsBeamLocalAxesVisible)
+                {
+                    double length = viewModel.LabelSize / 20.0;
+                    Point3D center = new((point0.X + point1.X) * 0.5, (point0.Y + point1.Y) * 0.5, (point0.Z + point1.Z) * 0.5);
+
+                    // 梁軸方向（局所X軸）
+                    Vector3D dir = point1 - point0;
+                    double dirLen = dir.Length;
+                    if (dirLen > 1e-9)
+                    {
+                        dir.Normalize();
+
+                        // 局所座標系（AddBeamSectionGeometry2D と同じロジック）
+                        Vector3D up = new(0, 0, 1);
+                        Vector3D localZ;
+                        if (Math.Abs(Vector3D.DotProduct(dir, up)) > 0.999)
+                            localZ = new Vector3D(0, 1, 0);
+                        else
+                        {
+                            localZ = up - Vector3D.DotProduct(up, dir) * dir;
+                            localZ.Normalize();
+                        }
+                        Vector3D localY = Vector3D.CrossProduct(localZ, dir);
+                        localY.Normalize();
+
+                        Point3D endX = new(center.X + dir.X * length, center.Y + dir.Y * length, center.Z + dir.Z * length);
+                        Point3D endY = new(center.X + localY.X * length, center.Y + localY.Y * length, center.Z + localY.Z * length);
+                        Point3D endZ = new(center.X + localZ.X * length, center.Y + localZ.Y * length, center.Z + localZ.Z * length);
+
+                        var axisPoints = new (Point3D start, Point3D end, Brush color, string name, PathGeometry pathGeometry)[]
+                        {
+                            (center, endX, Brushes.Red, "AxisX", viewModel.CanvasGeometry.PathGeoAxisX),
+                            (center, endY, Brushes.Green, "AxisY", viewModel.CanvasGeometry.PathGeoAxisY),
+                            (center, endZ, Brushes.Blue, "AxisZ", viewModel.CanvasGeometry.PathGeoAxisZ),
+                        };
+
+                        foreach (var (start3D, end3D, color, name, pathGeometry) in axisPoints)
+                        {
+                            Point start2D = viewModel.CanvasThreeDView.Transformation(start3D);
+                            Point end2D = viewModel.CanvasThreeDView.Transformation(end3D);
+                            AddAxisLine3D(start2D, end2D, color, name, pathGeometry);
+                        }
+                    }
                 }
             }
 

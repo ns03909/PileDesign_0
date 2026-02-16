@@ -17,7 +17,7 @@ namespace PileDesign.Services
         /// <param name="pileLayoutItems">杭配置アイテムのコレクション</param>
         /// <param name="deltaX">X方向の移動量</param>
         /// <param name="deltaY">Y方向の移動量</param>
-        public void MoveSelectedPiles(ObservableCollection<PileLayoutDataItem> pileLayoutItems, double deltaX, double deltaY)
+        public void MoveSelectedPiles(ObservableCollection<PileLayoutDataItem> pileLayoutItems, double deltaX, double deltaY, double deltaZ = 0)
         {
             if (pileLayoutItems == null)
                 throw new ArgumentNullException(nameof(pileLayoutItems));
@@ -28,6 +28,7 @@ namespace PileDesign.Services
                 {
                     pile.X += deltaX;
                     pile.Y += deltaY;
+                    pile.Z += deltaZ;
                     pile.IsSelected = false;
                 }
             }
@@ -46,6 +47,7 @@ namespace PileDesign.Services
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
             double deltaX,
             double deltaY,
+            double deltaZ,
             int repetitionNumber,
             Action<PileLayoutDataItem> viewModelSetter)
         {
@@ -67,7 +69,8 @@ namespace PileDesign.Services
                     var newItem = new PileLayoutDataItem
                     {
                         X = pile.X + deltaX * (i + 1),
-                        Y = pile.Y + deltaY * (i + 1)
+                        Y = pile.Y + deltaY * (i + 1),
+                        Z = pile.Z + deltaZ * (i + 1)
                     };
                     viewModelSetter(newItem);
                     newItems.Add(newItem);

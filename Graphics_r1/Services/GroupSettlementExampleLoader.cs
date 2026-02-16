@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Windows.Media.Media3D;
@@ -76,11 +77,11 @@ namespace PileDesign.Services
             // 載荷面標高を設定
             inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitude;
 
-            // 矩形荷重を設定
-            inputModel.PileGroupSettlement.RectLoads = [];
+            // 矩形荷重を設定（バッチ化）
+            var rectLoadList = new List<RectLoad>(data.RectLoads.Count);
             foreach (var rectLoadDto in data.RectLoads)
             {
-                inputModel.PileGroupSettlement.RectLoads.Add(new RectLoad
+                rectLoadList.Add(new RectLoad
                 {
                     X1 = rectLoadDto.X1,
                     X2 = rectLoadDto.X2,
@@ -89,12 +90,13 @@ namespace PileDesign.Services
                     QA = rectLoadDto.QA
                 });
             }
+            inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(rectLoadList);
 
-            // 沈下計算用地層を設定
-            inputModel.PileGroupSettlement.SettlementSoilLayers = [];
+            // 沈下計算用地層を設定（バッチ化）
+            var soilLayerList = new List<SettlementSoilLayer>(data.SettlementSoilLayers.Count);
             foreach (var layerDto in data.SettlementSoilLayers)
             {
-                inputModel.PileGroupSettlement.SettlementSoilLayers.Add(new SettlementSoilLayer
+                soilLayerList.Add(new SettlementSoilLayer
                 {
                     BottomAltitude = layerDto.BottomAltitude,
                     Ek = layerDto.Ek,
@@ -102,6 +104,7 @@ namespace PileDesign.Services
                     Thickness = layerDto.Thickness
                 });
             }
+            inputModel.PileGroupSettlement.SettlementSoilLayers = new ObservableCollection<SettlementSoilLayer>(soilLayerList);
 
             // 杭体情報（pileBodies）の反映
             if (data.PileBodies != null && data.PileBodies.Count > 0)
@@ -167,11 +170,15 @@ namespace PileDesign.Services
                     inputModel.PileBodies.Add(pileBody);
                 }
             }
+            else
+            {
+                inputModel.PileBodies.Clear();
+            }
 
-            // 杭位置を設定（ある場合）
+            // 杭位置を設定（ある場合、バッチ化）
             if (data.PileLayoutPositions != null && data.PileLayoutPositions.Count > 0)
             {
-                inputModel.PileLayoutItems = [];
+                var pileLayoutList = new List<PileLayoutDataItem>(data.PileLayoutPositions.Count);
                 foreach (var pos in data.PileLayoutPositions)
                 {
                     var item = new PileLayoutDataItem
@@ -180,56 +187,167 @@ namespace PileDesign.Services
                         Y = pos.Y
                     };
                     item.SetMainWindowViewModel(viewModel);
-                    inputModel.PileLayoutItems.Add(item);
+                    pileLayoutList.Add(item);
                 }
+                inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>(pileLayoutList);
+
+                // PileNo を早期設定（FoundationBeamInput の節点解決に必要）
+                for (int i = 0; i < inputModel.PileLayoutItems.Count; i++)
+                    inputModel.PileLayoutItems[i].PileNo = i + 1;
+            }
+            else
+            {
+                inputModel.PileLayoutItems = [];
             }
 
-            // 要素接続を設定（ある場合）
+            // 要素接続を設定（ある場合、バッチ化）
             if (data.ElementConnections != null && data.ElementConnections.Count > 0)
             {
-                inputModel.Elements = [];
+                var elemList = new List<Element>(data.ElementConnections.Count);
                 foreach (var conn in data.ElementConnections)
                 {
                     if (conn.Length >= 2 && conn[0] < inputModel.PileLayoutItems.Count && conn[1] < inputModel.PileLayoutItems.Count)
                     {
-                        inputModel.Elements.Add(new Element(
+                        elemList.Add(new Element(
                             "ダミー",
                             inputModel.PileLayoutItems[conn[0]],
                             inputModel.PileLayoutItems[conn[1]]));
                     }
                 }
+                inputModel.Elements = new ObservableCollection<Element>(elemList);
+            }
+            else
+            {
+                inputModel.Elements = new ObservableCollection<Element>();
             }
 
-            // グリッドを設定（ある場合）
+            // 一般節点をクリア
+            inputModel.InputNodes?.Clear();
+
+            // FoundationBeamInput 設定（基礎梁入力）
+            if (data.FoundationBeamInput != null)
+            {
+                inputModel.FoundationBeamInput ??= new FoundationBeamInput();
+
+                // 接続モード
+                inputModel.FoundationBeamInput.ConnectionMode = data.FoundationBeamInput.ConnectionMode switch
+                {
+                    "RigidBody" => FoundationBeamConnectionMode.RigidBody,
+                    "RigidFloor" => FoundationBeamConnectionMode.RigidFloor,
+                    _ => FoundationBeamConnectionMode.RigidBody
+                };
+
+                // 材料（バッチ化）
+                var matList = new List<BeamMaterial>(data.FoundationBeamInput.Materials.Count);
+                foreach (var matDto in data.FoundationBeamInput.Materials)
+                {
+                    matList.Add(new BeamMaterial
+                    {
+                        No = matDto.No,
+                        Name = matDto.Name,
+                        YoungModulus = matDto.YoungModulus,
+                        ShearModulus = matDto.ShearModulus,
+                        PoissonRatio = matDto.PoissonRatio
+                    });
+                }
+                inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>(matList);
+
+                // 断面（バッチ化）
+                var secList = new List<BeamSection>(data.FoundationBeamInput.Sections.Count);
+                foreach (var secDto in data.FoundationBeamInput.Sections)
+                {
+                    var section = new BeamSection
+                    {
+                        No = secDto.No,
+                        Name = secDto.Name,
+                        Width = secDto.Width,
+                        Height = secDto.Height
+                    };
+                    section.RecalculateProperties();
+                    secList.Add(section);
+                }
+                inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>(secList);
+
+                // 梁要素（バッチ化）
+                var beamList = new List<FoundationBeamElement>(data.FoundationBeamInput.Beams.Count);
+                foreach (var beamDto in data.FoundationBeamInput.Beams)
+                {
+                    var beam = new FoundationBeamElement
+                    {
+                        No = beamDto.No,
+                        MaterialNo = beamDto.MaterialNo,
+                        SectionNo = beamDto.SectionNo
+                    };
+
+                    // I端ノード参照を解決
+                    ResolveBeamNodeReference(beamDto.NodeI_Type, beamDto.NodeI_No,
+                        inputModel.PileLayoutItems,
+                        out var iType, out var iId);
+                    beam.NodeI_Type = iType;
+                    beam.NodeI_Id = iId;
+
+                    // J端ノード参照を解決
+                    ResolveBeamNodeReference(beamDto.NodeJ_Type, beamDto.NodeJ_No,
+                        inputModel.PileLayoutItems,
+                        out var jType, out var jId);
+                    beam.NodeJ_Type = jType;
+                    beam.NodeJ_Id = jId;
+
+                    beamList.Add(beam);
+                }
+                inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>(beamList);
+            }
+            else
+            {
+                // FoundationBeamInput がない場合はクリア
+                if (inputModel.FoundationBeamInput != null)
+                {
+                    inputModel.FoundationBeamInput.Materials.Clear();
+                    inputModel.FoundationBeamInput.Sections.Clear();
+                    inputModel.FoundationBeamInput.Beams.Clear();
+                }
+            }
+
+            // グリッドを設定（ある場合、バッチ化）
             if (data.GridXItems != null)
             {
-                inputModel.GridXItems.Clear();
+                var gridXList = new List<GridDataItem>(data.GridXItems.Count);
                 foreach (var gridDto in data.GridXItems)
                 {
-                    inputModel.GridXItems.Add(new GridDataItem
+                    gridXList.Add(new GridDataItem
                     {
                         Name = gridDto.Name,
                         Coord = gridDto.Coord,
                         Spacing = gridDto.Spacing
                     });
                 }
+                inputModel.GridXItems = new ObservableCollection<GridDataItem>(gridXList);
+            }
+            else
+            {
+                inputModel.GridXItems = new ObservableCollection<GridDataItem>();
             }
 
             if (data.GridYItems != null)
             {
-                inputModel.GridYItems.Clear();
+                var gridYList = new List<GridDataItem>(data.GridYItems.Count);
                 foreach (var gridDto in data.GridYItems)
                 {
-                    inputModel.GridYItems.Add(new GridDataItem
+                    gridYList.Add(new GridDataItem
                     {
                         Name = gridDto.Name,
                         Coord = gridDto.Coord,
                         Spacing = gridDto.Spacing
                     });
                 }
+                inputModel.GridYItems = new ObservableCollection<GridDataItem>(gridYList);
+            }
+            else
+            {
+                inputModel.GridYItems = new ObservableCollection<GridDataItem>();
             }
 
-            // 沈下解析オフセットを設定（ある場合）
+            // 沈下解析オフセットを設定（ある場合はJSONから、ない場合はデフォルト値）
             if (data.SettlementOffsets != null)
             {
                 viewModel.GroupPileSettlementXOffset = data.SettlementOffsets.XOffset;
@@ -237,10 +355,39 @@ namespace PileDesign.Services
                 viewModel.GroupPileSettlementXSpacing = data.SettlementOffsets.XSpacing;
                 viewModel.GroupPileSettlementYSpacing = data.SettlementOffsets.YSpacing;
             }
+            else
+            {
+                viewModel.GroupPileSettlementXOffset = 0.0;
+                viewModel.GroupPileSettlementYOffset = 0.0;
+                viewModel.GroupPileSettlementXSpacing = 1.0;
+                viewModel.GroupPileSettlementYSpacing = 1.0;
+            }
 
             // 根入れ部を無効化
             inputModel.EmbedmentInput.EmbedmentLayers.Clear();
             inputModel.ElementDivision.SoilEmbedment = null;
+        }
+
+        /// <summary>
+        /// 梁要素の節点参照（type + no）を NodeReferenceType + Guid に変換する
+        /// </summary>
+        private static void ResolveBeamNodeReference(
+            string typeStr, int nodeNo,
+            ObservableCollection<PileLayoutDataItem> piles,
+            out NodeReferenceType type, out Guid id)
+        {
+            switch (typeStr?.ToLowerInvariant())
+            {
+                case "pile":
+                    var pile = piles?.FirstOrDefault(p => p.PileNo == nodeNo);
+                    type = NodeReferenceType.PileLayout;
+                    id = pile?.UniqueId ?? Guid.Empty;
+                    return;
+                default:
+                    type = NodeReferenceType.PileLayout;
+                    id = Guid.Empty;
+                    return;
+            }
         }
 
         /// <summary>

@@ -114,6 +114,8 @@
     <None Remove="Icons\AxesVisible.svg" />
     <None Remove="Icons\AxialForceVeirification.png" />
     <None Remove="Icons\AxialForceVeirification.svg" />
+    <None Remove="Icons\BeamTwistStiffness0.png" />
+    <None Remove="Icons\BeamTwistStiffness0.svg" />
     <None Remove="Icons\BeamVisible.png" />
     <None Remove="Icons\BeamVisible.svg" />
     <None Remove="Icons\BoundaryCondition.svg" />
@@ -327,6 +329,8 @@
     <None Remove="Icons\SoilLayerVisible.svg" />
     <None Remove="Icons\SplitElementByNodes.png" />
     <None Remove="Icons\SplitElementByNodes.svg" />
+    <None Remove="Icons\SplitElementEqually.png" />
+    <None Remove="Icons\SplitElementEqually.svg" />
     <None Remove="Icons\Stop.svg" />
     <None Remove="Icons\SurroundingSoilVisible.png" />
     <None Remove="Icons\SurroundingSoilVisible.svg" />
@@ -671,6 +675,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\AxialForceVeirification.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamTwistStiffness0.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamTwistStiffness0.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BeamVisible.png">
@@ -1310,6 +1320,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SplitElementByNodes.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SplitElementEqually.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SplitElementEqually.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Stop.svg">

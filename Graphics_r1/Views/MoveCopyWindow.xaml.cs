@@ -29,6 +29,7 @@ namespace PileDesign.Views
             public bool IsCopy { get; set; }
             public double DX { get; set; }
             public double DY { get; set; }
+            public double DZ { get; set; }
             public int RepetitionNumber { get; set; }
             public bool IsInputNodesIncluded { get; set; }
             public bool IsPileLayoutIncluded { get; set; }
@@ -45,10 +46,10 @@ namespace PileDesign.Views
                 return;
             }
 
-            // DX/DY の検証
-            if (viewModel.DX == 0 && viewModel.DY == 0)
+            // DX/DY/DZ の検証
+            if (viewModel.DX == 0 && viewModel.DY == 0 && viewModel.DZ == 0)
             {
-                MessageBox.Show("DXとDYの両方が0です。値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("DX, DY, DZのすべてが0です。値を入力してください。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
@@ -143,6 +144,7 @@ namespace PileDesign.Views
                 IsCopy = viewModel.IsCopySelected,
                 DX = viewModel.DX,
                 DY = viewModel.DY,
+                DZ = viewModel.DZ,
                 RepetitionNumber = viewModel.RepetitionNumber,
                 IsInputNodesIncluded = viewModel.IsInputNodesIncluded,
                 IsPileLayoutIncluded = viewModel.IsPileLayoutIncluded

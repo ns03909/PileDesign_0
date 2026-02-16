@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Windows.Media.Media3D;
@@ -209,8 +210,8 @@ namespace PileDesign.Services
                 }
             }
 
-            // PileLayoutItems 設定
-            inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>();
+            // PileLayoutItems 設定（バッチ化: List に構築してから一括代入）
+            var pileLayoutList = new List<PileLayoutDataItem>(data.PileLayoutItems.Count);
             foreach (var layoutDto in data.PileLayoutItems)
             {
                 var item = new PileLayoutDataItem
@@ -233,42 +234,154 @@ namespace PileDesign.Services
                         ? new ObservableCollection<double>(layoutDto.AxialForceLevel2s)
                         : new ObservableCollection<double>([0.0, 0.0, 0.0, 0.0])
                 };
+                if (layoutDto.DeltaZc.HasValue)
+                    item.FoundationBeamDeltaZc = layoutDto.DeltaZc.Value;
                 item.SetMainWindowViewModel(viewModel);
-                inputModel.PileLayoutItems.Add(item);
+                pileLayoutList.Add(item);
             }
+            inputModel.PileLayoutItems = new ObservableCollection<PileLayoutDataItem>(pileLayoutList);
 
-            // GridXItems 設定
-            inputModel.GridXItems.Clear();
+            // InputNodes 設定（一般節点、バッチ化）
+            var inputNodesList = new List<InputNode>(data.InputNodes.Count);
+            foreach (var nodeDto in data.InputNodes)
+            {
+                inputNodesList.Add(new InputNode
+                {
+                    No = nodeDto.No,
+                    Type = NodeType.General,
+                    X = nodeDto.X,
+                    Y = nodeDto.Y,
+                    Z = nodeDto.Z
+                });
+            }
+            inputModel.InputNodes = new ObservableCollection<InputNode>(inputNodesList);
+
+            // GridXItems 設定（バッチ化）
+            var gridXList = new List<GridDataItem>(data.GridXItems.Count);
             foreach (var gridDto in data.GridXItems)
             {
-                inputModel.GridXItems.Add(new GridDataItem
+                gridXList.Add(new GridDataItem
                 {
                     Name = gridDto.Name,
                     Coord = gridDto.Coord,
                     Spacing = gridDto.Spacing
                 });
             }
+            inputModel.GridXItems = new ObservableCollection<GridDataItem>(gridXList);
 
-            // GridYItems 設定
-            inputModel.GridYItems.Clear();
+            // GridYItems 設定（バッチ化）
+            var gridYList = new List<GridDataItem>(data.GridYItems.Count);
             foreach (var gridDto in data.GridYItems)
             {
-                inputModel.GridYItems.Add(new GridDataItem
+                gridYList.Add(new GridDataItem
                 {
                     Name = gridDto.Name,
                     Coord = gridDto.Coord,
                     Spacing = gridDto.Spacing
                 });
             }
+            inputModel.GridYItems = new ObservableCollection<GridDataItem>(gridYList);
 
-            // Elements クリア
-            if (inputModel.Elements != null)
+            // Elements 設定（一般梁要素、バッチ化）
+            var elementsList = new List<Element>(data.Elements.Count);
+            foreach (var elemDto in data.Elements)
             {
-                inputModel.Elements.Clear();
+                var element = new Element
+                {
+                    No = elemDto.No,
+                    ElementType = elemDto.ElementType
+                };
+                foreach (var nodeRef in elemDto.Nodes)
+                {
+                    var resolved = ResolveNodeReference(nodeRef, inputModel.PileLayoutItems, inputModel.InputNodes);
+                    if (resolved != null) element.Nodes.Add(resolved);
+                }
+                elementsList.Add(element);
+            }
+            inputModel.Elements = new ObservableCollection<Element>(elementsList);
+
+            // FoundationBeamInput 設定（基礎梁入力）
+            if (data.FoundationBeamInput != null)
+            {
+                inputModel.FoundationBeamInput ??= new FoundationBeamInput();
+
+                // 接続モード
+                inputModel.FoundationBeamInput.ConnectionMode = data.FoundationBeamInput.ConnectionMode switch
+                {
+                    "RigidBody" => FoundationBeamConnectionMode.RigidBody,
+                    "RigidFloor" => FoundationBeamConnectionMode.RigidFloor,
+                    _ => FoundationBeamConnectionMode.RigidBody
+                };
+
+                // 材料（バッチ化）
+                var matList = new List<BeamMaterial>(data.FoundationBeamInput.Materials.Count);
+                foreach (var matDto in data.FoundationBeamInput.Materials)
+                {
+                    matList.Add(new BeamMaterial
+                    {
+                        No = matDto.No,
+                        Name = matDto.Name,
+                        YoungModulus = matDto.YoungModulus,
+                        ShearModulus = matDto.ShearModulus,
+                        PoissonRatio = matDto.PoissonRatio
+                    });
+                }
+                inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>(matList);
+
+                // 断面（バッチ化）
+                var secList = new List<BeamSection>(data.FoundationBeamInput.Sections.Count);
+                foreach (var secDto in data.FoundationBeamInput.Sections)
+                {
+                    var section = new BeamSection
+                    {
+                        No = secDto.No,
+                        Name = secDto.Name,
+                        Width = secDto.Width,
+                        Height = secDto.Height
+                    };
+                    section.RecalculateProperties();
+                    secList.Add(section);
+                }
+                inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>(secList);
+
+                // 梁要素（バッチ化）
+                var beamList = new List<FoundationBeamElement>(data.FoundationBeamInput.Beams.Count);
+                foreach (var beamDto in data.FoundationBeamInput.Beams)
+                {
+                    var beam = new FoundationBeamElement
+                    {
+                        No = beamDto.No,
+                        MaterialNo = beamDto.MaterialNo,
+                        SectionNo = beamDto.SectionNo
+                    };
+
+                    // I端ノード参照を解決
+                    ResolveBeamNodeReference(beamDto.NodeI_Type, beamDto.NodeI_No,
+                        inputModel.PileLayoutItems, inputModel.InputNodes,
+                        out var iType, out var iId);
+                    beam.NodeI_Type = iType;
+                    beam.NodeI_Id = iId;
+
+                    // J端ノード参照を解決
+                    ResolveBeamNodeReference(beamDto.NodeJ_Type, beamDto.NodeJ_No,
+                        inputModel.PileLayoutItems, inputModel.InputNodes,
+                        out var jType, out var jId);
+                    beam.NodeJ_Type = jType;
+                    beam.NodeJ_Id = jId;
+
+                    beamList.Add(beam);
+                }
+                inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>(beamList);
             }
             else
             {
-                inputModel.Elements = new ObservableCollection<Element>();
+                // FoundationBeamInput がない場合はクリア
+                if (inputModel.FoundationBeamInput != null)
+                {
+                    inputModel.FoundationBeamInput.Materials.Clear();
+                    inputModel.FoundationBeamInput.Sections.Clear();
+                    inputModel.FoundationBeamInput.Beams.Clear();
+                }
             }
 
             // PileGroupSettlement クリア（解析結果を含む）
@@ -286,6 +399,51 @@ namespace PileDesign.Services
             if (data.Embedment == null)
             {
                 inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+                inputModel.ElementDivision.SoilEmbedment = null;
+            }
+        }
+
+        /// <summary>
+        /// DTO の節点参照を実際の InputNode/PileLayoutDataItem インスタンスに解決する
+        /// </summary>
+        private static InputNode? ResolveNodeReference(
+            ElementNodeRefDto nodeRef,
+            ObservableCollection<PileLayoutDataItem> piles,
+            ObservableCollection<InputNode> nodes)
+        {
+            return nodeRef.NodeType?.ToLowerInvariant() switch
+            {
+                "pile" => piles?.FirstOrDefault(p => p.PileNo == nodeRef.NodeNo),
+                "general" => nodes?.FirstOrDefault(n => n.No == nodeRef.NodeNo),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// 梁要素の節点参照（type + no）を NodeReferenceType + Guid に変換する
+        /// </summary>
+        private static void ResolveBeamNodeReference(
+            string typeStr, int nodeNo,
+            ObservableCollection<PileLayoutDataItem> piles,
+            ObservableCollection<InputNode> nodes,
+            out NodeReferenceType type, out Guid id)
+        {
+            switch (typeStr?.ToLowerInvariant())
+            {
+                case "pile":
+                    var pile = piles?.FirstOrDefault(p => p.PileNo == nodeNo);
+                    type = NodeReferenceType.PileLayout;
+                    id = pile?.UniqueId ?? Guid.Empty;
+                    return;
+                case "general":
+                    var node = nodes?.FirstOrDefault(n => n.No == nodeNo);
+                    type = NodeReferenceType.GeneralNode;
+                    id = node?.UniqueId ?? Guid.Empty;
+                    return;
+                default:
+                    type = NodeReferenceType.FoundationNode;
+                    id = Guid.Empty;
+                    return;
             }
         }
 

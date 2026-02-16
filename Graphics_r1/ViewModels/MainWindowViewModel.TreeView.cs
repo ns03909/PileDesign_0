@@ -2,6 +2,7 @@
 using PileDesign.Models.InputData;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Media;
 using static PileDesign.Services.ModifyString;
@@ -30,13 +31,17 @@ namespace PileDesign.ViewModels
                 CTreeViewData.Clear();
 
                 UpdateTreeViewFundamental();
+                UpdateTreeViewGridLines();
                 UpdateTreeViewLoadCases();
                 UpdateTreeGroundLayers();
                 UpdateTreePileBodies();
                 UpdateTreeViewPileLocaiton();
+                UpdateTreeViewInputNodes();
+                UpdateTreeViewFoundationBeams();
                 UpdateTreeViewEmbedment();
                 UpdateTreeViewSoilPiles();
                 UpdateTreeViewSoilEmbedment();
+                UpdateTreeViewPileGroupSettlement();
             }
             // 展開状態を復元
             SetExpandedNodes(TreeViewControl, expandedNodes);
@@ -384,6 +389,216 @@ namespace PileDesign.ViewModels
 
                 CTreeViewData.Add(dataSoilEmbedment);
             }
+        }
+
+        // 通り心
+        private void UpdateTreeViewGridLines()
+        {
+            var gridX = CurrentInputModel.GridXItems;
+            var gridY = CurrentInputModel.GridYItems;
+
+            int xCount = gridX?.Count ?? 0;
+            int yCount = gridY?.Count ?? 0;
+
+            if (xCount == 0 && yCount == 0)
+                return;
+
+            CTreeViewData dataGridLines = new()
+            {
+                Name = $"通り心（X:{xCount}, Y:{yCount}）",
+                Children = []
+            };
+
+            CTreeViewData dataGridX = new()
+            {
+                Name = $"X方向（{xCount}）",
+                Children = []
+            };
+            if (gridX != null)
+            {
+                foreach (var item in gridX)
+                {
+                    dataGridX.Children.Add(new CTreeViewData
+                    {
+                        Name = $"<{item.No}> {item.Name}: {item.Coord:N3}m"
+                    });
+                }
+            }
+            dataGridLines.Children.Add(dataGridX);
+
+            CTreeViewData dataGridY = new()
+            {
+                Name = $"Y方向（{yCount}）",
+                Children = []
+            };
+            if (gridY != null)
+            {
+                foreach (var item in gridY)
+                {
+                    dataGridY.Children.Add(new CTreeViewData
+                    {
+                        Name = $"<{item.No}> {item.Name}: {item.Coord:N3}m"
+                    });
+                }
+            }
+            dataGridLines.Children.Add(dataGridY);
+
+            CTreeViewData.Add(dataGridLines);
+        }
+
+        // 一般節点
+        private void UpdateTreeViewInputNodes()
+        {
+            var nodes = CurrentInputModel.InputNodes;
+            if (nodes == null || nodes.Count == 0)
+                return;
+
+            CTreeViewData dataInputNodes = new()
+            {
+                Name = $"一般節点（{nodes.Count}）",
+                Children = []
+            };
+
+            int i = 0;
+            foreach (var node in nodes)
+            {
+                i++;
+                string typeStr = node.Type == NodeType.Pile ? "杭" : "一般";
+                dataInputNodes.Children.Add(new CTreeViewData
+                {
+                    Name = $"<{i}> No:{node.No} ({typeStr}) X:{node.X:N3}, Y:{node.Y:N3}, Z:{node.Z:N3}"
+                });
+            }
+
+            CTreeViewData.Add(dataInputNodes);
+        }
+
+        // 一般梁要素
+        private void UpdateTreeViewFoundationBeams()
+        {
+            var fbInput = CurrentInputModel.FoundationBeamInput;
+            if (fbInput == null)
+                return;
+
+            int matCount = fbInput.Materials?.Count ?? 0;
+            int secCount = fbInput.Sections?.Count ?? 0;
+            int beamCount = fbInput.Beams?.Count ?? 0;
+
+            if (matCount == 0 && secCount == 0 && beamCount == 0)
+                return;
+
+            string modeStr = fbInput.ConnectionMode == FoundationBeamConnectionMode.RigidBody
+                ? "剛体" : "剛床";
+
+            CTreeViewData dataFB = new()
+            {
+                Name = $"一般梁要素（接続:{modeStr}, 材料:{matCount}, 断面:{secCount}, 梁:{beamCount}）",
+                Children = []
+            };
+
+            string modeDetail = fbInput.ConnectionMode == FoundationBeamConnectionMode.RigidBody
+                ? "剛体連結" : "剛床連結";
+            dataFB.Children.Add(new CTreeViewData
+            {
+                Name = $"接続モード: {modeDetail}"
+            });
+
+            if (matCount > 0)
+            {
+                CTreeViewData dataMaterials = new()
+                {
+                    Name = $"材料（{matCount}）",
+                    Children = []
+                };
+                foreach (var mat in fbInput.Materials)
+                {
+                    dataMaterials.Children.Add(new CTreeViewData
+                    {
+                        Name = $"<{mat.No}> {mat.Name}: E={mat.YoungModulus:E2} kN/m²"
+                    });
+                }
+                dataFB.Children.Add(dataMaterials);
+            }
+
+            if (secCount > 0)
+            {
+                CTreeViewData dataSections = new()
+                {
+                    Name = $"断面（{secCount}）",
+                    Children = []
+                };
+                foreach (var sec in fbInput.Sections)
+                {
+                    dataSections.Children.Add(new CTreeViewData
+                    {
+                        Name = $"<{sec.No}> {sec.Name}: {sec.Width:N3}m×{sec.Height:N3}m"
+                    });
+                }
+                dataFB.Children.Add(dataSections);
+            }
+
+            if (beamCount > 0)
+            {
+                CTreeViewData dataBeams = new()
+                {
+                    Name = $"梁要素（{beamCount}）",
+                    Children = []
+                };
+                foreach (var beam in fbInput.Beams)
+                {
+                    string nodeIStr = CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeI_Type, beam.NodeI_Id);
+                    string nodeJStr = CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeJ_Type, beam.NodeJ_Id);
+                    dataBeams.Children.Add(new CTreeViewData
+                    {
+                        Name = $"<{beam.No}> 材料:{beam.MaterialNo}, 断面:{beam.SectionNo}, {nodeIStr}→{nodeJStr}"
+                    });
+                }
+                dataFB.Children.Add(dataBeams);
+            }
+
+            CTreeViewData.Add(dataFB);
+        }
+
+        // 群杭沈下
+        private void UpdateTreeViewPileGroupSettlement()
+        {
+            var pgs = CurrentInputModel.PileGroupSettlement;
+            if (pgs == null)
+                return;
+
+            int rectCount = pgs.RectLoads?.Count ?? 0;
+            int soilLayerCount = pgs.SettlementSoilLayers?.Count ?? 0;
+
+            if (pgs.LoadingType == "なし" && rectCount == 0 && soilLayerCount == 0)
+                return;
+
+            CTreeViewData dataPGS = new()
+            {
+                Name = "群杭沈下",
+                Children = []
+            };
+
+            dataPGS.Children.Add(new CTreeViewData
+            {
+                Name = $"荷重タイプ: {pgs.LoadingType ?? "未設定"}"
+            });
+
+            dataPGS.Children.Add(new CTreeViewData
+            {
+                Name = $"載荷面標高: {pgs.LoadingPlaneAltitude:N3}m"
+            });
+
+            dataPGS.Children.Add(new CTreeViewData
+            {
+                Name = $"矩形荷重（{rectCount}）"
+            });
+
+            dataPGS.Children.Add(new CTreeViewData
+            {
+                Name = $"沈下地盤層（{soilLayerCount}）"
+            });
+
+            CTreeViewData.Add(dataPGS);
         }
 
         // 展開状態を取得するメソッド

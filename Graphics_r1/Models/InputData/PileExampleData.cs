@@ -32,11 +32,20 @@ namespace PileDesign.Models.InputData
         [JsonPropertyName("pileLayoutItems")]
         public List<PileLayoutItemDto> PileLayoutItems { get; set; } = [];
 
+        [JsonPropertyName("inputNodes")]
+        public List<InputNodeDto> InputNodes { get; set; } = [];
+
+        [JsonPropertyName("elements")]
+        public List<ElementDto> Elements { get; set; } = [];
+
         [JsonPropertyName("gridXItems")]
         public List<GridItemDto> GridXItems { get; set; } = [];
 
         [JsonPropertyName("gridYItems")]
         public List<GridItemDto> GridYItems { get; set; } = [];
+
+        [JsonPropertyName("foundationBeamInput")]
+        public FoundationBeamInputDto? FoundationBeamInput { get; set; }
     }
 
     /// <summary>
@@ -197,6 +206,9 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("axialForceLevel2s")]
         public double[] AxialForceLevel2s { get; set; } = [];
+
+        [JsonPropertyName("deltaZc")]
+        public double? DeltaZc { get; set; }
     }
 
     /// <summary>
@@ -257,5 +269,134 @@ namespace PileDesign.Models.InputData
 
         [JsonPropertyName("y2")]
         public double Y2 { get; set; }
+    }
+
+    /// <summary>
+    /// 一般節点DTO
+    /// </summary>
+    public class InputNodeDto
+    {
+        [JsonPropertyName("no")]
+        public int No { get; set; }
+
+        [JsonPropertyName("x")]
+        public double X { get; set; }
+
+        [JsonPropertyName("y")]
+        public double Y { get; set; }
+
+        [JsonPropertyName("z")]
+        public double Z { get; set; }
+    }
+
+    /// <summary>
+    /// 要素の節点参照DTO
+    /// </summary>
+    public class ElementNodeRefDto
+    {
+        [JsonPropertyName("nodeType")]
+        public string NodeType { get; set; } = "pile";  // "pile" or "general"
+
+        [JsonPropertyName("nodeNo")]
+        public int NodeNo { get; set; }
+    }
+
+    /// <summary>
+    /// 梁要素DTO
+    /// </summary>
+    public class ElementDto
+    {
+        [JsonPropertyName("no")]
+        public int No { get; set; }
+
+        [JsonPropertyName("elementType")]
+        public string ElementType { get; set; } = "ダミー";
+
+        [JsonPropertyName("nodes")]
+        public List<ElementNodeRefDto> Nodes { get; set; } = [];
+    }
+
+    /// <summary>
+    /// 基礎梁入力DTO
+    /// </summary>
+    public class FoundationBeamInputDto
+    {
+        [JsonPropertyName("connectionMode")]
+        public string ConnectionMode { get; set; } = "RigidFloor";
+
+        [JsonPropertyName("materials")]
+        public List<BeamMaterialDto> Materials { get; set; } = [];
+
+        [JsonPropertyName("sections")]
+        public List<BeamSectionDto> Sections { get; set; } = [];
+
+        [JsonPropertyName("beams")]
+        public List<FoundationBeamElementDto> Beams { get; set; } = [];
+    }
+
+    /// <summary>
+    /// 梁材料DTO
+    /// </summary>
+    public class BeamMaterialDto
+    {
+        [JsonPropertyName("no")]
+        public int No { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
+
+        [JsonPropertyName("youngModulus")]
+        public double YoungModulus { get; set; }
+
+        [JsonPropertyName("shearModulus")]
+        public double ShearModulus { get; set; }
+
+        [JsonPropertyName("poissonRatio")]
+        public double PoissonRatio { get; set; }
+    }
+
+    /// <summary>
+    /// 梁断面DTO
+    /// </summary>
+    public class BeamSectionDto
+    {
+        [JsonPropertyName("no")]
+        public int No { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
+
+        [JsonPropertyName("width")]
+        public double Width { get; set; }
+
+        [JsonPropertyName("height")]
+        public double Height { get; set; }
+    }
+
+    /// <summary>
+    /// 基礎梁要素DTO
+    /// </summary>
+    public class FoundationBeamElementDto
+    {
+        [JsonPropertyName("no")]
+        public int No { get; set; }
+
+        [JsonPropertyName("materialNo")]
+        public int MaterialNo { get; set; } = 1;
+
+        [JsonPropertyName("sectionNo")]
+        public int SectionNo { get; set; } = 1;
+
+        [JsonPropertyName("nodeI_type")]
+        public string NodeI_Type { get; set; } = "pile";
+
+        [JsonPropertyName("nodeI_no")]
+        public int NodeI_No { get; set; }
+
+        [JsonPropertyName("nodeJ_type")]
+        public string NodeJ_Type { get; set; } = "pile";
+
+        [JsonPropertyName("nodeJ_no")]
+        public int NodeJ_No { get; set; }
     }
 }

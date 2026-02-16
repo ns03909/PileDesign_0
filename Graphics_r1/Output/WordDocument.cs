@@ -258,6 +258,7 @@ namespace PileDesign.Output
             AddLineBreak(body);
 
             AddHeader1(body, "検討方針", 1);
+            AddDesignApproachSection(body, inputModel);
             AddLineBreak(body);
 
 
@@ -346,8 +347,11 @@ namespace PileDesign.Output
                     AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
                     AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
 
-                    AddPileForceSummaryTable(mainPart, body);
-                    AddNMinT(mainPart, body);
+                    if (mainWindowViewModel?.IsHorizontalAnalysisDone == true)
+                    {
+                        AddPileForceSummaryTable(mainPart, body);
+                        AddNMinT(mainPart, body);
+                    }
                 }
 
                 // 基礎部材の強度と変形性能
@@ -1610,6 +1614,217 @@ namespace PileDesign.Output
                     150, 150);
                 AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力-変位関係", "図");
             }
+        }
+
+        // 検討方針: 接続モード説明と一般梁要素情報
+        private void AddDesignApproachSection(Body body, InputModel inputModel)
+        {
+            var fbInput = inputModel.FoundationBeamInput;
+            var mode = fbInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
+
+            // 接続モードの説明
+            AddHeader2(body, "杭頭接続仮定");
+
+            if (mode == FoundationBeamConnectionMode.RigidBody)
+            {
+                AddInlineMathParagraph(body, ["杭頭の接続は剛体連結とする。"]);
+                AddInlineMathParagraph(body, ["剛体連結では、すべての杭頭節点を代表点（荷重作用点）に対して" +
+                    "全6自由度（$U_x, U_y, U_z, R_x, R_y, R_z$）で剛体拘束する。"]);
+                AddInlineMathParagraph(body, ["フーチング等の基礎構造が十分な剛性を有し、" +
+                    "基礎底面が一体として変形すると見なせる場合に適用する。"]);
+
+                // 拘束自由度の表
+                AddConnectionModeTable(body, isRigidBody: true);
+            }
+            else
+            {
+                AddInlineMathParagraph(body, ["杭頭の接続は剛床連結とする。"]);
+                AddInlineMathParagraph(body, ["剛床連結では、水平面内の変位（$U_x, U_y$）および鉛直軸まわりの回転（$R_z$）のみを" +
+                    "剛体拘束し、鉛直変位（$U_z$）および水平軸まわりの回転（$R_x, R_y$）は自由とする。"]);
+                AddInlineMathParagraph(body, ["自由とした自由度の剛性は、一般梁要素（基礎梁）の曲げ剛性およびせん断剛性により負担する。" +
+                    "不均等な鉛直荷重の分配や、基礎梁のたわみによる各杭の沈下差を評価できる。"]);
+
+                // 拘束自由度の表
+                AddConnectionModeTable(body, isRigidBody: false);
+
+                // 一般梁要素の入力データ
+                if (fbInput != null)
+                {
+                    AddHeader2(body, "一般梁要素");
+                    AddFoundationBeamInputTables(body, fbInput);
+                }
+            }
+        }
+
+        // 接続モードの拘束自由度テーブル
+        private static void AddConnectionModeTable(Body body, bool isRigidBody)
+        {
+            double fs = 8.0;
+            int w0 = 2500;
+            int w1 = 1200;
+            Table table = CreateTableWithBordersAndWidths(w0, w1, w1, w1, w1, w1, w1);
+
+            // ヘッダ行
+            TableRow headerRow = CreateHeaderRow(
+                CreateTableCellWithWidth("", "center", w0, fs),
+                CreateTableCellWithWidth("Ux", "center", w1, fs),
+                CreateTableCellWithWidth("Uy", "center", w1, fs),
+                CreateTableCellWithWidth("Uz", "center", w1, fs),
+                CreateTableCellWithWidth("Rx", "center", w1, fs),
+                CreateTableCellWithWidth("Ry", "center", w1, fs),
+                CreateTableCellWithWidth("Rz", "center", w1, fs)
+            );
+            table.Append(headerRow);
+
+            // データ行
+            TableRow dataRow = new();
+            dataRow.Append(
+                CreateTableCellWithWidth("拘束", "center", w0, fs),
+                CreateTableCellWithWidth("○", "center", w1, fs),
+                CreateTableCellWithWidth("○", "center", w1, fs),
+                CreateTableCellWithWidth(isRigidBody ? "○" : "－", "center", w1, fs),
+                CreateTableCellWithWidth(isRigidBody ? "○" : "－", "center", w1, fs),
+                CreateTableCellWithWidth(isRigidBody ? "○" : "－", "center", w1, fs),
+                CreateTableCellWithWidth("○", "center", w1, fs)
+            );
+            table.Append(dataRow);
+
+            // 剛性負担行（剛床連結のみ）
+            if (!isRigidBody)
+            {
+                TableRow stiffnessRow = new();
+                stiffnessRow.Append(
+                    CreateTableCellWithWidth("剛性負担", "center", w0, fs),
+                    CreateTableCellWithWidth("剛床", "center", w1, fs),
+                    CreateTableCellWithWidth("剛床", "center", w1, fs),
+                    CreateTableCellWithWidth("梁要素", "center", w1, fs),
+                    CreateTableCellWithWidth("梁要素", "center", w1, fs),
+                    CreateTableCellWithWidth("梁要素", "center", w1, fs),
+                    CreateTableCellWithWidth("剛床", "center", w1, fs)
+                );
+                table.Append(stiffnessRow);
+            }
+
+            body.Append(table);
+        }
+
+        // 一般梁要素の入力データテーブル群
+        private static void AddFoundationBeamInputTables(Body body, FoundationBeamInput fbInput)
+        {
+            double fs = 8.0;
+
+            // 材料テーブル
+            if (fbInput.Materials != null && fbInput.Materials.Count > 0)
+            {
+                AddText(body, "材料");
+                int wNo = 1200, wName = 3000, wE = 3000, wG = 3000, wNu = 2000;
+                Table matTable = CreateTableWithBordersAndWidths(wNo, wName, wE, wG, wNu);
+
+                TableRow matHeader = CreateHeaderRow(
+                    CreateTableCellWithWidth("No", "center", wNo, fs),
+                    CreateTableCellWithWidth("名称", "center", wName, fs),
+                    CreateTableCellWithWidth("E (kN/m²)", "center", wE, fs),
+                    CreateTableCellWithWidth("G (kN/m²)", "center", wG, fs),
+                    CreateTableCellWithWidth("ν", "center", wNu, fs)
+                );
+                matTable.Append(matHeader);
+
+                foreach (var mat in fbInput.Materials)
+                {
+                    TableRow row = new();
+                    row.Append(
+                        CreateTableCellWithWidth($"{mat.No}", "center", wNo, fs),
+                        CreateTableCellWithWidth(mat.Name ?? "", "left", wName, fs),
+                        CreateTableCellWithWidth($"{mat.YoungModulus:E2}", "right", wE, fs),
+                        CreateTableCellWithWidth($"{mat.ShearModulus:E2}", "right", wG, fs),
+                        CreateTableCellWithWidth($"{mat.PoissonRatio:N2}", "right", wNu, fs)
+                    );
+                    matTable.Append(row);
+                }
+                body.Append(matTable);
+            }
+
+            // 断面テーブル
+            if (fbInput.Sections != null && fbInput.Sections.Count > 0)
+            {
+                AddText(body, "断面");
+                int wNo = 800, wName = 1800, wB = 1400, wH = 1400, wA = 1800, wIy = 2200, wIz = 2200;
+                Table secTable = CreateTableWithBordersAndWidths(wNo, wName, wB, wH, wA, wIy, wIz);
+
+                TableRow secHeader = CreateHeaderRow(
+                    CreateTableCellWithWidth("No", "center", wNo, fs),
+                    CreateTableCellWithWidth("名称", "center", wName, fs),
+                    CreateTableCellWithWidth("幅 (m)", "center", wB, fs),
+                    CreateTableCellWithWidth("高さ (m)", "center", wH, fs),
+                    CreateTableCellWithWidth("A (m²)", "center", wA, fs),
+                    CreateTableCellWithWidth("Iy (m⁴)", "center", wIy, fs),
+                    CreateTableCellWithWidth("Iz (m⁴)", "center", wIz, fs)
+                );
+                secTable.Append(secHeader);
+
+                foreach (var sec in fbInput.Sections)
+                {
+                    TableRow row = new();
+                    row.Append(
+                        CreateTableCellWithWidth($"{sec.No}", "center", wNo, fs),
+                        CreateTableCellWithWidth(sec.Name ?? "", "left", wName, fs),
+                        CreateTableCellWithWidth($"{sec.Width:N3}", "right", wB, fs),
+                        CreateTableCellWithWidth($"{sec.Height:N3}", "right", wH, fs),
+                        CreateTableCellWithWidth($"{sec.Area:N4}", "right", wA, fs),
+                        CreateTableCellWithWidth($"{sec.MomentOfInertiaYY:N4}", "right", wIy, fs),
+                        CreateTableCellWithWidth($"{sec.MomentOfInertiaZZ:N4}", "right", wIz, fs)
+                    );
+                    secTable.Append(row);
+                }
+                body.Append(secTable);
+            }
+
+            // 梁要素テーブル
+            if (fbInput.Beams != null && fbInput.Beams.Count > 0)
+            {
+                AddText(body, "梁要素");
+                int wNo = 1200, wMat = 2000, wSec = 2000, wNI = 3000, wNJ = 3000;
+                Table beamTable = CreateTableWithBordersAndWidths(wNo, wMat, wSec, wNI, wNJ);
+
+                TableRow beamHeader = CreateHeaderRow(
+                    CreateTableCellWithWidth("No", "center", wNo, fs),
+                    CreateTableCellWithWidth("材料No", "center", wMat, fs),
+                    CreateTableCellWithWidth("断面No", "center", wSec, fs),
+                    CreateTableCellWithWidth("I端", "center", wNI, fs),
+                    CreateTableCellWithWidth("J端", "center", wNJ, fs)
+                );
+                beamTable.Append(beamHeader);
+
+                foreach (var beam in fbInput.Beams)
+                {
+                    // ノード参照の表示文字列を組み立て
+                    string nodeIStr = GetBeamNodeDisplayString(beam.NodeI_Type, beam.NodeI_No, fbInput);
+                    string nodeJStr = GetBeamNodeDisplayString(beam.NodeJ_Type, beam.NodeJ_No, fbInput);
+
+                    TableRow row = new();
+                    row.Append(
+                        CreateTableCellWithWidth($"{beam.No}", "center", wNo, fs),
+                        CreateTableCellWithWidth($"{beam.MaterialNo}", "center", wMat, fs),
+                        CreateTableCellWithWidth($"{beam.SectionNo}", "center", wSec, fs),
+                        CreateTableCellWithWidth(nodeIStr, "left", wNI, fs),
+                        CreateTableCellWithWidth(nodeJStr, "left", wNJ, fs)
+                    );
+                    beamTable.Append(row);
+                }
+                body.Append(beamTable);
+            }
+        }
+
+        // 梁要素のノード参照表示文字列（Word出力用）
+        private static string GetBeamNodeDisplayString(NodeReferenceType type, int nodeNo, FoundationBeamInput fbInput)
+        {
+            return type switch
+            {
+                NodeReferenceType.PileLayout => $"杭 No.{nodeNo}",
+                NodeReferenceType.GeneralNode => $"一般節点 No.{nodeNo}",
+                NodeReferenceType.FoundationNode => $"専用節点 No.{nodeNo}",
+                _ => $"No.{nodeNo}"
+            };
         }
 
         // 杭明細を追加
@@ -7605,8 +7820,19 @@ diameterSelector,
             //    "水平地盤反力の非線形性および杭体の非線形性を考慮して、杭頭水平力および地震時地盤変位を同時に作用させ、杭応力を評価する。"
             //}, 2);
 
-            AddInlineMathParagraph(body, ["① 慣性力の作用点、各杭頭は剛体として連結する。" +
-                "根入部がある場合は、根入部も剛体として連結する。"]);
+            var connectionMode = inputModel.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
+            if (connectionMode == FoundationBeamConnectionMode.RigidBody)
+            {
+                AddInlineMathParagraph(body, ["① 慣性力の作用点、各杭頭は剛体として連結する（全6自由度拘束）。" +
+                    "根入部がある場合は、根入部も剛体として連結する。"]);
+            }
+            else
+            {
+                AddInlineMathParagraph(body, ["① 慣性力の作用点、各杭頭は水平面内で剛床として連結する" +
+                    "（$U_x, U_y, R_z$拘束、$U_z, R_x, R_y$自由）。" +
+                    "鉛直方向および水平軸まわりの回転は一般梁要素の剛性により負担する。" +
+                    "根入部がある場合は、根入部も剛体として連結する。"]);
+            }
             AddInlineMathParagraph(body, ["② 地盤条件および杭径と群杭硬化を考慮して各杭、" +
                 "各深度の水平地盤反力係数を設定し、" +
                 "杭径と支配区間長を乗じて水平地盤ばねを求める。" +

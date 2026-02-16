@@ -239,10 +239,8 @@ namespace PileDesign.ViewModels
         {
             if (PileSpacingDiaRatio.HasValue)
             {
-                // Undo 用に変更前の値を保存
-                var oldValues = InputModel.PileLayoutItems
-                    .Select(item => (item, item.PileSpacingFactor))
-                    .ToList();
+                // メインのUndoスタックに保存
+                _mainWindowViewModel.SaveUndoState();
 
                 double newValue = PileSpacingDiaRatio.Value;
 
@@ -251,44 +249,15 @@ namespace PileDesign.ViewModels
                 {
                     item.PileSpacingFactor = newValue;
                 }
-
-                // Undo アクションを登録
-                var undoAction = new DelegateUndoAction(
-                    "杭間隔比を全杭に適用",
-                    () =>
-                    {
-                        foreach (var (item, oldVal) in oldValues)
-                            item.PileSpacingFactor = oldVal;
-                    },
-                    () =>
-                    {
-                        foreach (var item in InputModel.PileLayoutItems)
-                            item.PileSpacingFactor = newValue;
-                    });
-
-                _undoManager.Push(undoAction);
-                NotifyUndoRedoChanged();
             }
         }
 
-        //public void OnApplyPileGroupFactorToModelsAllPiles()
-        //{
-        //    if (PileGroupFactor.HasValue)
-        //    {
-        //        foreach (var item in InputModel.PileLayoutItems)
-        //        {
-        //            item.GroupPileFactor = PileGroupFactor.Value;
-        //        }
-        //    }
-        //}
         public void OnApplyPileGroupFactorToModelsAllPiles()
         {
             if (PileGroupFactor.HasValue)
             {
-                // Undo 用に変更前の値を保存
-                var oldValues = InputModel.PileLayoutItems
-                    .Select(item => (item, item.GroupPileFactor))
-                    .ToList();
+                // メインのUndoスタックに保存
+                _mainWindowViewModel.SaveUndoState();
 
                 double newValue = PileGroupFactor.Value;
 
@@ -297,23 +266,6 @@ namespace PileDesign.ViewModels
                 {
                     item.GroupPileFactor = newValue;
                 }
-
-                // Undo アクションを登録
-                var undoAction = new DelegateUndoAction(
-                    "群杭係数を全杭に適用",
-                    () =>
-                    {
-                        foreach (var (item, oldVal) in oldValues)
-                            item.GroupPileFactor = oldVal;
-                    },
-                    () =>
-                    {
-                        foreach (var item in InputModel.PileLayoutItems)
-                            item.GroupPileFactor = newValue;
-                    });
-
-                _undoManager.Push(undoAction);
-                NotifyUndoRedoChanged();
             }
         }
     }

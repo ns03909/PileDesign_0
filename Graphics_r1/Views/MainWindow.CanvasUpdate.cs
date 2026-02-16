@@ -1089,8 +1089,8 @@ namespace PileDesign.Views
                 }
             }
 
-            // 基礎梁節点の選択描画
-            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            // 基礎梁節点の選択描画（梁要素表示がONの場合のみ）
+            if (viewModel.IsFoundationBeamVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
             {
                 foreach (FoundationNode node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
                 {
@@ -1126,12 +1126,13 @@ namespace PileDesign.Views
                 }
             }
 
-            // 一般梁要素の選択描画
-            if (viewModel.CurrentInputModel.FoundationBeamInput != null)
+            // 一般梁要素の選択描画（梁要素表示がONの場合のみ）
+            if (viewModel.IsFoundationBeamVisible && viewModel.CurrentInputModel.FoundationBeamInput != null)
             {
-                var nodeDict = viewModel.CurrentInputModel.FoundationBeamInput.Nodes.ToDictionary(n => n.No, n => n);
+                var fbInput = viewModel.CurrentInputModel.FoundationBeamInput;
+                var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
 
-                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                foreach (var beam in fbInput.Beams)
                 {
                     if (beam.IsSelected)
                     {
@@ -1182,6 +1183,20 @@ namespace PileDesign.Views
 
                         LineGeometry lineGeometry = new() { StartPoint = coordinate0, EndPoint = coordinate1 };
                         viewModel.CanvasGeometry.PathGeoSelectedElements.AddGeometry(lineGeometry);
+
+                        // 選択された梁要素の断面形状も描画
+                        if (viewModel.IsBeamElementSectionVisible)
+                        {
+                            var fbSections = fbInput.Sections?.ToDictionary(s => s.No, s => s);
+                            double bw = beam.Width;
+                            double bh = beam.Height;
+                            if (fbSections != null && fbSections.TryGetValue(beam.SectionNo, out var sec))
+                            {
+                                bw = sec.Width;
+                                bh = sec.Height;
+                            }
+                            AddBeamSectionGeometry2D(viewModel, point0, point1, bw, bh, beam.AngleBeta);
+                        }
                     }
                 }
             }

@@ -33,7 +33,7 @@
         <!--<FrameworkElement x:Key="ProxyElement" DataContext="{Binding ElementName=MainWin, Path=DataContext}"/>-->
 
         <ContextMenu x:Key="NodeContextMenu">
-            <MenuItem Header="コピー／平面移動" Command="{Binding MoveCopyPilesCommand}"/>
+            <MenuItem Header="コピー／移動" Command="{Binding MoveCopyPilesCommand}"/>
             <MenuItem Header="プロパティ変更／追加" Command="{Binding EditAddPilesCommand}"/>
             <MenuItem Header="削除" Command="{Binding DeletePilesCommand}"/>
             <MenuItem Header="選択解除" Command="{Binding DeselectPilesCommand}"/>

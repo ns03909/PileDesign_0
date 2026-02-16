@@ -377,12 +377,61 @@ namespace PileDesign.Views
 
         private CancellationTokenSource? _viewAnimationCts;
 
+        // ビューキューブ ドラッグ回転用フィールド
+        private bool _cubeDragging;
+        private Point _cubeDragStart;
+        private double _cubeDragStartTht;
+        private double _cubeDragStartPhi;
+        private const double CubeDragThreshold = 4.0; // これ以上動いたらドラッグとみなす
+        private bool _cubeDragMoved;
+
         // CanvasCube イベント
+        private void CanvasCube_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _cubeDragStart = e.GetPosition(CanvasCube);
+            _cubeDragMoved = false;
+
+            if (DataContext is MainWindowViewModel vm)
+            {
+                _cubeDragStartTht = vm.CanvasThreeDView.Tht;
+                _cubeDragStartPhi = vm.CanvasThreeDView.Phi;
+            }
+
+            _cubeDragging = true;
+            CanvasCube.CaptureMouse();
+            e.Handled = true;
+        }
+
         private void CanvasCube_MouseMove(object sender, MouseEventArgs e)
         {
-            var pos = e.GetPosition(CanvasCube);
+            if (_cubeDragging && e.LeftButton == MouseButtonState.Pressed)
+            {
+                var pos = e.GetPosition(CanvasCube);
+                var delta = pos - _cubeDragStart;
+
+                if (!_cubeDragMoved && (Math.Abs(delta.X) > CubeDragThreshold || Math.Abs(delta.Y) > CubeDragThreshold))
+                    _cubeDragMoved = true;
+
+                if (_cubeDragMoved && DataContext is MainWindowViewModel vm)
+                {
+                    // 水平方向のマウス移動 → Tht（左右回転）、垂直方向 → Phi（上下回転）
+                    double sensitivity = 1.5;
+                    double newTht = _cubeDragStartTht - delta.X * sensitivity;
+                    double newPhi = _cubeDragStartPhi + delta.Y * sensitivity;
+                    newPhi = Math.Clamp(newPhi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle);
+
+                    vm.CanvasThreeDView.Tht = newTht;
+                    vm.CanvasThreeDView.Phi = newPhi;
+                    UpdateCanvas3D();
+                    Mouse.OverrideCursor = Cursors.SizeAll;
+                }
+                return;
+            }
+
+            // ホバー処理（ドラッグ中でない場合）
+            var hoverPos = e.GetPosition(CanvasCube);
             var prev = _cubeHoverItem;
-            _cubeHoverItem = HitTestCube(pos);
+            _cubeHoverItem = HitTestCube(hoverPos);
             Mouse.OverrideCursor = _cubeHoverItem != null ? Cursors.Hand : null;
 
             if (!Equals(prev, _cubeHoverItem))
@@ -391,13 +440,28 @@ namespace PileDesign.Views
 
         private void CanvasCube_MouseLeave(object sender, MouseEventArgs e)
         {
-            _cubeHoverItem = null;
-            Mouse.OverrideCursor = null;
-            DrawCubeHighlight();
+            if (!_cubeDragging)
+            {
+                _cubeHoverItem = null;
+                Mouse.OverrideCursor = null;
+                DrawCubeHighlight();
+            }
         }
 
         private void CanvasCube_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
+            bool wasDragging = _cubeDragging && _cubeDragMoved;
+
+            if (_cubeDragging)
+            {
+                _cubeDragging = false;
+                CanvasCube.ReleaseMouseCapture();
+                Mouse.OverrideCursor = null;
+            }
+
+            // ドラッグ操作だった場合はクリック処理をスキップ
+            if (wasDragging) return;
+
             if (_cubeHoverItem == null) return;
 
             // 1) プリセット角度が決まるならそれを使う

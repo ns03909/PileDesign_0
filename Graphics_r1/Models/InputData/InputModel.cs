@@ -147,6 +147,17 @@ namespace PileDesign.Models.InputData
             RegenerateSoilPilesAndNotifyImmediate(); // Phase 2: Undo/Redo は即時実行
         }
 
+        /// <summary>
+        /// 通知抑制を解除するだけで、SoilPile 再生成や再描画はトリガーしない。
+        /// 呼び出し元で GenerateSoilPiles() と描画更新を個別に行う場合に使用。
+        /// </summary>
+        public void ResumeNotificationsQuiet()
+        {
+            _suppressSoilPileNotify = false;
+            _regeneratePending = false;
+            _regenerateDebounceTimer?.Stop();
+        }
+
         // Phase 1: SoilPile キャッシュ管理メソッド
 
         /// <summary>
@@ -642,9 +653,9 @@ namespace PileDesign.Models.InputData
             FoundationBeamInput.Sections.Add(new BeamSection
             {
                 No = 1,
-                Name = "500x800",
-                Width = 0.5,
-                Height = 0.8
+                Name = "G1",
+                Width = 0.8,
+                Height = 2.0
             });
 
             // 初期コレクションにも購読を張る
@@ -1085,7 +1096,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// FoundationBeamInputのデフォルト値を確保する
         /// </summary>
-        private void EnsureFoundationBeamDefaults()
+        internal void EnsureFoundationBeamDefaults()
         {
             // FoundationBeamInputがnullの場合は作成
             FoundationBeamInput ??= new FoundationBeamInput();
@@ -1111,9 +1122,9 @@ namespace PileDesign.Models.InputData
                 FoundationBeamInput.Sections.Add(new BeamSection
                 {
                     No = 1,
-                    Name = "500x800",
-                    Width = 0.5,
-                    Height = 0.8
+                    Name = "G1",
+                    Width = 0.8,
+                    Height = 2.0
                 });
             }
 
@@ -1125,7 +1136,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 旧形式のElementデータをFoundationBeamInputに自動変換する
         /// </summary>
-        private void MigrateElementsToFoundationBeams()
+        internal void MigrateElementsToFoundationBeams()
         {
             // 変換条件チェック: Elementsが存在し、FoundationBeamInputが空の場合のみ変換
             if (Elements == null || Elements.Count == 0) return;

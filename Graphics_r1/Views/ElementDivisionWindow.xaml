@@ -11,7 +11,7 @@
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         d:DataContext="{d:DesignInstance Type=local:ElementDivisionViewModel}"
         mc:Ignorable="d"
-        Title="要素分割ウィンドウ" Height="650" Width="650"
+        Title="要素分割" Height="650" Width="650"
         Loaded="ElementDivisionWindow_Loaded"
         common:EscapeKeyBehavior.Enable="True">
 

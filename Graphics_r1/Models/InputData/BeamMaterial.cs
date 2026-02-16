@@ -63,62 +63,62 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _name, value);
         }
 
-        private double _width = 0.5;  // デフォルト 0.5m
+        private double _width = 0.8;  // デフォルト 0.8m
         public double Width
         {
             get => _width;
             set { if (SetProperty(ref _width, value)) RecalculateProperties(); }
         }
 
-        private double _height = 0.8;  // デフォルト 0.8m
+        private double _height = 2.0;  // デフォルト 2.0m
         public double Height
         {
             get => _height;
             set { if (SetProperty(ref _height, value)) RecalculateProperties(); }
         }
 
-        // 断面積 (m²)
-        private double _area = 0.4;
+        // 断面積 (m²) — デフォルト: 0.8 * 2.0 = 1.6
+        private double _area = 1.6;
         public double Area
         {
             get => _area;
             set => SetProperty(ref _area, value);
         }
 
-        // せん断断面積 Y方向 (m²)
-        private double _shearAreaY = 0.333;
+        // せん断断面積 Y方向 (m²) — デフォルト: 1.6 * 5/6 ≈ 1.333
+        private double _shearAreaY = 1.333;
         public double ShearAreaY
         {
             get => _shearAreaY;
             set => SetProperty(ref _shearAreaY, value);
         }
 
-        // せん断断面積 Z方向 (m²)
-        private double _shearAreaZ = 0.333;
+        // せん断断面積 Z方向 (m²) — デフォルト: 1.6 * 5/6 ≈ 1.333
+        private double _shearAreaZ = 1.333;
         public double ShearAreaZ
         {
             get => _shearAreaZ;
             set => SetProperty(ref _shearAreaZ, value);
         }
 
-        // 断面ねじりモーメント (m⁴)
-        private double _torsionalMoment = 0.0107;
+        // 断面ねじりモーメント (m⁴) — デフォルト: beta(0.4) * 0.8 * 2.0^3 ≈ 1.597
+        private double _torsionalMoment = 1.597;
         public double TorsionalMoment
         {
             get => _torsionalMoment;
             set => SetProperty(ref _torsionalMoment, value);
         }
 
-        // 断面二次モーメント Y軸周り (m⁴)
-        private double _momentOfInertiaYY = 0.0213;
+        // 断面二次モーメント Y軸周り (m⁴) — デフォルト: 0.8 * 2.0^3 / 12 ≈ 0.5333
+        private double _momentOfInertiaYY = 0.5333;
         public double MomentOfInertiaYY
         {
             get => _momentOfInertiaYY;
             set => SetProperty(ref _momentOfInertiaYY, value);
         }
 
-        // 断面二次モーメント Z軸周り (m⁴)
-        private double _momentOfInertiaZZ = 0.0083;
+        // 断面二次モーメント Z軸周り (m⁴) — デフォルト: 2.0 * 0.8^3 / 12 ≈ 0.0853
+        private double _momentOfInertiaZZ = 0.0853;
         public double MomentOfInertiaZZ
         {
             get => _momentOfInertiaZZ;

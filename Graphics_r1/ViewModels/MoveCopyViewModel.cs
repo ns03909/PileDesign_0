@@ -56,6 +56,13 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _dY, value);
         }
 
+        private double _dZ;
+        public double DZ
+        {
+            get => _dZ;
+            set => SetProperty(ref _dZ, value);
+        }
+
         private int _repetitionNumber = 1;
         public int RepetitionNumber
         {
@@ -92,6 +99,7 @@ namespace PileDesign.ViewModels
         {
             DX = 0;
             DY = 0;
+            DZ = 0;
             RepetitionNumber = 1;
             IsInputNodesIncluded = true;
             IsPileLayoutIncluded = true;

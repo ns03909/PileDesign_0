@@ -56,14 +56,17 @@ namespace PileDesign.ViewModels
             // Undoポイントを追加
             _undoManager.SaveState(CurrentInputModel.DeepCopy());
 
-            // 新規作成状態にリセット
+            // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
+            CurrentInputModel.SuppressNotifications();
+
+            // 新規作成状態にリセット（UI更新はデータ読み込み後にまとめて実行）
             CurrentFilePath = null;
             IsElementSplit = false;
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
             IsGroupPileSettlementAnalysisDone = false;
-            UpdateWindowImmediate();
-            UpdateTreeView();
+            IsAnalysisResultVisible = false;
+            CurrentModel = null;
 
             // JSONから杭例題データを読み込む
             var pileData = PileExampleLoader.LoadFromFile(pileJsonFileName);
@@ -97,8 +100,14 @@ namespace PileDesign.ViewModels
             // 杭体数リストを更新（UIのコンボボックス用）
             CurrentInputModel.UpdateCountLists();
 
+            // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
+            CurrentInputModel.GenerateSoilPiles();
+
+            // 通知を再開（ここでは再描画をトリガーしない）
+            CurrentInputModel.ResumeNotificationsQuiet();
+
+            // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
-            UpdateTreeView();
 
             // 読み込み完了メッセージ
             MessageBox.Show($"{displayName}を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -118,6 +127,9 @@ namespace PileDesign.ViewModels
 
             // Undoポイントを追加
             _undoManager.SaveState(CurrentInputModel.DeepCopy());
+
+            // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
+            CurrentInputModel.SuppressNotifications();
 
             // 要素分割・解析状態をリセット
             IsElementSplit = false;
@@ -161,8 +173,15 @@ namespace PileDesign.ViewModels
 
             UpdatePileLayoutNo();
             IsGroupPileSettlementAnalysisDone = false;
+
+            // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
+            CurrentInputModel.GenerateSoilPiles();
+
+            // 通知を再開（ここでは再描画をトリガーしない）
+            CurrentInputModel.ResumeNotificationsQuiet();
+
+            // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
-            UpdateTreeView();
 
             // 読み込み完了メッセージ
             MessageBox.Show($"{displayName}を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);

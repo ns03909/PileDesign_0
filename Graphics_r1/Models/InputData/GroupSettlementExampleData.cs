@@ -79,6 +79,12 @@ namespace PileDesign.Models.InputData
         /// </summary>
         [JsonPropertyName("settlementOffsets")]
         public SettlementOffsetsDto? SettlementOffsets { get; set; }
+
+        /// <summary>
+        /// 基礎梁入力（FoundationBeamInput系）
+        /// </summary>
+        [JsonPropertyName("foundationBeamInput")]
+        public FoundationBeamInputDto? FoundationBeamInput { get; set; }
     }
 
     /// <summary>

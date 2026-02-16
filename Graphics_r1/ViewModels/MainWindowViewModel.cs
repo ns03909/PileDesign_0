@@ -76,6 +76,7 @@ namespace PileDesign.ViewModels
         public void SaveUndoState()
         {
             _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            RaiseUndoStateChanged();
         }
         private readonly FileOperationService _fileOperationService;
         private readonly PileLayoutService _pileLayoutService;
@@ -259,7 +260,7 @@ namespace PileDesign.ViewModels
             where TWindow : Window, new()
         {
             // Undoポイントを追加（読込前の状態を保存）
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
 
             // ダイアログを開く
             OpenDialogWindow<TViewModel, TWindow>(this);
@@ -327,7 +328,8 @@ namespace PileDesign.ViewModels
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
+            ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
         };
 
         private double _rightBlankWidthPx = 100.0;
@@ -406,7 +408,10 @@ namespace PileDesign.ViewModels
                         _currentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
                     }
 
-                    UpdateWindowImmediate();
+                    // 注: UpdateWindowImmediate() はここでは呼ばない。
+                    // 全ての代入元（ファイル読込、Undo/Redo等）がフラグリセット後に
+                    // 明示的に UpdateWindowImmediate() を呼ぶため、ここで呼ぶと
+                    // 不完全な状態での二重描画になる。
                     RaiseAllCommandsCanExecute();
 
                     OnPropertyChanged(nameof(CurrentInputModel));
@@ -840,6 +845,14 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 通り心選択対象距離 (m)
+        private double _gridSelectionDistance = 0.1;
+        public double GridSelectionDistance
+        {
+            get => _gridSelectionDistance;
+            set => SetProperty(ref _gridSelectionDistance, value);
+        }
+
         // GridX追加メソッド
         [RelayCommand]
         private void AddGridX()
@@ -1102,6 +1115,101 @@ namespace PileDesign.ViewModels
             RequestUpdateWindow();
         }
         [RelayCommand]
+        private void SelectGridX(object parameter)
+        {
+            if (parameter is not GridDataItem gridItem) return;
+            double coord = gridItem.Coord;
+            double tolerance = GridSelectionDistance;
+
+            ClearAllSelections();
+
+            // 通り上の杭配置を選択
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
+                if (Math.Abs(pile.X - coord) <= tolerance)
+                    pile.IsSelected = true;
+            }
+
+            // 通り上の一般節点を選択
+            if (CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in CurrentInputModel.InputNodes)
+                {
+                    if (node.Type == NodeType.General && Math.Abs(node.X - coord) <= tolerance)
+                        node.IsSelected = true;
+                }
+            }
+
+            // 両端の節点が通り上にある一般梁要素を選択
+            foreach (var element in CurrentInputModel.Elements)
+            {
+                if (element.Nodes.Count >= 2 &&
+                    element.Nodes.All(n => Math.Abs(n.X - coord) <= tolerance))
+                    element.IsSelected = true;
+            }
+
+            RequestUpdateWindow();
+        }
+
+        [RelayCommand]
+        private void SelectGridY(object parameter)
+        {
+            if (parameter is not GridDataItem gridItem) return;
+            double coord = gridItem.Coord;
+            double tolerance = GridSelectionDistance;
+
+            ClearAllSelections();
+
+            // 通り上の杭配置を選択
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
+                if (Math.Abs(pile.Y - coord) <= tolerance)
+                    pile.IsSelected = true;
+            }
+
+            // 通り上の一般節点を選択
+            if (CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in CurrentInputModel.InputNodes)
+                {
+                    if (node.Type == NodeType.General && Math.Abs(node.Y - coord) <= tolerance)
+                        node.IsSelected = true;
+                }
+            }
+
+            // 両端の節点が通り上にある一般梁要素を選択
+            foreach (var element in CurrentInputModel.Elements)
+            {
+                if (element.Nodes.Count >= 2 &&
+                    element.Nodes.All(n => Math.Abs(n.Y - coord) <= tolerance))
+                    element.IsSelected = true;
+            }
+
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// すべての選択状態をクリアするヘルパー
+        /// </summary>
+        private void ClearAllSelections()
+        {
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+                pile.IsSelected = false;
+            foreach (var element in CurrentInputModel.Elements)
+                element.IsSelected = false;
+            if (CurrentInputModel.InputNodes != null)
+                foreach (var node in CurrentInputModel.InputNodes)
+                    node.IsSelected = false;
+            if (CurrentInputModel.FoundationBeamInput != null)
+            {
+                foreach (var node in CurrentInputModel.FoundationBeamInput.Nodes)
+                    node.IsSelected = false;
+                foreach (var beam in CurrentInputModel.FoundationBeamInput.Beams)
+                    beam.IsSelected = false;
+            }
+        }
+
+        [RelayCommand]
         private void DeleteElement(object sender)
         {
             DeleteCollectionItem(sender, CurrentInputModel.Elements);
@@ -1170,6 +1278,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnComputePileGroupFactor()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
             if (pileCount == 0)
                 return;
@@ -1178,6 +1288,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnComputePileSpacingFactor()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
             if (pileCount == 0)
                 return;
@@ -1187,6 +1299,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnDeleteDuplicateElements()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             // Undoポイントを追加
             TrySaveUndoSnapshotSafely();
 
@@ -1242,6 +1356,123 @@ namespace PileDesign.ViewModels
                 "節点分割完了",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);
+        }
+
+        // 選択された梁要素を等分割するコマンド
+        [RelayCommand]
+        private void EqualDivideElements()
+        {
+            var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
+            if (beams == null) return;
+
+            if (!CheckAndResetAnalysisResults()) return;
+
+            var selectedBeams = beams.Where(b => b.IsSelected).ToList();
+            if (selectedBeams.Count == 0)
+            {
+                MessageBox.Show("分割する梁要素を選択してください。");
+                return;
+            }
+
+            SaveUndoState();
+
+            int n = EqualDivisionCount;
+            var toRemove = new List<FoundationBeamElement>();
+            var toAdd = new List<FoundationBeamElement>();
+
+            foreach (var beam in selectedBeams)
+            {
+                // 始終点の座標を取得（NodeI_Type/NodeI_Id 方式）
+                var coordsI = CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                var coordsJ = CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                if (coordsI == null || coordsJ == null) continue;
+
+                // 分割点に一般節点を生成
+                var divisionNodes = new List<InputNode>();
+                for (int i = 1; i < n; i++)
+                {
+                    double t = (double)i / n;
+                    var newNode = new InputNode
+                    {
+                        No = CurrentInputModel.InputNodes.Count + divisionNodes.Count + 1,
+                        Type = NodeType.General,
+                        X = coordsI.Value.X + (coordsJ.Value.X - coordsI.Value.X) * t,
+                        Y = coordsI.Value.Y + (coordsJ.Value.Y - coordsI.Value.Y) * t,
+                        Z = coordsI.Value.Z + (coordsJ.Value.Z - coordsI.Value.Z) * t
+                    };
+                    divisionNodes.Add(newNode);
+                }
+
+                foreach (var node in divisionNodes)
+                    CurrentInputModel.InputNodes.Add(node);
+
+                // 分割ビームを生成（I → div1 → div2 → ... → J）
+                // 最初のセグメント: 元のNodeI → 最初の分割節点
+                toAdd.Add(new FoundationBeamElement
+                {
+                    NodeI_Type = beam.NodeI_Type,
+                    NodeI_Id = beam.NodeI_Id,
+                    NodeJ_Type = NodeReferenceType.GeneralNode,
+                    NodeJ_Id = divisionNodes[0].UniqueId,
+                    MaterialNo = beam.MaterialNo,
+                    SectionNo = beam.SectionNo,
+                    AngleBeta = beam.AngleBeta,
+                    Width = beam.Width,
+                    Height = beam.Height,
+                    YoungModulus = beam.YoungModulus,
+                    ShearModulus = beam.ShearModulus,
+                    SectionName = beam.SectionName
+                });
+
+                // 中間セグメント
+                for (int i = 0; i < divisionNodes.Count - 1; i++)
+                {
+                    toAdd.Add(new FoundationBeamElement
+                    {
+                        NodeI_Type = NodeReferenceType.GeneralNode,
+                        NodeI_Id = divisionNodes[i].UniqueId,
+                        NodeJ_Type = NodeReferenceType.GeneralNode,
+                        NodeJ_Id = divisionNodes[i + 1].UniqueId,
+                        MaterialNo = beam.MaterialNo,
+                        SectionNo = beam.SectionNo,
+                        AngleBeta = beam.AngleBeta,
+                        Width = beam.Width,
+                        Height = beam.Height,
+                        YoungModulus = beam.YoungModulus,
+                        ShearModulus = beam.ShearModulus,
+                        SectionName = beam.SectionName
+                    });
+                }
+
+                // 最後のセグメント: 最後の分割節点 → 元のNodeJ
+                toAdd.Add(new FoundationBeamElement
+                {
+                    NodeI_Type = NodeReferenceType.GeneralNode,
+                    NodeI_Id = divisionNodes.Last().UniqueId,
+                    NodeJ_Type = beam.NodeJ_Type,
+                    NodeJ_Id = beam.NodeJ_Id,
+                    MaterialNo = beam.MaterialNo,
+                    SectionNo = beam.SectionNo,
+                    AngleBeta = beam.AngleBeta,
+                    Width = beam.Width,
+                    Height = beam.Height,
+                    YoungModulus = beam.YoungModulus,
+                    ShearModulus = beam.ShearModulus,
+                    SectionName = beam.SectionName
+                });
+
+                toRemove.Add(beam);
+            }
+
+            foreach (var beam in toRemove) beams.Remove(beam);
+            foreach (var beam in toAdd) beams.Add(beam);
+
+            RenumberFoundationBeams();
+            RequestUpdateWindow();
+
+            MessageBox.Show(
+                $"{toRemove.Count} 個の要素を {n} 等分しました（{toAdd.Count} 個の要素、{toRemove.Count * (n - 1)} 個の節点を生成）。",
+                "等分割完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // 梁要素を節点で分割するメソッド
@@ -1389,22 +1620,26 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
 
-            TrySaveUndoSnapshotSafely();
+            SaveUndoState();
 
             var beams = CurrentInputModel.FoundationBeamInput.Beams;
             var toRemove = new List<FoundationBeamElement>();
+            // 既に確認済みのペアを記録（順序なし）
+            var seenPairs = new HashSet<(NodeReferenceType, Guid, NodeReferenceType, Guid)>();
 
-            for (int i = 0; i < beams.Count; i++)
+            foreach (var beam in beams)
             {
-                for (int j = i + 1; j < beams.Count; j++)
+                // 順序を正規化して比較（I,J と J,I を同一視）
+                var key1 = (beam.NodeI_Type, beam.NodeI_Id, beam.NodeJ_Type, beam.NodeJ_Id);
+                var key2 = (beam.NodeJ_Type, beam.NodeJ_Id, beam.NodeI_Type, beam.NodeI_Id);
+
+                if (seenPairs.Contains(key1) || seenPairs.Contains(key2))
                 {
-                    // 順序を考慮しない重複チェック (1-2 と 2-1 は同じ)
-                    if ((beams[i].NodeI_No == beams[j].NodeI_No && beams[i].NodeJ_No == beams[j].NodeJ_No) ||
-                        (beams[i].NodeI_No == beams[j].NodeJ_No && beams[i].NodeJ_No == beams[j].NodeI_No))
-                    {
-                        if (!toRemove.Contains(beams[j]))
-                            toRemove.Add(beams[j]);
-                    }
+                    toRemove.Add(beam);
+                }
+                else
+                {
+                    seenPairs.Add(key1);
                 }
             }
 
@@ -1427,6 +1662,8 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.PileLayoutItems == null ||
                 CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
+
+            if (!CheckAndResetAnalysisResults()) return;
 
             var piles = CurrentInputModel.PileLayoutItems;
             if (piles.Count < 2) return;
@@ -1591,6 +1828,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAdjustEmbedmentPlan()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             if (CurrentInputModel.PileLayoutItems.Count == 0 || CurrentInputModel.EmbedmentInput.EmbedmentLayers.Count == 0)
                 return;
 
@@ -1618,10 +1857,12 @@ namespace PileDesign.ViewModels
             UpdateTreeView();
         }
 
-        // 慣性力作用点を杭配置の図心に移動するメソッド
+        // 慣性力作用点をすべての杭接合点の図心に移動するメソッド
         [RelayCommand]
         private void OnMoveForceActionPointToAverageCenter()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             if (CurrentInputModel.PileLayoutItems.Count == 0)
             {
                 MessageBox.Show("杭配置データがありません。");
@@ -1630,25 +1871,32 @@ namespace PileDesign.ViewModels
 
             TrySaveUndoSnapshotSafely();
 
-            // BoundingBoxCalculator を使用して平均中心を計算
-            var (centerX, centerY) = BoundingBoxCalculator.CalculateAverageCenter(CurrentInputModel.PileLayoutItems);
+            // 杭接合点（杭頭 + ΔZc）の図心を計算
+            var piles = CurrentInputModel.PileLayoutItems;
+            double centerX = piles.Average(p => p.X);
+            double centerY = piles.Average(p => p.Y);
+            double centerZ = piles.Average(p => p.Z + p.FoundationBeamDeltaZc);
 
             CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointX = centerX;
             CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointY = centerY;
+            CurrentInputModel.LoadCasesInput.LoadCaseLevel1Common.ForceActionPointAltitude = centerZ;
 
             CurrentInputModel.LoadCasesInput.LoadCaseLevel2Common.ForceActionPointX = centerX;
             CurrentInputModel.LoadCasesInput.LoadCaseLevel2Common.ForceActionPointY = centerY;
+            CurrentInputModel.LoadCasesInput.LoadCaseLevel2Common.ForceActionPointAltitude = centerZ;
 
             foreach (LoadCase loadCase in CurrentInputModel.LoadCasesInput.LoadCasesLevel1)
             {
                 loadCase.ForceActionPointX = centerX;
                 loadCase.ForceActionPointY = centerY;
+                loadCase.ForceActionPointAltitude = centerZ;
             }
 
             foreach (LoadCase loadCase in CurrentInputModel.LoadCasesInput.LoadCasesLevel2)
             {
                 loadCase.ForceActionPointX = centerX;
                 loadCase.ForceActionPointY = centerY;
+                loadCase.ForceActionPointAltitude = centerZ;
             }
 
             // 変更後（以下の箇所で適用）
@@ -1658,6 +1906,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AutoIsFrontPiles()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             TrySaveUndoSnapshotSafely();
 
             var viewModel = new AutoIsFrontPileViewModel();
@@ -1845,10 +2095,10 @@ namespace PileDesign.ViewModels
             CurrentFilePath = null;
 
             // ここで初期状態をUndoスタックに積む
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
 
+            // UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない
             UpdateWindowImmediate();
-            UpdateTreeView();
         }
 
         private void TrySaveUndoSnapshotSafely()
@@ -1859,6 +2109,7 @@ namespace PileDesign.ViewModels
                 if (snapshot != null)
                 {
                     _undoManager.SaveState(snapshot);
+                    RaiseUndoStateChanged();
                 }
                 else
                 {
@@ -1901,8 +2152,8 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
                 CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
 
+                // UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない
                 UpdateWindowImmediate();
-                UpdateTreeView();
                 MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
                 return true;
             }
@@ -1937,7 +2188,7 @@ namespace PileDesign.ViewModels
                 try
                 {
                     // Undoポイントを追加（読込前の状態を保存）
-                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                    SaveUndoState();
 
                     var projectData = _fileOperationService.LoadProjectData(openFileDialog.FileName);
 
@@ -1948,6 +2199,15 @@ namespace PileDesign.ViewModels
 
                         // コレクションを ObservableCollection に変換
                         _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
+
+                        // 旧データとの互換性: InputNodesがnullの場合は空のコレクションを作成
+                        CurrentInputModel.InputNodes ??= [];
+
+                        // 旧データとの互換性: Element → FoundationBeamElement への自動変換
+                        CurrentInputModel.MigrateElementsToFoundationBeams();
+
+                        // 旧データとの互換性: Materials/Sections の初期化
+                        CurrentInputModel.EnsureFoundationBeamDefaults();
 
                         // プロパティ変更通知
                         OnPropertyChanged(nameof(CurrentInputModel));
@@ -2080,8 +2340,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 解析結果が1つでも存在するか
-        private bool HasAnyAnalysisResult()
+        // 解析結果が1つでも存在するか（バインド用プロパティ）
+        public bool HasAnyAnalysisResult
             => IsHorizontalAnalysisDone || IsVerticalAnalysisDone || IsGroupPileSettlementAnalysisDone;
 
         // コマンド状態一括更新ヘルパ
@@ -2097,7 +2357,7 @@ namespace PileDesign.ViewModels
         {
             try
             {
-                if (!HasAnyAnalysisResult()) return;
+                if (!HasAnyAnalysisResult) return;
 
                 var viewModel = new GraphViewModel(this)
                 {
@@ -2115,7 +2375,7 @@ namespace PileDesign.ViewModels
                 MessageBox.Show($"グラフウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-        private bool CanOpenGraphWindow() => HasAnyAnalysisResult();
+        private bool CanOpenGraphWindow() => HasAnyAnalysisResult;
 
 
         // フィールド追加
@@ -2206,7 +2466,7 @@ namespace PileDesign.ViewModels
             if (CurrentModel == null ||
                 CurrentModel.AnalysisStepResults == null ||
                 CurrentModel.AnalysisStepResults.Count == 0 ||
-                !HasAnyAnalysisResult())
+                !HasAnyAnalysisResult)
             {
                 LatestResultTables = [];
                 OnPropertyChanged(nameof(LatestResultTables));
@@ -2379,7 +2639,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // Undoポイントを追加
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                SaveUndoState();
 
                 // MoveWindowをインスタンス化して表示
                 MoveCopyWindow moveCopyWindow = new();
@@ -2440,12 +2700,12 @@ namespace PileDesign.ViewModels
         {
             // 新しいウィンドウでの操作の結果を処理する
             if (e.IsMove)
-                MoveNodes(e.DX, e.DY, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);// 移動操作の処理
+                MoveNodes(e.DX, e.DY, e.DZ, e.IsInputNodesIncluded, e.IsPileLayoutIncluded);// 移動操作の処理
             else if (e.IsCopy)
-                await CopyNodesAsync(e.DX, e.DY, e.RepetitionNumber, e.IsInputNodesIncluded, e.IsPileLayoutIncluded); // 複製操作の処理
+                await CopyNodesAsync(e.DX, e.DY, e.DZ, e.RepetitionNumber, e.IsInputNodesIncluded, e.IsPileLayoutIncluded); // 複製操作の処理
         }
 
-        private async Task CopyNodesAsync(double dX, double dY, int repetitionNumber, bool isInputNodesIncluded, bool isPileLayoutIncluded)
+        private async Task CopyNodesAsync(double dX, double dY, double dZ, int repetitionNumber, bool isInputNodesIncluded, bool isPileLayoutIncluded)
         {
             // 変更を行う前に、選択されたアイテムのリストを作成
             var selectedItems = isPileLayoutIncluded
@@ -2468,6 +2728,7 @@ namespace PileDesign.ViewModels
                     CurrentInputModel.PileLayoutItems,
                     dX,
                     dY,
+                    dZ,
                     repetitionNumber,
                     item => item.SetMainWindowViewModel(this));
 
@@ -2483,7 +2744,7 @@ namespace PileDesign.ViewModels
                             Type = selectedNode.Type,
                             X = selectedNode.X + dX * (i + 1),
                             Y = selectedNode.Y + dY * (i + 1),
-                            Z = selectedNode.Z,
+                            Z = selectedNode.Z + dZ * (i + 1),
                             LinkedPileNo = selectedNode.LinkedPileNo,
                             IsVisible = selectedNode.IsVisible
                         };
@@ -2522,12 +2783,12 @@ namespace PileDesign.ViewModels
         }
 
         // 移動操作を行う
-        private void MoveNodes(double dX, double dY, bool isInputNodesIncluded, bool isPileLayoutIncluded)
+        private void MoveNodes(double dX, double dY, double dZ, bool isInputNodesIncluded, bool isPileLayoutIncluded)
         {
             // 杭配置の移動
             if (isPileLayoutIncluded)
             {
-                _pileLayoutService.MoveSelectedPiles(CurrentInputModel.PileLayoutItems, dX, dY);
+                _pileLayoutService.MoveSelectedPiles(CurrentInputModel.PileLayoutItems, dX, dY, dZ);
             }
 
             // InputNodes（一般節点）の移動
@@ -2540,6 +2801,7 @@ namespace PileDesign.ViewModels
                     {
                         node.X += dX;
                         node.Y += dY;
+                        node.Z += dZ;
                     }
                 }
             }
@@ -2552,6 +2814,7 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileLayoutItems,
                 dX,
                 dY,
+                0,
                 repetitionNumber,
                 item => item.SetMainWindowViewModel(this));
             CurrentInputModel.PileLayoutItems.CollectionChanged -= PileLayoutItems_CollectionChanged;
@@ -2650,10 +2913,11 @@ namespace PileDesign.ViewModels
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
 
-                // 変更: 即時実行
-                NotifyUIChanged(immediate: true);
+                // UpdateWindow() 内で UpdateTreeView() も実行されるため updateTree: false
+                NotifyUIChanged(updateTree: false, immediate: true);
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
+            RaiseUndoStateChanged();
         }
 
         [RelayCommand]
@@ -2665,10 +2929,11 @@ namespace PileDesign.ViewModels
                 CurrentInputModel = state.DeepCopy();
                 CurrentInputModel.AttachViewModel(this);
 
-                // 変更: 即時実行
-                NotifyUIChanged(immediate: true);
+                // UpdateWindow() 内で UpdateTreeView() も実行されるため updateTree: false
+                NotifyUIChanged(updateTree: false, immediate: true);
                 OnPropertyChanged(nameof(CurrentInputModel));
             }
+            RaiseUndoStateChanged();
         }
 
         private void RemoveElementsContainingPileLayoutItem(PileLayoutDataItem oldItem)
@@ -2845,7 +3110,7 @@ namespace PileDesign.ViewModels
                 try
                 {
                     // Undoポイントを追加（読込前の状態を保存）
-                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                    SaveUndoState();
 
                     GenerateSoilPilesImmediate();  // 即時実行に変更
                     CurrentInputModel.GenerateSoilEmbedment();
@@ -2969,7 +3234,7 @@ namespace PileDesign.ViewModels
                         try
                         {
                             // Undoポイントを追加（読込前の状態を保存）
-                            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                            SaveUndoState();
 
                             var viewModel = new HorizontalCalculationViewModel(this);
                             var window = new HorizontalCalculationWindow { DataContext = viewModel };
@@ -3030,7 +3295,7 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
 
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
             CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
@@ -3064,7 +3329,7 @@ namespace PileDesign.ViewModels
         private void AutoOverturningMoment()
         {
             // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
 
             var window = new AutoOverturningMomentWindow(this);
 
@@ -3097,12 +3362,14 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DeletePiles()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             var col = CurrentInputModel.PileLayoutItems;
             var itemsToRemove = col.Where(x => x.IsSelected).ToList();
             if (itemsToRemove.Count == 0) return;
 
             // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
 
             // Undo用にまとめる
             var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
@@ -3135,6 +3402,97 @@ namespace PileDesign.ViewModels
                 item.IsSelected = false;
 
             RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 選択された杭接合節点⇔一般節点を相互変換するコマンド
+        /// </summary>
+        [RelayCommand]
+        private void ConvertNodeType()
+        {
+            if (!CheckAndResetAnalysisResults()) return;
+
+            var selectedPiles = CurrentInputModel.PileLayoutItems.Where(p => p.IsSelected).ToList();
+            var selectedNodes = CurrentInputModel.InputNodes?
+                .Where(n => n.IsSelected && n.Type == NodeType.General).ToList()
+                ?? [];
+
+            if (selectedPiles.Count == 0 && selectedNodes.Count == 0) return;
+
+            SaveUndoState();
+
+            // 杭接合節点 → 一般節点: (x, y, z + ΔZc) の位置に一般節点を配置
+            foreach (var pile in selectedPiles)
+            {
+                var newNode = new InputNode
+                {
+                    No = CurrentInputModel.InputNodes.Count + 1,
+                    Type = NodeType.General,
+                    X = pile.X,
+                    Y = pile.Y,
+                    Z = pile.Z + pile.FoundationBeamDeltaZc,
+                };
+
+                foreach (var element in CurrentInputModel.Elements)
+                {
+                    for (int i = 0; i < element.Nodes.Count; i++)
+                    {
+                        if (ReferenceEquals(element.Nodes[i], pile))
+                            element.Nodes[i] = newNode;
+                    }
+                }
+
+                CurrentInputModel.PileLayoutItems.Remove(pile);
+                CurrentInputModel.InputNodes.Add(newNode);
+            }
+
+            // 一般節点 → 杭接合節点: (x, y, z - ΔZc) の位置に杭頭節点を配置
+            // ΔZc は既存杭配置の最頻値を使用（杭配置がない場合はデフォルト 1.0）
+            var deltaZc = GetMostCommonDeltaZc();
+            foreach (var node in selectedNodes)
+            {
+                var newPile = new PileLayoutDataItem
+                {
+                    X = node.X,
+                    Y = node.Y,
+                    Z = node.Z - deltaZc,
+                    PileBodyNo = 1,
+                    GroundNo = 1,
+                    FoundationBeamDeltaZc = deltaZc,
+                };
+                newPile.SetMainWindowViewModel(this);
+
+                foreach (var element in CurrentInputModel.Elements)
+                {
+                    for (int i = 0; i < element.Nodes.Count; i++)
+                    {
+                        if (ReferenceEquals(element.Nodes[i], node))
+                            element.Nodes[i] = newPile;
+                    }
+                }
+
+                CurrentInputModel.InputNodes.Remove(node);
+                CurrentInputModel.PileLayoutItems.Add(newPile);
+            }
+
+            UpdatePileLayoutNo();
+            if (selectedNodes.Count > 0) RequestGenerateSoilPiles();
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 既存の杭配置でもっとも多いΔZcを返す（杭配置がない場合はデフォルト 1.0）
+        /// </summary>
+        private double GetMostCommonDeltaZc()
+        {
+            var piles = CurrentInputModel.PileLayoutItems;
+            if (piles == null || piles.Count == 0) return 1.0;
+
+            return piles
+                .GroupBy(p => p.FoundationBeamDeltaZc)
+                .OrderByDescending(g => g.Count())
+                .First()
+                .Key;
         }
 
         /// <summary>
@@ -3492,7 +3850,7 @@ namespace PileDesign.ViewModels
             try
             {
                 // Undoポイントを追加
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                SaveUndoState();
 
                 var projectData = _fileOperationService.LoadProjectData(filePath);
 
@@ -3639,6 +3997,8 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.InputNodes == null) return;
 
+            if (!CheckAndResetAnalysisResults()) return;
+
             // 次の節点位置を決定
             Point3D nextPoint3D;
             if (CurrentInputModel.InputNodes.Count == 0)
@@ -3663,8 +4023,85 @@ namespace PileDesign.ViewModels
             };
 
             CurrentInputModel.InputNodes.Add(newNode);
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
             RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 重複一般節点を削除（同一座標の節点を統合し、梁要素の参照を付け替える）
+        /// </summary>
+        [RelayCommand]
+        private void DeleteDuplicateInputNodes()
+        {
+            if (CurrentInputModel?.InputNodes == null) return;
+
+            if (!CheckAndResetAnalysisResults()) return;
+
+            const double tol = 1e-6;
+            var nodes = CurrentInputModel.InputNodes;
+            var toRemove = new List<InputNode>();
+            // 削除される節点 → 残す節点 のマッピング
+            var mergeMap = new Dictionary<Guid, Guid>();
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (toRemove.Contains(nodes[i])) continue;
+
+                for (int j = i + 1; j < nodes.Count; j++)
+                {
+                    if (toRemove.Contains(nodes[j])) continue;
+
+                    if (Math.Abs(nodes[i].X - nodes[j].X) < tol &&
+                        Math.Abs(nodes[i].Y - nodes[j].Y) < tol &&
+                        Math.Abs(nodes[i].Z - nodes[j].Z) < tol)
+                    {
+                        mergeMap[nodes[j].UniqueId] = nodes[i].UniqueId;
+                        toRemove.Add(nodes[j]);
+                    }
+                }
+            }
+
+            if (toRemove.Count == 0)
+            {
+                MessageBox.Show("重複する一般節点はありませんでした。", "重複節点削除",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            SaveUndoState();
+
+            // 梁要素の参照を付け替え
+            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
+            if (beams != null)
+            {
+                foreach (var beam in beams)
+                {
+                    if (beam.NodeI_Type == NodeReferenceType.GeneralNode &&
+                        mergeMap.TryGetValue(beam.NodeI_Id, out var newI))
+                    {
+                        beam.NodeI_Id = newI;
+                    }
+                    if (beam.NodeJ_Type == NodeReferenceType.GeneralNode &&
+                        mergeMap.TryGetValue(beam.NodeJ_Id, out var newJ))
+                    {
+                        beam.NodeJ_Id = newJ;
+                    }
+                }
+            }
+
+            // 重複節点を削除
+            foreach (var node in toRemove)
+                nodes.Remove(node);
+
+            // 番号を振り直し
+            for (int i = 0; i < nodes.Count; i++)
+                nodes[i].No = i + 1;
+
+            RequestUpdateWindow();
+
+            MessageBox.Show(
+                $"{toRemove.Count} 個の重複一般節点を削除しました。",
+                "重複節点削除", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         /// <summary>
@@ -3686,7 +4123,7 @@ namespace PileDesign.ViewModels
             };
 
             CurrentInputModel.InputNodes.Add(newNode);
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
             RequestUpdateWindow();
         }
 
@@ -3707,7 +4144,7 @@ namespace PileDesign.ViewModels
             if (result == MessageBoxResult.OK)
             {
                 CurrentInputModel.InputNodes.Remove(node);
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                SaveUndoState();
                 RequestUpdateWindow();
             }
         }
@@ -3759,7 +4196,7 @@ namespace PileDesign.ViewModels
                         addedMaterialNo = newMaterial.No;
                     }
 
-                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                    SaveUndoState();
                     RequestUpdateWindow();
 
                     // Applyボタンが押された場合は編集を継続
@@ -3797,6 +4234,8 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel?.FoundationBeamInput?.Sections == null ||
                 CurrentInputModel.FoundationBeamInput.Sections.Count == 0) return;
+
+            if (!CheckAndResetAnalysisResults()) return;
 
             TrySaveUndoSnapshotSafely();
 
@@ -3879,7 +4318,7 @@ namespace PileDesign.ViewModels
                         addedSectionNo = newSection.No;
                     }
 
-                    _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                    SaveUndoState();
                     RequestUpdateWindow();
 
                     // Applyボタンが押された場合は編集を継続
@@ -3932,7 +4371,7 @@ namespace PileDesign.ViewModels
             }
 
             CurrentInputModel.FoundationBeamInput.Materials.Remove(material);
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
             RequestUpdateWindow();
         }
 
@@ -3958,7 +4397,7 @@ namespace PileDesign.ViewModels
             }
 
             CurrentInputModel.FoundationBeamInput.Sections.Remove(section);
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            SaveUndoState();
             RequestUpdateWindow();
         }
 
@@ -3966,6 +4405,8 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void EditBeamElements()
         {
+            if (!CheckAndResetAnalysisResults()) return;
+
             // 選択された一般梁要素がない場合はメッセージを表示
             var selectedBeams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
             if (selectedBeams == null || selectedBeams.Count == 0)
@@ -4005,7 +4446,7 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                _undoManager.SaveState(CurrentInputModel.DeepCopy());
+                SaveUndoState();
                 RequestUpdateWindow();
             }
         }

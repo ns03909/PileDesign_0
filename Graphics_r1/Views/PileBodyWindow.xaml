@@ -12,7 +12,7 @@
         mc:Ignorable="d"
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
-        Title="PileBodyWindow" WindowState="Maximized"
+        Title="杭体" WindowState="Maximized"
         Loaded="PileBodyWindow_Loaded"
         Closing="Window_Closing">
 

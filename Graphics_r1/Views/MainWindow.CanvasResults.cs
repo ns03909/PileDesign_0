@@ -248,6 +248,8 @@ namespace PileDesign.Views
                 // 1回のループで最大値と描画を行う
                 double maxAbsValue = 0;
                 var beamResults = new List<(Beam beam, double forceI, double forceJ, double originalForceI, double originalForceJ)>();
+                // RigidLink-杭頭境界ライン用ジオメトリ
+                var rigidLinkBoundaryGeo = new PathGeometry();
 
                 ObservableCollection<double> allValues = [];
 
@@ -256,10 +258,9 @@ namespace PileDesign.Views
                 foreach (var beam in anaModel.Beams)
                 {
                     // 非アクティブ杭のビームはスキップ（非アクティブ杭が存在する場合のみフィルタリング）
-                    // 基礎梁・RigidLinkは杭の可視フィルタ対象外（常に描画）
+                    // 基礎梁は杭の可視フィルタ対象外（常に描画）、RigidLinkは杭に紐付くためフィルタ対象
                     if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)
-                        && !beam.Name.StartsWith("FoundationBeam-")
-                        && !beam.Name.StartsWith("RigidLink-")) continue;
+                        && !beam.Name.StartsWith("FoundationBeam-")) continue;
 
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -440,12 +441,17 @@ namespace PileDesign.Views
                     List<double> values = [originalForceI, originalForceI, -originalForceJ, -originalForceJ];
                     AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
-
+                    // RigidLinkのJ端（杭頭）に境界ラインを追加
+                    if (beam.Name.StartsWith("RigidLink-"))
+                    {
+                        rigidLinkBoundaryGeo.AddGeometry(new LineGeometry(nodeJ2D, nodeJForce2D));
+                    }
 
                     if (viewModel.IsResultValueVisible)
                     {
+                        bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
                         string format = "{0:N" + viewModel.DecimalPlaces + "}";
-                        if (viewModel.IsPileTopResultValueVisibleOnly)
+                        if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                         {
                             if (beam.IsPileTop)
                             {
@@ -455,13 +461,12 @@ namespace PileDesign.Views
                         }
                         else
                         {
-                            // 
                             DrawResultValueTexts(
                             viewModel.IsResultValueVisible, Brushes.Black,
                             originalForceI, -originalForceJ,
                             nodeIForce2D, nodeJForce2D,
                             nodeJ2D, nodeI2D,
-                            format, format);
+                            format, format, isFoundationBeam);
                         }
                     }
                 }
@@ -470,6 +475,19 @@ namespace PileDesign.Views
                 foreach (ColorBaredGeometry colorBaredGeometry in colorBaredGeometries)
                 {
                     colorBaredGeometry.DrawPathes(Canvas3DLayout);
+                }
+
+                // RigidLink-杭頭境界ラインを描画（色付きエリアの上に重ねて表示）
+                if (rigidLinkBoundaryGeo.Figures.Count > 0)
+                {
+                    var boundaryPath = new System.Windows.Shapes.Path
+                    {
+                        Data = rigidLinkBoundaryGeo,
+                        Stroke = Brushes.Gray,
+                        StrokeThickness = 1.0,
+                        StrokeDashArray = [4, 2],
+                    };
+                    Canvas3DLayout.Children.Add(boundaryPath);
                 }
 
                 // 空チェック＋min/maxの順を修正
@@ -743,7 +761,8 @@ namespace PileDesign.Views
 
                         if (viewModel.IsResultValueVisible)
                         {
-                            if (viewModel.IsPileTopResultValueVisibleOnly)
+                            bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
+                            if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                             {
                                 if (beam.IsPileTop)
                                 {
@@ -752,7 +771,7 @@ namespace PileDesign.Views
                             }
                             else
                             {
-                                DrawResultValueTexts(viewModel.IsResultValueVisible, Brushes.Black, origI * multiplier, origJ * multiplier, nodeIDisp2D, nodeJDisp2D, nodeJ2D, nodeI2D, format, format);
+                                DrawResultValueTexts(viewModel.IsResultValueVisible, Brushes.Black, origI * multiplier, origJ * multiplier, nodeIDisp2D, nodeJDisp2D, nodeJ2D, nodeI2D, format, format, isFoundationBeam);
                             }
                         }
                     }
@@ -879,11 +898,12 @@ namespace PileDesign.Views
             double valueI, double valueJ,
             Point pointI, Point pointJ,
             Point nodeJ2D, Point nodeI2D,
-            string formatI, string formatJ)
+            string formatI, string formatJ,
+            bool isFoundationBeam = false)
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
             if (!isVisible) return;
-            if (viewModel.IsMidSpanResultValueVisibleOnly)
+            if (viewModel.IsMidSpanResultValueVisibleOnly && !isFoundationBeam)
             {
                 double value = (Math.Abs(valueI) + Math.Abs(valueJ)) / 2;
                 AddText3D(solidColorBrush, string.Format(formatI, value),
