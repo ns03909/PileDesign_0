@@ -555,114 +555,83 @@ namespace PileDesign.Models.InputData
                     return PileHeadRotationDef.Rigid();
                 }
 
-                // 場所打ち鉄筋コンクリート杭 → 最上段セグメントの Section から M-θ を取得
+                // 場所打ち鉄筋コンクリート杭 → PileSection 経由で M-θ を取得
                 if (pileBodyType.Contains("場所打ち鉄筋コンクリート杭"))
                 {
-                    object? sectionObj = PileBodySegments?.FirstOrDefault()?.PileSection;
-                    if (sectionObj == null)
+                    var ps = PileBodySegments?.FirstOrDefault()?.PileSection;
+                    if (ps != null)
                     {
-                        // フォールバック（下流の汎用ロジックへ）
-                    }
-                    else
-                    {
-                        // 1) もし既に InsituReinforcedConcreteSection の実体なら直接呼ぶ
-                        if (sectionObj is InsituReinforcedConcreteSection ircSection)
+                        // PileSection.GetMPhiRelationship → 内部で CreateSectionCalculator() を呼び
+                        // InsituReinforcedConcreteSection の M-φ を取得し、φ → θ に変換する
+                        try
                         {
-                            try
+                            // PileSection.GetMPhiRelationship は既に単位変換済み:
+                            // phis: [1/m], moments: [kNm]
+                            var mphi = ps.GetMPhiRelationship(axialN);
+                            var phis = mphi.Phis?.ToList();
+                            var ms = mphi.Moments?.ToList(); // 既に kNm
+                            if (phis != null && ms != null && phis.Count >= 2 && phis.Count == ms.Count)
                             {
-                                // axialN は kN、計算クラスは N を期待するため×1000
-                                var tup = ircSection.GetMThetaRelationship(axialN * 1000);
-                                var thetas = tup.Item1;
-                                var msRaw = tup.Item2;
-                                if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
-                                {
-                                    // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
-                                    var pts = new List<(double theta, double moment)>(thetas.Count);
-                                    for (int i = 0; i < thetas.Count; i++)
-                                        pts.Add((thetas[i], msRaw[i] * 1e-6));
-                                    return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
-                                }
-                            }
-                            catch { /* フォールバックへ */ }
-                        }
+                                // φ → θ 変換（鉄筋定着工法の経験式）
+                                // θ = 0.5 * α * D_bar * φ
+                                // ここで φ は 1/mm 単位で使われるため、1/m を 1/mm に変換
+                                double alpha = 32.0;
+                                double D_bar = InsituReinforcedConcreteSection.ExtractBarSizeNumber(ps.MainBarSize);
 
-                        // 2) sectionObj が PileSection のラッパーなら、まず PileSection 側の GetMThetaRelationship を探して呼ぶ
-                        if (sectionObj is PileSection ps)
-                        {
-                            // (A) PileSection に GetMThetaRelationship があれば直接呼ぶ（あれば最善）
-                            var miPS = ps.GetType().GetMethod("GetMThetaRelationship", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                            if (miPS != null)
-                            {
-                                try
+                                if (D_bar > 0)
                                 {
-                                    // axialN は kN、計算クラスは N を期待するため×1000
-                                    var ret = miPS.Invoke(ps, new object[] { axialN * 1000 });
-                                    if (ret != null)
-                                    {
-                                        // TryCallMThetaRelationship と同様にタプル(Item1,Item2) をパース
-                                        var t = ret.GetType();
-                                        var item1 = t.GetProperty("Item1")?.GetValue(ret) as System.Collections.IEnumerable;
-                                        var item2 = t.GetProperty("Item2")?.GetValue(ret) as System.Collections.IEnumerable;
-                                        if (item1 != null && item2 != null)
-                                        {
-                                            var th = item1.Cast<object>().Select(Convert.ToDouble).ToList();
-                                            var mmRaw = item2.Cast<object>().Select(Convert.ToDouble).ToList();
-                                            if (th.Count >= 2 && th.Count == mmRaw.Count)
-                                            {
-                                                // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
-                                                var pts = new List<(double theta, double moment)>(th.Count);
-                                                for (int i = 0; i < th.Count; i++)
-                                                    pts.Add((th[i], mmRaw[i] * 1e-6));
-                                                return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
-                                            }
-                                        }
-                                    }
-                                }
-                                catch { /* フォールバックへ */ }
-                            }
-
-                            // (B) なければ既存の M–φ を取り、φ -> θ に変換して曲線を作る
-                            try
-                            {
-                                // PileSection.GetMPhiRelationship は既に単位変換済み:
-                                // phis: [1/m], moments: [kNm]
-                                var mphi = ps.GetMPhiRelationship(axialN);
-                                var phis = mphi.Phis?.ToList();
-                                var ms = mphi.Moments?.ToList(); // 既に kNm
-                                if (phis != null && ms != null && phis.Count >= 2 && phis.Count == ms.Count)
-                                {
-                                    // φ → θ 変換（定着筋方式の経験式）
-                                    // θ = 0.5 * α * barNum * φ
-                                    // ここで φ は 1/mm 単位で使われるため、1/m を 1/mm に変換
-                                    double alpha = 32.0;
-                                    // MainBarSize 情報を PileSection から取得（存在すれば活用）
-                                    double barNum = 0.0;
-                                    try { barNum = InsituReinforcedConcreteSection.ExtractBarSizeNumber(ps.MainBarSize); } catch { barNum = 0.0; }
-
                                     var thetas = new List<double>(phis.Count);
                                     for (int i = 0; i < phis.Count; i++)
                                     {
                                         double phi_per_m = phis[i];
                                         double phi_per_mm = phi_per_m / 1000.0; // 1/m -> 1/mm
-                                        double theta = 0.5 * alpha * barNum * phi_per_mm;
+                                        double theta = 0.5 * alpha * D_bar * phi_per_mm;
                                         thetas.Add(theta);
                                     }
 
                                     // M は既に kNm なのでそのまま使用
                                     var pts = new List<(double theta, double moment)>(thetas.Count);
                                     for (int i = 0; i < thetas.Count; i++) pts.Add((thetas[i], ms[i]));
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[GetMThetaRelationship] 場所打ちRC杭 M-φ→θ変換成功: " +
+                                        $"D_bar={D_bar}, points={pts.Count}, " +
+                                        $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
+                                        $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}]");
                                     return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                                 }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[GetMThetaRelationship] 場所打ちRC杭 D_bar=0 (MainBarSize={ps.MainBarSize}) → Rigid()");
+                                }
                             }
-                            catch { /* フォールバックへ */ }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[GetMThetaRelationship] 場所打ちRC杭 M-φデータ不正: " +
+                                    $"phis={phis?.Count}, ms={ms?.Count}");
+                            }
                         }
-
-                        // 3) 最後に既存の反射フォールバック（元の TryCallMThetaRelationship を利用）
-                        // axialN は kN、計算クラスは N を期待するため×1000
-                        var curve = TryCallMThetaRelationship(sectionObj, axialN * 1000);
-                        if (curve != null) return PileHeadRotationDef.Combined(curve);
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[GetMThetaRelationship] 場所打ちRC杭 例外: {ex.Message}");
+                        }
                     }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[GetMThetaRelationship] 場所打ちRC杭 PileSection=null");
+                    }
+
+                    // すべての M-θ 計算パスが失敗した場合は剛結とする
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[GetMThetaRelationship] 場所打ちRC杭 フォールバック → Rigid()");
+                    return PileHeadRotationDef.Rigid();
                 }
+
+                // 場所打ち鉄筋コンクリート杭以外の鉄筋定着工法も剛結とする
+                return PileHeadRotationDef.Rigid();
             }
 
             // ===== ここから汎用ロジック（従来実装） =====

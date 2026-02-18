@@ -451,7 +451,7 @@ namespace PileDesign.FEM
                 { 0.0, 0.0, -6.0 * eIy_per_L3_RM1, 0.0, 6.0 * eIy_per_L2_RM1, 0.0,
                     0.0, 0.0, 6.0 * eIy_per_L3_RM1, 0.0, 6.0 * eIy_per_L2_RM2, 0.0 }, // 8
 
-                { 0.0, 0.0, 0.0, gJ_per_L, 0.0, 0.0, 0.0, 0.0, 0.0, gJ_per_L, 0.0, 0.0 }, // 9
+                { 0.0, 0.0, 0.0, -gJ_per_L, 0.0, 0.0, 0.0, 0.0, 0.0, gJ_per_L, 0.0, 0.0 }, // 9
 
                 { 0.0, 0.0, -6.0 * eIy_per_L2_RM2, 0.0, 6.0 * eIy_per_L1_RM3, 0.0,
                     0.0, 0.0, 6.0 * eIy_per_L2_RM2, 0.0, 6.0 * eIy_per_L1_RM2, 0.0 }, // 10
@@ -470,14 +470,23 @@ namespace PileDesign.FEM
             }
         }
 
+        // 座標変換マトリクスのキャッシュ（解析中ノード座標は不変）
+        private Matrix<double> _cachedCoordTransform;
+
+        public Matrix<double> GetCachedCoordTransform()
+        {
+            return _cachedCoordTransform ??= Utils.GetTransformMatrix(NodeI, NodeJ);
+        }
+
+        public void ClearCachedCoordTransform() => _cachedCoordTransform = null;
+
         // 要素剛性を部材座標系から全体座標系に変換する
         public Matrix<double> TransElemStiffToGlobal(bool isTan)
         {
             Matrix<double> ke = isTan ? KeTan : KeSec;
-            Matrix<double> t = Utils.GetTransformMatrix(NodeI, NodeJ);
+            Matrix<double> t = GetCachedCoordTransform();
             Matrix<double> kt = ke * t; // [Ke][t]
             Matrix<double> tkt = t.Transpose() * kt; // [t]-1[Ke][t] 逆行列
-            //Matrix<double> tkt = t.Inverse() * kt; // [t]-1[Ke][t] 逆行列
             return tkt;
         }
 

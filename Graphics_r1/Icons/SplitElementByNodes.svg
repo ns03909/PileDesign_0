@@ -20,6 +20,12 @@
                 <g transform="matrix(0.553852,0,0,0.553852,29.542459,1089.515798)">
                     <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
                 </g>
+                <g transform="matrix(0.553852,0,0,0.553852,79.542459,1089.515798)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+                </g>
+                <g transform="matrix(0.553852,0,0,0.553852,79.542459,1089.515798)">
+                    <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+                </g>
             </g>
         </g>
     </g>

@@ -125,12 +125,14 @@
     <None Remove="Icons\Cancel.svg" />
     <None Remove="Icons\Chang.png" />
     <None Remove="Icons\Chang.svg" />
+    <None Remove="Icons\ChangeProperty.svg" />
     <None Remove="Icons\ChangPile.png" />
     <None Remove="Icons\ChangPile.svg" />
     <None Remove="Icons\CollapseRibbon.png" />
     <None Remove="Icons\CollapseRibbon.svg" />
     <None Remove="Icons\ConnectionNodeVisible.png" />
     <None Remove="Icons\ConnectionNodeVisible.svg" />
+    <None Remove="Icons\CopyMove.svg" />
     <None Remove="Icons\CopySoilLayer.png" />
     <None Remove="Icons\CopySoilLayer.svg" />
     <None Remove="Icons\cover.png" />
@@ -310,6 +312,8 @@
     <None Remove="Icons\SaveFileAs.png" />
     <None Remove="Icons\SaveFileAs.svg" />
     <None Remove="Icons\Scale.svg" />
+    <None Remove="Icons\SectionWizard.eps" />
+    <None Remove="Icons\SectionWizard.png" />
     <None Remove="Icons\SelectAll.png" />
     <None Remove="Icons\SelectAll.svg" />
     <None Remove="Icons\SelectedActive.png" />
@@ -710,6 +714,9 @@
     <Resource Include="Icons\Chang.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\ChangeProperty.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ChangPile.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -726,6 +733,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ConnectionNodeVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopyMove.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CopySoilLayer.png">
@@ -1263,6 +1273,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Scale.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SectionWizard.eps">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SectionWizard.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SelectAll.png">

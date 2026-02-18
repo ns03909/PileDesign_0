@@ -19,6 +19,8 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
+    public record PropertyPanelItem(string Name, string Value);
+
     /// <summary>
     /// MainWindowViewModel.Constructor.cs
     ///
@@ -107,10 +109,295 @@ namespace PileDesign.ViewModels
             ? $"元に戻す: {(_undoManager.CanUndo ? "可能" : "不可")} | やり直し: {(_undoManager.CanRedo ? "可能" : "不可")}"
             : "";
 
+        // Undo/Redoツールチップ（操作名付き）
+        public string UndoToolTip
+        {
+            get
+            {
+                var desc = _undoManager?.PeekUndoDescription;
+                return string.IsNullOrEmpty(desc) ? "元に戻す (Ctrl+Z)" : $"元に戻す: {desc} (Ctrl+Z)";
+            }
+        }
+
+        public string RedoToolTip
+        {
+            get
+            {
+                var desc = _undoManager?.PeekRedoDescription;
+                return string.IsNullOrEmpty(desc) ? "やり直し (Ctrl+Y)" : $"やり直し: {desc} (Ctrl+Y)";
+            }
+        }
+
         // 杭本数表示
         public string PileCountText => CurrentInputModel?.PileLayoutItems != null
             ? $"杭本数: {CurrentInputModel.PileLayoutItems.Count}本"
             : "杭本数: 0本";
+
+        // 選択数表示
+        public string SelectionCountText
+        {
+            get
+            {
+                int piles = CurrentInputModel?.PileLayoutItems?.Count(p => p.IsSelected) ?? 0;
+                int nodes = CurrentInputModel?.InputNodes?.Count(n => n.Type == Models.InputData.NodeType.General && n.IsSelected) ?? 0;
+                int beams = CurrentInputModel?.FoundationBeamInput?.Beams?.Count(b => b.IsSelected) ?? 0;
+                int total = piles + nodes + beams;
+                if (total == 0) return "";
+                var parts = new List<string>();
+                if (piles > 0) parts.Add($"杭{piles}");
+                if (nodes > 0) parts.Add($"節点{nodes}");
+                if (beams > 0) parts.Add($"梁{beams}");
+                return $"選択: {string.Join(", ", parts)}";
+            }
+        }
+
+        // プロパティパネル: 選択アイテムのプロパティ一覧
+        public ObservableCollection<PropertyPanelItem> SelectedItemProperties { get; } = [];
+
+        // プロパティパネル: 選択中アイテムのPropertyChanged購読管理
+        private INotifyPropertyChanged? _subscribedPropertyItem;
+
+        public string SelectedItemHeader
+        {
+            get
+            {
+                var piles = CurrentInputModel?.PileLayoutItems?.Where(p => p.IsSelected).ToList();
+                if (piles?.Count == 1) return $"杭 #{CurrentInputModel.PileLayoutItems.IndexOf(piles[0]) + 1}";
+                if (piles?.Count > 1) return $"杭 ×{piles.Count}";
+
+                var beams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
+                if (beams?.Count == 1) return $"梁要素 #{beams[0].No}";
+                if (beams?.Count > 1) return $"梁要素 ×{beams.Count}";
+
+                var nodes = CurrentInputModel?.InputNodes?.Where(n => n.IsSelected && n.Type == Models.InputData.NodeType.General).ToList();
+                if (nodes?.Count == 1) return $"一般節点 #{nodes[0].No}";
+                if (nodes?.Count > 1) return $"一般節点 ×{nodes.Count}";
+
+                var fNode = CurrentInputModel?.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.IsSelected);
+                if (fNode != null) return $"基礎梁節点 #{fNode.No}";
+
+                return "選択なし";
+            }
+        }
+
+        public void UpdatePropertyPanel()
+        {
+            // 前回購読していたアイテムの購読を解除
+            if (_subscribedPropertyItem != null)
+            {
+                _subscribedPropertyItem.PropertyChanged -= OnSelectedItemPropertyChanged;
+                _subscribedPropertyItem = null;
+            }
+
+            SelectedItemProperties.Clear();
+            OnPropertyChanged(nameof(SelectedItemHeader));
+
+            // 杭
+            var piles = CurrentInputModel?.PileLayoutItems?.Where(p => p.IsSelected).ToList();
+            if (piles?.Count == 1)
+            {
+                SubscribeSelectedItem(piles[0]);
+                BuildPileProperties(piles[0]);
+                return;
+            }
+            if (piles?.Count > 1)
+            {
+                BuildMultiPileProperties(piles);
+                return;
+            }
+
+            // 梁要素
+            var beams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
+            if (beams?.Count == 1)
+            {
+                SubscribeSelectedItem(beams[0]);
+                BuildBeamProperties(beams[0]);
+                return;
+            }
+            if (beams?.Count > 1)
+            {
+                BuildMultiBeamProperties(beams);
+                return;
+            }
+
+            // 一般節点
+            var nodes = CurrentInputModel?.InputNodes?.Where(n => n.IsSelected && n.Type == Models.InputData.NodeType.General).ToList();
+            if (nodes?.Count == 1)
+            {
+                SubscribeSelectedItem(nodes[0]);
+                BuildInputNodeProperties(nodes[0]);
+                return;
+            }
+            if (nodes?.Count > 1)
+            {
+                BuildMultiInputNodeProperties(nodes);
+                return;
+            }
+
+            // 基礎梁節点
+            var fNode = CurrentInputModel?.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.IsSelected);
+            if (fNode != null)
+            {
+                SubscribeSelectedItem(fNode);
+                BuildFoundationNodeProperties(fNode);
+                return;
+            }
+        }
+
+        private void SubscribeSelectedItem(INotifyPropertyChanged item)
+        {
+            _subscribedPropertyItem = item;
+            item.PropertyChanged += OnSelectedItemPropertyChanged;
+        }
+
+        private void OnSelectedItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // 選択状態の変更はUpdatePropertyPanel自体が呼ばれるので無視
+            if (e.PropertyName == nameof(PileLayoutDataItem.IsSelected)) return;
+
+            // プロパティ一覧を再構築
+            SelectedItemProperties.Clear();
+            OnPropertyChanged(nameof(SelectedItemHeader));
+
+            if (sender is PileLayoutDataItem pile) BuildPileProperties(pile);
+            else if (sender is FoundationBeamElement beam) BuildBeamProperties(beam);
+            else if (sender is InputNode node) BuildInputNodeProperties(node);
+            else if (sender is FoundationNode fNode) BuildFoundationNodeProperties(fNode);
+        }
+
+        private void BuildPileProperties(PileLayoutDataItem pile)
+        {
+            int no = CurrentInputModel.PileLayoutItems.IndexOf(pile) + 1;
+            SelectedItemProperties.Add(new("番号", $"{no}"));
+            SelectedItemProperties.Add(new("X", $"{pile.X:F3} m"));
+            SelectedItemProperties.Add(new("Y", $"{pile.Y:F3} m"));
+            SelectedItemProperties.Add(new("Z (杭頭)", $"{pile.Z:F3} m"));
+            SelectedItemProperties.Add(new("杭体No", $"{pile.PileBodyNo}"));
+            SelectedItemProperties.Add(new("地盤No", $"{pile.GroundNo}"));
+            SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}"));
+            SelectedItemProperties.Add(new("間隔係数 R/B", $"{pile.PileSpacingFactor:F3}"));
+            SelectedItemProperties.Add(new("ΔZc", $"{pile.FoundationBeamDeltaZc:F3} m"));
+
+            // 軸力: VL
+            SelectedItemProperties.Add(new("軸力 VL", $"{pile.AxialForceVL:F1} kN"));
+
+            // 軸力: レベル1 (1-1, 1-2, 1-3, 1-4)
+            for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
+            {
+                SelectedItemProperties.Add(new($"軸力 1-{i + 1}", $"{pile.AxialForceLevel1s[i]:F1} kN"));
+            }
+
+            // 軸力: レベル2 (2-1, 2-2, 2-3, 2-4)
+            for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
+            {
+                SelectedItemProperties.Add(new($"軸力 2-{i + 1}", $"{pile.AxialForceLevel2s[i]:F1} kN"));
+            }
+        }
+
+        private void BuildBeamProperties(FoundationBeamElement beam)
+        {
+            SelectedItemProperties.Add(new("要素No", $"{beam.No}"));
+            SelectedItemProperties.Add(new("I端節点No", $"{beam.NodeI_No}"));
+            SelectedItemProperties.Add(new("J端節点No", $"{beam.NodeJ_No}"));
+            SelectedItemProperties.Add(new("材料No", $"{beam.MaterialNo}"));
+            SelectedItemProperties.Add(new("断面No", $"{beam.SectionNo}"));
+            SelectedItemProperties.Add(new("幅", $"{beam.Width:F3} m"));
+            SelectedItemProperties.Add(new("高さ", $"{beam.Height:F3} m"));
+            SelectedItemProperties.Add(new("ヤング率", $"{beam.YoungModulus:E2} kN/m²"));
+            SelectedItemProperties.Add(new("角度β", $"{beam.AngleBeta:F1}°"));
+        }
+
+        private void BuildInputNodeProperties(InputNode node)
+        {
+            SelectedItemProperties.Add(new("節点No", $"{node.No}"));
+            SelectedItemProperties.Add(new("X", $"{node.X:F3} m"));
+            SelectedItemProperties.Add(new("Y", $"{node.Y:F3} m"));
+            SelectedItemProperties.Add(new("Z", $"{node.Z:F3} m"));
+            SelectedItemProperties.Add(new("タイプ", $"{node.Type}"));
+        }
+
+        private void BuildFoundationNodeProperties(FoundationNode fNode)
+        {
+            SelectedItemProperties.Add(new("節点No", $"{fNode.No}"));
+            SelectedItemProperties.Add(new("X", $"{fNode.X:F3} m"));
+            SelectedItemProperties.Add(new("Y", $"{fNode.Y:F3} m"));
+            SelectedItemProperties.Add(new("Z", $"{fNode.Z:F3} m"));
+        }
+
+        // --- 複数選択時のプロパティ表示 ---
+
+        private static string CommonOrVarious<T>(IEnumerable<T> values)
+        {
+            var distinct = values.Distinct().ToList();
+            return distinct.Count == 1 ? $"{distinct[0]}" : "(様々)";
+        }
+
+        private static string CommonDoubleOrVarious(IEnumerable<double> values, string format = "F3", string unit = "")
+        {
+            var distinct = values.Select(v => Math.Round(v, 6)).Distinct().ToList();
+            return distinct.Count == 1 ? $"{distinct[0].ToString(format)} {unit}".Trim() : "(様々)";
+        }
+
+        private void BuildMultiPileProperties(List<PileLayoutDataItem> piles)
+        {
+            SelectedItemProperties.Add(new("選択数", $"{piles.Count} 本"));
+
+            // 共通プロパティ
+            SelectedItemProperties.Add(new("杭体No", CommonOrVarious(piles.Select(p => p.PileBodyNo))));
+            SelectedItemProperties.Add(new("地盤No", CommonOrVarious(piles.Select(p => p.GroundNo))));
+            SelectedItemProperties.Add(new("群杭係数 ξ", CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))));
+            SelectedItemProperties.Add(new("間隔係数 R/B", CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor))));
+            SelectedItemProperties.Add(new("ΔZc", CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc), "F3", "m")));
+
+            // 軸力合計
+            SelectedItemProperties.Add(new("軸力 VL (合計)", $"{piles.Sum(p => p.AxialForceVL):F1} kN"));
+
+            // レベル1
+            int level1Count = piles.Min(p => p.AxialForceLevel1s.Count);
+            for (int i = 0; i < level1Count; i++)
+            {
+                int idx = i;
+                SelectedItemProperties.Add(new($"軸力 1-{i + 1} (合計)", $"{piles.Sum(p => p.AxialForceLevel1s[idx]):F1} kN"));
+            }
+
+            // レベル2
+            int level2Count = piles.Min(p => p.AxialForceLevel2s.Count);
+            for (int i = 0; i < level2Count; i++)
+            {
+                int idx = i;
+                SelectedItemProperties.Add(new($"軸力 2-{i + 1} (合計)", $"{piles.Sum(p => p.AxialForceLevel2s[idx]):F1} kN"));
+            }
+        }
+
+        private void BuildMultiBeamProperties(List<FoundationBeamElement> beams)
+        {
+            SelectedItemProperties.Add(new("選択数", $"{beams.Count} 本"));
+            SelectedItemProperties.Add(new("材料No", CommonOrVarious(beams.Select(b => b.MaterialNo))));
+            SelectedItemProperties.Add(new("断面No", CommonOrVarious(beams.Select(b => b.SectionNo))));
+            SelectedItemProperties.Add(new("幅", CommonDoubleOrVarious(beams.Select(b => b.Width), "F3", "m")));
+            SelectedItemProperties.Add(new("高さ", CommonDoubleOrVarious(beams.Select(b => b.Height), "F3", "m")));
+            SelectedItemProperties.Add(new("ヤング率", CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "E2", "kN/m²")));
+            SelectedItemProperties.Add(new("角度β", CommonDoubleOrVarious(beams.Select(b => b.AngleBeta), "F1", "°")));
+        }
+
+        private void BuildMultiInputNodeProperties(List<InputNode> nodes)
+        {
+            SelectedItemProperties.Add(new("選択数", $"{nodes.Count} 個"));
+            SelectedItemProperties.Add(new("タイプ", CommonOrVarious(nodes.Select(n => n.Type))));
+        }
+
+        // マウス座標表示
+        private string _mouseCoordinateText = "";
+        public string MouseCoordinateText
+        {
+            get => _mouseCoordinateText;
+            set => SetProperty(ref _mouseCoordinateText, value);
+        }
+
+        // ズーム倍率表示
+        public string ZoomText => CanvasThreeDView != null
+            ? $"×{CanvasThreeDView.Scale:F1}"
+            : "";
 
         // 解析状態表示
         public string AnalysisStatusText
@@ -118,9 +405,9 @@ namespace PileDesign.ViewModels
             get
             {
                 var statuses = new List<string>();
+                if (IsElementSplit) statuses.Add("要素分割済み");
                 if (IsHorizontalAnalysisDone) statuses.Add("水平解析完了");
                 if (IsVerticalAnalysisDone) statuses.Add("沈下解析完了");
-                if (IsElementSplit) statuses.Add("要素分割済み");
                 return statuses.Count > 0 ? string.Join(" | ", statuses) : "未解析";
             }
         }
@@ -147,6 +434,14 @@ namespace PileDesign.ViewModels
         {
             get => _isInputVisualizerVisible;
             set => SetProperty(ref _isInputVisualizerVisible, value);
+        }
+
+        // ミニマップ表示/非表示
+        private bool _isMinimapVisible = true;
+        public bool IsMinimapVisible
+        {
+            get => _isMinimapVisible;
+            set => SetProperty(ref _isMinimapVisible, value);
         }
 
         // XYZ軸トグル用プロパティ
@@ -985,6 +1280,34 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // ビューキューブ表示
+        private bool _isViewCubeVisible = true;
+        public bool IsViewCubeVisible
+        {
+            get => _isViewCubeVisible;
+            set
+            {
+                if (SetProperty(ref _isViewCubeVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 右ツール群表示
+        private bool _isRightToolbarVisible = true;
+        public bool IsRightToolbarVisible
+        {
+            get => _isRightToolbarVisible;
+            set
+            {
+                if (SetProperty(ref _isRightToolbarVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
         // 接続用節点表示（杭頭+ΔZc位置）
         private bool _isConnectingNodeVisible = true;
         public bool IsConnectingNodeVisible
@@ -1031,11 +1354,25 @@ namespace PileDesign.ViewModels
                         }
                     }
 
+                    // カーソルを更新
+                    OnPropertyChanged(nameof(CanvasCursor));
+
                     // 画面更新
                     RequestUpdateWindow();
                 }
             }
         }
+
+        /// <summary>
+        /// 編集モードに応じたキャンバスカーソル
+        /// </summary>
+        public System.Windows.Input.Cursor CanvasCursor => CurrentEditMode switch
+        {
+            CanvasEditMode.AddNode => System.Windows.Input.Cursors.Cross,
+            CanvasEditMode.AddElement => System.Windows.Input.Cursors.Pen,
+            CanvasEditMode.Delete => System.Windows.Input.Cursors.No,
+            _ => System.Windows.Input.Cursors.Arrow,
+        };
 
         // 基礎梁ノード追加時のデフォルトZ座標（杭頭の平均高さなど）
         private double _defaultFoundationBeamZ = 1.0;
@@ -1542,7 +1879,7 @@ namespace PileDesign.ViewModels
 
 
         // 沈下検討用土層描画
-        private bool _isSettlementGroundVisible = true;
+        private bool _isSettlementGroundVisible = false;
         public bool IsSettlementGroundVisible
         {
             get => _isSettlementGroundVisible;
@@ -1550,7 +1887,19 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isSettlementGroundVisible, value))
                 {
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow();
+                    // ONにしたとき: 群杭荷重タブ→土層タブを表示し、θ=0にする
+                    if (value)
+                    {
+                        ActivateSettlementSoilTabAction?.Invoke();
+                        if (AnimateViewAnglesAction != null)
+                            AnimateViewAnglesAction(CanvasThreeDView.Tht, 0);
+                        else
+                        {
+                            CanvasThreeDView.Phi = 0;
+                            UpdateCanvas3DAction?.Invoke();
+                        }
+                    }
                 }
             }
         }
@@ -1593,6 +1942,20 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _isNodeNoVisible, value))
                 {
                     RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                }
+            }
+        }
+
+        // 一般節点Z座標描画
+        private bool _isGeneralNodeZVisible = false;
+        public bool IsGeneralNodeZVisible
+        {
+            get => _isGeneralNodeZVisible;
+            set
+            {
+                if (SetProperty(ref _isGeneralNodeZVisible, value))
+                {
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -2333,12 +2696,6 @@ namespace PileDesign.ViewModels
         //
         private void PileLayoutItems_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.Action == NotifyCollectionChangedAction.Remove && e.OldItems != null)
-            {
-                foreach (PileLayoutDataItem oldItem in e.OldItems)
-                    RemoveElementsContainingPileLayoutItem(oldItem);
-            }
-
             if (e.NewItems != null)
             {
                 foreach (PileLayoutDataItem newItem in e.NewItems)

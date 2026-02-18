@@ -200,26 +200,8 @@ namespace PileDesign.Services
                 inputModel.PileLayoutItems = [];
             }
 
-            // 要素接続を設定（ある場合、バッチ化）
-            if (data.ElementConnections != null && data.ElementConnections.Count > 0)
-            {
-                var elemList = new List<Element>(data.ElementConnections.Count);
-                foreach (var conn in data.ElementConnections)
-                {
-                    if (conn.Length >= 2 && conn[0] < inputModel.PileLayoutItems.Count && conn[1] < inputModel.PileLayoutItems.Count)
-                    {
-                        elemList.Add(new Element(
-                            "ダミー",
-                            inputModel.PileLayoutItems[conn[0]],
-                            inputModel.PileLayoutItems[conn[1]]));
-                    }
-                }
-                inputModel.Elements = new ObservableCollection<Element>(elemList);
-            }
-            else
-            {
-                inputModel.Elements = new ObservableCollection<Element>();
-            }
+            // 旧要素はクリア（後方互換用に読み込まれた場合に備える）
+            inputModel.Elements?.Clear();
 
             // 一般節点をクリア
             inputModel.InputNodes?.Clear();

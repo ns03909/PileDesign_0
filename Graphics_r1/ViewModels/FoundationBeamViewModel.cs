@@ -28,7 +28,7 @@ namespace PileDesign.ViewModels
         }
 
         // 接続モード
-        private FoundationBeamConnectionMode _connectionMode = FoundationBeamConnectionMode.RigidBody;
+        private FoundationBeamConnectionMode _connectionMode = FoundationBeamConnectionMode.RigidFloor;
         public FoundationBeamConnectionMode ConnectionMode
         {
             get => _connectionMode;

@@ -83,6 +83,10 @@ namespace PileDesign.Services
         public PathGeometry PathGeoInputNodesGeneral { get; set; } = new(); // 一般節点（General型・オレンジ）
         public PathGeometry PathGeoBeamSections { get; set; } = new(); // 梁要素断面形状
 
+        // ホバーハイライト（Clear()では消さない。MouseMoveで直接更新する）
+        public PathGeometry PathGeoHoverNode { get; set; } = new();
+        public PathGeometry PathGeoHoverElement { get; set; } = new();
+
         // クリアメソッド
         public void Clear()
         {
@@ -491,7 +495,6 @@ namespace PileDesign.Services
             });
 
             // 接続用節点（杭頭+ΔZc位置）
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] DrawAllPaths: PathGeoConnectingNodes.Figures.Count={PathGeoConnectingNodes.Figures.Count}");
             canvas.Children.Add(new Path()
             {
                 Stroke = Brushes.Red,
@@ -634,6 +637,27 @@ namespace PileDesign.Services
                 StrokeThickness = 0.5,
                 Data = PathGeoAxisZM,
                 Name = "AxisZM"
+            });
+
+            // ホバーハイライト（節点）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = new SolidColorBrush(Color.FromArgb(200, 0, 120, 215)),
+                Fill = new SolidColorBrush(Color.FromArgb(40, 0, 120, 215)),
+                StrokeThickness = 1.5,
+                Data = PathGeoHoverNode,
+                IsHitTestVisible = false,
+                Name = "HoverNode"
+            });
+
+            // ホバーハイライト（要素）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = new SolidColorBrush(Color.FromArgb(200, 0, 120, 215)),
+                StrokeThickness = 2.5,
+                Data = PathGeoHoverElement,
+                IsHitTestVisible = false,
+                Name = "HoverElement"
             });
         }
     }

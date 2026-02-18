@@ -162,10 +162,13 @@ namespace PileDesign.Models.InputData
 
         private void LoadCase_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            // IsApplicable が変更されたら AllSeismicLoadCases/AllLoadCases の変更を通知
             if (e.PropertyName == nameof(LoadCase.IsApplicable))
             {
                 RaiseAllLoadCasesChanged();
+            }
+            if (e.PropertyName == nameof(LoadCase.IsAnalysisTarget))
+            {
+                OnPropertyChanged(nameof(AnalysisTargetSeismicLoadCases));
             }
         }
 
@@ -219,6 +222,24 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 解析対象の地震荷重ケース（IsAnalysisTarget=true のもの）
+        /// </summary>
+        public ObservableCollection<LoadCase> AnalysisTargetSeismicLoadCases
+        {
+            get
+            {
+                var result = new ObservableCollection<LoadCase>();
+                if (LoadCasesLevel1 != null)
+                    foreach (var lc in LoadCasesLevel1.Where(x => x.IsAnalysisTarget))
+                        result.Add(lc);
+                if (LoadCasesLevel2 != null)
+                    foreach (var lc in LoadCasesLevel2.Where(x => x.IsAnalysisTarget))
+                        result.Add(lc);
+                return result;
+            }
+        }
+
         public ObservableCollection<LoadCombination> AllLoadCombinations
         {
             get
@@ -254,7 +275,7 @@ namespace PileDesign.Models.InputData
 
             double x = 0;
             double y = 0;
-            double z = 0;
+            double z = 1;
             bool isSoilNonLinear = true;
             bool isPileNonLinear1 = false;
             bool isPileNonLinear2 = true;
@@ -271,13 +292,13 @@ namespace PileDesign.Models.InputData
                 (_mainWindowViewModel, true, 1, 1, "VL+E1", 0.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, false, 1, 2, "VL+E2", 90.0, isSoilNonLinear, isPileNonLinear1,
+                (_mainWindowViewModel, true, 1, 2, "VL+E2", 90.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, false, 1, 3, "VL-E1", 180.0, isSoilNonLinear, isPileNonLinear1,
+                (_mainWindowViewModel, true, 1, 3, "VL-E1", 180.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, false, 1, 4, "VL-E2", 270.0, isSoilNonLinear, isPileNonLinear1,
+                (_mainWindowViewModel, true, 1, 4, "VL-E2", 270.0, isSoilNonLinear, isPileNonLinear1,
                 upperMassForce1, foundationMassForce1,  x, y, z),
             ];
 
@@ -286,18 +307,21 @@ namespace PileDesign.Models.InputData
 
             LoadCasesLevel2 = [
             new LoadCase
-                (_mainWindowViewModel, false, 2, 1, "U1", 0.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, true, 2, 1, "U1", 0.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, false, 2, 2, "U2", 90.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, true, 2, 2, "U2", 90.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, false, 2, 3, "U5", 180.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, true, 2, 3, "U5", 180.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             new LoadCase
-                (_mainWindowViewModel, false, 2, 4, "U6", 270.0, isSoilNonLinear, isPileNonLinear2,
+                (_mainWindowViewModel, true, 2, 4, "U6", 270.0, isSoilNonLinear, isPileNonLinear2,
                 upperMassForce2, foundationMassForce2, x, y, z),
             ];
+
+            // 解析対象のデフォルト: ケース2-1 (U1) のみ
+            LoadCasesLevel2[0].IsAnalysisTarget = true;
         }
 
         // 深いコピーを作成するメソッド

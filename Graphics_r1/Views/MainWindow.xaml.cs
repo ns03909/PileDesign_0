@@ -19,6 +19,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Controls.Ribbon;
 using System.Windows.Shapes;
 
 namespace PileDesign.Views
@@ -26,7 +27,7 @@ namespace PileDesign.Views
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック
     /// </summary>
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : RibbonWindow, INotifyPropertyChanged
     {
         // クラス内フィールドを追加
         private readonly Dictionary<(object item, string path), object?> _dgOldValues = [];
@@ -61,6 +62,7 @@ namespace PileDesign.Views
         private bool hasViewportGrid = true;
 
         private const double SelectionTolerance = 10.0;
+        private double _lastSnappedZ = double.NaN; // 最後にスナップした杭/一般節点のZ
 
         public double Canvas3DHeight { get; set; }
         public double Canvas3DWidth { get; set; }
@@ -90,6 +92,15 @@ namespace PileDesign.Views
             // 追加: ZoomFitAction をコードビハインド実装に接続
             viewModel.ZoomFitAction = ZoomFit;
 
+            // 沈下土層ON時: 群杭荷重タブ→土層タブを表示
+            viewModel.ActivateSettlementSoilTabAction = () =>
+            {
+                ActivateGroupPileLoadTab();
+                // 土層タブ（インデックス1）を選択
+                if (GroupPileTabControl != null && GroupPileTabControl.Items.Count > 1)
+                    GroupPileTabControl.SelectedIndex = 1;
+            };
+
             // （任意）アニメーション角度用も接続したい場合
             viewModel.AnimateViewAnglesAction = async (tht, phi) =>
             {
@@ -116,6 +127,7 @@ namespace PileDesign.Views
 
             // デリゲートの設定
             viewModel.UpdateCanvas3DAction = UpdateCanvas3D;
+            viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
             // データグリッドの選択変更イベントを設定
             DataGridPileLayout.SelectionChanged += DataGridPileLayout_SelectionChanged;
@@ -198,6 +210,59 @@ namespace PileDesign.Views
             // ツリービューの更新
             viewModel.UpdateTreeView();
         }
+
+        // トースト通知
+        private System.Windows.Threading.DispatcherTimer? _toastTimer;
+
+        public void ShowToast(string message, ToastType type = ToastType.Success)
+        {
+            ToastText.Text = message;
+
+            switch (type)
+            {
+                case ToastType.Success:
+                    ToastIcon.Text = "\u2714"; // ✔
+                    ToastIcon.Foreground = new SolidColorBrush(Color.FromRgb(76, 175, 80));
+                    break;
+                case ToastType.Info:
+                    ToastIcon.Text = "\u2139"; // ℹ
+                    ToastIcon.Foreground = new SolidColorBrush(Color.FromRgb(33, 150, 243));
+                    break;
+                case ToastType.Warning:
+                    ToastIcon.Text = "\u26A0"; // ⚠
+                    ToastIcon.Foreground = new SolidColorBrush(Color.FromRgb(255, 152, 0));
+                    break;
+            }
+
+            // フェードイン
+            ToastBorder.Visibility = Visibility.Visible;
+            var fadeIn = new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
+            ToastBorder.BeginAnimation(OpacityProperty, fadeIn);
+
+            // スライドイン
+            var slideIn = new System.Windows.Media.Animation.DoubleAnimation(40, 0, TimeSpan.FromMilliseconds(250))
+            {
+                EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
+            };
+            ToastTranslate.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, slideIn);
+
+            // 自動非表示タイマー
+            _toastTimer?.Stop();
+            _toastTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            _toastTimer.Tick += (s, e) =>
+            {
+                _toastTimer.Stop();
+                var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(400));
+                fadeOut.Completed += (_, _) => ToastBorder.Visibility = Visibility.Collapsed;
+                ToastBorder.BeginAnimation(OpacityProperty, fadeOut);
+            };
+            _toastTimer.Start();
+        }
+
+        public enum ToastType { Success, Info, Warning }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -314,8 +379,13 @@ namespace PileDesign.Views
         {
             InitializeCanvasTransformGroup();
             SetupDataBindings();
+            InitializePanelToggleSync();
             var viewModel = _mainWindowViewModel;
             viewModel.UpdateTreeView();
+
+            // 起動時にアイソメトリックビューを強制設定（Slider初期化で上書きされる場合の対策）
+            viewModel.CanvasThreeDView.Tht = -45;
+            viewModel.CanvasThreeDView.Phi = 45;
 
             // Canvas にフォーカスを設定
             Canvas3DLayout.Focus();
@@ -1113,6 +1183,26 @@ namespace PileDesign.Views
         // マウス左ボタンが押された時のメソッド
         private void Canvas3DLayout_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // ダブルクリック: 選択中の杭/梁のプロパティ編集
+            if (e.ClickCount == 2)
+            {
+                var viewModel = _mainWindowViewModel;
+                var selectedPile = viewModel.CurrentInputModel.PileLayoutItems.FirstOrDefault(p => p.IsSelected);
+                var selectedBeam = viewModel.CurrentInputModel.FoundationBeamInput?.Beams.FirstOrDefault(b => b.IsSelected);
+                if (selectedPile != null)
+                {
+                    viewModel.EditAddPilesCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+                else if (selectedBeam != null)
+                {
+                    viewModel.EditBeamElementsCommand.Execute(null);
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             // 基礎梁ビジュアル編集モードの処理
             if (HandleFoundationBeamEditMode(e))
             {
@@ -1340,6 +1430,19 @@ namespace PileDesign.Views
         {
             var viewModel = (MainWindowViewModel)DataContext;
 
+            // ステータスバーにマウス座標を表示（スナップZ平面上の逆変換）
+            var screenPos = e.GetPosition(Canvas3DLayout);
+            if (!double.IsNaN(_lastSnappedZ))
+            {
+                var worldPos = viewModel.CanvasThreeDView.InverseTransformationAtZ(screenPos, _lastSnappedZ);
+                viewModel.MouseCoordinateText = $"X={worldPos.X:F3}  Y={worldPos.Y:F3}  Z={worldPos.Z:F3}";
+            }
+            else
+            {
+                var worldPos = viewModel.CanvasThreeDView.InverseTransformation(screenPos);
+                viewModel.MouseCoordinateText = $"X={worldPos.X:F3}  Y={worldPos.Y:F3}  Z={worldPos.Z:F3}";
+            }
+
             // 基礎梁要素追加モード: プレビュー線を描画
             if (viewModel.CurrentEditMode == CanvasEditMode.AddElement && viewModel.TempStartNode != null)
             {
@@ -1479,12 +1582,16 @@ namespace PileDesign.Views
                 UpdateWhileMouseAction();
             }
 
-            // ツールチップの更新（ボタンが押されていない時のみ）
+            // ツールチップとホバーハイライトの更新（ボタンが押されていない時のみ）
             if (e.LeftButton == MouseButtonState.Released &&
                 e.RightButton == MouseButtonState.Released &&
                 !IsMouseWheelPressed)
             {
                 Point mousePos = e.GetPosition(Canvas3DLayout);
+                // ホバーハイライト + スナップZ更新
+                var snappedZ = UpdateHoverHighlight(mousePos);
+                if (snappedZ.HasValue)
+                    _lastSnappedZ = snappedZ.Value;
                 // 沈下マップツールチップ
                 UpdateSettlementTooltip(mousePos);
                 // 応力図・変位図ツールチップ
@@ -1499,6 +1606,7 @@ namespace PileDesign.Views
             }
             else
             {
+                ClearHoverHighlight();
                 HideSettlementTooltip();
                 try { HideBeamResultTooltip(); } catch { }
             }
@@ -1921,6 +2029,7 @@ namespace PileDesign.Views
 
             IsMouseWheelPressed = false;
             UpdateCanvas3D();
+            viewModel.RaisePropertyChanged(nameof(viewModel.ZoomText));
         }
 
         // 置換: プレビューMouseUpでのメニュー表示判定
@@ -2223,6 +2332,7 @@ namespace PileDesign.Views
 
             // Canvasを更新
             UpdateCanvas3D();
+            viewModel.RaisePropertyChanged(nameof(viewModel.ZoomText));
         }
 
         // すべてのノードを選択するメソッド
@@ -2233,6 +2343,36 @@ namespace PileDesign.Views
             {
                 pileLayoutItem.IsVisible = true;
                 pileLayoutItem.IsSelected = true;
+            }
+            // 一般節点
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    if (node.Type == NodeType.General)
+                    {
+                        node.IsVisible = true;
+                        node.IsSelected = true;
+                    }
+                }
+            }
+            // 梁要素
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    beam.IsVisible = true;
+                    beam.IsSelected = true;
+                }
+            }
+            // 基礎梁節点
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                {
+                    node.IsVisible = true;
+                    node.IsSelected = true;
+                }
             }
             UpdateWindow();
         }
@@ -2245,6 +2385,27 @@ namespace PileDesign.Views
             {
                 pileLayoutItem.IsVisible = true;
             }
+            // 一般節点
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    if (node.Type == NodeType.General)
+                        node.IsVisible = true;
+                }
+            }
+            // 梁要素
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    beam.IsVisible = true;
+            }
+            // 基礎梁節点
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                    node.IsVisible = true;
+            }
             UpdateWindow();
         }
 
@@ -2255,14 +2416,28 @@ namespace PileDesign.Views
 
             foreach (var pileLayoutItem in viewModel.CurrentInputModel.PileLayoutItems)
             {
-                if (pileLayoutItem.IsSelected)
+                pileLayoutItem.IsVisible = pileLayoutItem.IsSelected;
+            }
+            // 一般節点
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
                 {
-                    pileLayoutItem.IsVisible = true;
+                    if (node.Type == NodeType.General)
+                        node.IsVisible = node.IsSelected;
                 }
-                else
-                {
-                    pileLayoutItem.IsVisible = false;
-                }
+            }
+            // 梁要素
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    beam.IsVisible = beam.IsSelected;
+            }
+            // 基礎梁節点
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                    node.IsVisible = node.IsSelected;
             }
             UpdateWindow();
         }
@@ -2273,16 +2448,29 @@ namespace PileDesign.Views
             var viewModel = DataContext as MainWindowViewModel;
             foreach (var pileLayoutItem in viewModel.CurrentInputModel.PileLayoutItems)
             {
-                if (pileLayoutItem.IsSelected)
+                pileLayoutItem.IsVisible = !pileLayoutItem.IsSelected;
+            }
+            // 一般節点
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
                 {
-                    pileLayoutItem.IsVisible = false;
-                }
-                else
-                {
-                    pileLayoutItem.IsVisible = true;
+                    if (node.Type == NodeType.General)
+                        node.IsVisible = !node.IsSelected;
                 }
             }
-            //ClearCanvasSelection();
+            // 梁要素
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    beam.IsVisible = !beam.IsSelected;
+            }
+            // 基礎梁節点
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                    node.IsVisible = !node.IsSelected;
+            }
             UpdateWindow();
         }
 
@@ -3191,20 +3379,33 @@ namespace PileDesign.Views
 
         private void InvertActiveNodesButton_click(object sender, RoutedEventArgs e)
         {
-            //foreach (var pileLayoutItem in ((MainWindowViewModel)DataContext).CurrentInputModel.PileLayoutItems)
-            //{
-            //    if (pileLayoutItem.IsVisible)
-            //    { pileLayoutItem.IsVisible = false; }
-            //    else
-            //    {
-            //        pileLayoutItem.IsVisible = true;
-            //    }
-            //}
             var vm = (MainWindowViewModel)DataContext;
             foreach (var item in vm.CurrentInputModel.PileLayoutItems)
                 item.IsVisible = !item.IsVisible;
 
-            vm.UpdateViewCommand?.Execute(null); // 既存の再描画コマンドがあれば
+            // 一般節点
+            if (vm.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in vm.CurrentInputModel.InputNodes)
+                {
+                    if (node.Type == NodeType.General)
+                        node.IsVisible = !node.IsVisible;
+                }
+            }
+            // 梁要素
+            if (vm.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in vm.CurrentInputModel.FoundationBeamInput.Beams)
+                    beam.IsVisible = !beam.IsVisible;
+            }
+            // 基礎梁節点
+            if (vm.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var node in vm.CurrentInputModel.FoundationBeamInput.Nodes)
+                    node.IsVisible = !node.IsVisible;
+            }
+
+            UpdateWindow();
         }
 
         private void MergeElementsButton_click(object sender, RoutedEventArgs e)

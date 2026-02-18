@@ -12,6 +12,7 @@ namespace PileDesign.Models.InputData
 
         // プロパティ
         private bool _isApplicable;
+        /// <summary>荷重ケースの適用状態（表示・出力用）</summary>
         public bool IsApplicable
         {
             get => _isApplicable;
@@ -21,6 +22,21 @@ namespace PileDesign.Models.InputData
                 {
                     _isApplicable = value;
                     OnPropertyChanged(nameof(IsApplicable));
+                }
+            }
+        }
+
+        private bool _isAnalysisTarget;
+        /// <summary>解析対象フラグ（解析ループで使用。IsApplicable とは独立）</summary>
+        public bool IsAnalysisTarget
+        {
+            get => _isAnalysisTarget;
+            set
+            {
+                if (_isAnalysisTarget != value)
+                {
+                    _isAnalysisTarget = value;
+                    OnPropertyChanged(nameof(IsAnalysisTarget));
                 }
             }
         }

@@ -45,6 +45,11 @@ namespace PileDesign.ViewModels
         // 再入防止フラグ
         private bool _isSyncingGroundInput;
 
+        // Update() 再入防止・デバウンス
+        private bool _isUpdating;
+        private bool _updatePending;
+        private System.Windows.Threading.DispatcherTimer? _updateDebounceTimer;
+
         // GroundInput プロパティ: 購読の付け替えを内包
         private GroundInput _groundInput;
         public GroundInput? GroundInput
@@ -166,8 +171,8 @@ namespace PileDesign.ViewModels
                 // 相互換算の同期
                 SyncDepthAltitude(gi, e.PropertyName);
 
-                // 再計算・再描画
-                Update();
+                // 再計算・再描画（デバウンス）
+                ScheduleUpdate();
             }
         }
 
@@ -1744,7 +1749,62 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// 全再計算＋グラフ再描画を行う。
+        /// 再入防止ガード付き：実行中に呼ばれた場合は完了後に1回だけ再実行する。
+        /// </summary>
         public void Update()
+        {
+            if (_isUpdating)
+            {
+                // 再入：現在の実行完了後にもう1回実行する
+                _updatePending = true;
+                return;
+            }
+
+            _isUpdating = true;
+            try
+            {
+                UpdateCore();
+            }
+            finally
+            {
+                _isUpdating = false;
+            }
+
+            // 再入リクエストがあった場合は1回だけ再実行
+            if (_updatePending)
+            {
+                _updatePending = false;
+                UpdateCore();
+            }
+        }
+
+        /// <summary>
+        /// デバウンス付きUpdate。短時間の連続呼び出しをバッチ化する。
+        /// DataGrid編集やPropertyChanged連鎖からはこちらを呼ぶ。
+        /// </summary>
+        public void ScheduleUpdate()
+        {
+            _updateDebounceTimer?.Stop();
+            _updateDebounceTimer = new System.Windows.Threading.DispatcherTimer(
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle)
+            {
+                Interval = TimeSpan.FromMilliseconds(50)
+            };
+            _updateDebounceTimer.Tick += (s, e) =>
+            {
+                _updateDebounceTimer?.Stop();
+                _updateDebounceTimer = null;
+                Update();
+            };
+            _updateDebounceTimer.Start();
+        }
+
+        /// <summary>
+        /// 再計算の実体。グラフ描画はDispatcherで遅延実行する。
+        /// </summary>
+        private void UpdateCore()
         {
             if (GroundInput.GroundLayers.Count != 0)
             {
@@ -1775,13 +1835,16 @@ namespace PileDesign.ViewModels
                 RecalculateVSE();
             }
 
-            DrawNValueGraph();
-            DrawCuGraph();
-            DrawVsGraph();
-            DrawEsGraph();
-
-            DrawGroundDisplacementGraph();
-            DrawFLGraph();
+            // グラフ描画はUIスレッドで遅延実行（計算とバッチ化）
+            GroundWindowInstance?.Dispatcher?.InvokeAsync(() =>
+            {
+                DrawNValueGraph();
+                DrawCuGraph();
+                DrawVsGraph();
+                DrawEsGraph();
+                DrawGroundDisplacementGraph();
+                DrawFLGraph();
+            }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
         // 土層番号の再計算
@@ -2496,7 +2559,7 @@ namespace PileDesign.ViewModels
         // 土層入力内コンボボックス変化時のメソッド
         public void ComboBox_SelectionChangedCommand()
         {
-            Update(); // Update() を呼び出してグラフを更新
+            ScheduleUpdate(); // デバウンス付きで再計算・グラフ更新
         }
     }
 }

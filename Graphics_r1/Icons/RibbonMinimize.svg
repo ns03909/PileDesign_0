@@ -8,16 +8,10 @@
                 <rect x="1068" y="2136" width="128" height="128"/>
             </clipPath>
             <g clip-path="url(#_clip1)">
-                <g transform="matrix(2.078125,0,0,0.808663,-82.447479,821.659383)">
-                    <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
-                </g>
-                <g transform="matrix(3.810245,0,0,1,-2510.409687,-35.148739)">
+                <g transform="matrix(3.810245,0,0,2.218274,-2510.409687,-2758.172167)">
                     <rect x="939.155" y="2206.297" width="33.594" height="57.703" style="fill:rgb(98,176,226);"/>
                 </g>
                 <path d="M1141.791,2155.456L1186.224,2155.456" style="fill:none;stroke:black;stroke-width:8.33px;"/>
-                <g transform="matrix(2.078125,0,0,0.808663,-82.447479,914.510644)">
-                    <rect x="553.39" y="1625.326" width="61.594" height="43.465" style="fill:rgb(216,255,255);"/>
-                </g>
                 <g transform="matrix(1,0,0,1,-76.833348,2093.352446)">
                     <g transform="matrix(41.666667,0,0,41.666667,1267.729182,128)">
                     </g>

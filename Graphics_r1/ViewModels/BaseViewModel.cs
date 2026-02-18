@@ -56,7 +56,10 @@ namespace PileDesign.ViewModels
             return SetProperty(ref field, value, propertyName);
         }
 
-        public ICommand CopyDataGridSelectionCommand { get; }
+        public ICommand CopyDataGridSelectionCommand { get; } = new RelayCommand(p =>
+        {
+            if (p is DataGrid dg) CopyDataGridSelection(dg);
+        });
 
         private static void CopyDataGridSelection(DataGrid dataGrid)
         {

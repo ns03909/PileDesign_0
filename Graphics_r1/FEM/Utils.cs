@@ -52,7 +52,7 @@ namespace PileDesign.FEM
                 my = 1 / lambda * (lx * cos + (-mx * nx) * sin);
                 ny = 1 / lambda * (lambda * lambda * sin);
                 lz = 1 / lambda * (mx * sin - nx * lx * cos);
-                mz = 1 / lambda * (lx * sin - mx * nx * cos);
+                mz = 1 / lambda * (-lx * sin - mx * nx * cos);
                 nz = 1 / lambda * (lambda * lambda * cos);
             }
             else
@@ -260,19 +260,23 @@ namespace PileDesign.FEM
             Node nodeI,
             Node nodeJ)
         {
-            Matrix<double> transferMatrix = Matrix<double>.Build.DenseIdentity(12);
-
-            for (int r = 0; r < 6; r++)
+            // マスター・スレーブ関係がある場合のみ変換行列を構築（大半のノードは恒等）
+            Matrix<double> transferedLocalStiffness;
+            if (nodeI.HasMasterSlave || nodeJ.HasMasterSlave)
             {
-                for (int c = 0; c < 6; c++)
-                {
-                    transferMatrix[r, c] = nodeI.TransferMatrix[r, c];
-                    transferMatrix[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
-                }
+                var transferMatrix = Matrix<double>.Build.DenseIdentity(12);
+                for (int r = 0; r < 6; r++)
+                    for (int c = 0; c < 6; c++)
+                    {
+                        transferMatrix[r, c] = nodeI.TransferMatrix[r, c];
+                        transferMatrix[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
+                    }
+                transferedLocalStiffness = transferMatrix.Transpose() * localStiffness * transferMatrix;
             }
-
-            // ローカル剛性マトリクスを変換
-            var transferedLocalStiffness = transferMatrix.Transpose() * localStiffness * transferMatrix;
+            else
+            {
+                transferedLocalStiffness = localStiffness;
+            }
             // eqリストを配列に変換
 
             for (int i_row = 0; i_row < 12; i_row++) // 行

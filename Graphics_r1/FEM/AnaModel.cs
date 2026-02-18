@@ -17,6 +17,7 @@ namespace PileDesign.FEM
         public List<RigidBody> RigidBodies { get; set; }
         public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; }
         public List<RotationalSpring> RotationalSprings { get; set; }
+        public List<HorizontalSoilSpring> PenaltySprings { get; set; } = [];  // ConnectionNode↔CapNodeペナルティばね
         public List<AnalysisStepResult> AnalysisStepResults { get; set; } = []; // 解析ステップ結果のリスト
 
         public int CountFree { get; set; }
@@ -146,6 +147,20 @@ namespace PileDesign.FEM
             foreach (var beam in Beams)
             {
                 beam.SetKe(isTan);
+                // NaN検出: Ke対角にNaNがあればログ出力（ill-conditioning診断用）
+                var ke = isTan ? beam.KeTan : beam.KeSec;
+                if (ke != null)
+                {
+                    for (int d = 0; d < Math.Min(12, ke.RowCount); d++)
+                    {
+                        if (!double.IsFinite(ke[d, d]))
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[MapOnKmat] NaN/Inf detected in Beam Ke: {beam.Name} diag[{d}]={ke[d, d]:E3}");
+                            break;
+                        }
+                    }
+                }
                 matrixKAA = beam.MapOnGlobalStiff(matrixKAA, isTan, true, true);
             }
 
@@ -161,6 +176,16 @@ namespace PileDesign.FEM
                 {
                     // KeTan/KeSec は PrepareKmat 内で SetKe 済みである前提
                     matrixKAA = rs.MapOnGlobalStiff(matrixKAA, isTan, true, true);
+                }
+            }
+
+            // ペナルティばね（ConnectionNode↔CapNode）の剛性を加算
+            if (PenaltySprings != null && PenaltySprings.Count > 0)
+            {
+                foreach (var ps in PenaltySprings)
+                {
+                    // KeTan/KeSec は ConnectCapsFlexibleBeam で設定済み（定数: Kbig=1e8）
+                    matrixKAA = ps.MapOnGlobalStiff(matrixKAA, isTan, true, true);
                 }
             }
 
@@ -454,6 +479,15 @@ namespace PileDesign.FEM
                 }
             }
 
+            // ペナルティばねの内力を組み立て（全体座標系で定義されている）
+            if (PenaltySprings != null)
+            {
+                foreach (var ps in PenaltySprings)
+                {
+                    AssembleSpringForceToGlobal(ps.NodeI, ps.NodeJ, ps.CumulativeForce);
+                }
+            }
+
         }
 
         // 梁要素の内力を全体ベクトルに組み立て（要素座標系→全体座標系変換＋マスター節点変換を含む）
@@ -462,22 +496,27 @@ namespace PileDesign.FEM
             // 要素内力（要素座標系）
             Vector<double> f_local = beam.CumulativeForce.GetVector();
 
-            // 要素座標系→全体座標系への変換: f_global = T_coord^T * f_local
-            Matrix<double> coordTransform = Utils.GetTransformMatrix(beam.NodeI, beam.NodeJ);
+            // 要素座標系→全体座標系への変換: f_global = T_coord^T * f_local（キャッシュ使用）
+            Matrix<double> coordTransform = beam.GetCachedCoordTransform();
             Vector<double> f_global = coordTransform.Transpose() * f_local;
 
-            // スレーブ節点のマスター変換（TransferMatrix）を適用
-            // 剛性マトリクスと同様: K = T_slave^T * K_local * T_slave に対応して f = T_slave^T * f_local
-            Matrix<double> slaveTransform = Matrix<double>.Build.DenseIdentity(12);
-            for (int r = 0; r < 6; r++)
+            // スレーブ節点のマスター変換（TransferMatrix）を適用（恒等の場合はスキップ）
+            Vector<double> f_transformed;
+            if (beam.NodeI.HasMasterSlave || beam.NodeJ.HasMasterSlave)
             {
-                for (int c = 0; c < 6; c++)
-                {
-                    slaveTransform[r, c] = beam.NodeI.TransferMatrix[r, c];
-                    slaveTransform[r + 6, c + 6] = beam.NodeJ.TransferMatrix[r, c];
-                }
+                var slaveTransform = Matrix<double>.Build.DenseIdentity(12);
+                for (int r = 0; r < 6; r++)
+                    for (int c = 0; c < 6; c++)
+                    {
+                        slaveTransform[r, c] = beam.NodeI.TransferMatrix[r, c];
+                        slaveTransform[r + 6, c + 6] = beam.NodeJ.TransferMatrix[r, c];
+                    }
+                f_transformed = slaveTransform.Transpose() * f_global;
             }
-            Vector<double> f_transformed = slaveTransform.Transpose() * f_global;
+            else
+            {
+                f_transformed = f_global;
+            }
 
             // 方程式番号リストを取得（マスター節点を考慮）
             var eq = Utils.GetEquationNumbers(beam.NodeI, beam.NodeJ);
@@ -509,18 +548,23 @@ namespace PileDesign.FEM
             // ばね内力（既に全体座標系）
             Vector<double> f = cumulativeForce.GetVector();
 
-            // スレーブ節点のマスター変換（TransferMatrix）を適用
-            // 剛性マトリクスと同様: K = T_slave^T * K_local * T_slave に対応して f = T_slave^T * f_local
-            Matrix<double> slaveTransform = Matrix<double>.Build.DenseIdentity(12);
-            for (int r = 0; r < 6; r++)
+            // スレーブ節点のマスター変換（TransferMatrix）を適用（恒等の場合はスキップ）
+            Vector<double> f_transformed;
+            if (nodeI.HasMasterSlave || nodeJ.HasMasterSlave)
             {
-                for (int c = 0; c < 6; c++)
-                {
-                    slaveTransform[r, c] = nodeI.TransferMatrix[r, c];
-                    slaveTransform[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
-                }
+                var slaveTransform = Matrix<double>.Build.DenseIdentity(12);
+                for (int r = 0; r < 6; r++)
+                    for (int c = 0; c < 6; c++)
+                    {
+                        slaveTransform[r, c] = nodeI.TransferMatrix[r, c];
+                        slaveTransform[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
+                    }
+                f_transformed = slaveTransform.Transpose() * f;
             }
-            Vector<double> f_transformed = slaveTransform.Transpose() * f;
+            else
+            {
+                f_transformed = f;
+            }
 
             // 方程式番号リストを取得（マスター節点を考慮）
             var eq = Utils.GetEquationNumbers(nodeI, nodeJ);
@@ -553,6 +597,7 @@ namespace PileDesign.FEM
         }
 
         // 残余力ベクトルの更新
+        private int _findRCallCount = 0;
         public void FindR()
         {
             VectorR.Clear();
@@ -571,6 +616,58 @@ namespace PileDesign.FEM
             double normsqR = VectorR.L2Norm() * VectorR.L2Norm();
             double normsqF = VectorF.L2Norm() * VectorF.L2Norm();
             NormsROnNormsFint = normsqR / normsqF;
+
+            // 最初の3回のFindR呼び出しで残差の大きいDOFを出力
+            _findRCallCount++;
+            if (_findRCallCount <= 3 && NormsROnNormsFint > 1e-4)
+            {
+                string[] dofNames = { "Ux", "Uy", "Uz", "Rx", "Ry", "Rz" };
+                var log = new System.Text.StringBuilder();
+                log.AppendLine($"=== FindR 診断 (呼び出し#{_findRCallCount}) ===");
+                log.AppendLine($"||R||²/||F||² = {NormsROnNormsFint:E3}");
+                log.AppendLine($"||F|| = {VectorF.L2Norm():E3}, ||T|| = {VectorT.L2Norm():E3}, ||R|| = {VectorR.L2Norm():E3}");
+
+                // 残差の大きいDOFトップ10
+                var residuals = new List<(int eq, double r, double f, double t)>();
+                for (int i = 0; i < CountFree; i++)
+                {
+                    if (!VectorDOFForcedDisp[i])
+                        residuals.Add((i, VectorR[i], VectorF[i], VectorT[i]));
+                }
+                residuals.Sort((a, b) => Math.Abs(b.r).CompareTo(Math.Abs(a.r)));
+
+                log.AppendLine("残差の大きいDOF (top 15):");
+                log.AppendLine("  eq    | R(=F-T)     | F           | T           | Node:DOF");
+                foreach (var (eq, r, f, t) in residuals.Take(15))
+                {
+                    string nodeDof = "?";
+                    foreach (var node in Nodes)
+                    {
+                        for (int d = 0; d < 6; d++)
+                        {
+                            if (node.EquationNumber[d] == eq)
+                            {
+                                nodeDof = $"{node.Name}:{dofNames[d]}";
+                                break;
+                            }
+                        }
+                        if (nodeDof != "?") break;
+                    }
+                    log.AppendLine($"  {eq,5} | {r,11:E3} | {f,11:E3} | {t,11:E3} | {nodeDof}");
+                }
+
+                // F≠0のDOF数とT≠0のDOF数
+                int fNonZero = 0, tNonZero = 0;
+                for (int i = 0; i < CountFree; i++)
+                {
+                    if (Math.Abs(VectorF[i]) > 1e-10) fNonZero++;
+                    if (Math.Abs(VectorT[i]) > 1e-10) tNonZero++;
+                }
+                log.AppendLine($"F≠0のDOF数: {fNonZero}, T≠0のDOF数: {tNonZero}, 全自由度: {CountFree}");
+
+                log.AppendLine("=== FindR 診断終了 ===");
+                System.Diagnostics.Debug.WriteLine(log.ToString());
+            }
         }
 
         public void InitializeStates()
@@ -718,6 +815,10 @@ namespace PileDesign.FEM
             var rotationalSprings = this.RotationalSprings.Select(rs => rs.DeepCopy()).ToList();
 
             var copy = new AnaModel(_inputModel, nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings, rotationalSprings);
+
+            // PenaltySpringsのDeepCopy
+            if (this.PenaltySprings != null)
+                copy.PenaltySprings = this.PenaltySprings.Select(ps => ps.DeepCopy()).ToList();
 
             // AnalysisStepResultsもDeepCopy
             foreach (var result in this.AnalysisStepResults)

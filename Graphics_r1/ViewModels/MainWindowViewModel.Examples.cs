@@ -106,11 +106,14 @@ namespace PileDesign.ViewModels
             // 通知を再開（ここでは再描画をトリガーしない）
             CurrentInputModel.ResumeNotificationsQuiet();
 
+            // ステータスバーの杭本数を更新（バッチ代入ではCollectionChangedが発火しないため）
+            OnPropertyChanged(nameof(PileCountText));
+
             // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
 
             // 読み込み完了メッセージ
-            MessageBox.Show($"{displayName}を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowToast($"{displayName}を読み込みました。");
         }
 
         /// <summary>
@@ -180,11 +183,14 @@ namespace PileDesign.ViewModels
             // 通知を再開（ここでは再描画をトリガーしない）
             CurrentInputModel.ResumeNotificationsQuiet();
 
+            // ステータスバーの杭本数を更新（バッチ代入ではCollectionChangedが発火しないため）
+            OnPropertyChanged(nameof(PileCountText));
+
             // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
 
             // 読み込み完了メッセージ
-            MessageBox.Show($"{displayName}を読み込みました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowToast($"{displayName}を読み込みました。");
         }
 
         // 設計例集3.1

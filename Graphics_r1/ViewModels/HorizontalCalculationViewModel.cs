@@ -149,6 +149,15 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // Modified NR モード時の Full NR 初期反復数
+        // Modified NR では最初の N 回を Full NR（接線剛性更新）で実行し、以降は K を再利用
+        private int _fullNRIterations = 5;
+        public int FullNRIterations
+        {
+            get => _fullNRIterations;
+            set => SetProperty(ref _fullNRIterations, Math.Clamp(value, 1, 99));
+        }
+
         // 反復なし簡易法（1ステップ=1回解析、最も安定だがステップ数を増やす必要あり）
         private bool _skipIteration = false;
         public bool SkipIteration
@@ -252,7 +261,7 @@ namespace PileDesign.ViewModels
             Both
         }
 
-        private LiquefactionOptionType _liquefactionOption = LiquefactionOptionType.Both;
+        private LiquefactionOptionType _liquefactionOption = LiquefactionOptionType.Yes;
         public LiquefactionOptionType LiquefactionOption
         {
             get => _liquefactionOption;
@@ -295,9 +304,9 @@ namespace PileDesign.ViewModels
                 // 液状化オプション: あり=1, なし=1, 両方=2
                 int liquefactionFactor = LiquefactionOption == LiquefactionOptionType.Both ? 2 : 1;
 
-                // 適用されている荷重ケース1, 2の数
-                int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsApplicable) ?? 0;
-                int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsApplicable) ?? 0;
+                // 解析対象の荷重ケース1, 2の数
+                int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsAnalysisTarget) ?? 0;
+                int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsAnalysisTarget) ?? 0;
 
                 // 適用されている荷重組み合わせの数
                 int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?.Count(x => x.IsApplicable) ?? 0;
@@ -423,7 +432,7 @@ namespace PileDesign.ViewModels
 
         private void LoadCase_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(LoadCase.IsApplicable))
+            if (e.PropertyName == nameof(LoadCase.IsAnalysisTarget))
                 OnPropertyChanged(nameof(TotalCalculationCount));
             if (e.PropertyName == nameof(LoadCombination.IsApplicable))
                 OnPropertyChanged(nameof(TotalCalculationCount));
@@ -439,43 +448,43 @@ namespace PileDesign.ViewModels
             //CurrentProgress = 0;
         }
 
-        // 全レベル1荷重適用
+        // 全レベル1荷重を解析対象に設定
         [RelayCommand]
         private void ApplyAllLoadCasesLevel1()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel1 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
-                item.IsApplicable = true;
+                item.IsAnalysisTarget = true;
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
-        // 全レベル1荷重非適用
+        // 全レベル1荷重を解析対象から除外
         [RelayCommand]
         private void UnapplyAllLoadCasesLevel1()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel1 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
-                item.IsApplicable = false;
+                item.IsAnalysisTarget = false;
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
-        // 全レベル2荷重適用
+        // 全レベル2荷重を解析対象に設定
         [RelayCommand]
         private void ApplyAllLoadCasesLevel2()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel2 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel2)
-                item.IsApplicable = true;
+                item.IsAnalysisTarget = true;
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
-        // 全レベル2荷重非適用
+        // 全レベル2荷重を解析対象から除外
         [RelayCommand]
         private void UnapplyAllLoadCasesLevel2()
         {
             if (InputModel.LoadCasesInput.LoadCasesLevel2 == null) return;
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel2)
-                item.IsApplicable = false;
+                item.IsAnalysisTarget = false;
             OnPropertyChanged(nameof(TotalCalculationCount));
         }
 
@@ -595,7 +604,8 @@ namespace PileDesign.ViewModels
                 AnalysisModelling.RotationalSprings
             )
             {
-                RotationalSprings = AnalysisModelling.RotationalSprings
+                RotationalSprings = AnalysisModelling.RotationalSprings,
+                PenaltySprings = AnalysisModelling.PenaltySprings
             };
 
             // 既に編集用モデルが存在する場合は入れ替え
@@ -625,7 +635,7 @@ namespace PileDesign.ViewModels
         private async Task OnExecuteAnalysis()
         {
             // 荷重がゼロの荷重ケースをチェック
-            var zeroForceLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases
+            var zeroForceLoadCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
                 .Where(lc => lc.UpperMassForce == 0 && lc.FoundationMassForce == 0)
                 .ToList();
 
@@ -639,7 +649,7 @@ namespace PileDesign.ViewModels
                 MessageBox.Show(message, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                 // すべての荷重ケースがゼロの場合は解析を中止
-                if (zeroForceLoadCases.Count == InputModel.LoadCasesInput.AllSeismicLoadCases.Count)
+                if (zeroForceLoadCases.Count == InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases.Count)
                 {
                     return;
                 }
@@ -653,7 +663,7 @@ namespace PileDesign.ViewModels
             if (hasSemiRigidPileTop)
             {
                 // IsPileNonLinear=false の荷重ケースがあるかチェック
-                var nonLinearOffLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases
+                var nonLinearOffLoadCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
                     .Where(lc => !lc.IsPileNonLinear)
                     .ToList();
 
@@ -672,7 +682,7 @@ namespace PileDesign.ViewModels
                     if (result == MessageBoxResult.Yes)
                     {
                         // すべての荷重ケースで IsPileNonLinear を true に設定
-                        foreach (var lc in InputModel.LoadCasesInput.AllSeismicLoadCases)
+                        foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
                         {
                             lc.IsPileNonLinear = true;
                         }
@@ -686,7 +696,7 @@ namespace PileDesign.ViewModels
             }
 
             // 杭体の非線形が有効で解析ステップ数が少ない場合の警告
-            var nonLinearOnLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases
+            var nonLinearOnLoadCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
                 .Where(lc => lc.IsPileNonLinear)
                 .ToList();
 
@@ -1148,7 +1158,7 @@ namespace PileDesign.ViewModels
             if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0) return;
 
             const double KMin = 1e-6;   // 特異化回避用の下限
-            const double KBig = 1e6;    // 剛体相当（アーム変換後の条件数を改善するため1e6に低減）
+            const double KBig = 1e10;   // 剛体相当（杭断面 4EI/L ≈ 1e8 に対して十分大きい値）
 
             foreach (var spring in model.RotationalSprings)
             {
@@ -1174,6 +1184,10 @@ namespace PileDesign.ViewModels
                 var pileBody = InputModel.PileBodies[pb - 1];
                 var def = pileBody.GetMThetaRelationship(axialN);
 
+                System.Diagnostics.Debug.WriteLine(
+                    $"[SetupMTheta] {spring.Name}: IsPileNonLinear={loadCase.IsPileNonLinear}, " +
+                    $"def.Mode={def.Mode}, axialN={axialN:F1}kN");
+
                 // 非線形OFF: つねに剛体相当
                 if (!loadCase.IsPileNonLinear)
                 {
@@ -1191,6 +1205,8 @@ namespace PileDesign.ViewModels
                         spring.Mode = RotationalSpringMode.CombinedXY;
                         spring.CurveXY = null;
                         spring.KthetaXY = KBig;
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[SetupMTheta] {spring.Name}: → Rigid (KBig={KBig:E2})");
                         break;
 
                     case PileHeadRotationMode.CombinedXY:
@@ -1210,6 +1226,9 @@ namespace PileDesign.ViewModels
                         {
                             spring.KthetaXY = KMin;
                         }
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[SetupMTheta] {spring.Name}: → CombinedXY, CurveXY={(spring.CurveXY != null ? $"{spring.CurveXY.Points.Count}pts" : "null")}, " +
+                            $"KthetaXY={spring.KthetaXY:E3}");
                         break;
 
                     case PileHeadRotationMode.Separate:
@@ -1293,7 +1312,7 @@ namespace PileDesign.ViewModels
             });
 
             const double alpha = 1e-6;
-            foreach (var loadCaseItem in InputModel.LoadCasesInput.AllSeismicLoadCases)
+            foreach (var loadCaseItem in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
             {
                 LoadCase loadCase = loadCaseItem;
                 int iLC = loadCaseItem.No - 1;
@@ -1445,23 +1464,15 @@ namespace PileDesign.ViewModels
                                     // N は荷重ケース一定だが、簡便に毎回解決しても可（コストは小）
                                     //SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
 
-                                    // v17 Newton-Raphsonモード:
-                                    // - Full NRモード (!UseModifiedNewtonRaphson): 常に毎反復で接線剛性+Kマトリクス更新
-                                    // - Modified NRモード (UseModifiedNewtonRaphson): 適応的
-                                    //   - 最初の3反復: Full NR（接線剛性+Kマトリクス更新）
-                                    //   - 4反復目以降: Modified NR（Kマトリクス再利用で高速化）
-                                    const int FULL_NR_ITERATIONS = 3;
-                                    bool useFullNR = !UseModifiedNewtonRaphson || n_iteration <= FULL_NR_ITERATIONS;
-
+                                    // Newton-Raphsonモード:
+                                    // - Full NR: 常に毎反復で接線剛性+Kマトリクス更新
+                                    // - Modified NR: 最初の FullNRIterations 回は Full NR、以降は K 再利用
+                                    bool useFullNR = !UseModifiedNewtonRaphson || n_iteration <= FullNRIterations;
 
                                     if (loadCase.IsPileNonLinear && useFullNR)
                                     {
                                         // Full Newton-Raphson: 毎反復で接線剛性を更新
                                         UpdateBeamMPhiTangent(targetModel);
-                                    }
-                                    else if (loadCase.IsPileNonLinear && UseModifiedNewtonRaphson && n_iteration > FULL_NR_ITERATIONS)
-                                    {
-                                        // Modified NRモード: 適応的切り替え後
                                     }
 
                                     // KTan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
@@ -1828,7 +1839,12 @@ namespace PileDesign.ViewModels
             }
 
             // 非線形 OFF (回転ばねを無効にしたい) 場合は RigidBodies[0] にスレーブして剛結にする
-            if (!loadCase.IsPileNonLinear)
+            // ただし、RigidFloor（柔梁）モードでは基礎梁グリッド経由の荷重伝達を維持するため、
+            // PileNode-0をRigidBodies[0]に追加しない（master-slave + 高い初期回転剛性で剛結を実現）
+            bool isFlexibleBeamMode = InputModel.FoundationBeamInput?.ConnectionMode == Models.InputData.FoundationBeamConnectionMode.RigidFloor
+                && InputModel.FoundationBeamInput?.Beams?.Count > 0;
+
+            if (!loadCase.IsPileNonLinear && !isFlexibleBeamMode)
             {
                 foreach (var pile in InputModel.PileLayoutItems)
                 {
@@ -2003,8 +2019,8 @@ namespace PileDesign.ViewModels
                 // この杭に属する全梁（AnalysisModelling 時に PileLayoutDataItem.Beams に格納済み）
                 foreach (var beam in pile.Beams)
                 {
-                    // セグメント番号は Beam 側に保持している前提（無い場合は 0 扱いでも可）
-                    int seg = beam.SegmentIndex ?? 0;
+                    // RigidLink等の非杭ビームはスキップ（SegmentIndex未設定 = 杭要素ではない）
+                    if (beam.SegmentIndex is not int seg) continue;
                     if (seg < 0 || seg >= pileBody.PileBodySegments.Count) continue;
 
                     var pileSection = pileBody.PileBodySegments[seg].PileSection;
@@ -2077,42 +2093,96 @@ namespace PileDesign.ViewModels
         }
 
         // K対角の最小/最大を取得（isTan=trueで接線剛性）
+        // 強制変位DOF（diag=1.0に設定されるもの）を除外して構造的な最小値を報告
         private static (double min, double max) GetKDiagonalMiNMax(AnaModel model, bool isTan)
         {
-            // GetForcedDispOnLoadVectorAndStiffnessMatrix: (K, rhs) を返す前提
             var (K, _) = model.GetForcedDispOnLoadVectorAndStiffnessMatrix(isTan);
+
+            // 強制変位DOFの方程式番号を集める
+            var forcedDispEqs = new HashSet<int>();
+            foreach (var node in model.Nodes)
+            {
+                if (node.IsForcedDisped)
+                {
+                    for (int k = 0; k < 2; k++) // Ux, Uy のみ強制変位
+                    {
+                        int eq = node.EquationNumber[k];
+                        if (eq >= 0) forcedDispEqs.Add(eq);
+                    }
+                }
+            }
+
             double min = double.PositiveInfinity, max = double.NegativeInfinity;
             int minIdx = -1, maxIdx = -1;
             int n = K.RowCount;
             for (int i = 0; i < n; i++)
             {
+                if (forcedDispEqs.Contains(i)) continue; // 強制変位DOFを除外
                 double v = K[i, i];
                 if (v < min) { min = v; minIdx = i; }
                 if (v > max) { max = v; maxIdx = i; }
             }
 
-            // 最小値のDOFを特定して出力（1回だけ）
-            const double smallThreshold = 1e-6;
-            if (min < smallThreshold && minIdx >= 0)
+            // 常に最小/最大のDOFを特定して出力
+            if (minIdx >= 0)
             {
-                string minDofName = $"eq{minIdx}";
-                foreach (var node in model.Nodes)
+                var log = new System.Text.StringBuilder();
+                log.AppendLine("=== K対角 診断（強制変位DOF除外） ===");
+
+                string minDofName = IdentifyDof(model, minIdx);
+                string maxDofName = IdentifyDof(model, maxIdx);
+                log.AppendLine($"min diag[{minIdx}]={min:E3} → {minDofName}");
+                log.AppendLine($"max diag[{maxIdx}]={max:E3} → {maxDofName}");
+                log.AppendLine($"条件数(概算): {max / Math.Max(min, 1e-30):E3}");
+                log.AppendLine($"除外した強制変位DOF数: {forcedDispEqs.Count}");
+
+                // 小さい対角値のDOFをリストアップ（上位10個）
+                var smallDiags = new List<(int idx, double val)>();
+                for (int i = 0; i < n; i++)
                 {
-                    for (int d = 0; d < 6; d++)
+                    if (forcedDispEqs.Contains(i)) continue;
+                    double v = K[i, i];
+                    if (v < 1e6)
+                        smallDiags.Add((i, v));
+                }
+                smallDiags.Sort((a, b) => a.val.CompareTo(b.val));
+
+                if (smallDiags.Count > 0)
+                {
+                    log.AppendLine($"diag(K) < 1e6 のDOF数: {smallDiags.Count}/{n} (強制変位除外後)");
+                    foreach (var (idx, val) in smallDiags.Take(15))
                     {
-                        if (node.EquationNumber[d] == minIdx)
-                        {
-                            string dofName = d switch { 0 => "Ux", 1 => "Uy", 2 => "Uz", 3 => "Rx", 4 => "Ry", _ => "Rz" };
-                            minDofName = $"{node.Name}:{dofName}";
-                            break;
-                        }
+                        string dofName = IdentifyDof(model, idx);
+                        log.AppendLine($"  diag[{idx}]={val:E3} → {dofName}");
                     }
                 }
+                else
+                {
+                    log.AppendLine("diag(K) < 1e6 のDOFはありません（良好）");
+                }
+
+                log.AppendLine("=== K対角 診断終了 ===");
+                System.Diagnostics.Debug.WriteLine(log.ToString());
             }
 
             if (double.IsInfinity(min)) min = double.NaN;
             if (double.IsInfinity(max)) max = double.NaN;
             return (min, max);
+        }
+
+        // 方程式番号からノード名:DOF名を特定するヘルパ
+        private static string IdentifyDof(AnaModel model, int eqIndex)
+        {
+            string[] dofNames = { "Ux", "Uy", "Uz", "Rx", "Ry", "Rz" };
+            foreach (var node in model.Nodes)
+            {
+                for (int d = 0; d < 6; d++)
+                {
+                    if (node.EquationNumber[d] == eqIndex)
+                        return $"{node.Name}:{dofNames[d]}";
+                }
+            }
+            return $"eq{eqIndex}(不明)";
         }
 
         // 代表自由度の |d| 最大値（節点の増分変位 Ux,Uy,Uz の最大絶対値）
@@ -2144,8 +2214,15 @@ namespace PileDesign.ViewModels
                 foreach (RotationalSpring rotationalSpring in targetModel.RotationalSprings)
                     rotationalSpring.SetBeamDispAndForce();
             }
+            // ペナルティばねの内力も計算
+            if (targetModel.PenaltySprings != null)
+            {
+                foreach (HorizontalSoilSpring penaltySpring in targetModel.PenaltySprings)
+                    penaltySpring.SetBeamDispAndForce();
+            }
 
-            targetModel.MapOnKsecMat();
+            // MapOnKsecMat 削除: KAA_sec はNR反復中に参照されないため不要
+            // SetT() は要素レベルの CumulativeForce から直接 VectorT を組み立てる
             targetModel.SetT();
         }
 
@@ -2753,6 +2830,17 @@ namespace PileDesign.ViewModels
                     }
                     // Rx/Ry は M–θ に基づき算出した kRx/kRy を用いる
                     rxy.SetKe(kx, ky, kz, kRx, kRy, kRz, isTan);
+                    if (isTan)
+                    {
+                        var phn = pileHeadNode;
+                        var cn = capNode;
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[PrepareKmat] {rxy.Name}: useMasterSlave={useMasterSlave}, " +
+                            $"kRx={kRx:E3}, kRy={kRy:E3}, kx={kx:E1}, kRz={kRz:E1}, " +
+                            $"CurveXY={(rxy.CurveXY != null ? "yes" : "no")}, " +
+                            $"dRx={dRx:E3}, dRy={dRy:E3}, " +
+                            $"PileHead.MasterNodes[0]={(phn.MasterNodes?[0]?.Name ?? "null")}");
+                    }
 
                 }
             }

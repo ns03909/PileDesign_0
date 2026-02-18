@@ -4,13 +4,13 @@
     <g transform="matrix(1,0,0,1,-356,-1958)">
         <g id="CopySoilLayer" transform="matrix(1,0,0,1,178,356)">
             <rect x="178" y="1602" width="128" height="128" style="fill:none;"/>
-            <g transform="matrix(0.709076,0,0,0.221586,178,1534.444126)">
+            <g transform="matrix(0.709076,0,0,0.221586,178,1519.328979)">
                 <rect x="0" y="534" width="128" height="128" style="fill:rgb(1,50,32);fill-opacity:0.5;"/>
             </g>
-            <g transform="matrix(0.709076,0,0,0.110793,178,1579.426107)">
+            <g transform="matrix(0.709076,0,0,0.110793,178,1564.108774)">
                 <rect x="0" y="534" width="128" height="128" style="fill:rgb(244,164,96);fill-opacity:0.5;"/>
             </g>
-            <g transform="matrix(0.709076,0,0,0.16619,178,1528.572094)">
+            <g transform="matrix(0.709076,0,0,0.16619,178,1513.254761)">
                 <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
             </g>
             <g transform="matrix(0.709076,0,0,0.221586,215.238327,1583.126793)">
@@ -23,15 +23,15 @@
                 <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
             </g>
             <g transform="matrix(1,0,0,1,-9.869026,3.526391)">
-                <path d="M226.14,1701.454C214.727,1701.454 205.405,1692.43 204.925,1681.134" style="fill:none;stroke:black;stroke-width:8.33px;"/>
+                <path d="M226.14,1701.454C214.727,1701.454 205.405,1692.43 204.925,1681.134" style="fill:none;stroke:black;stroke-width:12.5px;"/>
             </g>
             <g transform="matrix(1,0,0,1,-86.59558,30.974765)">
-                <path d="M281.632,1652.771L281.632,1617.317" style="fill:none;stroke:black;stroke-width:8.33px;"/>
+                <path d="M281.632,1652.771L281.632,1617.317" style="fill:none;stroke:black;stroke-width:12.5px;"/>
             </g>
-            <g transform="matrix(-0,-1,1,-0,-1401.046238,1986.61255)">
-                <g transform="matrix(-0,1,-1,-0,384.61255,1579.046238)">
-                    <path d="M68.725,115.48L93.725,102.98L68.725,90.48L68.725,115.48Z"/>
-                    <path d="M73.725,102.98L38.271,102.98" style="fill:none;stroke:black;stroke-width:8.33px;"/>
+            <g transform="matrix(-0,-1,0.725703,-0,-957.420606,1986.61255)">
+                <g transform="matrix(-0,1.377975,-1,-0,384.61255,1564.580737)">
+                    <path d="M56.5,121.73L94,102.98L56.5,84.23L56.5,121.73Z"/>
+                    <path d="M64,102.98L38.271,102.98" style="fill:none;stroke:black;stroke-width:12.5px;"/>
                 </g>
             </g>
         </g>

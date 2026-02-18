@@ -1,4 +1,4 @@
-﻿<Window x:Class="PileDesign.Views.MainWindow"
+﻿<ribbon:RibbonWindow x:Class="PileDesign.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,13 +23,15 @@
         AllowDrop="True"
         DragEnter="Window_DragEnter"
         Drop="Window_Drop"
-        Title="杭基礎検討プログラム" Height="800" Width="1200" WindowState="Maximized"
+        Title="{Binding WindowTitle}" Height="800" Width="1200" WindowState="Maximized"
         x:Name="MainWin"
         >
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveInputModelFileCommand}" />
+        <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveInputModelFileAsCommand}" />
     </Window.InputBindings>
 
     <Window.DataContext>
@@ -50,6 +52,7 @@
         <conv:LogSliderConverter x:Key="LogSliderConverter" LogMin="0.1" LogMax="1000"/>
         <conv:OutOfRangeToBoolConverter x:Key="OutOfRangeToBoolConverter"/>
         <conv:AnyBoolToVisibilityConverter x:Key="AnyBoolToVisibilityConverter"/>
+
         <conv:GreaterThanZeroConverter x:Key="GreaterThanZeroConverter"/>
         <conv:EnumToBooleanConverter x:Key="EnumToBoolConverter"/>
         <conv:NodeReferenceDisplayConverter x:Key="NodeReferenceDisplayConverter"/>
@@ -659,11 +662,11 @@
         </Style>
 
         <ribbon:RibbonQuickAccessToolBar x:Key="MainQAT" x:Shared="False">
-            <ribbon:RibbonButton ToolTip="元に戻す (Ctrl+Z)"
+            <ribbon:RibbonButton ToolTip="{Binding UndoToolTip}"
                            Command="{Binding UndoCommand}"
             SmallImageSource="pack://application:,,,/Icons/Undo.png"/>
 
-            <ribbon:RibbonButton ToolTip="やり直し (Ctrl+Y)"
+            <ribbon:RibbonButton ToolTip="{Binding RedoToolTip}"
                            Command="{Binding RedoCommand}"
             SmallImageSource="pack://application:,,,/Icons/Redo.png"/>
         </ribbon:RibbonQuickAccessToolBar>
@@ -867,32 +870,44 @@
                           ItemsSource="{Binding LoadCaseNameOption}"
                           SelectedItem="{Binding SelectedLoadCaseName}"
                           ItemTemplate="{StaticResource LoadCaseItemTemplate}"
-                          ribbon:RibbonControlService.Label="荷重ケース">
+                          ribbon:RibbonControlService.Label="荷重ケース"
+                          ToolTip="荷重ケース">
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding UpdateViewCommand}"/>
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
+                        
                     </ComboBox>
-                    <TextBlock Margin="0,4,0,0">
+                    <!--<TextBlock Margin="0,4,0,0">
                         <TextBlock.Visibility>
                             <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
                                 <Binding Path="SelectedLoadCaseName"/>
                                 <Binding Path="CurrentInputModel.LoadCasesInput.AllSeismicLoadCases"/>
                             </MultiBinding>
                         </TextBlock.Visibility>
-                        <Run Text="組み合わせケース α"/>
+                        <Run Text="組合せケース α"/>
                         <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
                         <Run Text="/β"/>
                         <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
                         <Run Text="/β"/>
                         <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
-                    </TextBlock>
-                    <ComboBox Width="140"
+                    </TextBlock>-->
+                    <ComboBox Width="120"
                           ItemsSource="{Binding LoadCombinationNameOption}"
                           SelectedItem="{Binding SelectedLoadCombinationName}"
                           ItemTemplate="{StaticResource LoadCombinationItemTemplate}"
                           ribbon:RibbonControlService.Label="組み合わせ">
+                        <ComboBox.ToolTip>
+                            <TextBlock>
+                                <Run Text="組合せケース α"/>
+                                <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
+                                <Run Text="/β"/>
+                                <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
+                                <Run Text="/β"/>
+                                <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
+                            </TextBlock>
+                        </ComboBox.ToolTip>
                         <ComboBox.Visibility>
                             <MultiBinding Converter="{StaticResource LoadCaseNameInSeismicCasesToVisibilityConverter}">
                                 <Binding Path="SelectedLoadCaseName"/>
@@ -917,12 +932,14 @@
                                      Style="{StaticResource AnalyzedSegmentedButtonStyle}"
                                      IsChecked="{Binding IsLiquefaction, Converter={StaticResource BooleanNegationConverter}}"
                                      Tag="{Binding IsCurrentNonLiquefactionAnalyzed}"
-                                     Margin="2,0,1,0"/>
+                                     Margin="0,0,0,0"
+                                     Width="60"/>
                         <RadioButton Content="液状化" GroupName="RibbonLiquefaction"
                                      Style="{StaticResource AnalyzedSegmentedButtonStyle}"
                                      IsChecked="{Binding IsLiquefaction}"
                                      Tag="{Binding IsCurrentLiquefactionAnalyzed}"
-                                     Margin="1,0,2,0"/>
+                                     Margin="0,0,0,0"
+                                     Width="60"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
@@ -970,10 +987,20 @@
                                                 SmallImageSource="pack://application:,,,/Icons/ConnectionNodeVisible.png"/>
                 </ribbon:RibbonGroup>
 
+                <!-- 一般ラベル -->
+                <ribbon:RibbonGroup Header="一般ラベル" SmallImageSource="pack://application:,,,/Icons/ElementNo.png">
+                    <ribbon:RibbonToggleButton Label="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsElementNoVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
+                    <ribbon:RibbonToggleButton Label="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsGeneralNodeZVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
+                </ribbon:RibbonGroup>
+
                 <!-- 杭節点ラベル -->
                 <ribbon:RibbonGroup Header="杭節点ラベル" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png">
                     <ribbon:RibbonToggleButton Label="節点番号" IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
-                    <ribbon:RibbonToggleButton Label="杭番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="杭体番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭頭Z" IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible}"
@@ -987,9 +1014,6 @@
                     <ribbon:RibbonToggleButton Label="群杭係数" ToolTip="群杭係数ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGroupPileFactorLabelVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsGroupPileFactorVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
-                               IsChecked="{Binding IsElementNoVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
                 </ribbon:RibbonGroup>
 
                 <!-- 荷重 -->
@@ -1004,6 +1028,27 @@
                                                IsChecked="{Binding IsAxialLoadingVisible}"
                                                LargeImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"
                                                SmallImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"/>
+                    <StackPanel Orientation="Horizontal"
+                                ToolTip="モデル範囲に対する最大応力ダイアグラム長の比率">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMassLoadingVisible}" Value="True">
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsAxialLoadingVisible}" Value="True">
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <!--<Image Source="pack://application:,,,/Icons/LoadForceScale.png" Width="16" Height="16" Margin="2,0"/>-->
+                        <TextBox Width="50" HorizontalContentAlignment="Right"
+                                 Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 KeyDown="TextBox_KeyDown"/>
+                    </StackPanel>
                 </ribbon:RibbonGroup>
                 
                 <!-- 土層・土質点関連 -->
@@ -1075,26 +1120,22 @@
                 </ribbon:RibbonGroup>
 
                 <!-- 群杭沈下ビュー -->
-                <ribbon:RibbonGroup Header="群杭沈下ビュー" SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png">
-                    <ribbon:RibbonToggleButton Label="沈下グリッド" ToolTip="群杭沈下グリッド表示"
+                <ribbon:RibbonGroup Header="群杭沈下" SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png">
+                    <ribbon:RibbonToggleButton Label="群杭沈下グリッド" ToolTip="群杭沈下グリッド表示"
                                IsChecked="{Binding IsGroupPileGridVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsSettlementGridVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="沈下土層" ToolTip="群杭沈下用土層表示"
+                    <ribbon:RibbonToggleButton Label="群杭沈下土層" ToolTip="群杭沈下用土層表示（水平視）"
                                IsChecked="{Binding IsSettlementGroundVisible}"
                                SmallImageSource="pack://application:,,,/Icons/SoilLayerVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="沈下荷重面" ToolTip="群杭沈下用荷重面表示"
+                    <ribbon:RibbonToggleButton Label="群杭沈下荷重面" ToolTip="群杭沈下用荷重面表示"
                                IsChecked="{Binding IsSettlementLoadVisible}"
                                SmallImageSource="pack://application:,,,/Icons/LoadingPlaneVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="表示:杭頭" ToolTip="杭頭位置表示"
+                    <!--<ribbon:RibbonToggleButton Label="表示:杭頭" ToolTip="杭頭位置表示"
                                IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}"
                                SmallImageSource="pack://application:,,,/Icons/PileTopSelected.png"/>
                     <ribbon:RibbonToggleButton Label="表示:荷重面" ToolTip="沈下荷重面位置表示"
                                IsChecked="{Binding IsElementShownAtSettlementPlane}"
-                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneSelected.png"/>
-                    <ribbon:RibbonToggleButton Label="グリッド変位"
-                               ToolTip="群杭グリッド変位表示"
-                               IsChecked="{Binding IsGroupPileGridDeformationVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
+                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneSelected.png"/>-->
                 </ribbon:RibbonGroup>
 
                 <!-- XYZ平行軸 -->
@@ -1192,7 +1233,7 @@
 
             </ribbon:RibbonTab>
 
-            <ribbon:RibbonTab Header="解析(S)" KeyTip="S">
+            <ribbon:RibbonTab Header="解析条件/解析(S)" KeyTip="S">
                 <ribbon:RibbonGroup Header="解析条件設定">
                     <ribbon:RibbonButton x:Name="ButtonFundamental"
                          Label="基本設定"
@@ -1308,15 +1349,14 @@
 
             <ribbon:RibbonTab x:Name="AnalysisResultRibbonTab" Header="解析結果(R)" KeyTip="R">
                 <ribbon:RibbonGroup Header="解析結果表示">
-                    <ribbon:RibbonToggleButton Label="解析結果表示"
-                        ToolTip="解析結果全体の表示/非表示"
+                    <ribbon:RibbonToggleButton Label="杭・梁要素"
+                        ToolTip="杭・梁要素の解析結果表示/非表示"
                         IsChecked="{Binding IsAnalysisResultVisible}"
                         IsEnabled="{Binding HasAnyAnalysisResult}"
                         LargeImageSource="pack://application:,,,/Icons/AnalysisResult.png"
                         SmallImageSource="pack://application:,,,/Icons/AnalysisResult.png"/>
 
-
-                    <ComboBox Width="120"
+                    <ComboBox Width="100"
                           ItemsSource="{Binding AnalysisResultContentOption}"
                           SelectedItem="{Binding AnalysisResultContent}"
                           ribbon:RibbonControlService.Label="内容"
@@ -1382,7 +1422,7 @@
                     </ComboBox>
 
                     <!-- 節点変位 -->
-                    <ComboBox Width="110"
+                    <ComboBox Width="100"
                           ItemsSource="{Binding AnalysisResultNodeDisplacementOption}"
                           SelectedItem="{Binding AnalysisResultNodeDisplacementType}"
                           ribbon:RibbonControlService.Label="節点変位">
@@ -1432,8 +1472,13 @@
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                     </ComboBox>
+                    <ribbon:RibbonToggleButton Label="群杭グリッド変位"
+                               ToolTip="群杭グリッド変位表示"
+                               IsChecked="{Binding IsGroupPileGridDeformationVisible}"
+                               LargeImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"
+                               SmallImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
                 </ribbon:RibbonGroup>
-
+                
                 <ribbon:RibbonGroup Header="値表示">
                     <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}"/>
                     <CheckBox Content="杭中間"
@@ -1625,6 +1670,8 @@
                              LargeImageSource="pack://application:,,,/Icons/Log.png"
                              SmallImageSource="pack://application:,,,/Icons/Log.png"/>
                 </ribbon:RibbonGroup>
+
+
             </ribbon:RibbonTab>
 
 
@@ -1672,6 +1719,45 @@
 
             </ribbon:RibbonTab>
 
+            <ribbon:RibbonTab Header="ウィンドウ(W)" KeyTip="W">
+                <ribbon:RibbonGroup Header="パネル">
+                    <ribbon:RibbonToggleButton x:Name="LeftTabsToggle"
+                                         Label="データタブ"
+                                         ToolTip="データタブ（一般節点～群杭荷重）の表示/非表示"
+                                         IsChecked="True"
+                                         Click="ToggleLeftTabs_Click"
+                                         SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                    <ribbon:RibbonToggleButton x:Name="InputDataPanelToggle"
+                                         Label="入力データ"
+                                         ToolTip="入力データパネルの表示/非表示"
+                                         IsChecked="True"
+                                         Click="ToggleInputDataPanel_Click"
+                                         SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                    <ribbon:RibbonToggleButton x:Name="PropertiesPanelToggle"
+                                         Label="プロパティ"
+                                         ToolTip="プロパティパネルの表示/非表示"
+                                         IsChecked="True"
+                                         Click="TogglePropertiesPanel_Click"
+                                         SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                    <ribbon:RibbonToggleButton x:Name="MinimapPanelToggle"
+                                         Label="ミニマップ"
+                                         ToolTip="ミニマップパネルの表示/非表示"
+                                         IsChecked="True"
+                                         Click="ToggleMinimapPanel_Click"
+                                         SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"/>
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="3Dビュー">
+                    <ribbon:RibbonToggleButton Label="ビューキューブ"
+                                                ToolTip="ビューキューブの表示/非表示"
+                                                IsChecked="{Binding IsViewCubeVisible}"
+                                                SmallImageSource="pack://application:,,,/Icons/IsometricView.png"/>
+                    <ribbon:RibbonToggleButton Label="ツール"
+                                                ToolTip="右ツール群の表示/非表示"
+                                                IsChecked="{Binding IsRightToolbarVisible}"
+                                                SmallImageSource="pack://application:,,,/Icons/Display.png"/>
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
             <ribbon:RibbonTab Header="ヘルプ(H)" KeyTip="H">
                 <ribbon:RibbonGroup Header="ヘルプ">
                     <ribbon:RibbonButton x:Name="RibbonButtonHelp"
@@ -1705,7 +1791,7 @@
                 <avalonDock:LayoutPanel Orientation="Horizontal">
                     <avalonDock:LayoutAnchorablePane DockWidth="Auto">
                         <avalonDock:LayoutAnchorable x:Name="inputDataAnchorable" Title="入力データ"
-                                                     CanClose="False" CanHide="False" CanAutoHide="True" AutoHideWidth="250">
+                                                     CanClose="False" CanHide="True" CanAutoHide="True" AutoHideWidth="250">
                             <TreeView x:Name="TreeViewControl" ItemsSource="{Binding CTreeViewData}">
                                 <TreeView.ItemTemplate>
                                     <HierarchicalDataTemplate DataType="{x:Type local:CTreeViewData}"
@@ -1733,7 +1819,7 @@
                         </avalonDock:LayoutAnchorable>
                     </avalonDock:LayoutAnchorablePane>
 
-                    <avalonDock:LayoutDocumentPaneGroup DockWidth="1*">
+                    <avalonDock:LayoutDocumentPaneGroup x:Name="leftTabsGroup" DockWidth="1*">
                         <avalonDock:LayoutDocumentPane>
 
                             <!-- 一般節点タブ -->
@@ -1768,7 +1854,7 @@
                                               AutoGenerateColumns="False"
                                               CanUserAddRows="False"
                                               CanUserDeleteRows="False"
-                                              CanUserSortColumns="False"
+                                              CanUserSortColumns="True"
                                               VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Auto"
                                               LoadingRow="DataGridInputNodes_LoadingRow_Numbering"
@@ -1971,13 +2057,14 @@
                                                 ToolTip="断面寸法から断面性能を自動計算します"
                                                 Margin="2"
                                                 Padding="5,2"/>
-                                                <Button 
-                                                Command="{Binding ClearAllTorsionalStiffnessCommand}"
-                                                ToolTip="全断面ねじり剛性無視：すべての断面のIxx係数を0.0に設定し、ねじれ剛性を無視します">
-                                                    <svgc:SvgViewbox Source="/Icons/BeamTwistStiffness0.svg"
-                                                Style="{StaticResource SvgIconStyle24}"/>
-                                                </Button>
-                                            </StackPanel>
+                                        <Button Command="{Binding ClearAllTorsionalStiffnessCommand}"
+                                                ToolTip="全断面ねじり剛性無視：すべての断面のIxx係数を0.0に設定し、ねじり剛性を無視します"
+                                                Margin="2"
+                                                Padding="5,2">
+                                            <svgc:SvgViewbox Source="/Icons/BeamTwistStiffness0.svg"
+                                                             Style="{StaticResource SvgIconStyle24}"/>
+                                        </Button>
+                                    </StackPanel>
 
 
                                             <GroupBox Grid.Row="1" Header="断面一覧" Margin="2">
@@ -2430,7 +2517,7 @@
                                                     SelectionChanged="DataGridPileLayout_SelectionChanged"
                                                     AutoGenerateColumns="False"
                                                     CanUserAddRows="False"
-                                                    CanUserSortColumns="False"
+                                                    CanUserSortColumns="True"
                                                     VerticalScrollBarVisibility="Auto"
                                                     HorizontalScrollBarVisibility="Auto"
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
@@ -2704,22 +2791,22 @@
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="0" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="1" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="2" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="3" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="0" Background="LightGray"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="1" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="2" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="3" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="0" Background="WhiteSmoke"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="1"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="2"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="3"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="0" Background="LightGray"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="0" Background="WhiteSmoke"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="1"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="2"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="3"/>
 
-                                                            <TextBlock Text="VL0" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="VLadd" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="VL (VL0 + VLadd)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="VL0" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                            <TextBlock Text="VLadd" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                            <TextBlock Text="VL (VL0 + VLadd)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="#3271AD"/>
 
                                                             <TextBlock Text="重心 (m)" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="Σ (kN)" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center"/>
@@ -2783,17 +2870,17 @@
                                                                 <ColumnDefinition Width="*"/>
                                                             </Grid.ColumnDefinitions>
 
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="0" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="1" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="2" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="3" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="4" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="5" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="6" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="7" Background="LightGray"/>
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="8" Background="LightGray"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="1" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="2" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="3" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="4" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="5" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="6" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="7" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="8" Background="WhiteSmoke"/>
 
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="0" Background="LightGray"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="0" Background="WhiteSmoke"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="1"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="2"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="3"/>
@@ -2803,7 +2890,7 @@
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="7"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="8"/>
 
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="0" Background="LightGray"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="0" Background="WhiteSmoke"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="1"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="2"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="3"/>
@@ -2813,7 +2900,7 @@
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="7"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="8"/>
 
-                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="0" Background="LightGray"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="0" Background="WhiteSmoke"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="1"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="2"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="3"/>
@@ -2843,15 +2930,15 @@
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="7"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="8"/>
 
-                                                            <TextBlock Text="1-1" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="1-2" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="1-3" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="1-4" Grid.Row="0" Grid.Column="4" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="1-1" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="#238966"/>
+                                                            <TextBlock Text="1-2" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="#238966"/>
+                                                            <TextBlock Text="1-3" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="#238966"/>
+                                                            <TextBlock Text="1-4" Grid.Row="0" Grid.Column="4" HorizontalAlignment="Center" Foreground="#238966"/>
 
-                                                            <TextBlock Text="2-1" Grid.Row="0" Grid.Column="5" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="2-2" Grid.Row="0" Grid.Column="6" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="2-3" Grid.Row="0" Grid.Column="7" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="2-4" Grid.Row="0" Grid.Column="8" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="2-1" Grid.Row="0" Grid.Column="5" HorizontalAlignment="Center" Foreground="#D82531"/>
+                                                            <TextBlock Text="2-2" Grid.Row="0" Grid.Column="6" HorizontalAlignment="Center" Foreground="#D82531"/>
+                                                            <TextBlock Text="2-3" Grid.Row="0" Grid.Column="7" HorizontalAlignment="Center" Foreground="#D82531"/>
+                                                            <TextBlock Text="2-4" Grid.Row="0" Grid.Column="8" HorizontalAlignment="Center" Foreground="#D82531"/>
 
                                                             <!--<TextBlock Text="OTM X (MNm)" Grid.Row="1" Grid.Column="0"/>-->
                                                             <TextBlock Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center">
@@ -2932,7 +3019,7 @@
                                                     SelectedCellsChanged="DataGridPileAxialForce_SelectedCellsChanged"
                                                     AutoGenerateColumns="False"
                                                     CanUserAddRows="False"
-                                                    CanUserSortColumns="False"
+                                                    CanUserSortColumns="True"
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
                                                     CellEditEnding="DataGridPileAxialForce_CellEditEnding"
@@ -3354,9 +3441,11 @@
                                                         Foreground="Gray" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
-                                                                <TextBlock Text="R_SLS" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
+                                                                <TextBlock TextAlignment="Center">
+                                                                    <Run Text="R"/>
+                                                                    <Run Text="SL" BaselineAlignment="Subscript" FontSize="10"/>
+                                                                </TextBlock>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
@@ -3366,7 +3455,10 @@
                                                         Foreground="Gray" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
-                                                                <TextBlock Text="Rt_SLS" TextAlignment="Center"/>
+                                                                <TextBlock TextAlignment="Center">
+                                                                    <Run Text="R"/>
+                                                                    <Run Text="t,SL" BaselineAlignment="Subscript" FontSize="10"/>
+                                                                </TextBlock>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
                                                             </StackPanel>
@@ -3378,7 +3470,10 @@
                                                         Foreground="Gray" HeaderStyle="{StaticResource GreenHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
-                                                                <TextBlock Text="R_DLS" TextAlignment="Center"/>
+                                                                <TextBlock TextAlignment="Center">
+                                                                    <Run Text="R"/>
+                                                                    <Run Text="DL" BaselineAlignment="Subscript" FontSize="10"/>
+                                                                </TextBlock>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
                                                             </StackPanel>
@@ -3390,7 +3485,10 @@
                                                         Foreground="Gray" HeaderStyle="{StaticResource GreenHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
-                                                                <TextBlock Text="Rt_DLS" TextAlignment="Center"/>
+                                                                <TextBlock TextAlignment="Center">
+                                                                    <Run Text="R"/>
+                                                                    <Run Text="t,DL" BaselineAlignment="Subscript" FontSize="10"/>
+                                                                </TextBlock>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
                                                             </StackPanel>
@@ -3402,7 +3500,10 @@
                                                         Foreground="Gray" HeaderStyle="{StaticResource CrimsonHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
-                                                                <TextBlock Text="R_ULS" TextAlignment="Center"/>
+                                                                <TextBlock TextAlignment="Center">
+                                                                    <Run Text="R"/>
+                                                                    <Run Text="UL" BaselineAlignment="Subscript" FontSize="10"/>
+                                                                </TextBlock>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
                                                             </StackPanel>
@@ -3414,7 +3515,10 @@
                                                         Foreground="Gray" HeaderStyle="{StaticResource CrimsonHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
-                                                                <TextBlock Text="Rt_ULS" TextAlignment="Center"/>
+                                                                <TextBlock TextAlignment="Center">
+                                                                    <Run Text="R"/>
+                                                                    <Run Text="t,UL" BaselineAlignment="Subscript" FontSize="10"/>
+                                                                </TextBlock>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
                                                             </StackPanel>
@@ -3449,7 +3553,7 @@
                                                                     SelectionChanged="DataGridIsFrontPile_SelectionChanged"
                                                                     AutoGenerateColumns="False"
                                                                     CanUserAddRows="False"
-                                                                    CanUserSortColumns="False"
+                                                                    CanUserSortColumns="True"
                                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                                     CellEditEnding="DataGridIsFrontPile_CellEditEnding"
                                                                     BeginningEdit="DataGridIsFrontPile_BeginningEdit"
@@ -3636,7 +3740,7 @@
                                         HorizontalAlignment="Left"
                                         AutoGenerateColumns="False"
                                         CanUserAddRows="False"
-                                        CanUserSortColumns="False"
+                                        CanUserSortColumns="True"
                                         VerticalScrollBarVisibility="Auto"
                                         HorizontalScrollBarVisibility="Auto"
                                         LoadingRow="DataGrid_LoadingRow_Numbering"
@@ -4076,18 +4180,27 @@
                                         <TextBox x:Name="TextBoxGroupPileLoadingPlaneAltitude"
                                                     Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude, 
                                                     StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
-                                                    
                                                     Grid.Row="1" Grid.Column="2"
                                                     HorizontalContentAlignment="Right"
                                                     GotFocus="TextBox_GotFocus"
                                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
                                                     TextChanged="TextBoxAltitude_TextChanged"
                                                     PreviewMouseDown="TextBoxBottomAltitude_PreviewMouseDown"
-                                                 KeyDown="TextBox_KeyDown"/>
+                                                    KeyDown="TextBox_KeyDown">
+                                            <TextBox.ToolTip>
+                                                <TextBlock>
+                                                    <Run Text="杭周面抵抗に対する荷重面の例：杭先端から(1/3)Lの高さ"/>
+                                                    <LineBreak/>
+                                                    <Run Text="杭先端荷重に対する荷重面の例：杭先端"/>
+                                                    <LineBreak/>
+                                                    <Run Text="(基礎指針'19 図6.3.11 p230)"/>
+                                                </TextBlock>
+                                            </TextBox.ToolTip>
+                                        </TextBox>
                                     </Grid>
                                     <!--</StackPanel>-->
 
-                                    <TabControl Grid.Row="1" SelectionChanged="GroupPileTabControl_SelectionChanged">
+                                    <TabControl x:Name="GroupPileTabControl" Grid.Row="1" SelectionChanged="GroupPileTabControl_SelectionChanged">
 
                                         <TabItem Header="荷重">
                                             <Grid>
@@ -4203,7 +4316,7 @@
                                                     <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                                         AutoGenerateColumns="False"
                                                         CanUserAddRows="False"
-                                                        CanUserSortColumns="False"
+                                                        CanUserSortColumns="True"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         CellEditEnding="DataGridRectLoads_CellEditEnding"
                                                         EnableRowVirtualization="True"
@@ -4380,7 +4493,7 @@
                                                     <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.ElementDivision.SoilPiles}"
                                                             AutoGenerateColumns="False"
                                                             CanUserAddRows="False"
-                                                            CanUserSortColumns="False"
+                                                            CanUserSortColumns="True"
                                                             LoadingRow="DataGrid_LoadingRow_Numbering"
                                                             CellEditEnding="DataGridSoilPile_CellEditEnding"
                                                               BeginningEdit="DataGridGrid_BeginningEdit"
@@ -4528,7 +4641,7 @@
                                                             </Grid.RowDefinitions>
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="50"/>
                                                                 <ColumnDefinition Width="auto"/>
                                                             </Grid.ColumnDefinitions>
 
@@ -4568,7 +4681,7 @@
                                                             HorizontalAlignment="Left"
                                                             AutoGenerateColumns="False"
                                                             CanUserAddRows="False"
-                                                            CanUserSortColumns="False"
+                                                            CanUserSortColumns="True"
                                                             VerticalScrollBarVisibility="Auto"
                                                             HorizontalScrollBarVisibility="Auto"
                                                             LoadingRow="DataGrid_LoadingRow_Numbering"
@@ -4739,7 +4852,7 @@
                                                         SelectionChanged="DataGridPileAxialForce_SelectionChanged"
                                                         AutoGenerateColumns="False"
                                                         CanUserAddRows="False"
-                                                        CanUserSortColumns="False"
+                                                        CanUserSortColumns="True"
                                                         LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                         CellEditEnding="DataGridPileAxialForce_CellEditEnding"
                                                         MouseRightButtonDown="DataGridPileLayout_MouseRightButtonDown"
@@ -4823,8 +4936,10 @@
                             </avalonDock:LayoutDocument>
 
                         </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
 
-                        <avalonDock:LayoutDocumentPane DockWidth="2*">
+                    <avalonDock:LayoutDocumentPaneGroup DockWidth="2*">
+                        <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutDocument Title="編集ビュー" CanClose="False" >
                                 <Grid>
                                     <Grid >
@@ -4832,7 +4947,7 @@
 
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
@@ -4847,8 +4962,9 @@
                                                 Grid.ColumnSpan="3"
                                                 HorizontalAlignment="Left"
                                                 Background="Transparent"
-                                                Opacity="1"          
-                                                Focusable="True"   
+                                                Opacity="1"
+                                                Focusable="True"
+                                                Cursor="{Binding CanvasCursor}"
                                                 PreviewKeyDown="Canvas3DLayout_PreviewKeyDown"
                                                
                                                 MouseLeftButtonDown="Canvas3DLayout_MouseLeftButtonDown"
@@ -4866,6 +4982,8 @@
                                                 Panel.ZIndex="0">
                                         </Canvas>
 
+                                        <!-- ミニマップはAvalonDockパネルに移動 -->
+
                                         <Canvas x:Name="ColorBarCanvas"
                                                 Grid.Row="1"
                                                 Grid.Column="1"
@@ -4877,11 +4995,14 @@
                                                 Panel.ZIndex="20">
                                         </Canvas>
 
-                                        <Canvas x:Name="CanvasCube"
-                                            Grid.Column="2"
-                                            Grid.Row="1"
-                                            VerticalAlignment="Top"
-                                            HorizontalAlignment="Center"
+                                        <StackPanel Grid.Column="2" Grid.Row="0" Grid.RowSpan="3"
+                                                    VerticalAlignment="Top" HorizontalAlignment="Right"
+                                                    Panel.ZIndex="10">
+                                            <Grid Width="140" Height="120"
+                                                  Visibility="{Binding IsViewCubeVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Canvas x:Name="CanvasCube"
+                                                    VerticalAlignment="Top"
+                                                    HorizontalAlignment="Center"
                                             Background="Transparent"
                                             Visibility="Visible"
                                             Width="100"
@@ -4893,24 +5014,24 @@
                                             MouseLeftButtonUp="CanvasCube_MouseLeftButtonUp">
                                         </Canvas>
 
-                                        <Slider Grid.Column="2" Grid.Row="1"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Bottom"
-                                                Minimum="-180" Maximum="180" ToolTip="左右回転θ(°)" Orientation="Horizontal" Width="100"
-                                               Value="{Binding CanvasThreeDView.Tht, UpdateSourceTrigger=PropertyChanged}"
-                                                Panel.ZIndex="10" />
-                                        <Slider Grid.Column="2" Grid.Row="1"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Top"
-                                                Minimum="-90" Maximum="90" ToolTip="上下回転φ(°)" Orientation="Vertical" Height="80"
-                                                Value="{Binding CanvasThreeDView.Phi, UpdateSourceTrigger=PropertyChanged}"
-                                                Panel.ZIndex="10"/>
-                                        
-                                        <Grid Grid.Row="2" Grid.Column="2"
-                                             HorizontalAlignment="Right"
-                                             VerticalAlignment="Top"
-                                             Margin="0,0,2,0"
-                                             Panel.ZIndex="10">
+                                                <Slider HorizontalAlignment="Center"
+                                                        VerticalAlignment="Bottom"
+                                                        Minimum="-180" Maximum="180" ToolTip="左右回転θ(°)" Orientation="Horizontal" Width="100"
+                                                        Value="{Binding CanvasThreeDView.Tht, UpdateSourceTrigger=PropertyChanged}"
+                                                        Panel.ZIndex="10" />
+                                                <Slider HorizontalAlignment="Right"
+                                                        VerticalAlignment="Top"
+                                                        Minimum="-90" Maximum="90" ToolTip="上下回転φ(°)" Orientation="Vertical" Height="80"
+                                                        Value="{Binding CanvasThreeDView.Phi, UpdateSourceTrigger=PropertyChanged}"
+                                                        Panel.ZIndex="10"/>
+                                            </Grid>
+
+                                            <Grid Width="140"
+                                                  Visibility="{Binding IsRightToolbarVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <Grid HorizontalAlignment="Right"
+                                                      VerticalAlignment="Top"
+                                                      Margin="0,0,2,0"
+                                                      Panel.ZIndex="10">
                                             <!-- 行高さに合わせて明示 -->
 
                                             <Grid.RowDefinitions>
@@ -5195,7 +5316,7 @@
                                                               ItemTemplate="{StaticResource LoadCombinationItemTemplate}">
                                                         <ComboBox.ToolTip>
                                                             <TextBlock>
-                                                                <Run Text="組み合わせケース α"/>
+                                                                <Run Text="組合せケース α"/>
                                                                 <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
                                                                 <Run Text="/β"/>
                                                                 <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
@@ -5238,7 +5359,7 @@
                                                     </UniformGrid>
 
                                                     <!-- 解析結果表示トグル -->
-                                                    <ToggleButton x:Name= "ButtonAnalysisResult" Grid.Row="3" Content="解析結果"
+                                                    <ToggleButton x:Name= "ButtonAnalysisResult" Grid.Row="3" Content="杭・梁要素 解析結果"
                                                           ToolTip="解析結果の表示/非表示"
                                                           IsChecked="{Binding IsAnalysisResultVisible}"
                                                           IsEnabled="{Binding HasAnyAnalysisResult}"
@@ -5343,6 +5464,8 @@
                                             </Border>
 
                                         </Grid>
+                                            </Grid>
+                                        </StackPanel>
 
                                     </Grid>
                                 </Grid>
@@ -5381,9 +5504,108 @@
                         </avalonDock:LayoutDocumentPane>
                     </avalonDock:LayoutDocumentPaneGroup>
 
+                    <!-- プロパティ・ミニマップパネル（右側） -->
+                    <avalonDock:LayoutAnchorablePaneGroup DockWidth="220" Orientation="Vertical">
+                        <avalonDock:LayoutAnchorablePane DockHeight="*">
+                            <avalonDock:LayoutAnchorable x:Name="propertiesAnchorable"
+                                                         Title="プロパティ"
+                                                         CanClose="False"
+                                                         CanHide="True"
+                                                         CanAutoHide="True"
+                                                         AutoHideWidth="220">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- ヘッダー -->
+                                    <Border Grid.Row="0" Background="#F0F0F0" Padding="8,6">
+                                        <TextBlock Text="{Binding SelectedItemHeader}"
+                                                   FontWeight="SemiBold" FontSize="13"
+                                                   Foreground="#333"/>
+                                    </Border>
+
+                                    <!-- プロパティ一覧（スクロール可能） -->
+                                    <ScrollViewer Grid.Row="1"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding SelectedItemProperties}"
+                                                      Margin="0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Padding="8,4" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" MinWidth="70"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                       Foreground="#666" FontSize="12"
+                                                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Value}"
+                                                                       Foreground="#222" FontSize="12"
+                                                                       FontWeight="Medium"
+                                                                       VerticalAlignment="Center"
+                                                                       HorizontalAlignment="Right"
+                                                                       TextAlignment="Right"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutAnchorablePane>
+
+                        <avalonDock:LayoutAnchorablePane DockHeight="180">
+                            <avalonDock:LayoutAnchorable x:Name="minimapAnchorable"
+                                                         Title="ミニマップ"
+                                                         CanClose="False"
+                                                         CanHide="True"
+                                                         CanAutoHide="True"
+                                                         AutoHideWidth="220">
+                                <Border Background="White">
+                                    <Canvas x:Name="MinimapCanvas"
+                                            ClipToBounds="True"
+                                            Background="Transparent"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            SizeChanged="MinimapCanvas_SizeChanged"
+                                            MouseLeftButtonDown="MinimapCanvas_MouseLeftButtonDown"/>
+                                </Border>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutAnchorablePane>
+                    </avalonDock:LayoutAnchorablePaneGroup>
+
                 </avalonDock:LayoutPanel >
             </avalonDock:LayoutRoot>
         </avalonDock:DockingManager>
+
+        <!-- トースト通知 -->
+        <Border x:Name="ToastBorder"
+                Grid.Row="1"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,24,24"
+                Padding="16,10"
+                CornerRadius="6"
+                Background="#E6333333"
+                Visibility="Collapsed"
+                Panel.ZIndex="9999"
+                IsHitTestVisible="False"
+                RenderTransformOrigin="1,1">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="ToastTranslate" X="0" Y="0"/>
+            </Border.RenderTransform>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="ToastIcon" Text="&#x2714;" Foreground="#4CAF50" FontSize="14"
+                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock x:Name="ToastText" Text="" Foreground="White" FontSize="13"
+                           VerticalAlignment="Center" MaxWidth="400" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
 
         <!-- ステータスバーの定義 -->
         <Grid Grid.Row="2" Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
@@ -5393,9 +5615,11 @@
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
                 <TextBlock Text="{Binding StatusMessage}" Foreground="{Binding StatusMessageColor}" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding SelectionCountText}" Foreground="#E95541" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding PileCountText}" Foreground="DarkBlue" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding AnalysisStatusText}" Foreground="DarkGreen" Margin="0,0,16,0"/>
-                <TextBlock Text="{Binding UndoRedoStatusText}" Foreground="Gray" Margin="0,0,0,0"/>
+                <TextBlock Text="{Binding MouseCoordinateText}" Foreground="#555" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding ZoomText}" Foreground="Gray" Margin="0,0,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
 
@@ -5425,4 +5649,4 @@
             </StackPanel>
         </Grid>
     </Grid>
-</Window>
+</ribbon:RibbonWindow>

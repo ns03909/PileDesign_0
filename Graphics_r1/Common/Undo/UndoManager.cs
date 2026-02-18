@@ -116,6 +116,16 @@ public sealed class UndoManager
     /// </summary>
     public int RedoCount => _redo.Count;
 
+    /// <summary>
+    /// 次にUndoされるアクションの説明を取得します
+    /// </summary>
+    public string? PeekUndoDescription => _undo.Count > 0 ? _undo.Peek().Description : null;
+
+    /// <summary>
+    /// 次にRedoされるアクションの説明を取得します
+    /// </summary>
+    public string? PeekRedoDescription => _redo.Count > 0 ? _redo.Peek().Description : null;
+
     // スナップショット方式のメソッド群
 
     /// <summary>

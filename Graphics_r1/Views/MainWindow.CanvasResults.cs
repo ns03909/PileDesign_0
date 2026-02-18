@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls.Ribbon;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Node = PileDesign.FEM.Node;
@@ -15,7 +16,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : RibbonWindow
     {
  
         private static IEnumerable<LoadCase> GetSelectedLoadCases(MainWindowViewModel vm)
@@ -442,7 +443,9 @@ namespace PileDesign.Views
                     AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
                     // RigidLinkのJ端（杭頭）に境界ラインを追加
-                    if (beam.Name.StartsWith("RigidLink-"))
+                    if (beam.Name.StartsWith("RigidLink-")
+                        && double.IsFinite(nodeJ2D.X) && double.IsFinite(nodeJ2D.Y)
+                        && double.IsFinite(nodeJForce2D.X) && double.IsFinite(nodeJForce2D.Y))
                     {
                         rigidLinkBoundaryGeo.AddGeometry(new LineGeometry(nodeJ2D, nodeJForce2D));
                     }
@@ -696,7 +699,10 @@ namespace PileDesign.Views
                             Point pJDisp = viewModel.CanvasThreeDView.Transformation(nJDisp3D);
                             Point pJ = viewModel.CanvasThreeDView.Transformation(nJ);
 
-                            if (!double.IsNaN(pI.X) && !double.IsNaN(pJ.Y))
+                            if (double.IsFinite(pI.X) && double.IsFinite(pI.Y)
+                                && double.IsFinite(pIDisp.X) && double.IsFinite(pIDisp.Y)
+                                && double.IsFinite(pJDisp.X) && double.IsFinite(pJDisp.Y)
+                                && double.IsFinite(pJ.X) && double.IsFinite(pJ.Y))
                             {
                                 if (!viewModel.AnalysisResultNodeDisplacementType.StartsWith('θ'))
                                 {
@@ -822,6 +828,8 @@ namespace PileDesign.Views
                         if (proj == null) continue;
                         var (center2DUnit, majorUnitPx, minorUnitPx, angleDegUnit) = proj.Value;
                         if (majorUnitPx <= 1e-9) continue;
+                        if (!double.IsFinite(center2DUnit.X) || !double.IsFinite(center2DUnit.Y)
+                            || !double.IsFinite(majorUnitPx) || !double.IsFinite(minorUnitPx)) continue;
 
                         double scale = (targetPixelDiameter * 0.5) / majorUnitPx;
                         double finalMajor = majorUnitPx * scale;
@@ -1024,6 +1032,11 @@ namespace PileDesign.Views
                     // 2D投影
                     Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
                     Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
+
+                    // NaN/Infinity座標チェック
+                    if (!double.IsFinite(head2D.X) || !double.IsFinite(head2D.Y)
+                        || !double.IsFinite(tail2D.X) || !double.IsFinite(tail2D.Y))
+                        continue;
 
                     // カラー帯の選択（選択されたタイプの値で色分け）
                     var picked = ColorBarUtils.PickColorGeometry(displayValue, colorBaredGeometries)

@@ -36,8 +36,8 @@ namespace PileDesign.FEM
             {
                 if (derivedType == "Mh")
                 {
-                    // 曲げ合成: My, Mz の比率を使う（Mxは無視）
-                    return Vector<double>.Build.DenseOfArray(new double[] { 0.0, mz, my });
+                    // 曲げ合成: -Mz, My の比率を使う（Mxは無視）
+                    return Vector<double>.Build.DenseOfArray(new double[] { 0.0, -mz, my });
                 }
                 else if (derivedType == "Fh")
                 {

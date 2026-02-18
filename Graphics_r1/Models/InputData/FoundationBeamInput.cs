@@ -8,7 +8,7 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public class FoundationBeamInput : BaseModel
     {
-        private FoundationBeamConnectionMode _connectionMode = FoundationBeamConnectionMode.RigidBody;
+        private FoundationBeamConnectionMode _connectionMode = FoundationBeamConnectionMode.RigidFloor;
         public FoundationBeamConnectionMode ConnectionMode
         {
             get => _connectionMode;
@@ -149,6 +149,14 @@ namespace PileDesign.Models.InputData
             get => _isSelected;
             set => SetProperty(ref _isSelected, value);
         }
+
+        // 表示状態（アクティブ/非アクティブ）
+        private bool _isVisible = true;
+        public bool IsVisible
+        {
+            get => _isVisible;
+            set => SetProperty(ref _isVisible, value);
+        }
     }
 
     /// <summary>
@@ -281,6 +289,14 @@ namespace PileDesign.Models.InputData
         {
             get => _isSelected;
             set => SetProperty(ref _isSelected, value);
+        }
+
+        // 表示状態（アクティブ/非アクティブ）
+        private bool _isVisible = true;
+        public bool IsVisible
+        {
+            get => _isVisible;
+            set => SetProperty(ref _isVisible, value);
         }
     }
 }

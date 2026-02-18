@@ -150,33 +150,33 @@
                 IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Both}"/>
             </StackPanel>
 
-            <TextBlock Text="荷重ケース レベル1" Margin="0,10,0,0"/>
+            <TextBlock Text="解析対象 荷重ケース レベル1" Margin="0,10,0,0"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                <Button Content="すべて適用" Command="{Binding ApplyAllLoadCasesLevel1Command}" Width="80" Margin="0,0,5,0"/>
-                <Button Content="すべて不適用" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
+                <Button Content="すべて対象" Command="{Binding ApplyAllLoadCasesLevel1Command}" Width="80" Margin="0,0,5,0"/>
+                <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
             </StackPanel>
 
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False">
                 <common:EnhancedDataGrid.Columns>
                     <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
-                    <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto"/>
+                    <DataGridCheckBoxColumn Binding="{Binding IsAnalysisTarget, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto"/>
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
 
-            <TextBlock Text="荷重ケース レベル2" Margin="0,10,0,0"/>
+            <TextBlock Text="解析対象 荷重ケース レベル2" Margin="0,10,0,0"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
-                <Button Content="すべて適用" Command="{Binding ApplyAllLoadCasesLevel2Command}" Width="80" Margin="0,0,5,0"/>
-                <Button Content="すべて不適用" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
+                <Button Content="すべて対象" Command="{Binding ApplyAllLoadCasesLevel2Command}" Width="80" Margin="0,0,5,0"/>
+                <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
             </StackPanel>
 
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False">
                 <common:EnhancedDataGrid.Columns>
                     <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
-                    <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
+                    <DataGridCheckBoxColumn Binding="{Binding IsAnalysisTarget, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
 
@@ -242,6 +242,13 @@
                     <RadioButton Content="Modified NR" GroupName="NRMethod" VerticalAlignment="Center"
                                  IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay}"
                                  ToolTip="Modified Newton-Raphson法&#x0a;反復中は接線剛性を固定（安定）"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,2"
+                            Visibility="{Binding UseModifiedNewtonRaphson, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock Text="" Width="60" Margin="0,0,8,0"/>
+                    <TextBlock Text="Full NR初期反復:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox Text="{Binding FullNRIterations, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="30" VerticalAlignment="Center"
+                             ToolTip="Modified NR 時に最初の N 回を Full NR で実行&#x0a;大きいほど収束が速いが反復あたりのコスト増&#x0a;デフォルト: 5"/>
                 </StackPanel>
 
                 <!-- 収束安定化手法（排他的） -->

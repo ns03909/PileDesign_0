@@ -41,6 +41,12 @@ namespace PileDesign.FEM
 
         // マスター
         public Node[] MasterNodes { get; set; } = new Node[6];
+
+        /// <summary>いずれかの自由度がマスター節点に拘束されているか</summary>
+        [JsonIgnore]
+        public bool HasMasterSlave => MasterNodes[0] != null || MasterNodes[1] != null ||
+            MasterNodes[2] != null || MasterNodes[3] != null ||
+            MasterNodes[4] != null || MasterNodes[5] != null;
         public Vector3S SlaveArm { get; set; } = new(0, 0, 0);
 
         // 接点ばね

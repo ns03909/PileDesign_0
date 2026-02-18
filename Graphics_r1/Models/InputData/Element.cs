@@ -6,6 +6,12 @@ using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
+    /// <summary>
+    /// [Obsolete] 旧梁要素クラス。FoundationBeamElement に完全に置き換え済み。
+    /// デシリアライズ（旧ファイル読み込み）用にのみ残している。
+    /// MigrateElementsToFoundationBeams() で新形式に変換される。
+    /// </summary>
+    [Obsolete("旧形式。FoundationBeamElement を使用してください。")]
     public class Element : BaseModel
     {
         public ObservableCollection<InputNode> Nodes { get; set; } = [];

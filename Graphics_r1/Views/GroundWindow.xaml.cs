@@ -129,14 +129,14 @@ namespace PileDesign.Views
 
             if (sender is DataGrid grid)
             {
-                // セル/行コミット完了後に Update()（確実に編集値が反映された後）
+                // セル/行コミット完了後にデバウンス付きUpdate
                 grid.Dispatcher.InvokeAsync(() =>
                 {
                     grid.CommitEdit(DataGridEditingUnit.Cell, true);
                     grid.CommitEdit(DataGridEditingUnit.Row, true);
 
                     if (DataContext is GroundLayerViewModel vm)
-                        vm.Update();
+                        vm.ScheduleUpdate();
                 }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
             }
         }
@@ -219,33 +219,13 @@ namespace PileDesign.Views
             {
                 if (DataContext is GroundLayerViewModel vm)
                 {
-                    vm.Update();
+                    vm.ScheduleUpdate();
                 }
             }
             catch (System.Runtime.InteropServices.COMException comEx) when (comEx.HResult == unchecked((int)0x80040206))
             {
                 // IME/TextStore の競合による COMException を無視
-                // 200ms 後に再試行
-                var retryTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle)
-                {
-                    Interval = TimeSpan.FromMilliseconds(200)
-                };
-                retryTimer.Tick += (s, e) =>
-                {
-                    retryTimer.Stop();
-                    try
-                    {
-                        if (DataContext is GroundLayerViewModel vm2)
-                        {
-                            vm2.Update();
-                        }
-                    }
-                    catch
-                    {
-                        // 最終的に失敗しても UI は壊れないので続行
-                    }
-                };
-                retryTimer.Start();
+                // ScheduleUpdate のデバウンスで自然に再試行される
             }
         }
 
@@ -255,7 +235,7 @@ namespace PileDesign.Views
             {
                 if (sender is ComboBox)
                 {
-                    viewModel.Update();
+                    viewModel.ScheduleUpdate();
                 }
             }
         }

@@ -1,7 +1,12 @@
-﻿using PileDesign.ViewModels;
+﻿using AvalonDock.Layout;
+using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Ribbon;
+using System.Windows.Media;
 
 namespace PileDesign.Views
 {
@@ -9,7 +14,7 @@ namespace PileDesign.Views
     /// 根入れ部のコードビハインド
     /// </summary>
     /// 
-    public partial class MainWindow : Window
+    public partial class MainWindow : RibbonWindow
     {
         // 追加: ビュー操作中フラグ
         private bool _isViewInteracting = false;
@@ -295,6 +300,9 @@ namespace PileDesign.Views
                 {
                     RenderTextBlocksWithDrawingVisual();
                 }
+
+                // ミニマップの更新（AvalonDockパネルが表示中の場合のみ）
+                if (minimapAnchorable?.IsVisible == true) UpdateMinimap();
             }
             finally
             {
@@ -306,6 +314,315 @@ namespace PileDesign.Views
                     RequestUpdateCanvas3D();
                 }
             }
+        }
+
+        /// <summary>
+        /// ミニマップを更新：全モデル点を縮小描画し、現在のビューポート範囲を矩形で表示
+        /// </summary>
+        private void UpdateMinimap()
+        {
+            if (MinimapCanvas == null) return;
+            if (DataContext is not MainWindowViewModel viewModel) return;
+
+            MinimapCanvas.Children.Clear();
+
+            double mmW = MinimapCanvas.ActualWidth;
+            double mmH = MinimapCanvas.ActualHeight;
+            if (mmW < 10 || mmH < 10) return; // サイズ未確定時はスキップ
+            const double margin = 6;
+
+            // 全モデル点を2D変換してバウンディングボックスを計算
+            var allPoints = new System.Collections.Generic.List<Point>();
+
+            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            {
+                allPoints.Add(viewModel.CanvasThreeDView.Transformation(pile.Point3D));
+            }
+
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    allPoints.Add(viewModel.CanvasThreeDView.Transformation(
+                        new System.Windows.Media.Media3D.Point3D(node.X, node.Y, node.Z)));
+                }
+            }
+
+            if (viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
+                {
+                    allPoints.Add(viewModel.CanvasThreeDView.Transformation(
+                        new System.Windows.Media.Media3D.Point3D(node.X, node.Y, node.Z)));
+                }
+            }
+
+            if (allPoints.Count < 1) return;
+
+            // バウンディングボックス
+            double minX = allPoints.Min(p => p.X);
+            double maxX = allPoints.Max(p => p.X);
+            double minY = allPoints.Min(p => p.Y);
+            double maxY = allPoints.Max(p => p.Y);
+
+            // ビューポート範囲も含めてバウンディングボックスを拡張
+            minX = Math.Min(minX, 0);
+            maxX = Math.Max(maxX, Canvas3DWidth);
+            minY = Math.Min(minY, 0);
+            maxY = Math.Max(maxY, Canvas3DHeight);
+
+            double rangeX = maxX - minX;
+            double rangeY = maxY - minY;
+            if (rangeX < 1) rangeX = 1;
+            if (rangeY < 1) rangeY = 1;
+
+            // ミニマップへのマッピング関数
+            double scaleX = (mmW - margin * 2) / rangeX;
+            double scaleY = (mmH - margin * 2) / rangeY;
+            double mmScale = Math.Min(scaleX, scaleY);
+
+            double offsetX = margin + ((mmW - margin * 2) - rangeX * mmScale) * 0.5;
+            double offsetY = margin + ((mmH - margin * 2) - rangeY * mmScale) * 0.5;
+
+            Point ToMinimap(Point canvasPt)
+            {
+                return new Point(
+                    (canvasPt.X - minX) * mmScale + offsetX,
+                    (canvasPt.Y - minY) * mmScale + offsetY);
+            }
+
+            // ビューポート矩形を描画
+            var vpTopLeft = ToMinimap(new Point(0, 0));
+            var vpBottomRight = ToMinimap(new Point(Canvas3DWidth, Canvas3DHeight));
+            var vpRect = new System.Windows.Shapes.Rectangle
+            {
+                Width = Math.Max(1, vpBottomRight.X - vpTopLeft.X),
+                Height = Math.Max(1, vpBottomRight.Y - vpTopLeft.Y),
+                Stroke = new SolidColorBrush(Color.FromArgb(160, 100, 100, 100)),
+                StrokeThickness = 1,
+                Fill = new SolidColorBrush(Color.FromArgb(15, 0, 0, 0)),
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(vpRect, vpTopLeft.X);
+            Canvas.SetTop(vpRect, vpTopLeft.Y);
+            MinimapCanvas.Children.Add(vpRect);
+
+            // 要素（Elements）を線として描画
+            foreach (var element in viewModel.CurrentInputModel.Elements)
+            {
+                var p0 = ToMinimap(viewModel.CanvasThreeDView.Transformation(element.Nodes[0].Point3D));
+                var p1 = ToMinimap(viewModel.CanvasThreeDView.Transformation(element.Nodes[1].Point3D));
+                var line = new System.Windows.Shapes.Line
+                {
+                    X1 = p0.X, Y1 = p0.Y, X2 = p1.X, Y2 = p1.Y,
+                    Stroke = Brushes.Goldenrod, StrokeThickness = 0.5,
+                    IsHitTestVisible = false
+                };
+                MinimapCanvas.Children.Add(line);
+            }
+
+            // 基礎梁要素を線として描画（Guidベース座標解決）
+            if (viewModel.IsFoundationBeamVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                var fbInput = viewModel.CurrentInputModel.FoundationBeamInput;
+                var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
+                foreach (var beam in fbInput.Beams)
+                {
+                    if (!beam.IsVisible) continue;
+
+                    System.Windows.Media.Media3D.Point3D? loc0 = null, loc1 = null;
+                    if (beam.NodeI_Id != Guid.Empty)
+                    {
+                        var c = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                        if (c.HasValue) loc0 = new(c.Value.X, c.Value.Y, c.Value.Z);
+                    }
+                    else if (beam.NodeI_No > 0 && nodeDict.TryGetValue(beam.NodeI_No, out var nI))
+                        loc0 = new(nI.X, nI.Y, nI.Z);
+
+                    if (beam.NodeJ_Id != Guid.Empty)
+                    {
+                        var c = viewModel.CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                        if (c.HasValue) loc1 = new(c.Value.X, c.Value.Y, c.Value.Z);
+                    }
+                    else if (beam.NodeJ_No > 0 && nodeDict.TryGetValue(beam.NodeJ_No, out var nJ))
+                        loc1 = new(nJ.X, nJ.Y, nJ.Z);
+
+                    if (!loc0.HasValue || !loc1.HasValue) continue;
+
+                    var p0 = ToMinimap(viewModel.CanvasThreeDView.Transformation(loc0.Value));
+                    var p1 = ToMinimap(viewModel.CanvasThreeDView.Transformation(loc1.Value));
+                    MinimapCanvas.Children.Add(new System.Windows.Shapes.Line
+                    {
+                        X1 = p0.X, Y1 = p0.Y, X2 = p1.X, Y2 = p1.Y,
+                        Stroke = Brushes.DarkOrange, StrokeThickness = 0.5,
+                        IsHitTestVisible = false
+                    });
+                }
+            }
+
+            // 杭節点をドットとして描画
+            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            {
+                var mp = ToMinimap(viewModel.CanvasThreeDView.Transformation(pile.Point3D));
+                var dot = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 3, Height = 3,
+                    Fill = pile.IsSelected ? Brushes.Red : Brushes.DimGray,
+                    IsHitTestVisible = false
+                };
+                Canvas.SetLeft(dot, mp.X - 1.5);
+                Canvas.SetTop(dot, mp.Y - 1.5);
+                MinimapCanvas.Children.Add(dot);
+            }
+
+            // 一般節点をドットとして描画
+            if (viewModel.CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in viewModel.CurrentInputModel.InputNodes)
+                {
+                    if (!node.IsVisible) continue;
+                    var mp = ToMinimap(viewModel.CanvasThreeDView.Transformation(
+                        new System.Windows.Media.Media3D.Point3D(node.X, node.Y, node.Z)));
+                    var dot = new System.Windows.Shapes.Ellipse
+                    {
+                        Width = 3, Height = 3,
+                        Fill = node.IsSelected ? Brushes.Red : Brushes.SteelBlue,
+                        IsHitTestVisible = false
+                    };
+                    Canvas.SetLeft(dot, mp.X - 1.5);
+                    Canvas.SetTop(dot, mp.Y - 1.5);
+                    MinimapCanvas.Children.Add(dot);
+                }
+            }
+
+            // ミニマップのスケール情報を保存（クリックナビゲーション用）
+            _minimapMinX = minX;
+            _minimapMinY = minY;
+            _minimapScale = mmScale;
+            _minimapOffsetX = offsetX;
+            _minimapOffsetY = offsetY;
+        }
+
+        // ミニマップのマッピング用パラメータ
+        private double _minimapMinX, _minimapMinY, _minimapScale, _minimapOffsetX, _minimapOffsetY;
+
+        /// <summary>
+        /// ミニマップクリックでビューを移動
+        /// </summary>
+        private void MinimapCanvas_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (_minimapScale <= 0) return;
+
+            var clickPos = e.GetPosition(MinimapCanvas);
+
+            // ミニマップ座標→メインキャンバス座標に逆変換
+            double canvasX = (clickPos.X - _minimapOffsetX) / _minimapScale + _minimapMinX;
+            double canvasY = (clickPos.Y - _minimapOffsetY) / _minimapScale + _minimapMinY;
+
+            // ビューの中心をクリック位置に移動（ViewTransitionを調整）
+            double centerX = Canvas3DWidth * 0.5;
+            double centerY = Canvas3DHeight * 0.5;
+
+            viewModel.CanvasThreeDView.ViewTransition = new Point(
+                viewModel.CanvasThreeDView.ViewTransition.X + (centerX - canvasX),
+                viewModel.CanvasThreeDView.ViewTransition.Y + (centerY - canvasY));
+
+            UpdateCanvas3D();
+        }
+
+        /// <summary>
+        /// ミニマップのサイズ変更時にDockHeightを幅の0.8倍に維持して再描画
+        /// </summary>
+        private void MinimapCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (e.WidthChanged && minimapAnchorable?.Parent is LayoutAnchorablePane pane)
+            {
+                double targetHeight = e.NewSize.Width * 0.8;
+                if (targetHeight > 10)
+                    pane.DockHeight = new GridLength(targetHeight);
+            }
+
+            if (minimapAnchorable?.IsVisible == true)
+                UpdateMinimap();
+        }
+
+        private GridLength _savedLeftTabsDockWidth = new GridLength(1, GridUnitType.Star);
+
+        /// <summary>
+        /// データタブ（一般節点～群杭荷重）の表示/非表示トグル
+        /// </summary>
+        private void ToggleLeftTabs_Click(object sender, RoutedEventArgs e)
+        {
+            var rootPanel = dockingManager.Layout.RootPanel;
+            if (rootPanel.Children.Contains(leftTabsGroup))
+            {
+                _savedLeftTabsDockWidth = leftTabsGroup.DockWidth;
+                rootPanel.Children.Remove(leftTabsGroup);
+            }
+            else
+            {
+                leftTabsGroup.DockWidth = _savedLeftTabsDockWidth;
+                // LayoutAnchorablePane(入力データ)の直後に挿入
+                var insertIndex = Math.Min(1, rootPanel.Children.Count);
+                rootPanel.Children.Insert(insertIndex, leftTabsGroup);
+            }
+        }
+
+        /// <summary>
+        /// 入力データパネルの表示/非表示トグル
+        /// </summary>
+        private void ToggleInputDataPanel_Click(object sender, RoutedEventArgs e)
+        {
+            if (inputDataAnchorable.IsVisible)
+                inputDataAnchorable.Hide();
+            else
+            {
+                inputDataAnchorable.Show();
+                inputDataAnchorable.IsActive = true;
+            }
+        }
+
+        /// <summary>
+        /// プロパティパネルの表示/非表示トグル
+        /// </summary>
+        private void TogglePropertiesPanel_Click(object sender, RoutedEventArgs e)
+        {
+            if (propertiesAnchorable.IsVisible)
+                propertiesAnchorable.Hide();
+            else
+            {
+                propertiesAnchorable.Show();
+                propertiesAnchorable.IsActive = true;
+            }
+        }
+
+        /// <summary>
+        /// ミニマップパネルの表示/非表示トグル
+        /// </summary>
+        private void ToggleMinimapPanel_Click(object sender, RoutedEventArgs e)
+        {
+            if (minimapAnchorable.IsVisible)
+                minimapAnchorable.Hide();
+            else
+            {
+                minimapAnchorable.Show();
+                minimapAnchorable.IsActive = true;
+                UpdateMinimap();
+            }
+        }
+
+        /// <summary>
+        /// パネルのIsVisibleChanged購読を初期化（パネルXボタンとトグルボタンの同期用）
+        /// </summary>
+        internal void InitializePanelToggleSync()
+        {
+            inputDataAnchorable.IsVisibleChanged += (s, e) =>
+                InputDataPanelToggle.IsChecked = inputDataAnchorable.IsVisible;
+            propertiesAnchorable.IsVisibleChanged += (s, e) =>
+                PropertiesPanelToggle.IsChecked = propertiesAnchorable.IsVisible;
+            minimapAnchorable.IsVisibleChanged += (s, e) =>
+                MinimapPanelToggle.IsChecked = minimapAnchorable.IsVisible;
         }
     }
 }

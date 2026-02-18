@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls.Ribbon;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Path = System.Windows.Shapes.Path;
@@ -13,7 +14,7 @@ using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : RibbonWindow
     {
         // クラスフィールドのどこか適切な場所（他の _xxx フィールドに倣う）
         private ObservableCollection<Point3D>? _pendingSettlementPoints;

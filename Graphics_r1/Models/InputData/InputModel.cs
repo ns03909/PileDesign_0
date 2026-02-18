@@ -559,20 +559,6 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            if (Elements != null)
-            {
-                foreach (var element in Elements)
-                {
-                    if (element.Nodes != null)
-                    {
-                        foreach (var node in element.Nodes.OfType<PileLayoutDataItem>())
-                        {
-                            node.SetMainWindowViewModel(mainWindowViewModel);
-                        }
-                    }
-                }
-            }
-
             Reset(); // ElementDivision等を初期化
 
             // 初期化後に各種購読を張る
@@ -595,19 +581,20 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            if (Elements != null)
+            // LoadCase の MainWindowViewModel を再セット（デシリアライズ後は null のため）
+            if (LoadCasesInput != null)
             {
-                foreach (var element in Elements)
-                {
-                    if (element.Nodes != null)
-                    {
-                        foreach (var node in element.Nodes.OfType<PileLayoutDataItem>())
-                        {
-                            node.SetMainWindowViewModel(mainWindowViewModel);
-                        }
-                    }
-                }
+                LoadCasesInput.LoadCaseVL0?.SetMainWindowViewModel(mainWindowViewModel);
+                LoadCasesInput.LoadCaseVLadd?.SetMainWindowViewModel(mainWindowViewModel);
+                LoadCasesInput.LoadCaseVL?.SetMainWindowViewModel(mainWindowViewModel);
+                if (LoadCasesInput.LoadCasesLevel1 != null)
+                    foreach (var lc in LoadCasesInput.LoadCasesLevel1)
+                        lc.SetMainWindowViewModel(mainWindowViewModel);
+                if (LoadCasesInput.LoadCasesLevel2 != null)
+                    foreach (var lc in LoadCasesInput.LoadCasesLevel2)
+                        lc.SetMainWindowViewModel(mainWindowViewModel);
             }
+
             // 重要: DeepCopy 後に null になり得るコレクションを補正
             GridXItems ??= [];
             GridYItems ??= [];
@@ -1052,9 +1039,10 @@ namespace PileDesign.Models.InputData
 
                 // 旧データとの互換性: Materials/Sections の初期化
                 loaded.EnsureFoundationBeamDefaults();
+                loaded.EnsureAnalysisTargetDefaults();
 
-                // MainWindowViewModelをセット
-                loaded.SetMainWindowViewModel(mainWindowViewModel);
+                // MainWindowViewModelをセット（Reset()を呼ばない軽量版を使用）
+                loaded.AttachViewModel(mainWindowViewModel);
                 return loaded;
             }
             catch (Exception ex) when (ex is NotSupportedException || ex is System.Text.Json.JsonException || json.Contains("\"$ref\"") || json.Contains("\"$id\""))
@@ -1079,9 +1067,10 @@ namespace PileDesign.Models.InputData
 
                     // 旧データとの互換性: Materials/Sections の初期化
                     loaded.EnsureFoundationBeamDefaults();
+                    loaded.EnsureAnalysisTargetDefaults();
 
-                    // MainWindowViewModelをセット
-                    loaded.SetMainWindowViewModel(mainWindowViewModel);
+                    // MainWindowViewModelをセット（Reset()を呼ばない軽量版を使用）
+                    loaded.AttachViewModel(mainWindowViewModel);
                     return loaded;
                 }
                 catch (Exception ex2)
@@ -1131,6 +1120,30 @@ namespace PileDesign.Models.InputData
             // NodesとBeamsも初期化
             FoundationBeamInput.Nodes ??= [];
             FoundationBeamInput.Beams ??= [];
+        }
+
+        /// <summary>
+        /// 旧データとの互換性: IsAnalysisTarget が全て false の場合、
+        /// IsApplicable の値をコピーして互換動作を維持する
+        /// </summary>
+        internal void EnsureAnalysisTargetDefaults()
+        {
+            if (LoadCasesInput == null) return;
+
+            // Level1/Level2 の IsAnalysisTarget が全て false の場合（旧データ）
+            bool allLevel1False = LoadCasesInput.LoadCasesLevel1?.All(x => !x.IsAnalysisTarget) ?? true;
+            bool allLevel2False = LoadCasesInput.LoadCasesLevel2?.All(x => !x.IsAnalysisTarget) ?? true;
+
+            if (allLevel1False && allLevel2False)
+            {
+                // 旧データ: IsApplicable の値を IsAnalysisTarget にコピー
+                if (LoadCasesInput.LoadCasesLevel1 != null)
+                    foreach (var lc in LoadCasesInput.LoadCasesLevel1)
+                        lc.IsAnalysisTarget = lc.IsApplicable;
+                if (LoadCasesInput.LoadCasesLevel2 != null)
+                    foreach (var lc in LoadCasesInput.LoadCasesLevel2)
+                        lc.IsAnalysisTarget = lc.IsApplicable;
+            }
         }
 
         /// <summary>

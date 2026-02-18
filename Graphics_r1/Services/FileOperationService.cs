@@ -86,7 +86,7 @@ namespace PileDesign.Services
             // トップレベルのコレクション変換
             inputModel.PileLayoutItems = EnsureObservableCollection(inputModel.PileLayoutItems);
             inputModel.InputNodes = EnsureObservableCollection(inputModel.InputNodes);
-            inputModel.Elements = EnsureObservableCollection(inputModel.Elements);
+
             inputModel.GridXItems = EnsureObservableCollection(inputModel.GridXItems);
             inputModel.GridYItems = EnsureObservableCollection(inputModel.GridYItems);
             inputModel.PileBodies = EnsureObservableCollection(inputModel.PileBodies);
@@ -106,6 +106,10 @@ namespace PileDesign.Services
                     EnsureObservableCollection(inputModel.LoadCasesInput.LoadCasesLevel1);
                 inputModel.LoadCasesInput.LoadCasesLevel2 =
                     EnsureObservableCollection(inputModel.LoadCasesInput.LoadCasesLevel2);
+                inputModel.LoadCasesInput.LoadCombinations =
+                    EnsureObservableCollection(inputModel.LoadCasesInput.LoadCombinations);
+                inputModel.LoadCasesInput.LoadCombinationsPlus =
+                    EnsureObservableCollection(inputModel.LoadCasesInput.LoadCombinationsPlus);
             }
 
             // ネストされたコレクションの変換

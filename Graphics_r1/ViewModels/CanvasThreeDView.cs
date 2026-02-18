@@ -209,7 +209,69 @@ namespace PileDesign.ViewModels
             return InverseHomographyTransformation(Ct, new Point(x, y));
         }
 
-        // 逆透視変換メソッドを追加します
+        // 指定Z平面上のワールド座標を求める逆変換
+        public Point3D InverseTransformationAtZ(Point point, double targetZ)
+        {
+            double xCamera = (point.X - Org.X - ViewTransition.X) / Scale;
+            double yCamera = -(point.Y - Org.Y - ViewTransition.Y) / Scale;
+
+            var camPoint = new Point(xCamera, yCamera);
+
+            // 視線レイ上の2点を求める（カメラ深度 0 と 1）
+            Point3D p0 = InverseHomographyAtDepth(Ct, camPoint, 0.0);
+            Point3D p1 = InverseHomographyAtDepth(Ct, camPoint, 1.0);
+
+            // レイ方向
+            double rdx = p1.X - p0.X;
+            double rdy = p1.Y - p0.Y;
+            double rdz = p1.Z - p0.Z;
+
+            // Z=targetZ 平面との交点（平行の場合はフォールバック）
+            if (Math.Abs(rdz) < 1e-10)
+                return p0;
+
+            double t = (targetZ - p0.Z) / rdz;
+            return new Point3D(p0.X + t * rdx, p0.Y + t * rdy, targetZ);
+        }
+
+        // カメラ深度を指定した逆透視変換
+        private Point3D InverseHomographyAtDepth(Point3D ct, Point point, double zS)
+        {
+            double thtRad = DegreesToRadians(Tht);
+            double phiRad = DegreesToRadians(Phi);
+
+            double cosTht = Math.Cos(thtRad);
+            double sinTht = Math.Sin(thtRad);
+            double cosPhi = Math.Cos(phiRad);
+            double sinPhi = Math.Sin(phiRad);
+
+            double xS = point.X;
+            double yS = point.Y;
+
+            if (IsPerspective)
+            {
+                double dvAdjusted = Dv - zS;
+                if (dvAdjusted == 0) dvAdjusted = 1;
+                xS /= Dv / dvAdjusted;
+                yS /= Dv / dvAdjusted;
+            }
+
+            double y2 = xS;
+            double z2 = yS;
+            double x2 = zS;
+
+            double x1 = x2 * cosPhi + z2 * sinPhi;
+            double y1 = y2;
+            double z1 = -x2 * sinPhi + z2 * cosPhi;
+
+            double dx = x1 * cosTht + y1 * sinTht;
+            double dy = -x1 * sinTht + y1 * cosTht;
+            double dz = z1;
+
+            return new Point3D(dx + ct.X, dy + ct.Y, dz + ct.Z);
+        }
+
+        // 逆透視変換メソッド（既存: zS=0 固定）
         private Point3D InverseHomographyTransformation(Point3D ct, Point point)
         {
             double thtRad = DegreesToRadians(Tht);

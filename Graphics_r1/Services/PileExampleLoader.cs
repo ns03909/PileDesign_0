@@ -282,23 +282,8 @@ namespace PileDesign.Services
             }
             inputModel.GridYItems = new ObservableCollection<GridDataItem>(gridYList);
 
-            // Elements 設定（一般梁要素、バッチ化）
-            var elementsList = new List<Element>(data.Elements.Count);
-            foreach (var elemDto in data.Elements)
-            {
-                var element = new Element
-                {
-                    No = elemDto.No,
-                    ElementType = elemDto.ElementType
-                };
-                foreach (var nodeRef in elemDto.Nodes)
-                {
-                    var resolved = ResolveNodeReference(nodeRef, inputModel.PileLayoutItems, inputModel.InputNodes);
-                    if (resolved != null) element.Nodes.Add(resolved);
-                }
-                elementsList.Add(element);
-            }
-            inputModel.Elements = new ObservableCollection<Element>(elementsList);
+            // 旧要素はクリア（後方互換用に読み込まれた場合に備える）
+            inputModel.Elements?.Clear();
 
             // FoundationBeamInput 設定（基礎梁入力）
             if (data.FoundationBeamInput != null)

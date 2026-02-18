@@ -22,6 +22,7 @@ namespace PileDesign.FEM
         public List<RigidBody> RigidBodies { get; set; } = [];
         public List<HorizontalSoilSpring> HorizontalSoilSprings { get; set; } = []; // 水平地盤ばね
         public List<RotationalSpring> RotationalSprings { get; set; } = [];        // 杭頭回転ばね（RunAsyncでカーブ/剛性をセット）
+        public List<HorizontalSoilSpring> PenaltySprings { get; set; } = [];       // ConnectionNode↔CapNodeペナルティばね（剛床モード用）
 
         // 最適化用: Material/Section キャッシュ
         private readonly ConcurrentDictionary<double, Material> _materialCache = new();
@@ -37,6 +38,14 @@ namespace PileDesign.FEM
             _inputModel = inputModel ?? throw new ArgumentNullException(nameof(inputModel));
             Initialize();
         }
+
+        /// <summary>
+        /// FoundationBeamInput が有効（非null かつ梁要素あり）かどうか
+        /// </summary>
+        private bool HasFoundationBeams =>
+            InputModel.FoundationBeamInput != null &&
+            InputModel.FoundationBeamInput.Beams != null &&
+            InputModel.FoundationBeamInput.Beams.Count > 0;
 
         // Guid→FEM節点名のルックアップ（AddFoundationBeamNodesで構築）
         private Dictionary<Guid, string> _pileGuidToFemName;
@@ -268,7 +277,7 @@ namespace PileDesign.FEM
             double x = pile.X;
             double y = pile.Y;
             int soilPileAltNo = pile.SoilPileAltNo;
-            double initialRotK = 1e6;  // アーム変換後の条件数を改善するため1e6に低減
+            double initialRotK = 1e10;  // 杭断面 4EI/L ≈ 1e8 に対して十分大きい剛体相当値
 
             if (InputModel.ElementDivision.SoilPiles == null ||
                 soilPileAltNo - 1 < 0 ||
@@ -371,9 +380,9 @@ namespace PileDesign.FEM
                 {
                     Nodes.Add(result.CapNode);
 
-                    if (InputModel.FoundationBeamInput == null)
+                    if (!HasFoundationBeams)
                     {
-                        // 基礎梁未設定: 従来通りCapNode → RigidBodies[0] 直接スレーブ
+                        // 基礎梁未設定（または梁要素なし）: 従来通りCapNode → RigidBodies[0] 直接スレーブ
                         RigidBodies[0].AddSlaveNode(result.CapNode);
                     }
                     // FoundationBeamInput設定時（両モード共通）:
@@ -445,7 +454,7 @@ namespace PileDesign.FEM
         {
             _pileGuidToFemName = [];
 
-            if (InputModel.FoundationBeamInput == null)
+            if (!HasFoundationBeams)
                 return;
 
             var mode = InputModel.FoundationBeamInput.ConnectionMode;
@@ -510,7 +519,7 @@ namespace PileDesign.FEM
         // 基礎梁要素の追加
         private void AddFoundationBeams()
         {
-            if (InputModel.FoundationBeamInput == null)
+            if (!HasFoundationBeams)
                 return;
 
             //var mode = InputModel.FoundationBeamInput.ConnectionMode;
@@ -709,7 +718,7 @@ namespace PileDesign.FEM
         // 両モード（RigidBody/RigidFloor）で動作する
         private void ConnectCapsToFoundation()
         {
-            if (InputModel.FoundationBeamInput == null)
+            if (!HasFoundationBeams)
                 return;
 
             if (InputModel.PileLayoutItems == null)
@@ -717,12 +726,12 @@ namespace PileDesign.FEM
 
             var mode = InputModel.FoundationBeamInput.ConnectionMode;
 
-            // RigidFloorモードでは基礎梁要素が必要（Uz, Rx, Ryの剛性を負担）
+            // RigidFloorモードでは基礎梁要素が必要
             if (mode == FoundationBeamConnectionMode.RigidFloor)
             {
                 var beamElements = InputModel.FoundationBeamInput.Beams;
                 if (beamElements == null || beamElements.Count == 0)
-                    throw new InvalidOperationException("剛床連結モードでは基礎梁要素が必要です。基礎梁がUz, Rx, Ryの剛性を負担します。");
+                    throw new InvalidOperationException("剛床連結モードでは基礎梁要素が必要です。");
             }
 
             // 剛リンク用セクション（非常に高い剛性でCapNode-ConnectionNode間を実質剛結合）
@@ -731,48 +740,36 @@ namespace PileDesign.FEM
             var rigidLinkSec = _sectionCache.GetOrAdd(rigidLinkSecKey,
                 _ => new Section(rigidLinkMat, 1.0, 1.0, 1.0, 0.14, 1.0 / 12.0, 1.0 / 12.0));
 
-            // モード別のRigidBodyを取得/作成
-            RigidBody targetRigidBody;
             if (mode == FoundationBeamConnectionMode.RigidBody)
             {
-                // 剛体連結: RigidBodies[0]（全6DOF）を使用
-                targetRigidBody = RigidBodies[0];
+                // ── 剛体連結: RigidBodies[0]（全6DOF）を使用 ──
+                // 全ConnectionNodeを同一剛体のslaveにする → 基礎梁は剛性に寄与しない
+                ConnectCapsRigidBody(rigidLinkSec);
             }
             else
             {
-                // 剛床連結: 新規RigidBody（Ux, Uy, Rz のみ）を作成
-                targetRigidBody = new RigidBody(Nodes[0], [true, true, false, false, false, true]);
-
-                // RigidFloorモード: 基礎梁要素が参照するFEM節点を剛床に追加
-                var beamElements = InputModel.FoundationBeamInput.Beams;
-                var beamFemNodeNames = new HashSet<string>();
-                var pileNosInBeams = new HashSet<int>();
-                foreach (var beam in beamElements)
-                {
-                    CollectBeamRefInfo(beam.NodeI_Type, beam.NodeI_Id, beam.NodeI_No, beamFemNodeNames, pileNosInBeams);
-                    CollectBeamRefInfo(beam.NodeJ_Type, beam.NodeJ_Id, beam.NodeJ_No, beamFemNodeNames, pileNosInBeams);
-                }
-
-                foreach (var femNodeName in beamFemNodeNames)
-                {
-                    var femNode = Nodes.FirstOrDefault(n => n.Name == femNodeName);
-                    if (femNode != null)
-                        targetRigidBody.AddSlaveNode(femNode);
-                }
+                // ── 剛床連結（柔梁モード）: 剛体拘束を使わず基礎梁が全自由度の剛性を負担 ──
+                // ConnectionNodeをRigidBodyのslaveにしないため、基礎梁が水平曲げ(Mz)を
+                // 含む全方向の力を伝達し、荷重を各杭に分配する。
+                ConnectCapsFlexibleBeam(rigidLinkSec);
             }
+        }
 
-            // 各杭のConnectionNode→slave、CapNode→RigidLinkビーム接続
+        /// <summary>
+        /// 剛体連結モード: 全ConnectionNodeをRigidBodies[0]のslaveに追加
+        /// </summary>
+        private void ConnectCapsRigidBody(Section rigidLinkSec)
+        {
+            var targetRigidBody = RigidBodies[0];
+
             foreach (var pile in InputModel.PileLayoutItems)
             {
                 var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
                 if (capNode == null) continue;
 
-                // ConnectionNode（FoundationNode-P{No}）を検索
                 var connectionNode = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-P{pile.No}");
-
                 if (connectionNode == null)
                 {
-                    // ConnectionNodeが見つからない場合: CapNodeを直接slaveにする（フォールバック）
                     targetRigidBody.AddSlaveNode(capNode);
                     continue;
                 }
@@ -780,58 +777,188 @@ namespace PileDesign.FEM
                 // ConnectionNode → RigidBody slave
                 targetRigidBody.AddSlaveNode(connectionNode);
 
-                // CapNode-ConnectionNode間の距離で接続方法を決定
                 double dist = (capNode.Coord - connectionNode.Coord).Length;
                 if (dist > 0.001)
                 {
-                    // パターン1: RigidLinkビームで接続
-                    // CapNodeの境界を自由に変更（RigidLinkビーム＋回転ばねで拘束される）
                     capNode.SetBoundary(new Boundary(false, false, false, false, false, false));
                     var rigidBeam = new Beam($"RigidLink-{pile.No}", rigidLinkSec, connectionNode, capNode, 1.0, 1.0);
                     Beams.Add(rigidBeam);
-                    pile.Beams.Add(rigidBeam); // 可視フィルタ用に杭のBeamsにも追加
+                    pile.Beams.Add(rigidBeam);
 
-                    // ★ PileNode-0 を capNode の master-slave として設定（Ux, Uy, Uz, Rz）
-                    // capNode が自由節点（パターン1）の場合のみ適用。
-                    // 同一座標のためアームベクトル=0、ペナルティ剛性不要で厳密な拘束を実現。
-                    // Rx, Ry は M-θ回転ばね（RotationalSpring）で接続するため free のまま。
-                    var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
-                    if (pileHeadNode != null)
-                    {
-                        // Ux, Uy, Uz, Rz = slave（固定）、Rx, Ry = free
-                        pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
-
-                        // capNode を master に設定
-                        pileHeadNode.SetMasterNode(0, capNode); // Ux
-                        pileHeadNode.SetMasterNode(1, capNode); // Uy
-                        pileHeadNode.SetMasterNode(2, capNode); // Uz
-                        pileHeadNode.SetMasterNode(5, capNode); // Rz
-                        // ArmVector = (0,0,0): 同一座標のためデフォルトのまま
-                        pileHeadNode.SetTransferMatrix();
-                    }
+                    SetPileHeadMasterSlave(pile, capNode);
                 }
                 else
                 {
-                    // パターン2: 距離が近すぎてビーム不可 → CapNodeも同一RigidBodyのslaveに追加
                     targetRigidBody.AddSlaveNode(capNode);
                 }
             }
 
-            // RigidBody関係の設定
-            if (mode == FoundationBeamConnectionMode.RigidBody)
+            foreach (var rb in RigidBodies)
+                rb.SetSlaveNodeRelations();
+        }
+
+        /// <summary>
+        /// 剛床連結モード:
+        /// ・ActionPoint → ConnectionNode: 剛床仮定（Ux, Uy, Rz をmaster-slave拘束）
+        /// ・ConnectionNode → CapNode: 完全剛（ペナルティばね Kbig=1e8 で全6DOF結合）
+        /// ・ConnectionNode の自由DOF: Uz, Rx, Ry（基礎梁が剛性を負担）
+        /// ・PileNode-0 → CapNode: master-slave（Ux, Uy, Uz, Rz）
+        ///
+        /// ペナルティばね方式を採用する理由:
+        /// ・旧RigidLinkビーム（L=0.01m）は 12EI/L³≈1e16 の曲げ剛性でK行列がill-conditioning
+        /// ・master-slaveチェーンは GetEquationNumbers が1レベルしか辿れない
+        /// ・ペナルティばね（Kbig=1e8）はK行列に適度な剛性を加算し、チェーン問題を回避
+        /// </summary>
+        private void ConnectCapsFlexibleBeam(Section rigidLinkSec)
+        {
+            var log = new System.Text.StringBuilder();
+            log.AppendLine("=== ConnectCapsFlexibleBeam 診断 v4 (剛床slave + ペナルティばね) ===");
+
+            var actionPoint = Nodes[0]; // ActionPoint
+            log.AppendLine($"ActionPoint: ({actionPoint.Coord.X:F3}, {actionPoint.Coord.Y:F3}, {actionPoint.Coord.Z:F3})");
+
+            // 剛床モードではActionPointのUz, Rx, Ryに剛性を提供する要素が存在しない。
+            // （剛体モードではCapNode→ActionPointの全6DOF slave経由で杭の軸剛性が寄与するが、
+            //  剛床モードではConnectionNodeのUx,Uy,Rzのみがslave。）
+            // 面外自由度(Uz,Rx,Ry)を固定しないと、K対角≈0→巨大変位→変位リミッタで
+            // 全変位がスケールダウンされ、NR反復が収束不能になる。
+            var apBnd = actionPoint.Boundary;
+            actionPoint.SetBoundary(new Boundary(
+                apBnd.Ux,  // Ux: 維持（面内：荷重方向）
+                apBnd.Uy,  // Uy: 維持（面内：荷重方向）
+                true,      // Uz: 固定（面外：基礎梁+ConnectionNodeが負担）
+                true,      // Rx: 固定（面外：基礎梁+ConnectionNodeが負担）
+                true,      // Ry: 固定（面外：基礎梁+ConnectionNodeが負担）
+                apBnd.Rz   // Rz: 維持（面内：剛床回転）
+            ));
+            log.AppendLine($"ActionPoint boundary updated: Uz=fixed, Rx=fixed, Ry=fixed (rigid floor mode)");
+
+            const double Kbig = 1e8; // ペナルティ剛性 [kN/m or kNm/rad]
+
+            // ── 1. 各ConnectionNodeを ActionPoint の部分slave（Ux, Uy, Rz）に設定 ──
+            // ── 2. 各ConnectionNode↔CapNode 間にペナルティばね（全6DOF）を作成 ──
+            int slaveCount = 0;
+            int penaltyCount = 0;
+            foreach (var pile in InputModel.PileLayoutItems)
             {
-                // RigidBodies[0]にConnectionNodeを追加したので関係を再設定
-                foreach (var rb in RigidBodies)
+                var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
+                if (capNode == null) continue;
+
+                var connectionNode = Nodes.FirstOrDefault(n => n.Name == $"FoundationNode-P{pile.No}");
+                if (connectionNode == null) continue;
+
+                // CapNodeを自由節点に設定（PileNode-0のmasterとなるため、slave不可）
+                capNode.SetBoundary(new Boundary(false, false, false, false, false, false));
+
+                // ConnectionNode → ActionPoint: 剛床拘束（Ux, Uy, Rz のみslave）
+                // Uz, Rx, Ry は自由 → 基礎梁が剛性を負担
+                var armToAP = connectionNode.Coord - actionPoint.Coord;
+                connectionNode.SetBoundary(new Boundary(
+                    true,  // Ux: slave of ActionPoint
+                    true,  // Uy: slave of ActionPoint
+                    false, // Uz: free（基礎梁 + ペナルティばねが負担）
+                    false, // Rx: free（基礎梁 + ペナルティばねが負担）
+                    false, // Ry: free（基礎梁 + ペナルティばねが負担）
+                    true   // Rz: slave of ActionPoint
+                ));
+                connectionNode.SetMasterNode(0, actionPoint); // Ux → ActionPoint
+                connectionNode.SetMasterNode(1, actionPoint); // Uy → ActionPoint
+                connectionNode.SetMasterNode(5, actionPoint); // Rz → ActionPoint
+                // arm vector（剛床回転によるUx,Uy変位の寄与を計算するため）
+                connectionNode.SetArmVector(0, armToAP);
+                connectionNode.SetArmVector(1, armToAP);
+                connectionNode.SetArmVector(2, armToAP);
+                connectionNode.SetTransferMatrix();
+                slaveCount++;
+
+                log.AppendLine($"  {connectionNode.Name} → ActionPoint: 剛床slave(Ux,Uy,Rz) arm=({armToAP.X:F3},{armToAP.Y:F3},{armToAP.Z:F3})");
+
+                // ConnectionNode ↔ CapNode: ペナルティばね（全6DOF）
+                // TwoNodeSpringElement は座標変換不要（全体座標系で直接結合）
+                var penaltySpring = new HorizontalSoilSpring(
+                    $"PenaltySpring-{pile.No}", connectionNode, capNode);
+                penaltySpring.SetKe(Kbig, Kbig, Kbig, Kbig, Kbig, Kbig, true);  // KeTan
+                penaltySpring.SetKe(Kbig, Kbig, Kbig, Kbig, Kbig, Kbig, false); // KeSec
+                PenaltySprings.Add(penaltySpring);
+                penaltyCount++;
+
+                log.AppendLine($"  {connectionNode.Name} ↔ {capNode.Name}: ペナルティばね Kbig={Kbig:E1}");
+
+                // PileNode-0 → CapNode slave（Ux,Uy,Uz,Rz）
+                SetPileHeadMasterSlave(pile, capNode);
+            }
+            log.AppendLine($"剛床slave拘束: {slaveCount}組, ペナルティばね: {penaltyCount}組");
+
+            // ── 3. ConnectionNodeの基礎梁接続状況を確認 ──
+            var connNodeNames = new HashSet<string>();
+            foreach (var pile in InputModel.PileLayoutItems)
+                connNodeNames.Add($"FoundationNode-P{pile.No}");
+
+            var connectedByBeam = new HashSet<string>();
+            foreach (var beam in Beams)
+            {
+                if (beam.Name.StartsWith("FoundationBeam"))
                 {
-                    rb.SetSlaveNodeRelations();
+                    if (connNodeNames.Contains(beam.NodeI.Name)) connectedByBeam.Add(beam.NodeI.Name);
+                    if (connNodeNames.Contains(beam.NodeJ.Name)) connectedByBeam.Add(beam.NodeJ.Name);
                 }
             }
-            else
+            var orphanNodes = connNodeNames.Except(connectedByBeam).ToList();
+            log.AppendLine($"ConnectionNode総数: {connNodeNames.Count}");
+            log.AppendLine($"  基礎梁に接続: {connectedByBeam.Count}");
+            log.AppendLine($"  孤立（基礎梁未接続）: {orphanNodes.Count}");
+            if (orphanNodes.Count > 0)
+                log.AppendLine($"  孤立ノード: {string.Join(", ", orphanNodes.Take(10))}");
+
+            int fbCount = Beams.Count(b => b.Name.StartsWith("FoundationBeam"));
+            log.AppendLine($"基礎梁要素数: {fbCount}");
+            log.AppendLine($"全Beam要素数: {Beams.Count}");
+            log.AppendLine($"全Node数: {Nodes.Count}");
+            log.AppendLine($"PenaltySprings数: {PenaltySprings.Count}");
+
+            // ── 4. Master-Slave関係の診断 ──
+            log.AppendLine("=== Master-Slave 診断 ===");
+            string[] dofNames = { "Ux", "Uy", "Uz", "Rx", "Ry", "Rz" };
+            foreach (var node in Nodes)
             {
-                // 新規rigidFloor RigidBodyを追加
-                targetRigidBody.SetSlaveNodeRelations();
-                RigidBodies.Add(targetRigidBody);
+                if (node.MasterNodes == null) continue;
+                var slavedDofs = new List<string>();
+                for (int d = 0; d < 6; d++)
+                {
+                    if (node.MasterNodes[d] != null)
+                        slavedDofs.Add($"{dofNames[d]}→{node.MasterNodes[d].Name}");
+                }
+                if (slavedDofs.Count > 0)
+                {
+                    log.AppendLine($"  {node.Name}: slave[{string.Join(", ", slavedDofs)}]" +
+                        $"  Boundary=({node.Boundary.Ux},{node.Boundary.Uy},{node.Boundary.Uz},{node.Boundary.Rx},{node.Boundary.Ry},{node.Boundary.Rz})");
+                }
             }
+            log.AppendLine($"RigidBodies[0]: master={RigidBodies[0].MasterNode?.Name}, slaves=[{string.Join(", ", RigidBodies[0].SlaveNodes.Select(n => n.Name))}]");
+
+            log.AppendLine("=== 診断終了 ===");
+            System.Diagnostics.Debug.WriteLine(log.ToString());
+
+            // RigidBodies[0]の関係を再設定（EmbedmentNode等の既存slave用）
+            foreach (var rb in RigidBodies)
+                rb.SetSlaveNodeRelations();
+        }
+
+        /// <summary>
+        /// PileNode-0をCapNodeのmaster-slaveとして設定（Ux, Uy, Uz, Rz）
+        /// Rx, Ryは回転ばね（RotationalSpring）で接続するためfreeのまま
+        /// </summary>
+        private void SetPileHeadMasterSlave(PileLayoutDataItem pile, Node capNode)
+        {
+            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
+            if (pileHeadNode == null) return;
+
+            pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
+            pileHeadNode.SetMasterNode(0, capNode); // Ux
+            pileHeadNode.SetMasterNode(1, capNode); // Uy
+            pileHeadNode.SetMasterNode(2, capNode); // Uz
+            pileHeadNode.SetMasterNode(5, capNode); // Rz
+            pileHeadNode.SetTransferMatrix();
         }
 
     }

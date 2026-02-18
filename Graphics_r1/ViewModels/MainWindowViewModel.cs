@@ -432,7 +432,20 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _currentFilePath, value))
                 {
                     RaiseAllCommandsCanExecute();
+                    OnPropertyChanged(nameof(WindowTitle));
                 }
+            }
+        }
+
+        // ウィンドウタイトル（ファイル名表示）
+        public string WindowTitle
+        {
+            get
+            {
+                const string appName = "杭基礎検討プログラム";
+                if (string.IsNullOrEmpty(CurrentFilePath))
+                    return $"{appName} - [新規]";
+                return $"{appName} - {System.IO.Path.GetFileName(CurrentFilePath)}";
             }
         }
 
@@ -487,6 +500,18 @@ namespace PileDesign.ViewModels
 
         public Action? ZoomFitAction { get => zoomFitAction; set => zoomFitAction = value; }
         public Action<double, double>? AnimateViewAnglesAction { get; set; }
+        public Action? ActivateSettlementSoilTabAction { get; set; }
+
+        /// <summary>
+        /// トースト通知を表示するデリゲート（code-behind で設定）
+        /// type: 0=Success, 1=Info, 2=Warning
+        /// </summary>
+        public Action<string, int>? ShowToastAction { get; set; }
+
+        /// <summary>
+        /// トースト通知を表示します
+        /// </summary>
+        public void ShowToast(string message, int type = 0) => ShowToastAction?.Invoke(message, type);
 
         // ズームフィット
         [RelayCommand]
@@ -1140,14 +1165,6 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // 両端の節点が通り上にある一般梁要素を選択
-            foreach (var element in CurrentInputModel.Elements)
-            {
-                if (element.Nodes.Count >= 2 &&
-                    element.Nodes.All(n => Math.Abs(n.X - coord) <= tolerance))
-                    element.IsSelected = true;
-            }
-
             RequestUpdateWindow();
         }
 
@@ -1177,14 +1194,6 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // 両端の節点が通り上にある一般梁要素を選択
-            foreach (var element in CurrentInputModel.Elements)
-            {
-                if (element.Nodes.Count >= 2 &&
-                    element.Nodes.All(n => Math.Abs(n.Y - coord) <= tolerance))
-                    element.IsSelected = true;
-            }
-
             RequestUpdateWindow();
         }
 
@@ -1195,8 +1204,6 @@ namespace PileDesign.ViewModels
         {
             foreach (var pile in CurrentInputModel.PileLayoutItems)
                 pile.IsSelected = false;
-            foreach (var element in CurrentInputModel.Elements)
-                element.IsSelected = false;
             if (CurrentInputModel.InputNodes != null)
                 foreach (var node in CurrentInputModel.InputNodes)
                     node.IsSelected = false;
@@ -1207,12 +1214,6 @@ namespace PileDesign.ViewModels
                 foreach (var beam in CurrentInputModel.FoundationBeamInput.Beams)
                     beam.IsSelected = false;
             }
-        }
-
-        [RelayCommand]
-        private void DeleteElement(object sender)
-        {
-            DeleteCollectionItem(sender, CurrentInputModel.Elements);
         }
 
         private static void DeleteGridItem(object sender, ObservableCollection<GridDataItem> collection)
@@ -1293,22 +1294,6 @@ namespace PileDesign.ViewModels
             double pileCount = CurrentInputModel.PileLayoutItems.Count;
             if (pileCount == 0)
                 return;
-        }
-
-        // 重複要素の削除
-        [RelayCommand]
-        private void OnDeleteDuplicateElements()
-        {
-            if (!CheckAndResetAnalysisResults()) return;
-
-            // Undoポイントを追加
-            TrySaveUndoSnapshotSafely();
-
-            var uniqueElements = new HashSet<Element>(CurrentInputModel.Elements);
-            CurrentInputModel.Elements = new ObservableCollection<Element>(uniqueElements);
-
-            // 変更後（以下の箇所で適用）
-            RequestUpdateWindow();
         }
 
         // 要素の節点位置での分割
@@ -2039,7 +2024,7 @@ namespace PileDesign.ViewModels
                 try
                 {
                     _fileOperationService.SaveProjectData(CurrentFilePath, CurrentInputModel, CurrentModel);
-                    MessageBox.Show("保存が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ShowToast("保存が完了しました。");
 
                     // MRUに追加
                     _mruService.AddFile(CurrentFilePath);
@@ -2064,7 +2049,7 @@ namespace PileDesign.ViewModels
                 try
                 {
                     _fileOperationService.SaveProjectData(CurrentFilePath, CurrentInputModel, CurrentModel);
-                    MessageBox.Show("保存が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ShowToast("保存が完了しました。");
                 }
                 catch (Exception ex)
                 {
@@ -2154,7 +2139,7 @@ namespace PileDesign.ViewModels
 
                 // UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない
                 UpdateWindowImmediate();
-                MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowToast("読込が完了しました。");
                 return true;
             }
             catch (Exception ex)
@@ -2208,6 +2193,7 @@ namespace PileDesign.ViewModels
 
                         // 旧データとの互換性: Materials/Sections の初期化
                         CurrentInputModel.EnsureFoundationBeamDefaults();
+                        CurrentInputModel.EnsureAnalysisTargetDefaults();
 
                         // プロパティ変更通知
                         OnPropertyChanged(nameof(CurrentInputModel));
@@ -2240,7 +2226,7 @@ namespace PileDesign.ViewModels
                     CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
 
                     UpdateWindowImmediate();
-                    MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ShowToast("読込が完了しました。");
 
                     // MRUに追加
                     _mruService.AddFile(CurrentFilePath);
@@ -2936,18 +2922,6 @@ namespace PileDesign.ViewModels
             RaiseUndoStateChanged();
         }
 
-        private void RemoveElementsContainingPileLayoutItem(PileLayoutDataItem oldItem)
-        {
-            var elementsToRemove = CurrentInputModel.Elements.Where(element => element.Nodes.Contains(oldItem)).ToList();
-
-            foreach (var element in elementsToRemove)
-                CurrentInputModel.Elements.Remove(element);
-
-
-            // 変更: デバウンス付きで更新
-            RequestUpdateWindow();
-        }
-
         public void DeleteDuplicatedPiles()
         {
             var uniquePileLayoutDataItems = new ObservableCollection<PileLayoutDataItem>();
@@ -3433,15 +3407,6 @@ namespace PileDesign.ViewModels
                     Z = pile.Z + pile.FoundationBeamDeltaZc,
                 };
 
-                foreach (var element in CurrentInputModel.Elements)
-                {
-                    for (int i = 0; i < element.Nodes.Count; i++)
-                    {
-                        if (ReferenceEquals(element.Nodes[i], pile))
-                            element.Nodes[i] = newNode;
-                    }
-                }
-
                 CurrentInputModel.PileLayoutItems.Remove(pile);
                 CurrentInputModel.InputNodes.Add(newNode);
             }
@@ -3461,15 +3426,6 @@ namespace PileDesign.ViewModels
                     FoundationBeamDeltaZc = deltaZc,
                 };
                 newPile.SetMainWindowViewModel(this);
-
-                foreach (var element in CurrentInputModel.Elements)
-                {
-                    for (int i = 0; i < element.Nodes.Count; i++)
-                    {
-                        if (ReferenceEquals(element.Nodes[i], node))
-                            element.Nodes[i] = newPile;
-                    }
-                }
 
                 CurrentInputModel.InputNodes.Remove(node);
                 CurrentInputModel.PileLayoutItems.Add(newPile);
@@ -3860,6 +3816,13 @@ namespace PileDesign.ViewModels
                     CurrentModel = projectData.AnaModel;
 
                     _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
+
+                    // 旧データとの互換性
+                    CurrentInputModel.InputNodes ??= [];
+                    CurrentInputModel.MigrateElementsToFoundationBeams();
+                    CurrentInputModel.EnsureFoundationBeamDefaults();
+                    CurrentInputModel.EnsureAnalysisTargetDefaults();
+
                     OnPropertyChanged(nameof(CurrentInputModel));
                 }
                 else
@@ -3888,7 +3851,7 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
 
                 UpdateWindowImmediate();
-                MessageBox.Show("読込が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowToast("読込が完了しました。");
 
                 // 自動保存を開始
                 _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel);
@@ -3935,6 +3898,13 @@ namespace PileDesign.ViewModels
                         CurrentModel = projectData.AnaModel;
 
                         _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
+
+                        // 旧データとの互換性
+                        CurrentInputModel.InputNodes ??= [];
+                        CurrentInputModel.MigrateElementsToFoundationBeams();
+                        CurrentInputModel.EnsureFoundationBeamDefaults();
+                        CurrentInputModel.EnsureAnalysisTargetDefaults();
+
                         OnPropertyChanged(nameof(CurrentInputModel));
 
                         CurrentInputModel.AttachViewModel(this);
@@ -3961,7 +3931,7 @@ namespace PileDesign.ViewModels
                         CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
 
                         UpdateWindowImmediate();
-                        MessageBox.Show("自動保存ファイルの復元が完了しました。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                        ShowToast("自動保存ファイルの復元が完了しました。");
 
                         // 復元後は自動保存を開始
                         if (!string.IsNullOrEmpty(CurrentFilePath))

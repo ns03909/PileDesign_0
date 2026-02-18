@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls.Ribbon;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : RibbonWindow
     {
         // 3D荷重更新メソッド
         public void UpdateLoading3D()

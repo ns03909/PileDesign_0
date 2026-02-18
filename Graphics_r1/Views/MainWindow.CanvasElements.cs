@@ -6,14 +6,15 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls.Ribbon;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
-using Element = PileDesign.Models.InputData.Element;
+
 using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : RibbonWindow
     {
 
         // 短縮要素の節点を返すメソッド
@@ -270,12 +271,8 @@ namespace PileDesign.Views
             if (DataContext is not MainWindowViewModel viewModel) return;
 
             // 接続用節点を描画（杭頭+ΔZc位置） - FoundationBeamInputとは独立
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateFoundationBeams3D: IsConnectingNodeVisible={viewModel.IsConnectingNodeVisible}");
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateFoundationBeams3D: PileLayoutItems count={viewModel.CurrentInputModel?.PileLayoutItems?.Count ?? 0}");
-
             if (viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
             {
-                int nodeCount = 0;
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
                     // 非アクティブ杭の接合節点・Rigid link線はスキップ
@@ -296,15 +293,7 @@ namespace PileDesign.Views
                     Point coordPileTop = viewModel.CanvasThreeDView.Transformation(locPileTop);
                     LineGeometry rigidLine = new() { StartPoint = coordPileTop, EndPoint = coordConnecting };
                     viewModel.CanvasGeometry.PathGeoRigidConnections.AddGeometry(rigidLine);
-
-                    nodeCount++;
-                    System.Diagnostics.Debug.WriteLine($"[DEBUG] Added connecting node {nodeCount}: Pile({pile.X},{pile.Y},{pile.Z}) ΔZc={pile.FoundationBeamDeltaZc} -> ConnectingZ={connectingZ} Screen=({coordConnecting.X},{coordConnecting.Y})");
                 }
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Total connecting nodes added: {nodeCount}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Connecting nodes NOT drawn - IsVisible={viewModel.IsConnectingNodeVisible}, PileItems null={viewModel.CurrentInputModel?.PileLayoutItems == null}");
             }
 
             // 基礎梁要素・節点の描画（FoundationBeamInputが必要）
@@ -324,6 +313,8 @@ namespace PileDesign.Views
             // 基礎梁要素を描画
             foreach (var beam in fbInput.Beams)
             {
+                // 非アクティブ梁はスキップ
+                if (!beam.IsVisible) continue;
                 // 選択された梁はUpdateSelectedNodesAndElements3D()で描画するのでスキップ
                 if (beam.IsSelected) continue;
 
@@ -449,6 +440,7 @@ namespace PileDesign.Views
             // 基礎梁節点を描画
             foreach (var node in fbInput.Nodes)
             {
+                if (!node.IsVisible) continue;
                 // 選択された節点はUpdateSelectedNodesAndElements3D()で描画するのでスキップ
                 if (node.IsSelected) continue;
 
@@ -575,12 +567,17 @@ namespace PileDesign.Views
                     viewModel.CanvasGeometry.PathGeoInputNodesGeneral.AddGeometry(ellipse);
                 }
 
-                // ノード番号表示（オプション）
-                // TODO: ノード番号表示フラグを追加する場合はここに実装
-                // if (viewModel.IsInputNodeNoVisible)
-                // {
-                //     AddText3D(Brushes.Black, $"N{node.No}", coord.X, coord.Y + 10, "C", "T", 0);
-                // }
+                // 一般節点の番号表示（杭配置番号と区別するため Purple を使用）
+                if (viewModel.IsNodeNoVisible && node.Type == NodeType.General)
+                {
+                    AddText3D(Brushes.Purple, node.No.ToString(), coord.X, coord.Y, "L", "B", 0.0);
+                }
+
+                // 一般節点のZ座標表示
+                if (viewModel.IsGeneralNodeZVisible && node.Type == NodeType.General)
+                {
+                    AddText3D(Brushes.Purple, $"Z={node.Z:N3}", coord.X, coord.Y, "L", "T", 0.0);
+                }
             }
         }
 

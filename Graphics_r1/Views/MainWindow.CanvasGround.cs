@@ -3,13 +3,14 @@ using PileDesign.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls.Ribbon;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Point = System.Windows.Point;
 
 namespace PileDesign.Views
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : RibbonWindow
     {
         // 杭周地盤描画の更新
         private void UpdateGround3D()

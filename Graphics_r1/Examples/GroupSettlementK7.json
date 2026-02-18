@@ -70,13 +70,39 @@
     { "x": 20.4, "y": 19.0, "z": -2.0 },
     { "x": 26.0, "y": 19.0, "z": -2.0 }
   ],
-  "elementConnections": [
-    [0, 1], [1, 2], [2, 3], [3, 4],
-    [5, 6], [6, 7], [7, 8], [8, 9],
-    [10, 11], [11, 12], [12, 13], [13, 14],
-    [0, 5], [1, 6], [2, 7], [3, 8], [4, 9],
-    [5, 10], [6, 11], [7, 12], [8, 13], [9, 14]
-  ],
+  "foundationBeamInput": {
+    "connectionMode": "RigidBody",
+    "materials": [
+      { "no": 1, "name": "C24", "youngModulus": 25000, "shearModulus": 10400, "poissonRatio": 0.2 }
+    ],
+    "sections": [
+      { "no": 1, "name": "FG1", "width": 0.800, "height": 2.000 }
+    ],
+    "beams": [
+      { "no": 1,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1,  "nodeJ_type": "pile", "nodeJ_no": 2 },
+      { "no": 2,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 2,  "nodeJ_type": "pile", "nodeJ_no": 3 },
+      { "no": 3,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 3,  "nodeJ_type": "pile", "nodeJ_no": 4 },
+      { "no": 4,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 4,  "nodeJ_type": "pile", "nodeJ_no": 5 },
+      { "no": 5,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 6,  "nodeJ_type": "pile", "nodeJ_no": 7 },
+      { "no": 6,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 7,  "nodeJ_type": "pile", "nodeJ_no": 8 },
+      { "no": 7,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 8,  "nodeJ_type": "pile", "nodeJ_no": 9 },
+      { "no": 8,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 9,  "nodeJ_type": "pile", "nodeJ_no": 10 },
+      { "no": 9,  "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 11, "nodeJ_type": "pile", "nodeJ_no": 12 },
+      { "no": 10, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 12, "nodeJ_type": "pile", "nodeJ_no": 13 },
+      { "no": 11, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 13, "nodeJ_type": "pile", "nodeJ_no": 14 },
+      { "no": 12, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 14, "nodeJ_type": "pile", "nodeJ_no": 15 },
+      { "no": 13, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1,  "nodeJ_type": "pile", "nodeJ_no": 6 },
+      { "no": 14, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 2,  "nodeJ_type": "pile", "nodeJ_no": 7 },
+      { "no": 15, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 3,  "nodeJ_type": "pile", "nodeJ_no": 8 },
+      { "no": 16, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 4,  "nodeJ_type": "pile", "nodeJ_no": 9 },
+      { "no": 17, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 5,  "nodeJ_type": "pile", "nodeJ_no": 10 },
+      { "no": 18, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 6,  "nodeJ_type": "pile", "nodeJ_no": 11 },
+      { "no": 19, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 7,  "nodeJ_type": "pile", "nodeJ_no": 12 },
+      { "no": 20, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 8,  "nodeJ_type": "pile", "nodeJ_no": 13 },
+      { "no": 21, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 9,  "nodeJ_type": "pile", "nodeJ_no": 14 },
+      { "no": 22, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 10, "nodeJ_type": "pile", "nodeJ_no": 15 }
+    ]
+  },
   "gridXItems": [
     { "name": "X1", "coord": 0.0, "spacing": 0.0 },
     { "name": "X2", "coord": 7.6, "spacing": 7.6 },
