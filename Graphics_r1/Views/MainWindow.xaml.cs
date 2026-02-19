@@ -1994,7 +1994,10 @@ namespace PileDesign.Views
         //    }
         //}
 
-        // マウスホイールイベント: スムーズズーム（累積ターゲット + フレーム補間）
+        // ズーム後のフル描画デバウンスタイマー
+        private System.Windows.Threading.DispatcherTimer? _zoomFullRenderTimer;
+
+        // マウスホイールイベント: 軽量描画 + デバウンスでフル描画
         private void Canvas3DLayout_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (e.Delta != 0)
@@ -2025,8 +2028,26 @@ namespace PileDesign.Views
             viewModel.CanvasThreeDView.ViewTransition = newViewPosition;
 
             IsMouseWheelPressed = false;
-            UpdateCanvas3D();
+
+            // 軽量描画（ラベル・地盤・解析結果を省略）
+            UpdateWhileMouseAction();
             viewModel.RaisePropertyChanged(nameof(viewModel.ZoomText));
+
+            // 200ms後にフル描画を1回実行（連続ホイール操作ではリセット）
+            if (_zoomFullRenderTimer == null)
+            {
+                _zoomFullRenderTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(200)
+                };
+                _zoomFullRenderTimer.Tick += (s, _) =>
+                {
+                    _zoomFullRenderTimer.Stop();
+                    UpdateCanvas3D();
+                };
+            }
+            _zoomFullRenderTimer.Stop();
+            _zoomFullRenderTimer.Start();
         }
 
         // 置換: プレビューMouseUpでのメニュー表示判定
