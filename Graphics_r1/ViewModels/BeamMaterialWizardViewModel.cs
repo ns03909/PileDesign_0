@@ -5,7 +5,7 @@ namespace PileDesign.ViewModels
     public class BeamMaterialWizardViewModel : BaseViewModel
     {
         // 名称
-        private string _name = "C24";
+        private string _name = "FC30";
         public string Name
         {
             get => _name;
@@ -13,7 +13,7 @@ namespace PileDesign.ViewModels
         }
 
         // コンクリート強度 Fc (N/mm²)
-        private double _fc = 24.0;
+        private double _fc = 30.0;
         public double Fc
         {
             get => _fc;

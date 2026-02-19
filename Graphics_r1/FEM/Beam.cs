@@ -552,7 +552,32 @@ namespace PileDesign.FEM
             Matrix<double> k = (isTan ? KeTan : KeSec) ?? throw new InvalidOperationException("Stiffness matrix is not initialized. Call SetKe() before CalcInternalForce().");
             // 内力計算
             Vector<double> f = k * d; //double[] f = Utils.MatrixVectorMultiply(k, d);
-                                      // 要素応力を結果用オブジェクトにセット
+
+            // NaN診断: 要素内力のNaN検出
+            bool fHasNaN = false;
+            for (int fi = 0; fi < f.Count; fi++)
+            {
+                if (!double.IsFinite(f[fi])) { fHasNaN = true; break; }
+            }
+            if (fHasNaN)
+            {
+                // 原因を特定: 変位d、剛性k、変換T、節点変位のどれが汚染源か
+                bool dispHasNaN = false, keHasNaN = false;
+                for (int di2 = 0; di2 < d.Count; di2++)
+                    if (!double.IsFinite(d[di2])) { dispHasNaN = true; break; }
+                for (int ki = 0; ki < Math.Min(12, k.RowCount); ki++)
+                    if (!double.IsFinite(k[ki, ki])) { keHasNaN = true; break; }
+
+                NaNDiagnostics.LogNaN(
+                    $"Beam '{Name}' force NaN! dispNaN={dispHasNaN}, keNaN={keHasNaN}, " +
+                    $"NodeI='{NodeI?.Name}' NodeJ='{NodeJ?.Name}' " +
+                    $"NodeI.disp=[{NodeI?.CumulativeDisp?.Ux:E3},{NodeI?.CumulativeDisp?.Uy:E3},{NodeI?.CumulativeDisp?.Uz:E3}," +
+                    $"{NodeI?.CumulativeDisp?.Rx:E3},{NodeI?.CumulativeDisp?.Ry:E3},{NodeI?.CumulativeDisp?.Rz:E3}] " +
+                    $"NodeJ.disp=[{NodeJ?.CumulativeDisp?.Ux:E3},{NodeJ?.CumulativeDisp?.Uy:E3},{NodeJ?.CumulativeDisp?.Uz:E3}," +
+                    $"{NodeJ?.CumulativeDisp?.Rx:E3},{NodeJ?.CumulativeDisp?.Ry:E3},{NodeJ?.CumulativeDisp?.Rz:E3}]");
+            }
+
+            // 要素応力を結果用オブジェクトにセット
             CumulativeDisp.SetVector(d);
             CumulativeForce.SetVector(f);
         }

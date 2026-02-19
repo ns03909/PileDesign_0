@@ -133,6 +133,18 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- 全杭セット自動分割ボタン＋パラメータ -->
+            <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
+            <Button Content="全杭セット自動分割" Command="{Binding AutoZsAllPilesCommand}"
+                    ToolTip="全ての土層-杭セットに対して自動要素分割を実行します"
+                    Padding="6,2" Margin="2" VerticalAlignment="Center"/>
+            <TextBlock Text="杭頭～第二節点(m)" VerticalAlignment="Center" Margin="8,0,2,0"/>
+            <TextBox Text="{Binding FirstDistance, StringFormat='N2'}"
+                     HorizontalContentAlignment="Right" Width="60" VerticalAlignment="Center"/>
+            <TextBlock Text="最大節点間(m)" VerticalAlignment="Center" Margin="8,0,2,0"/>
+            <TextBox Text="{Binding MaxPileSpacing, StringFormat='N2'}"
+                     HorizontalContentAlignment="Right" Width="60" VerticalAlignment="Center"/>
+
             <!-- 赤ランプがある場合の警告メッセージ -->
             <TextBlock Text="{Binding WarningMessage}" Foreground="Red" FontWeight="Bold" Margin="12,0,0,0"
                        VerticalAlignment="Center"
@@ -207,24 +219,9 @@
                                                     <TextBlock Text="m"/>
                                                 </StackPanel>
 
-                                                <GroupBox Header="自動要素分割" Grid.Row="5">
-                                                    <StackPanel>
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="杭頭～第二節点最大距離(m)" Width="175"/>
-                                                            <TextBox x:Name="TextFirstDistance" Text="{Binding FirstDistance, StringFormat='N2'}"
-                                                            HorizontalContentAlignment="Right" Width="100"></TextBox>
-                                                        </StackPanel>
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="最大節点間距離(m)" Width="175"/>
-                                                            <TextBox x:Name="MaxSpacing" Text="{Binding MaxPileSpacing, StringFormat='N2'}"
-                                                            HorizontalContentAlignment="Right" Width="100"></TextBox>
-                                                        </StackPanel>
-
-                                                        <Button x:Name="ButtonAuto" Content="自動要素分割実行" Width="100"
+                                                <Button x:Name="ButtonAuto" Content="この杭セットを自動分割" Grid.Row="5"
                                                         Command="{Binding AutoZsCommand}"
-                                                        HorizontalAlignment="Left"/>
-                                                    </StackPanel>
-                                                </GroupBox>
+                                                        HorizontalAlignment="Left" Margin="0,4"/>
 
                                                 <StackPanel Grid.Row="6">
                                                     <Button x:Name="ButtonResetPile" Content="初期化" Command="{Binding ResetPileCommand}"/>
@@ -1068,6 +1065,14 @@
             <Button x:Name="ButtonCancel" Content="破棄して閉じる(Esc)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
         </StackPanel>
+
+        <!-- 読み込み中オーバーレイ -->
+        <Grid x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#80FFFFFF" Visibility="Visible">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="データ準備中..." FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 
 </Window>

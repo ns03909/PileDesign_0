@@ -140,8 +140,8 @@ namespace PileDesign.ViewModels
                 SectionName = $"Beam-{Beams.Count + 1}",
                 Width = 0.5,
                 Height = 0.8,
-                YoungModulus = 2.5e7,
-                ShearModulus = 1.04e7
+                YoungModulus = 2.6589e7,
+                ShearModulus = 1.1079e7
             };
             Beams.Add(newBeam);
         }
