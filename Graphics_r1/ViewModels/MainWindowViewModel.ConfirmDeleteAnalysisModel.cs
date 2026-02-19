@@ -55,6 +55,26 @@ namespace PileDesign.ViewModels
             return true; // 操作を続ける
         }
 
+        /// <summary>
+        /// 材料・断面の変更時など、確認ダイアログなしで解析結果を自動削除する。
+        /// 解析結果が存在する場合のみリセットを実行する。
+        /// </summary>
+        public void ResetAnalysisResultsSilently()
+        {
+            if (!IsHorizontalAnalysisDone && !IsVerticalAnalysisDone && !IsGroupPileSettlementAnalysisDone)
+                return;
+
+            IsElementSplit = false;
+            IsHorizontalAnalysisDone = false;
+            IsVerticalAnalysisDone = false;
+            IsGroupPileSettlementAnalysisDone = false;
+            IsAnalysisResultVisible = false;
+            CurrentModel = null;
+
+            UpdateWindowImmediate();
+            UpdateTreeView();
+        }
+
         [RelayCommand]
         private void DeleteAnalysisResults()
         {

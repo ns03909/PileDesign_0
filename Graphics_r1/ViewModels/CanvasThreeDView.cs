@@ -186,11 +186,19 @@ namespace PileDesign.ViewModels
         // 節点の変換
         public Point Transformation(Point3D node)
         {
+            // 入力座標のNaN/Infinity防止
+            if (!double.IsFinite(node.X) || !double.IsFinite(node.Y) || !double.IsFinite(node.Z))
+                return new Point(0, 0);
+
             Point s = HomographyTransformation(Ct, node);
 
             // 原点を図枠の中心に移動
             s.X = s.X * Scale + Org.X + ViewTransition.X;
             s.Y = -s.Y * Scale + Org.Y + ViewTransition.Y;
+
+            // 出力座標のNaN/Infinity防止（HomographyTransformation内の除算で発生しうる）
+            if (!double.IsFinite(s.X) || !double.IsFinite(s.Y))
+                return new Point(0, 0);
 
             return s;
         }

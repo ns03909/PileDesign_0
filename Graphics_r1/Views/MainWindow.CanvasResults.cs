@@ -65,6 +65,17 @@ namespace PileDesign.Views
                 }
             }
 
+            // 非アクティブ基礎梁のFEM梁名セットを構築（応力図非表示用）
+            var invisibleFBNames = new HashSet<string>();
+            if (viewModel.CurrentInputModel?.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var fb in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    if (!fb.IsVisible)
+                        invisibleFBNames.Add($"FoundationBeam-{fb.No}");
+                }
+            }
+
             if (viewModel.AnalysisResultContent != "沈下")
             {
                 ColorBarCanvas.Children.Clear();
@@ -259,9 +270,15 @@ namespace PileDesign.Views
                 foreach (var beam in anaModel.Beams)
                 {
                     // 非アクティブ杭のビームはスキップ（非アクティブ杭が存在する場合のみフィルタリング）
-                    // 基礎梁は杭の可視フィルタ対象外（常に描画）、RigidLinkは杭に紐付くためフィルタ対象
-                    if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)
-                        && !beam.Name.StartsWith("FoundationBeam-")) continue;
+                    // 非アクティブ基礎梁もスキップ
+                    if (beam.Name.StartsWith("FoundationBeam-"))
+                    {
+                        if (invisibleFBNames.Contains(beam.Name)) continue;
+                    }
+                    else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam))
+                    {
+                        continue;
+                    }
 
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -301,8 +318,14 @@ namespace PileDesign.Views
 
                     double absForceI = Math.Abs(originalForceI);
                     double absForceJ = Math.Abs(originalForceJ);
-                    //allValues.Add(absForceI);
-                    //allValues.Add(absForceJ);
+
+                    // NaN/Infinity防止: 不正な値を持つビームはスキップ（maxAbsValue汚染を防止）
+                    if (!double.IsFinite(originalForceI) || !double.IsFinite(originalForceJ))
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[CanvasResults] WARNING: NaN/Inf beam force skipped: {beam.Name} I={originalForceI} J={originalForceJ}");
+                        continue;
+                    }
 
                     // ここを絶対値追加から符号付き追加へ変更(カラーバー用ジオメトリ)
                     allValues.Add(originalForceI);
@@ -596,7 +619,11 @@ namespace PileDesign.Views
                     {
                         foreach (var b in anaModel.Beams)
                         {
-                            if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(b)) continue;
+                            if (b.Name.StartsWith("FoundationBeam-"))
+                            {
+                                if (invisibleFBNames.Contains(b.Name)) continue;
+                            }
+                            else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(b)) continue;
                             if (b?.NodeI != null) nodeSet.Add(b.NodeI);
                             if (b?.NodeJ != null) nodeSet.Add(b.NodeJ);
                         }
@@ -628,6 +655,7 @@ namespace PileDesign.Views
                         Math.Pow(nd.Rx * effectiveVector[3], 2) +
                         Math.Pow(nd.Ry * effectiveVector[4], 2) +
                         Math.Pow(nd.Rz * effectiveVector[5], 2));
+                    if (!double.IsFinite(val)) continue; // NaN/Infinity防止
                     if (isThetaLocal)
                     {
                         // θ 系は表示上の値領域とカラーバーを揃えるため比率×ModelExtentを乗ずる
@@ -717,10 +745,14 @@ namespace PileDesign.Views
                         }
                     }
 
-                    // Beams（杭要素）描画 — 非アクティブ杭のビームはスキップ（非アクティブ杭が存在する場合のみフィルタリング）
+                    // Beams（杭要素）描画 — 非アクティブ杭/基礎梁のビームはスキップ
                     foreach (var beam in anaModel.Beams)
                     {
-                        if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
+                        if (beam.Name.StartsWith("FoundationBeam-"))
+                        {
+                            if (invisibleFBNames.Contains(beam.Name)) continue;
+                        }
+                        else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
 
                         var nrI = beam.NodeI?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                         var nrJ = beam.NodeJ?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -952,7 +984,8 @@ namespace PileDesign.Views
 
                     // 選択されたタイプに応じた値を取得
                     double value = GetSoilSpringValue(s, springType);
-                    allValues.Add(value);
+                    if (double.IsFinite(value)) // NaN/Infinity防止
+                        allValues.Add(value);
                 }
                 catch
                 {
@@ -984,7 +1017,7 @@ namespace PileDesign.Views
                 double dx2 = di2.Ux - dj2.Ux;
                 double dy2 = di2.Uy - dj2.Uy;
                 double len = Math.Sqrt(dx2 * dx2 + dy2 * dy2);
-                if (len > maxDispDiffLen) maxDispDiffLen = len;
+                if (double.IsFinite(len) && len > maxDispDiffLen) maxDispDiffLen = len;
             }
             double springForceScale = maxDispDiffLen > 1e-15
                 ? viewModel.ForceDiagramRatio * viewModel.ModelExtent / maxDispDiffLen
@@ -1003,6 +1036,7 @@ namespace PileDesign.Views
 
                     // 選択されたタイプに応じた値を取得
                     double displayValue = GetSoilSpringValue(s, springType);
+                    if (!double.IsFinite(displayValue)) continue; // NaN/Infinity防止
 
                     // ノードの変位差 (I - J)（並進成分のみ）
                     var di = s.NodeI.CumulativeDisp;

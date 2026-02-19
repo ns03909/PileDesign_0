@@ -175,7 +175,7 @@
   "foundationBeamInput": {
     "connectionMode": "RigidFloor",
     "materials": [
-      { "no": 1, "name": "C24", "youngModulus": 25000, "shearModulus": 10400, "poissonRatio": 0.2 }
+      { "no": 1, "name": "FC30", "youngModulus": 26589000, "shearModulus": 11079000, "poissonRatio": 0.2 }
     ],
     "sections": [
       { "no": 1, "name": "G1", "width": 0.800, "height": 1.700 }

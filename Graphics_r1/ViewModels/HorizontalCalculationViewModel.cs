@@ -123,7 +123,7 @@ namespace PileDesign.ViewModels
 
         // Newton-Raphson緩和係数（0.0-1.0: 1.0=フル更新、小さいほど安定だが収束遅い）
         // Full NR: 1.0推奨、Modified NR: 0.5推奨
-        private double _relaxationFactor = 0.5;  // Modified NRデフォルトに合わせて0.5
+        private double _relaxationFactor = 1.0;  // Full NRデフォルト: ω=1.0（ラインサーチで調整）
         public double RelaxationFactor
         {
             get => _relaxationFactor;
@@ -134,7 +134,7 @@ namespace PileDesign.ViewModels
         // - Full NR (OFF): 毎反復で接線剛性+Kマトリクス更新（収束が速いが計算コスト高）
         // - Modified NR (ON): 適応的 - 最初の数回はFull NR、その後はKマトリクス再利用（高速化）
         // デフォルトはModified NR（ON）
-        private bool _useModifiedNewtonRaphson = true;
+        private bool _useModifiedNewtonRaphson = false;  // Full NRがデフォルト（収束速度が大幅に向上）
         public bool UseModifiedNewtonRaphson
         {
             get => _useModifiedNewtonRaphson;
@@ -296,6 +296,14 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isAnalysisExecuted, value);
         }
 
+        // モデル作成中フラグ（ウィンドウ表示後の非同期初期化用）
+        private bool _isModelCreating = false;
+        public bool IsModelCreating
+        {
+            get => _isModelCreating;
+            set => SetProperty(ref _isModelCreating, value);
+        }
+
         // 解析ケース数
         public int TotalCalculationCount
         {
@@ -380,12 +388,13 @@ namespace PileDesign.ViewModels
 
         public string ProgressText => $"{CurrentProgress}/{TotalCalculationCount}";
 
-        // コンストラクタ
+        // コンストラクタ（軽量: UIが先に表示されるようにモデル作成は遅延）
         public HorizontalCalculationViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel;
 
-            OnAnalysisModeling();
+            // 重い処理(OnAnalysisModeling)はInitializeModelAsync()に移動
+            // → ウィンドウのLoadedイベントから呼び出す
 
             PauseAnalysisCommand = new ToolkitRelayCommand(OnPauseAnalysis, () => IsAnalysisRunning);
             ResumeAnalysisCommand = new ToolkitRelayCommand(OnResumeAnalysis, () => IsAnalysisRunning);
@@ -402,6 +411,117 @@ namespace PileDesign.ViewModels
             InputModel.LoadCasesInput.LoadCasesLevel1.CollectionChanged += LoadCasesLevel1_CollectionChanged;
             InputModel.LoadCasesInput.LoadCasesLevel2.CollectionChanged += LoadCasesLevel2_CollectionChanged;
             InputModel.LoadCasesInput.LoadCombinations.CollectionChanged += LoadCombinations_CollectionChanged;
+        }
+
+        /// <summary>
+        /// ウィンドウ表示後に呼び出す非同期モデル初期化。
+        /// バリデーションはUIスレッドで実行し、FEMモデル作成はバックグラウンドで実行。
+        /// </summary>
+        public async Task InitializeModelAsync()
+        {
+            IsModelCreating = true;
+            try
+            {
+                // バリデーション（UIスレッド: MessageBox使用のため）
+                if (!ValidateForAnalysisModeling())
+                {
+                    RequestClose?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
+
+                // 重いFEMモデル作成をバックグラウンドで実行
+                AnalysisModelling? modelling = null;
+                string? errorMessage = null;
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        modelling = new AnalysisModelling(InputModel);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        errorMessage = ex.Message;
+                    }
+                });
+
+                if (errorMessage != null || modelling == null)
+                {
+                    MessageBox.Show(errorMessage ?? "モデル作成に失敗しました。", "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    RequestClose?.Invoke(this, EventArgs.Empty);
+                    return;
+                }
+
+                // UIスレッドでモデルをセットアップ
+                AnalysisModelling = modelling;
+                SetupAnalysisModel();
+            }
+            finally
+            {
+                IsModelCreating = false;
+            }
+        }
+
+        /// <summary>
+        /// モデル作成前のバリデーション（UIスレッドで実行）
+        /// </summary>
+        private bool ValidateForAnalysisModeling()
+        {
+            if (ConnectionMode != FoundationBeamConnectionMode.RigidFloor)
+                return true;
+
+            var fbInput = InputModel.FoundationBeamInput;
+            if (fbInput == null)
+            {
+                MessageBox.Show("剛床連結モードでは基礎梁入力が必要です。",
+                    "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            if (fbInput.Beams == null || fbInput.Beams.Count == 0)
+            {
+                MessageBox.Show("剛床連結モードでは基礎梁要素が必要です。\n基礎梁入力で梁要素を定義してください。",
+                    "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
+            bool hasPileReferences = fbInput.Beams.Any(b =>
+                b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
+            if (!hasFoundationNodes && !hasPileReferences)
+            {
+                MessageBox.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
+                    "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// AnalysisModelling完了後にAnaModelをセットアップ（UIスレッドで実行）
+        /// </summary>
+        private void SetupAnalysisModel()
+        {
+            NodesCount = AnalysisModelling.Nodes.Count;
+            BeamsCount = AnalysisModelling.Beams.Count;
+
+            var editModel = new AnaModel(
+                InputModel,
+                AnalysisModelling.Nodes,
+                AnalysisModelling.Beams,
+                AnalysisModelling.DummyBeams,
+                AnalysisModelling.RigidBodies,
+                AnalysisModelling.HorizontalSoilSprings,
+                AnalysisModelling.RotationalSprings
+            )
+            {
+                RotationalSprings = AnalysisModelling.RotationalSprings,
+                PenaltySprings = AnalysisModelling.PenaltySprings
+            };
+
+            if (AnaModels.Count > 1)
+                AnaModels[1] = editModel;
+            else if (AnaModels.Count == 1)
+                AnaModels.Add(editModel);
+            else
+                AnaModels.Add(editModel);
         }
 
         // コレクション変更時のハンドラ
@@ -1409,6 +1529,11 @@ namespace PileDesign.ViewModels
 
                             targetModel.InitializeNormsqR_onNormsqFint();
 
+                            // NaN診断: ステップ開始
+                            if (step == 0)
+                                FEM.NaNDiagnostics.Begin();
+                            FEM.NaNDiagnostics.Log($"=== Step {step + 1}/{nStep}, LC={loadCase.LoadName}, Liq={isLiquefaction} ===");
+
                             int n_iteration = 1;
                             UpdateSoilDisp();
                             UpdateF(targetModel);
@@ -1518,6 +1643,15 @@ namespace PileDesign.ViewModels
                                         FindT(iLC, targetModel);
 
                                         targetModel.FindR();
+                                    }
+
+                                    // NaN診断: 反復ごとのチェック
+                                    FEM.NaNDiagnostics.SetIteration(n_iteration);
+                                    if (!double.IsFinite(targetModel.NormsROnNormsFint))
+                                    {
+                                        FEM.NaNDiagnostics.LogNaN($"NormsROnNormsFint is NaN at iteration {n_iteration}!");
+                                        FEM.NaNDiagnostics.CheckNodeDisplacements(targetModel.Nodes);
+                                        FEM.NaNDiagnostics.CheckBeamForces(targetModel.Beams);
                                     }
 
                                     // 診断値: ばね剛性min/max（PrepareKMatで集計済み）
@@ -1769,6 +1903,9 @@ namespace PileDesign.ViewModels
                                 }
                             }
                         }
+
+                        // NaN診断: 荷重ケース完了
+                        FEM.NaNDiagnostics.End();
                     }
                 }
             }

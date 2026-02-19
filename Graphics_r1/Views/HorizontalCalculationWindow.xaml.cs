@@ -65,7 +65,7 @@ namespace PileDesign.Views
             }
         }
 
-        private void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // DataContext が ViewModel の場合はイベントを購読
             if (this.DataContext is HorizontalCalculationViewModel vm)
@@ -82,6 +82,9 @@ namespace PileDesign.Views
 
                 vm.RequestClose -= OnRequestClose;
                 vm.RequestClose += OnRequestClose;
+
+                // ウィンドウ表示後にバックグラウンドでFEMモデルを作成
+                await vm.InitializeModelAsync();
             }
             else
             {

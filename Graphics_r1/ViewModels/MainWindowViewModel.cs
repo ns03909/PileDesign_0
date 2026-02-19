@@ -3076,28 +3076,12 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                // 待機カーソルを表示（重い処理があるため）
-                var previousCursor = System.Windows.Input.Mouse.OverrideCursor;
-                System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+                // Undoポイントを追加（読込前の状態を保存）
+                SaveUndoState();
 
-                ElementDivisionWindow window = null;
-                try
-                {
-                    // Undoポイントを追加（読込前の状態を保存）
-                    SaveUndoState();
-
-                    GenerateSoilPilesImmediate();  // 即時実行に変更
-                    CurrentInputModel.GenerateSoilEmbedment();
-
-                    window = new ElementDivisionWindow(this);
-                }
-                finally
-                {
-                    // カーソルを元に戻す
-                    System.Windows.Input.Mouse.OverrideCursor = previousCursor;
-                }
-
-                window?.ShowDialog();
+                // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
+                var window = new ElementDivisionWindow(this);
+                window.ShowDialog();
 
                 UpdateCanvas3DAction?.Invoke();
                 UpdateTreeView();
@@ -3200,11 +3184,6 @@ namespace PileDesign.ViewModels
                     }
                     else
                     {
-                        // 砂時計カーソルを表示
-                        Mouse.OverrideCursor = Cursors.Wait;
-                        // UIを更新させるために短時間待機
-                        await Task.Delay(50);
-
                         try
                         {
                             // Undoポイントを追加（読込前の状態を保存）
@@ -3219,9 +3198,7 @@ namespace PileDesign.ViewModels
                                     window.Close();
                             }
 
-                            // 砂時計を戻してからダイアログを表示
-                            Mouse.OverrideCursor = null;
-
+                            // ウィンドウを即座に表示（FEMモデル作成はLoadedイベントでバックグラウンド実行）
                             window.ShowDialog();
                         }
                         catch (Exception ex)
