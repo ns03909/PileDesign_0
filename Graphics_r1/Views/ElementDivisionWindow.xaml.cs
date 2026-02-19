@@ -3,7 +3,6 @@ using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using PileDesign.Models;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
@@ -15,84 +14,39 @@ namespace PileDesign.Views
 {
     public partial class ElementDivisionWindow : Window
     {
-        private ElementDivisionViewModel? _viewModel;
-        private readonly MainWindowViewModel _mainWindowViewModel;
+        private readonly ElementDivisionViewModel _viewModel;
         private bool _isLoaded = false; // フラグを追加
         private bool _isClosingHandled = false;
 
         public ElementDivisionWindow(MainWindowViewModel mainWindowViewModel)
         {
             InitializeComponent();
-            _mainWindowViewModel = mainWindowViewModel;
+
+            _viewModel = new ElementDivisionViewModel(mainWindowViewModel);
+            DataContext = _viewModel;
 
             Loaded += ElementDivisionWindow_Loaded;
-            ContentRendered += ElementDivisionWindow_ContentRendered;
         }
 
-        /// <summary>
-        /// ウィンドウが描画された後に重い初期化を実行する
-        /// </summary>
-        private async void ElementDivisionWindow_ContentRendered(object? sender, EventArgs e)
+        private void ElementDivisionWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            ContentRendered -= ElementDivisionWindow_ContentRendered;
+            if (_isLoaded) return;
 
-            try
-            {
-                // UIスレッドを一旦解放してウィンドウを完全に描画
-                await System.Threading.Tasks.Task.Yield();
+            var viewModel = (ElementDivisionViewModel)DataContext;
+            viewModel.ElementDivisionWindowInstance = this;
+            viewModel.Canvas = Canvas;
+            viewModel.CanvasEmbedment = CanvasEmbedment;
 
-                // Step 1: SoilPiles/SoilEmbedmentデータ生成（UIスレッド：ObservableCollection操作を含むため）
-                _mainWindowViewModel.GenerateSoilPilesImmediate();
-                _mainWindowViewModel.CurrentInputModel.GenerateSoilEmbedment();
-
-                // Step 2: DeepCopyをバックグラウンドスレッドで実行（純粋な計算のため安全）
-                var elementDivision = _mainWindowViewModel.CurrentInputModel.ElementDivision;
-                var sourcePiles = elementDivision?.SoilPiles?.ToList() ?? new List<SoilPile>();
-                var sourceEmbedment = elementDivision?.SoilEmbedment;
-
-                var (copiedPiles, copiedEmbedment) = await System.Threading.Tasks.Task.Run(() =>
-                {
-                    var piles = sourcePiles.Select(sp => sp.DeepCopy()).ToList();
-                    var embedment = sourceEmbedment?.DeepCopy();
-                    return (piles, embedment);
-                });
-
-                // Step 3: ViewModel作成（UIスレッド、事前コピー済みデータを渡す）
-                _viewModel = new ElementDivisionViewModel(_mainWindowViewModel, copiedPiles, copiedEmbedment);
-                DataContext = _viewModel;
-
-                // UI初期化
-                InitializeViewModelAndUI();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "初期化エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                Close();
-                return;
-            }
-            finally
-            {
-                // 読み込み中オーバーレイを非表示
-                LoadingOverlay.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        /// <summary>
-        /// ViewModel初期化とUI要素の接続を行う
-        /// </summary>
-        private void InitializeViewModelAndUI()
-        {
-            if (_viewModel == null) return;
-
-            _viewModel.ElementDivisionWindowInstance = this;
-            _viewModel.Canvas = Canvas;
-            _viewModel.CanvasEmbedment = CanvasEmbedment;
-
-            // DataGridZs の既存設定
+            // DataGridZs の既存設定（省略せずそのまま）
             DataGridZs.SelectionUnit = DataGridSelectionUnit.FullRow;
             DataGridZs.SelectionMode = DataGridSelectionMode.Single;
 
-            _viewModel.Initialize();
+            viewModel.Initialize();
+
+            Canvas.SizeChanged += Canvas_SizeChanged;
+            CanvasEmbedment.SizeChanged += CanvasEmbedment_SizeChanged;
+
+            _isLoaded = true;
 
             _viewModel.RequestClose += (s, e2) =>
             {
@@ -108,16 +62,6 @@ namespace PileDesign.Views
             PlotHelper.AddCsvExportMenu(wpfPlotPpPo, "土圧分布");
             PlotHelper.AddCsvExportMenu(wpfPlotDGBperM, "単位幅土圧合力");
             PlotHelper.AddCsvExportMenu(wpfPlotDGB, "土圧合力");
-        }
-
-        private void ElementDivisionWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            if (_isLoaded) return;
-
-            Canvas.SizeChanged += Canvas_SizeChanged;
-            CanvasEmbedment.SizeChanged += CanvasEmbedment_SizeChanged;
-
-            _isLoaded = true;
         }
 
         private void CanvasEmbedment_Loaded(object sender, RoutedEventArgs e)

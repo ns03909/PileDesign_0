@@ -33,8 +33,7 @@
       "Bash(git commit:*)",
       "Bash(Select-String -Pattern \"\\(error|warning|succeeded|failed\\)\")",
       "Bash(Select-String -Pattern \"\\(エラー|警告|成功|失敗|error|warning|succeeded|failed\\)\")",
-      "Read(//c/Users/keisu/.nuget/packages/csparse/**)",
-      "Bash(git stash:*)"
+      "Read(//c/Users/keisu/.nuget/packages/csparse/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0"

@@ -636,12 +636,7 @@ namespace PileDesign.Models.InputData
 
             // ===== ここから汎用ロジック（従来実装） =====
             var pileTop = this.PileTop as object;
-            if (pileTop == null)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[GetMThetaRelationship] PileTop=null → Rigid() (フォールバック)");
-                return PileHeadRotationDef.Rigid();
-            }
+            if (pileTop == null) return PileHeadRotationDef.CombinedLinear(0.0);
 
             // 完全剛フラグ
             var rigidProp = pileTop.GetType().GetProperty("IsRigidHead") ??
@@ -675,10 +670,8 @@ namespace PileDesign.Models.InputData
             double? ky = TryGetDouble(pileTop, "KthetaY", "Kθy", "Ky");
             if (kx.HasValue || ky.HasValue) return PileHeadRotationDef.Separate(null, null, kx, ky);
 
-            // データ無し → 安全側として剛結（M-θデータなしの場合はモーメントを完全伝達）
-            System.Diagnostics.Debug.WriteLine(
-                $"[GetMThetaRelationship] M-θデータ取得不可 (PileTopType='{pileTopType}', PileBodyType='{pileBodyType}') → Rigid() (フォールバック)");
-            return PileHeadRotationDef.Rigid();
+            // データ無し
+            return PileHeadRotationDef.CombinedLinear(0.0);
         }
 
         // 反射で obj の GetMThetaRelationship を呼び、(theta[], M[]) から曲線を生成する（寛容検索版）

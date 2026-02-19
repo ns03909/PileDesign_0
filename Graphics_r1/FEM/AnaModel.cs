@@ -226,9 +226,6 @@ namespace PileDesign.FEM
                 }
             }
 
-            // NaN診断: 組立後の剛性マトリクス検査
-            NaNDiagnostics.CheckMatrixDiag(matrixKAA, $"KAA_{(isTan ? "tan" : "sec")} (post-assembly)", this);
-
             if (isTan)
             {
                 KAA_tan = matrixKAA;
@@ -491,8 +488,6 @@ namespace PileDesign.FEM
                 }
             }
 
-            // NaN診断: 内力ベクトル検査
-            NaNDiagnostics.CheckVector(VectorT, "VectorT (post-SetT)", this);
         }
 
         // 梁要素の内力を全体ベクトルに組み立て（要素座標系→全体座標系変換＋マスター節点変換を含む）
@@ -620,10 +615,7 @@ namespace PileDesign.FEM
 
             double normsqR = VectorR.L2Norm() * VectorR.L2Norm();
             double normsqF = VectorF.L2Norm() * VectorF.L2Norm();
-            NormsROnNormsFint = normsqF > 1e-30 ? normsqR / normsqF : (normsqR > 1e-30 ? 1e30 : 0.0);
-
-            // NaN診断
-            NaNDiagnostics.DiagnoseResidual(VectorF, VectorT, VectorR, NormsROnNormsFint);
+            NormsROnNormsFint = normsqR / normsqF;
 
             // 最初の3回のFindR呼び出しで残差の大きいDOFを出力
             _findRCallCount++;

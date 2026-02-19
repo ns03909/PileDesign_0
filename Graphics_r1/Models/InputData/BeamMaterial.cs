@@ -15,21 +15,21 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _no, value);
         }
 
-        private string _name = "FC30";
+        private string _name = "";
         public string Name
         {
             get => _name;
             set => SetProperty(ref _name, value);
         }
 
-        private double _youngModulus = 2.6589e7;  // デフォルト 2.6589×10^7 kN/m² (コンクリートFC30相当)
+        private double _youngModulus = 2.5e7;  // デフォルト 2.5×10^7 kN/m² (コンクリートC24相当)
         public double YoungModulus
         {
             get => _youngModulus;
             set => SetProperty(ref _youngModulus, value);
         }
 
-        private double _shearModulus = 1.1079e7;  // デフォルト 1.1079×10^7 kN/m² (E/2.4, ポアソン比0.2)
+        private double _shearModulus = 1.04e7;  // デフォルト 1.04×10^7 kN/m² (E/2.4, ポアソン比0.2)
         public double ShearModulus
         {
             get => _shearModulus;

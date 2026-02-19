@@ -1977,7 +1977,6 @@
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="True"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
-                                                CellEditEnding="DataGridBeamMaterialsOrSections_CellEditEnding"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                 common:DataGridNavigationBehavior.Enable="True">
 
@@ -2074,7 +2073,6 @@
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="True"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
-                                                CellEditEnding="DataGridBeamMaterialsOrSections_CellEditEnding"
                                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                                 common:DataGridNavigationBehavior.Enable="True"
                                                 HorizontalScrollBarVisibility="Auto"

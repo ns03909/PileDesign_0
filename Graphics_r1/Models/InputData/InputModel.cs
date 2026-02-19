@@ -1272,9 +1272,9 @@ namespace PileDesign.Models.InputData
             _suppressSoilPileNotify = true;
             try
             {
-                // O(1) 重複チェック用HashSet（座標は離散化してキー化）
-                var usedCombinations = new HashSet<(int groundNo, int pileBodyNo, long zKey)>();
-                var newPiles = new List<SoilPile>();
+                ElementDivision.SoilPiles.Clear();
+
+                ObservableCollection<(int, int, double)> usedGroundNosPileBodyNosPileTopAltitudes = [];
 
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
@@ -1285,86 +1285,89 @@ namespace PileDesign.Models.InputData
                     if (pileBodyNo - 1 < 0 || pileBodyNo - 1 >= PileBodies.Count) continue;
                     if (groundNo - 1 < 0 || groundNo - 1 >= GroundsInput.Count) continue;
 
-                    PileBodies[pileBodyNo - 1].PileBodySegmentsUpdate();
                     var pileBodySegments = PileBodies[pileBodyNo - 1].PileBodySegments;
+                    PileBodies[pileBodyNo - 1].PileBodySegmentsUpdate();
+                    pileBodySegments = PileBodies[pileBodyNo - 1].PileBodySegments;
                     var groundLayerDataItems = GroundsInput[groundNo - 1].GroundLayers;
 
-                    // O(1) 重複チェック（座標を離散化してHashSetで判定）
-                    long zKey = (long)Math.Round(pileTopAltitude / NumericalConstants.COORDINATE_TOLERANCE);
-                    if (!usedCombinations.Add((groundNo, pileBodyNo, zKey)))
-                        continue; // 既に処理済みの組み合わせ
+                    // 許容差付きで重複チェック
+                    bool exists = usedGroundNosPileBodyNosPileTopAltitudes.Any(t =>
+                        t.Item1 == groundNo &&
+                        t.Item2 == pileBodyNo &&
+                        Math.Abs(t.Item3 - pileTopAltitude) <= NumericalConstants.COORDINATE_TOLERANCE);
 
-                    // Z座標リストをList<double>で構築（ObservableCollectionより高速）
-                    var zs = new List<double> { pileTopAltitude };
-                    foreach (PileBodySegment pileBodySegment in pileBodySegments)
-                        zs.Add(pileTopAltitude - pileBodySegment.SegmentDepth);
-
-                    double pileBottomAltitude = zs[^1];
-
-                    foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems)
+                    if (!exists)
                     {
-                        if (pileTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > pileBottomAltitude)
+                        usedGroundNosPileBodyNosPileTopAltitudes.Add((groundNo, pileBodyNo, pileTopAltitude));
+
+                        ObservableCollection<double> zs = [pileTopAltitude];
+                        foreach (PileBodySegment pileBodySegment in pileBodySegments)
+                            zs.Add(pileTopAltitude - pileBodySegment.SegmentDepth);
+
+                        double pileBottomAltitude = zs[^1];
+
+                        foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems)
                         {
-                            for (int i = zs.Count - 1; i >= 0; i--)
+                            if (pileTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > pileBottomAltitude)
                             {
-                                if (zs[i] < groundLayerDataItem.BottomAltitude)
+                                for (int i = zs.Count - 1; i >= 0; i--)
                                 {
-                                    zs.Insert(i, groundLayerDataItem.BottomAltitude);
-                                    break;
+                                    double z = zs[i];
+                                    if (z < groundLayerDataItem.BottomAltitude)
+                                    {
+                                        zs.Insert(i, groundLayerDataItem.BottomAltitude);
+                                        break;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    List<double> sortedZs = [.. zs.Distinct().OrderByDescending(z => z)];
-                    var pileZDataItems = new ObservableCollection<PileZDataItem>();
-                    foreach (double sortedZ in sortedZs)
-                    {
-                        PileZDataItem pileZDataItem = new()
+                        List<double> sortedZs = [.. zs.Distinct().OrderByDescending(z => z)];
+                        ObservableCollection<PileZDataItem> pileZDataItems = [];
+                        foreach (double sortedZ in sortedZs)
                         {
-                            Z = sortedZ,
-                            GroundInput = GroundsInput[pileLayoutDataItem.GroundNo - 1],
+                            PileZDataItem pileZDataItem = new()
+                            {
+                                Z = sortedZ,
+                                GroundInput = GroundsInput[pileLayoutDataItem.GroundNo - 1],
+                            };
+                            pileZDataItem.SetSoilDisplacement();
+                            pileZDataItems.Add(pileZDataItem);
+                        }
+
+                        var sp = new SoilPile()
+                        {
+                            No = ElementDivision.SoilPiles.Count + 1,
+                            GroundNo = groundNo,
+                            GroundInput = GroundsInput[groundNo - 1],
+                            PileBodyNo = pileBodyNo,
+                            PileBodyInput = PileBodies[pileBodyNo - 1],
+                            Z = pileTopAltitude,
+                            ZDataItems = pileZDataItems
                         };
-                        pileZDataItem.SetSoilDisplacement();
-                        pileZDataItems.Add(pileZDataItem);
+
+                        // 追加: R_* 等の特性を再計算
+                        sp.UpdateProperties();
+
+                        ElementDivision.SoilPiles.Add(sp);
                     }
-
-                    var sp = new SoilPile()
-                    {
-                        No = newPiles.Count + 1,
-                        GroundNo = groundNo,
-                        GroundInput = GroundsInput[groundNo - 1],
-                        PileBodyNo = pileBodyNo,
-                        PileBodyInput = PileBodies[pileBodyNo - 1],
-                        Z = pileTopAltitude,
-                        ZDataItems = pileZDataItems
-                    };
-
-                    // 追加: R_* 等の特性を再計算
-                    sp.UpdateProperties();
-
-                    newPiles.Add(sp);
                 }
-
-                // バッチでObservableCollectionを更新（個別Addの通知コストを回避）
-                ElementDivision.SoilPiles = new ObservableCollection<SoilPile>(newPiles);
 
                 ElementDivision.UpdateSoilPileNumberOption();
 
-                // SoilPileAltNo を付与（SoilPilesのルックアップ用Dictionary）
-                var soilPileLookup = new Dictionary<(int groundNo, int pileBodyNo, long zKey), int>();
-                for (int i = 0; i < ElementDivision.SoilPiles.Count; i++)
-                {
-                    var sp = ElementDivision.SoilPiles[i];
-                    long spZKey = (long)Math.Round(sp.Z / NumericalConstants.COORDINATE_TOLERANCE);
-                    soilPileLookup.TryAdd((sp.GroundNo, sp.PileBodyNo, spZKey), i + 1);
-                }
+                // 許容差付きで SoilPileAltNo を付与
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
-                    long pZKey = (long)Math.Round(pileLayoutDataItem.Point3D.Z / NumericalConstants.COORDINATE_TOLERANCE);
-                    if (soilPileLookup.TryGetValue((pileLayoutDataItem.GroundNo, pileLayoutDataItem.PileBodyNo, pZKey), out int altNo))
+                    for (int i = 0; i < ElementDivision.SoilPiles.Count; i++)
                     {
-                        pileLayoutDataItem.SoilPileAltNo = altNo;
+                        var sp = ElementDivision.SoilPiles[i];
+                        if (pileLayoutDataItem.GroundNo == sp.GroundNo
+                            && pileLayoutDataItem.PileBodyNo == sp.PileBodyNo
+                            && Math.Abs(pileLayoutDataItem.Point3D.Z - sp.Z) <= NumericalConstants.COORDINATE_TOLERANCE)
+                        {
+                            pileLayoutDataItem.SoilPileAltNo = i + 1;
+                            break; // 見つかったら抜ける
+                        }
                     }
                 }
             }

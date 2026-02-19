@@ -889,53 +889,6 @@ namespace PileDesign.FEM
             }
             log.AppendLine($"剛床slave拘束: {slaveCount}組, ペナルティばね: {penaltyCount}組");
 
-            // ── 2b. InputNode（General型）とFoundationNode（中間節点）もActionPointの剛床slaveに設定 ──
-            // 剛床仮定ではスラブ上の全節点が面内(Ux,Uy,Rz)で剛体運動する。
-            // ConnectionNode(FoundationNode-P{No})は上で処理済み。
-            // ここでは残りのスラブ上節点（InputNode-*、FoundationNode-{N}）をslave化する。
-            int additionalSlaveCount = 0;
-            var alreadySlavedNames = new HashSet<string>();
-            foreach (var pile in InputModel.PileLayoutItems)
-                alreadySlavedNames.Add($"FoundationNode-P{pile.No}");
-
-            foreach (var node in Nodes)
-            {
-                // ActionPoint自身、杭節点、CapNode、EmbedmentNode等はスキップ
-                if (node == actionPoint) continue;
-                if (alreadySlavedNames.Contains(node.Name)) continue; // 既にslave化済み
-
-                // InputNode-* または FoundationNode-{数字} が剛床slave対象
-                bool isInputNode = node.Name.StartsWith("InputNode-");
-                bool isFoundationNode = node.Name.StartsWith("FoundationNode-") && !node.Name.StartsWith("FoundationNode-P");
-                if (!isInputNode && !isFoundationNode) continue;
-
-                // 既にmaster-slave関係がある場合はスキップ（安全ガード）
-                if (node.MasterNodes[0] != null || node.MasterNodes[1] != null || node.MasterNodes[5] != null)
-                    continue;
-
-                // 剛床slave設定: Ux, Uy, Rz → ActionPoint
-                var arm = node.Coord - actionPoint.Coord;
-                node.SetBoundary(new Boundary(
-                    true,  // Ux: slave of ActionPoint
-                    true,  // Uy: slave of ActionPoint
-                    false, // Uz: free（基礎梁が負担）
-                    false, // Rx: free（基礎梁が負担）
-                    false, // Ry: free（基礎梁が負担）
-                    true   // Rz: slave of ActionPoint
-                ));
-                node.SetMasterNode(0, actionPoint); // Ux → ActionPoint
-                node.SetMasterNode(1, actionPoint); // Uy → ActionPoint
-                node.SetMasterNode(5, actionPoint); // Rz → ActionPoint
-                node.SetArmVector(0, arm);
-                node.SetArmVector(1, arm);
-                node.SetArmVector(2, arm);
-                node.SetTransferMatrix();
-                additionalSlaveCount++;
-
-                log.AppendLine($"  {node.Name} → ActionPoint: 剛床slave(Ux,Uy,Rz) arm=({arm.X:F3},{arm.Y:F3},{arm.Z:F3})");
-            }
-            log.AppendLine($"追加剛床slave拘束（InputNode/FoundationNode）: {additionalSlaveCount}組");
-
             // ── 3. ConnectionNodeの基礎梁接続状況を確認 ──
             var connNodeNames = new HashSet<string>();
             foreach (var pile in InputModel.PileLayoutItems)

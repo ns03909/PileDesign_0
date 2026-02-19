@@ -10,15 +10,6 @@ namespace PileDesign.FEM
         {
             anaModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true); // KAA_tanとVectorRを取得
 
-            // --- NaN診断: ソルバ入力を検査 ---
-            bool kHasNaN = NaNDiagnostics.CheckMatrixDiag(anaModel.KAA_tan, "KAA_tan (pre-solve)", anaModel);
-            bool rHasNaN = NaNDiagnostics.CheckVector(anaModel.VectorR, "VectorR (pre-solve)", anaModel);
-            if (kHasNaN || rHasNaN)
-            {
-                int kNaNCount = NaNDiagnostics.CountMatrixNaN(anaModel.KAA_tan);
-                NaNDiagnostics.LogNaN($"Solver input contaminated: K has {kNaNCount} NaN entries, R has NaN={rHasNaN}");
-            }
-
             // CSparse で一次方程式を解く（MathNetと同じく K Δd = R）
             Vector<double> incrementalDispVector;
             try
@@ -46,19 +37,6 @@ namespace PileDesign.FEM
             if (relaxationFactor < 1.0 && relaxationFactor > 0.0)
             {
                 incrementalDispVector = incrementalDispVector * relaxationFactor;
-            }
-
-            // NaN/Infinity 検出: ソルバ出力にNaNが含まれる場合はゼロにクランプ
-            // （特異行列や数値不安定時に発生しうる）
-            bool hasNaN = NaNDiagnostics.CheckVector(incrementalDispVector, "incrementalDispVector (post-solve)", anaModel);
-            if (hasNaN)
-            {
-                // NaN成分をゼロにクランプ
-                for (int idx = 0; idx < incrementalDispVector.Count; idx++)
-                {
-                    if (!double.IsFinite(incrementalDispVector[idx]))
-                        incrementalDispVector[idx] = 0.0;
-                }
             }
 
             // 変位増分制限（発散防止のためのライン検索簡易版）

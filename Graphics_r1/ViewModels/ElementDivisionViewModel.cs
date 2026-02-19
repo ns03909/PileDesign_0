@@ -425,21 +425,7 @@ namespace PileDesign.ViewModels
         private bool isEditingCancelled = false;
 
         // コンストラクタ //
-        /// <summary>
-        /// 標準コンストラクタ（UIスレッドでDeepCopyを実行）
-        /// </summary>
         public ElementDivisionViewModel(MainWindowViewModel mainWindowViewModel)
-            : this(mainWindowViewModel, null, null)
-        {
-        }
-
-        /// <summary>
-        /// 高速コンストラクタ（事前にバックグラウンドスレッドでDeepCopy済みのデータを受け取る）
-        /// </summary>
-        public ElementDivisionViewModel(
-            MainWindowViewModel mainWindowViewModel,
-            IList<SoilPile>? preCopiedPiles,
-            SoilEmbedment? preCopiedEmbedment)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
 
@@ -449,22 +435,13 @@ namespace PileDesign.ViewModels
             var coll = _mainWindowViewModel.CurrentInputModel?.ElementDivision?.SoilPiles;
             if (coll != null) coll.CollectionChanged += SoilPiles_CollectionChanged;
 
-            // DeepCopy済みデータがあればそのまま使用、なければここでコピー
-            if (preCopiedPiles != null)
-            {
-                SoilPiles = new ObservableCollection<SoilPile>(preCopiedPiles);
-            }
-            else
-            {
-                var soilPilesSnapshot = elementDivision?.SoilPiles?.ToList() ?? new List<SoilPile>();
-                SoilPiles = new ObservableCollection<SoilPile>(soilPilesSnapshot.Select(sp => sp.DeepCopy()));
-            }
+            // 元コレクションのスナップショットを先に取得
+            var soilPilesSnapshot = elementDivision?.SoilPiles?.ToList() ?? new List<SoilPile>();
 
-            if (preCopiedEmbedment != null)
-            {
-                SoilEmbedment = preCopiedEmbedment;
-            }
-            else if (elementDivision?.SoilEmbedment != null)
+            // スナップショットを列挙して DeepCopy し、VM 側のコレクションを構築
+            SoilPiles = new ObservableCollection<SoilPile>(soilPilesSnapshot.Select(sp => sp.DeepCopy()));
+
+            if (elementDivision?.SoilEmbedment != null)
             {
                 SoilEmbedment = elementDivision.SoilEmbedment.DeepCopy();
             }
@@ -1239,86 +1216,6 @@ namespace PileDesign.ViewModels
             // 1 回だけ後処理を実行（DataModel・グラフ等の更新）
             OnZDataItemsChanged();
         }
-
-        // 全土層-杭セット一括自動分割
-        [RelayCommand]
-        private void AutoZsAllPiles()
-        {
-            if (SoilPiles == null || SoilPiles.Count == 0) return;
-
-            // Undo スナップショットを1回だけ保存
-            _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
-
-            // 現在選択中の杭データを SoilPiles に反映
-            if (SelectedSoilPileNo > 0 && SelectedSoilPileNo <= SoilPiles.Count)
-            {
-                SetZdataItemsAndHorizontalSoilReactionItems(SelectedSoilPileNo);
-            }
-
-            // 全杭セットに対して自動分割を適用
-            for (int pileIdx = 0; pileIdx < SoilPiles.Count; pileIdx++)
-            {
-                var soilPile = SoilPiles[pileIdx];
-                var original = soilPile.ZDataItems.ToList();
-                var merged = new List<PileZDataItem>(original.Count * 2);
-
-                for (int i = 0; i < original.Count - 1; i++)
-                {
-                    merged.Add(original[i]);
-
-                    double interval = original[i].Z - original[i + 1].Z;
-                    if (interval > MaxPileSpacing)
-                    {
-                        int divider = (int)Math.Ceiling(interval / MaxPileSpacing);
-                        double step = interval / divider;
-
-                        for (int j = 1; j < divider; j++)
-                        {
-                            var newItem = new PileZDataItem
-                            {
-                                Z = original[i].Z - step * j,
-                                IsChangeable = true,
-                                GroundInput = soilPile.GroundInput
-                            };
-                            newItem.SetSoilDisplacement();
-                            merged.Add(newItem);
-                        }
-                    }
-                }
-
-                if (original.Count > 0) merged.Add(original.Last());
-
-                // FirstDistance チェック
-                if (merged.Count >= 2 && merged[0].Z - merged[1].Z > FirstDistance)
-                {
-                    var firstInsert = new PileZDataItem
-                    {
-                        Z = merged[0].Z - FirstDistance,
-                        IsChangeable = true,
-                        GroundInput = soilPile.GroundInput
-                    };
-                    firstInsert.SetSoilDisplacement();
-                    merged.Insert(1, firstInsert);
-                }
-
-                merged = merged.OrderByDescending(item => item.Z).ToList();
-                soilPile.ZDataItems = new ObservableCollection<PileZDataItem>(merged);
-                soilPile.OnZDataItemsChanged(soilPile.ZDataItems);
-
-                // ランプを緑に点灯
-                MarkPileAsShown(pileIdx);
-            }
-
-            // 現在表示中の杭の UI を更新
-            _suppressUndoSave = true;
-            var currentPile = SoilPiles[SelectedSoilPileNo - 1];
-            SelectedZDataItems = new ObservableCollection<PileZDataItem>(
-                currentPile.ZDataItems.Select(item => item.DeepCopy()));
-            _suppressUndoSave = false;
-
-            OnZDataItemsChanged();
-        }
-
         // 自動番号づけメソッド
         private static void AutoNumberingDataGrid(DataGrid dataGrid)
         {

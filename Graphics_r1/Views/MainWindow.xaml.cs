@@ -487,20 +487,6 @@ namespace PileDesign.Views
         }
 
 
-        // 材料・断面DataGridのセル編集時に解析結果を自動削除
-        private void DataGridBeamMaterialsOrSections_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
-        {
-            if (e.EditAction != DataGridEditAction.Commit) return;
-
-            Dispatcher.BeginInvoke(() =>
-            {
-                if (DataContext is MainWindowViewModel vm)
-                {
-                    vm.ResetAnalysisResultsSilently();
-                }
-            });
-        }
-
         private void DataGridEmbedment_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             // 追加: Commitのみ処理
@@ -1994,7 +1980,7 @@ namespace PileDesign.Views
         //    }
         //}
 
-        // マウスホイールイベント: スムーズズーム（累積ターゲット + フレーム補間）
+        // マウスホイールイベント マウスホイールが押された時の処理
         private void Canvas3DLayout_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (e.Delta != 0)
@@ -2005,22 +1991,39 @@ namespace PileDesign.Views
             IsRightButtonClicked = false;
 
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
+
+            // マウスポインタの位置を取得
             Point mousePosition = e.GetPosition(Canvas3DLayout);
 
+            // 現在のスケールを取得
             double scale = viewModel.CanvasThreeDView.Scale;
-            double zoomFactor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
-            double newScale = Math.Max(0.1, Math.Min(scale * zoomFactor, 100));
 
+            // 拡大・縮小の倍率を計算
+            double zoomFactor = e.Delta > 0 ? 1.1 : 1.0 / 1.1;
+
+            // 新しいスケールを計算
+            double newScale = scale * zoomFactor;
+
+            // ズームの最小値と最大値を設定
+            newScale = Math.Max(0.1, Math.Min(newScale, 100));
+
+            // 注視点位置を取得
             Point originalFocalPoint = viewModel.CanvasThreeDView.Transformation(viewModel.CanvasThreeDView.Ct);
+
+            // 新しいスケールでの注視点位置を計算
             Point newFocalPoint = new(
                 (originalFocalPoint.X - mousePosition.X) * zoomFactor + mousePosition.X,
-                (originalFocalPoint.Y - mousePosition.Y) * zoomFactor + mousePosition.Y);
+                (originalFocalPoint.Y - mousePosition.Y) * zoomFactor + mousePosition.Y
+            );
 
+            // マウスポインタの位置を中心にビューを調整
             Point originalViewPosition = viewModel.CanvasThreeDView.ViewTransition;
             Point newViewPosition = new(
                 originalViewPosition.X + (newFocalPoint.X - originalFocalPoint.X),
-                originalViewPosition.Y + (newFocalPoint.Y - originalFocalPoint.Y));
+                originalViewPosition.Y + (newFocalPoint.Y - originalFocalPoint.Y)
+            );
 
+            // スケールとビュー位置を更新
             viewModel.CanvasThreeDView.Scale = newScale;
             viewModel.CanvasThreeDView.ViewTransition = newViewPosition;
 
