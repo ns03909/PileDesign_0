@@ -676,6 +676,7 @@ namespace PileDesign.ViewModels
                     IsElementSplit = false;
                     IsVerticalAnalysisDone = false;
                     IsHorizontalAnalysisDone = false;
+                    IsVerticalBeamAnalysisDone = false;
                     // 変更後（以下の箇所で適用）
                     RequestUpdateWindow();
                 }
@@ -1561,6 +1562,243 @@ namespace PileDesign.ViewModels
             return indexedDistances[n].Index;
         }
 
+        /// <summary>
+        /// 2つの3D線分の最近接点を求め、交差判定を行う。
+        /// 端点同士の交差（t≈0,1 or s≈0,1）は除外する。
+        /// </summary>
+        /// <returns>交差点と各線分上のパラメータ t, s。交差しない場合は null。</returns>
+        private (Point3D point, double t, double s)? FindSegmentIntersection(
+            Point3D p1, Point3D p2, Point3D p3, Point3D p4, double tolerance)
+        {
+            var d1 = p2 - p1; // 線分Aの方向ベクトル
+            var d2 = p4 - p3; // 線分Bの方向ベクトル
+            var r = p1 - p3;
+
+            double a = Vector3D.DotProduct(d1, d1); // |d1|^2
+            double e = Vector3D.DotProduct(d2, d2); // |d2|^2
+            double f = Vector3D.DotProduct(d2, r);
+
+            // 両方の線分が点に退化している場合
+            if (a < 1e-12 && e < 1e-12) return null;
+
+            double b = Vector3D.DotProduct(d1, d2);
+            double c = Vector3D.DotProduct(d1, r);
+            double denom = a * e - b * b;
+
+            // 平行（または非常に近い）線分
+            if (Math.Abs(denom) < 1e-12) return null;
+
+            double t = (b * f - c * e) / denom;
+            double s = (a * f - b * c) / denom;
+
+            // 端点付近は除外（端点での接続は交差ではない）
+            const double endEps = 1e-6;
+            if (t <= endEps || t >= 1.0 - endEps) return null;
+            if (s <= endEps || s >= 1.0 - endEps) return null;
+
+            // 最近接点
+            var closestA = p1 + t * d1;
+            var closestB = p3 + s * d2;
+            double dist = (closestA - closestB).Length;
+
+            if (dist > tolerance) return null;
+
+            // 交差点は両最近接点の中点
+            var intersection = new Point3D(
+                (closestA.X + closestB.X) * 0.5,
+                (closestA.Y + closestB.Y) * 0.5,
+                (closestA.Z + closestB.Z) * 0.5);
+
+            return (intersection, t, s);
+        }
+
+        /// <summary>
+        /// 1つの梁要素を複数の交差点(InputNode)で分割し、分割後の要素リストを返す。
+        /// </summary>
+        private List<FoundationBeamElement> SplitBeamAtPoints(
+            FoundationBeamElement beam,
+            List<(InputNode node, double t)> splitPoints)
+        {
+            if (splitPoints.Count == 0) return [beam];
+
+            // tの昇順にソート
+            var sorted = splitPoints.OrderBy(sp => sp.t).ToList();
+
+            var result = new List<FoundationBeamElement>();
+
+            // 最初のセグメント: 元のNodeI → 最初の分割節点
+            result.Add(new FoundationBeamElement
+            {
+                NodeI_Type = beam.NodeI_Type,
+                NodeI_Id = beam.NodeI_Id,
+                NodeJ_Type = NodeReferenceType.GeneralNode,
+                NodeJ_Id = sorted[0].node.UniqueId,
+                MaterialNo = beam.MaterialNo,
+                SectionNo = beam.SectionNo,
+                AngleBeta = beam.AngleBeta,
+                Width = beam.Width,
+                Height = beam.Height,
+                YoungModulus = beam.YoungModulus,
+                ShearModulus = beam.ShearModulus,
+                SectionName = beam.SectionName
+            });
+
+            // 中間セグメント
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                result.Add(new FoundationBeamElement
+                {
+                    NodeI_Type = NodeReferenceType.GeneralNode,
+                    NodeI_Id = sorted[i].node.UniqueId,
+                    NodeJ_Type = NodeReferenceType.GeneralNode,
+                    NodeJ_Id = sorted[i + 1].node.UniqueId,
+                    MaterialNo = beam.MaterialNo,
+                    SectionNo = beam.SectionNo,
+                    AngleBeta = beam.AngleBeta,
+                    Width = beam.Width,
+                    Height = beam.Height,
+                    YoungModulus = beam.YoungModulus,
+                    ShearModulus = beam.ShearModulus,
+                    SectionName = beam.SectionName
+                });
+            }
+
+            // 最後のセグメント: 最後の分割節点 → 元のNodeJ
+            result.Add(new FoundationBeamElement
+            {
+                NodeI_Type = NodeReferenceType.GeneralNode,
+                NodeI_Id = sorted.Last().node.UniqueId,
+                NodeJ_Type = beam.NodeJ_Type,
+                NodeJ_Id = beam.NodeJ_Id,
+                MaterialNo = beam.MaterialNo,
+                SectionNo = beam.SectionNo,
+                AngleBeta = beam.AngleBeta,
+                Width = beam.Width,
+                Height = beam.Height,
+                YoungModulus = beam.YoungModulus,
+                ShearModulus = beam.ShearModulus,
+                SectionName = beam.SectionName
+            });
+
+            return result;
+        }
+
+        // 交差点で要素分割
+        [RelayCommand]
+        private void SplitElementsAtIntersections()
+        {
+            var beams = CurrentInputModel?.FoundationBeamInput?.Beams;
+            if (beams == null) return;
+
+            if (!CheckAndResetAnalysisResults()) return;
+
+            var selectedBeams = beams.Where(b => b.IsSelected).ToList();
+            if (selectedBeams.Count < 2)
+            {
+                MessageBox.Show("交差判定するには梁要素を2本以上選択してください。",
+                    "交差点分割", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            SaveUndoState();
+
+            double tolerance = EditDistanceThreshold;
+
+            // 各要素の座標を事前取得
+            var beamCoords = new Dictionary<FoundationBeamElement, (Point3D pi, Point3D pj)>();
+            foreach (var beam in selectedBeams)
+            {
+                var ci = CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                var cj = CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                if (ci == null || cj == null) continue;
+                beamCoords[beam] = (new Point3D(ci.Value.X, ci.Value.Y, ci.Value.Z),
+                                    new Point3D(cj.Value.X, cj.Value.Y, cj.Value.Z));
+            }
+
+            // 各要素ごとの分割点リスト
+            var beamSplitPoints = new Dictionary<FoundationBeamElement, List<(InputNode node, double t)>>();
+
+            // 全ペアの交差判定
+            var beamList = beamCoords.Keys.ToList();
+            int intersectionCount = 0;
+
+            for (int i = 0; i < beamList.Count; i++)
+            {
+                for (int j = i + 1; j < beamList.Count; j++)
+                {
+                    var beamA = beamList[i];
+                    var beamB = beamList[j];
+                    var (pi1, pi2) = beamCoords[beamA];
+                    var (pj1, pj2) = beamCoords[beamB];
+
+                    var result = FindSegmentIntersection(pi1, pi2, pj1, pj2, tolerance);
+                    if (result == null) continue;
+
+                    var (point, tA, tB) = result.Value;
+
+                    // 同座標に既存節点があるかチェック（重複防止）
+                    bool alreadyExists = false;
+
+                    // 既にこの要素ペアで同じ位置に分割点が登録されていないかチェック
+                    if (beamSplitPoints.TryGetValue(beamA, out var existingA))
+                    {
+                        if (existingA.Any(sp => (new Point3D(sp.node.X, sp.node.Y, sp.node.Z) - point).Length < tolerance))
+                            alreadyExists = true;
+                    }
+
+                    if (alreadyExists) continue;
+
+                    // 交差点に一般節点を生成
+                    var newNode = new InputNode
+                    {
+                        No = CurrentInputModel.InputNodes.Count + 1,
+                        Type = NodeType.General,
+                        X = point.X,
+                        Y = point.Y,
+                        Z = point.Z
+                    };
+                    CurrentInputModel.InputNodes.Add(newNode);
+
+                    // 要素Aの分割点リストに追加
+                    if (!beamSplitPoints.ContainsKey(beamA))
+                        beamSplitPoints[beamA] = [];
+                    beamSplitPoints[beamA].Add((newNode, tA));
+
+                    // 要素Bの分割点リストに追加
+                    if (!beamSplitPoints.ContainsKey(beamB))
+                        beamSplitPoints[beamB] = [];
+                    beamSplitPoints[beamB].Add((newNode, tB));
+
+                    intersectionCount++;
+                }
+            }
+
+            if (intersectionCount == 0)
+            {
+                ShowToast("選択要素間に交差点が見つかりませんでした。", 2); // Warning
+                return;
+            }
+
+            // 交差が検出された要素を分割
+            var toRemove = new List<FoundationBeamElement>();
+            var toAdd = new List<FoundationBeamElement>();
+
+            foreach (var (beam, splitPoints) in beamSplitPoints)
+            {
+                var splitBeams = SplitBeamAtPoints(beam, splitPoints);
+                toRemove.Add(beam);
+                toAdd.AddRange(splitBeams);
+            }
+
+            foreach (var beam in toRemove) beams.Remove(beam);
+            foreach (var beam in toAdd) beams.Add(beam);
+
+            RenumberFoundationBeams();
+            RequestUpdateWindow();
+
+            ShowToast($"{intersectionCount} 個の交差点で {toRemove.Count} → {toAdd.Count} 要素に分割");
+        }
+
         // 基礎梁節点削除
         [RelayCommand]
         private void DeleteFoundationNode(FoundationNode node)
@@ -1923,6 +2161,23 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void PileGroupSettlementAnalysis()
         {
+            // 群杭荷重（矩形荷重）が定義されているかチェック
+            var rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
+            if (rectLoads == null || rectLoads.Count == 0)
+            {
+                MessageBox.Show("群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 荷重値が全て0かチェック
+            if (rectLoads.All(r => r.QA == 0))
+            {
+                MessageBox.Show("値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             var result = _settlementAnalysisService.PerformSettlementAnalysis(
                 CurrentInputModel.PileGroupSettlement,
                 CurrentInputModel.PileLayoutItems,
@@ -2128,6 +2383,7 @@ namespace PileDesign.ViewModels
                 IsHorizontalAnalysisDone = false;
                 IsVerticalAnalysisDone = false;
                 IsGroupPileSettlementAnalysisDone = false;
+                IsVerticalBeamAnalysisDone = false;
 
                 // M-φキャッシュをクリア（新プロジェクト読込時）
                 PileSection.ClearMphiCache();
@@ -2216,6 +2472,7 @@ namespace PileDesign.ViewModels
                     IsHorizontalAnalysisDone = false;
                     IsVerticalAnalysisDone = false;
                     IsGroupPileSettlementAnalysisDone = false;
+                    IsVerticalBeamAnalysisDone = false;
 
                     // M-φキャッシュをクリア（新プロジェクト読込時）
                     PileSection.ClearMphiCache();
@@ -2269,6 +2526,91 @@ namespace PileDesign.ViewModels
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Word出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        // Rhino 3D (.3dm) ファイルにエクスポートするメソッド
+        [RelayCommand]
+        public void Export3dmFile()
+        {
+            Microsoft.Win32.SaveFileDialog saveFileDialog = new()
+            {
+                Filter = "Rhino 3D (*.3dm)|*.3dm|All files (*.*)|*.*",
+                DefaultExt = ".3dm",
+                FileName = "PileModel_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".3dm"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var exporter = new Output.Rhino3dmExporter(CurrentInputModel);
+                    exporter.Export(saveFileDialog.FileName);
+                    ShowToast($"3dmファイルを作成しました。\n{saveFileDialog.FileName}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"3dm出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        // DXF ファイルにエクスポートするメソッド
+        [RelayCommand]
+        public void ExportDxfFile()
+        {
+            Microsoft.Win32.SaveFileDialog saveFileDialog = new()
+            {
+                Filter = "DXF (*.dxf)|*.dxf|All files (*.*)|*.*",
+                DefaultExt = ".dxf",
+                FileName = "PileModel_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".dxf"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var exporter = new Output.DxfExporter(CurrentInputModel);
+                    exporter.Export(saveFileDialog.FileName);
+                    ShowToast($"DXFファイルを作成しました。\n{saveFileDialog.FileName}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        // midas Gen MGT ファイルにエクスポートするメソッド
+        [RelayCommand]
+        public void ExportMgtFile()
+        {
+            if (CurrentModel == null)
+            {
+                MessageBox.Show("水平解析が実行されていません。\n解析モデルをエクスポートするには、先に水平解析を実行してください。",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            Microsoft.Win32.SaveFileDialog saveFileDialog = new()
+            {
+                Filter = "midas Gen MGT (*.mgt)|*.mgt|All files (*.*)|*.*",
+                DefaultExt = ".mgt",
+                FileName = "FEM_Model_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".mgt"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var exporter = new Output.MgtExporter(CurrentModel);
+                    exporter.Export(saveFileDialog.FileName);
+                    ShowToast($"MGTファイルを作成しました。\n{saveFileDialog.FileName}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"MGT出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -2328,7 +2670,7 @@ namespace PileDesign.ViewModels
 
         // 解析結果が1つでも存在するか（バインド用プロパティ）
         public bool HasAnyAnalysisResult
-            => IsHorizontalAnalysisDone || IsVerticalAnalysisDone || IsGroupPileSettlementAnalysisDone;
+            => IsHorizontalAnalysisDone || IsVerticalAnalysisDone || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
 
         // コマンド状態一括更新ヘルパ
         private void RaiseResultCommandsCanExecute()
@@ -2517,6 +2859,21 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 MessageBox.Show($"ヘルプウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // 設計例によるプログラムの検証ウィンドウ表示
+        [RelayCommand]
+        public static void OpenVerificationWindow()
+        {
+            try
+            {
+                var window = new VerificationWindow();
+                window.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"検証ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -3220,6 +3577,54 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 基礎梁鉛直解析ウィンドウを開くメソッド
+        [RelayCommand]
+        public void OpenVerticalBeamCalculation()
+        {
+            // バリデーション
+            if (CurrentInputModel.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
+            {
+                MessageBox.Show("杭配置が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (CurrentInputModel.FoundationBeamInput?.Beams == null || CurrentInputModel.FoundationBeamInput.Beams.Count == 0)
+            {
+                MessageBox.Show("基礎梁要素が定義されていません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // LoadDisplacementsが計算済みか確認
+            bool anyMissing = false;
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
+                var soilPile = pile.SoilPile;
+                if (soilPile?.LoadDisplacements == null || soilPile.LoadDisplacements.Count == 0)
+                {
+                    anyMissing = true;
+                    break;
+                }
+            }
+            if (anyMissing)
+            {
+                MessageBox.Show("単杭沈下解析が未実行の杭があります。先に単杭沈下解析を実行してください。",
+                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                var viewModel = new VerticalBeamCalculationViewModel(this);
+                var window = new Views.VerticalBeamCalculationWindow { DataContext = viewModel };
+                window.Owner = Application.Current.MainWindow;
+                window.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"ダイアログの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         // 解析準備ができているかを確認するメソッド
         private bool IsPreparedForAnalysis()
         {
@@ -3249,15 +3654,15 @@ namespace PileDesign.ViewModels
             SaveUndoState();
 
             var groundInput = CurrentInputModel.GroundsInput[SelectedGroundInputModelNo - 1];
-            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Clear();
-
             double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
 
+            // バッチ構築（1件ずつAddするとCollectionChanged連発で遅い）
+            var list = new List<SettlementSoilLayer>();
             foreach (var layer in groundInput.GroundLayers)
             {
                 if (layer.BottomAltitude < loadingPlaneAltitude)
                 {
-                    CurrentInputModel.PileGroupSettlement.SettlementSoilLayers.Add(new SettlementSoilLayer
+                    list.Add(new SettlementSoilLayer
                     {
                         BottomAltitude = layer.BottomAltitude,
                         Ek = layer.Es,
@@ -3267,9 +3672,17 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            CalculateLayerThicknesses(
-                CurrentInputModel.PileGroupSettlement.SettlementSoilLayers,
-                loadingPlaneAltitude);
+            // 層厚を計算
+            for (int i = 0; i < list.Count; i++)
+            {
+                list[i].Thickness = i == 0
+                    ? loadingPlaneAltitude - list[i].BottomAltitude
+                    : list[i - 1].BottomAltitude - list[i].BottomAltitude;
+            }
+
+            // 一括代入（CollectionChanged は1回だけ）
+            CurrentInputModel.PileGroupSettlement.SettlementSoilLayers =
+                new ObservableCollection<SettlementSoilLayer>(list);
 
             // 変更: 即時実行
             UpdateWindowImmediate();
@@ -3820,6 +4233,7 @@ namespace PileDesign.ViewModels
                 IsHorizontalAnalysisDone = false;
                 IsVerticalAnalysisDone = false;
                 IsGroupPileSettlementAnalysisDone = false;
+                IsVerticalBeamAnalysisDone = false;
 
                 PileSection.ClearMphiCache();
 

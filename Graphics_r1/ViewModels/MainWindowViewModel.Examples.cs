@@ -51,10 +51,11 @@ namespace PileDesign.ViewModels
             // 砂時計にする（UI スレッドで設定）
             Mouse.OverrideCursor = Cursors.Wait;
             // UI を一度描画させる（カーソル表示のために短時間yield）
-            await Task.Delay(50);
+            await Task.Delay(10);
 
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            // Undoポイントを追加（バックグラウンドでDeepCopy）
+            var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
+            _undoManager.SaveState(undoCopy);
 
             // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
             CurrentInputModel.SuppressNotifications();
@@ -65,18 +66,27 @@ namespace PileDesign.ViewModels
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
             IsGroupPileSettlementAnalysisDone = false;
+            IsVerticalBeamAnalysisDone = false;
             IsAnalysisResultVisible = false;
             CurrentModel = null;
 
-            // JSONから杭例題データを読み込む
-            var pileData = PileExampleLoader.LoadFromFile(pileJsonFileName);
+            // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
+            var (pileData, groundInputCopy) = await Task.Run(() =>
+            {
+                // JSONから杭例題データを読み込む
+                var pd = PileExampleLoader.LoadFromFile(pileJsonFileName);
 
-            // 地盤例題を読み込む
-            var groundLayerViewModel = new GroundLayerViewModel(this);
-            var groundData = GroundExampleLoader.LoadFromFile(pileData.GroundExampleName);
-            GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
-            groundLayerViewModel.Update(); // 土層プロパティを再計算
-            CurrentInputModel.GroundsInput[0] = groundLayerViewModel.GroundInput.DeepCopy();
+                // 地盤例題を読み込む
+                var groundLayerViewModel = new GroundLayerViewModel(this);
+                var groundData = GroundExampleLoader.LoadFromFile(pd.GroundExampleName);
+                GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
+                groundLayerViewModel.Update(); // 土層プロパティを再計算
+
+                return (pd, groundLayerViewModel.GroundInput.DeepCopy());
+            });
+
+            // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
+            CurrentInputModel.GroundsInput[0] = groundInputCopy;
 
             // 杭例題データを適用
             PileExampleLoader.ApplyToInputModel(CurrentInputModel, pileData, this);
@@ -126,10 +136,11 @@ namespace PileDesign.ViewModels
             // 砂時計にする（UI スレッドで設定）
             Mouse.OverrideCursor = Cursors.Wait;
             // UI を一度描画させる（カーソル表示のために短時間yield）
-            await Task.Delay(50);
+            await Task.Delay(10);
 
-            // Undoポイントを追加
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
+            // Undoポイントを追加（バックグラウンドでDeepCopy）
+            var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
+            _undoManager.SaveState(undoCopy);
 
             // SoilPile再生成通知を抑制（読み込み完了後に一括で行う）
             CurrentInputModel.SuppressNotifications();
@@ -138,24 +149,36 @@ namespace PileDesign.ViewModels
             IsElementSplit = false;
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
+            IsVerticalBeamAnalysisDone = false;
 
-            // JSONから群杭沈下解析例題データを読み込む
-            var data = GroupSettlementExampleLoader.LoadFromFile(jsonFileName);
-
-            // 地盤例題を読み込む（指定がある場合）
-            if (!string.IsNullOrEmpty(data.GroundExampleName))
+            // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
+            var (data, groundInputCopy) = await Task.Run(() =>
             {
-                var groundLayerViewModel = new GroundLayerViewModel(this);
-                var groundData = GroundExampleLoader.LoadFromFile(data.GroundExampleName);
-                GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
-                groundLayerViewModel.Update(); // 土層プロパティを再計算
-                CurrentInputModel.GroundsInput[0] = groundLayerViewModel.GroundInput.DeepCopy();
-            }
+                // JSONから群杭沈下解析例題データを読み込む
+                var d = GroupSettlementExampleLoader.LoadFromFile(jsonFileName);
+
+                // 地盤例題を読み込む（指定がある場合）
+                GroundInput? gi = null;
+                if (!string.IsNullOrEmpty(d.GroundExampleName))
+                {
+                    var groundLayerViewModel = new GroundLayerViewModel(this);
+                    var groundData = GroundExampleLoader.LoadFromFile(d.GroundExampleName);
+                    GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
+                    groundLayerViewModel.Update(); // 土層プロパティを再計算
+                    gi = groundLayerViewModel.GroundInput.DeepCopy();
+                }
+
+                return (d, gi);
+            });
+
+            // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
+            if (groundInputCopy != null)
+                CurrentInputModel.GroundsInput[0] = groundInputCopy;
 
             // 例題データを適用
             GroupSettlementExampleLoader.ApplyToInputModel(CurrentInputModel, data, this);
 
-            // 追加：LoadPileExampleAsync と同様に各 PileSection を再計算してプロパティ反映
+            // 各 PileSection を再計算してプロパティ反映
             foreach (var pb in CurrentInputModel.PileBodies)
             {
                 foreach (var seg in pb.PileBodySegments)
@@ -171,14 +194,15 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // 追加：杭体数リストを更新（UIのコンボボックス用）
+            // 杭体数リストを更新（UIのコンボボックス用）
             CurrentInputModel.UpdateCountLists();
 
             UpdatePileLayoutNo();
-            IsGroupPileSettlementAnalysisDone = false;
 
             // SoilPile を一括再生成（SuppressNotifications で抑制していた分）
             CurrentInputModel.GenerateSoilPiles();
+
+            IsGroupPileSettlementAnalysisDone = false;
 
             // 通知を再開（ここでは再描画をトリガーしない）
             CurrentInputModel.ResumeNotificationsQuiet();

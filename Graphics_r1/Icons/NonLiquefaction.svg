@@ -1,37 +1,32 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
-    <g transform="matrix(1,0,0,1,-178,-1602)">
-        <g id="NotLequefaction" transform="matrix(1,0,0,1,178,356)">
+    <g transform="matrix(1,0,0,1,-534,-1602)">
+        <g id="NotLequefaction" transform="matrix(1,0,0,1,534,356)">
             <rect x="0" y="1246" width="128" height="128" style="fill:none;"/>
-            <clipPath id="_clip1">
-                <rect x="0" y="1246" width="128" height="128"/>
-            </clipPath>
-            <g clip-path="url(#_clip1)">
-                <g transform="matrix(0.751785,0,0,0.3125,15.885731,1167.125)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(1,50,32);fill-opacity:0.5;"/>
-                </g>
-                <g transform="matrix(0.751785,0,0,0.234375,15.885731,1158.84375)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(244,164,96);fill-opacity:0.5;"/>
-                </g>
-                <g transform="matrix(0.751785,0,0,0.03015,15.885731,1267.900003)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(98,176,226);fill-opacity:0.75;"/>
-                </g>
-                <g transform="matrix(0.751785,0,0,0.03015,15.885731,1271.759178)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(98,176,226);fill-opacity:0.5;"/>
-                </g>
-                <g transform="matrix(0.751785,0,0,0.03015,15.885731,1275.618354)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(98,176,226);fill-opacity:0.25;"/>
-                </g>
-                <g transform="matrix(0.751785,0,0,0.15625,15.885731,1230.5625)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
-                </g>
-                <g transform="matrix(0.751785,0,0,0.15625,15.885731,1180.5625)">
-                    <rect x="0" y="534" width="128" height="128" style="fill:rgb(244,164,96);fill-opacity:0.5;"/>
-                </g>
-                <g transform="matrix(-1,-0,0,-1,21.755341,2607.554629)">
-                    <path d="M13.812,1323.555L21.755,1339.44L5.87,1339.44L13.812,1323.555Z" style="fill:rgb(98,176,226);"/>
-                </g>
+            <g transform="matrix(0.751785,0,0,0.3125,15.885731,1167.125)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(1,50,32);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(0.751785,0,0,0.234375,15.885731,1158.84375)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(244,164,96);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(0.751785,0,0,0.03015,15.885731,1267.900003)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(98,176,226);fill-opacity:0.75;"/>
+            </g>
+            <g transform="matrix(0.751785,0,0,0.03015,15.885731,1271.759178)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(98,176,226);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(0.751785,0,0,0.03015,15.885731,1275.618354)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(98,176,226);fill-opacity:0.25;"/>
+            </g>
+            <g transform="matrix(0.751785,0,0,0.15625,15.885731,1230.5625)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(139,69,19);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(0.751785,0,0,0.15625,15.885731,1180.5625)">
+                <rect x="0" y="534" width="128" height="128" style="fill:rgb(244,164,96);fill-opacity:0.5;"/>
+            </g>
+            <g transform="matrix(-1,-0,0,-1,21.755341,2607.554629)">
+                <path d="M13.812,1323.555L21.755,1339.44L5.87,1339.44L13.812,1323.555Z" style="fill:rgb(98,176,226);"/>
             </g>
         </g>
     </g>

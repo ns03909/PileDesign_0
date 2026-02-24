@@ -110,14 +110,30 @@
     <None Remove="Icons\AutoBeamGeneration.svg" />
     <None Remove="Icons\AutoFrontRear.png" />
     <None Remove="Icons\AutoFrontRear.svg" />
+    <None Remove="Icons\AutoSplit.png" />
+    <None Remove="Icons\AutoSplit.svg" />
+    <None Remove="Icons\AutoSplitAll.png" />
+    <None Remove="Icons\AutoSplitAll.svg" />
     <None Remove="Icons\AxesVisible.png" />
     <None Remove="Icons\AxesVisible.svg" />
     <None Remove="Icons\AxialForceVeirification.png" />
     <None Remove="Icons\AxialForceVeirification.svg" />
+    <None Remove="Icons\BeamAngleBetaVisible.png" />
+    <None Remove="Icons\BeamAngleBetaVisible.svg" />
+    <None Remove="Icons\BeamMaterialNameVisible.png" />
+    <None Remove="Icons\BeamMaterialNameVisible.svg" />
+    <None Remove="Icons\BeamMaterialNoVisible.png" />
+    <None Remove="Icons\BeamMaterialNoVisible.svg" />
+    <None Remove="Icons\BeamSectionNameVisible.png" />
+    <None Remove="Icons\BeamSectionNameVisible.svg" />
+    <None Remove="Icons\BeamSectionNoVisible.png" />
+    <None Remove="Icons\BeamSectionNoVisible.svg" />
     <None Remove="Icons\BeamTwistStiffness0.png" />
     <None Remove="Icons\BeamTwistStiffness0.svg" />
     <None Remove="Icons\BeamVisible.png" />
     <None Remove="Icons\BeamVisible.svg" />
+    <None Remove="Icons\BeamVisibleDone.png" />
+    <None Remove="Icons\BeamVisibleDone.svg" />
     <None Remove="Icons\BoundaryCondition.svg" />
     <None Remove="Icons\BubbleDia.svg" />
     <None Remove="Icons\BubbleVisible.png" />
@@ -141,6 +157,8 @@
     <None Remove="Icons\CrossFormPressure.png" />
     <None Remove="Icons\CrossFormPressure.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
+    <None Remove="Icons\DataTabVisible.png" />
+    <None Remove="Icons\DataTabVisible.svg" />
     <None Remove="Icons\DecimalPoint.png" />
     <None Remove="Icons\DecimalPoint.svg" />
     <None Remove="Icons\DeformedElementVisible.png" />
@@ -156,6 +174,7 @@
     <None Remove="Icons\Display2.svg" />
     <None Remove="Icons\DocxFileOutput.png" />
     <None Remove="Icons\DocxFileOutput.svg" />
+    <None Remove="Icons\dxf.png" />
     <None Remove="Icons\ElementDivisionWindow.png" />
     <None Remove="Icons\ElementDivisionWindow.svg" />
     <None Remove="Icons\ElementDivisionWindowDone.png" />
@@ -195,6 +214,10 @@
     <None Remove="Icons\HideRibbon.png" />
     <None Remove="Icons\HideRibbon.svg" />
     <None Remove="Icons\HorizontalRotation.svg" />
+    <None Remove="Icons\InputDataVisible.png" />
+    <None Remove="Icons\InputDataVisible.svg" />
+    <None Remove="Icons\Intersect.png" />
+    <None Remove="Icons\Intersect.svg" />
     <None Remove="Icons\InvertActive.png" />
     <None Remove="Icons\InvertActive.svg" />
     <None Remove="Icons\IsActionPointLoadVisible.png" />
@@ -257,8 +280,16 @@
     <None Remove="Icons\MaterialWizard.svg" />
     <None Remove="Icons\MergeElements.png" />
     <None Remove="Icons\MergeElements.svg" />
+    <None Remove="Icons\MergeElems.png" />
+    <None Remove="Icons\MergeElems.svg" />
     <None Remove="Icons\MergeNodes.png" />
     <None Remove="Icons\MergeNodes.svg" />
+    <None Remove="Icons\mgtFile.png" />
+    <None Remove="Icons\mgtFile.svg" />
+    <None Remove="Icons\MiniMapVisible.png" />
+    <None Remove="Icons\MiniMapVisible.svg" />
+    <None Remove="Icons\Mouse.png" />
+    <None Remove="Icons\Mouse.svg" />
     <None Remove="Icons\MoveActionPointToCentroid.png" />
     <None Remove="Icons\MoveActionPointToCentroid.svg" />
     <None Remove="Icons\MoveActionPointToGravityCenter.png" />
@@ -294,6 +325,8 @@
     <None Remove="Icons\Play.svg" />
     <None Remove="Icons\PostAnalysisMode.svg" />
     <None Remove="Icons\PreAnalysisMode.svg" />
+    <None Remove="Icons\PropertyVisible.png" />
+    <None Remove="Icons\PropertyVisible.svg" />
     <None Remove="Icons\QuickHint.png" />
     <None Remove="Icons\QuickHint.svg" />
     <None Remove="Icons\Redo.png" />
@@ -301,6 +334,7 @@
     <None Remove="Icons\RemoveResults.png" />
     <None Remove="Icons\RemoveResults.svg" />
     <None Remove="Icons\Resume.svg" />
+    <None Remove="Icons\rhino8-.png" />
     <None Remove="Icons\RibboNMinimize.png" />
     <None Remove="Icons\RibboNMinimize.svg" />
     <None Remove="Icons\RibbonVisible.png" />
@@ -314,6 +348,7 @@
     <None Remove="Icons\Scale.svg" />
     <None Remove="Icons\SectionWizard.eps" />
     <None Remove="Icons\SectionWizard.png" />
+    <None Remove="Icons\SectionWizard.svg" />
     <None Remove="Icons\SelectAll.png" />
     <None Remove="Icons\SelectAll.svg" />
     <None Remove="Icons\SelectedActive.png" />
@@ -325,6 +360,10 @@
     <None Remove="Icons\SettlementWindowDone%402x.png" />
     <None Remove="Icons\SettlementWindowDone.png" />
     <None Remove="Icons\SettlementWindowDone.svg" />
+    <None Remove="Icons\SettlementWithBeamWindow.png" />
+    <None Remove="Icons\SettlementWithBeamWindow.svg" />
+    <None Remove="Icons\SettlementWithBeamWindowDone.png" />
+    <None Remove="Icons\SettlementWithBeamWindowDone.svg" />
     <None Remove="Icons\ShortcutKeys.png" />
     <None Remove="Icons\ShortcutKeys.svg" />
     <None Remove="Icons\ShrinkElementMode.png" />
@@ -344,11 +383,23 @@
     <None Remove="Icons\Table.svg" />
     <None Remove="Icons\TickMarkVisible.png" />
     <None Remove="Icons\TickMarkVisible.svg" />
+    <None Remove="Icons\ToolVisible.png" />
+    <None Remove="Icons\ToolVisible.svg" />
+    <None Remove="Icons\ToolVisilbe.png" />
+    <None Remove="Icons\ToolVisilbe.svg" />
+    <None Remove="Icons\ToolVisilble.png" />
+    <None Remove="Icons\ToolVisilble.svg" />
     <None Remove="Icons\TopView.png" />
     <None Remove="Icons\TopView.svg" />
     <None Remove="Icons\Undo.png" />
     <None Remove="Icons\Undo.svg" />
+    <None Remove="Icons\Verification.png" />
+    <None Remove="Icons\Verification.svg" />
     <None Remove="Icons\VerticalRotation.svg" />
+    <None Remove="Icons\ViewCubeVisible.png" />
+    <None Remove="Icons\ViewCubeVisible.svg" />
+    <None Remove="Icons\ViewCuveVisible.png" />
+    <None Remove="Icons\ViewCuveVisible.svg" />
     <None Remove="Icons\WireFrameVisible.png" />
     <None Remove="Icons\WireFrameVisible.svg" />
     <None Remove="Icons\ZoomFit.png" />
@@ -383,6 +434,9 @@
     </Content>
     <Content Include="Help\help.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\verification.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
@@ -564,6 +618,9 @@
     <Content Include="Help\images\解説図2.3b_original.jpeg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Help\images\verification\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Resource Include="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -669,6 +726,18 @@
     <Resource Include="Icons\AutoFrontRear.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AutoSplit.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AutoSplit.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AutoSplitAll.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\AutoSplitAll.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\AxesVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -681,6 +750,36 @@
     <Resource Include="Icons\AxialForceVeirification.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\BeamAngleBetaVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamAngleBetaVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamMaterialNameVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamMaterialNameVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamMaterialNoVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamMaterialNoVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamSectionNameVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamSectionNameVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamSectionNoVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamSectionNoVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\BeamTwistStiffness0.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -691,6 +790,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BeamVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamVisibleDone.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamVisibleDone.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\BoundaryCondition.svg">
@@ -762,6 +867,12 @@
     <Resource Include="Icons\CsvFileOutput.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\DataTabVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\DataTabVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\DecimalPoint.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -805,6 +916,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DocxFileOutput.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\dxf.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ElementDivisionWindow.png">
@@ -922,6 +1036,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\HorizontalRotation.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\InputDataVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\InputDataVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Intersect.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Intersect.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\InvertActive.png">
@@ -1110,10 +1236,34 @@
     <Resource Include="Icons\MergeElements.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\MergeElems.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MergeElems.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\MergeNodes.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MergeNodes.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\mgtFile.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\mgtFile.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MiniMapVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\MiniMapVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Mouse.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Mouse.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\MoveActionPointToCentroid.png">
@@ -1221,6 +1371,12 @@
     <Resource Include="Icons\PreAnalysisMode.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\PropertyVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\PropertyVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\QuickHint.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1240,6 +1396,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Resume.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\rhino8-.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\RibboNMinimize.png">
@@ -1281,6 +1440,9 @@
     <Resource Include="Icons\SectionWizard.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\SectionWizard.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\SelectAll.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1312,6 +1474,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SettlementWindowDone@2x.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SettlementWithBeamWindow.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SettlementWithBeamWindow.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SettlementWithBeamWindowDone.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SettlementWithBeamWindowDone.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ShortcutKeys.png">
@@ -1371,6 +1545,24 @@
     <Resource Include="Icons\TickMarkVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\ToolVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ToolVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ToolVisilbe.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ToolVisilbe.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ToolVisilble.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ToolVisilble.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\TopView.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1383,7 +1575,25 @@
     <Resource Include="Icons\Undo.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\Verification.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Verification.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\VerticalRotation.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ViewCubeVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ViewCubeVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ViewCuveVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ViewCuveVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\WireFrameVisible.png">

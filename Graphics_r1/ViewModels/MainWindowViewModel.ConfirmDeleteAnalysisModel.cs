@@ -30,6 +30,7 @@ namespace PileDesign.ViewModels
                 IsHorizontalAnalysisDone = false;
                 IsVerticalAnalysisDone = false;
                 IsGroupPileSettlementAnalysisDone = false;
+                IsVerticalBeamAnalysisDone = false;
                 IsAnalysisResultVisible = false;
 
                 // AnaModel の破棄
@@ -61,13 +62,14 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void ResetAnalysisResultsSilently()
         {
-            if (!IsHorizontalAnalysisDone && !IsVerticalAnalysisDone && !IsGroupPileSettlementAnalysisDone)
+            if (!IsHorizontalAnalysisDone && !IsVerticalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone)
                 return;
 
             IsElementSplit = false;
             IsHorizontalAnalysisDone = false;
             IsVerticalAnalysisDone = false;
             IsGroupPileSettlementAnalysisDone = false;
+            IsVerticalBeamAnalysisDone = false;
             IsAnalysisResultVisible = false;
             CurrentModel = null;
 

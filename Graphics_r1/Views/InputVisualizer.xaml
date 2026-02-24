@@ -8,6 +8,49 @@
              Background="Transparent">
 
     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <!-- キーボードイラスト -->
+        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="2" Margin="2">
+            <StackPanel Orientation="Horizontal">
+                <!-- Ctrl キー -->
+                <Border x:Name="CtrlKey"
+                        MinWidth="28" Height="18"
+                        Margin="1"
+                        CornerRadius="2"
+                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1">
+                    <TextBlock Text="Ctrl" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Shift キー -->
+                <Border x:Name="ShiftKey"
+                        MinWidth="28" Height="18"
+                        Margin="1"
+                        CornerRadius="2"
+                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1">
+                    <TextBlock Text="Shift" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Alt キー -->
+                <Border x:Name="AltKey"
+                        MinWidth="24" Height="18"
+                        Margin="1"
+                        CornerRadius="2"
+                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1">
+                    <TextBlock Text="Alt" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- 現在のキー表示 -->
+                <Border x:Name="CurrentKeyBorder"
+                        MinWidth="24" Height="18"
+                        Margin="1"
+                        CornerRadius="2"
+                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1"
+                        Visibility="Collapsed">
+                    <TextBlock x:Name="CurrentKeyText" FontSize="9" FontWeight="Bold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
         <!-- マウスイラスト -->
         <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="8" Padding="4" Margin="2">
             <Grid Width="40" Height="32">
@@ -51,49 +94,6 @@
                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
                            Margin="0,0,2,2"/>
             </Grid>
-        </Border>
-
-        <!-- キーボードイラスト -->
-        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="2" Margin="2">
-            <StackPanel Orientation="Horizontal">
-                <!-- Ctrl キー -->
-                <Border x:Name="CtrlKey"
-                        MinWidth="28" Height="18"
-                        Margin="1"
-                        CornerRadius="2"
-                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1">
-                    <TextBlock Text="Ctrl" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-
-                <!-- Shift キー -->
-                <Border x:Name="ShiftKey"
-                        MinWidth="28" Height="18"
-                        Margin="1"
-                        CornerRadius="2"
-                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1">
-                    <TextBlock Text="Shift" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-
-                <!-- Alt キー -->
-                <Border x:Name="AltKey"
-                        MinWidth="24" Height="18"
-                        Margin="1"
-                        CornerRadius="2"
-                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1">
-                    <TextBlock Text="Alt" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-
-                <!-- 現在のキー表示 -->
-                <Border x:Name="CurrentKeyBorder"
-                        MinWidth="24" Height="18"
-                        Margin="1"
-                        CornerRadius="2"
-                        Background="#E0E0E0" BorderBrush="Gray" BorderThickness="1"
-                        Visibility="Collapsed">
-                    <TextBlock x:Name="CurrentKeyText" FontSize="9" FontWeight="Bold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-            </StackPanel>
         </Border>
     </StackPanel>
 </UserControl>

@@ -61,7 +61,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _statusMessageColor, value);
         }
 
-        private int _selectedGroundInputModelNo;
+        private int _selectedGroundInputModelNo = 1;
         public int SelectedGroundInputModelNo
         {
             get => _selectedGroundInputModelNo;
@@ -274,6 +274,11 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("Z (杭頭)", $"{pile.Z:F3} m"));
             SelectedItemProperties.Add(new("杭体No", $"{pile.PileBodyNo}"));
             SelectedItemProperties.Add(new("地盤No", $"{pile.GroundNo}"));
+
+            var pileLen = CalcPileLength(pile);
+            if (pileLen.HasValue)
+                SelectedItemProperties.Add(new("杭長", $"{pileLen.Value:F3} m"));
+
             SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}"));
             SelectedItemProperties.Add(new("間隔係数 R/B", $"{pile.PileSpacingFactor:F3}"));
             SelectedItemProperties.Add(new("ΔZc", $"{pile.FoundationBeamDeltaZc:F3} m"));
@@ -303,8 +308,36 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("断面No", $"{beam.SectionNo}"));
             SelectedItemProperties.Add(new("幅", $"{beam.Width:F3} m"));
             SelectedItemProperties.Add(new("高さ", $"{beam.Height:F3} m"));
-            SelectedItemProperties.Add(new("ヤング率", $"{beam.YoungModulus:E2} kN/m²"));
+            SelectedItemProperties.Add(new("ヤング率", $"{beam.YoungModulus / 1000.0:N0} N/mm²"));
+            SelectedItemProperties.Add(new("横弾性係数", $"{beam.ShearModulus / 1000.0:N0} N/mm²"));
             SelectedItemProperties.Add(new("角度β", $"{beam.AngleBeta:F1}°"));
+
+            var len = CalcBeamLength(beam);
+            if (len.HasValue)
+                SelectedItemProperties.Add(new("部材長", $"{len.Value:F3} m"));
+        }
+
+        private double? CalcBeamLength(FoundationBeamElement beam)
+        {
+            if (beam.NodeI_Id == Guid.Empty || beam.NodeJ_Id == Guid.Empty) return null;
+            var ci = CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+            var cj = CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+            if (ci == null || cj == null) return null;
+            double dx = ci.Value.X - cj.Value.X;
+            double dy = ci.Value.Y - cj.Value.Y;
+            double dz = ci.Value.Z - cj.Value.Z;
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }
+
+        private double? CalcPileLength(PileLayoutDataItem pile)
+        {
+            int idx = pile.PileBodyNo - 1;
+            if (idx < 0 || CurrentInputModel.PileBodies == null || idx >= CurrentInputModel.PileBodies.Count)
+                return null;
+            var pileBody = CurrentInputModel.PileBodies[idx];
+            if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
+                return null;
+            return pileBody.PileBodySegments.Sum(s => s.SegmentLength);
         }
 
         private void BuildInputNodeProperties(InputNode node)
@@ -332,15 +365,26 @@ namespace PileDesign.ViewModels
             return distinct.Count == 1 ? $"{distinct[0]}" : "(様々)";
         }
 
-        private static string CommonDoubleOrVarious(IEnumerable<double> values, string format = "F3", string unit = "")
+        private static string CommonDoubleOrVarious(IEnumerable<double> values, string format = "F3", string unit = "", double scale = 1.0)
         {
             var distinct = values.Select(v => Math.Round(v, 6)).Distinct().ToList();
-            return distinct.Count == 1 ? $"{distinct[0].ToString(format)} {unit}".Trim() : "(様々)";
+            return distinct.Count == 1 ? $"{(distinct[0] * scale).ToString(format)} {unit}".Trim() : "(様々)";
         }
 
         private void BuildMultiPileProperties(List<PileLayoutDataItem> piles)
         {
             SelectedItemProperties.Add(new("選択数", $"{piles.Count} 本"));
+
+            // 杭長合計
+            double totalPileLen = 0;
+            int countValid = 0;
+            foreach (var p in piles)
+            {
+                var len = CalcPileLength(p);
+                if (len.HasValue) { totalPileLen += len.Value; countValid++; }
+            }
+            if (countValid > 0)
+                SelectedItemProperties.Add(new("杭長 (合計)", $"{totalPileLen:F3} m"));
 
             // 共通プロパティ
             SelectedItemProperties.Add(new("杭体No", CommonOrVarious(piles.Select(p => p.PileBodyNo))));
@@ -376,8 +420,20 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("断面No", CommonOrVarious(beams.Select(b => b.SectionNo))));
             SelectedItemProperties.Add(new("幅", CommonDoubleOrVarious(beams.Select(b => b.Width), "F3", "m")));
             SelectedItemProperties.Add(new("高さ", CommonDoubleOrVarious(beams.Select(b => b.Height), "F3", "m")));
-            SelectedItemProperties.Add(new("ヤング率", CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "E2", "kN/m²")));
+            SelectedItemProperties.Add(new("ヤング率", CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "N0", "N/mm²", scale: 0.001)));
+            SelectedItemProperties.Add(new("横弾性係数", CommonDoubleOrVarious(beams.Select(b => b.ShearModulus), "N0", "N/mm²", scale: 0.001)));
             SelectedItemProperties.Add(new("角度β", CommonDoubleOrVarious(beams.Select(b => b.AngleBeta), "F1", "°")));
+
+            // 部材長合計
+            double totalLen = 0;
+            int countValid = 0;
+            foreach (var b in beams)
+            {
+                var len = CalcBeamLength(b);
+                if (len.HasValue) { totalLen += len.Value; countValid++; }
+            }
+            if (countValid > 0)
+                SelectedItemProperties.Add(new("部材長 (合計)", $"{totalLen:F3} m"));
         }
 
         private void BuildMultiInputNodeProperties(List<InputNode> nodes)
@@ -408,6 +464,7 @@ namespace PileDesign.ViewModels
                 if (IsElementSplit) statuses.Add("要素分割済み");
                 if (IsHorizontalAnalysisDone) statuses.Add("水平解析完了");
                 if (IsVerticalAnalysisDone) statuses.Add("沈下解析完了");
+                if (IsVerticalBeamAnalysisDone) statuses.Add("梁鉛直解析完了");
                 return statuses.Count > 0 ? string.Join(" | ", statuses) : "未解析";
             }
         }
@@ -1969,7 +2026,77 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isElementNoVisible, value))
                 {
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 梁要素 材料No描画
+        private bool _isBeamMaterialNoVisible = false;
+        public bool IsBeamMaterialNoVisible
+        {
+            get => _isBeamMaterialNoVisible;
+            set
+            {
+                if (SetProperty(ref _isBeamMaterialNoVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 梁要素 材料名称描画
+        private bool _isBeamMaterialNameVisible = false;
+        public bool IsBeamMaterialNameVisible
+        {
+            get => _isBeamMaterialNameVisible;
+            set
+            {
+                if (SetProperty(ref _isBeamMaterialNameVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 梁要素 断面No描画
+        private bool _isBeamSectionNoVisible = false;
+        public bool IsBeamSectionNoVisible
+        {
+            get => _isBeamSectionNoVisible;
+            set
+            {
+                if (SetProperty(ref _isBeamSectionNoVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 梁要素 断面名称描画
+        private bool _isBeamSectionNameVisible = false;
+        public bool IsBeamSectionNameVisible
+        {
+            get => _isBeamSectionNameVisible;
+            set
+            {
+                if (SetProperty(ref _isBeamSectionNameVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
+        // 梁要素 β角度描画
+        private bool _isBeamAngleBetaVisible = false;
+        public bool IsBeamAngleBetaVisible
+        {
+            get => _isBeamAngleBetaVisible;
+            set
+            {
+                if (SetProperty(ref _isBeamAngleBetaVisible, value))
+                {
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -2170,6 +2297,20 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 基礎梁鉛直解析済か否か
+        private bool _isVerticalBeamAnalysisDone;
+        public bool IsVerticalBeamAnalysisDone
+        {
+            get => _isVerticalBeamAnalysisDone;
+            set
+            {
+                if (SetProperty(ref _isVerticalBeamAnalysisDone, value))
+                {
+                    OnPropertyChanged(nameof(HasAnyAnalysisResult));
+                    OnPropertyChanged(nameof(AnalysisStatusText));
+                }
+            }
+        }
 
         // 水平解析済か否か
         private bool _isHorizontalAnalysisDone;

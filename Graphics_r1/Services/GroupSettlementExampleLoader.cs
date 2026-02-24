@@ -51,10 +51,10 @@ namespace PileDesign.Services
             GroupSettlementExampleData data,
             MainWindowViewModel viewModel)
         {
-            // 群杭沈下解析結果をクリア
-            inputModel.PileGroupSettlement.SettlementGridData?.Clear();
-            inputModel.PileGroupSettlement.SettlementGridX?.Clear();
-            inputModel.PileGroupSettlement.SettlementGridY?.Clear();
+            // 群杭沈下解析結果をクリア（バッチ置換でスレッド安全）
+            inputModel.PileGroupSettlement.SettlementGridData = new ObservableCollection<SettlementGridDataItem>();
+            inputModel.PileGroupSettlement.SettlementGridX = new ObservableCollection<double>();
+            inputModel.PileGroupSettlement.SettlementGridY = new ObservableCollection<double>();
 
             // 慣性力中心点を設定
             if (data.InertiaPoint != null)
@@ -106,10 +106,10 @@ namespace PileDesign.Services
             }
             inputModel.PileGroupSettlement.SettlementSoilLayers = new ObservableCollection<SettlementSoilLayer>(soilLayerList);
 
-            // 杭体情報（pileBodies）の反映
+            // 杭体情報（pileBodies）の反映（バッチ化: List に構築してから一括代入）
             if (data.PileBodies != null && data.PileBodies.Count > 0)
             {
-                inputModel.PileBodies.Clear();
+                var pileBodyList = new List<PileBodyInput>(data.PileBodies.Count);
                 foreach (var pileBodyDto in data.PileBodies)
                 {
                     var pileBody = new PileBodyInput
@@ -167,12 +167,13 @@ namespace PileDesign.Services
                         if (segDto.ConcreteGamma.HasValue)
                             segment.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
                     }
-                    inputModel.PileBodies.Add(pileBody);
+                    pileBodyList.Add(pileBody);
                 }
+                inputModel.PileBodies = new ObservableCollection<PileBodyInput>(pileBodyList);
             }
             else
             {
-                inputModel.PileBodies.Clear();
+                inputModel.PileBodies = new ObservableCollection<PileBodyInput>();
             }
 
             // 杭位置を設定（ある場合、バッチ化）
@@ -186,6 +187,8 @@ namespace PileDesign.Services
                         X = pos.X,
                         Y = pos.Y
                     };
+                    if (data.FoundationBeamDeltaZc.HasValue)
+                        item.FoundationBeamDeltaZc = data.FoundationBeamDeltaZc.Value;
                     item.SetMainWindowViewModel(viewModel);
                     pileLayoutList.Add(item);
                 }
@@ -201,10 +204,10 @@ namespace PileDesign.Services
             }
 
             // 旧要素はクリア（後方互換用に読み込まれた場合に備える）
-            inputModel.Elements?.Clear();
+            inputModel.Elements = new ObservableCollection<Element>();
 
             // 一般節点をクリア
-            inputModel.InputNodes?.Clear();
+            inputModel.InputNodes = new ObservableCollection<InputNode>();
 
             // FoundationBeamInput 設定（基礎梁入力）
             if (data.FoundationBeamInput != null)
@@ -281,12 +284,12 @@ namespace PileDesign.Services
             }
             else
             {
-                // FoundationBeamInput がない場合はクリア
+                // FoundationBeamInput がない場合はクリア（バッチ置換でスレッド安全）
                 if (inputModel.FoundationBeamInput != null)
                 {
-                    inputModel.FoundationBeamInput.Materials.Clear();
-                    inputModel.FoundationBeamInput.Sections.Clear();
-                    inputModel.FoundationBeamInput.Beams.Clear();
+                    inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>();
+                    inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>();
+                    inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>();
                 }
             }
 
@@ -345,8 +348,8 @@ namespace PileDesign.Services
                 viewModel.GroupPileSettlementYSpacing = 1.0;
             }
 
-            // 根入れ部を無効化
-            inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+            // 根入れ部を無効化（バッチ置換でスレッド安全）
+            inputModel.EmbedmentInput.EmbedmentLayers = new ObservableCollection<EmbedmentDataItem>();
             inputModel.ElementDivision.SoilEmbedment = null;
         }
 

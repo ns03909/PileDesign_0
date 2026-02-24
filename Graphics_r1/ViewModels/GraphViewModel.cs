@@ -1263,9 +1263,9 @@ namespace PileDesign.ViewModels
                 IsGridOptionVisible = false;
                 IsLimitStateOptionVisible = true;
 
-                DrawPileForce(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "F", "kN");
-                DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "M", "kNm");
-                DrawPileDisp(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "U", "mm");
+                DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm");
+                DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN");
+                DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm");
 
             }
             else if (SelectedGraphOption == "単杭沈下" ||

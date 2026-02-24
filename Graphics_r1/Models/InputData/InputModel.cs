@@ -1305,14 +1305,7 @@ namespace PileDesign.Models.InputData
                     {
                         if (pileTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > pileBottomAltitude)
                         {
-                            for (int i = zs.Count - 1; i >= 0; i--)
-                            {
-                                if (zs[i] < groundLayerDataItem.BottomAltitude)
-                                {
-                                    zs.Insert(i, groundLayerDataItem.BottomAltitude);
-                                    break;
-                                }
-                            }
+                            zs.Add(groundLayerDataItem.BottomAltitude);
                         }
                     }
 
@@ -1624,19 +1617,20 @@ namespace PileDesign.Models.InputData
         }
 
         // 追加: Ground / PileBody の番号リストを更新するユーティリティ
+        // バッチ置換で更新（Clear+Addだと ComboBox の SelectedItem がリセットされるため）
         public void UpdateCountLists()
         {
-            GroundsInputCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
-            GroundsInputCountList.Clear();
-            int gCount = GroundsInput?.Count ?? 0;
-            for (int i = 1; i <= Math.Max(1, gCount); i++) // 地盤が0件でも1を用意（UIが空白にならないように）
-                GroundsInputCountList.Add(i);
+            int gCount = Math.Max(1, GroundsInput?.Count ?? 0);
+            var newGroundsList = new System.Collections.ObjectModel.ObservableCollection<int>();
+            for (int i = 1; i <= gCount; i++)
+                newGroundsList.Add(i);
+            GroundsInputCountList = newGroundsList;
 
-            PileBodiesCountList ??= new System.Collections.ObjectModel.ObservableCollection<int>();
-            PileBodiesCountList.Clear();
-            int pbCount = PileBodies?.Count ?? 0;
-            for (int i = 1; i <= Math.Max(1, pbCount); i++)
-                PileBodiesCountList.Add(i);
+            int pbCount = Math.Max(1, PileBodies?.Count ?? 0);
+            var newPilesList = new System.Collections.ObjectModel.ObservableCollection<int>();
+            for (int i = 1; i <= pbCount; i++)
+                newPilesList.Add(i);
+            PileBodiesCountList = newPilesList;
         }
     }
 }

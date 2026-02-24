@@ -310,6 +310,10 @@ namespace PileDesign.Views
 
             var nodeDict = fbInput.Nodes.ToDictionary(n => n.No, n => n);
 
+            // ラベル表示用の材料・断面辞書
+            var matDict = fbInput.Materials?.ToDictionary(m => m.No, m => m);
+            var secDict = fbInput.Sections?.ToDictionary(s => s.No, s => s);
+
             // 基礎梁要素を描画
             foreach (var beam in fbInput.Beams)
             {
@@ -388,6 +392,28 @@ namespace PileDesign.Views
                     // 梁の中心点に要素番号を表示
                     Point midPoint = new((coord0.X + coord1.X) / 2, (coord0.Y + coord1.Y) / 2);
                     AddText3D(Brushes.DarkOrange, beam.No.ToString(), midPoint.X, midPoint.Y, "C", "C", 0);
+                }
+
+                // 梁要素ラベル（材料No, 材料名称, 断面No, 断面名称, β）
+                {
+                    var labels = new System.Collections.Generic.List<string>();
+                    if (viewModel.IsBeamMaterialNoVisible)
+                        labels.Add($"M{beam.MaterialNo}");
+                    if (viewModel.IsBeamMaterialNameVisible && matDict != null && matDict.TryGetValue(beam.MaterialNo, out var mat))
+                        labels.Add(mat.Name);
+                    if (viewModel.IsBeamSectionNoVisible)
+                        labels.Add($"S{beam.SectionNo}");
+                    if (viewModel.IsBeamSectionNameVisible && secDict != null && secDict.TryGetValue(beam.SectionNo, out var sec2))
+                        labels.Add(sec2.Name);
+                    if (viewModel.IsBeamAngleBetaVisible)
+                        labels.Add($"\u03b2={beam.AngleBeta:0.#}\u00b0");
+
+                    if (labels.Count > 0)
+                    {
+                        Point midPt = new((coord0.X + coord1.X) / 2, (coord0.Y + coord1.Y) / 2);
+                        string labelText = string.Join(" ", labels);
+                        AddText3D(Brushes.Teal, labelText, midPt.X, midPt.Y, "C", "T", 0);
+                    }
                 }
 
                 // 要素座標系

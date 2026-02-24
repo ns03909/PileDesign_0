@@ -34,7 +34,13 @@
       "Bash(Select-String -Pattern \"\\(error|warning|succeeded|failed\\)\")",
       "Bash(Select-String -Pattern \"\\(エラー|警告|成功|失敗|error|warning|succeeded|failed\\)\")",
       "Read(//c/Users/keisu/.nuget/packages/csparse/**)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "WebFetch(domain:www.nuget.org)",
+      "WebFetch(domain:mcneel.github.io)",
+      "WebFetch(domain:discourse.mcneel.com)",
+      "WebFetch(domain:developer.rhino3d.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:support.midasuser.com)"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0"

@@ -207,7 +207,7 @@
       { "no": 1, "name": "FC30", "youngModulus": 26589000, "shearModulus": 11079000, "poissonRatio": 0.2 }
     ],
     "sections": [
-      { "no": 1, "name": "G1", "width": 0.800, "height": 2.000 }
+      { "no": 1, "name": "G1", "width": 0.650, "height": 2.000 }
     ],
     "beams": [
       { "no": 1, "materialNo": 1, "sectionNo": 1, "nodeI_type": "pile", "nodeI_no": 1, "nodeJ_type": "pile", "nodeJ_no": 5 },

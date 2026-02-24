@@ -9,7 +9,9 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace PileDesign.Common
 {
@@ -27,6 +29,16 @@ namespace PileDesign.Common
 
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
+            // Ctrl+C でコピー（DataGridTemplateColumn対応）
+            if (e.Key == Key.C && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                if (TryCopyToClipboard())
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+
             // Ctrl+V で貼り付け
             if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
             {
@@ -37,6 +49,136 @@ namespace PileDesign.Common
                 }
             }
             base.OnPreviewKeyDown(e);
+        }
+
+        private bool TryCopyToClipboard()
+        {
+            try
+            {
+                if (SelectedCells == null || SelectedCells.Count == 0) return false;
+
+                // 選択セルを行・列順に整理
+                var cellsByRow = new SortedDictionary<int, SortedDictionary<int, string>>();
+
+                foreach (var cellInfo in SelectedCells)
+                {
+                    if (cellInfo.Item == null || cellInfo.Column == null) continue;
+
+                    int rowIndex = Items.IndexOf(cellInfo.Item);
+                    int colDisplayIndex = cellInfo.Column.DisplayIndex;
+                    if (rowIndex < 0) continue;
+
+                    string cellText = GetCellText(cellInfo.Item, cellInfo.Column);
+
+                    // DataGridTemplateColumn の場合、VisualTreeから表示テキストを取得
+                    if (string.IsNullOrEmpty(cellText) && cellInfo.Column is DataGridTemplateColumn)
+                    {
+                        cellText = GetCellTextFromVisualTree(rowIndex, cellInfo.Column);
+                    }
+
+                    if (!cellsByRow.ContainsKey(rowIndex))
+                        cellsByRow[rowIndex] = new SortedDictionary<int, string>();
+                    cellsByRow[rowIndex][colDisplayIndex] = cellText;
+                }
+
+                if (cellsByRow.Count == 0) return false;
+
+                // TSV形式で組み立て
+                var sb = new StringBuilder();
+                foreach (var row in cellsByRow.Values)
+                {
+                    sb.AppendLine(string.Join("\t", row.Values));
+                }
+
+                Clipboard.SetText(sb.ToString());
+                return true;
+            }
+            catch
+            {
+                return false; // コピー失敗時はデフォルト動作にフォールバック
+            }
+        }
+
+        private static string GetCellText(object item, DataGridColumn column)
+        {
+            switch (column)
+            {
+                case DataGridBoundColumn bound:
+                    if (bound.Binding is Binding binding && binding.Path != null)
+                    {
+                        var value = GetPropertyValue(item, binding.Path.Path);
+                        if (value == null) return string.Empty;
+
+                        if (value is bool b) return b ? "True" : "False";
+
+                        if (!string.IsNullOrEmpty(binding.StringFormat))
+                        {
+                            try { return string.Format(binding.StringFormat, value); }
+                            catch { return value.ToString() ?? string.Empty; }
+                        }
+                        return value.ToString() ?? string.Empty;
+                    }
+                    break;
+
+                case DataGridTemplateColumn:
+                    // TemplateColumn: VisualTree内のTextBlockから表示テキストを取得
+                    return string.Empty; // VisualTree版は別途GetCellTextFromVisualTreeで取得
+            }
+
+            return string.Empty;
+        }
+
+        private string GetCellTextFromVisualTree(int rowIndex, DataGridColumn column)
+        {
+            try
+            {
+                // DataGridRowコンテナを取得
+                var row = (DataGridRow)ItemContainerGenerator.ContainerFromIndex(rowIndex);
+                if (row == null) return string.Empty;
+
+                // 列のセルを探す
+                var presenter = FindVisualChild<DataGridCellsPresenter>(row);
+                if (presenter == null) return string.Empty;
+
+                var cell = (DataGridCell?)presenter.ItemContainerGenerator.ContainerFromIndex(column.DisplayIndex);
+                if (cell == null) return string.Empty;
+
+                // セル内のTextBlockからテキストを取得
+                var textBlock = FindVisualChild<System.Windows.Controls.TextBlock>(cell);
+                return textBlock?.Text ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T found) return found;
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private static object? GetPropertyValue(object item, string path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+
+            object? current = item;
+            foreach (var segment in path.Split('.'))
+            {
+                if (current == null) return null;
+                var prop = current.GetType().GetProperty(segment,
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (prop == null) return null;
+                current = prop.GetValue(current);
+            }
+            return current;
         }
 
         private bool TryPasteFromClipboard()

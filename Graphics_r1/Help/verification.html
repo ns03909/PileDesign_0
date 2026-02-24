@@ -1,0 +1,3414 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>設計例によるプログラムの検証</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        /* =========================
+            Base
+        ========================= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", "Meiryo", sans-serif;
+            font-size: 14px;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* =========================
+            Header
+        ========================= */
+        .header {
+            background-color: #62B0E2;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .header .nav {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .header .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            background: rgba(255,255,255,0.15);
+            transition: background 0.2s;
+        }
+
+        .header .nav a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* =========================
+            Scrollable Content Area
+        ========================= */
+        .scroll-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* =========================
+            Column Headers (sticky)
+        ========================= */
+        .column-headers {
+            display: flex;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid #62B0E2;
+        }
+
+        .column-header {
+            flex: 1;
+            font-size: 14px;
+            font-weight: bold;
+            color: #62B0E2;
+            text-align: center;
+            padding: 8px;
+        }
+
+        .column-header-left {
+            background-color: #fafafa;
+            border-right: 3px solid #62B0E2;
+        }
+
+        .column-header-right {
+            background-color: #fff;
+        }
+
+        /* =========================
+            Section (one example)
+        ========================= */
+        .section {
+            border-bottom: 3px solid #62B0E2;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        /* Section title row */
+        .section-title-row {
+            display: flex;
+            background-color: #e8f4fd;
+        }
+
+        .section-title-cell {
+            flex: 1;
+            padding: 8px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            border-left: 4px solid #62B0E2;
+        }
+
+        .section-title-cell-left {
+            border-right: 3px solid #62B0E2;
+            background-color: #e0eef7;
+        }
+
+        .section-title-cell-right {
+            background-color: #e8f4fd;
+        }
+
+        /* Description row */
+        .desc-row {
+            display: flex;
+        }
+
+        .desc-cell {
+            flex: 1;
+            padding: 8px 24px 4px;
+            line-height: 1.7;
+            color: #444;
+        }
+
+        .desc-cell-left {
+            background-color: #fafafa;
+            border-right: 3px solid #62B0E2;
+        }
+
+        .desc-cell-right {
+            background-color: #fff;
+        }
+
+        /* =========================
+            Item Row (sub-item level)
+        ========================= */
+        .item-row {
+            display: flex;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .item-cell {
+            flex: 1;
+            padding: 12px 24px 16px;
+        }
+
+        .item-cell-left {
+            background-color: #fafafa;
+            border-right: 3px solid #62B0E2;
+        }
+
+        .item-cell-right {
+            background-color: #fff;
+        }
+
+        .item-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px dashed #ccc;
+        }
+
+        /* =========================
+            Content
+        ========================= */
+        .description {
+            line-height: 1.7;
+            margin-bottom: 8px;
+            color: #444;
+        }
+
+        .figure-container {
+            text-align: center;
+            margin: 12px 0;
+        }
+
+        .figure-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .figure-caption {
+            font-size: 12px;
+            color: #777;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        /* =========================
+            Comparison Table
+        ========================= */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .comparison-table th {
+            background-color: #62B0E2;
+            color: white;
+            padding: 8px 12px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .comparison-table td {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+
+        .match {
+            color: #2e8b57;
+            font-weight: bold;
+        }
+
+        .diff {
+            color: #e95541;
+            font-weight: bold;
+        }
+
+        /* =========================
+            Placeholder
+        ========================= */
+        .placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #bbb;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>設計例によるプログラムの検証</h1>
+        <div class="nav">
+            <a href="#sec-5">計算例5</a>
+            <a href="#sec-9">計算例9</a>
+            <a href="#sec-3-1">設計例3.1</a>
+            <a href="#sec-3-2">設計例3.2</a>
+            <a href="#sec-3-3">設計例3.3</a>
+            <a href="#sec-3-4">設計例3.4</a>
+            <a href="#sec-k7">関東支部7</a>
+            <a href="#sec-k8">関東支部8</a>
+        </div>
+    </div>
+
+    <div class="scroll-container">
+        <!-- Column Headers (sticky) -->
+        <div class="column-headers">
+            <div class="column-header column-header-left">文献（図表）</div>
+            <div class="column-header column-header-right">プログラム出力（検証結果）</div>
+        </div>
+
+        <!-- ============================================================
+         計算例5
+    ============================================================ -->
+        <div class="section" id="sec-5">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例5</div>
+                <div class="section-title-cell section-title-cell-right">基礎指針'19 計算例5</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例5（群杭沈下）</div>
+                <div class="desc-cell desc-cell-right">プログラムで計算例5（群杭沈下）を再現し、文献との比較を行う。<br>アプリケーションメニュー → 計算例 → 「基礎指針'19 計算例5...」を読み込む。</div>
+            </div>
+
+            <!-- 入力条件 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex5_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex5_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図1.1　地盤条件</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig1.1.png" alt="図1.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.1　杭伏図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.1.png" alt="図10.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.3　杭のM-φ関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.3.png" alt="図10.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.4　押込側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.4.png" alt="図10.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.5　引抜き側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.5.png" alt="図10.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.6　押込側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.6.png" alt="図10.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.7　引抜き側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.7.png" alt="図10.7">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図4.1　基礎形状および地盤定数</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig4.1.png" alt="図4.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図5.1　沈下検討建物の基礎伏図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig5.1.png" alt="図5.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図5.1　地盤条件</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig5.2.png" alt="図5.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図7.2　地盤と杭の概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig7.2.png" alt="図7.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図7.4　地盤と杭の概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig7.4.png" alt="図7.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図7.6　地盤と杭の概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig7.6.png" alt="図7.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図8.1　杭頭荷重-沈下量曲線</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig8.1.png" alt="図8.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図8.2　杭頭引抜き荷重と引抜き量曲線</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig8.2.png" alt="図8.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図8.3　地震時の杭頭荷重-変位曲線</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig8.3.png" alt="図8.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図8.4　杭頭荷重-沈下量曲線</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig8.4.png" alt="図8.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図8.5　解析モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig8.5.png" alt="図8.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図8.6　沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig8.6.png" alt="図8.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.1　杭配置および杭基礎概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.1.png" alt="図9.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.10　M-φ関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.10.png" alt="図9.10">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.2　M-φ関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.2.png" alt="図9.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.3　杭州の水平地盤ばねの非線形性</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.3.png" alt="図9.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.4　土圧合力ばね</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.4.png" alt="図9.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.5　地盤変位分布</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.5.png" alt="図9.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.7　杭応答図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.7.png" alt="図9.7">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.8　M-φ関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.8.png" alt="図9.8">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図9.97　杭応答図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig9.9.png" alt="図9.9">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表1.1　液状化判定結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table1.1.png" alt="表1.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表1.2　算定ひずみ</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table1.2.png" alt="表1.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表10.1　上部構造の地上部分と地下部部の慣性力および地盤の水平変位の組み合わせ</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table10.1.png" alt="表10.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表10.2　前方杭と後方杭に対する基準水平地盤反力係数と塑性水平地盤反力度</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table10.2.png" alt="表10.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表2.1　敷地地盤の概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table2.1.png" alt="表2.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表2.2　地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table2.2.png" alt="表2.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表2.1　敷地地盤の地盤モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.1.png" alt="表3.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表2.1　地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.2.png" alt="表3.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.3　液状化判定の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.3.png" alt="表3.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.4　上部構造の地上部分の解析モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.4.png" alt="表3.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.5　レベル2地震荷重時の層せん断力および限界層せん断力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.5.png" alt="表3.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表4.1　地盤定数等</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table4.1.png" alt="表4.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表4.2　設計荷重</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table4.2.png" alt="表4.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.1　各フーチング地震の荷重により生じる即時沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.1.png" alt="表5.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.2　No.3フーチングの荷重により生じるほかのフーチングの即時沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.2.png" alt="表5.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.3　ほかのフーチングの荷重の影響を考慮した即時沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.3.png" alt="表5.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.4　基礎梁の有無及び繰り返し収束計算の有無による沈下量と変形角の比較</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.4.png" alt="表5.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.5　基礎梁の有無および繰り返し収束計算の有無による地盤反力の比較</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.5.png" alt="表5.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.1　各フーチングの荷重によるNo.1フーチング直下の粘土層の鉛直有効応力増分</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.1.png" alt="表6.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.2　各フーチング直下の粘土層の鉛直有効応力増分（基礎梁なし）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.2.png" alt="表6.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.2　各フーチング直下の粘土層の圧密沈下量（基礎梁なし）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.3.png" alt="表6.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.3　各フーチング直下の粘土層圧密沈下量（基礎梁なし）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.4.png" alt="表6.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.4　基礎梁の有無および繰り返し収束計算の有無による沈下量と変形角の比較</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table8.1.png" alt="表8.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表8.2　杭周面摩擦ばね（引抜き側）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table8.2.png" alt="表8.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表9.1　地盤物性値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table9.1.png" alt="表9.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表9.2　静止土圧、受働土圧</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table9.2.png" alt="表9.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex5_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>群杭沈下量 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+         計算例9
+    ============================================================ -->
+        <div class="section" id="sec-9">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例9</div>
+                <div class="section-title-cell section-title-cell-right">基礎指針'19 計算例9</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例9</div>
+                <div class="desc-cell desc-cell-right">プログラムで計算例9を再現し、文献との比較を行う。</div>
+            </div>
+
+            <!-- 入力条件 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex9_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex9_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+         設計例 3.1
+    ============================================================ -->
+        <div class="section" id="sec-3-1">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">設計例 3.1 ― SC杭, PRC杭</div>
+                <div class="section-title-cell section-title-cell-right">設計例 3.1 ― SC杭, PRC杭</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 付録 設計例集 3.1</div>
+                <div class="desc-cell desc-cell-right">プログラムで設計例3.1を再現し、文献との比較を行う。<br>アプリケーションメニュー → 計算例 → 「設計例集3.1...」を読み込む。</div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">設計用軸力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.12.png" alt="図3.1.12">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位（レベル1）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.6.png" alt="図3.1.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">地盤条件</div>
+                    <div class="placeholder">
+                        プログラムの地盤設定スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_ground.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位（レベル2）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.7.png" alt="図3.1.7">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">地盤条件</div>
+                    <div class="placeholder">
+                        プログラムの地盤設定スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_ground.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭P1の杭頭荷重-変位量曲線</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.9.png" alt="図3.1.9">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">地盤条件</div>
+                    <div class="placeholder">
+                        プログラムの地盤設定スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_ground.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭P1、P2の曲げモーメント、線打力、水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.13.png" alt="図3.1.13">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">地盤条件</div>
+                    <div class="placeholder">
+                        プログラムの地盤設定スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_ground.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭のM-N関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.14.png" alt="図3.1.14">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の最大Q-N関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.1.15.png" alt="図3.1.15">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位（レベル1）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.7.png" alt="表3.1.7">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位（レベル2）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.8.png" alt="表3.1.8">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">極限周面抵抗力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.17.png" alt="表3.1.17">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤から定まる杭の鉛直支持力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.18.png" alt="表3.1.18">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭位置の沈下量　常時荷重時</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.23.png" alt="表3.1.23">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭位置の沈下量　Y方向正加力時</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.24.png" alt="表3.1.24">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">最大引抜き抵抗力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.25.png" alt="表3.1.25">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">残留引抜き抵抗力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.26.png" alt="表3.1.26">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">降伏引抜き抵抗力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.27.png" alt="表3.1.27">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭体の引抜き力に対する設計用限界値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.28.png" alt="表3.1.28">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の引抜き力に対する設計用限界値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.29.png" alt="表3.1.29">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">P1杭の水平地盤反力係数</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.30.png" alt="表3.1.30">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">P2杭の水平地盤反力係数</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.31.png" alt="表3.1.31">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">P1杭の塑性水平地盤反力度</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.32.png" alt="表3.1.32">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">水平荷重時の杭軸力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.1.33.png" alt="表3.1.33">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 解析結果 ― 数値表 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果 ― 数値表</div>
+                    <div class="placeholder">
+                        文献の結果数値表をここに配置<br>
+                        <code>images/verification/ex3_1_ref_table.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <p class="description">以下は文献値とプログラム計算値の比較表です。</p>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>杭頭曲げモーメント (kNm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>杭頭せん断力 (kN)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>最大曲げモーメント (kNm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+         設計例 3.2
+    ============================================================ -->
+        <div class="section" id="sec-3-2">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">設計例 3.2 ― PHC杭</div>
+                <div class="section-title-cell section-title-cell-right">設計例 3.2 ― PHC杭</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 付録 設計例集 3.2</div>
+                <div class="desc-cell desc-cell-right">プログラムで設計例3.2を再現し、文献との比較を行う。</div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">土質柱状図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.4.png" alt="図3.2.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.6.png" alt="図3.2.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭荷重-杭頭変位量、杭先端変位量関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.8.png" alt="図3.2.8">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">軸力分布</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.10.png" alt="図3.2.10">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭周面抵抗力度-区間変位量関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.11.png" alt="図3.2.11">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭体の曲げモーメント-曲率関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.20.png" alt="図3.2.20">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">水平変位、せん断力、曲げモーメント分布（レベル1地震荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.21.png" alt="図3.2.21">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">N-M関係図（レベル1地震荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.22.png" alt="図3.2.22">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">N-Q関係図（レベル1地震荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.23.png" alt="図3.2.23">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">水平変位、せん断力、曲げモーメント分布（レベル2地震荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.24.png" alt="図3.2.24">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">N-M関係図（レベル2地震荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.25.png" alt="図3.2.25">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">N-Q関係図（レベル2地震荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.2.26.png" alt="図3.2.26">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.1.png" alt="表3.2.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の液状化判定結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.5.png" alt="表3.2.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.6.png" alt="表3.2.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎の設計用軸力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.9.png" alt="表3.2.9">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤から定まる杭の鉛直支持力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.12.png" alt="表3.2.12">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭体の鉛直力に対する設計用限界値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.13.png" alt="表3.2.13">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の鉛直支持力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.14.png" alt="表3.2.14">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.15.png" alt="表3.2.15">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の水平地盤反力係数</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.17.png" alt="表3.2.17">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の塑性水平地盤反力度</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.2.18.png" alt="表3.2.18">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 入力条件 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex3_2_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_2_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex3_2_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+         設計例 3.3
+    ============================================================ -->
+        <div class="section" id="sec-3-3">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">設計例 3.3 ― 場所打ち杭</div>
+                <div class="section-title-cell section-title-cell-right">設計例 3.3 ― 場所打ち杭</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 付録 設計例集 3.3</div>
+                <div class="desc-cell desc-cell-right">プログラムで設計例3.3を再現し、文献との比較を行う。</div>
+            </div>
+
+            <!-- 入力条件 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex3_3_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_3_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">荷重-沈下関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.10.png" alt="図3.3.10">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">常時荷重に対する杭頭部の沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.12.png" alt="図3.3.12">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重＋X方向加力時C通り変位図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.15.png" alt="図3.3.15">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重＋X方向加力時C通り曲げ応力図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.16.png" alt="図3.3.16">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重＋X方向加力時C通りせん断力図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.17.png" alt="図3.3.17">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重＋Y方向加力時3通り変位図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.18.png" alt="図3.3.18">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重＋Y方向加力時3通り曲げ応力図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.19.png" alt="図3.3.19">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重＋Y方向加力時3通りせん断力図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.20.png" alt="図3.3.20">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭部のM-N関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.3.21.png" alt="図3.3.21">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の沈下量の最大値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.3.11.png" alt="表3.3.11">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">水平地盤ばね</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.3.12.png" alt="表3.3.12">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex3_3_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+         設計例 3.4
+    ============================================================ -->
+        <div class="section" id="sec-3-4">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">設計例 3.4 ― SC杭 液状化</div>
+                <div class="section-title-cell section-title-cell-right">設計例 3.4 ― SC杭 液状化</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 付録 設計例集 3.4</div>
+                <div class="desc-cell desc-cell-right">プログラムで設計例3.4を再現し、文献との比較を行う。</div>
+            </div>
+
+            <!-- 入力条件 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex3_4_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_4_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">液状化判定結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.5.png" alt="表3.4.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">液状化による地盤の最大水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.6.png" alt="表3.4.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">改良後の液状化判定結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.9.png" alt="表3.4.9">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">砂質土の周面抵抗</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.14.png" alt="表3.4.14">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">粘性土の周面抵抗</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.15.png" alt="表3.4.15">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤から求まる杭の極限支持力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.16.png" alt="表3.4.16">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭体の鉛直力に対する設計限界値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.17.png" alt="表3.4.17">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭体の鉛直力に対する設計限界値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.18.png" alt="表3.4.18">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">砂質土の引抜き時の最大周面抵抗</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.20.png" alt="表3.4.20">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">粘性土の引抜き時の最大周面抵抗</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.21.png" alt="表3.4.21">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭の引抜き抵抗力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.22.png" alt="表3.4.22">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table3.4.27.png" alt="表3.4.27">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">ボーリング柱状図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.4.png" alt="図3.4.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">液状化安全率</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.5.png" alt="図3.4.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎設計用軸力</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.7.png" alt="図3.4.7">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル1荷重時の地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.9.png" alt="図3.4.9">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">SC杭の損傷限界N-M関係図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.12.png" alt="図3.4.12">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">曲げモーメント図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.13.png" alt="図3.4.13">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">曲げモーメント図および水平変位図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.14.png" alt="図3.4.14">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">終局限界N-M関係図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.15.png" alt="図3.4.15">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重時の地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.16.png" alt="図3.4.16">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭P1の曲げモーメント図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.18.png" alt="図3.4.18">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭P2の曲げモーメント図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.19.png" alt="図3.4.19">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭P2Aの曲げモーメント図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.20.png" alt="図3.4.20">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">水平変位図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.21.png" alt="図3.4.21">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">SC杭900φの終局限界N-M関係図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.22.png" alt="図3.4.22">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">SC杭1000φの終局限界N-M関係図</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.23.png" alt="図3.4.23">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">レベル2荷重時の沈下量計算結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig3.4.26.png" alt="図3.4.26">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 変位・断面力</div>
+                    <div class="placeholder">
+                        プログラムの解析結果スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_result.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex3_4_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+         関東支部7
+    ============================================================ -->
+        <div class="section" id="sec-k7">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎構造の設計 計算例7</div>
+                <div class="section-title-cell section-title-cell-right">基礎構造の設計 計算例7</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 基礎構造の設計 計算例7（群杭沈下）</div>
+                <div class="desc-cell desc-cell-right">プログラムで計算例7（群杭沈下）を再現し、文献との比較を行う。<br>アプリケーションメニュー → 計算例 → 「基礎構造の設計 7...」を読み込む。</div>
+            </div>
+
+            <!-- 矩形荷重形状 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">矩形荷重形状</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig7.4.1.png" alt="図7.4.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 群杭荷重土層条件 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">群杭荷重土層条件</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig7.5.1.png" alt="図7.5.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 即時沈下量（隣接フーチング考慮） -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">即時沈下量（隣接フーチング考慮）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table7.5.2.png" alt="表7.5.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 即時沈下量（格子モデル） -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">即時沈下量（格子モデル）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table7.5.3.png" alt="表7.5.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 解析結果 -->
+            <!--<div class="item-row">
+        <div class="item-cell item-cell-left">
+            <div class="item-title">解析結果</div>
+            <div class="placeholder">
+                文献の結果図表をここに配置<br>
+                <code>images/verification/exk7_ref_result.png</code>
+            </div>
+        </div>
+        <div class="item-cell item-cell-right">
+            <div class="item-title">解析結果 ― 数値比較</div>
+            <table class="comparison-table">
+                <tr>
+                    <th>項目</th>
+                    <th>文献値</th>
+                    <th>プログラム値</th>
+                    <th>誤差</th>
+                    <th>判定</th>
+                </tr>
+                <tr>
+                    <td>群杭沈下量 (mm)</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+            </table>
+        </div>
+    </div>-->
+        </div>
+
+        <!-- ============================================================
+         関東支部8
+    ============================================================ -->
+        <div class="section" id="sec-k8">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">関東支部 計算例8</div>
+                <div class="section-title-cell section-title-cell-right">関東支部 計算例8</div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 基礎構造の設計 計算例8</div>
+                <div class="desc-cell desc-cell-right">プログラムで計算例8を再現し、文献との比較を行う。</div>
+            </div>
+
+            <!-- 地盤の水平変位（レベル１荷重時） -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位（レベル１荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.2.4.png" alt="表8.2.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 地盤の水平変位（レベル２荷重時） -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤の水平変位（レベル２荷重時）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.2.5.png" alt="表8.2.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 支持力算定結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">支持力算定結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.3.1.png" alt="表8.3.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 杭頭の荷重－変位 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">杭頭の荷重－変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig8.3.2.png" alt="図8.3.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk7_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 常時荷重時の沈下量 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">常時荷重時の沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.3.4.png" alt="表8.3.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk8_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 常時荷重時の沈下量 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">常時荷重時の変形角</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.3.5.png" alt="表8.3.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk8_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Fig8.4.4.png" alt="図8.4.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk8_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- 地盤モデル -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">地盤モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.4.7.png" alt="表8.4.7">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/exk8_app_input.png</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 常時荷重時の変形角 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">常時荷重時の変形角</div>
+                    <div class="figure-container">
+                        <img src="images/verification/Table8.3.5.png" alt="表8.3.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== ナビゲーションリンク: セクションへスクロール =====
+        document.querySelectorAll('.header .nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                const target = document.getElementById(targetId);
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    </script>
+</body>
+
+</html>

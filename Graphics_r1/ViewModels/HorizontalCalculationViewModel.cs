@@ -470,18 +470,16 @@ namespace PileDesign.ViewModels
                 return true;
 
             var fbInput = InputModel.FoundationBeamInput;
-            if (fbInput == null)
+
+            // 基礎梁入力がない、または梁要素が定義されていない場合は剛体連結に自動切替
+            bool hasBeams = fbInput?.Beams != null && fbInput.Beams.Count > 0;
+            if (!hasBeams)
             {
-                MessageBox.Show("剛床連結モードでは基礎梁入力が必要です。",
-                    "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
+                ConnectionMode = FoundationBeamConnectionMode.RigidBody;
+                return true;
             }
-            if (fbInput.Beams == null || fbInput.Beams.Count == 0)
-            {
-                MessageBox.Show("剛床連結モードでは基礎梁要素が必要です。\n基礎梁入力で梁要素を定義してください。",
-                    "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return false;
-            }
+
+            // 基礎梁はあるが節点参照が不正な場合はエラー
             bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
             bool hasPileReferences = fbInput.Beams.Any(b =>
                 b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
@@ -672,31 +670,31 @@ namespace PileDesign.ViewModels
         // 水平解析モデルの作成（成功時 true、失敗時 false を返す）
         private bool TryCreateAnalysisModel()
         {
-            // 剛床連結モードの事前バリデーション（例外を投げずにメッセージ表示）
+            // 剛床連結モードの事前バリデーション
             if (ConnectionMode == FoundationBeamConnectionMode.RigidFloor)
             {
                 var fbInput = InputModel.FoundationBeamInput;
-                if (fbInput == null)
+                bool hasBeams = fbInput?.Beams != null && fbInput.Beams.Count > 0;
+
+                if (!hasBeams)
                 {
-                    MessageBox.Show("剛床連結モードでは基礎梁入力が必要です。",
-                        "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return false;
+                    // 基礎梁がない場合は自動的に剛体連結に切り替える
+                    ConnectionMode = FoundationBeamConnectionMode.RigidBody;
+                    MessageBox.Show("基礎梁要素が定義されていないため、剛体連結モードに切り替えて解析を実行します。",
+                        "接続モード変更", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                if (fbInput.Beams == null || fbInput.Beams.Count == 0)
+                else
                 {
-                    MessageBox.Show("剛床連結モードでは基礎梁要素が必要です。\n基礎梁入力で梁要素を定義してください。",
-                        "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return false;
-                }
-                // 専用節点が無い場合、梁要素が杭参照（PileLayout）を使っているか確認
-                bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
-                bool hasPileReferences = fbInput.Beams.Any(b =>
-                    b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
-                if (!hasFoundationNodes && !hasPileReferences)
-                {
-                    MessageBox.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
-                        "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return false;
+                    // 基礎梁はあるが節点参照が不正な場合はエラー
+                    bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
+                    bool hasPileReferences = fbInput.Beams.Any(b =>
+                        b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
+                    if (!hasFoundationNodes && !hasPileReferences)
+                    {
+                        MessageBox.Show("剛床連結モードでは基礎梁節点が必要です。\n基礎梁入力で節点を定義するか、杭配置を参照してください。",
+                            "モデル作成エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return false;
+                    }
                 }
             }
 

@@ -9,6 +9,8 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+        xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         d:DataContext="{d:DesignInstance Type=local:ElementDivisionViewModel}"
         mc:Ignorable="d"
         Title="要素分割" Height="650" Width="650"
@@ -25,6 +27,26 @@
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
 
+
+        <!-- SvgViewboxコントロール用のスタイルを定義 -->
+        <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="StretchDirection" Value="DownOnly"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <Style x:Key="SvgIconStyle24" TargetType="svgc:SvgViewbox">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+            <Setter Property="StretchDirection" Value="DownOnly"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+        
         <!--CheckBoxのスタイル定義-->
         <Style x:Key="GrayCheckBoxStyle" TargetType="CheckBox">
             <Setter Property="Foreground" Value="Gray"/>
@@ -135,9 +157,11 @@
 
             <!-- 全杭セット自動分割ボタン＋パラメータ -->
             <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
-            <Button Content="全杭セット自動分割" Command="{Binding AutoZsAllPilesCommand}"
-                    ToolTip="全ての土層-杭セットに対して自動要素分割を実行します"
-                    Padding="6,2" Margin="2" VerticalAlignment="Center"/>
+            <Button Command="{Binding AutoZsAllPilesCommand}"
+                    ToolTip="全杭セット自動分割:全ての土層-杭セットに対して自動要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center">
+                    <svgc:SvgViewbox Source="/Icons/AutoSplitAll.svg" Style="{StaticResource SvgIconStyle24}"/>
+            </Button>
+
             <TextBlock Text="杭頭～第二節点(m)" VerticalAlignment="Center" Margin="8,0,2,0"/>
             <TextBox Text="{Binding FirstDistance, StringFormat='N2'}"
                      HorizontalContentAlignment="Right" Width="60" VerticalAlignment="Center"/>
@@ -149,7 +173,6 @@
             <TextBlock Text="{Binding WarningMessage}" Foreground="Red" FontWeight="Bold" Margin="12,0,0,0"
                        VerticalAlignment="Center"
                        Visibility="{Binding HasAnyRedLamp, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-
         </StackPanel>
 
         <!-- 既存 TabControl を下に移動、名前を付与 -->
@@ -219,11 +242,13 @@
                                                     <TextBlock Text="m"/>
                                                 </StackPanel>
 
-                                                <Button x:Name="ButtonAuto" Content="この杭セットを自動分割" Grid.Row="5"
+                                                    <Button x:Name="ButtonAuto" ToolTip="この杭セットを自動分割" Grid.Row="5"
                                                         Command="{Binding AutoZsCommand}"
-                                                        HorizontalAlignment="Left" Margin="0,4"/>
+                                                        HorizontalAlignment="Left" Margin="0,4">
+                                                        <svgc:SvgViewbox Source="/Icons/AutoSplit.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    </Button>
 
-                                                <StackPanel Grid.Row="6">
+                                                    <StackPanel Grid.Row="6">
                                                     <Button x:Name="ButtonResetPile" Content="初期化" Command="{Binding ResetPileCommand}"/>
                                                     <Button x:Name="ButtonAddZs" Content="選択行下への行追加" Command="{Binding AddZsCommand}"/>
                                                 <!--</ToolBar>-->
@@ -665,9 +690,11 @@
                                                                     HorizontalContentAlignment="Right" Width="100"></TextBox>
                                                         </StackPanel>
 
-                                                        <Button x:Name="ButtonEmbedmentAuto" Content="自動要素分割実行" Width="100"
+                                                        <Button x:Name="ButtonEmbedmentAuto" ToolTip="自動要素分割実行" Width="100"
                                                                 Command="{Binding AutoEmbedmentZsCommand}"
-                                                                HorizontalAlignment="Left"/>
+                                                                HorizontalAlignment="Left">
+                                                            <svgc:SvgViewbox Source="/Icons/AutoSplitD.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
                                                     </StackPanel>
                                                 </GroupBox>
                                             </StackPanel>

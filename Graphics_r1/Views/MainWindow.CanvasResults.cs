@@ -280,6 +280,10 @@ namespace PileDesign.Views
                         continue;
                     }
 
+                    // 接続用節点が非表示の場合、RigidLinkビームもスキップ
+                    if (!viewModel.IsConnectingNodeVisible && beam.Name.StartsWith("RigidLink-"))
+                        continue;
+
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                     if (beamResult == null) continue;
@@ -753,6 +757,10 @@ namespace PileDesign.Views
                             if (invisibleFBNames.Contains(beam.Name)) continue;
                         }
                         else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
+
+                        // 接続用節点が非表示の場合、RigidLinkビームもスキップ
+                        if (!viewModel.IsConnectingNodeVisible && beam.Name.StartsWith("RigidLink-"))
+                            continue;
 
                         var nrI = beam.NodeI?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                         var nrJ = beam.NodeJ?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);

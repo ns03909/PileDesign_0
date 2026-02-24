@@ -81,6 +81,12 @@ namespace PileDesign.Models.InputData
         public SettlementOffsetsDto? SettlementOffsets { get; set; }
 
         /// <summary>
+        /// 接合～杭頭ΔZc（全杭共通、省略時はデフォルト1.0）
+        /// </summary>
+        [JsonPropertyName("foundationBeamDeltaZc")]
+        public double? FoundationBeamDeltaZc { get; set; }
+
+        /// <summary>
         /// 基礎梁入力（FoundationBeamInput系）
         /// </summary>
         [JsonPropertyName("foundationBeamInput")]

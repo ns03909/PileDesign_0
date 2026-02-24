@@ -89,8 +89,8 @@ namespace PileDesign.Services
                 }
             }
 
-            // PileBodies 設定
-            inputModel.PileBodies.Clear();
+            // PileBodies 設定（バッチ化: List に構築してから一括代入）
+            var pileBodyList = new List<PileBodyInput>(data.PileBodies.Count);
             foreach (var pileBodyDto in data.PileBodies)
             {
                 var pileBody = new PileBodyInput
@@ -155,8 +155,9 @@ namespace PileDesign.Services
                         segment.PileSection.ConcreteGamma = segDto.ConcreteGamma.Value;
                 }
 
-                inputModel.PileBodies.Add(pileBody);
+                pileBodyList.Add(pileBody);
             }
+            inputModel.PileBodies = new ObservableCollection<PileBodyInput>(pileBodyList);
 
             // 根入れ情報を設定（ある場合）
             if (data.Embedment != null)
@@ -187,14 +188,14 @@ namespace PileDesign.Services
                 inputModel.EmbedmentInput ??= new EmbedmentInput();
                 inputModel.EmbedmentInput.GroundNo = data.Embedment.GroundNo;
                 inputModel.EmbedmentInput.BottomAltitude = data.Embedment.EmbedmentBottomAltitude;
-                inputModel.EmbedmentInput.EmbedmentLayers.Clear();
-
+                // EmbedmentLayers をバッチ構築して一括代入（スレッド安全）
                 if (data.Embedment.EmbedmentLayers != null)
                 {
                     int no = 1;
+                    var embedLayerList = new List<EmbedmentDataItem>(data.Embedment.EmbedmentLayers.Count);
                     foreach (var layer in data.Embedment.EmbedmentLayers)
                     {
-                        inputModel.EmbedmentInput.EmbedmentLayers.Add(new EmbedmentDataItem
+                        embedLayerList.Add(new EmbedmentDataItem
                         {
                             No = no++,
                             TopAltitude = layer.TopAltitude,
@@ -206,6 +207,7 @@ namespace PileDesign.Services
                             Y2 = layer.Y2
                         });
                     }
+                    inputModel.EmbedmentInput.EmbedmentLayers = new ObservableCollection<EmbedmentDataItem>(embedLayerList);
                     inputModel.EmbedmentInput.EmbedmentLayersCount = inputModel.EmbedmentInput.EmbedmentLayers.Count;
                 }
             }
@@ -283,7 +285,7 @@ namespace PileDesign.Services
             inputModel.GridYItems = new ObservableCollection<GridDataItem>(gridYList);
 
             // 旧要素はクリア（後方互換用に読み込まれた場合に備える）
-            inputModel.Elements?.Clear();
+            inputModel.Elements = new ObservableCollection<Element>();
 
             // FoundationBeamInput 設定（基礎梁入力）
             if (data.FoundationBeamInput != null)
@@ -329,7 +331,10 @@ namespace PileDesign.Services
                 }
                 inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>(secList);
 
-                // 梁要素（バッチ化）
+                // 梁要素（バッチ化 + Dictionary参照解決）
+                var pileLookup = inputModel.PileLayoutItems.ToDictionary(p => p.PileNo, p => p.UniqueId);
+                var nodeLookup = inputModel.InputNodes.ToDictionary(n => n.No, n => n.UniqueId);
+
                 var beamList = new List<FoundationBeamElement>(data.FoundationBeamInput.Beams.Count);
                 foreach (var beamDto in data.FoundationBeamInput.Beams)
                 {
@@ -340,17 +345,15 @@ namespace PileDesign.Services
                         SectionNo = beamDto.SectionNo
                     };
 
-                    // I端ノード参照を解決
-                    ResolveBeamNodeReference(beamDto.NodeI_Type, beamDto.NodeI_No,
-                        inputModel.PileLayoutItems, inputModel.InputNodes,
-                        out var iType, out var iId);
+                    // I端ノード参照を解決（Dictionary O(1)）
+                    ResolveBeamNodeReferenceFast(beamDto.NodeI_Type, beamDto.NodeI_No,
+                        pileLookup, nodeLookup, out var iType, out var iId);
                     beam.NodeI_Type = iType;
                     beam.NodeI_Id = iId;
 
-                    // J端ノード参照を解決
-                    ResolveBeamNodeReference(beamDto.NodeJ_Type, beamDto.NodeJ_No,
-                        inputModel.PileLayoutItems, inputModel.InputNodes,
-                        out var jType, out var jId);
+                    // J端ノード参照を解決（Dictionary O(1)）
+                    ResolveBeamNodeReferenceFast(beamDto.NodeJ_Type, beamDto.NodeJ_No,
+                        pileLookup, nodeLookup, out var jType, out var jId);
                     beam.NodeJ_Type = jType;
                     beam.NodeJ_Id = jId;
 
@@ -360,30 +363,30 @@ namespace PileDesign.Services
             }
             else
             {
-                // FoundationBeamInput がない場合はクリア
+                // FoundationBeamInput がない場合はクリア（バッチ置換でスレッド安全）
                 if (inputModel.FoundationBeamInput != null)
                 {
-                    inputModel.FoundationBeamInput.Materials.Clear();
-                    inputModel.FoundationBeamInput.Sections.Clear();
-                    inputModel.FoundationBeamInput.Beams.Clear();
+                    inputModel.FoundationBeamInput.Materials = new ObservableCollection<BeamMaterial>();
+                    inputModel.FoundationBeamInput.Sections = new ObservableCollection<BeamSection>();
+                    inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>();
                 }
             }
 
-            // PileGroupSettlement クリア（解析結果を含む）
+            // PileGroupSettlement クリア（解析結果を含む、バッチ置換でスレッド安全）
             if (inputModel.PileGroupSettlement != null)
             {
-                inputModel.PileGroupSettlement.RectLoads?.Clear();
-                inputModel.PileGroupSettlement.SettlementSoilLayers?.Clear();
-                inputModel.PileGroupSettlement.SettlementGridData?.Clear();
-                inputModel.PileGroupSettlement.SettlementGridX?.Clear();
-                inputModel.PileGroupSettlement.SettlementGridY?.Clear();
+                inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>();
+                inputModel.PileGroupSettlement.SettlementSoilLayers = new ObservableCollection<SettlementSoilLayer>();
+                inputModel.PileGroupSettlement.SettlementGridData = new ObservableCollection<SettlementGridDataItem>();
+                inputModel.PileGroupSettlement.SettlementGridX = new ObservableCollection<double>();
+                inputModel.PileGroupSettlement.SettlementGridY = new ObservableCollection<double>();
                 inputModel.PileGroupSettlement.LoadingPlaneAltitude = 0.0;
             }
 
             // 根入れクリア（JSONに根入れ情報がない場合のみ）
             if (data.Embedment == null)
             {
-                inputModel.EmbedmentInput.EmbedmentLayers.Clear();
+                inputModel.EmbedmentInput.EmbedmentLayers = new ObservableCollection<EmbedmentDataItem>();
                 inputModel.ElementDivision.SoilEmbedment = null;
             }
         }
@@ -424,6 +427,32 @@ namespace PileDesign.Services
                     var node = nodes?.FirstOrDefault(n => n.No == nodeNo);
                     type = NodeReferenceType.GeneralNode;
                     id = node?.UniqueId ?? Guid.Empty;
+                    return;
+                default:
+                    type = NodeReferenceType.FoundationNode;
+                    id = Guid.Empty;
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// 梁要素の節点参照を Dictionary で O(1) 解決する高速版
+        /// </summary>
+        private static void ResolveBeamNodeReferenceFast(
+            string typeStr, int nodeNo,
+            Dictionary<int, Guid> pileLookup,
+            Dictionary<int, Guid> nodeLookup,
+            out NodeReferenceType type, out Guid id)
+        {
+            switch (typeStr?.ToLowerInvariant())
+            {
+                case "pile":
+                    type = NodeReferenceType.PileLayout;
+                    id = pileLookup.TryGetValue(nodeNo, out var pileId) ? pileId : Guid.Empty;
+                    return;
+                case "general":
+                    type = NodeReferenceType.GeneralNode;
+                    id = nodeLookup.TryGetValue(nodeNo, out var nodeId) ? nodeId : Guid.Empty;
                     return;
                 default:
                     type = NodeReferenceType.FoundationNode;

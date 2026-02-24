@@ -59,6 +59,8 @@
         <conv:StressUnitConverter x:Key="StressUnitConverter"/>
         <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
+        <conv:SettlementAnalyzedConverter x:Key="SettlementAnalyzedConverter"/>
+        <conv:GroupSettlementAnalyzedConverter x:Key="GroupSettlementAnalyzedConverter"/>
 
         <ContextMenu x:Key="NodeContextMenu">
             <MenuItem Header="コピー／移動" Command="{Binding MoveCopyPilesCommand}"/>
@@ -465,11 +467,32 @@
         <!-- 荷重ケースComboBox用 ItemTemplate（解析済みインジケータ付き） -->
         <DataTemplate x:Key="LoadCaseItemTemplate">
             <StackPanel Orientation="Horizontal">
-                <Ellipse Width="6" Height="6" Fill="#2E7D32" Margin="0,0,4,0" VerticalAlignment="Center">
+                <!-- 水平解析済み (Green) -->
+                <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,1,0" VerticalAlignment="Center">
                     <Ellipse.Visibility>
                         <MultiBinding Converter="{StaticResource LoadCaseAnalyzedConverter}">
                             <Binding/>
                             <Binding Path="DataContext.CurrentModel"
+                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                        </MultiBinding>
+                    </Ellipse.Visibility>
+                </Ellipse>
+                <!-- 単杭沈下解析済み (Blue) -->
+                <Ellipse Width="5" Height="5" Fill="#1565C0" Margin="0,0,1,0" VerticalAlignment="Center">
+                    <Ellipse.Visibility>
+                        <MultiBinding Converter="{StaticResource SettlementAnalyzedConverter}">
+                            <Binding/>
+                            <Binding Path="DataContext.IsVerticalAnalysisDone"
+                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                        </MultiBinding>
+                    </Ellipse.Visibility>
+                </Ellipse>
+                <!-- 群杭沈下解析済み (Orange) - VLのみ -->
+                <Ellipse Width="5" Height="5" Fill="#E65100" Margin="0,0,3,0" VerticalAlignment="Center">
+                    <Ellipse.Visibility>
+                        <MultiBinding Converter="{StaticResource GroupSettlementAnalyzedConverter}">
+                            <Binding/>
+                            <Binding Path="DataContext.IsGroupPileSettlementAnalysisDone"
                                      RelativeSource="{RelativeSource AncestorType=Window}"/>
                         </MultiBinding>
                     </Ellipse.Visibility>
@@ -599,7 +622,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="水平解析(未)"/>
+            <Setter Property="Tag" Value="水平解析"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -608,7 +631,8 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="水平解析(済)"/>
+                    <Setter Property="Tag" Value="水平解析(済●)"/>
+                    <Setter Property="Foreground" Value="#2E7D32"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -623,7 +647,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="単杭沈下解析(未)"/>
+            <Setter Property="Tag" Value="単杭沈下解析"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -632,7 +656,8 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="単杭沈下解析(済)"/>
+                    <Setter Property="Tag" Value="単杭沈下解析(済●)"/>
+                    <Setter Property="Foreground" Value="#1565C0"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -647,7 +672,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="群杭沈下解析(未)"/>
+            <Setter Property="Tag" Value="群杭沈下解析"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -656,7 +681,8 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="群杭沈下解析(済)"/>
+                    <Setter Property="Tag" Value="群杭沈下解析(済●)"/>
+                    <Setter Property="Foreground" Value="#E65100"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -992,6 +1018,21 @@
                     <ribbon:RibbonToggleButton Label="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsElementNoVisible}"
                                SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
+                    <ribbon:RibbonToggleButton Label="材料No" ToolTip="梁要素の材料番号ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsBeamMaterialNoVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/BeamMaterialNoVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="材料名称" ToolTip="梁要素の材料名称ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsBeamMaterialNameVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/BeamMaterialNameVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="断面No" ToolTip="梁要素の断面番号ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsBeamSectionNoVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/BeamSectionNoVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="断面名称" ToolTip="梁要素の断面名称ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsBeamSectionNameVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/BeamSectionNameVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="β" ToolTip="梁要素のβ角度ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsBeamAngleBetaVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/BeamAngleBetaVisible.png"/>
                     <ribbon:RibbonToggleButton Label="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGeneralNodeZVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
@@ -1290,15 +1331,17 @@
 
                 <ribbon:RibbonGroup Header="解析実行">
                     <ribbon:RibbonButton x:Name="RibbonButtonLateralLoadAnalysisSettlement"
-                         Label="{Binding IsHorizontalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='水平解析(済),水平解析(未)'}"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
                          IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="Label" Value="水平解析"/>
                                 <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
+                                        <Setter Property="Label" Value="水平解析(済●)"/>
+                                        <Setter Property="Foreground" Value="#2E7D32"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
                                     </DataTrigger>
@@ -1308,16 +1351,18 @@
                     </ribbon:RibbonButton>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonSettlement"
-                         Label="{Binding IsVerticalAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='単杭沈下解析(済),単杭沈下解析(未)'}"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
                          IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="Label" Value="単杭沈下解析"/>
                                 <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
+                                        <Setter Property="Label" Value="単杭沈下解析(済●)"/>
+                                        <Setter Property="Foreground" Value="#1565C0"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
                                     </DataTrigger>
@@ -1327,16 +1372,37 @@
                     </ribbon:RibbonButton>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
-                     Label="{Binding IsGroupPileSettlementAnalysisDone, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='群杭沈下解析(済),群杭沈下解析(未)'}"
                      Click="ButtonGroupPileSettlement_Click">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="Label" Value="群杭沈下解析"/>
                                 <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
+                                        <Setter Property="Label" Value="群杭沈下解析(済●)"/>
+                                        <Setter Property="Foreground" Value="#E65100"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ribbon:RibbonButton.Style>
+                    </ribbon:RibbonButton>
+
+                    <ribbon:RibbonButton x:Name="RibbonButtonVerticalBeamCalculation"
+                         Command="{Binding OpenVerticalBeamCalculationCommand}">
+                        <ribbon:RibbonButton.Style>
+                            <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="Label" Value="基礎梁考慮沈下解析"/>
+                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
+                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsVerticalBeamAnalysisDone}" Value="True">
+                                        <Setter Property="Label" Value="基礎梁考慮沈下解析(済◎)"/>
+                                        <Setter Property="Foreground" Value="#1565C0"/>
+                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1709,13 +1775,24 @@
                              CommandParameter="2.0"/>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="説明用">
-                    <ribbon:RibbonToggleButton Label="入力表示"
-                        ToolTip="マウス・キーボード入力状態を画面右下に表示"
-                        IsChecked="{Binding IsInputVisualizerVisible}"
-                        LargeImageSource="pack://application:,,,/Icons/Display.png"
-                        SmallImageSource="pack://application:,,,/Icons/Display.png"/>
+                <ribbon:RibbonGroup Header="3Dモデル">
+                    <ribbon:RibbonButton Label="3dm出力"
+                        ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
+                        Command="{Binding Export3dmFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/rhino8-.png"
+                        SmallImageSource="pack://application:,,,/Icons/rhino8-.png"/>
+                    <ribbon:RibbonButton Label="DXF出力"
+                        ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
+                        Command="{Binding ExportDxfFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
+                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
+                    <ribbon:RibbonButton Label="MGT出力"
+                        ToolTip="FEM解析モデルを midas Gen MGT テキスト形式でエクスポート"
+                        Command="{Binding ExportMgtFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/mgtFile.png"
+                        SmallImageSource="pack://application:,,,/Icons/mgtFile.png"/>
                 </ribbon:RibbonGroup>
+
 
             </ribbon:RibbonTab>
 
@@ -1726,35 +1803,43 @@
                                          ToolTip="データタブ（一般節点～群杭荷重）の表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleLeftTabs_Click"
-                                         SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                                         SmallImageSource="pack://application:,,,/Icons/DataTabVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="InputDataPanelToggle"
                                          Label="入力データ"
                                          ToolTip="入力データパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleInputDataPanel_Click"
-                                         SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                                         SmallImageSource="pack://application:,,,/Icons/InputDataVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="PropertiesPanelToggle"
                                          Label="プロパティ"
                                          ToolTip="プロパティパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="TogglePropertiesPanel_Click"
-                                         SmallImageSource="pack://application:,,,/Icons/Table.png"/>
+                                         SmallImageSource="pack://application:,,,/Icons/PropertyVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="MinimapPanelToggle"
                                          Label="ミニマップ"
                                          ToolTip="ミニマップパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleMinimapPanel_Click"
-                                         SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"/>
+                                         SmallImageSource="pack://application:,,,/Icons/MiniMapVisible.png"/>
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="3Dビュー">
                     <ribbon:RibbonToggleButton Label="ビューキューブ"
                                                 ToolTip="ビューキューブの表示/非表示"
                                                 IsChecked="{Binding IsViewCubeVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/IsometricView.png"/>
+                                                SmallImageSource="pack://application:,,,/Icons/ViewCubeVisible.png"/>
                     <ribbon:RibbonToggleButton Label="ツール"
                                                 ToolTip="右ツール群の表示/非表示"
                                                 IsChecked="{Binding IsRightToolbarVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/Display.png"/>
+                                                SmallImageSource="pack://application:,,,/Icons/ToolVisible.png"/>
+                </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="説明用">
+                    <ribbon:RibbonToggleButton Label="入力状況表示"
+                        ToolTip="マウス・キーボード入力状態を画面右下に表示"
+                        IsChecked="{Binding IsInputVisualizerVisible}"
+                        LargeImageSource="pack://application:,,,/Icons/Mouse.png"
+                        SmallImageSource="pack://application:,,,/Icons/Mouse.png"/>
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
@@ -1782,6 +1867,11 @@
                                  LargeImageSource="pack://application:,,,/Icons/ShortcutKeys.png"
                                  SmallImageSource="pack://application:,,,/Icons/ShortcutKeys.png"
                                  />
+                    <ribbon:RibbonButton Label="検証"
+                                 ToolTip="設計例によるプログラムの検証"
+                                 Command="{Binding OpenVerificationWindowCommand}"
+                                 LargeImageSource="pack://application:,,,/Icons/Verification.png"
+                                 SmallImageSource="pack://application:,,,/Icons/Verification.png"/>
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
         </ribbon:Ribbon>
@@ -1919,12 +2009,6 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Width="*" Binding="{Binding LinkedPileNo}" MinWidth="80">
-                                                <DataGridTextColumn.Header>
-                                                    <TextBlock Text="杭No" TextAlignment="Center"/>
-                                                </DataGridTextColumn.Header>
-                                            </DataGridTextColumn>
-
                                             <DataGridCheckBoxColumn Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="*" MinWidth="50">
                                                 <DataGridCheckBoxColumn.Header>
                                                     <TextBlock Text="選択" TextAlignment="Center"/>
@@ -2010,14 +2094,23 @@
                                                 <DataGridTextColumn Binding="{Binding YoungModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
-                                                        <TextBlock Text="ヤング係数 (N/mm²)" TextAlignment="Center"/>
+                                                        <StackPanel>
+                                                            <TextBlock Text="ヤング" TextAlignment="Center"/>
+                                                                    <TextBlock Text="係数" TextAlignment="Center"/>
+                                                                    <TextBlock Text="N/mm²" TextAlignment="Center"/>
+                                                        </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding ShearModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
-                                                        <TextBlock Text="せん断弾性係数 (N/mm²)" TextAlignment="Center"/>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="せん断" TextAlignment="Center"/>
+                                                                    <TextBlock Text="弾性係数" TextAlignment="Center"/>
+                                                                    <TextBlock Text="N/mm²" TextAlignment="Center"/>
+                                                                </StackPanel>
+                                                        
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
@@ -2392,10 +2485,17 @@
                                                      VerticalAlignment="Center"/>
                                         </StackPanel>
 
-                                        <Button Grid.Row="0" Grid.Column="1" Margin="2"
-                                                Content="重複要素の削除" Command="{Binding DeleteDupulicateElementsCommand}"/>
+                                            <Button Grid.Row="0" Grid.Column="1" Margin="2"
+                                                ToolTip="重複要素の削除" Command="{Binding DeleteDupulicateElementsCommand}">
+                                                    <svgc:SvgViewbox Source="/Icons/MergeElems.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
 
-                                        <!-- 自動梁要素生成ボタンは編集ビューツールバーに移動 (Ctrl+Shift+B) -->
+                                                <Button Grid.Row="1" Grid.Column="1" Margin="2"
+                                                    Command="{Binding SplitElementsAtIntersectionsCommand}"
+                                                    ToolTip="交差点で要素分割:選択要素同士の交差点に節点を生成し、要素を分割します">
+                                                    <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                                <!-- 自動梁要素生成ボタンは編集ビューツールバーに移動 (Ctrl+Shift+B) -->
                                     </Grid>
                                 </Grid>
                             </TabItem>

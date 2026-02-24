@@ -59,4 +59,50 @@ namespace PileDesign.Converters
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
+
+    /// <summary>
+    /// 単杭沈下解析が完了しているかどうかを Visibility に変換する。
+    /// values[0]: string loadCaseName (未使用だが統一性のため)
+    /// values[1]: bool IsVerticalAnalysisDone
+    /// </summary>
+    public class SettlementAnalyzedConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length >= 2 &&
+                values[1] is bool isSettlementDone &&
+                isSettlementDone)
+            {
+                return Visibility.Visible;
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// 群杭沈下解析が完了しているかどうかを Visibility に変換する（VL荷重ケースのみ）。
+    /// values[0]: string loadCaseName
+    /// values[1]: bool IsGroupPileSettlementAnalysisDone
+    /// </summary>
+    public class GroupSettlementAnalyzedConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length >= 2 &&
+                values[0] is string loadCaseName &&
+                values[1] is bool isGroupSettlementDone &&
+                isGroupSettlementDone &&
+                loadCaseName == "VL")
+            {
+                return Visibility.Visible;
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
 }
