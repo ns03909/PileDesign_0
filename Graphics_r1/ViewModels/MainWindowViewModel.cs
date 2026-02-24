@@ -3543,6 +3543,8 @@ namespace PileDesign.ViewModels
                     {
                         try
                         {
+                            Mouse.OverrideCursor = Cursors.Wait;
+
                             // Undoポイントを追加（読込前の状態を保存）
                             SaveUndoState();
 
@@ -3556,6 +3558,7 @@ namespace PileDesign.ViewModels
                             }
 
                             // ウィンドウを即座に表示（FEMモデル作成はLoadedイベントでバックグラウンド実行）
+                            Mouse.OverrideCursor = null;
                             window.ShowDialog();
                         }
                         catch (Exception ex)
