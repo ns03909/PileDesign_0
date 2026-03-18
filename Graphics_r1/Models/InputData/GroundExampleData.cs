@@ -171,6 +171,9 @@ namespace PileDesign.Models.InputData
         [JsonPropertyName("vs0")]
         public double VS0 { get; set; }
 
+        [JsonPropertyName("h")]
+        public double? H { get; set; }
+
         /// <summary>
         /// DTOからGroundMassDataInputへ変換
         /// </summary>
@@ -182,7 +185,8 @@ namespace PileDesign.Models.InputData
                 NValue = NValue,
                 Fc = Fc,
                 Density = Density,
-                VS0 = VS0
+                VS0 = VS0,
+                H = H  // JSONに "h" がある場合はそのまま使用、なければnull→RecalculateH()でSpacingをデフォルト設定
             };
         }
     }

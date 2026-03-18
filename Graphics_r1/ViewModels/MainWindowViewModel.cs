@@ -437,15 +437,25 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // アセンブリからバージョン文字列を取得
+        private static readonly string _appVersion =
+            System.Reflection.Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion?.Split('+')[0] ?? "不明";
+
+        /// <summary>アプリケーションバージョン（他のクラスからも参照可能）</summary>
+        public static string AppVersion => _appVersion;
+
         // ウィンドウタイトル（ファイル名表示）
         public string WindowTitle
         {
             get
             {
                 const string appName = "杭基礎検討プログラム";
+                string ver = $"v{_appVersion}";
                 if (string.IsNullOrEmpty(CurrentFilePath))
-                    return $"{appName} - [新規]";
-                return $"{appName} - {System.IO.Path.GetFileName(CurrentFilePath)}";
+                    return $"{appName} {ver} - [新規]";
+                return $"{appName} {ver} - {System.IO.Path.GetFileName(CurrentFilePath)}";
             }
         }
 

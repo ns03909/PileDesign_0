@@ -702,9 +702,10 @@ namespace PileDesign.ViewModels
                         scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                         scatter.LineWidth = 2;
 
+                        double xMax1 = dMaxU1s.Max();
                         for (int i = 0; i < gLDepths.Count; i++)
                         {
-                            wpf.Plot.Add.Text($"{dMaxU1s[i]:N1}", new(dMaxU1s[i], gLDepths[i]));
+                            PlotHelper.AddText(wpf.Plot, $"{dMaxU1s[i]:N1}", dMaxU1s[i], gLDepths[i], xMax1);
                         }
                     }
                 }
@@ -723,9 +724,10 @@ namespace PileDesign.ViewModels
                         scatter.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                         scatter.LineWidth = 2;
 
+                        double xMax2 = dMaxU2s.Max();
                         for (int i = 0; i < gLDepths.Count; i++)
                         {
-                            wpf.Plot.Add.Text($"{dMaxU2s[i]:N1}", new(dMaxU2s[i], gLDepths[i]));
+                            PlotHelper.AddText(wpf.Plot, $"{dMaxU2s[i]:N1}", dMaxU2s[i], gLDepths[i], xMax2);
                         }
                     }
                 }
@@ -744,9 +746,10 @@ namespace PileDesign.ViewModels
                         scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                         scatter.LineWidth = 2;
 
+                        double xMax1p = dMaxU1Pluss.Max();
                         for (int i = 0; i < gLDepths.Count; i++)
                         {
-                            wpf.Plot.Add.Text($"{dMaxU1Pluss[i]:N1}", new(dMaxU1Pluss[i], gLDepths[i]));
+                            PlotHelper.AddText(wpf.Plot, $"{dMaxU1Pluss[i]:N1}", dMaxU1Pluss[i], gLDepths[i], xMax1p);
                         }
                     }
                 }
@@ -765,9 +768,10 @@ namespace PileDesign.ViewModels
                         scatter.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                         scatter.LineWidth = 2;
 
+                        double xMax2p = dMaxU2Pluss.Max();
                         for (int i = 0; i < gLDepths.Count; i++)
                         {
-                            wpf.Plot.Add.Text($"{dMaxU2Pluss[i]:N1}", new(dMaxU2Pluss[i], gLDepths[i]));
+                            PlotHelper.AddText(wpf.Plot, $"{dMaxU2Pluss[i]:N1}", dMaxU2Pluss[i], gLDepths[i], xMax2p);
                         }
                     }
                 }
@@ -836,9 +840,10 @@ namespace PileDesign.ViewModels
                 var scatter = wpf.Plot.Add.Scatter(fL1ss[i].ToArray(), [.. gLDepth1ss[i]]);
                 scatter.Color = Color.FromSKColor(skColor);
                 scatter.LineWidth = 2;
+                double xMaxFL = fL1ss[i].Count > 0 ? fL1ss[i].Max() : 1.0;
                 for (int j = 0; j < gLDepth1ss[i].Count; j++)
                 {
-                    wpf.Plot.Add.Text($"{fL1ss[i][j]:N2}", new(fL1ss[i][j], gLDepth1ss[i][j]));
+                    PlotHelper.AddText(wpf.Plot, $"{fL1ss[i][j]:N2}", fL1ss[i][j], gLDepth1ss[i][j], xMaxFL);
                 }
             }
         }
@@ -916,8 +921,9 @@ namespace PileDesign.ViewModels
             scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
             scatter.LineWidth = 2;
 
+            double xMaxN = ns.Count > 0 ? ns.Max() : 60.0;
             for (int i = 0; i < _bottomGLDepths.Count; i++)
-                wpfNValue.Plot.Add.Text($"{ns[i]:N0}", new(ns[i], _bottomGLDepths[i]));
+                PlotHelper.AddText(wpfNValue.Plot, $"{ns[i]:N0}", ns[i], _bottomGLDepths[i], xMaxN);
 
             string title = "N値分布";
             wpfNValue.Plot.Axes.Title.Label.Text = title;
@@ -1052,9 +1058,10 @@ namespace PileDesign.ViewModels
             scatter.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
             scatter.LineWidth = 2;
 
+            double xMaxStepped = dataX1.Length > 0 ? dataX1.Max() : 1.0;
             for (int i = 0; i < dataX1.Length; i++)
             {
-                wpf.Plot.Add.Text($"{dataX1[i]:N0}", new(dataX1[i], dataY1[i]));
+                PlotHelper.AddText(wpf.Plot, $"{dataX1[i]:N0}", dataX1[i], dataY1[i], xMaxStepped);
             }
 
             List<CoordinateRect> coordinateRects = GetRectangleGeometry(originalX, originalY);
@@ -1938,17 +1945,30 @@ namespace PileDesign.ViewModels
             var groundMassesData = GroundInput.GroundMassesData;
             int count = groundMassesData.Count;
 
+            // H の設定：工学的基盤はnull、それ以外はユーザー入力を保持（未入力の場合のみ間隔をデフォルト値として設定）
             for (int i = 0; i < count; i++)
             {
                 var current = groundMassesData[i];
                 if (current.IsEngineeringBedrock)
                     current.H = null;
-                else if (i == 0)
-                    current.H = (count == 1 || groundMassesData[1].IsEngineeringBedrock) ? current.Spacing : current.Spacing + groundMassesData[1].Spacing * 0.5;
-                else if (i == count - 1 || groundMassesData[i + 1].IsEngineeringBedrock)
-                    current.H = current.Spacing * 0.5;
+                else if (!current.H.HasValue)
+                    current.H = current.Spacing; // 未入力時のデフォルト：間隔
+            }
+
+            // 層下面Z = GroundTopAltitude から H を上から累積して算出
+            double bottomZ = GroundInput.GroundTopAltitude;
+            for (int i = 0; i < count; i++)
+            {
+                var current = groundMassesData[i];
+                if (current.H.HasValue)
+                {
+                    bottomZ -= current.H.Value;
+                    current.LayerBottomZ = bottomZ;
+                }
                 else
-                    current.H = groundMassesData[i - 1].Spacing * 0.5 + current.Spacing * 0.5;
+                {
+                    current.LayerBottomZ = null;
+                }
             }
         }
 
@@ -2266,7 +2286,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-
         // M
         internal void RecalculateMass()
         {
@@ -2280,14 +2299,34 @@ namespace PileDesign.ViewModels
                 GroundInput.GroundMassesData[i].Mass = 0.0;
 
                 if (i == 0)
+                {
                     zi1 = 0;
-                else
-                    zi1 = (GroundInput.GroundMassesData[i - 1].GLDepth + GroundInput.GroundMassesData[i].GLDepth) / 2.0;
+                    zi2 = -0.5 * GroundInput.GroundMassesData[0].H.GetValueOrDefault();
+                }
+                else if ( i == 1)
+                {
+                    zi1 = -0.5 * GroundInput.GroundMassesData[0].H.GetValueOrDefault();
+                    zi2 = - GroundInput.GroundMassesData[0].H.GetValueOrDefault() - 0.5 * GroundInput.GroundMassesData[1].H.GetValueOrDefault();
+                }
 
-                if (i != GroundInput.GroundMassesData.Count - 1)
-                    zi2 = (GroundInput.GroundMassesData[i].GLDepth + GroundInput.GroundMassesData[i + 1].GLDepth) / 2.0;
                 else
-                    zi2 = GroundInput.GroundMassesData[i].GLDepth;
+                {
+                    zi1 = 0;
+                    zi2 = 0;
+                    for (int j = 0; j < i-2; j++)
+                    {
+                        zi1 -= GroundInput.GroundMassesData[j].H.GetValueOrDefault();
+                    }
+                    zi1 -= 0.5 * GroundInput.GroundMassesData[i-1].H.GetValueOrDefault();
+                    zi2 = zi1 - 0.5 * GroundInput.GroundMassesData[i - 1].H.GetValueOrDefault() - 0.5 * GroundInput.GroundMassesData[i].H.GetValueOrDefault();
+                }
+                    //zi1 = (GroundInput.GroundMassesData[i - 1].GLDepth + GroundInput.GroundMassesData[i].GLDepth) / 2.0;
+
+
+                //if (i != GroundInput.GroundMassesData.Count - 1)
+                //    zi2 = (GroundInput.GroundMassesData[i].GLDepth + GroundInput.GroundMassesData[i + 1].GLDepth) / 2.0;
+                //else
+                //    zi2 = GroundInput.GroundMassesData[i].GLDepth;
 
                 for (int j = 0; j < GroundInput.GroundLayers.Count; j++)
                 {
@@ -2297,6 +2336,7 @@ namespace PileDesign.ViewModels
                     GroundInput.GroundMassesData[i].Mass += Math.Max(Math.Min(zi1, zj1) - Math.Max(zi2, zj2), 0)
                         * GroundInput.GroundLayers[j].Density / 9.806665;
                 }
+
             }
         }
 
@@ -2362,7 +2402,7 @@ namespace PileDesign.ViewModels
                     groundMassData.VSE[levelIndex] = Math.Pow(density * vs0 / bedrockDensity / bedrockShearWaveVelocity, beta) * vs0;
 
                     // 等価せん断ばね剛性
-                    groundMassData.K[levelIndex] = density / 9.80665 * Math.Pow(groundMassData.VSE[levelIndex], 2.0) / groundMassData.Spacing;
+                    groundMassData.K[levelIndex] = density / 9.80665 * Math.Pow(groundMassData.VSE[levelIndex], 2.0) / groundMassData.H.GetValueOrDefault();
 
                     if (i == 0)
                     {

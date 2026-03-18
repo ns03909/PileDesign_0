@@ -19,7 +19,59 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
-    public record PropertyPanelItem(string Name, string Value);
+    public enum PropertyInputType { ReadOnly, Number, ComboBox }
+
+    public class PropertyPanelItem : INotifyPropertyChanged
+    {
+        public string Name { get; }
+        public string Unit { get; }
+        public PropertyInputType InputType { get; }
+        public IReadOnlyList<string>? Options { get; }
+
+        private string _value;
+        public string Value
+        {
+            get => _value;
+            set
+            {
+                if (_value == value) return;
+                _value = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+                if (!_suppressCommit) CommitAction?.Invoke(this, value);
+            }
+        }
+
+        private bool _suppressCommit;
+
+        /// <summary>CommitAction を発火させずに Value を更新する（入力キャンセル時に元の値へ戻す場合など）</summary>
+        public void SetValueSilent(string value)
+        {
+            _suppressCommit = true;
+            Value = value;
+            _suppressCommit = false;
+        }
+
+        /// <summary>値が確定したときに呼ばれるコールバック。引数は (this, rawValue)。</summary>
+        public Action<PropertyPanelItem, string>? CommitAction { get; }
+
+        public PropertyPanelItem(
+            string name,
+            string value,
+            string unit = "",
+            PropertyInputType inputType = PropertyInputType.ReadOnly,
+            Action<PropertyPanelItem, string>? commitAction = null,
+            IReadOnlyList<string>? options = null)
+        {
+            Name = name;
+            _value = value;
+            Unit = unit;
+            InputType = inputType;
+            CommitAction = commitAction;
+            Options = options;
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+    }
 
     /// <summary>
     /// MainWindowViewModel.Constructor.cs
@@ -265,52 +317,144 @@ namespace PileDesign.ViewModels
             else if (sender is FoundationNode fNode) BuildFoundationNodeProperties(fNode);
         }
 
+        // -------------------------------------------------------
+        // プロパティパネル Build ヘルパー
+        // -------------------------------------------------------
+
+        /// <summary>数値（double）の編集コミットアクションを生成する。</summary>
+        private Action<PropertyPanelItem, string> MakeDoubleCommit(
+            Func<double> getter, Action<double> setter, string format = "F3")
+        {
+            return (item, rawValue) =>
+            {
+                if (!double.TryParse(rawValue, out var newVal))
+                {
+                    item.SetValueSilent(getter().ToString(format));
+                    return;
+                }
+                var oldVal = getter();
+                if (Math.Abs(newVal - oldVal) < 1e-9) return;
+                if (!CheckAndResetAnalysisResults())
+                {
+                    item.SetValueSilent(oldVal.ToString(format));
+                    return;
+                }
+                SaveUndoState();
+                setter(newVal);
+                RequestUpdateWindow();
+            };
+        }
+
+        /// <summary>整数（int）の編集コミットアクションを生成する（ComboBox 用）。</summary>
+        private Action<PropertyPanelItem, string> MakeIntCommit(
+            Func<int> getter, Action<int> setter)
+        {
+            return (item, rawValue) =>
+            {
+                if (!int.TryParse(rawValue, out var newVal))
+                {
+                    item.SetValueSilent(getter().ToString());
+                    return;
+                }
+                if (newVal == getter()) return;
+                if (!CheckAndResetAnalysisResults())
+                {
+                    item.SetValueSilent(getter().ToString());
+                    return;
+                }
+                SaveUndoState();
+                setter(newVal);
+                RequestUpdateWindow();
+            };
+        }
+
+        // -------------------------------------------------------
+        // 単一選択 Build メソッド
+        // -------------------------------------------------------
+
         private void BuildPileProperties(PileLayoutDataItem pile)
         {
+            var pileBodyOptions = CurrentInputModel.PileBodiesCountList.Select(x => x.ToString()).ToList();
+            var groundOptions   = CurrentInputModel.GroundsInputCountList.Select(x => x.ToString()).ToList();
+
             int no = CurrentInputModel.PileLayoutItems.IndexOf(pile) + 1;
             SelectedItemProperties.Add(new("番号", $"{no}"));
-            SelectedItemProperties.Add(new("X", $"{pile.X:F3} m"));
-            SelectedItemProperties.Add(new("Y", $"{pile.Y:F3} m"));
-            SelectedItemProperties.Add(new("Z (杭頭)", $"{pile.Z:F3} m"));
-            SelectedItemProperties.Add(new("杭体No", $"{pile.PileBodyNo}"));
-            SelectedItemProperties.Add(new("地盤No", $"{pile.GroundNo}"));
+
+            SelectedItemProperties.Add(new("X", $"{pile.X:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => pile.X, v => pile.X = v)));
+            SelectedItemProperties.Add(new("Y", $"{pile.Y:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => pile.Y, v => pile.Y = v)));
+            SelectedItemProperties.Add(new("Z (杭頭)", $"{pile.Z:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => pile.Z, v => pile.Z = v)));
+
+            SelectedItemProperties.Add(new("杭体No", $"{pile.PileBodyNo}", "",
+                PropertyInputType.ComboBox,
+                MakeIntCommit(() => pile.PileBodyNo, v => pile.PileBodyNo = v),
+                pileBodyOptions));
+            SelectedItemProperties.Add(new("地盤No", $"{pile.GroundNo}", "",
+                PropertyInputType.ComboBox,
+                MakeIntCommit(() => pile.GroundNo, v => pile.GroundNo = v),
+                groundOptions));
 
             var pileLen = CalcPileLength(pile);
             if (pileLen.HasValue)
                 SelectedItemProperties.Add(new("杭長", $"{pileLen.Value:F3} m"));
 
-            SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}"));
+            SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}", "",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => pile.GroupPileFactor, v => pile.GroupPileFactor = v)));
             SelectedItemProperties.Add(new("間隔係数 R/B", $"{pile.PileSpacingFactor:F3}"));
-            SelectedItemProperties.Add(new("ΔZc", $"{pile.FoundationBeamDeltaZc:F3} m"));
+            SelectedItemProperties.Add(new("ΔZc", $"{pile.FoundationBeamDeltaZc:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => pile.FoundationBeamDeltaZc, v => pile.FoundationBeamDeltaZc = v)));
 
-            // 軸力: VL
-            SelectedItemProperties.Add(new("軸力 VL", $"{pile.AxialForceVL:F1} kN"));
+            // 軸力 VL（VL0 を編集、表示は VL0 の値）
+            SelectedItemProperties.Add(new("軸力 VL", $"{pile.AxialForceVL0:F1}", "kN",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => pile.AxialForceVL0, v => pile.AxialForceVL0 = v, "F1")));
 
-            // 軸力: レベル1 (1-1, 1-2, 1-3, 1-4)
+            // 軸力: レベル1
             for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
             {
-                SelectedItemProperties.Add(new($"軸力 1-{i + 1}", $"{pile.AxialForceLevel1s[i]:F1} kN"));
+                int idx = i;
+                SelectedItemProperties.Add(new($"軸力 1-{i + 1}", $"{pile.AxialForceLevel1s[i]:F1}", "kN",
+                    PropertyInputType.Number,
+                    MakeDoubleCommit(
+                        () => pile.AxialForceLevel1s[idx],
+                        v => pile.AxialForceLevel1s[idx] = v, "F1")));
             }
 
-            // 軸力: レベル2 (2-1, 2-2, 2-3, 2-4)
+            // 軸力: レベル2
             for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
             {
-                SelectedItemProperties.Add(new($"軸力 2-{i + 1}", $"{pile.AxialForceLevel2s[i]:F1} kN"));
+                int idx = i;
+                SelectedItemProperties.Add(new($"軸力 2-{i + 1}", $"{pile.AxialForceLevel2s[i]:F1}", "kN",
+                    PropertyInputType.Number,
+                    MakeDoubleCommit(
+                        () => pile.AxialForceLevel2s[idx],
+                        v => pile.AxialForceLevel2s[idx] = v, "F1")));
             }
         }
 
         private void BuildBeamProperties(FoundationBeamElement beam)
         {
-            SelectedItemProperties.Add(new("要素No", $"{beam.No}"));
+            SelectedItemProperties.Add(new("要素No",    $"{beam.No}"));
             SelectedItemProperties.Add(new("I端節点No", $"{beam.NodeI_No}"));
             SelectedItemProperties.Add(new("J端節点No", $"{beam.NodeJ_No}"));
-            SelectedItemProperties.Add(new("材料No", $"{beam.MaterialNo}"));
-            SelectedItemProperties.Add(new("断面No", $"{beam.SectionNo}"));
-            SelectedItemProperties.Add(new("幅", $"{beam.Width:F3} m"));
-            SelectedItemProperties.Add(new("高さ", $"{beam.Height:F3} m"));
-            SelectedItemProperties.Add(new("ヤング率", $"{beam.YoungModulus / 1000.0:N0} N/mm²"));
+            SelectedItemProperties.Add(new("材料No",    $"{beam.MaterialNo}"));
+            SelectedItemProperties.Add(new("断面No",    $"{beam.SectionNo}"));
+            SelectedItemProperties.Add(new("幅",        $"{beam.Width:F3} m"));
+            SelectedItemProperties.Add(new("高さ",      $"{beam.Height:F3} m"));
+            SelectedItemProperties.Add(new("ヤング率",   $"{beam.YoungModulus / 1000.0:N0} N/mm²"));
             SelectedItemProperties.Add(new("横弾性係数", $"{beam.ShearModulus / 1000.0:N0} N/mm²"));
-            SelectedItemProperties.Add(new("角度β", $"{beam.AngleBeta:F1}°"));
+
+            // 角度β のみ編集可能
+            SelectedItemProperties.Add(new("角度β", $"{beam.AngleBeta:F1}", "°",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => beam.AngleBeta, v => beam.AngleBeta = v, "F1")));
 
             var len = CalcBeamLength(beam);
             if (len.HasValue)
@@ -343,9 +487,15 @@ namespace PileDesign.ViewModels
         private void BuildInputNodeProperties(InputNode node)
         {
             SelectedItemProperties.Add(new("節点No", $"{node.No}"));
-            SelectedItemProperties.Add(new("X", $"{node.X:F3} m"));
-            SelectedItemProperties.Add(new("Y", $"{node.Y:F3} m"));
-            SelectedItemProperties.Add(new("Z", $"{node.Z:F3} m"));
+            SelectedItemProperties.Add(new("X", $"{node.X:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => node.X, v => node.X = v)));
+            SelectedItemProperties.Add(new("Y", $"{node.Y:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => node.Y, v => node.Y = v)));
+            SelectedItemProperties.Add(new("Z", $"{node.Z:F3}", "m",
+                PropertyInputType.Number,
+                MakeDoubleCommit(() => node.Z, v => node.Z = v)));
             SelectedItemProperties.Add(new("タイプ", $"{node.Type}"));
         }
 
@@ -357,7 +507,9 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("Z", $"{fNode.Z:F3} m"));
         }
 
-        // --- 複数選択時のプロパティ表示 ---
+        // -------------------------------------------------------
+        // 複数選択 Build メソッド
+        // -------------------------------------------------------
 
         private static string CommonOrVarious<T>(IEnumerable<T> values)
         {
@@ -365,73 +517,135 @@ namespace PileDesign.ViewModels
             return distinct.Count == 1 ? $"{distinct[0]}" : "(様々)";
         }
 
-        private static string CommonDoubleOrVarious(IEnumerable<double> values, string format = "F3", string unit = "", double scale = 1.0)
+        private static string CommonDoubleOrVarious(IEnumerable<double> values, string format = "F3", double scale = 1.0)
         {
             var distinct = values.Select(v => Math.Round(v, 6)).Distinct().ToList();
-            return distinct.Count == 1 ? $"{(distinct[0] * scale).ToString(format)} {unit}".Trim() : "(様々)";
+            return distinct.Count == 1 ? (distinct[0] * scale).ToString(format) : "(様々)";
         }
 
         private void BuildMultiPileProperties(List<PileLayoutDataItem> piles)
         {
+            var pileBodyOptions = CurrentInputModel.PileBodiesCountList.Select(x => x.ToString()).ToList();
+            var groundOptions   = CurrentInputModel.GroundsInputCountList.Select(x => x.ToString()).ToList();
+
             SelectedItemProperties.Add(new("選択数", $"{piles.Count} 本"));
 
-            // 杭長合計
-            double totalPileLen = 0;
-            int countValid = 0;
-            foreach (var p in piles)
-            {
-                var len = CalcPileLength(p);
-                if (len.HasValue) { totalPileLen += len.Value; countValid++; }
-            }
-            if (countValid > 0)
+            // 杭長合計（読み取り専用）
+            double totalPileLen = 0; int countValidLen = 0;
+            foreach (var p in piles) { var l = CalcPileLength(p); if (l.HasValue) { totalPileLen += l.Value; countValidLen++; } }
+            if (countValidLen > 0)
                 SelectedItemProperties.Add(new("杭長 (合計)", $"{totalPileLen:F3} m"));
 
-            // 共通プロパティ
-            SelectedItemProperties.Add(new("杭体No", CommonOrVarious(piles.Select(p => p.PileBodyNo))));
-            SelectedItemProperties.Add(new("地盤No", CommonOrVarious(piles.Select(p => p.GroundNo))));
-            SelectedItemProperties.Add(new("群杭係数 ξ", CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))));
-            SelectedItemProperties.Add(new("間隔係数 R/B", CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor))));
-            SelectedItemProperties.Add(new("ΔZc", CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc), "F3", "m")));
+            // 杭体No（ComboBox: 同一値なら選択可、様々なら空欄）
+            var commonPileBodyNo = piles.Select(p => p.PileBodyNo).Distinct().ToList();
+            SelectedItemProperties.Add(new("杭体No",
+                commonPileBodyNo.Count == 1 ? commonPileBodyNo[0].ToString() : "",
+                "", PropertyInputType.ComboBox,
+                (item, rawValue) =>
+                {
+                    if (!int.TryParse(rawValue, out var newVal)) return;
+                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(commonPileBodyNo.Count == 1 ? commonPileBodyNo[0].ToString() : ""); return; }
+                    SaveUndoState();
+                    foreach (var p in piles) p.PileBodyNo = newVal;
+                    RequestUpdateWindow();
+                }, pileBodyOptions));
 
-            // 軸力合計
+            // 地盤No（ComboBox）
+            var commonGroundNo = piles.Select(p => p.GroundNo).Distinct().ToList();
+            SelectedItemProperties.Add(new("地盤No",
+                commonGroundNo.Count == 1 ? commonGroundNo[0].ToString() : "",
+                "", PropertyInputType.ComboBox,
+                (item, rawValue) =>
+                {
+                    if (!int.TryParse(rawValue, out var newVal)) return;
+                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(commonGroundNo.Count == 1 ? commonGroundNo[0].ToString() : ""); return; }
+                    SaveUndoState();
+                    foreach (var p in piles) p.GroundNo = newVal;
+                    RequestUpdateWindow();
+                }, groundOptions));
+
+            // 群杭係数 ξ
+            SelectedItemProperties.Add(new("群杭係数 ξ",
+                CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor)), "",
+                PropertyInputType.Number,
+                (item, rawValue) =>
+                {
+                    if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
+                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.GroupPileFactor))); return; }
+                    SaveUndoState();
+                    foreach (var p in piles) p.GroupPileFactor = newVal;
+                    RequestUpdateWindow();
+                }));
+
+            // 間隔係数（読み取り専用）
+            SelectedItemProperties.Add(new("間隔係数 R/B", CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor))));
+
+            // ΔZc
+            SelectedItemProperties.Add(new("ΔZc",
+                CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc)), "m",
+                PropertyInputType.Number,
+                (item, rawValue) =>
+                {
+                    if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
+                    if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.FoundationBeamDeltaZc))); return; }
+                    SaveUndoState();
+                    foreach (var p in piles) p.FoundationBeamDeltaZc = newVal;
+                    RequestUpdateWindow();
+                }));
+
+            // 軸力 VL（合計：読み取り専用）
             SelectedItemProperties.Add(new("軸力 VL (合計)", $"{piles.Sum(p => p.AxialForceVL):F1} kN"));
 
-            // レベル1
+            // レベル1軸力
             int level1Count = piles.Min(p => p.AxialForceLevel1s.Count);
             for (int i = 0; i < level1Count; i++)
             {
                 int idx = i;
-                SelectedItemProperties.Add(new($"軸力 1-{i + 1} (合計)", $"{piles.Sum(p => p.AxialForceLevel1s[idx]):F1} kN"));
+                SelectedItemProperties.Add(new($"軸力 1-{i + 1}",
+                    CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1"), "kN",
+                    PropertyInputType.Number,
+                    (item, rawValue) =>
+                    {
+                        if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
+                        if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
+                        SaveUndoState();
+                        foreach (var p in piles) p.AxialForceLevel1s[idx] = newVal;
+                        RequestUpdateWindow();
+                    }));
             }
 
-            // レベル2
+            // レベル2軸力
             int level2Count = piles.Min(p => p.AxialForceLevel2s.Count);
             for (int i = 0; i < level2Count; i++)
             {
                 int idx = i;
-                SelectedItemProperties.Add(new($"軸力 2-{i + 1} (合計)", $"{piles.Sum(p => p.AxialForceLevel2s[idx]):F1} kN"));
+                SelectedItemProperties.Add(new($"軸力 2-{i + 1}",
+                    CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1"), "kN",
+                    PropertyInputType.Number,
+                    (item, rawValue) =>
+                    {
+                        if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
+                        if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
+                        SaveUndoState();
+                        foreach (var p in piles) p.AxialForceLevel2s[idx] = newVal;
+                        RequestUpdateWindow();
+                    }));
             }
         }
 
         private void BuildMultiBeamProperties(List<FoundationBeamElement> beams)
         {
-            SelectedItemProperties.Add(new("選択数", $"{beams.Count} 本"));
-            SelectedItemProperties.Add(new("材料No", CommonOrVarious(beams.Select(b => b.MaterialNo))));
-            SelectedItemProperties.Add(new("断面No", CommonOrVarious(beams.Select(b => b.SectionNo))));
-            SelectedItemProperties.Add(new("幅", CommonDoubleOrVarious(beams.Select(b => b.Width), "F3", "m")));
-            SelectedItemProperties.Add(new("高さ", CommonDoubleOrVarious(beams.Select(b => b.Height), "F3", "m")));
-            SelectedItemProperties.Add(new("ヤング率", CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "N0", "N/mm²", scale: 0.001)));
-            SelectedItemProperties.Add(new("横弾性係数", CommonDoubleOrVarious(beams.Select(b => b.ShearModulus), "N0", "N/mm²", scale: 0.001)));
-            SelectedItemProperties.Add(new("角度β", CommonDoubleOrVarious(beams.Select(b => b.AngleBeta), "F1", "°")));
+            SelectedItemProperties.Add(new("選択数",    $"{beams.Count} 本"));
+            SelectedItemProperties.Add(new("材料No",    CommonOrVarious(beams.Select(b => b.MaterialNo))));
+            SelectedItemProperties.Add(new("断面No",    CommonOrVarious(beams.Select(b => b.SectionNo))));
+            SelectedItemProperties.Add(new("幅",        $"{CommonDoubleOrVarious(beams.Select(b => b.Width))} m"));
+            SelectedItemProperties.Add(new("高さ",      $"{CommonDoubleOrVarious(beams.Select(b => b.Height))} m"));
+            SelectedItemProperties.Add(new("ヤング率",   $"{CommonDoubleOrVarious(beams.Select(b => b.YoungModulus), "N0", 0.001)} N/mm²"));
+            SelectedItemProperties.Add(new("横弾性係数", $"{CommonDoubleOrVarious(beams.Select(b => b.ShearModulus), "N0", 0.001)} N/mm²"));
+            SelectedItemProperties.Add(new("角度β",     $"{CommonDoubleOrVarious(beams.Select(b => b.AngleBeta), "F1")}°"));
 
-            // 部材長合計
-            double totalLen = 0;
-            int countValid = 0;
-            foreach (var b in beams)
-            {
-                var len = CalcBeamLength(b);
-                if (len.HasValue) { totalLen += len.Value; countValid++; }
-            }
+            double totalLen = 0; int countValid = 0;
+            foreach (var b in beams) { var l = CalcBeamLength(b); if (l.HasValue) { totalLen += l.Value; countValid++; } }
             if (countValid > 0)
                 SelectedItemProperties.Add(new("部材長 (合計)", $"{totalLen:F3} m"));
         }

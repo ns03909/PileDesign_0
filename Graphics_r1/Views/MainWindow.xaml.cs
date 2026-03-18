@@ -2151,6 +2151,26 @@ namespace PileDesign.Views
             HandleKeyDown(e);
         }
 
+        // -------------------------------------------------------
+        // プロパティパネル イベントハンドラー
+        // -------------------------------------------------------
+
+        /// <summary>TextBox でフォーカスを得たら全選択する。</summary>
+        private void PropertyPanel_TextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is TextBox tb) tb.SelectAll();
+        }
+
+        /// <summary>プロパティパネル内で Enter キーを押したら TextBox の変更を確定し、フォーカスを外す。</summary>
+        private void PropertyPanel_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && e.OriginalSource is TextBox tb)
+            {
+                tb.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+                e.Handled = true;
+            }
+        }
+
         // キーを押したときの処理
         private void HandleKeyDown(KeyEventArgs e)
         {
@@ -3118,6 +3138,7 @@ namespace PileDesign.Views
                     // イベントを再度有効にする
                     viewModel.CurrentInputModel.PileLayoutItems.CollectionChanged += SelectedPileLayoutItems_CollectionChanged;
                     UpdateCanvas3D();
+                    viewModel.UpdatePropertyPanel();
                 }
             }
         }
@@ -3226,6 +3247,7 @@ namespace PileDesign.Views
             finally
             {
                 isSelectionChanging = false;
+                viewModel.UpdatePropertyPanel();
             }
         }
 

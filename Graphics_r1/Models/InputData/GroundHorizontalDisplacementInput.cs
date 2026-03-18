@@ -1,4 +1,5 @@
-﻿using System;
+/*
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -174,32 +175,32 @@ namespace PileDesign.Models.InputData
         }
 
         // 水平変位
-        private ObservableCollection<double> _dmaxUStars;
-        public ObservableCollection<double> DmaxUStars
+        private ObservableCollection<double> _dMaxUStars;
+        public ObservableCollection<double> DMaxUStars
         {
-            get => _dmaxUStars;
+            get => _dMaxUStars;
             set
             {
-                if (_dmaxUStars != value)
+                if (_dMaxUStars != value)
                 {
-                    _dmaxUStars = value;
-                    OnPropertyChanged(nameof(DmaxUStars));
+                    _dMaxUStars = value;
+                    OnPropertyChanged(nameof(DMaxUStars));
                 }
             }
         }
 
 
         // 水平変位
-        private ObservableCollection<double> _dmaxUStarSigmaGammaCyHs;
-        public ObservableCollection<double> DmaxUStarSigmaGammaCyHs
+        private ObservableCollection<double> _dMaxUStarSigmaGammaCyHs;
+        public ObservableCollection<double> DMaxUStarSigmaGammaCyHs
         {
-            get => _dmaxUStarSigmaGammaCyHs;
+            get => _dMaxUStarSigmaGammaCyHs;
             set
             {
-                if (_dmaxUStarSigmaGammaCyHs != value)
+                if (_dMaxUStarSigmaGammaCyHs != value)
                 {
-                    _dmaxUStarSigmaGammaCyHs = value;
-                    OnPropertyChanged(nameof(DmaxUStarSigmaGammaCyHs));
+                    _dMaxUStarSigmaGammaCyHs = value;
+                    OnPropertyChanged(nameof(DMaxUStarSigmaGammaCyHs));
                 }
             }
         }
@@ -294,7 +295,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 
+        //
         private ObservableCollection<double> _sigmaGammaCyHs;
         public ObservableCollection<double> SigmaGammaCyHs
         {
@@ -326,8 +327,8 @@ namespace PileDesign.Models.InputData
             Ks = [];
             Us = [];
             UStars = [];
-            DmaxUStars = [];
-            DmaxUStarSigmaGammaCyHs = [];
+            DMaxUStars = [];
+            DMaxUStarSigmaGammaCyHs = [];
             Masses = [];
             SigmaGammaCyHs = [];
 
@@ -385,13 +386,11 @@ namespace PileDesign.Models.InputData
                 double SigmaGammaVS0H = 0.0;
                 for (int i = 0; i < LayerNum; i++)
                 {
-                    if (IsEngineeringBedrocks[i] == true)
-                    { break; }
-                    T0 += 4 * DmaxUStarSigmaGammaCyHs[i] / VS0s[i];
+                    if (IsEngineeringBedrocks[i] == true) { break; }
+                    //T0 += 4 * DmaxUStarSigmaGammaCyHs[i] / VS0s[i];
+                    T0 += 4 * Hs[i] / VS0s[i];
                     SigmaH += Hs[i];
-                    SigmaGammaVS0H += Densities[i]
-                        * VS0s[i]
-                        * Hs[i];
+                    SigmaGammaVS0H += Densities[i] * VS0s[i] * Hs[i];
 
                     if (IsEngineeringBedrocks[i] == true && i < LayerNum - 1)
                     {
@@ -411,7 +410,7 @@ namespace PileDesign.Models.InputData
                     VSEs[i]
                         = Math.Pow(Densities[i] * VS0s[i] / BedrockDensity / BedrockShearWaveVelocity, beta) * VS0s[i];
 
-                    double spacing = (Hs[i] + Hs[i + 1]) * 0.5;
+                    //double spacing = (Hs[i] + Hs[i + 1]) * 0.5;
 
                     Ks[i]
                         = Densities[i] / 9.80665 * Math.Pow(VSEs[i], 2.0) / Hs[i];
@@ -480,12 +479,13 @@ namespace PileDesign.Models.InputData
 
                 for (int i = 0; i < hs.Count; i++)
                 {
-                    DmaxUStars[i] = Dmax * UStars[i] * 1000.0;
-                    DmaxUStarSigmaGammaCyHs[i]
-                        = DmaxUStars[i]
+                    DMaxUStars[i] = Dmax * UStars[i] * 1000.0;
+                    DMaxUStarSigmaGammaCyHs[i]
+                        = DMaxUStars[i]
                         + SigmaGammaCyHs[i];
                 }
             }
         }
     }
 }
+*/

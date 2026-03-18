@@ -25,6 +25,62 @@ namespace PileDesign.Common
             // セル選択をデフォルト化（複数セル選択も許可）
             SelectionUnit = DataGridSelectionUnit.CellOrRowHeader;
             SelectionMode = DataGridSelectionMode.Extended;
+
+            // 縦スクロールバーを常時表示：Auto だとスクロールバー出現時にデータ行幅だけ縮んでヘッダーとずれる
+            ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Visible);
+
+            // 列仮想化を無効化：FrozenColumnCount との組み合わせで横スクロール時にガタつき・ヘッダー欠けが発生するため
+            EnableColumnVirtualization = false;
+
+            // ヘッダー高さを全列の最大に固定（列仮想化ON時の横スクロールでのガタつき防止）
+            Loaded += OnDataGridLoaded;
+        }
+
+        private void OnDataGridLoaded(object sender, RoutedEventArgs e)
+        {
+            FixColumnHeaderHeight();
+        }
+
+        /// <summary>
+        /// 全カラムヘッダーを計測し、最大高さに ColumnHeaderHeight を固定する。
+        /// 列仮想化が有効な場合、表示中のカラムだけで高さが決まるため
+        /// 横スクロール時にヘッダー行がガタつく問題を防止する。
+        /// </summary>
+        private void FixColumnHeaderHeight()
+        {
+            // XAML で ColumnHeaderHeight が明示指定されている場合はそれを尊重
+            if (!double.IsNaN(ColumnHeaderHeight))
+                return;
+
+            double maxContentHeight = 0;
+
+            foreach (var column in Columns)
+            {
+                double measuredHeight = 0;
+
+                if (column.Header is UIElement element)
+                {
+                    // StackPanel 等の UIElement ヘッダーを計測
+                    element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    measuredHeight = element.DesiredSize.Height;
+                }
+                else if (column.Header is string text && !string.IsNullOrEmpty(text))
+                {
+                    // 文字列ヘッダーは一時 TextBlock で計測
+                    var textBlock = new TextBlock { Text = text };
+                    textBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                    measuredHeight = textBlock.DesiredSize.Height;
+                }
+
+                if (measuredHeight > maxContentHeight)
+                    maxContentHeight = measuredHeight;
+            }
+
+            if (maxContentHeight > 0)
+            {
+                // DataGridColumnHeader のパディング・ボーダー分を加算
+                ColumnHeaderHeight = maxContentHeight + 10;
+            }
         }
 
         protected override void OnPreviewKeyDown(KeyEventArgs e)

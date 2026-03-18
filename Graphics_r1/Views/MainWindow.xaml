@@ -5631,7 +5631,9 @@
                                     <!-- プロパティ一覧（スクロール可能） -->
                                     <ScrollViewer Grid.Row="1"
                                                   VerticalScrollBarVisibility="Auto"
-                                                  HorizontalScrollBarVisibility="Disabled">
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  x:Name="PropertyPanelScrollViewer"
+                                                  PreviewKeyDown="PropertyPanel_PreviewKeyDown">
                                         <ItemsControl ItemsSource="{Binding SelectedItemProperties}"
                                                       Margin="0">
                                             <ItemsControl.ItemTemplate>
@@ -5641,16 +5643,91 @@
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="Auto" MinWidth="70"/>
                                                                 <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
                                                             </Grid.ColumnDefinitions>
+
+                                                            <!-- 項目名 -->
                                                             <TextBlock Grid.Column="0" Text="{Binding Name}"
                                                                        Foreground="#666" FontSize="12"
                                                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding Value}"
-                                                                       Foreground="#222" FontSize="12"
-                                                                       FontWeight="Medium"
+
+                                                            <!-- 読み取り専用 TextBlock -->
+                                                            <TextBlock Grid.Column="1" Grid.ColumnSpan="2"
+                                                                       Text="{Binding Value}"
+                                                                       Foreground="#222" FontSize="12" FontWeight="Medium"
                                                                        VerticalAlignment="Center"
-                                                                       HorizontalAlignment="Right"
-                                                                       TextAlignment="Right"/>
+                                                                       HorizontalAlignment="Right" TextAlignment="Right">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding InputType}" Value="Number">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                            <DataTrigger Binding="{Binding InputType}" Value="ComboBox">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+
+                                                            <!-- 編集用 TextBox（Number） -->
+                                                            <TextBox Grid.Column="1"
+                                                                     Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
+                                                                     FontSize="12" FontWeight="Medium"
+                                                                     HorizontalContentAlignment="Right"
+                                                                     VerticalAlignment="Center"
+                                                                     BorderThickness="0,0,0,1" BorderBrush="#62B0E2"
+                                                                     Background="Transparent" Padding="0"
+                                                                     GotFocus="PropertyPanel_TextBox_GotFocus">
+                                                                <TextBox.Style>
+                                                                    <Style TargetType="TextBox">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding InputType}" Value="Number">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBox.Style>
+                                                            </TextBox>
+
+                                                            <!-- 単位ラベル -->
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding Unit}"
+                                                                       Foreground="#888" FontSize="11"
+                                                                       VerticalAlignment="Center" Margin="3,0,0,0">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding InputType}" Value="Number">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+
+                                                            <!-- 編集用 ComboBox -->
+                                                            <ComboBox Grid.Column="1" Grid.ColumnSpan="2"
+                                                                      SelectedItem="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                                      ItemsSource="{Binding Options}"
+                                                                      FontSize="12" VerticalAlignment="Center"
+                                                                      HorizontalContentAlignment="Right"
+                                                                      BorderThickness="0,0,0,1" BorderBrush="#62B0E2">
+                                                                <ComboBox.Style>
+                                                                    <Style TargetType="ComboBox">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding InputType}" Value="ComboBox">
+                                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </ComboBox.Style>
+                                                            </ComboBox>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>

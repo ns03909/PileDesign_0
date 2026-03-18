@@ -3,10 +3,16 @@
     <TargetFramework>net8.0-windows7.0</TargetFramework>
 	<Nullable>enable</Nullable>
     <OutputType>WinExe</OutputType>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>
     <UseWPF>true</UseWPF>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+
+    <!-- バージョン管理 -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
   </PropertyGroup>	
 
   <ItemGroup>
@@ -53,6 +59,10 @@
     <None Remove="Help\images\manyu5.jpg" />
     <None Remove="Help\images\mouse.png" />
     <None Remove="Help\images\RightClickMenu.png" />
+    <None Remove="Help\images\verification_c\Fig5.1.png" />
+    <None Remove="Help\images\verification_c\Fig5.2.png" />
+    <None Remove="Help\images\verification_c\Fig9.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table1.1.png" />
     <None Remove="Help\images\viewCube.png" />
     <None Remove="Help\images\図2.1.jpeg" />
     <None Remove="Help\images\図3.1.png" />
@@ -420,6 +430,15 @@
   </ItemGroup>	
 
   <ItemGroup>
+    <Content Include="Help\images\verification_c\shishin19\Fig5.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig5.2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Models\PileLibrary\CaptainPileTensionBarPCD_circle.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -619,6 +638,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\images\verification\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table1.1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Resource Include="Icons\316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg">
@@ -1726,5 +1748,9 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Help\images\verification_c\kantoshibu\" />
+    <Folder Include="Help\images\verification_c\sekkeirei\" />
   </ItemGroup>
 </Project>

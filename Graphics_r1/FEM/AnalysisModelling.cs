@@ -195,11 +195,46 @@ namespace PileDesign.FEM
         // 杭要素の追加（接続ノードを明示引数に）- キャッシュ対応版
         private Beam CreatePileElement(SoilPile soilPile, int segIndex, Node upperNode, Node lowerNode)
         {
-            double youngsModulus = soilPile.PileBodySegments[segIndex].PileSection.ConcreteE * 1000.0; // kN/m2
+            // PileBodySegments の範囲チェック
+            if (segIndex < 0 || segIndex >= soilPile.PileBodySegments.Count)
+                throw new InvalidOperationException(
+                    $"杭要素作成エラー: segIndex={segIndex} が PileBodySegments.Count={soilPile.PileBodySegments.Count} の範囲外です。" +
+                    $"\n上端: {upperNode.Name} ({upperNode.Coord.X:F3},{upperNode.Coord.Y:F3},{upperNode.Coord.Z:F3})" +
+                    $"\n下端: {lowerNode.Name} ({lowerNode.Coord.X:F3},{lowerNode.Coord.Y:F3},{lowerNode.Coord.Z:F3})");
+
+            var pileSection = soilPile.PileBodySegments[segIndex].PileSection;
+            double concreteE = pileSection.ConcreteE;
+
+            // ConcreteE の妥当性チェック
+            if (!double.IsFinite(concreteE) || concreteE <= 0)
+                throw new InvalidOperationException(
+                    $"杭要素作成エラー: ConcreteE={concreteE} が無効です (segIndex={segIndex})。" +
+                    $"\n上端: {upperNode.Name}, 下端: {lowerNode.Name}");
+
+            double youngsModulus = concreteE * 1000.0; // kN/m2
             double shearModulus = Utils.GetShearModulus(youngsModulus, 0.2); // kN/m2
-            double area = soilPile.PileBodySegments[segIndex].PileSection.EA / youngsModulus; // m2
-            double inertia = soilPile.PileBodySegments[segIndex].PileSection.EI / youngsModulus; // m4
-            double torsionalInertia = soilPile.PileBodySegments[segIndex].PileSection.GJ / shearModulus; // m4
+            double ea = pileSection.EA;
+            double ei = pileSection.EI;
+            double gj = pileSection.GJ;
+
+            // 断面値の妥当性チェック
+            if (!double.IsFinite(ea) || ea <= 0 || !double.IsFinite(ei) || ei <= 0 || !double.IsFinite(gj) || gj <= 0)
+                throw new InvalidOperationException(
+                    $"杭要素作成エラー: 断面値が無効です (segIndex={segIndex})。" +
+                    $"\nEA={ea}, EI={ei}, GJ={gj}, ConcreteE={concreteE}" +
+                    $"\n上端: {upperNode.Name}, 下端: {lowerNode.Name}");
+
+            double area = ea / youngsModulus; // m2
+            double inertia = ei / youngsModulus; // m4
+            double torsionalInertia = gj / shearModulus; // m4
+
+            // ゼロ長さビームのチェック
+            double beamLength = Utils.GetLengthBetweenTwoNodes(upperNode, lowerNode);
+            if (beamLength < 1e-10)
+                throw new InvalidOperationException(
+                    $"杭要素作成エラー: ビーム長さがゼロです (L={beamLength:E3}, segIndex={segIndex})。" +
+                    $"\n上端: {upperNode.Name} ({upperNode.Coord.X:F3},{upperNode.Coord.Y:F3},{upperNode.Coord.Z:F3})" +
+                    $"\n下端: {lowerNode.Name} ({lowerNode.Coord.X:F3},{lowerNode.Coord.Y:F3},{lowerNode.Coord.Z:F3})");
 
             // Material キャッシュ
             var material = _materialCache.GetOrAdd(youngsModulus, y => new Material(y, 0.2));
@@ -241,11 +276,11 @@ namespace PileDesign.FEM
             // 並列処理用: 各杭の処理結果を格納
             var pileResults = new PileProcessingResult[pileCount];
 
-            // 並列で各杭を処理（杭間に依存関係がないため安全）
-            Parallel.For(0, pileCount, i =>
+            // 逐次処理（SoilPile共有オブジェクトへの並行アクセスによるNaN問題を回避）
+            for (int i = 0; i < pileCount; i++)
             {
                 pileResults[i] = ProcessSinglePile(pileList[i]);
-            });
+            }
 
             // メインスレッドで結果をマージ
             MergePileResults(pileResults);

@@ -284,6 +284,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _dmaxUStar, value);
         }
 
+        // 層下面Z（層厚の累積から算出）
+        private double? _layerBottomZ;
+        public double? LayerBottomZ
+        {
+            get => _layerBottomZ;
+            set => SetProperty(ref _layerBottomZ, value);
+        }
+
         // 水平変位
         private ObservableCollection<double> _dmaxUStarSigmaGammaCyH;
         public ObservableCollection<double> DmaxUStarSigmaGammaCyH

@@ -406,7 +406,7 @@
 
                                                 <TextBlock Text="基準水平地盤反力係数と塑性水平地盤反力度（上段：要素上端の値，下段：要素下端の値）" Grid.Row="1"/>
 
-                                                <common:EnhancedDataGrid x:Name="horizon" AutoGenerateColumns="False" HorizontalAlignment="Left" Height="300"
+                                                <common:EnhancedDataGrid x:Name="horizon" AutoGenerateColumns="False" HorizontalAlignment="Left" 
                                                         CanUserAddRows="False" CanUserSortColumns="False"
                                                         ItemsSource="{Binding SelectedHorizontalSoilReactions, UpdateSourceTrigger=PropertyChanged}"
                                                         SelectedItem="{Binding SelectedLayeronDataGrid, UpdateSourceTrigger=PropertyChanged}"

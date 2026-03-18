@@ -22,10 +22,10 @@
   ],
   "settlementSoilLayers": [
     {
-      "bottomAltitude": -9.5,
+      "bottomAltitude": -7.5,
       "ek": 28000,
-      "poissonsRatio": 0.33,
-      "thickness": 9.5
+      "poissonsRatio": 0.30,
+      "thickness": 7.5
     }
   ],
     "pileBodies": [

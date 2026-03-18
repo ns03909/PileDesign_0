@@ -828,9 +828,10 @@ namespace PileDesign.ViewModels
                 rectangle.LineWidth = 1;
             }
 
+            double xMaxKh0 = dataX1.Length > 0 ? dataX1.Max() : 1.0;
             for (int i = 0; i < dataX1.Length; i++)
             {
-                wpf.Plot.Add.Text($"{dataX1[i]:N0}", new Coordinates(dataX1[i], dataY1[i]));
+                PlotHelper.AddText(wpf.Plot, $"{dataX1[i]:N0}", dataX1[i], dataY1[i], xMaxKh0);
             }
 
             if (x1.Count == 0)
@@ -932,7 +933,7 @@ namespace PileDesign.ViewModels
 
                 var scatterLineB = wpfPlot.Plot.Add.ScatterLine(dataX, dataY);
                 scatterLineB.LegendText = $"{j + 1}B";
-                wpfPlot.Plot.Add.Text($"{j + 1}B", new Coordinates(dataX[^1] + 50, dataY[^1]));
+                PlotHelper.AddText(wpfPlot.Plot, $"{j + 1}B", dataX[^1] + 50, dataY[^1], 600);
 
                 if (SelectedLayeronDataGrid == items[j])
                 {
@@ -956,7 +957,7 @@ namespace PileDesign.ViewModels
 
                 var scatterLineT = wpfPlot.Plot.Add.ScatterLine(dataX, dataY);
                 scatterLineT.LegendText = $"{j + 1}T";
-                wpfPlot.Plot.Add.Text($"{j + 1}T", new Coordinates(dataX[^1], dataY[^1]));
+                PlotHelper.AddText(wpfPlot.Plot, $"{j + 1}T", dataX[^1], dataY[^1], 600);
 
                 if (SelectedLayeronDataGrid == items[j])
                 {

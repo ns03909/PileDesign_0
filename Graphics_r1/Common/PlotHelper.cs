@@ -182,6 +182,21 @@ namespace PileDesign.Common
         /// </summary>
         /// <param name="wpfPlot">対象のWpfPlotコントロール</param>
         /// <param name="defaultFileName">デフォルトのファイル名（拡張子なし）</param>
+        /// <summary>
+        /// データ点にラベルを追加する。右端付近の点は左寄せにしてはみ出しを防ぐ。
+        /// </summary>
+        /// <param name="xMax">X軸データの最大値（アライメント判定に使用）</param>
+        public static ScottPlot.Plottables.Text AddText(
+            Plot plot, string text, double x, double y, double xMax)
+        {
+            var label = plot.Add.Text(text, new Coordinates(x, y));
+            // 右端70%以上はテキストを左に伸ばす（LowerRight = テキスト右端が点に揃う）
+            label.LabelAlignment = (xMax > 0 && x > xMax * 0.70)
+                ? Alignment.LowerRight
+                : Alignment.LowerLeft;
+            return label;
+        }
+
         public static void AddCsvExportMenu(WpfPlot wpfPlot, string defaultFileName = "data")
         {
             wpfPlot.Menu.AddSeparator();

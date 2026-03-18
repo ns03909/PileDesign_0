@@ -14,12 +14,23 @@ namespace PileDesign.Views
             InitializeComponent();
 
             // WebView2 の初期化
-            //HelpWebView.Source = new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views.help.html"));
-            HelpWebView.Source = new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help", "Help.html"));
-
-            // ファイルパスの絶対パス指定（file:/// 形式）
             var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help", "Help.html");
             HelpWebView.Source = new Uri("file:///" + filePath.Replace("\\", "/"));
+
+            // ナビゲーション完了後にバージョン文字列を注入
+            HelpWebView.NavigationCompleted += async (s, e) =>
+            {
+                if (e.IsSuccess)
+                {
+                    var version = ViewModels.MainWindowViewModel.AppVersion;
+                    // id="app-version" の要素があれば書き換え、なければ既存テキストを置換
+                    var script = $@"
+                        var el = document.getElementById('app-version');
+                        if (el) {{ el.textContent = 'ver {version}'; }}
+                    ";
+                    await HelpWebView.ExecuteScriptAsync(script);
+                }
+            };
 
 
             //string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Help\\Help.html");

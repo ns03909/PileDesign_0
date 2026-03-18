@@ -887,6 +887,9 @@ namespace PileDesign.ViewModels
                 });
 
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
+
+                // 計算完了通知（UIスレッドで直接表示）
+                MessageBox.Show("計算が終了しました。", "完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException)
             {
@@ -925,6 +928,13 @@ namespace PileDesign.ViewModels
         /// </summary>
         public async Task CleanupAsync()
         {
+            // タイマーを停止してUIへのポストを止める
+            if (_logTimerStarted)
+            {
+                _logFlushTimer.Stop();
+                _logFlushTimer.Dispose();
+            }
+
             if (IsAnalysisRunning && _cancellationTokenSource != null)
             {
                 _cancellationTokenSource.Cancel();
@@ -1954,7 +1964,6 @@ namespace PileDesign.ViewModels
                 // Dispatcher が利用できない場面は無視
             }
 
-            Application.Current?.Dispatcher.Invoke(() => MessageBox.Show("計算が終了しました。"));
         }
 
         // RunAsync 内の荷重ケース処理の先頭に以下ヘルパを呼ぶか、そのまま挿入してください。

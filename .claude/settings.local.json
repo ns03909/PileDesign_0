@@ -40,10 +40,14 @@
       "WebFetch(domain:discourse.mcneel.com)",
       "WebFetch(domain:developer.rhino3d.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:support.midasuser.com)"
+      "WebFetch(domain:support.midasuser.com)",
+      "Bash(xargs:*)",
+      "Read(//c/Users/keisu/.nuget/**)",
+      "Bash(/c/Users/keisu/AppData/Local/Programs/Python/Python310/python.exe /tmp/transform_verification.py \"/c/Users/keisu/source/repos/PileDesign_0/Graphics_r1/Help/verification.html\")"
     ],
     "additionalDirectories": [
-      "c:\\Users\\keisu\\source\\repos\\PileDesign_0"
+      "c:\\Users\\keisu\\source\\repos\\PileDesign_0",
+      "c:\\Users\\keisu\\.claude\\plans"
     ]
   }
 }
