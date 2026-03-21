@@ -792,7 +792,7 @@ namespace PileDesign.ViewModels
         {
             if (SelectedGraphOption.StartsWith('杭'))
             {
-                if (xLabel.StartsWith('F'))
+                if (xLabel.StartsWith('F') || xLabel.StartsWith('Q'))
                 { title = "せん断力"; }
                 else if (xLabel.StartsWith('M'))
                 { title = "曲げモーメント"; }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace PileDesign.Models.InputData
 {
@@ -148,16 +149,18 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _bedrockShearWaveVelocity, value);
         }
 
-        // 土層データ
+        // 土層データ（デシリアライズ時はコンストラクタのデフォルト値を上書きする）
         private ObservableCollection<GroundLayerInput> _groundLayers;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<GroundLayerInput> GroundLayers
         {
             get => _groundLayers;
             set => SetProperty(ref _groundLayers, value);
         }
 
-        // 土質点データ
+        // 土質点データ（デシリアライズ時はコンストラクタのデフォルト値を上書きする）
         private ObservableCollection<GroundMassDataInput> _groundMassesData;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<GroundMassDataInput> GroundMassesData
         {
             get => _groundMassesData;

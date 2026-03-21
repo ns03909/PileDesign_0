@@ -110,6 +110,21 @@ namespace PileDesign.Views
             PlotHelper.AddCsvExportMenu(wpfPlotDGB, "土圧合力");
         }
 
+        /// <summary>
+        /// Ctrl+Enter で「保存して閉じる」を実行（DataGridのCtrl+Enter行コピーを抑制）
+        /// </summary>
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (_viewModel?.OkCommand?.CanExecute(null) == true)
+                {
+                    _viewModel.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+
         private void ElementDivisionWindow_Loaded(object sender, RoutedEventArgs e)
         {
             if (_isLoaded) return;

@@ -52,5 +52,36 @@ namespace PileDesign.Models.Results
                 Tzj = disp.Rzj
             };
         }
+
+        /// <summary>
+        /// RotationalSpring（杭頭リンク要素）から断面変位行を生成
+        /// </summary>
+        public static ElementSectionDispRow FromSpring(
+            int elementIndex,
+            int node1Index,
+            int node2Index,
+            RotationalSpring spring,
+            BeamDisp disp)
+        {
+            return new ElementSectionDispRow
+            {
+                ElementIndex = elementIndex,
+                ElementName = spring.Name,
+                Node1Index = node1Index,
+                Node2Index = node2Index,
+                Uxi = disp.Dxi * 1000.0,
+                Uyi = disp.Dyi * 1000.0,
+                Uzi = disp.Dzi * 1000.0,
+                Txi = disp.Rxi,
+                Tyi = disp.Ryi,
+                Tzi = disp.Rzi,
+                Uxj = disp.Dxj * 1000.0,
+                Uyj = disp.Dyj * 1000.0,
+                Uzj = disp.Dzj * 1000.0,
+                Txj = disp.Rxj,
+                Tyj = disp.Ryj,
+                Tzj = disp.Rzj
+            };
+        }
     }
 }

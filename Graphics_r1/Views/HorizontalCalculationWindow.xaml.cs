@@ -28,6 +28,18 @@ namespace PileDesign.Views
             this.Closing += HorizontalCalculationWindow_Closing;
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (DataContext is HorizontalCalculationViewModel vm && vm.OkCommand?.CanExecute(null) == true)
+                {
+                    vm.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+
         /// <summary>
         /// ウィンドウが閉じられる際に呼び出される
         /// 実行中の解析をキャンセルし、クリーンアップを行う

@@ -1163,7 +1163,7 @@ namespace PileDesign.ViewModels
         }
 
         private ObservableCollection<string> _analysisSoilSpringOption = [
-            "RH",
+            "R",
             "RX",
             "RY",
             "RZ",
@@ -1178,7 +1178,7 @@ namespace PileDesign.ViewModels
             get => _analysisSoilSpringOption;
             set => SetProperty(ref _analysisSoilSpringOption, value);
         }
-        private string _analysisResultSoilSpringType = "RH";
+        private string _analysisResultSoilSpringType = "R";
         public string AnalysisResultSoilSpringType
         {
             get => _analysisResultSoilSpringType;
@@ -2540,23 +2540,39 @@ namespace PileDesign.ViewModels
                     // "梁応力"の表示制御
                     const string beamForceLabel = "梁応力";
                     const string nodeDisplacementLabel = "節点変位";
-                    const string nodeSoilSpringLabel = "地盤ばね";
+                    const string nodeSoilSpringLabel = "地盤反力";
+                    const string pileHeadMLabel = "杭頭Mマップ";
+                    const string pileHeadQLabel = "杭頭Qマップ";
+                    const string capNodeMLabel = "接合点Mマップ";
+                    const string capNodeQLabel = "接合点Qマップ";
                     if (value)
                     {
-                        // true: "梁応力"がなければ追加
+                        // true: がなければ追加
                         if (!AnalysisResultContentOption.Contains(beamForceLabel))
                             AnalysisResultContentOption.Add(beamForceLabel);
                         if (!AnalysisResultContentOption.Contains(nodeDisplacementLabel))
                             AnalysisResultContentOption.Add(nodeDisplacementLabel);
                         if (!AnalysisResultContentOption.Contains(nodeSoilSpringLabel))
                             AnalysisResultContentOption.Add(nodeSoilSpringLabel);
+                        if (!AnalysisResultContentOption.Contains(pileHeadMLabel))
+                            AnalysisResultContentOption.Add(pileHeadMLabel);
+                        if (!AnalysisResultContentOption.Contains(pileHeadQLabel))
+                            AnalysisResultContentOption.Add(pileHeadQLabel);
+                        if (!AnalysisResultContentOption.Contains(capNodeMLabel))
+                            AnalysisResultContentOption.Add(capNodeMLabel);
+                        if (!AnalysisResultContentOption.Contains(capNodeQLabel))
+                            AnalysisResultContentOption.Add(capNodeQLabel);
                     }
                     else
                     {
-                        // false: "梁応力"があれば削除
+                        // false: があれば削除
                         AnalysisResultContentOption.Remove(beamForceLabel);
                         AnalysisResultContentOption.Remove(nodeDisplacementLabel);
                         AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
+                        AnalysisResultContentOption.Remove(pileHeadMLabel);
+                        AnalysisResultContentOption.Remove(pileHeadQLabel);
+                        AnalysisResultContentOption.Remove(capNodeMLabel);
+                        AnalysisResultContentOption.Remove(capNodeQLabel);
                     }
 
                     // 解析済みインジケータ更新

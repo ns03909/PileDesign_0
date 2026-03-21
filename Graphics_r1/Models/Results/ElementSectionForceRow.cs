@@ -58,5 +58,38 @@ namespace PileDesign.Models.Results
                 FabsMax = bf.FabsMax
             };
         }
+
+        /// <summary>
+        /// RotationalSpring（杭頭リンク要素）から断面力行を生成
+        /// </summary>
+        public static ElementSectionForceRow FromSpring(
+            int elementIndex,
+            int node1Index,
+            int node2Index,
+            RotationalSpring spring,
+            BeamForce bf)
+        {
+            return new ElementSectionForceRow
+            {
+                ElementIndex = elementIndex,
+                ElementName = spring.Name,
+                Node1Index = node1Index,
+                Node2Index = node2Index,
+                Fxi = bf.Fxi,
+                Fyi = bf.Fyi,
+                Fzi = bf.Fzi,
+                Mxi = bf.Mxi,
+                Myi = bf.Myi,
+                Mzi = bf.Mzi,
+                Fxj = bf.Fxj,
+                Fyj = bf.Fyj,
+                Fzj = bf.Fzj,
+                Mxj = bf.Mxj,
+                Myj = bf.Myj,
+                Mzj = bf.Mzj,
+                MabsMax = bf.MabsMax,
+                FabsMax = bf.FabsMax
+            };
+        }
     }
 }

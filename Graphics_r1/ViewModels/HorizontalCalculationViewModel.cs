@@ -1921,6 +1921,9 @@ namespace PileDesign.ViewModels
             token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
 
+            // ペナルティばねの精度検証
+            await VerifyPenaltySpringAccuracy(targetModel);
+
             // 最終進捗を報告（100%完了）
             progress?.Report(new Models.AnalysisProgress
             {
@@ -1990,11 +1993,22 @@ namespace PileDesign.ViewModels
 
             if (!loadCase.IsPileNonLinear && !isFlexibleBeamMode)
             {
+                // 非線形OFF時: PileNode-0 を RigidBodies[0] に追加して剛結にするが、
+                // Rx/Ry は RotationalSpring（高い回転剛性 kRx/kRy）で処理するため除外。
+                // AddSlaveNode は全DOFを拘束してしまうので、個別にmaster-slaveを設定する。
                 foreach (var pile in InputModel.PileLayoutItems)
                 {
                     var head = pile.PileNodes?.FirstOrDefault();
                     if (head == null) continue;
-                    rb0.AddSlaveNode(head);
+                    // Ux, Uy, Uz, Rz のみ RigidBodies[0] の master-slave にする
+                    // Rx, Ry は RotationalSpring のペナルティ剛性で拘束
+                    head.SetBoundary(new FEM.Boundary(true, true, true, false, false, true));
+                    head.SetMasterNode(0, rb0.MasterNode); // Ux
+                    head.SetMasterNode(1, rb0.MasterNode); // Uy
+                    head.SetMasterNode(2, rb0.MasterNode); // Uz
+                    // Rx(3), Ry(4) は null のまま（RotationalSpring が担当）
+                    head.SetMasterNode(5, rb0.MasterNode); // Rz
+                    head.SetTransferMatrix();
                 }
             }
 
@@ -2798,6 +2812,99 @@ namespace PileDesign.ViewModels
         private static double SafeK(double v)
             => (double.IsFinite(v) && v > 0.0) ? v : 0.0;
 
+        /// <summary>
+        /// ペナルティばね（RotationalSpring・PenaltySprings）の両端相対変位を検証し、
+        /// 全体変位に対して十分小さいことを確認する。
+        /// 閾値を超えた場合はログに警告を出力する。
+        /// </summary>
+        private async Task VerifyPenaltySpringAccuracy(AnaModel model)
+        {
+            const double threshold = 0.001; // 0.1%
+            if (model == null) return;
+
+            // 全節点の最大変位を取得（基準値）
+            double maxGlobalDisp = 0;
+            double maxGlobalRot = 0;
+            foreach (var node in model.Nodes)
+            {
+                var d = node.CumulativeDisp;
+                if (d == null) continue;
+                maxGlobalDisp = Math.Max(maxGlobalDisp, Math.Max(Math.Abs(d.Ux), Math.Max(Math.Abs(d.Uy), Math.Abs(d.Uz))));
+                maxGlobalRot = Math.Max(maxGlobalRot, Math.Max(Math.Abs(d.Rx), Math.Max(Math.Abs(d.Ry), Math.Abs(d.Rz))));
+            }
+
+            if (maxGlobalDisp < 1e-15 && maxGlobalRot < 1e-15) return; // 変位がない
+
+            var warnings = new List<string>();
+
+            // RotationalSpring の検証
+            if (model.RotationalSprings != null)
+            {
+                foreach (var rs in model.RotationalSprings)
+                {
+                    if (rs.NodeI?.CumulativeDisp == null || rs.NodeJ?.CumulativeDisp == null) continue;
+                    var di = rs.NodeI.CumulativeDisp;
+                    var dj = rs.NodeJ.CumulativeDisp;
+
+                    // 並進方向の相対変位（ペナルティで拘束されている場合）
+                    if (rs.TieUx && maxGlobalDisp > 1e-15)
+                    {
+                        double relUx = Math.Abs(di.Ux - dj.Ux);
+                        if (relUx / maxGlobalDisp > threshold)
+                            warnings.Add($"{rs.Name}: Ux相対変位={relUx:E3} ({relUx / maxGlobalDisp * 100:F2}%)");
+                    }
+                    if (rs.TieUy && maxGlobalDisp > 1e-15)
+                    {
+                        double relUy = Math.Abs(di.Uy - dj.Uy);
+                        if (relUy / maxGlobalDisp > threshold)
+                            warnings.Add($"{rs.Name}: Uy相対変位={relUy:E3} ({relUy / maxGlobalDisp * 100:F2}%)");
+                    }
+                    if (rs.TieUz && maxGlobalDisp > 1e-15)
+                    {
+                        double relUz = Math.Abs(di.Uz - dj.Uz);
+                        if (relUz / maxGlobalDisp > threshold)
+                            warnings.Add($"{rs.Name}: Uz相対変位={relUz:E3} ({relUz / maxGlobalDisp * 100:F2}%)");
+                    }
+                    if (rs.TieRz && maxGlobalRot > 1e-15)
+                    {
+                        double relRz = Math.Abs(di.Rz - dj.Rz);
+                        if (relRz / maxGlobalRot > threshold)
+                            warnings.Add($"{rs.Name}: Rz相対変位={relRz:E3} ({relRz / maxGlobalRot * 100:F2}%)");
+                    }
+                }
+            }
+
+            // PenaltySprings の検証
+            if (model.PenaltySprings != null)
+            {
+                foreach (var ps in model.PenaltySprings)
+                {
+                    if (ps.NodeI?.CumulativeDisp == null || ps.NodeJ?.CumulativeDisp == null) continue;
+                    var di = ps.NodeI.CumulativeDisp;
+                    var dj = ps.NodeJ.CumulativeDisp;
+
+                    double relDisp = Math.Sqrt(
+                        Math.Pow(di.Ux - dj.Ux, 2) + Math.Pow(di.Uy - dj.Uy, 2) + Math.Pow(di.Uz - dj.Uz, 2));
+                    if (maxGlobalDisp > 1e-15 && relDisp / maxGlobalDisp > threshold)
+                        warnings.Add($"{ps.Name}: 相対変位={relDisp:E3} ({relDisp / maxGlobalDisp * 100:F2}%)");
+                }
+            }
+
+            if (warnings.Count > 0)
+            {
+                await AddLogAsync($"⚠ ペナルティばね精度警告: {warnings.Count}件のばねで相対変位が閾値({threshold * 100:F1}%)を超えています");
+                foreach (var w in warnings.Take(20))
+                    await AddLogAsync($"  {w}");
+                if (warnings.Count > 20)
+                    await AddLogAsync($"  ...他{warnings.Count - 20}件");
+                await AddLogAsync("  → ペナルティ定数(KBig)の増加を検討してください。");
+            }
+            else
+            {
+                await AddLogAsync("ペナルティばね精度検証: OK（全ばねで相対変位 < 0.1%）");
+            }
+        }
+
         private void PrepareKmat(int iLC, bool isTan, AnaModel model)
         {
             // 診断: ばね剛性の min/max を集計
@@ -2882,15 +2989,11 @@ namespace PileDesign.ViewModels
 
                 foreach (var pile in InputModel.PileLayoutItems)
                 {
-                    var topBeam = pile.Beams?.FirstOrDefault(b => b.IsPileTop);
-                    if (topBeam == null) continue;
-
-                    var pileHeadNode = topBeam.NodeI;
-
-                    var rxy = model.RotationalSprings
-                        .FirstOrDefault(rs => rs.NodeJ == pileHeadNode);
+                    // PileTopRotationalSpring を直接参照（Beams経由のNodeインスタンス一致問題を回避）
+                    var rxy = pile.PileTopRotationalSpring;
                     if (rxy == null) continue;
 
+                    var pileHeadNode = rxy.NodeJ;
                     var capNode = rxy.NodeI;
                     double dRx = (pileHeadNode.CumulativeDisp?.Rx ?? 0.0) - (capNode.CumulativeDisp?.Rx ?? 0.0);
                     double dRy = (pileHeadNode.CumulativeDisp?.Ry ?? 0.0) - (capNode.CumulativeDisp?.Ry ?? 0.0);
@@ -2952,40 +3055,17 @@ namespace PileDesign.ViewModels
                         }
                     }
 
-                    // Ux, Uy, Uz, Rz の拘束方式を判定:
-                    // PileNode（NodeJ）が master-slave 設定済みの場合はペナルティ不要
-                    // （両端が同一DOFにマッピングされるため自動的に相殺するが、明示的にゼロにする）
-                    // master-slave 未設定の場合（基礎梁なし等）は従来のペナルティ剛性を使用
-                    bool useMasterSlave = pileHeadNode.MasterNodes?[0] != null;
-                    double kx, ky, kz, kRz;
-                    if (useMasterSlave)
-                    {
-                        // master-slave: 並進・Rz のペナルティ不要
-                        kx = 0.0; ky = 0.0; kz = 0.0; kRz = 0.0;
-                    }
-                    else
-                    {
-                        // ペナルティ方式: 十分大きい剛性で拘束
-                        const double KBig = 1e8;
-                        kx = rxy.TieUx ? KBig : 0.0;
-                        ky = rxy.TieUy ? KBig : 0.0;
-                        kz = rxy.TieUz ? KBig : 0.0;
-                        kRz = rxy.TieRz ? KBig : 0.0;
-                    }
+                    // 並進(Ux,Uy,Uz)・Rz の拘束:
+                    // PileNode-0 は CapNode の master-slave として拘束されるべきだが、
+                    // Boundaryの設定タイミングにより拘束が不完全な場合がある。
+                    // そのため常にペナルティ剛性を適用して安全にする。
+                    const double KBig = 1e8;
+                    double kx = rxy.TieUx ? KBig : 0.0;
+                    double ky = rxy.TieUy ? KBig : 0.0;
+                    double kz = rxy.TieUz ? KBig : 0.0;
+                    double kRz = rxy.TieRz ? KBig : 0.0;
                     // Rx/Ry は M–θ に基づき算出した kRx/kRy を用いる
                     rxy.SetKe(kx, ky, kz, kRx, kRy, kRz, isTan);
-                    if (isTan)
-                    {
-                        var phn = pileHeadNode;
-                        var cn = capNode;
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[PrepareKmat] {rxy.Name}: useMasterSlave={useMasterSlave}, " +
-                            $"kRx={kRx:E3}, kRy={kRy:E3}, kx={kx:E1}, kRz={kRz:E1}, " +
-                            $"CurveXY={(rxy.CurveXY != null ? "yes" : "no")}, " +
-                            $"dRx={dRx:E3}, dRy={dRy:E3}, " +
-                            $"PileHead.MasterNodes[0]={(phn.MasterNodes?[0]?.Name ?? "null")}");
-                    }
-
                 }
             }
 

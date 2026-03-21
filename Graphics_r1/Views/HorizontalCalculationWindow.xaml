@@ -11,8 +11,9 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         d:DataContext="{d:DesignInstance Type=local:HorizontalCalculationViewModel}"
         mc:Ignorable="d"
-        Title="水平解析" Height="700" Width="1200"
-        x:Name="LateralCalcWin">
+        Title="水平解析" Height="700" Width="1200" WindowState="Maximized"
+        x:Name="LateralCalcWin"
+        PreviewKeyDown="Window_PreviewKeyDown">
     
     <Window.CommandBindings>
         <CommandBinding Command="ApplicationCommands.SelectAll"

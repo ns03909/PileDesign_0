@@ -195,6 +195,18 @@ namespace PileDesign.Views
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (DataContext is PileBodyViewModel vm && vm.OkCommand?.CanExecute(null) == true)
+                {
+                    vm.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (_isClosingHandled) return;

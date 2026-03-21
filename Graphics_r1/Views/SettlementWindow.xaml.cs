@@ -50,6 +50,18 @@ namespace PileDesign.Views
             Loaded += SettlementWindow_Loaded;
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (DataContext is SettlementViewModel vm && vm.OkCommand?.CanExecute(null) == true)
+                {
+                    vm.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+
         private void SettlementWindow_Loaded(object sender, RoutedEventArgs e)
         {
             if (DataContext is not SettlementViewModel viewModel) return;

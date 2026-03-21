@@ -166,7 +166,7 @@ namespace PileDesign.FEM
                 return tan0;
             }
             double M = EvaluateMoment(phi);
-            double secant = M / p;
+            double secant = Math.Abs(M) / p;
             return secant;
         }
     }

@@ -1,4 +1,5 @@
-﻿using PileDesign.ViewModels;
+﻿using Newtonsoft.Json;
+using PileDesign.ViewModels;
 using System.Collections.ObjectModel;
 
 namespace PileDesign.Models.InputData
@@ -182,6 +183,7 @@ namespace PileDesign.Models.InputData
 
         // 繰り返しせん断応力比
         private ObservableCollection<double?> _tauDonSigmaZPrime;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> TauDonSigmaZPrime
         {
             get => _tauDonSigmaZPrime;
@@ -190,6 +192,7 @@ namespace PileDesign.Models.InputData
 
         // 液状化安全率;
         private ObservableCollection<double?> _fL;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> FL
         {
             get => _fL;
@@ -198,6 +201,7 @@ namespace PileDesign.Models.InputData
 
         // 低減率
         private ObservableCollection<double?> _betaL;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> BetaL
         {
             get => _betaL;
@@ -206,6 +210,7 @@ namespace PileDesign.Models.InputData
 
         // 繰り返しせん断ひずみ
         private ObservableCollection<double?> _gammaCy;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double?> GammaCy
         {
             get => _gammaCy;
@@ -214,6 +219,7 @@ namespace PileDesign.Models.InputData
 
         // 液状化水平変位
         private ObservableCollection<double> _sigmaGammaCyH;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> SigmaGammaCyH
         {
             get => _sigmaGammaCyH;
@@ -246,6 +252,7 @@ namespace PileDesign.Models.InputData
 
         // 等価S波速度
         private ObservableCollection<double> _vSE;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> VSE
         {
             get => _vSE;
@@ -254,6 +261,7 @@ namespace PileDesign.Models.InputData
 
         // 等価せん断ばね剛性
         private ObservableCollection<double> _k;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> K
         {
             get => _k;
@@ -262,6 +270,7 @@ namespace PileDesign.Models.InputData
 
         // 仮の無次元化水平変位
         private ObservableCollection<double> _u;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> U
         {
             get => _u;
@@ -270,6 +279,7 @@ namespace PileDesign.Models.InputData
 
         // 調整後無次元化水平変位
         private ObservableCollection<double> _uStar;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> UStar
         {
             get => _uStar;
@@ -278,6 +288,7 @@ namespace PileDesign.Models.InputData
 
         // 水平変位
         private ObservableCollection<double> _dmaxUStar;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> DmaxUStar
         {
             get => _dmaxUStar;
@@ -294,6 +305,7 @@ namespace PileDesign.Models.InputData
 
         // 水平変位
         private ObservableCollection<double> _dmaxUStarSigmaGammaCyH;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<double> DmaxUStarSigmaGammaCyH
         {
             get => _dmaxUStarSigmaGammaCyH;

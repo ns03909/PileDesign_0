@@ -250,7 +250,6 @@ namespace PileDesign.Services
                 Stroke = Brushes.Black,
                 StrokeThickness = 0.5,
                 Fill = Brushes.Red,
-                //Fill = new SolidColorBrush(Colors.Red) { Opacity = 0.5 },
                 Data = PathGeoSelectedPileNodes,
                 Name = "Selection"
             });
@@ -497,8 +496,8 @@ namespace PileDesign.Services
             // 接続用節点（杭頭+ΔZc位置）
             canvas.Children.Add(new Path()
             {
-                Stroke = Brushes.Red,
-                Fill = Brushes.Red, // 塗りつぶし
+                Stroke = NikkenBrush.Green,
+                Fill = Brushes.White,
                 StrokeThickness = 1.0,
                 Data = PathGeoConnectingNodes,
                 Name = "ConnectingNode"

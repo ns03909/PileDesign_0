@@ -932,12 +932,21 @@ namespace PileDesign.Views
                     }
                 }
             }
-            else if (viewModel.AnalysisResultContent == "地盤ばね")
+            else if (viewModel.AnalysisResultContent == "地盤反力")
             {
                 var anaModel = viewModel.CurrentModel;
                 if (anaModel == null || anaModel.Beams == null)
                     return;
                 DrawHorizontalSoilSpringsResult3D(viewModel, anaModel, hasInvisiblePile ? visibleSoilSprings : null);
+            }
+            else if (viewModel.AnalysisResultContent == "杭頭Mマップ" ||
+                     viewModel.AnalysisResultContent == "杭頭Qマップ" ||
+                     viewModel.AnalysisResultContent == "接合点Mマップ" ||
+                     viewModel.AnalysisResultContent == "接合点Qマップ")
+            {
+                var anaModel = viewModel.CurrentModel;
+                if (anaModel?.RotationalSprings == null) return;
+                DrawPileHeadForceMap(viewModel, anaModel);
             }
         }
 
@@ -969,7 +978,7 @@ namespace PileDesign.Views
             }
         }
 
-        // 追加: 地盤ばね描画ヘルパー（UpdateAnalysisResult3D 内から呼び出してください）
+        // 地盤反力描画ヘルパー（UpdateAnalysisResult3D 内から呼び出してください）
         private void DrawHorizontalSoilSpringsResult3D(MainWindowViewModel viewModel, AnaModel anaModel, HashSet<HorizontalSoilSpring> visibleSoilSprings = null)
         {
             if (viewModel == null || anaModel == null) return;
@@ -977,7 +986,7 @@ namespace PileDesign.Views
             if (Canvas3DLayout == null || ColorBarCanvas == null) return;
 
             // 選択されたタイプを取得
-            string springType = viewModel.AnalysisResultSoilSpringType ?? "RH";
+            string springType = viewModel.AnalysisResultSoilSpringType ?? "R";
 
             // 1) 全ばねの値を収集（カラーバー用） — 非アクティブ杭のばねはスキップ
             var allValues = new ObservableCollection<double>();
@@ -1014,24 +1023,22 @@ namespace PileDesign.Views
             string unit = (springType == "MX" || springType == "MY" || springType == "MZ" || springType == "MH") ? "kNm" : "kN";
             string colorBarTitle = GetSoilSpringTypeName(springType);
 
-            // 2) 最大変位差を求める（正規化用プレパス）
-            double maxDispDiffLen = 0;
+            // 2) 反力の最大絶対値を求める（正規化用プレパス）
+            double maxAbsValue = 0;
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
                 if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
-                if (s?.NodeI == null || s.NodeJ == null) continue;
-                var di2 = s.NodeI.CumulativeDisp;
-                var dj2 = s.NodeJ.CumulativeDisp;
-                double dx2 = di2.Ux - dj2.Ux;
-                double dy2 = di2.Uy - dj2.Uy;
-                double len = Math.Sqrt(dx2 * dx2 + dy2 * dy2);
-                if (double.IsFinite(len) && len > maxDispDiffLen) maxDispDiffLen = len;
+                try
+                {
+                    s.SetBeamDispAndForce(isTan: false);
+                    double v = Math.Abs(GetSoilSpringValue(s, springType));
+                    if (double.IsFinite(v) && v > maxAbsValue) maxAbsValue = v;
+                }
+                catch { }
             }
-            double springForceScale = maxDispDiffLen > 1e-15
-                ? viewModel.ForceDiagramRatio * viewModel.ModelExtent / maxDispDiffLen
-                : 0;
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
 
-            // 3) 各ばねについて、I点（head）と tail ( = head - scaled (dispI - dispJ)) を求めて描画
+            // 3) 各ばねについて、反力の方向と大きさに基づいて矢印を描画
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
                 if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
@@ -1046,29 +1053,38 @@ namespace PileDesign.Views
                     double displayValue = GetSoilSpringValue(s, springType);
                     if (!double.IsFinite(displayValue)) continue; // NaN/Infinity防止
 
-                    // ノードの変位差 (I - J)（並進成分のみ）
-                    var di = s.NodeI.CumulativeDisp;
-                    var dj = s.NodeJ.CumulativeDisp;
-                    double dx = di.Ux - dj.Ux;
-                    double dy = di.Uy - dj.Uy;
+                    // 反力値から矢印方向と長さを決定
+                    double fx = s.CumulativeForce.GetByIndex(0);
+                    double fy = s.CumulativeForce.GetByIndex(1);
+                    double fz = s.CumulativeForce.GetByIndex(2);
 
-                    // 選択されたタイプに応じて変位成分をフィルタリング
-                    var dispDiff = springType switch
+                    // 選択されたタイプに応じた反力方向ベクトル
+                    var forceDir = springType switch
                     {
-                        "RX" => new System.Windows.Media.Media3D.Vector3D(dx, 0, 0),  // X成分のみ
-                        "RY" => new System.Windows.Media.Media3D.Vector3D(0, dy, 0),  // Y成分のみ
-                        _ => new System.Windows.Media.Media3D.Vector3D(dx, dy, 0)     // RH等はXY両方
+                        "RX" => new System.Windows.Media.Media3D.Vector3D(fx, 0, 0),
+                        "RY" => new System.Windows.Media.Media3D.Vector3D(0, fy, 0),
+                        "RZ" => new System.Windows.Media.Media3D.Vector3D(0, 0, fz),
+                        "R" => new System.Windows.Media.Media3D.Vector3D(fx, fy, fz),
+                        _ => new System.Windows.Media.Media3D.Vector3D(fx, fy, fz)
                     };
 
-                    // 表示スケール: 最大変位差で正規化し、比率×ModelExtentを適用
-                    var scaledDisp = dispDiff * springForceScale;
+                    // 表示スケール: 最大反力値で正規化し、比率×ModelExtentを適用
+                    double arrowLength3D = maxAbsValue > 1e-15
+                        ? displayValue / maxAbsValue * forceScale
+                        : 0;
 
-                    // 矢印の頂点（I点）と尾（頂点 - scaledDisp）
+                    // 反力方向を正規化
+                    double forceDirLen = forceDir.Length;
+                    var forceDirNorm = forceDirLen > 1e-15
+                        ? forceDir / forceDirLen
+                        : new System.Windows.Media.Media3D.Vector3D(1, 0, 0);
+
+                    // 矢印の頂点（杭側ノード = I点）と尾
                     var head3D = s.NodeI.Coord;
                     var tail3D = new System.Windows.Media.Media3D.Point3D(
-                        head3D.X - scaledDisp.X,
-                        head3D.Y - scaledDisp.Y,
-                        head3D.Z - scaledDisp.Z
+                        head3D.X - forceDirNorm.X * arrowLength3D,
+                        head3D.Y - forceDirNorm.Y * arrowLength3D,
+                        head3D.Z - forceDirNorm.Z * arrowLength3D
                     );
 
                     // 2D投影
@@ -1121,7 +1137,88 @@ namespace PileDesign.Views
                 }
             }
 
-            // 3) Path を Canvas に描画
+            // 3b) 杭先端反力の描画（R または RZ 選択時）
+            if (springType == "R" || springType == "RZ")
+            {
+                foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                {
+                    if (!pile.IsVisible) continue;
+                    var tipNode = pile.PileNodes?.LastOrDefault();
+                    if (tipNode?.CumulativeReaction == null) continue;
+
+                    double tipFx = tipNode.CumulativeReaction.Fx;
+                    double tipFy = tipNode.CumulativeReaction.Fy;
+                    double tipFz = tipNode.CumulativeReaction.Fz;
+
+                    // R選択時: 水平成分 sqrt(Fx²+Fy²) と鉛直成分 Fz を分けて描画
+                    // RZ選択時: Fz のみ描画
+                    var components = new System.Collections.Generic.List<(double value, System.Windows.Media.Media3D.Vector3D dir)>();
+
+                    if (springType == "R")
+                    {
+                        double tipRH = Math.Sqrt(tipFx * tipFx + tipFy * tipFy);
+                        if (double.IsFinite(tipRH) && tipRH > 1e-15)
+                            components.Add((tipRH, new System.Windows.Media.Media3D.Vector3D(tipFx, tipFy, 0)));
+                        if (double.IsFinite(tipFz) && Math.Abs(tipFz) > 1e-15)
+                            components.Add((tipFz, new System.Windows.Media.Media3D.Vector3D(0, 0, tipFz)));
+                    }
+                    else // RZ
+                    {
+                        if (double.IsFinite(tipFz) && Math.Abs(tipFz) > 1e-15)
+                            components.Add((tipFz, new System.Windows.Media.Media3D.Vector3D(0, 0, tipFz)));
+                    }
+
+                    foreach (var (tipValue, tipForceDir) in components)
+                    {
+                        allValues.Add(tipValue);
+
+                        double tipForceDirLen = tipForceDir.Length;
+                        var tipDirNorm = tipForceDirLen > 1e-15
+                            ? tipForceDir / tipForceDirLen
+                            : new System.Windows.Media.Media3D.Vector3D(0, 0, -1);
+
+                        double tipArrowLen = maxAbsValue > 1e-15 ? tipValue / maxAbsValue * forceScale : 0;
+
+                        var tipHead3D = tipNode.Coord;
+                        var tipTail3D = new System.Windows.Media.Media3D.Point3D(
+                            tipHead3D.X - tipDirNorm.X * tipArrowLen,
+                            tipHead3D.Y - tipDirNorm.Y * tipArrowLen,
+                            tipHead3D.Z - tipDirNorm.Z * tipArrowLen);
+
+                        Point tipHead2D = viewModel.CanvasThreeDView.Transformation(tipHead3D);
+                        Point tipTail2D = viewModel.CanvasThreeDView.Transformation(tipTail3D);
+                        if (!double.IsFinite(tipHead2D.X) || !double.IsFinite(tipTail2D.X)) continue;
+
+                        var tipPicked = ColorBarUtils.PickColorGeometry(tipValue, colorBaredGeometries)
+                                        ?? ColorBarUtils.PickColorGeometryInclusiveTop(tipValue, colorBaredGeometries)
+                                        ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+                        if (tipPicked == null) continue;
+
+                        tipPicked.PathGeometry.AddGeometry(new LineGeometry(tipTail2D, tipHead2D));
+
+                        // 矢印ヘッド
+                        double tipArrowDia = viewModel.ArrowHeadDia;
+                        Vector tipDir = tipHead2D - tipTail2D;
+                        double tipDirLen2D = tipDir.Length;
+                        Vector tipDirNorm2D = tipDirLen2D > 1e-9 ? tipDir / tipDirLen2D : new Vector(0, -1);
+                        Point tipCenterEllipse = tipHead2D - tipDirNorm2D * (viewModel.ArrowHeadLength * 0.4);
+                        tipPicked.PathGeometry.AddGeometry(new EllipseGeometry(tipCenterEllipse, tipArrowDia * 0.5, tipArrowDia * 0.5 * viewModel.CanvasThreeDView.Flattening));
+                        Vector tipOrtho = GetUnitOrthogonalVector(tipDirNorm2D);
+                        Point tipSide1 = tipCenterEllipse - tipDirNorm2D * (viewModel.ArrowHeadLength * 0.6) + tipOrtho * (tipArrowDia * 0.5);
+                        Point tipSide2 = tipCenterEllipse - tipDirNorm2D * (viewModel.ArrowHeadLength * 0.6) - tipOrtho * (tipArrowDia * 0.5);
+                        tipPicked.PathGeometry.AddGeometry(new LineGeometry(tipHead2D, tipSide1));
+                        tipPicked.PathGeometry.AddGeometry(new LineGeometry(tipHead2D, tipSide2));
+
+                        if (viewModel.IsResultValueVisible)
+                        {
+                            string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+                            AddText3D(Brushes.Black, string.Format(fmt, tipValue), (tipHead2D.X + tipTail2D.X) * 0.5, (tipHead2D.Y + tipTail2D.Y) * 0.5, "C", "C", 0);
+                        }
+                    }
+                }
+            }
+
+            // 3c) Path を Canvas に描画
             foreach (var geo in colorBaredGeometries)
             {
                 geo.DrawPathes(Canvas3DLayout);
@@ -1148,7 +1245,7 @@ namespace PileDesign.Views
         }
 
         /// <summary>
-        /// 地盤ばねから選択されたタイプに応じた値を取得
+        /// 地盤反力から選択されたタイプに応じた値を取得
         /// </summary>
         private static double GetSoilSpringValue(FEM.HorizontalSoilSpring spring, string springType)
         {
@@ -1167,32 +1264,204 @@ namespace PileDesign.Views
                 "RX" => fx,
                 "RY" => fy,
                 "RZ" => fz,
-                "RH" => Math.Sqrt(fx * fx + fy * fy),  // 水平反力
+                "R" => Math.Sqrt(fx * fx + fy * fy + fz * fz),  // 全方向反力
                 "MX" => mx,
                 "MY" => my,
                 "MZ" => mz,
                 "MH" => Math.Sqrt(mx * mx + my * my),  // 水平モーメント
-                _ => Math.Sqrt(fx * fx + fy * fy)       // デフォルトはRH
+                _ => Math.Sqrt(fx * fx + fy * fy + fz * fz)     // デフォルトはR
             };
         }
 
         /// <summary>
-        /// 地盤ばねタイプの表示名を取得
+        /// 地盤反力タイプの表示名を取得
         /// </summary>
         private static string GetSoilSpringTypeName(string springType)
         {
             return springType switch
             {
-                "RX" => "地盤ばねRX",
-                "RY" => "地盤ばねRY",
-                "RZ" => "地盤ばねRZ",
-                "RH" => "地盤ばねRH",
-                "MX" => "地盤ばねMX",
-                "MY" => "地盤ばねMY",
-                "MZ" => "地盤ばねMZ",
-                "MH" => "地盤ばねMH",
-                _ => "地盤ばねRH"
+                "RX" => "地盤反力RX",
+                "RY" => "地盤反力RY",
+                "RZ" => "地盤反力RZ",
+                "R" => "地盤反力R",
+                "MX" => "地盤反力MX",
+                "MY" => "地盤反力MY",
+                "MZ" => "地盤反力MZ",
+                "MH" => "地盤反力MH",
+                _ => "地盤反力R"
             };
+        }
+
+        // ========================================
+        // 杭頭M/Qマップ描画
+        // ========================================
+
+        /// <summary>
+        /// 杭頭Mマップ / 杭頭Qマップ / 接合点Mマップ / 接合点Qマップ を描画
+        /// </summary>
+        private void DrawPileHeadForceMap(MainWindowViewModel viewModel, AnaModel anaModel)
+        {
+            if (Canvas3DLayout == null || ColorBarCanvas == null) return;
+
+            string content = viewModel.AnalysisResultContent;
+            bool isMoment = content.Contains('M');
+            bool isPileHead = content.StartsWith("杭頭"); // true: j端(杭頭), false: i端(接合点)
+
+            // 各杭のリンク要素から値を収集
+            var entries = new System.Collections.Generic.List<(Point3D location, double valueX, double valueY, double valueMag)>();
+
+            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            {
+                if (!pile.IsVisible) continue;
+                var rs = pile.PileTopRotationalSpring;
+                if (rs?.CumulativeForce == null) continue;
+
+                var bf = rs.CumulativeForce;
+                var node = isPileHead ? rs.NodeJ : rs.NodeI;
+                if (node == null) continue;
+
+                double vx, vy;
+                if (isMoment)
+                {
+                    // i端: Mxi=bf[3], Myi=bf[4], j端: Mxj=bf[9], Myj=bf[10]
+                    if (isPileHead) { vx = bf.GetByIndex(9); vy = bf.GetByIndex(10); }
+                    else { vx = bf.GetByIndex(3); vy = bf.GetByIndex(4); }
+                }
+                else
+                {
+                    // i端: Fxi=bf[0], Fyi=bf[1], j端: Fxj=bf[6], Fyj=bf[7]
+                    if (isPileHead) { vx = bf.GetByIndex(6); vy = bf.GetByIndex(7); }
+                    else { vx = bf.GetByIndex(0); vy = bf.GetByIndex(1); }
+                }
+                double mag = Math.Sqrt(vx * vx + vy * vy);
+                if (!double.IsFinite(mag)) continue;
+
+                entries.Add((node.Coord, vx, vy, mag));
+            }
+
+            if (entries.Count == 0) { ColorBarCanvas.Children.Clear(); return; }
+
+            // カラーバー
+            var allValues = new ObservableCollection<double>(entries.Select(e => e.valueMag));
+            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+            double maxVal = entries.Max(e => e.valueMag);
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+            string unit = isMoment ? "kNm" : "kN";
+            string title = content;
+
+            foreach (var (location, vx, vy, mag) in entries)
+            {
+                if (mag < 1e-15) continue;
+
+                Point center2D = viewModel.CanvasThreeDView.Transformation(location);
+                if (!double.IsFinite(center2D.X)) continue;
+
+                double arrowLen = maxVal > 1e-15 ? mag / maxVal * forceScale : 0;
+
+                var picked = ColorBarUtils.PickColorGeometry(mag, colorBaredGeometries)
+                             ?? ColorBarUtils.PickColorGeometryInclusiveTop(mag, colorBaredGeometries)
+                             ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+                if (picked == null) continue;
+
+                if (isMoment)
+                {
+                    // モーメント: 右ねじの法則に従った方向に二重矢印
+                    // M=(Mx,My) → 右ねじ: 回転軸方向 = (Mx,My) の方向
+                    var forceDir3D = new Vector3D(vx, vy, 0);
+                    double forceDirLen = forceDir3D.Length;
+                    var dirNorm3D = forceDirLen > 1e-15 ? forceDir3D / forceDirLen : new Vector3D(1, 0, 0);
+
+                    var tail3D = location;
+                    var head3D = new Point3D(
+                        location.X + dirNorm3D.X * arrowLen,
+                        location.Y + dirNorm3D.Y * arrowLen,
+                        location.Z);
+
+                    Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
+                    Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
+                    if (!double.IsFinite(head2D.X) || !double.IsFinite(tail2D.X)) continue;
+
+                    // 軸線
+                    picked.PathGeometry.AddGeometry(new LineGeometry(tail2D, head2D));
+
+                    // 先端に二重矢印
+                    double headLen = viewModel.ArrowHeadLength * 0.8;
+                    DrawDoubleArrowHead(picked.PathGeometry, head2D, tail2D, headLen);
+                }
+                else
+                {
+                    // せん断力: その方向に矢印
+                    var forceDir3D = new Vector3D(vx, vy, 0);
+                    double forceDirLen = forceDir3D.Length;
+                    var dirNorm3D = forceDirLen > 1e-15 ? forceDir3D / forceDirLen : new Vector3D(1, 0, 0);
+
+                    var head3D = location;
+                    var tail3D = new Point3D(
+                        head3D.X - dirNorm3D.X * arrowLen,
+                        head3D.Y - dirNorm3D.Y * arrowLen,
+                        head3D.Z - dirNorm3D.Z * arrowLen);
+
+                    Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
+                    Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
+                    if (!double.IsFinite(head2D.X) || !double.IsFinite(tail2D.X)) continue;
+
+                    picked.PathGeometry.AddGeometry(new LineGeometry(tail2D, head2D));
+
+                    // 矢印ヘッド
+                    Vector dir2D = head2D - tail2D;
+                    double dirLen2D = dir2D.Length;
+                    Vector dirNorm2D = dirLen2D > 1e-9 ? dir2D / dirLen2D : new Vector(0, -1);
+                    double headLen = viewModel.ArrowHeadLength;
+                    Vector ortho = GetUnitOrthogonalVector(dirNorm2D);
+                    Point side1 = head2D - dirNorm2D * headLen + ortho * (headLen * 0.4);
+                    Point side2 = head2D - dirNorm2D * headLen - ortho * (headLen * 0.4);
+                    picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side1));
+                    picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side2));
+                }
+
+                // 値ラベル
+                if (viewModel.IsResultValueVisible)
+                {
+                    string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+                    AddText3D(Brushes.Black, string.Format(fmt, mag), center2D.X, center2D.Y + 8, "C", "T", 0);
+                }
+            }
+
+            // Path を Canvas に描画
+            foreach (var geo in colorBaredGeometries)
+                geo.DrawPathes(Canvas3DLayout);
+
+            // カラーバー
+            if (allValues.Count > 0)
+            {
+                ColorBar.DrawStepColorBar(
+                    ColorBarCanvas, colorBaredGeometries, title, unit,
+                    allValues.Min(), allValues.Max(),
+                    "{0:N" + viewModel.DecimalPlaces + "}", viewModel.LabelSize);
+            }
+        }
+
+        /// <summary>
+        /// 二重矢印ヘッドを描画（先端に2つの矢じりを並べる）
+        /// tip: 矢印の先端, from: 矢印の根元方向
+        /// </summary>
+        private static void DrawDoubleArrowHead(PathGeometry pathGeo, Point tip, Point from, double headLen)
+        {
+            Vector dir = tip - from;
+            double dirLen = dir.Length;
+            if (dirLen < 1e-9) return;
+            Vector dirNorm = dir / dirLen;
+            Vector ortho = GetUnitOrthogonalVector(dirNorm);
+            double w = headLen * 0.4;
+
+            // 1つ目の矢じり（先端）
+            pathGeo.AddGeometry(new LineGeometry(tip, tip - dirNorm * headLen + ortho * w));
+            pathGeo.AddGeometry(new LineGeometry(tip, tip - dirNorm * headLen - ortho * w));
+
+            // 2つ目の矢じり（少し内側）
+            Point tip2 = tip - dirNorm * headLen * 0.7;
+            pathGeo.AddGeometry(new LineGeometry(tip2, tip2 - dirNorm * headLen + ortho * w));
+            pathGeo.AddGeometry(new LineGeometry(tip2, tip2 - dirNorm * headLen - ortho * w));
         }
 
         // ========================================

@@ -12,7 +12,8 @@
         d:DataContext="{d:DesignInstance Type=local:PileTopViewModel}"
         Title="杭頭" Height="800" Width="1200"
         Loaded="PileTopWindow_Loaded"
-        Closing="Window_Closing">
+        Closing="Window_Closing"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

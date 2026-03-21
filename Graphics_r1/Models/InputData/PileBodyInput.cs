@@ -1,4 +1,5 @@
-﻿using PileDesign.FEM;
+﻿using Newtonsoft.Json;
+using PileDesign.FEM;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -63,6 +64,7 @@ namespace PileDesign.Models.InputData
         private bool _suppressSectionReset = false;
 
         private ObservableCollection<PileBodySegment> _pileBodySegments;
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public ObservableCollection<PileBodySegment> PileBodySegments
         {
             get => _pileBodySegments;

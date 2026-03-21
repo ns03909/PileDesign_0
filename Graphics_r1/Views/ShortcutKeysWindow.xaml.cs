@@ -28,8 +28,8 @@ namespace PileDesign.Views
                 new("地盤編集", "Ctrl + G"),
                 new("杭体編集", "Ctrl + B"),
                 new("軸力確認", "Ctrl + K"),
-                new("要素分割", "Ctrl + D"),
                 new("自動梁要素生成", "Ctrl + Shift + B"),
+                new("要素分割", "F4 / Ctrl + D"),
 
                 // 解析
                 new("水平解析実行", "F5"),

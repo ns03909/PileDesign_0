@@ -661,7 +661,15 @@ namespace PileDesign.Views
 
         private void GroundWindow_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (DataContext is GroundLayerViewModel vm && vm.OkCommand?.CanExecute(null) == true)
+                {
+                    vm.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+            else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
             {
                 if (DataContext is GroundLayerViewModel viewModel)
                 {

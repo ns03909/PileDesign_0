@@ -1309,7 +1309,14 @@ namespace PileDesign.Models.InputData
                         }
                     }
 
-                    List<double> sortedZs = [.. zs.Distinct().OrderByDescending(z => z)];
+                    // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
+                    zs.Sort((a, b) => b.CompareTo(a)); // 降順ソート
+                    var sortedZs = new List<double>(zs.Count);
+                    foreach (var z in zs)
+                    {
+                        if (sortedZs.Count == 0 || Math.Abs(sortedZs[^1] - z) > NumericalConstants.COORDINATE_TOLERANCE)
+                            sortedZs.Add(z);
+                    }
                     var pileZDataItems = new ObservableCollection<PileZDataItem>();
                     foreach (double sortedZ in sortedZs)
                     {

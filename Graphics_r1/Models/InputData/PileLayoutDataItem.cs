@@ -1,6 +1,8 @@
-﻿using PileDesign.FEM;
+﻿using Graphics_r1.Constants;
+using PileDesign.FEM;
 using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -68,7 +70,14 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            var sortedZs = zs.Distinct().OrderByDescending(v => v).ToList();
+            // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
+            var tempZs = zs.OrderByDescending(v => v).ToList();
+            var sortedZs = new List<double>(tempZs.Count);
+            foreach (var v in tempZs)
+            {
+                if (sortedZs.Count == 0 || Math.Abs(sortedZs[^1] - v) > NumericalConstants.COORDINATE_TOLERANCE)
+                    sortedZs.Add(v);
+            }
             var zItems = new ObservableCollection<PileZDataItem>();
             foreach (var z in sortedZs)
             {

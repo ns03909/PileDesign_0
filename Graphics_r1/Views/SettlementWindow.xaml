@@ -14,7 +14,8 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
         xmlns:models="clr-namespace:PileDesign.Models"
-        Title="単杭沈下" Height="600" Width="800">
+        Title="単杭沈下" Height="600" Width="800"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

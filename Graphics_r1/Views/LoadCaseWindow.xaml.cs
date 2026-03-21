@@ -163,6 +163,18 @@ namespace PileDesign.Views
             }
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (DataContext is LoadCaseViewModel vm && vm.OkCommand?.CanExecute(null) == true)
+                {
+                    vm.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+        }
+
         private void DataGridLoadCombination_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (DataContext is LoadCaseViewModel vm)

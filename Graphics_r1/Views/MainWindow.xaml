@@ -598,7 +598,7 @@
                 </Setter.Value>
             </Setter>
             <!-- 既定タグ（ToolTip文言） -->
-            <Setter Property="Tag" Value="要素分割(未)"/>
+            <Setter Property="Tag" Value="要素分割(未) (F4/Ctrl+D)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsElementSplit}" Value="True">
                     <Setter Property="Content">
@@ -607,7 +607,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="要素分割(済)"/>
+                    <Setter Property="Tag" Value="要素分割(済) (F4/Ctrl+D)"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -622,7 +622,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="水平解析"/>
+            <Setter Property="Tag" Value="水平解析 (F5)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -631,7 +631,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="水平解析(済●)"/>
+                    <Setter Property="Tag" Value="水平解析(済●) (F5)"/>
                     <Setter Property="Foreground" Value="#2E7D32"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -647,7 +647,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="単杭沈下解析"/>
+            <Setter Property="Tag" Value="単杭沈下解析 (F6)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -656,7 +656,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="単杭沈下解析(済●)"/>
+                    <Setter Property="Tag" Value="単杭沈下解析(済●) (F6)"/>
                     <Setter Property="Foreground" Value="#1565C0"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -672,7 +672,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="群杭沈下解析"/>
+            <Setter Property="Tag" Value="群杭沈下解析 (F7)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -681,7 +681,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="群杭沈下解析(済●)"/>
+                    <Setter Property="Tag" Value="群杭沈下解析(済●) (F7)"/>
                     <Setter Property="Foreground" Value="#E65100"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -1084,11 +1084,10 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <!--<Image Source="pack://application:,,,/Icons/LoadForceScale.png" Width="16" Height="16" Margin="2,0"/>-->
-                        <TextBox Width="50" HorizontalContentAlignment="Right"
-                                 Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                 KeyDown="TextBox_KeyDown"/>
+                        <Slider Width="80" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                Value="{Binding ForceDiagramRatio}"/>
+                        <TextBlock Text="{Binding ForceDiagramRatio, StringFormat=N2}" VerticalAlignment="Center" Width="30" Margin="4,0,0,0"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
                 
@@ -1152,11 +1151,11 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBox Width="50" HorizontalContentAlignment="Right"
-                             Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"
-                             ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
+                        <Slider Width="80" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                Value="{Binding DisplacementDiagramRatio}"
+                                ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
+                        <TextBlock Text="{Binding DisplacementDiagramRatio, StringFormat=N2}" VerticalAlignment="Center" Width="30" Margin="4,0,0,0"/>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
@@ -1311,6 +1310,7 @@
 
                     <ribbon:RibbonButton x:Name="RibbonButtonExecuteAnalyse"
                              Label="{Binding IsElementSplit, Converter={StaticResource BooleanToContentConverter}, ConverterParameter='要素分割(済),要素分割(未)'}"
+                             ToolTip="要素分割 (F4)"
                              Command="{Binding OpenElementDivisionWindowCommand}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
@@ -1513,11 +1513,11 @@
                         </i:Interaction.Triggers>
                     </ComboBox>
 
-                    <!-- 地盤ばね -->
+                    <!-- 地盤反力 -->
                     <ComboBox Width="100"
                           ItemsSource="{Binding AnalysisResultSoilSpringOption}"
                           SelectedItem="{Binding AnalysisResultSoilSpringType}"
-                          ribbon:RibbonControlService.Label="地盤ばね">
+                          ribbon:RibbonControlService.Label="地盤反力">
                         <ComboBox.Style>
                             <Style TargetType="ComboBox">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -1525,7 +1525,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
-                                            <Condition Binding="{Binding AnalysisResultContent}" Value="地盤ばね"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="地盤反力"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
@@ -1547,7 +1547,7 @@
                 
                 <ribbon:RibbonGroup Header="値表示">
                     <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}"/>
-                    <CheckBox Content="杭中間"
+                    <CheckBox Content="要素中間"
                           IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
                           IsEnabled="{Binding IsResultValueVisible}"/>
                     <CheckBox Content="杭頭"
@@ -1575,22 +1575,24 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="ダイアグラムスケール">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="応力" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <TextBox Width="50" HorizontalContentAlignment="Right"
-                             Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"
-                             ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                            Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="変位" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <TextBox Width="50" HorizontalContentAlignment="Right"
-                             Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"
-                             ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
+                    <StackPanel Orientation="Vertical" Margin="0,2">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="応力" VerticalAlignment="Center" Width="28"/>
+                            <Slider Width="100" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                    Value="{Binding ForceDiagramRatio}"
+                                    ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
+                            <TextBlock Text="{Binding ForceDiagramRatio, StringFormat=N2}" VerticalAlignment="Center" Width="30" Margin="4,0,0,0"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="変位" VerticalAlignment="Center" Width="28"/>
+                            <Slider Width="100" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                    TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                    Value="{Binding DisplacementDiagramRatio}"
+                                    ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
+                            <TextBlock Text="{Binding DisplacementDiagramRatio, StringFormat=N2}" VerticalAlignment="Center" Width="30" Margin="4,0,0,0"/>
+                        </StackPanel>
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
@@ -5324,28 +5326,28 @@
                                                     <Button Grid.Row="0" Grid.Column="1"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="荷重条件"
+                                                        Tag="荷重条件編集 (Ctrl + L)"
                                                         Command="{Binding OpenLoadCaseWindowCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/LoadCaseWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
                                                     <Button Grid.Row="0" Grid.Column="2"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="地盤"
+                                                        Tag="地盤編集 (Ctrl + G)"
                                                         Command="{Binding OpenGroundWindowCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/GroundWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
                                                     <Button Grid.Row="0" Grid.Column="3"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="杭体"
+                                                        Tag="杭体編集 (Ctrl + B)"
                                                         Command="{Binding OpenPileBodyWindowCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/PileBodyWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
                                                     <Button x:Name="ButtonAxialVerification0" Grid.Row="0" Grid.Column="4"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="軸力確認"
+                                                        Tag="軸力確認 (Ctrl + K)"
                                                         Command="{Binding AxialForceCheckCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/AxialForceVeirification.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
@@ -5520,11 +5522,11 @@
                                                             </i:Interaction.Triggers>
                                                         </ComboBox>
 
-                                                        <!-- 地盤ばね種別 -->
-                                                        <ComboBox 
+                                                        <!-- 地盤反力種別 -->
+                                                        <ComboBox
                                                               ItemsSource="{Binding AnalysisResultSoilSpringOption}"
                                                               SelectedItem="{Binding AnalysisResultSoilSpringType}"
-                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=地盤ばね}">
+                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=地盤反力}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>

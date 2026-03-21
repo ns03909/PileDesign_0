@@ -3349,6 +3349,12 @@ namespace PileDesign.Views
                 viewModel?.OpenElementDivisionWindow();
                 e.Handled = true;
             }
+            // 要素分割（F4）
+            else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None)
+            {
+                viewModel?.OpenElementDivisionWindow();
+                e.Handled = true;
+            }
 
             // 水平解析
             else if (e.Key == Key.F5)

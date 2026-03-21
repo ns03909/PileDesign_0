@@ -15,6 +15,7 @@
         mc:Ignorable="d"
         Title="要素分割" Height="650" Width="650"
         Loaded="ElementDivisionWindow_Loaded"
+        PreviewKeyDown="Window_PreviewKeyDown"
         common:EscapeKeyBehavior.Enable="True">
 
     <Window.InputBindings>

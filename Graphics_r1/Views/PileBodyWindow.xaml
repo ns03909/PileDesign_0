@@ -14,7 +14,8 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         Title="杭体" WindowState="Maximized"
         Loaded="PileBodyWindow_Loaded"
-        Closing="Window_Closing">
+        Closing="Window_Closing"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />

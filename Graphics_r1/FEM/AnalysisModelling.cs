@@ -375,6 +375,7 @@ namespace PileDesign.FEM
                     var beam = CreatePileElement(soilPile, i - 1, prevPileNode!, pileNode);
                     beam.PileBodyNo = soilPile.PileBodyNo;
                     beam.SegmentIndex = i - 1;
+                    if (i == 1) beam.SetPileTopFlag(true); // nodeCount==2の場合（杭頭+先端のみ）
                     result.Beams.Add(beam);
                     pileNode.SetBoundary(PileTipBoundary);
                 }
@@ -754,7 +755,22 @@ namespace PileDesign.FEM
         private void ConnectCapsToFoundation()
         {
             if (!HasFoundationBeams)
+            {
+                // 基礎梁未設定: PileNode-0 → CapNode のmaster-slave設定のみ行う
+                // （CapNodeはMergePileResultsでRigidBodies[0]のslaveに追加済み）
+                if (InputModel.PileLayoutItems != null)
+                {
+                    foreach (var pile in InputModel.PileLayoutItems)
+                    {
+                        var capNode = Nodes.FirstOrDefault(n => n.Name == $"CapNode-{pile.No}");
+                        if (capNode != null)
+                            SetPileHeadMasterSlave(pile, capNode);
+                    }
+                    foreach (var rb in RigidBodies)
+                        rb.SetSlaveNodeRelations();
+                }
                 return;
+            }
 
             if (InputModel.PileLayoutItems == null)
                 return;
@@ -806,6 +822,7 @@ namespace PileDesign.FEM
                 if (connectionNode == null)
                 {
                     targetRigidBody.AddSlaveNode(capNode);
+                    SetPileHeadMasterSlave(pile, capNode);
                     continue;
                 }
 
@@ -819,13 +836,13 @@ namespace PileDesign.FEM
                     var rigidBeam = new Beam($"RigidLink-{pile.No}", rigidLinkSec, connectionNode, capNode, 1.0, 1.0);
                     Beams.Add(rigidBeam);
                     pile.Beams.Add(rigidBeam);
-
-                    SetPileHeadMasterSlave(pile, capNode);
                 }
                 else
                 {
                     targetRigidBody.AddSlaveNode(capNode);
                 }
+                // CapNode/ConnectionNodeの接続方法によらず、PileNode-0はCapNodeのmaster-slaveとして設定
+                SetPileHeadMasterSlave(pile, capNode);
             }
 
             foreach (var rb in RigidBodies)
