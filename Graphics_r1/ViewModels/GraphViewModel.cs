@@ -227,6 +227,34 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // M/Qdスライダー表示
+        private bool _isMonQdSliderVisible;
+        public bool IsMonQdSliderVisible
+        {
+            get => _isMonQdSliderVisible;
+            set => SetProperty(ref _isMonQdSliderVisible, value);
+        }
+
+        private double _monQd = 3.0;
+        public double MonQd
+        {
+            get => _monQd;
+            set
+            {
+                if (SetProperty(ref _monQd, value))
+                {
+                    UpdateGraph();
+                }
+            }
+        }
+
+        private string _monQdReference = "";
+        public string MonQdReference
+        {
+            get => _monQdReference;
+            set => SetProperty(ref _monQdReference, value);
+        }
+
         // 杭区間オプション描画
         private bool _isPileSegmentOptionVisible;
         public bool IsPileSegmentOptionVisible
@@ -713,7 +741,8 @@ namespace PileDesign.ViewModels
                 //GraphOptions.Add("杭応力M");
                 //GraphOptions.Add("杭変位U");
                 GraphOptions.Add("杭");
-                GraphOptions.Add("NMinT");
+                GraphOptions.Add("NMINT");
+                GraphOptions.Add("QNINT");
                 GraphOptions.Add("杭頭M-θ");
                 GraphOptions.Add("杭体M-φ");
                 GraphOptions.Add("水平地盤反力");
@@ -839,7 +868,7 @@ namespace PileDesign.ViewModels
                 else
                 { decimalPlacesX = 1; }
             }
-            else if (SelectedGraphOption.StartsWith("NMinT"))
+            else if (SelectedGraphOption.StartsWith("NMINT") || SelectedGraphOption.StartsWith("QNINT"))
             {
                 decimalPlacesX = 1;
                 decimalPlacesY = 1;
@@ -876,6 +905,7 @@ namespace PileDesign.ViewModels
 
             // 限界状態オプションをデフォルトで非表示
             IsLimitStateOptionVisible = false;
+            IsMonQdSliderVisible = false;
 
             if (SelectedGraphOption.StartsWith("杭頭応力変形関係"))
             {
@@ -1060,7 +1090,7 @@ namespace PileDesign.ViewModels
                 DrawPileDisp(WpfPlot, MyCrosshair, "CrosshairPositionText", dispType, unit);
             }
 
-            else if (SelectedGraphOption.StartsWith("NMinT"))
+            else if (SelectedGraphOption.StartsWith("NMINT"))
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -1076,7 +1106,7 @@ namespace PileDesign.ViewModels
                 var pileBody = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
                 if (pileBody?.PileBodySegments == null || SelectedPileSegmentNo < 1 || SelectedPileSegmentNo > pileBody.PileBodySegments.Count)
                 {
-                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMinT", "軸力(kN)", "曲げモーメント(kNm)");
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
                     WpfPlot.Refresh();
                     return;
                 }
@@ -1084,52 +1114,66 @@ namespace PileDesign.ViewModels
                 var pileSection = pileBody.PileBodySegments[SelectedPileSegmentNo - 1].PileSection;
                 if (pileSection == null)
                 {
-                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMinT", "軸力(kN)", "曲げモーメント(kNm)");
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
                     WpfPlot.Refresh();
                     return;
                 }
 
                 // NM曲線データが有効な場合のみ描画
-                if (pileSection.UnfactoredServiceNM.N?.Count > 0 && pileSection.UnfactoredServiceNM.M?.Count > 0)
-                {
-                    var scatterUnService = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.UnfactoredServiceNM.N.ToArray(), pileSection.UnfactoredServiceNM.M.ToArray());
-                    scatterUnService.LegendText = "低減前使用限界";
-                }
+                // 低減後（実線）を先に描画して色を取得し、低減前（破線）に同じ色を適用
 
+                // 使用限界
+                ScottPlot.Color serviceColor = default;
                 if (pileSection.FactoredServiceNM.N?.Count > 0 && pileSection.FactoredServiceNM.M?.Count > 0)
                 {
                     var scatterFaService = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.FactoredServiceNM.N.ToArray(), pileSection.FactoredServiceNM.M.ToArray());
                     scatterFaService.LegendText = "低減後使用限界";
+                    serviceColor = scatterFaService.LineStyle.Color;
                 }
-
-                if (pileSection.UnfactoredDamageNM.N?.Count > 0 && pileSection.UnfactoredDamageNM.M?.Count > 0)
+                if (pileSection.UnfactoredServiceNM.N?.Count > 0 && pileSection.UnfactoredServiceNM.M?.Count > 0)
                 {
-                    var scatterUnDamage = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.UnfactoredDamageNM.N.ToArray(), pileSection.UnfactoredDamageNM.M.ToArray());
-                    scatterUnDamage.LegendText = "低減前損傷限界";
+                    var scatterUnService = WpfPlot.Plot.Add.ScatterLine(
+                        pileSection.UnfactoredServiceNM.N.ToArray(), pileSection.UnfactoredServiceNM.M.ToArray());
+                    scatterUnService.LegendText = "低減前使用限界";
+                    scatterUnService.LineStyle.Pattern = LinePattern.Dashed;
+                    if (serviceColor != default) scatterUnService.LineStyle.Color = serviceColor;
                 }
 
+                // 損傷限界
+                ScottPlot.Color damageColor = default;
                 if (pileSection.FactoredDamageNM.N?.Count > 0 && pileSection.FactoredDamageNM.M?.Count > 0)
                 {
                     var scatterFaDamage = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.FactoredDamageNM.N.ToArray(), pileSection.FactoredDamageNM.M.ToArray());
                     scatterFaDamage.LegendText = "低減後損傷限界";
+                    damageColor = scatterFaDamage.LineStyle.Color;
                 }
-
-                if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
+                if (pileSection.UnfactoredDamageNM.N?.Count > 0 && pileSection.UnfactoredDamageNM.M?.Count > 0)
                 {
-                    var scatterUnUltimate = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.UnfactoredUltimateNM.N.ToArray(), pileSection.UnfactoredUltimateNM.M.ToArray());
-                    scatterUnUltimate.LegendText = "低減前安全限界";
+                    var scatterUnDamage = WpfPlot.Plot.Add.ScatterLine(
+                        pileSection.UnfactoredDamageNM.N.ToArray(), pileSection.UnfactoredDamageNM.M.ToArray());
+                    scatterUnDamage.LegendText = "低減前損傷限界";
+                    scatterUnDamage.LineStyle.Pattern = LinePattern.Dashed;
+                    if (damageColor != default) scatterUnDamage.LineStyle.Color = damageColor;
                 }
 
+                // 安全限界
+                ScottPlot.Color ultimateColor = default;
                 if (pileSection.FactoredUltimateNM.N?.Count > 0 && pileSection.FactoredUltimateNM.M?.Count > 0)
                 {
                     var scatterFaUltimate = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.FactoredUltimateNM.N.ToArray(), pileSection.FactoredUltimateNM.M.ToArray());
                     scatterFaUltimate.LegendText = "低減後安全限界";
+                    ultimateColor = scatterFaUltimate.LineStyle.Color;
+                }
+                if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
+                {
+                    var scatterUnUltimate = WpfPlot.Plot.Add.ScatterLine(
+                        pileSection.UnfactoredUltimateNM.N.ToArray(), pileSection.UnfactoredUltimateNM.M.ToArray());
+                    scatterUnUltimate.LegendText = "低減前安全限界";
+                    scatterUnUltimate.LineStyle.Pattern = LinePattern.Dashed;
+                    if (ultimateColor != default) scatterUnUltimate.LineStyle.Color = ultimateColor;
                 }
 
                 List<double> axialForceResultsVL = [];
@@ -1246,7 +1290,186 @@ namespace PileDesign.ViewModels
                         scatterResultLevel2.LegendText = "レベル2地震時";
                         scatterResultLevel2.LineStyle.Width = 0;
 
-                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMinT", "軸力(kN)", "曲げモーメント(kNm)");
+                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                        WpfPlot.Plot.ShowLegend();
+                        WpfPlot.Refresh();
+                    }
+                }
+            }
+            else if (SelectedGraphOption.StartsWith("QNINT"))
+            {
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = false;
+                IsPileBodyOptionVisible = true;
+                IsPileSegmentOptionVisible = true;
+                IsLiquefactionOptionVisible = false;
+                IsGridOptionVisible = false;
+                IsMonQdSliderVisible = true;
+
+                WpfPlot.Plot.Clear();
+
+                var pileBody = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
+                if (pileBody?.PileBodySegments == null || SelectedPileSegmentNo < 1 || SelectedPileSegmentNo > pileBody.PileBodySegments.Count)
+                {
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "QNINT", "軸力(kN)", "せん断力(kN)");
+                    WpfPlot.Refresh();
+                    return;
+                }
+
+                var pileSection = pileBody.PileBodySegments[SelectedPileSegmentNo - 1].PileSection;
+                if (pileSection == null)
+                {
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "QNINT", "軸力(kN)", "せん断力(kN)");
+                    WpfPlot.Refresh();
+                    return;
+                }
+
+                // QN曲線データ描画（MonQdスライダー値で再計算、低減後=実線、低減前=同色破線）
+                var qnCurves = pileSection.ComputeQNForMonQd(MonQd);
+                // 既製杭でない場合はキャッシュ値にフォールバック
+                if (qnCurves.UnfactoredService.N == null)
+                {
+                    qnCurves = (
+                        pileSection.UnfactoredServiceNQ, pileSection.FactoredServiceNQ,
+                        pileSection.UnfactoredDamageNQ, pileSection.FactoredDamageNQ,
+                        pileSection.UnfactoredUltimateNQ, pileSection.FactoredUltimateNQ
+                    );
+                }
+
+                void DrawQNCurvePair(
+                    (List<double> N, List<double> Q) factored,
+                    (List<double> N, List<double> Q) unfactored,
+                    string label)
+                {
+                    ScottPlot.Color color = default;
+                    if (factored.N?.Count > 0 && factored.Q?.Count > 0)
+                    {
+                        var sc = WpfPlot.Plot.Add.ScatterLine(factored.N.ToArray(), factored.Q.ToArray());
+                        sc.LegendText = $"低減後{label}";
+                        color = sc.LineStyle.Color;
+                    }
+                    if (unfactored.N?.Count > 0 && unfactored.Q?.Count > 0)
+                    {
+                        var sc = WpfPlot.Plot.Add.ScatterLine(unfactored.N.ToArray(), unfactored.Q.ToArray());
+                        sc.LegendText = $"低減前{label}";
+                        sc.LineStyle.Pattern = LinePattern.Dashed;
+                        if (color != default) sc.LineStyle.Color = color;
+                    }
+                }
+
+                DrawQNCurvePair(qnCurves.FactoredService, qnCurves.UnfactoredService, "使用限界");
+                DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, "損傷限界");
+                DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "安全限界");
+
+                // 解析結果プロット
+                List<double> axialForceResultsLevel1Q = [];
+                List<double> shearResultsLevel1 = [];
+                List<double> axialForceResultsLevel2Q = [];
+                List<double> shearResultsLevel2 = [];
+
+                if (SelectedLoadCaseOption == "VL0" || SelectedLoadCaseOption == "VLadd" || SelectedLoadCaseOption == "VL")
+                {
+                    // 常時荷重: せん断力=0
+                    foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
+                    {
+                        if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                            continue;
+
+                        double axialForce = SelectedLoadCaseOption == "VL0" ? pileLayoutDataItem.AxialForceVL0
+                            : SelectedLoadCaseOption == "VLadd" ? pileLayoutDataItem.AxialForceVLAdditional
+                            : pileLayoutDataItem.AxialForceVL;
+
+                        var scatter = WpfPlot.Plot.Add.Scatter(new double[] { axialForce }, new double[] { 0.0 });
+                        scatter.LegendText = $"P{pileLayoutDataItem.PileNo}";
+                        scatter.LineStyle.Width = 0;
+                    }
+
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "QNINT", "軸力(kN)", "せん断力(kN)");
+                    WpfPlot.Plot.ShowLegend();
+                    WpfPlot.Refresh();
+                }
+                else
+                {
+                    foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
+                    {
+                        if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                            continue;
+
+                        foreach (LoadCase loadCase in GetSelectedLoadCases())
+                        {
+                            var axialForce = pileLayoutDataItem.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+
+                            foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
+                            {
+                                foreach (var isLiquefaction in SelectedLiquefactionCases)
+                                {
+                                    int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                    if (lastStep < 0) continue;
+
+                                    double shear = double.MinValue;
+
+                                    var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                                    for (int i = 0; i < soilPile.PileBodySegments.Count; i++)
+                                    {
+                                        var pileBodySegment = soilPile.PileBodySegments[i];
+                                        if (pileBodySegment.No == SelectedPileSegmentNo)
+                                        {
+                                            if (pileLayoutDataItem.Beams != null && i < pileLayoutDataItem.Beams.Count)
+                                            {
+                                                var beamResult = pileLayoutDataItem.Beams[i]?.GetBeamResult(
+                                                    AnaModel, loadCase, loadCombination, isLiquefaction);
+                                                if (beamResult?.CumulativeForce != null)
+                                                {
+                                                    shear = Math.Max(shear, beamResult.CumulativeForce.FabsMax);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (loadCase.Level == 1)
+                                    {
+                                        axialForceResultsLevel1Q.Add(axialForce);
+                                        shearResultsLevel1.Add(shear);
+                                    }
+                                    else if (loadCase.Level == 2)
+                                    {
+                                        axialForceResultsLevel2Q.Add(axialForce);
+                                        shearResultsLevel2.Add(shear);
+                                    }
+                                }
+                            }
+                        }
+
+                        var scatterLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1Q.ToArray(), [.. shearResultsLevel1]);
+                        scatterLevel1.LegendText = "レベル1地震時";
+                        scatterLevel1.LineStyle.Width = 0;
+
+                        var scatterLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2Q.ToArray(), [.. shearResultsLevel2]);
+                        scatterLevel2.LegendText = "レベル2地震時";
+                        scatterLevel2.LineStyle.Width = 0;
+
+                        // 解析結果から該当杭体の最大MonQdを計算
+                        double maxMonQd = 0;
+                        double d = pileSection.EffectiveDepth; // [mm]
+                        if (d > 0 && pileLayoutDataItem.Beams != null)
+                        {
+                            double maxM = 0, maxQ = 0;
+                            foreach (var b in pileLayoutDataItem.Beams)
+                            {
+                                foreach (var br in b.BeamResults)
+                                {
+                                    if (br.CumulativeForce == null) continue;
+                                    maxM = Math.Max(maxM, br.CumulativeForce.MabsMax);
+                                    maxQ = Math.Max(maxQ, br.CumulativeForce.FabsMax);
+                                }
+                            }
+                            if (maxQ > 0)
+                                maxMonQd = (maxM * 1e6) / (maxQ * 1e3 * d);
+                        }
+                        MonQdReference = maxMonQd > 0 ? $"解析結果最大値: {maxMonQd:N2}" : "";
+
+                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "QNINT", "軸力(kN)", "せん断力(kN)");
                         WpfPlot.Plot.ShowLegend();
                         WpfPlot.Refresh();
                     }
@@ -1374,12 +1597,32 @@ namespace PileDesign.ViewModels
                 }
 
                 // 対応するBeam要素を見つける
+                // SoilPileの要素分割（地層境界・0.5D分割）でBeam数 > 入力セグメント数のため、
+                // SegmentIndexからSoilPileのセグメント番号で逆引きする
                 Beam targetBeam = null;
-                for (int i = 0; i < pileLayout.Beams.Count && i < pileBody.PileBodySegments.Count; i++)
+                SoilPile soilPile = null;
                 {
-                    if (pileBody.PileBodySegments[i].No == SelectedPileSegmentNo)
+                    int soilPileAltNo = pileLayout.SoilPileAltNo;
+                    if (InputModel.ElementDivision?.SoilPiles != null
+                        && soilPileAltNo - 1 >= 0
+                        && soilPileAltNo - 1 < InputModel.ElementDivision.SoilPiles.Count)
                     {
-                        targetBeam = pileLayout.Beams[i];
+                        soilPile = InputModel.ElementDivision.SoilPiles[soilPileAltNo - 1];
+                    }
+                }
+
+                foreach (var beam in pileLayout.Beams)
+                {
+                    if (beam.SegmentIndex is not int seg) continue;
+
+                    // SoilPileのPileBodySegments[seg].No は入力セグメント番号と一致（DeepCopy由来）
+                    int inputSegNo = -1;
+                    if (soilPile != null && seg >= 0 && seg < soilPile.PileBodySegments.Count)
+                        inputSegNo = soilPile.PileBodySegments[seg].No;
+
+                    if (inputSegNo == SelectedPileSegmentNo)
+                    {
+                        targetBeam = beam;
                         break;
                     }
                 }

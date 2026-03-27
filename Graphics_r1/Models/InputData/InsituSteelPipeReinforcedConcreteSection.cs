@@ -330,6 +330,27 @@ namespace PileDesign.Models.InputData
             return (phis, Ms);
         }
 
+        // 杭中間部用M-φ関係（終局曲率をひび割れ後勾配の延長で算出）
+        public (List<double> Phis, List<double> Moments) GetMPhiRelationshipForMiddle(double axialN)
+        {
+            var (phis, Ms) = GetMPhiRelationshipInternal(axialN, 1.0);
+
+            if (phis.Count < 3 || Ms.Count < 4)
+                return (phis, Ms);
+
+            double denom = Ms[2] - Ms[1]; // MY - MCr
+            if (Math.Abs(denom) < 1e-12)
+                return (phis, Ms);
+
+            double beta1 = 1.0;
+            // ひび割れ後勾配を延長して β1*Mu に到達する曲率を算出
+            double phiC = phis[1] + (phis[2] - phis[1]) * (beta1 * Ms[3] - Ms[1]) / denom;
+
+            List<double> middlePhis = [phis[0], phis[1], phis[2], phiC];
+            // モーメント値は杭頭部と同じ
+            return (middlePhis, Ms);
+        }
+
         // 最外縁の鋼管または杭主筋が引張降伏するときのN、Mを返すメソッド
         internal (double, double) GetYieldForceAndMoment(double curvature)
         {

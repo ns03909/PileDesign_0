@@ -240,9 +240,9 @@
                     <RadioButton Content="Full NR" GroupName="NRMethod" Margin="0,0,12,0" VerticalAlignment="Center"
                                  IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
                                  ToolTip="Full Newton-Raphson法&#x0a;反復中も接線剛性を更新（高速だが不安定な場合あり）"/>
-                    <RadioButton Content="Modified NR" GroupName="NRMethod" VerticalAlignment="Center"
+                    <RadioButton Content="Full→Modified NR" GroupName="NRMethod" VerticalAlignment="Center"
                                  IsChecked="{Binding UseModifiedNewtonRaphson, Mode=TwoWay}"
-                                 ToolTip="Modified Newton-Raphson法&#x0a;反復中は接線剛性を固定（安定）"/>
+                                 ToolTip="最初の N 回を Full NR で実行し、以降は Modified NR（K行列再利用）に移行&#x0a;Full NR の回数は下の「Full NR初期反復」で設定"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,2"
                             Visibility="{Binding UseModifiedNewtonRaphson, Converter={StaticResource BooleanToVisibilityConverter}}">

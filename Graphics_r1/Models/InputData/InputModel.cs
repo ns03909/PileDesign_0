@@ -1083,6 +1083,44 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// ヘッドレス（UI無し）でJSONファイルからInputModelを読み込む。
+        /// CLI・バッチ処理用。MainWindowViewModelへの依存なし。
+        /// </summary>
+        public static InputModel LoadHeadless(string filePath)
+        {
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException("指定されたファイルが存在しません。", filePath);
+
+            string json = File.ReadAllText(filePath);
+
+            InputModel? loaded = null;
+            try
+            {
+                loaded = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions);
+            }
+            catch
+            {
+                // フォールバック: Newtonsoft.Json
+                var settings = new Newtonsoft.Json.JsonSerializerSettings
+                {
+                    PreserveReferencesHandling = PreserveReferencesHandling.All,
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    Formatting = Formatting.Indented,
+                };
+                loaded = JsonConvert.DeserializeObject<InputModel>(json, settings);
+            }
+
+            if (loaded == null)
+                throw new InvalidOperationException("ファイルの内容をデシリアライズできませんでした。");
+
+            loaded.InputNodes ??= [];
+            loaded.MigrateElementsToFoundationBeams();
+            loaded.EnsureFoundationBeamDefaults();
+            loaded.EnsureAnalysisTargetDefaults();
+            return loaded;
+        }
+
+        /// <summary>
         /// FoundationBeamInputのデフォルト値を確保する
         /// </summary>
         internal void EnsureFoundationBeamDefaults()
@@ -1298,6 +1336,25 @@ namespace PileDesign.Models.InputData
                     var zs = new List<double> { pileTopAltitude };
                     foreach (PileBodySegment pileBodySegment in pileBodySegments)
                         zs.Add(pileTopAltitude - pileBodySegment.SegmentDepth);
+
+                    // 場所打ち鋼管コンクリート杭の場合、杭頭から0.5Dの位置に分割点を追加
+                    // （杭頭部と杭中間部で異なるM-φ関係を適用するため）
+                    if (pileBodySegments.Count > 0)
+                    {
+                        var firstSection = pileBodySegments[0].PileSection;
+                        if (firstSection?.PileBodyType == "場所打ち鋼管コンクリート杭"
+                            && firstSection.PileSectionType == "鋼管コンクリート部")
+                        {
+                            double pileDia_m = firstSection.PipeDia / 1000.0; // mm → m
+                            double zHalfD = pileTopAltitude - 0.5 * pileDia_m;
+                            // 杭底より上、かつ杭頭より下の場合のみ追加
+                            if (zHalfD > zs[^1] + NumericalConstants.COORDINATE_TOLERANCE
+                                && zHalfD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
+                            {
+                                zs.Add(zHalfD);
+                            }
+                        }
+                    }
 
                     double pileBottomAltitude = zs[^1];
 

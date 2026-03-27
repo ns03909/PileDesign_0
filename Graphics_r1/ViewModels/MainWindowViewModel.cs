@@ -1896,6 +1896,17 @@ namespace PileDesign.ViewModels
             if (CurrentInputModel?.PileLayoutItems == null ||
                 CurrentInputModel?.FoundationBeamInput?.Beams == null) return;
 
+            string message = "梁要素を自動生成しますか？\n\n選択中の杭配置について、X成分・Y成分がそれぞれ同一の隣り合う杭配置の接合節点を基礎梁で連結します。";
+            if (HasAnyAnalysisResult)
+                message += "\n\n※ 既存の解析結果は消去されます。";
+
+            var result = System.Windows.MessageBox.Show(
+                message,
+                "自動梁要素生成",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+            if (result != System.Windows.MessageBoxResult.Yes) return;
+
             if (!CheckAndResetAnalysisResults()) return;
 
             var piles = CurrentInputModel.PileLayoutItems;
@@ -2887,6 +2898,152 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // AI連携: Claude Desktop にMCPサーバーを登録
+        [RelayCommand]
+        public static void RegisterMcpServer()
+        {
+            try
+            {
+                var mcpExePath = System.IO.Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, "PileDesign.Mcp.exe");
+
+                if (!System.IO.File.Exists(mcpExePath))
+                {
+                    MessageBox.Show(
+                        $"PileDesign.Mcp.exe が見つかりません。\n\n" +
+                        $"検索パス: {mcpExePath}\n\n" +
+                        "PileDesign.Mcp.exe をこのプログラムと同じフォルダに配置してください。",
+                        "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Claude Desktop の設定ファイルパスを探索
+                string? configPath = FindClaudeDesktopConfigPath();
+
+                if (configPath == null)
+                {
+                    // 設定ファイルが見つからない場合は手動設定の案内を表示
+                    var jsonSnippet = $@"{{
+  ""mcpServers"": {{
+    ""piledesign"": {{
+      ""command"": ""{mcpExePath.Replace("\\", "\\\\")}""
+    }}
+  }}
+}}";
+                    MessageBox.Show(
+                        "Claude Desktop の設定ファイルが見つかりませんでした。\n\n" +
+                        "Claude Desktop をインストール後、設定ファイル\n" +
+                        "(claude_desktop_config.json) に以下を追加してください:\n\n" +
+                        jsonSnippet,
+                        "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // クリップボードにコピー
+                    try { Clipboard.SetText(jsonSnippet); } catch { }
+                    return;
+                }
+
+                // 既存の設定を読み込み
+                string existingJson = System.IO.File.Exists(configPath)
+                    ? System.IO.File.ReadAllText(configPath) : "{}";
+
+                var doc = System.Text.Json.JsonDocument.Parse(existingJson);
+                var root = new System.Text.Json.Nodes.JsonObject();
+
+                // 既存のプロパティをコピー
+                foreach (var prop in doc.RootElement.EnumerateObject())
+                {
+                    root[prop.Name] = System.Text.Json.Nodes.JsonNode.Parse(prop.Value.GetRawText());
+                }
+
+                // mcpServers を取得または作成
+                if (root["mcpServers"] is not System.Text.Json.Nodes.JsonObject mcpServers)
+                {
+                    mcpServers = new System.Text.Json.Nodes.JsonObject();
+                    root["mcpServers"] = mcpServers;
+                }
+
+                // 既に登録済みかチェック
+                if (mcpServers.ContainsKey("piledesign"))
+                {
+                    var result = MessageBox.Show(
+                        "piledesign は既に登録されています。上書きしますか？",
+                        "AI連携設定", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result != MessageBoxResult.Yes) return;
+                }
+
+                // piledesign エントリを追加/更新
+                mcpServers["piledesign"] = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["command"] = mcpExePath.Replace("/", "\\"),
+                    ["args"] = new System.Text.Json.Nodes.JsonArray()
+                };
+
+                // 保存
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+                string newJson = root.ToJsonString(options);
+                System.IO.File.WriteAllText(configPath, newJson);
+
+                MessageBox.Show(
+                    $"Claude Desktop にAI連携を登録しました。\n\n" +
+                    $"設定ファイル: {configPath}\n" +
+                    $"MCPサーバー: {mcpExePath}\n\n" +
+                    "Claude Desktop を再起動すると有効になります。",
+                    "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"設定中にエラーが発生しました:\n{ex.Message}",
+                    "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Claude Desktop の設定ファイルパスを探索する
+        /// </summary>
+        private static string? FindClaudeDesktopConfigPath()
+        {
+            var candidates = new List<string>();
+
+            // Microsoft Store 版
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var packagesDir = System.IO.Path.Combine(localAppData, "Packages");
+            if (System.IO.Directory.Exists(packagesDir))
+            {
+                try
+                {
+                    foreach (var dir in System.IO.Directory.GetDirectories(packagesDir, "Claude_*"))
+                    {
+                        var candidate = System.IO.Path.Combine(dir, "LocalCache", "Roaming", "Claude", "claude_desktop_config.json");
+                        candidates.Add(candidate);
+                    }
+                }
+                catch { }
+            }
+
+            // 通常インストール版
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            candidates.Add(System.IO.Path.Combine(appData, "Claude", "claude_desktop_config.json"));
+
+            // 既存ファイルを優先
+            foreach (var path in candidates)
+            {
+                if (System.IO.File.Exists(path)) return path;
+            }
+
+            // ファイルが存在しない場合、ディレクトリが存在するパスを返す
+            foreach (var path in candidates)
+            {
+                var dir = System.IO.Path.GetDirectoryName(path);
+                if (dir != null && System.IO.Directory.Exists(dir)) return path;
+            }
+
+            return null;
+        }
+
         [RelayCommand]
         public void OnQuickHint()
         {
@@ -3431,7 +3588,7 @@ namespace PileDesign.ViewModels
 
         // 要素分割ウィンドウを開くメソッド
         [RelayCommand]
-        public void OpenElementDivisionWindow()
+        public async Task OpenElementDivisionWindowAsync()
         {
             if (IsPreparedForAnalysis())
             {
@@ -3443,12 +3600,17 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                // Undoポイントを追加（読込前の状態を保存）
-                SaveUndoState();
+                // Undo用DeepCopyをバックグラウンドで開始（ウィンドウ表示をブロックしない）
+                var undoTask = Task.Run(() => CurrentInputModel.DeepCopy());
 
                 // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
                 var window = new ElementDivisionWindow(this);
                 window.ShowDialog();
+
+                // ダイアログ終了後にUndo保存
+                var undoCopy = await undoTask;
+                _undoManager.SaveState(undoCopy);
+                RaiseUndoStateChanged();
 
                 UpdateCanvas3DAction?.Invoke();
                 UpdateTreeView();
@@ -3508,6 +3670,42 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 根入部の地盤カバーチェック
+            var embedment = CurrentInputModel.EmbedmentInput;
+            if (embedment?.EmbedmentLayers != null && embedment.EmbedmentLayers.Count > 0)
+            {
+                int embGroundNo = embedment.GroundNo;
+                if (embGroundNo < 1 || embGroundNo > CurrentInputModel.GroundsInput.Count)
+                {
+                    errors.AppendLine($"根入部: 地盤番号{embGroundNo}が存在しません。");
+                }
+                else
+                {
+                    var embGround = CurrentInputModel.GroundsInput[embGroundNo - 1];
+                    double embTop = embedment.EmbedmentLayers[0].TopAltitude;
+                    double embBottom = embedment.EmbedmentLayers[^1].BottomAltitude;
+
+                    if (embGround.GroundLayers != null && embGround.GroundLayers.Count > 0)
+                    {
+                        double groundTop = embGround.GroundLayers.Max(layer => layer.BottomAltitude + layer.LayerThickness);
+                        double groundBottom = embGround.GroundLayers.Min(layer => layer.BottomAltitude);
+
+                        if (embTop > groundTop)
+                        {
+                            errors.AppendLine($"根入部: 根入上端標高({embTop:F2}m)が地盤No.{embGroundNo}の最上層標高({groundTop:F2}m)より上にあります。");
+                        }
+                        if (embBottom < groundBottom)
+                        {
+                            errors.AppendLine($"根入部: 根入下端標高({embBottom:F2}m)が地盤No.{embGroundNo}の最下層標高({groundBottom:F2}m)より下にあります。");
+                        }
+                    }
+                    else
+                    {
+                        errors.AppendLine($"根入部: 地盤No.{embGroundNo}に土層データがありません。");
+                    }
+                }
+            }
+
             return errors.Length > 0 ? errors.ToString() : null;
         }
 
@@ -3553,10 +3751,7 @@ namespace PileDesign.ViewModels
                     {
                         try
                         {
-                            Mouse.OverrideCursor = Cursors.Wait;
-
-                            // Undoポイントを追加（読込前の状態を保存）
-                            SaveUndoState();
+                            // Undo保存は不要（ウィンドウに「破棄して閉じる」ボタンがあるため）
 
                             var viewModel = new HorizontalCalculationViewModel(this);
                             var window = new HorizontalCalculationWindow { DataContext = viewModel };
@@ -3568,7 +3763,6 @@ namespace PileDesign.ViewModels
                             }
 
                             // ウィンドウを即座に表示（FEMモデル作成はLoadedイベントでバックグラウンド実行）
-                            Mouse.OverrideCursor = null;
                             window.ShowDialog();
                         }
                         catch (Exception ex)

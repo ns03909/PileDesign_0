@@ -54,6 +54,16 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>有効せい [mm]（MonQd計算用）</summary>
+        public double EffectiveDepth
+        {
+            get
+            {
+                var section = CreateSectionCalculator();
+                return (section as AbstractPileSection)?.EffectiveDepth ?? 0;
+            }
+        }
+
         // フィールド
         private int _pileBodyNo;
         public int PileBodyNo
@@ -1656,6 +1666,78 @@ namespace PileDesign.Models.InputData
                 GetMultipliedListValues(n, 1e-3),
                 GetMultipliedListValues(q, 1e-3)
             );
+        }
+
+        /// <summary>
+        /// 指定したM/Qdで全6種のQN曲線を再計算して返す（kN単位）
+        /// </summary>
+        public (
+            (List<double> N, List<double> Q) UnfactoredService,
+            (List<double> N, List<double> Q) FactoredService,
+            (List<double> N, List<double> Q) UnfactoredDamage,
+            (List<double> N, List<double> Q) FactoredDamage,
+            (List<double> N, List<double> Q) UnfactoredUltimate,
+            (List<double> N, List<double> Q) FactoredUltimate
+        ) ComputeQNForMonQd(double monQd)
+        {
+            var section = CreateSectionCalculator();
+            if (section is not AbstractPileSection absSection)
+                return default;
+
+            (List<double> N, List<double> Q) Scale((List<double>, List<double>) raw)
+            {
+                var (q, n) = raw; // AbstractPileSection stores (Q, N)
+                return (
+                    GetMultipliedListValues(n, 1e-3),
+                    GetMultipliedListValues(q, 1e-3)
+                );
+            }
+
+            // 場所打ち鋼管コンクリート杭はmonQd非依存のQN（引数なし版）を使用
+            if (absSection is InsituSteelPipeReinforcedConcreteSection sprc)
+            {
+                return (
+                    Scale(sprc.GetServiceLimitQNInteraction()),
+                    Scale(sprc.GetServiceLimitQNInteraction()),
+                    Scale(sprc.GetDamageLimitQNInteraction()),
+                    Scale(sprc.GetDamageLimitQNInteraction()),
+                    Scale(sprc.GetUltimateQNInteraction()),
+                    Scale(sprc.GetUltimateQNInteraction())
+                );
+            }
+
+            // 場所打ち鉄筋コンクリート杭はpw, sigmaWyが追加で必要
+            if (absSection is InsituReinforcedConcreteSection rcSec)
+            {
+                double pw = HoopPw;
+                double sigmaWy = HoopSigmay;
+                return (
+                    Scale(rcSec.GetServiceLimitQNInteraction(monQd, false)),
+                    Scale(rcSec.GetServiceLimitQNInteraction(monQd, true)),
+                    Scale(rcSec.GetDamageLimitQNInteraction(monQd, false)),
+                    Scale(rcSec.GetDamageLimitQNInteraction(monQd, true)),
+                    Scale(rcSec.GetUltimateQNInteraction(monQd, pw, sigmaWy, false)),
+                    Scale(rcSec.GetUltimateQNInteraction(monQd, pw, sigmaWy, true))
+                );
+            }
+
+            // サブクラス（PHC/PRC/SC）の GetXxxQNInteraction を dynamic で呼び出す
+            dynamic d = absSection;
+            try
+            {
+                return (
+                    Scale(d.GetServiceLimitQNInteraction(monQd, false)),
+                    Scale(d.GetServiceLimitQNInteraction(monQd, true)),
+                    Scale(d.GetDamageLimitQNInteraction(monQd, false)),
+                    Scale(d.GetDamageLimitQNInteraction(monQd, true)),
+                    Scale(d.GetUltimateQNInteraction(monQd, false)),
+                    Scale(d.GetUltimateQNInteraction(monQd, true))
+                );
+            }
+            catch
+            {
+                return default;
+            }
         }
 
         //private (List<double> N, List<double> M) GetNMRaw(string propertyName)

@@ -432,6 +432,7 @@ namespace PileDesign.ViewModels
                 // 重いFEMモデル作成をバックグラウンドで実行
                 AnalysisModelling? modelling = null;
                 string? errorMessage = null;
+                var swTotal = System.Diagnostics.Stopwatch.StartNew();
                 await Task.Run(() =>
                 {
                     try
@@ -443,6 +444,7 @@ namespace PileDesign.ViewModels
                         errorMessage = ex.Message;
                     }
                 });
+                System.Diagnostics.Debug.WriteLine($"[InitializeModelAsync] AnalysisModelling total: {swTotal.ElapsedMilliseconds}ms");
 
                 if (errorMessage != null || modelling == null)
                 {
@@ -752,6 +754,16 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private async Task OnExecuteAnalysis()
         {
+            // 既存の解析結果がある場合は警告
+            if (_mainWindowViewModel.IsHorizontalAnalysisDone)
+            {
+                var result = MessageBox.Show(
+                    "既に水平解析の結果が存在します。\n再実行すると既存の結果は上書きされます。\n\n解析を実行しますか？",
+                    "解析結果の上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result != MessageBoxResult.Yes)
+                    return;
+            }
+
             // 荷重がゼロの荷重ケースをチェック
             var zeroForceLoadCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases
                 .Where(lc => lc.UpperMassForce == 0 && lc.FoundationMassForce == 0)
@@ -1044,16 +1056,28 @@ namespace PileDesign.ViewModels
                     axialN_kN = pile.AxialForce / 1000.0; // N → kN
                 }
 
-                var curve = TryCallMPhiRelationship(section, axialN_kN);
+                // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
+                (IList<double> Phis, IList<double> Moments)? curve;
+                if (!beam.IsPileTop
+                    && section.PileBodyType == "場所打ち鋼管コンクリート杭"
+                    && section.PileSectionType == "鋼管コンクリート部")
+                {
+                    var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
+                        new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
+                        new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
+                        new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
+                    var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN);
+                    curve = (middle.Phis, middle.Moments);
+                }
+                else
+                {
+                    curve = TryCallMPhiRelationship(section, axialN_kN);
+                }
+
                 if (curve is null)
                 {
                     skippedNoCurve++;
                     continue;
-                }
-
-                // デバッグ: TryCallMPhiRelationshipの戻り値を確認
-                if (curve.Value.Phis.Count > 0 && curve.Value.Moments.Count > 0)
-                {
                 }
 
                 beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
@@ -1439,7 +1463,7 @@ namespace PileDesign.ViewModels
                 StartTime = startTime
             });
 
-            const double alpha = 1e-6;
+            const double alpha = 1e-5;
             foreach (var loadCaseItem in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
             {
                 LoadCase loadCase = loadCaseItem;
@@ -1604,8 +1628,10 @@ namespace PileDesign.ViewModels
 
                                     if (loadCase.IsPileNonLinear && useFullNR)
                                     {
-                                        // Full Newton-Raphson: 毎反復で接線剛性を更新
-                                        UpdateBeamMPhiTangent(targetModel);
+                                        // Full NR: ダンピングなし（正確なヤコビアンで2次収束）
+                                        // Modified NR の初期反復: ダンピングあり（安定化）
+                                        bool relaxTangent = UseModifiedNewtonRaphson;
+                                        UpdateBeamMPhiTangent(targetModel, useRelaxation: relaxTangent);
                                     }
 
                                     // KTan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
@@ -1893,6 +1919,31 @@ namespace PileDesign.ViewModels
                                 prevStepDispIncrement = targetModel.VectorD - vectorDAtStepStart;
                             }
 
+                            // デバッグ: 杭頭変位・M-θばねの確認
+                            if (step == 0 || step == nStep - 1)
+                            {
+                                var actionPt = targetModel.Nodes[0];
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[Step{step}] ActionPoint Ux={actionPt.CumulativeDisp?.Ux:E3} Rx={actionPt.CumulativeDisp?.Rx:E3} Ry={actionPt.CumulativeDisp?.Ry:E3}");
+                                foreach (var pile in InputModel.PileLayoutItems.Take(2))
+                                {
+                                    var rxy = pile.PileTopRotationalSpring;
+                                    var capNode = rxy?.NodeI;
+                                    var pileHead = pile.PileNodes?.FirstOrDefault();
+                                    double capRx = capNode?.CumulativeDisp?.Rx ?? 0;
+                                    double pileRx = pileHead?.CumulativeDisp?.Rx ?? 0;
+                                    double kRx = rxy?.KeTan?[3, 3] ?? -1;
+                                    double springMx = rxy?.CumulativeForce?.Mxi ?? 0;
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[Step{step}] Pile{pile.No} " +
+                                        $"CapRx={capRx:E3} PileRx={pileRx:E3} dRx={pileRx - capRx:E3} " +
+                                        $"kRx={kRx:E3} CurveXY={(rxy?.CurveXY != null ? $"{rxy.CurveXY.Points.Count}pts" : "null")} " +
+                                        $"KthetaXY={rxy?.KthetaXY:E3} " +
+                                        $"SpringMxI={rxy?.CumulativeForce?.Mxi:E3} SpringMxJ={rxy?.CumulativeForce?.Mxj:E3} " +
+                                        $"SpringMyI={rxy?.CumulativeForce?.Myi:E3} SpringMyJ={rxy?.CumulativeForce?.Myj:E3}");
+                                }
+                            }
+
                             targetModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iteration, targetModel.NormsROnNormsFint));
                             foreach (var node in targetModel.Nodes)
                                 node.NodeResults.Add(new(loadCase, loadCombination, isLiquefaction, step, node));
@@ -1910,6 +1961,7 @@ namespace PileDesign.ViewModels
                                     // else: この荷重ケースでは回転ばねは存在するが「使用されなかった」ため結果を保存しない
                                 }
                             }
+
                         }
 
                         // NaN診断: 荷重ケース完了
@@ -1920,6 +1972,17 @@ namespace PileDesign.ViewModels
 
             token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
+
+            // 検定比の計算（解析完了後に一括処理）
+            try
+            {
+                ComputeCapacityRatiosForAllResults(targetModel);
+                await AddLogAsync("検定比の計算完了");
+            }
+            catch (Exception ex)
+            {
+                await AddLogAsync($"検定比の計算でエラー: {ex.Message}");
+            }
 
             // ペナルティばねの精度検証
             await VerifyPenaltySpringAccuracy(targetModel);
@@ -1971,46 +2034,146 @@ namespace PileDesign.ViewModels
 
         // RunAsync 内の荷重ケース処理の先頭に以下ヘルパを呼ぶか、そのまま挿入してください。
         // 杭頭回転角helper を別メソッドとして定義する例を示します。
-        private void ApplyPileHeadRigidBindingForLoadCase(AnaModel targetModel, LoadCase loadCase)
+        /// <summary>
+        /// 解析完了後に全BeamResultの検定比を一括計算する
+        /// </summary>
+        private void ComputeCapacityRatiosForAllResults(AnaModel targetModel)
         {
-            if (targetModel?.RigidBodies == null || targetModel.RigidBodies.Count == 0) return;
-
-            var rb0 = targetModel.RigidBodies[0];
-
-            // すべての pile head を一旦削除（ViewModel 側で一貫して操作するため）
-            foreach (var pile in InputModel.PileLayoutItems)
+            // SoilPile（要素分割後）をPileBodyNoで検索するための辞書
+            var soilPileDict = new Dictionary<int, Models.InputData.SoilPile>();
+            if (InputModel.ElementDivision?.SoilPiles != null)
             {
-                var head = pile.PileNodes?.FirstOrDefault();
-                if (head == null) continue;
-                rb0.RemoveSlaveNode(head);
-            }
-
-            // 非線形 OFF (回転ばねを無効にしたい) 場合は RigidBodies[0] にスレーブして剛結にする
-            // ただし、RigidFloor（柔梁）モードでは基礎梁グリッド経由の荷重伝達を維持するため、
-            // PileNode-0をRigidBodies[0]に追加しない（master-slave + 高い初期回転剛性で剛結を実現）
-            bool isFlexibleBeamMode = InputModel.FoundationBeamInput?.ConnectionMode == Models.InputData.FoundationBeamConnectionMode.RigidFloor
-                && InputModel.FoundationBeamInput?.Beams?.Count > 0;
-
-            if (!loadCase.IsPileNonLinear && !isFlexibleBeamMode)
-            {
-                // 非線形OFF時: PileNode-0 を RigidBodies[0] に追加して剛結にするが、
-                // Rx/Ry は RotationalSpring（高い回転剛性 kRx/kRy）で処理するため除外。
-                // AddSlaveNode は全DOFを拘束してしまうので、個別にmaster-slaveを設定する。
-                foreach (var pile in InputModel.PileLayoutItems)
+                foreach (var sp in InputModel.ElementDivision.SoilPiles)
                 {
-                    var head = pile.PileNodes?.FirstOrDefault();
-                    if (head == null) continue;
-                    // Ux, Uy, Uz, Rz のみ RigidBodies[0] の master-slave にする
-                    // Rx, Ry は RotationalSpring のペナルティ剛性で拘束
-                    head.SetBoundary(new FEM.Boundary(true, true, true, false, false, true));
-                    head.SetMasterNode(0, rb0.MasterNode); // Ux
-                    head.SetMasterNode(1, rb0.MasterNode); // Uy
-                    head.SetMasterNode(2, rb0.MasterNode); // Uz
-                    // Rx(3), Ry(4) は null のまま（RotationalSpring が担当）
-                    head.SetMasterNode(5, rb0.MasterNode); // Rz
-                    head.SetTransferMatrix();
+                    if (sp.PileBodyNo > 0 && !soilPileDict.ContainsKey(sp.PileBodyNo))
+                        soilPileDict[sp.PileBodyNo] = sp;
                 }
             }
+
+            // beam → PileLayoutDataItem のマッピング
+            var beamToPile = new Dictionary<Beam, Models.InputData.PileLayoutDataItem>();
+            if (InputModel.PileLayoutItems != null)
+            {
+                foreach (var pile in InputModel.PileLayoutItems)
+                {
+                    if (pile.Beams == null) continue;
+                    foreach (var b in pile.Beams)
+                        beamToPile[b] = pile;
+                }
+            }
+
+            // 第1パス: 杭ごと・荷重ケースごとの maxM, maxQ を集計
+            // キー: (PileLayoutDataItem, LoadCase) → (maxM [kNm], maxQ [kN])
+            var maxForces = new Dictionary<(Models.InputData.PileLayoutDataItem pile, LoadCase lc), (double maxM, double maxQ)>();
+
+            foreach (var pile in InputModel.PileLayoutItems ?? [])
+            {
+                if (pile.Beams == null) continue;
+                foreach (var beam in pile.Beams)
+                {
+                    foreach (var result in beam.BeamResults)
+                    {
+                        var force = result.CumulativeForce;
+                        if (force == null || result.LoadCase == null) continue;
+                        var key = (pile, result.LoadCase);
+                        double m = force.MabsMax; // max(Mi, Mj)
+                        double q = force.FabsMax; // max(Fi, Fj)
+                        if (maxForces.TryGetValue(key, out var prev))
+                            maxForces[key] = (Math.Max(prev.maxM, m), Math.Max(prev.maxQ, q));
+                        else
+                            maxForces[key] = (m, q);
+                    }
+                }
+            }
+
+            // 第2パス: 検定比計算（MonQdを反映したQN曲線を使用）
+            foreach (var beam in targetModel.Beams)
+            {
+                if (beam.PileBodyNo is not int pb || beam.SegmentIndex is not int seg)
+                    continue;
+                if (!soilPileDict.TryGetValue(pb, out var soilPile))
+                    continue;
+                if (seg < 0 || seg >= soilPile.PileBodySegments.Count)
+                    continue;
+                var pileSection = soilPile.PileBodySegments[seg].PileSection;
+                if (pileSection == null) continue;
+
+                beamToPile.TryGetValue(beam, out var pileItem);
+
+                foreach (var result in beam.BeamResults)
+                {
+                    var force = result.CumulativeForce;
+                    if (force == null) continue;
+
+                    int lcLevel = result.LoadCase?.Level ?? 0;
+                    int lcNo = result.LoadCase?.No ?? 0;
+                    if (lcLevel < 1 || lcLevel > 2 || lcNo < 1) continue;
+
+                    // 軸力
+                    double axialN_kN = 0.0;
+                    if (pileItem != null)
+                    {
+                        try { axialN_kN = pileItem.GetSeismicAxialForce(lcNo, lcLevel); }
+                        catch { axialN_kN = pileItem.AxialForce; }
+                    }
+
+                    // MonQd = maxM / (maxQ × d)
+                    double monQd = 3.0; // フォールバック
+                    double d = pileSection.EffectiveDepth; // [mm]
+                    if (pileItem != null && result.LoadCase != null && d > 0)
+                    {
+                        var key = (pileItem, result.LoadCase);
+                        if (maxForces.TryGetValue(key, out var mf) && mf.maxQ > 0)
+                        {
+                            // maxM [kNm] → [Nmm] = ×1e6, maxQ [kN] → [N] = ×1e3, d [mm]
+                            monQd = (mf.maxM * 1e6) / (mf.maxQ * 1e3 * d);
+                        }
+                    }
+
+                    // MonQdでQN曲線を再計算
+                    var qnCurves = pileSection.ComputeQNForMonQd(monQd);
+                    (List<double> N, List<double> Q) unfNQ, facNQ;
+                    if (qnCurves.UnfactoredService.N != null)
+                    {
+                        unfNQ = lcLevel == 1 ? qnCurves.UnfactoredDamage : qnCurves.UnfactoredUltimate;
+                        facNQ = lcLevel == 1 ? qnCurves.FactoredDamage : qnCurves.FactoredUltimate;
+                    }
+                    else
+                    {
+                        // 場所打ち杭等: キャッシュ値にフォールバック
+                        unfNQ = lcLevel == 1 ? pileSection.UnfactoredDamageNQ : pileSection.UnfactoredUltimateNQ;
+                        facNQ = lcLevel == 1 ? pileSection.FactoredDamageNQ : pileSection.FactoredUltimateNQ;
+                    }
+
+                    var ratios = FEM.Utils.ComputeCapacityRatios(force, pileSection, lcLevel, axialN_kN, unfNQ, facNQ);
+                    result.AxialForceForRatio = axialN_kN;
+                    result.MonQdForRatio = d > 0 ? monQd : -1;
+                    result.UnfactoredMiRatio = ratios.UnfactoredMiRatio;
+                    result.FactoredMiRatio = ratios.FactoredMiRatio;
+                    result.UnfactoredQiRatio = ratios.UnfactoredQiRatio;
+                    result.FactoredQiRatio = ratios.FactoredQiRatio;
+                    result.UnfactoredMjRatio = ratios.UnfactoredMjRatio;
+                    result.FactoredMjRatio = ratios.FactoredMjRatio;
+                    result.UnfactoredQjRatio = ratios.UnfactoredQjRatio;
+                    result.FactoredQjRatio = ratios.FactoredQjRatio;
+                }
+            }
+        }
+
+        private void ApplyPileHeadRigidBindingForLoadCase(AnaModel targetModel, LoadCase loadCase)
+        {
+            // PileNode-0 には境界条件を設定しない。
+            // 接続構造:
+            //   ActionPoint (master) → RigidBody[0] → CapNode (slave)
+            //                                              ↕ RotationalSpring
+            //                                          PileNode-0 (常に自由)
+            //
+            // PileNode-0 の並進は RotationalSpring のペナルティ剛性 (Kbig=1e8) で CapNode に追従。
+            // PileNode-0 の回転は RotationalSpring の M-θ曲線 or 高回転剛性で決まる。
+            // 非線形ON/OFFの切替は SetupNonlinearMThetaForLoadCase で
+            // RotationalSpring の回転剛性を変更することで行う。
+
+            if (targetModel?.RigidBodies == null || targetModel.RigidBodies.Count == 0) return;
 
             // 変更を反映：転送行列等を更新
             targetModel.SetSlaveNodes();
@@ -2018,13 +2181,16 @@ namespace PileDesign.ViewModels
 
 
         // 接線剛性用: 端部回転から要素中央曲率を評価し、dM/dφ を EI_eff として KTan（倍率）に反映
-        private static void UpdateBeamMPhiTangent(AnaModel model) => UpdateBeamMPhi(model, true);
+        // useRelaxation=false: Full NR（正確なヤコビアンで2次収束）
+        // useRelaxation=true:  Modified NR の初期反復（安定化のためダンピング）
+        private static void UpdateBeamMPhiTangent(AnaModel model, bool useRelaxation = false)
+            => UpdateBeamMPhi(model, isTangent: true, useRelaxation: useRelaxation);
 
         // 割線剛性用（必要なら接線と同手順でKsecも更新）
-        private static void UpdateBeamMPhiSecant(AnaModel model) => UpdateBeamMPhi(model, false);
+        private static void UpdateBeamMPhiSecant(AnaModel model) => UpdateBeamMPhi(model, isTangent: false);
 
         // 統合されたM-φ更新メソッド: 接線剛性と割線剛性の両方に対応
-        private static void UpdateBeamMPhi(AnaModel model, bool isTangent)
+        private static void UpdateBeamMPhi(AnaModel model, bool isTangent, bool useRelaxation = false)
         {
             int beamIdx = 0;
             foreach (var beam in model.Beams)
@@ -2096,16 +2262,23 @@ namespace PileDesign.ViewModels
 
                 if (isTangent)
                 {
-                    // v10: 緩和係数0.3で安定性を確保（振動防止）
-                    const double RELAXATION = 0.3;
-                    double prevKy = beam.KTan_y;
-                    double prevKz = beam.KTan_z;
-                    // 初回（prevK=0）は緩和なしで設定
-                    double newKy = (prevKy > 0.01) ? prevKy * (1 - RELAXATION) + ratioY * RELAXATION : ratioY;
-                    double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION) + ratioZ * RELAXATION : ratioZ;
-
-                    beam.KTan_y = newKy;
-                    beam.KTan_z = newKz;
+                    if (useRelaxation)
+                    {
+                        // Modified NR の初期反復: 緩和係数で安定性を確保
+                        const double RELAXATION = 0.3;
+                        double prevKy = beam.KTan_y;
+                        double prevKz = beam.KTan_z;
+                        double newKy = (prevKy > 0.01) ? prevKy * (1 - RELAXATION) + ratioY * RELAXATION : ratioY;
+                        double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION) + ratioZ * RELAXATION : ratioZ;
+                        beam.KTan_y = newKy;
+                        beam.KTan_z = newKz;
+                    }
+                    else
+                    {
+                        // Full NR: 正確なヤコビアン（2次収束に必要）
+                        beam.KTan_y = ratioY;
+                        beam.KTan_z = ratioZ;
+                    }
                     beam.SetKe(true); // KeTan 再構築
                 }
                 else
@@ -3002,8 +3175,6 @@ namespace PileDesign.ViewModels
                     if (rxy.Mode == RotationalSpringMode.CombinedXY)
                     {
                         double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
-                        // 修正: CurveXYが存在する場合は曲線を優先使用（KthetaXYより優先）
-                        // これにより非線形M-θ曲線が正しく反映される
                         double kxy;
                         if (rxy.CurveXY != null)
                         {
@@ -3020,7 +3191,7 @@ namespace PileDesign.ViewModels
                     }
                     else
                     {
-                        // SingleDof モード: Curveが存在する場合は曲線を優先使用
+                        // SingleDof モード
                         if (rxy.Dof == RotationalDof.Rx)
                         {
                             double k;

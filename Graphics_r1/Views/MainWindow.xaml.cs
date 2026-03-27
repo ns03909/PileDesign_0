@@ -399,8 +399,8 @@ namespace PileDesign.Views
 
             UpdateCanvasRightBlankClip(); // 初期適用
 
-            // --- ここから追加: 起動時に QuickHintPopup を一度だけ表示する---
-            if (!_startupQuickHintShown)
+            // --- 起動時の QuickHintPopup 表示を無効化 ---
+            if (false && !_startupQuickHintShown)
             {
                 _startupQuickHintShown = true;
                 _ = Task.Run(async () =>
@@ -3346,13 +3346,13 @@ namespace PileDesign.Views
             // 要素分割
             else if (e.Key == Key.D && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                viewModel?.OpenElementDivisionWindow();
+                _ = viewModel?.OpenElementDivisionWindowAsync();
                 e.Handled = true;
             }
             // 要素分割（F4）
             else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None)
             {
-                viewModel?.OpenElementDivisionWindow();
+                _ = viewModel?.OpenElementDivisionWindowAsync();
                 e.Handled = true;
             }
 
