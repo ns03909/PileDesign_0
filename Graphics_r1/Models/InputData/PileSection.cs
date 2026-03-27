@@ -59,8 +59,8 @@ namespace PileDesign.Models.InputData
         {
             get
             {
-                var section = CreateSectionCalculator();
-                return (section as AbstractPileSection)?.EffectiveDepth ?? 0;
+                // TODO: AbstractPileSection に EffectiveDepth を追加後に復元
+                return PileDiameter * 0.8; // 暫定: 杭径の80%
             }
         }
 

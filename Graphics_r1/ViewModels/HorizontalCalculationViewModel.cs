@@ -1973,11 +1973,11 @@ namespace PileDesign.ViewModels
             token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
 
-            // 検定比の計算（解析完了後に一括処理）
+            // 検定比の計算（解析完了後に一括処理）- 未完成のため一時無効化
             try
             {
-                ComputeCapacityRatiosForAllResults(targetModel);
-                await AddLogAsync("検定比の計算完了");
+                //ComputeCapacityRatiosForAllResults(targetModel);
+                //await AddLogAsync("検定比の計算完了");
             }
             catch (Exception ex)
             {
@@ -2037,6 +2037,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 解析完了後に全BeamResultの検定比を一括計算する
         /// </summary>
+        /*
         private void ComputeCapacityRatiosForAllResults(AnaModel targetModel)
         {
             // SoilPile（要素分割後）をPileBodyNoで検索するための辞書
@@ -2159,6 +2160,7 @@ namespace PileDesign.ViewModels
                 }
             }
         }
+        */
 
         private void ApplyPileHeadRigidBindingForLoadCase(AnaModel targetModel, LoadCase loadCase)
         {
