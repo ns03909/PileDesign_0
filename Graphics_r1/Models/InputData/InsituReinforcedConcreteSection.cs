@@ -699,26 +699,30 @@ namespace PileDesign.Models.InputData
         }
 
         //// ある軸力時のM-θ関係を得るメソッド
+        /// 4点折線: [0, 極小値, θy, θu]
+        /// 極小値(1e-8)により初期勾配 Mcr/1e-8 ≈ 実質剛体
         internal (List<double>, List<double>) GetMThetaRelationship(double Ntarget, double alpha = 32)
         {
             double beta1 = 0.95;
-            (double MCr, double phiCr) = GetCrackMoment(Ntarget, false);
+            (double MCr, double _) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
+            (double Mu0, double _2) = GetUltimateMomentForSpecificN(Ntarget);
 
-            // φ→θ変換: θ = 0.5 * α * D_bar * φ
+            // θy = 0.5 * α * D_bar * φy
             double D_bar = ExtractBarSizeNumber(MainBars.BarSize);
-            double thetaCr = 0.5 * alpha * D_bar * phiCr;  // ひび割れ回転角
-            double thetaY = 0.5 * alpha * D_bar * phiY;    // 降伏回転角
+            double thetaY = 0.5 * alpha * D_bar * phiY;
 
-            (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
-            double thetaU = 0.01;  // 終局回転角
+            // θu = 1/100 rad（固定）
+            double thetaU = 1.0 / 100.0;
 
-            // θの重複を避けるため、thetaCrが非常に小さい場合は最小値を設定
-            if (thetaCr < 1e-6) thetaCr = 1e-6;
-            if (thetaY <= thetaCr) thetaY = thetaCr * 1.5;  // thetaY > thetaCrを保証
-            if (thetaU <= thetaY) thetaU = thetaY * 2.0;    // thetaU > thetaYを保証
+            // θ[1] は初期勾配を十分大きくするための固定微小値
+            double thetaSmall = 1e-8;
 
-            List<double> thetas = [0.0, thetaCr, thetaY, thetaU];
+            // 安全ガード
+            if (thetaY <= thetaSmall) thetaY = thetaSmall * 1.5;
+            if (thetaU <= thetaY) thetaU = thetaY * 2.0;
+
+            List<double> thetas = [0.0, thetaSmall, thetaY, thetaU];
             List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
 
             return (thetas, Ms);

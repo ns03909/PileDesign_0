@@ -259,8 +259,8 @@ namespace PileDesign.ViewModels
             where TViewModel : ObservableObject
             where TWindow : Window, new()
         {
-            // Undoポイントを追加（読込前の状態を保存）
-            SaveUndoState();
+            // Undo保存は不要（ダイアログに「破棄して閉じる」ボタンがあるため）
+            // DeepCopy が重い（28秒以上）ため省略してウィンドウを即座に表示する
 
             // ダイアログを開く
             OpenDialogWindow<TViewModel, TWindow>(this);
