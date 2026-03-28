@@ -1603,6 +1603,8 @@ namespace PileDesign.ViewModels
                             int slowDivergenceCount = 0;            // 連続増加回数
                             const int SLOW_DIVERGENCE_LIMIT = 10;   // この回数連続増加で緩やかな発散と判定
 
+                            // v17: 長時間反復時の収束基準緩和（40反復以上 + 残差≦RELAXED_ALPHA で緩和）
+
                             // v16: 診断値をループ外に宣言（Modified NRフェーズでスキップしても前回値を保持）
                             double diagKMin = double.NaN, diagKMax = double.NaN;
 
@@ -1789,6 +1791,16 @@ namespace PileDesign.ViewModels
                                 {
                                     minResidualSeen = currentResidual;  // 最小残差を更新
                                     slowDivergenceCount = 0;  // 最小更新時にリセット
+                                }
+
+                                // v17: 長時間反復時の収束基準緩和
+                                // 40反復以上で残差が RELAXED_ALPHA 以下なら、十分収束したとみなす
+                                // （M-φ/M-θ非線形で残差が振動停滞するケースへの対策）
+                                if (n_iteration >= 40 && currentResidual <= RELAXED_ALPHA
+                                    && effectiveAlpha < RELAXED_ALPHA)
+                                {
+                                    effectiveAlpha = RELAXED_ALPHA;
+                                    await AddLogAsync($"  → 長時間反復: 残差 {currentResidual:E2} ≦ {RELAXED_ALPHA:E2} で収束基準を緩和 ({alpha:E2}→{effectiveAlpha:E2})");
                                 }
 
                                 bool isDiverging = currentResidual > initialResidual * DIVERGENCE_RATIO ||
@@ -3199,9 +3211,15 @@ namespace PileDesign.ViewModels
                             double k;
                             if (rxy.Curve != null)
                             {
-                                k = isTan
-                                    ? SafeK(rxy.Curve.EvaluateTangent(dRx))
-                                    : SafeK(rxy.Curve.EvaluateSecant(dRx));
+                                if (isTan)
+                                {
+                                    k = SafeK(rxy.Curve.EvaluateTangent(dRx));
+                                    k = Math.Min(k, rxy.Kbig);
+                                }
+                                else
+                                {
+                                    k = SafeK(rxy.Curve.EvaluateSecant(dRx));
+                                }
                             }
                             else
                             {
@@ -3215,9 +3233,15 @@ namespace PileDesign.ViewModels
                             double k;
                             if (rxy.Curve != null)
                             {
-                                k = isTan
-                                    ? SafeK(rxy.Curve.EvaluateTangent(dRy))
-                                    : SafeK(rxy.Curve.EvaluateSecant(dRy));
+                                if (isTan)
+                                {
+                                    k = SafeK(rxy.Curve.EvaluateTangent(dRy));
+                                    k = Math.Min(k, rxy.Kbig);
+                                }
+                                else
+                                {
+                                    k = SafeK(rxy.Curve.EvaluateSecant(dRy));
+                                }
                             }
                             else
                             {
