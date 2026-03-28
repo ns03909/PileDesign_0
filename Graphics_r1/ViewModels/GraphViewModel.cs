@@ -746,6 +746,7 @@ namespace PileDesign.ViewModels
                 GraphOptions.Add("杭頭M-θ");
                 GraphOptions.Add("杭体M-φ");
                 GraphOptions.Add("水平地盤反力");
+                GraphOptions.Add("水平地盤反力度p-y");
 
             }
             if (IsVerticalAnalysisDone)
@@ -1568,6 +1569,19 @@ namespace PileDesign.ViewModels
                 DrawHorizontalSoilReaction(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "Reaction", "kN/m");
                 DrawHorizontalSoilReaction(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "SecantStiffness", "kN/m²");
             }
+            else if (SelectedGraphOption == "水平地盤反力度p-y")
+            {
+                // 水平地盤反力度p-y: 各要素の理論P-y曲線 + 最終ステップマーカー
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = true;
+                IsPileBodyOptionVisible = false;
+                IsPileSegmentOptionVisible = true;
+                IsLiquefactionOptionVisible = true;
+                IsGridOptionVisible = false;
+
+                DrawPyCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
+            }
             // レジェンド描画
             UpdateLegendVisibility();
         }
@@ -1933,6 +1947,123 @@ namespace PileDesign.ViewModels
             }
 
             ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-θ関係", "θ (rad)", "M (kN·m)");
+            wpfPlot.Plot.ShowLegend();
+            wpfPlot.Refresh();
+        }
+
+        // 水平地盤反力度p-y関係描画（理論P-y曲線 + 最終ステップマーカー）
+        private void DrawPyCurvesWithMarker(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
+        {
+            wpfPlot.Plot.Clear();
+
+            var targetPiles = GetSelectedPileLayouts();
+            var selectedLoadCases = GetSelectedLoadCases();
+            var selectedCombinations = GetSelectedLoadCombinations();
+            int segIdx = SelectedPileSegmentNo - 1; // 0-based
+
+            double maxMarkerDisp = 0;
+
+            foreach (var pileLayout in targetPiles)
+            {
+                int altNo = pileLayout.SoilPileAltNo;
+                if (altNo <= 0 || altNo > InputModel.ElementDivision.SoilPiles.Count) continue;
+                var soilPile = InputModel.ElementDivision.SoilPiles[altNo - 1];
+                var reactions = soilPile.HorizontalSoilReactions;
+                if (reactions == null || segIdx < 0 || segIdx >= reactions.Count) continue;
+
+                var reaction = reactions[segIdx];
+                bool isFront = pileLayout.IsFrontPiles?.FirstOrDefault() ?? true;
+
+                // 理論P-y曲線（Top/Btm）を描画
+                double pyTop = isFront ? reaction.PyFrontTop : reaction.PyRearTop;
+                double pyBtm = isFront ? reaction.PyFrontBtm : reaction.PyRearBtm;
+
+                // P-y曲線のサンプリング点（小変位域を細かく、大変位域は粗く）
+                var yValues = new List<double>();
+                for (double y = 0.0; y < 0.01; y += 0.0001) yValues.Add(y);   // 0-10mm: 0.1mm刻み
+                for (double y = 0.01; y < 0.05; y += 0.001) yValues.Add(y);   // 10-50mm: 1mm刻み
+                for (double y = 0.05; y < 0.50; y += 0.005) yValues.Add(y);   // 50-500mm: 5mm刻み
+
+                // Top曲線
+                var xsT = yValues.Select(y => y * 1000.0).ToArray();
+                var ysT = yValues.Select(y => reaction.GetP(y, pyTop)).ToArray();
+                var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
+                curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top";
+
+                // Btm曲線
+                var xsB = xsT; // 同じX値
+                var ysB = yValues.Select(y => reaction.GetP(y, pyBtm)).ToArray();
+                var curveB = wpfPlot.Plot.Add.ScatterLine(xsB, ysB);
+                curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm";
+                curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+
+                // 最終ステップのマーカーを描画（i端・j端）
+                // X軸: 解析結果の相対変位、Y軸: 理論P-y曲線上の値（必ず曲線上に乗る）
+                var springs = pileLayout.HorizontalSoilSprings;
+                if (springs == null) continue;
+
+                // i端 = node segIdx, j端 = node segIdx+1
+                var endNodes = new List<(int nodeIdx, string label, double py, ScottPlot.MarkerShape shape)>();
+                if (segIdx < springs.Count)
+                    endNodes.Add((segIdx, "i端", pyTop, ScottPlot.MarkerShape.FilledCircle));
+                if (segIdx + 1 < springs.Count)
+                    endNodes.Add((segIdx + 1, "j端", pyBtm, ScottPlot.MarkerShape.FilledSquare));
+
+                foreach (var (nodeIdx, endLabel, py, shape) in endNodes)
+                {
+                    var spring = springs[nodeIdx];
+
+                    foreach (var loadCase in selectedLoadCases)
+                    {
+                        foreach (var loadCombination in selectedCombinations)
+                        {
+                            foreach (var isLiquefaction in SelectedLiquefactionCases)
+                            {
+                                int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                if (lastStep < 0) continue;
+
+                                var result = spring.HorizontalSpringResults?
+                                    .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                             && r.LoadCombination?.No == loadCombination.No
+                                             && r.IsLiquefaction == isLiquefaction)
+                                    .OrderByDescending(r => r.Step)
+                                    .FirstOrDefault();
+
+                                if (result?.CumulativeDisp == null) continue;
+
+                                double relDispX = result.CumulativeDisp.Dxi - result.CumulativeDisp.Dxj;
+                                double relDispY = result.CumulativeDisp.Dyi - result.CumulativeDisp.Dyj;
+                                double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
+                                double relDispMm = relDisp * 1000.0;
+
+                                // Y軸は理論値（P-y曲線上の値）
+                                double pTheory = reaction.GetP(relDisp, py);
+
+                                string legend = $"LC:{loadCase.LoadName}|LIQ:{isLiquefaction}|P{pileLayout.No}|{endLabel}";
+
+                                if (double.IsFinite(relDispMm) && relDispMm > 0 && double.IsFinite(pTheory))
+                                {
+                                    maxMarkerDisp = Math.Max(maxMarkerDisp, relDispMm);
+
+                                    var marker = wpfPlot.Plot.Add.Scatter(new[] { relDispMm }, new[] { pTheory });
+                                    marker.LineStyle.Width = 0;
+                                    marker.MarkerSize = 12;
+                                    marker.MarkerStyle.Shape = shape;
+                                    marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+                                    marker.LegendText = $"最終:{legend}";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "水平地盤反力度p-y関係", "相対変位 (mm)", "反力度 p (kN/m²)");
+            // X軸の定義域をマーカー最大値 × 1.5 に設定
+            if (maxMarkerDisp > 0)
+            {
+                wpfPlot.Plot.Axes.SetLimitsX(0, maxMarkerDisp * 1.5);
+            }
             wpfPlot.Plot.ShowLegend();
             wpfPlot.Refresh();
         }
