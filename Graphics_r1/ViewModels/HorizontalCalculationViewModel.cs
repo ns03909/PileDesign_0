@@ -2297,14 +2297,11 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
-                    // v10: 割線剛性にも緩和を追加して振動を防止
-                    const double RELAXATION_SEC = 0.5;
-                    double prevKy = beam.KSec_y;
-                    double prevKz = beam.KSec_z;
-                    double newKy = (prevKy > 0.01) ? prevKy * (1 - RELAXATION_SEC) + ratioY * RELAXATION_SEC : ratioY;
-                    double newKz = (prevKz > 0.01) ? prevKz * (1 - RELAXATION_SEC) + ratioZ * RELAXATION_SEC : ratioZ;
-                    beam.KSec_y = newKy;
-                    beam.KSec_z = newKz;
+                    // 割線剛性: 緩和なし（正確な値を使用）
+                    // M(φ)/φ は常に正値で滑らかに変化するため、緩和は不要。
+                    // 緩和(0.5)は内力の不正確さを生み、大変形時の収束を著しく遅延させる。
+                    beam.KSec_y = ratioY;
+                    beam.KSec_z = ratioZ;
                     beam.SetKe(false); // KeSec 再構築
                 }
             }
