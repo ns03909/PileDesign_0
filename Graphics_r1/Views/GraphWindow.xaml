@@ -73,7 +73,7 @@
                 <TextBlock Text="杭区間番号:" VerticalAlignment="Center"/>
                 <ComboBox
                     ItemsSource="{Binding PileSegmentOptions}"
-                    SelectedItem="{Binding SelectedPileSegmentNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    SelectedItem="{Binding SelectedPileSegmentOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
             </StackPanel>
 

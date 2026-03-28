@@ -179,9 +179,11 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _selectedPileBodyRef, value))
                 {
                     UpdateGraph();
-                    SelectedPileSegmentNo = 1;
                     int segmentsCount = InputModel.GetPileBodyByPileBodyRef(_selectedPileBodyRef).PileBodySegments.Count;
-                    PileSegmentOptions = new ObservableCollection<int>(Enumerable.Range(1, segmentsCount));
+                    var options = new ObservableCollection<string> { "All" };
+                    foreach (int i in Enumerable.Range(1, segmentsCount)) options.Add(i.ToString());
+                    PileSegmentOptions = options;
+                    SelectedPileSegmentOption = "All";
                 }
             }
         }
@@ -200,8 +202,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private ObservableCollection<int> _pileSegmentOptions;
-        public ObservableCollection<int> PileSegmentOptions
+        private ObservableCollection<string> _pileSegmentOptions;
+        public ObservableCollection<string> PileSegmentOptions
         {
             get => _pileSegmentOptions;
             set
@@ -214,17 +216,24 @@ namespace PileDesign.ViewModels
         }
 
 
-        private int _selectedPileSegmentNo;
-        public int SelectedPileSegmentNo
+        private string _selectedPileSegmentOption = "All";
+        public string SelectedPileSegmentOption
         {
-            get => _selectedPileSegmentNo;
+            get => _selectedPileSegmentOption;
             set
             {
-                if (SetProperty(ref _selectedPileSegmentNo, value))
+                if (SetProperty(ref _selectedPileSegmentOption, value))
                 {
                     UpdateGraph();
                 }
             }
+        }
+
+        /// <summary>選択中の杭区間番号（0-based）。"All" の場合は -1 を返す。</summary>
+        public int SelectedPileSegmentNo
+        {
+            get => int.TryParse(_selectedPileSegmentOption, out int n) ? n : 0;
+            set => SelectedPileSegmentOption = value <= 0 ? "All" : value.ToString();
         }
 
         // M/Qdスライダー表示
@@ -1959,7 +1968,8 @@ namespace PileDesign.ViewModels
             var targetPiles = GetSelectedPileLayouts();
             var selectedLoadCases = GetSelectedLoadCases();
             var selectedCombinations = GetSelectedLoadCombinations();
-            int segIdx = SelectedPileSegmentNo - 1; // 0-based
+            bool isAllSegments = SelectedPileSegmentOption == "All";
+            int singleSegIdx = SelectedPileSegmentNo - 1; // 0-based（All以外）
 
             double maxMarkerDisp = 0;
 
@@ -1969,10 +1979,18 @@ namespace PileDesign.ViewModels
                 if (altNo <= 0 || altNo > InputModel.ElementDivision.SoilPiles.Count) continue;
                 var soilPile = InputModel.ElementDivision.SoilPiles[altNo - 1];
                 var reactions = soilPile.HorizontalSoilReactions;
-                if (reactions == null || segIdx < 0 || segIdx >= reactions.Count) continue;
+                if (reactions == null || reactions.Count == 0) continue;
 
-                var reaction = reactions[segIdx];
+                // All: 全区間、それ以外: 選択区間のみ
+                var segIndices = isAllSegments
+                    ? Enumerable.Range(0, reactions.Count).ToList()
+                    : (singleSegIdx >= 0 && singleSegIdx < reactions.Count ? new List<int> { singleSegIdx } : new List<int>());
+
                 bool isFront = pileLayout.IsFrontPiles?.FirstOrDefault() ?? true;
+
+                foreach (int segIdx in segIndices)
+                {
+                var reaction = reactions[segIdx];
 
                 // 理論P-y曲線（Top/Btm）を描画
                 double pyTop = isFront ? reaction.PyFrontTop : reaction.PyRearTop;
@@ -2056,6 +2074,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
+                } // foreach segIdx
             }
 
             ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "水平地盤反力度p-y関係", "相対変位 (mm)", "反力度 p (kN/m²)");
