@@ -446,6 +446,26 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// M-θ 関係を取得します（場所打ちRC杭用）。
+        /// 単位: θ [rad], M [kNm]
+        /// </summary>
+        public (List<double> Thetas, List<double> Moments)? GetMThetaRelationship(double axialN)
+        {
+            var section = CreateSectionCalculator();
+            if (section is not InsituReinforcedConcreteSection rcSection)
+                return null;
+
+            // 単位変換: 軸力 kN → N
+            var (thetas, msRaw) = rcSection.GetMThetaRelationship(axialN * 1000.0);
+            if (thetas == null || msRaw == null || thetas.Count < 2 || msRaw.Count != thetas.Count)
+                return null;
+
+            // 単位変換: M [N·mm] → [kNm]
+            var ms = msRaw.Select(m => m * 1e-6).ToList();
+            return (thetas, ms);
+        }
+
+        /// <summary>
         /// M-φキャッシュの統計情報を取得します。
         /// </summary>
         public static (int hits, int misses, int cacheSize) GetMphiCacheStats()

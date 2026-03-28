@@ -557,61 +557,27 @@ namespace PileDesign.Models.InputData
                     return PileHeadRotationDef.Rigid();
                 }
 
-                // 場所打ち鉄筋コンクリート杭 → PileSection 経由で M-θ を取得
+                // 場所打ち鉄筋コンクリート杭 → InsituReinforcedConcreteSection.GetMThetaRelationship() を直接呼ぶ
                 if (pileBodyType.Contains("場所打ち鉄筋コンクリート杭"))
                 {
-                    var ps = PileBodySegments?.FirstOrDefault()?.PileSection;
-                    if (ps != null)
+                    var pileSection = PileBodySegments?.FirstOrDefault()?.PileSection;
+                    if (pileSection != null)
                     {
-                        // PileSection.GetMPhiRelationship → 内部で CreateSectionCalculator() を呼び
-                        // InsituReinforcedConcreteSection の M-φ を取得し、φ → θ に変換する
                         try
                         {
-                            // PileSection.GetMPhiRelationship は既に単位変換済み:
-                            // phis: [1/m], moments: [kNm]
-                            var mphi = ps.GetMPhiRelationship(axialN);
-                            var phis = mphi.Phis?.ToList();
-                            var ms = mphi.Moments?.ToList(); // 既に kNm
-                            if (phis != null && ms != null && phis.Count >= 2 && phis.Count == ms.Count)
+                            // PileSection.GetMThetaRelationship: axialN は kN、戻り値は θ[rad], M[kNm]
+                            var result = pileSection.GetMThetaRelationship(axialN);
+                            if (result.HasValue)
                             {
-                                // φ → θ 変換（鉄筋定着工法の経験式）
-                                // θ = 0.5 * α * D_bar * φ
-                                // ここで φ は 1/mm 単位で使われるため、1/m を 1/mm に変換
-                                double alpha = 32.0;
-                                double D_bar = InsituReinforcedConcreteSection.ExtractBarSizeNumber(ps.MainBarSize);
-
-                                if (D_bar > 0)
-                                {
-                                    var thetas = new List<double>(phis.Count);
-                                    for (int i = 0; i < phis.Count; i++)
-                                    {
-                                        double phi_per_m = phis[i];
-                                        double phi_per_mm = phi_per_m / 1000.0; // 1/m -> 1/mm
-                                        double theta = 0.5 * alpha * D_bar * phi_per_mm;
-                                        thetas.Add(theta);
-                                    }
-
-                                    // M は既に kNm なのでそのまま使用
-                                    var pts = new List<(double theta, double moment)>(thetas.Count);
-                                    for (int i = 0; i < thetas.Count; i++) pts.Add((thetas[i], ms[i]));
-                                    System.Diagnostics.Debug.WriteLine(
-                                        $"[GetMThetaRelationship] 場所打ちRC杭 M-φ→θ変換成功: " +
-                                        $"D_bar={D_bar}, points={pts.Count}, " +
-                                        $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
-                                        $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}]");
-                                    return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Debug.WriteLine(
-                                        $"[GetMThetaRelationship] 場所打ちRC杭 D_bar=0 (MainBarSize={ps.MainBarSize}) → Rigid()");
-                                }
-                            }
-                            else
-                            {
+                                var (thetas, ms) = result.Value;
+                                var pts = new List<(double theta, double moment)>(thetas.Count);
+                                for (int i = 0; i < thetas.Count; i++)
+                                    pts.Add((thetas[i], ms[i]));
                                 System.Diagnostics.Debug.WriteLine(
-                                    $"[GetMThetaRelationship] 場所打ちRC杭 M-φデータ不正: " +
-                                    $"phis={phis?.Count}, ms={ms?.Count}");
+                                    $"[GetMThetaRelationship] 場所打ちRC杭: points={pts.Count}, " +
+                                    $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
+                                    $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}]");
+                                return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
                             }
                         }
                         catch (Exception ex)
@@ -620,13 +586,7 @@ namespace PileDesign.Models.InputData
                                 $"[GetMThetaRelationship] 場所打ちRC杭 例外: {ex.Message}");
                         }
                     }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[GetMThetaRelationship] 場所打ちRC杭 PileSection=null");
-                    }
 
-                    // すべての M-θ 計算パスが失敗した場合は剛結とする
                     System.Diagnostics.Debug.WriteLine(
                         $"[GetMThetaRelationship] 場所打ちRC杭 フォールバック → Rigid()");
                     return PileHeadRotationDef.Rigid();
