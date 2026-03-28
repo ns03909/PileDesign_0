@@ -127,8 +127,8 @@ namespace PileDesign.Models.InputData
             else
             {
                 //return py / Math.Abs(y);
-                double gradient = 0.0001 * 3.16 * kh0; // 0 >> 0.001
                 double yy = Math.Pow(py / kh0, 2) / y0;
+                double gradient = 0.001 * py / yy; // 降伏時割線剛性の 0.1%
                 double p = gradient * (Math.Abs(y) - yy) + py;
                 return p / Math.Abs(y);
             }
@@ -151,7 +151,8 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                double gradient = 0.0001 * 3.16 * kh0; // 0 >> 0.001
+                double yy = Math.Pow(py / kh0, 2) / y0;
+                double gradient = 0.001 * py / yy; // 降伏時割線剛性の 0.1%
                 return gradient;
             }
         }

@@ -3102,19 +3102,18 @@ namespace PileDesign.ViewModels
                 {
                     var item = InputModel.ElementDivision.DoatsuGoryokuBane.Items[i];
 
-                    const double KminSoilDoatsu = 100.0;  // 最小地盤バネ剛性 [kN/m]
                     var relDispTop = item.TopEmbedmentNode.CumulativeDisp - item.TopSoilNode.CumulativeDisp;
                     var kVecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
-                    double kxTop = Math.Max(SafeK(kVecTop.Kx), KminSoilDoatsu);
-                    double kyTop = Math.Max(SafeK(kVecTop.Ky), KminSoilDoatsu);
+                    double kxTop = SafeK(kVecTop.Kx);
+                    double kyTop = SafeK(kVecTop.Ky);
                     item.TopHorizontalSoilSpring.SetKe(kxTop, kyTop, 0, 0, 0, 0, isTan);
                     springMin = Math.Min(springMin, Math.Min(kxTop, kyTop));
                     springMax = Math.Max(springMax, Math.Max(kxTop, kyTop));
 
                     var relDisplacementBtm = item.BtmEmbedmentNode.CumulativeDisp - item.BtmSoilNode.CumulativeDisp;
                     var kVecBtm = isTan ? item.GetTangentStiffnessVector(relDisplacementBtm) : item.GetSecantStiffnessVector(relDisplacementBtm);
-                    double kxBtm = Math.Max(SafeK(kVecBtm.Kx), KminSoilDoatsu);
-                    double kyBtm = Math.Max(SafeK(kVecBtm.Ky), KminSoilDoatsu);
+                    double kxBtm = SafeK(kVecBtm.Kx);
+                    double kyBtm = SafeK(kVecBtm.Ky);
                     item.BtmHorizontalSoilSpring.SetKe(kxBtm, kyBtm, 0, 0, 0, 0, isTan);
                     springMin = Math.Min(springMin, Math.Min(kxBtm, kyBtm));
                     springMax = Math.Max(springMax, Math.Max(kxBtm, kyBtm));
@@ -3153,10 +3152,7 @@ namespace PileDesign.ViewModels
                             : horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
                     }
 
-                    // 地盤バネの剛性に最小値を設定（0になると解析が不安定になる）
-                    // 最小値は初期剛性の1%程度を確保（1e-3は小さすぎて発散の原因になる）
-                    const double KminSoil = 100.0;  // 最小地盤バネ剛性 [kN/m]
-                    k = Math.Max(SafeK(k), KminSoil);
+                    k = SafeK(k);
                     pileLayoutItem.HorizontalSoilSprings[i].SetKe(k, k, 0, 0, 0, 0, isTan);
 
                     springMin = Math.Min(springMin, k);
