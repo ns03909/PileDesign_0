@@ -1751,32 +1751,38 @@ namespace PileDesign.ViewModels
                                 {
                                     double residualRatio = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
 
-                                    if (residualRatio < 0.95) // 残差が5%以上減少 → 良好な収束
+                                    if (residualRatio < 0.8) // 残差が20%以上減少 → 良好な収束
                                     {
                                         consecutiveDecrease++;
-                                        // 良好な減少が続けばω回復（最大1.0）
+                                        // 2回連続で大幅減少したらω回復（最大1.0）
                                         if (consecutiveDecrease >= 2 && currentRelaxFactor < 1.0)
-                                        {
-                                            currentRelaxFactor = Math.Min(currentRelaxFactor * 1.5, 1.0);
-                                            consecutiveDecrease = 0;
-                                        }
-                                    }
-                                    else if (residualRatio > 1.1) // 残差が10%以上増加 → ω減少
-                                    {
-                                        double reductionFactor = residualRatio > 2.0 ? 0.25 : (residualRatio > 1.5 ? 0.5 : 0.7);
-                                        currentRelaxFactor = Math.Max(currentRelaxFactor * reductionFactor, 0.15);
-                                        consecutiveDecrease = 0;
-                                    }
-                                    else // 微減・停滞・微増（0.95-1.1）→ ωを維持して様子見
-                                    {
-                                        if (residualRatio <= 1.0) consecutiveDecrease++;
-                                        else consecutiveDecrease = 0;
-                                        // 微減が3回連続ならω回復
-                                        if (consecutiveDecrease >= 3 && currentRelaxFactor < 1.0)
                                         {
                                             currentRelaxFactor = Math.Min(currentRelaxFactor * 1.3, 1.0);
                                             consecutiveDecrease = 0;
                                         }
+                                    }
+                                    else if (residualRatio > 1.02) // 残差が2%以上増加 → 即座にω減少
+                                    {
+                                        // 増加量に応じてω減少幅を調整（より積極的に）
+                                        double reductionFactor = residualRatio > 1.5 ? 0.25 : (residualRatio > 1.1 ? 0.5 : 0.7);
+                                        currentRelaxFactor = Math.Max(currentRelaxFactor * reductionFactor, 0.1);
+                                        consecutiveDecrease = 0;
+                                    }
+                                    else if (residualRatio < 1.0) // 微減（0-20%）
+                                    {
+                                        consecutiveDecrease++;
+                                        // 3回連続微減でもω小幅回復
+                                        if (consecutiveDecrease >= 3 && currentRelaxFactor < 0.7)
+                                        {
+                                            currentRelaxFactor = Math.Min(currentRelaxFactor * 1.1, 0.7);
+                                            consecutiveDecrease = 0;
+                                        }
+                                    }
+                                    else // 停滞（1.0-1.02）
+                                    {
+                                        consecutiveDecrease = 0;
+                                        // 停滞時もωを少し下げる
+                                        currentRelaxFactor = Math.Max(currentRelaxFactor * 0.85, 0.15);
                                     }
                                 }
 
@@ -1789,6 +1795,7 @@ namespace PileDesign.ViewModels
 
                                 // v17: 長時間反復時の収束基準緩和
                                 // 40反復以上で残差が RELAXED_ALPHA 以下なら、十分収束したとみなす
+                                // （M-φ/M-θ非線形で残差が振動停滞するケースへの対策）
                                 if (n_iteration >= 40 && currentResidual <= RELAXED_ALPHA
                                     && effectiveAlpha < RELAXED_ALPHA)
                                 {
