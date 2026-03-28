@@ -473,12 +473,13 @@ namespace PileDesign.FEM
                 AssembleSpringForceToGlobal(spring.NodeI, spring.NodeJ, spring.CumulativeForce);
             }
 
-            // 回転ばねの内力を組み立て（co-located ノード前提で T=I として直接アセンブリ）
+            // 回転ばねの内力を組み立て（標準パス: T^T×f 変換でマスター節点への力分配を含む）
+            // CapNode の TransferMatrix により、ペナルティ力が AP.Rx,Ry にモーメントとして正しく分配される
             if (RotationalSprings != null)
             {
                 foreach (var rs in RotationalSprings)
                 {
-                    rs.AssembleInternalForceToGlobal(VectorT);
+                    AssembleSpringForceToGlobal(rs.NodeI, rs.NodeJ, rs.CumulativeForce);
                 }
             }
 

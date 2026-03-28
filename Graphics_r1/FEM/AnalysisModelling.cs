@@ -382,7 +382,12 @@ namespace PileDesign.FEM
 
                 if (i == 0)
                 {
-                    // 杭頭回転ばね
+                    // 杭頭回転ばね + ペナルティ結合（全DOF）
+                    // PileNode-0 は全DOFフリー（master-slave なし）。
+                    // TieUx/Uy/Uz/Rz=true: ペナルティ剛性 Kbig で CapNode に追従させる。
+                    // Rx, Ry: M-θ 曲線 or 高回転剛性（1e10）で CapNode と結合。
+                    // 標準 T^T×K×T 組立パスにより、CapNode の TransferMatrix クロス項が
+                    // AP.Rx,Ry と PileNode-0.Uz の正しい結合を K 行列に反映する。
                     var rxy = new RotationalSpring($"RθXY-{pile.No}", capNode, pileNode, initialRotK)
                     {
                         PileBodyNo = pile.PileBodyNo,
@@ -390,7 +395,7 @@ namespace PileDesign.FEM
                         TieUy = true,
                         TieUz = true,
                         TieRz = true,
-                        Kbig = 1e8  // CapNode-PileNode間のペナルティ剛性（1e6では変位差が生じるため増加）
+                        Kbig = 1e8
                     };
                     result.RotationalSpring = rxy;
                     prevPileNode = pileNode;
@@ -1083,33 +1088,24 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
-        /// PileNode-0 を ActionPoint の master-slave として設定（Ux, Uy, Uz, Rz）。
-        /// CapNode は RigidBody のスレーブで方程式番号が負のため、
-        /// 2段階チェーン（PileNode-0→CapNode→ActionPoint）は変位更新で辿れない。
-        /// PileNode-0 → ActionPoint を直接設定することで回避する。
-        /// PileNode-0 と CapNode は同位置なので arm vector は CapNode と同一。
-        /// Rx, Ry は RotationalSpring（M-θ曲線 or 高回転剛性）で制御するため自由のまま。
+        /// PileNode-0 の接続設定。
+        /// PileNode-0 は全6DOFフリー（master-slave なし）。
+        /// CapNode（ActionPoint の全6DOF slave）との結合は RotationalSpring のペナルティ
+        /// （TieUx/Uy/Uz/Rz=true, Kbig=1e8）および M-θ回転ばね（Rx,Ry）で実現する。
+        ///
+        /// この方式により:
+        /// - PileNode-0 の TransferMatrix = Identity（クロス項問題なし）
+        /// - CapNode の TransferMatrix（全クロス項あり）が RotationalSpring の T^T×K×T で
+        ///   AP.Rx,Ry と PileNode-0.Uz の正しい結合を生成
+        /// - 梁の軸剛性（EA/L）が PileNode-0.Uz を通じて基礎回転剛性に正しく寄与
         /// </summary>
         private void SetPileHeadMasterSlave(PileLayoutDataItem pile, Node capNode)
         {
             var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
             if (pileHeadNode == null) return;
 
-            // ActionPoint（RigidBodies[0] のマスター）を直接マスターにする
-            var actionPoint = RigidBodies[0].MasterNode;
-
-            pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
-            pileHeadNode.SetMasterNode(0, actionPoint); // Ux
-            pileHeadNode.SetMasterNode(1, actionPoint); // Uy
-            pileHeadNode.SetMasterNode(2, actionPoint); // Uz
-            pileHeadNode.SetMasterNode(5, actionPoint); // Rz
-
-            // arm vector: PileNode-0 から ActionPoint までの距離（CapNode と同位置なので同じ arm）
-            var arm = pileHeadNode.Coord - actionPoint.Coord;
-            pileHeadNode.SetArmVector(0, arm);
-            pileHeadNode.SetArmVector(1, arm);
-            pileHeadNode.SetArmVector(2, arm);
-            pileHeadNode.SetTransferMatrix();
+            // PileNode-0: 全DOFフリー（マスター設定なし → TransferMatrix = Identity）
+            // ProcessSinglePile で Boundary は未設定（デフォルト: 全 false = 全フリー）なので追加設定不要
         }
 
     }
