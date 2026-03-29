@@ -473,7 +473,7 @@ namespace PileDesign.FEM
                 AssembleSpringForceToGlobal(spring.NodeI, spring.NodeJ, spring.CumulativeForce);
             }
 
-            // 回転ばねの内力を組み立て（直接アセンブリ: ResolveEquationNumbers で master chain を辿る）
+            // 回転ばねの内力を組み立て（co-located ノード前提で T=I として直接アセンブリ）
             if (RotationalSprings != null)
             {
                 foreach (var rs in RotationalSprings)

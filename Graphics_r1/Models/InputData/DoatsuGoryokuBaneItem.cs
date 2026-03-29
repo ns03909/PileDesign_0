@@ -168,10 +168,9 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                // 塑性領域: 降伏時割線剛性の 0.1% を維持
-                // 0.0001*k0 では接線が小さすぎてK行列と内力の整合性が崩れる
-                double pMax = Pp - P0;
-                return DeltaP > 0 ? 0.001 * pMax / DeltaP : 0.0001 * k0;
+                // 塑性領域: 小さな接線剛性を維持（ゼロだと剛性マトリクスが特異になる）
+                // HorizontalSoilReaction.GetkhTanと同様に、初期剛性の0.01%程度を返す
+                return 0.0001 * k0;
             }
         }
 

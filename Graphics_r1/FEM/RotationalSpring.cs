@@ -259,13 +259,36 @@ namespace PileDesign.FEM
             base.SetBeamDispAndForce(isTan, CumulativeDisp, CumulativeForce);
         }
 
-        // 剛性アセンブリは基底クラス TwoNodeSpringElement.MapOnGlobalStiff を使用。
-        // 標準の T^T×K×T 変換により、CapNode の TransferMatrix クロス項が
-        // AP.Rx,Ry と PileNode-0.Uz の正しい結合を K 行列に生成する。
+        /// <summary>
+        /// co-located ノード（CapNode と PileNode-0）前提の剛性アセンブリ。
+        /// 基底クラスの T^T * K * T 変換をバイパスし、master chain を辿った
+        /// resolved equation numbers で直接アセンブリする。
+        /// これにより CapNode と PileNode-0 の TransferMatrix の非対称性に起因する
+        /// スプリアス項（Kbig × arm² が ActionPoint の回転DOFに漏れる問題）を回避する。
+        /// </summary>
+        public new Matrix<double> MapOnGlobalStiff(Matrix<double> K, bool isTan, bool isRowFree, bool isColFree)
+        {
+            var ke = (isTan ? KeTan : KeSec)
+                ?? throw new InvalidOperationException("SetKe が未実行です。");
+            var eq = ResolveEquationNumbers();
+            for (int i = 0; i < 12; i++)
+            {
+                int eqRow = eq[i];
+                if ((isRowFree && eqRow < 0) || (!isRowFree && eqRow >= 0)) continue;
+                for (int j = 0; j < 12; j++)
+                {
+                    int eqCol = eq[j];
+                    if ((isColFree && eqCol < 0) || (!isColFree && eqCol >= 0)) continue;
+                    double val = ke[i, j];
+                    if (val != 0.0) K[eqRow, eqCol] += val;
+                }
+            }
+            return K;
+        }
 
         /// <summary>
-        /// 内力アセンブリ: master chain を辿った equation numbers で直接加算する。
-        /// T^T×f 変換ではなく、ResolveEquationNumbers で直接マッピングする。
+        /// co-located ノード前提の内力アセンブリ。
+        /// T^T * f 変換をバイパスし、resolved equation numbers で直接加算する。
         /// </summary>
         public void AssembleInternalForceToGlobal(Vector<double> vectorT)
         {
@@ -278,6 +301,10 @@ namespace PileDesign.FEM
             }
         }
 
+        /// <summary>
+        /// master chain を辿って 12 個の方程式番号を解決する。
+        /// CapNode のように全DOFがスレーブの場合、master（ActionPoint）の方程式番号を返す。
+        /// </summary>
         private List<int> ResolveEquationNumbers()
         {
             var eq = new List<int>(12);
