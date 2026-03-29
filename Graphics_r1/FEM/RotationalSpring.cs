@@ -260,13 +260,43 @@ namespace PileDesign.FEM
         }
 
         // 剛性アセンブリは基底クラス TwoNodeSpringElement.MapOnGlobalStiff を使用。
-        // PileNode-0 は全DOFフリー（TransferMatrix = Identity）、
-        // CapNode は ActionPoint の全6DOF slave（TransferMatrix に全クロス項あり）。
-        // 標準の T^T×K×T 変換により、ペナルティ剛性が CapNode の arm を通じて
+        // 標準の T^T×K×T 変換により、CapNode の TransferMatrix クロス項が
         // AP.Rx,Ry と PileNode-0.Uz の正しい結合を K 行列に生成する。
 
-        // 内力アセンブリも標準パス（AnaModel.AssembleSpringForceToGlobal）を使用。
-        // T^T×f 変換により、ペナルティ力が AP.Rx にモーメントとして正しく分配される。
+        /// <summary>
+        /// 内力アセンブリ: master chain を辿った equation numbers で直接加算する。
+        /// T^T×f 変換ではなく、ResolveEquationNumbers で直接マッピングする。
+        /// </summary>
+        public void AssembleInternalForceToGlobal(Vector<double> vectorT)
+        {
+            var f = CumulativeForce.GetVector();
+            var eq = ResolveEquationNumbers();
+            for (int i = 0; i < 12; i++)
+            {
+                if (eq[i] >= 0)
+                    vectorT[eq[i]] += f[i];
+            }
+        }
+
+        private List<int> ResolveEquationNumbers()
+        {
+            var eq = new List<int>(12);
+            ResolveNodeDofs(eq, NodeI);
+            ResolveNodeDofs(eq, NodeJ);
+            return eq;
+        }
+
+        private static void ResolveNodeDofs(List<int> eq, Node node)
+        {
+            for (int dof = 0; dof < 6; dof++)
+            {
+                var master = node.MasterNodes[dof];
+                if (master != null)
+                    eq.Add(master.EquationNumber[dof]);
+                else
+                    eq.Add(node.EquationNumber[dof]);
+            }
+        }
 
         public RotationalSpring DeepCopy()
         {
