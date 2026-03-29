@@ -1,0 +1,77 @@
+using PileDesign.FEM;
+
+namespace PileDesign.Models.Results
+{
+    public sealed class CapacityRatioRow
+    {
+        [ResultColumn("要素No", 0)] public int ElementIndex { get; init; }
+        [ResultColumn("要素名", 1)] public string ElementName { get; init; } = "";
+        [ResultColumn("N(kN)", 2, "N1")] public double AxialForce { get; init; }
+
+        // Mi
+        [ResultColumn("Mi(kNm)", 10, "N1")] public double DemandMi { get; init; }
+        [ResultColumn("低減前Mi", 11, "N3")] public double UnfactoredMiRatio { get; init; }
+        [ResultColumn("前Mi判定", 12)] public string UnfactoredMiJudge { get; init; } = "";
+        [ResultColumn("低減後Mi", 13, "N3")] public double FactoredMiRatio { get; init; }
+        [ResultColumn("後Mi判定", 14)] public string FactoredMiJudge { get; init; } = "";
+
+        // Mj
+        [ResultColumn("Mj(kNm)", 20, "N1")] public double DemandMj { get; init; }
+        [ResultColumn("低減前Mj", 21, "N3")] public double UnfactoredMjRatio { get; init; }
+        [ResultColumn("前Mj判定", 22)] public string UnfactoredMjJudge { get; init; } = "";
+        [ResultColumn("低減後Mj", 23, "N3")] public double FactoredMjRatio { get; init; }
+        [ResultColumn("後Mj判定", 24)] public string FactoredMjJudge { get; init; } = "";
+
+        // Qi
+        [ResultColumn("Qi(kN)", 30, "N1")] public double DemandQi { get; init; }
+        [ResultColumn("低減前Qi", 31, "N3")] public double UnfactoredQiRatio { get; init; }
+        [ResultColumn("前Qi判定", 32)] public string UnfactoredQiJudge { get; init; } = "";
+        [ResultColumn("低減後Qi", 33, "N3")] public double FactoredQiRatio { get; init; }
+        [ResultColumn("後Qi判定", 34)] public string FactoredQiJudge { get; init; } = "";
+
+        // Qj
+        [ResultColumn("Qj(kN)", 40, "N1")] public double DemandQj { get; init; }
+        [ResultColumn("低減前Qj", 41, "N3")] public double UnfactoredQjRatio { get; init; }
+        [ResultColumn("前Qj判定", 42)] public string UnfactoredQjJudge { get; init; } = "";
+        [ResultColumn("低減後Qj", 43, "N3")] public double FactoredQjRatio { get; init; }
+        [ResultColumn("後Qj判定", 44)] public string FactoredQjJudge { get; init; } = "";
+
+        // M/Qd
+        [ResultColumn("M/Qd", 50)] public string MonQd { get; init; } = "-";
+
+        private static string Judge(double ratio) =>
+            ratio < 1.0 ? "OK" : "NG";
+
+        public static CapacityRatioRow From(int elementIndex, Beam beam, BeamResult result)
+        {
+            var force = result.CumulativeForce;
+            return new CapacityRatioRow
+            {
+                ElementIndex = elementIndex,
+                ElementName = beam.Name,
+                AxialForce = result.AxialForceForRatio,
+                DemandMi = force?.Mi ?? 0,
+                DemandQi = force?.Fi ?? 0,
+                DemandMj = force?.Mj ?? 0,
+                DemandQj = force?.Fj ?? 0,
+                UnfactoredMiRatio = result.UnfactoredMiRatio,
+                FactoredMiRatio = result.FactoredMiRatio,
+                UnfactoredQiRatio = result.UnfactoredQiRatio,
+                FactoredQiRatio = result.FactoredQiRatio,
+                UnfactoredMjRatio = result.UnfactoredMjRatio,
+                FactoredMjRatio = result.FactoredMjRatio,
+                UnfactoredQjRatio = result.UnfactoredQjRatio,
+                FactoredQjRatio = result.FactoredQjRatio,
+                UnfactoredMiJudge = Judge(result.UnfactoredMiRatio),
+                FactoredMiJudge = Judge(result.FactoredMiRatio),
+                UnfactoredQiJudge = Judge(result.UnfactoredQiRatio),
+                FactoredQiJudge = Judge(result.FactoredQiRatio),
+                UnfactoredMjJudge = Judge(result.UnfactoredMjRatio),
+                FactoredMjJudge = Judge(result.FactoredMjRatio),
+                UnfactoredQjJudge = Judge(result.UnfactoredQjRatio),
+                FactoredQjJudge = Judge(result.FactoredQjRatio),
+                MonQd = result.MonQdForRatio >= 0 ? result.MonQdForRatio.ToString("N2") : "-",
+            };
+        }
+    }
+}

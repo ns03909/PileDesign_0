@@ -155,8 +155,8 @@ namespace PileDesign.FEM
                     {
                         if (!double.IsFinite(ke[d, d]))
                         {
-                            System.Diagnostics.Debug.WriteLine(
-                                $"[MapOnKmat] NaN/Inf detected in Beam Ke: {beam.Name} diag[{d}]={ke[d, d]:E3}");
+                            // System.Diagnostics.Debug.WriteLine(
+                    //             $"[MapOnKmat] NaN/Inf detected in Beam Ke: {beam.Name} diag[{d}]={ke[d, d]:E3}");
                             break;
                         }
                     }
@@ -227,7 +227,7 @@ namespace PileDesign.FEM
             }
 
             // NaN診断: 組立後の剛性マトリクス検査
-            NaNDiagnostics.CheckMatrixDiag(matrixKAA, $"KAA_{(isTan ? "tan" : "sec")} (post-assembly)", this);
+            // NaNDiagnostics.CheckMatrixDiag(matrixKAA, $"KAA_{(isTan ? "tan" : "sec")} (post-assembly)", this);
 
             if (isTan)
             {
@@ -492,7 +492,7 @@ namespace PileDesign.FEM
             }
 
             // NaN診断: 内力ベクトル検査
-            NaNDiagnostics.CheckVector(VectorT, "VectorT (post-SetT)", this);
+            // NaNDiagnostics.CheckVector(VectorT, "VectorT (post-SetT)", this);
         }
 
         // 梁要素の内力を全体ベクトルに組み立て（要素座標系→全体座標系変換＋マスター節点変換を含む）
@@ -623,11 +623,11 @@ namespace PileDesign.FEM
             NormsROnNormsFint = normsqF > 1e-30 ? normsqR / normsqF : (normsqR > 1e-30 ? 1e30 : 0.0);
 
             // NaN診断
-            NaNDiagnostics.DiagnoseResidual(VectorF, VectorT, VectorR, NormsROnNormsFint);
+            // NaNDiagnostics.DiagnoseResidual(VectorF, VectorT, VectorR, NormsROnNormsFint);
 
-            // 最初の3回のFindR呼び出しで残差の大きいDOFを出力
+            // 残差の大きいDOFを診断出力（最初3回 + 10回おき）
             _findRCallCount++;
-            if (_findRCallCount <= 3 && NormsROnNormsFint > 1e-4)
+            if (NormsROnNormsFint > 1e-4 && (_findRCallCount <= 3 || _findRCallCount % 10 == 0))
             {
                 string[] dofNames = { "Ux", "Uy", "Uz", "Rx", "Ry", "Rz" };
                 var log = new System.Text.StringBuilder();
@@ -645,10 +645,11 @@ namespace PileDesign.FEM
                 residuals.Sort((a, b) => Math.Abs(b.r).CompareTo(Math.Abs(a.r)));
 
                 log.AppendLine("残差の大きいDOF (top 15):");
-                log.AppendLine("  eq    | R(=F-T)     | F           | T           | Node:DOF");
+                log.AppendLine("  eq    | R(=F-T)     | F           | T           | K_diag       | Node:DOF (master)");
                 foreach (var (eq, r, f, t) in residuals.Take(15))
                 {
                     string nodeDof = "?";
+                    string masterInfo = "";
                     foreach (var node in Nodes)
                     {
                         for (int d = 0; d < 6; d++)
@@ -658,10 +659,16 @@ namespace PileDesign.FEM
                                 nodeDof = $"{node.Name}:{dofNames[d]}";
                                 break;
                             }
+                            // slave DOF の master eq 番号もチェック
+                            if (node.MasterNodes[d] != null && node.MasterNodes[d].EquationNumber[d] == eq)
+                            {
+                                masterInfo += $" ←slave:{node.Name}:{dofNames[d]}";
+                            }
                         }
                         if (nodeDof != "?") break;
                     }
-                    log.AppendLine($"  {eq,5} | {r,11:E3} | {f,11:E3} | {t,11:E3} | {nodeDof}");
+                    double kDiag = (KAA_tan != null && eq < KAA_tan.RowCount) ? KAA_tan[eq, eq] : 0;
+                    log.AppendLine($"  {eq,5} | {r,11:E3} | {f,11:E3} | {t,11:E3} | {kDiag,12:E3} | {nodeDof}{masterInfo}");
                 }
 
                 // F≠0のDOF数とT≠0のDOF数

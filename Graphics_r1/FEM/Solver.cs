@@ -10,14 +10,14 @@ namespace PileDesign.FEM
         {
             anaModel.SetForcedDispOnLoadVectorAndStiffnessMatrix(true); // KAA_tanとVectorRを取得
 
-            // --- NaN診断: ソルバ入力を検査 ---
+            /* --- NaN診断: ソルバ入力を検査 ---
             bool kHasNaN = NaNDiagnostics.CheckMatrixDiag(anaModel.KAA_tan, "KAA_tan (pre-solve)", anaModel);
             bool rHasNaN = NaNDiagnostics.CheckVector(anaModel.VectorR, "VectorR (pre-solve)", anaModel);
             if (kHasNaN || rHasNaN)
             {
                 int kNaNCount = NaNDiagnostics.CountMatrixNaN(anaModel.KAA_tan);
                 NaNDiagnostics.LogNaN($"Solver input contaminated: K has {kNaNCount} NaN entries, R has NaN={rHasNaN}");
-            }
+            } */
 
             // CSparse で一次方程式を解く（MathNetと同じく K Δd = R）
             Vector<double> incrementalDispVector;
@@ -50,7 +50,7 @@ namespace PileDesign.FEM
 
             // NaN/Infinity 検出: ソルバ出力にNaNが含まれる場合はゼロにクランプ
             // （特異行列や数値不安定時に発生しうる）
-            bool hasNaN = NaNDiagnostics.CheckVector(incrementalDispVector, "incrementalDispVector (post-solve)", anaModel);
+            bool hasNaN = false; // NaNDiagnostics.CheckVector(incrementalDispVector, "incrementalDispVector (post-solve)", anaModel);
             if (hasNaN)
             {
                 // NaN成分をゼロにクランプ
@@ -84,12 +84,11 @@ namespace PileDesign.FEM
                 // クロス項の定義: (クロス先index, arm成分, 符号)
                 (int crossIdx, Func<Vector3S, double> arm, double sign)[][] crossTerms =
                 [
-
-                [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)], // 0: Ux
-                [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)], // 1: Uy
-                [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)], // 2: Uz
-                [], [], [], // 3: Tx // 4: Ty // 5: Tz
-            ];
+                    [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)], // 0: Ux
+                    [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)], // 1: Uy
+                    [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)], // 2: Uz
+                    [], [], [], // 3: Rx // 4: Ry // 5: Rz
+                ];
 
                 for (int i = 0; i < 6; i++)
                 {
@@ -99,14 +98,15 @@ namespace PileDesign.FEM
                         int eq = node.MasterNodes[i].EquationNumber[i];
                         ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
 
-                        // クロス項の加算
-                        // 修正: crossIdx のマスターノードから crossIdx の方程式番号を取得
+                        // クロス項の加算（剛体運動学: Uz += Rx×ΔY - Ry×ΔX 等）
+                        // クロス先DOFもslaveの場合のみ追加（TransferMatrixと整合）
                         foreach (var (crossIdx, arm, sign) in crossTerms[i])
                         {
                             if (node.MasterNodes[crossIdx] != null)
                             {
                                 int eqCross = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
-                                ddisp[i] += eqCross < 0 ? 0 : incrementalDispVector[eqCross] * arm(node.SlaveArm) * sign;
+                                if (eqCross >= 0)
+                                    ddisp[i] += incrementalDispVector[eqCross] * arm(node.SlaveArm) * sign;
                             }
                         }
                     }

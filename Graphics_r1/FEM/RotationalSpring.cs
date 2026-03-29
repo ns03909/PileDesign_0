@@ -283,8 +283,57 @@ namespace PileDesign.FEM
                     if (val != 0.0) K[eqRow, eqCol] += val;
                 }
             }
+
             return K;
         }
+
+        /// <summary>
+        /// PileNode.Uz(free) と AP.Rx/Ry の間接結合を K 行列に追加。
+        /// ペナルティ→CapNode→RigidLink→AP チェーンの剛リンク近似。
+        /// </summary>
+        private void AddUzIndirectCouplingToK(Matrix<double> K, bool isTan)
+        {
+            // PileNode (NodeJ) の Uz が free (MasterNodes[2]==null) の場合のみ
+            if (NodeJ.MasterNodes[2] != null) return;
+
+            // AP ノードを Ux/Uy/Rz いずれかの master から取得
+            Node? ap = NodeJ.MasterNodes[0] ?? NodeJ.MasterNodes[1] ?? NodeJ.MasterNodes[5];
+            if (ap == null) return;
+
+            var ke = isTan ? KeTan : KeSec;
+            if (ke == null) return;
+            double kz = ke[8, 8]; // Uz ペナルティ剛性
+            if (kz == 0.0) return;
+
+            double dY = NodeJ.SlaveArm.Y;
+            double dX = NodeJ.SlaveArm.X;
+            if (Math.Abs(dX) < 1e-10 && Math.Abs(dY) < 1e-10) return;
+
+            int eqPileUz = NodeJ.EquationNumber[2]; // PileNode.Uz (free DOF)
+            int eqApRx = ap.EquationNumber[3];
+            int eqApRy = ap.EquationNumber[4];
+
+            void AddSym(int r, int c, double v)
+            {
+                if (r >= 0 && c >= 0 && v != 0.0)
+                {
+                    K[r, c] += v;
+                    if (r != c) K[c, r] += v;
+                }
+            }
+
+            // d(f[PileNode.Uz])/d(AP.Rx) = -kz × ΔY
+            AddSym(eqPileUz, eqApRx, -kz * dY);
+            // d(f[PileNode.Uz])/d(AP.Ry) = kz × ΔX
+            AddSym(eqPileUz, eqApRy, kz * dX);
+
+            // AP.Rx/Ry 対角: d(f[AP.Rx])/d(AP.Rx) from penalty chain
+            if (eqApRx >= 0) K[eqApRx, eqApRx] += kz * dY * dY;
+            if (eqApRy >= 0) K[eqApRy, eqApRy] += kz * dX * dX;
+            AddSym(eqApRx, eqApRy, -kz * dX * dY);
+        }
+
+
 
         /// <summary>
         /// co-located ノード前提の内力アセンブリ。
@@ -299,6 +348,7 @@ namespace PileDesign.FEM
                 if (eq[i] >= 0)
                     vectorT[eq[i]] += f[i];
             }
+
         }
 
         /// <summary>

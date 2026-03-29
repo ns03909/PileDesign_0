@@ -55,35 +55,35 @@ namespace PileDesign.FEM
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             PreallocateCollections();
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] PreallocateCollections: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] PreallocateCollections: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddActionPointNode();
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddActionPointNode: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddActionPointNode: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddInputNodes();               // InputNode（General型）を追加
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddInputNodes: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddInputNodes: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddDoatsuGoryokuBane();
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddDoatsuGoryokuBane: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddDoatsuGoryokuBane: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddPileOptimized();            // ← pile.No を 1-based に振り直す
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddPileOptimized: {sw.ElapsedMilliseconds}ms (Piles={InputModel.PileLayoutItems?.Count ?? 0})");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddPileOptimized: {sw.ElapsedMilliseconds}ms (Piles={InputModel.PileLayoutItems?.Count ?? 0})");
 
             sw.Restart();
             AddFoundationBeamNodes();      // 基礎梁節点を追加（pile.No 確定後）
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddFoundationBeamNodes: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddFoundationBeamNodes: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             AddFoundationBeams();          // 基礎梁要素を追加
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddFoundationBeams: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] AddFoundationBeams: {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
             ConnectCapsToFoundation();     // CapNode と基礎梁節点を接続
-            System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] ConnectCapsToFoundation: {sw.ElapsedMilliseconds}ms");
+            // System.Diagnostics.Debug.WriteLine($"[AnalysisModelling] ConnectCapsToFoundation: {sw.ElapsedMilliseconds}ms");
         }
 
         // 最適化: リストの事前割り当て
@@ -1075,7 +1075,7 @@ namespace PileDesign.FEM
             log.AppendLine($"RigidBodies[0]: master={RigidBodies[0].MasterNode?.Name}, slaves=[{string.Join(", ", RigidBodies[0].SlaveNodes.Select(n => n.Name))}]");
 
             log.AppendLine("=== 診断終了 ===");
-            System.Diagnostics.Debug.WriteLine(log.ToString());
+            // System.Diagnostics.Debug.WriteLine(log.ToString());
 
             // RigidBodies[0]の関係を再設定（EmbedmentNode等の既存slave用）
             foreach (var rb in RigidBodies)
@@ -1098,13 +1098,17 @@ namespace PileDesign.FEM
             // ActionPoint（RigidBodies[0] のマスター）を直接マスターにする
             var actionPoint = RigidBodies[0].MasterNode;
 
-            pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
+            // Uz は master-slave にしない。RotationalSpring のペナルティ（Kbig）で
+            // CapNode.Uz に追従させる。CapNode.Uz は RigidLink beam 経由で
+            // AP.Uz + AP.Rx×ΔY - AP.Ry×ΔX に自然に追従するため、
+            // PileNode-0.Uz にも AP 回転の効果が反映される。
+            // master-slave にすると PileNode.Uz = AP.Uz（回転なし）に固定され、
+            // CapNode.Uz（回転あり）とペナルティが矛盾する。
+            pileHeadNode.SetBoundary(new Boundary(true, true, false, false, false, true));
             pileHeadNode.SetMasterNode(0, actionPoint); // Ux
             pileHeadNode.SetMasterNode(1, actionPoint); // Uy
-            pileHeadNode.SetMasterNode(2, actionPoint); // Uz
             pileHeadNode.SetMasterNode(5, actionPoint); // Rz
 
-            // arm vector: PileNode-0 から ActionPoint までの距離（CapNode と同位置なので同じ arm）
             var arm = pileHeadNode.Coord - actionPoint.Coord;
             pileHeadNode.SetArmVector(0, arm);
             pileHeadNode.SetArmVector(1, arm);

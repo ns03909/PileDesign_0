@@ -52,8 +52,8 @@ namespace PileDesign.FEM
             if (pList.Count != mList.Count || pList.Count < 2) { _combinedCurve = null; return; }
 
             // デバッグ: 入力値を出力（単位変換なし：入力はFEM単位系を期待）
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] SetResolvedCombinedMPhi: Beam={Name}, Points={pList.Count}, " +
-                $"phi[0]={pList[0]:E6} [1/m], phi[last]={pList[^1]:E6} [1/m], M[0]={mList[0]:F1} [kNm], M[last]={mList[^1]:F1} [kNm]");
+            // System.Diagnostics.Debug.WriteLine($"[DEBUG] SetResolvedCombinedMPhi: Beam={Name}, Points={pList.Count}, " +
+            //     $"phi[0]={pList[0]:E6} [1/m], phi[last]={pList[^1]:E6} [1/m], M[0]={mList[0]:F1} [kNm], M[last]={mList[^1]:F1} [kNm]");
 
             // フィルタ: 有限値のみ
             var pairs = new System.Collections.Generic.List<(double Phi, double Moment)>(pList.Count);
@@ -120,7 +120,7 @@ namespace PileDesign.FEM
             {
                 var first = cleanPts.First();
                 var last = cleanPts.Last();
-                System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
+                // System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
             catch { }
         }
@@ -132,7 +132,7 @@ namespace PileDesign.FEM
             if (MPhi_ByN == null)
             {
                 _combinedCurve = null;
-                System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, MPhi_ByN=null");
+                // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, MPhi_ByN=null");
                 return;
             }
 
@@ -142,7 +142,7 @@ namespace PileDesign.FEM
                 _combinedCurve = resolved;
                 if (resolved == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
+                    // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, resolved=null for N={axialN:E}");
                 }
                 else
                 {
@@ -164,7 +164,7 @@ namespace PileDesign.FEM
                                 int cnt = list.Count;
                                 var first5 = string.Join(", ", list.Take(5).Select(t => $"{t.Phi:E6}/{t.Moment:E6}"));
                                 var last = list.Last();
-                                System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
+                                // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Points={cnt}, first5=[{first5}], last={last.Phi:E6}/{last.Moment:E6}");
                             }
                         }
                     }
@@ -174,7 +174,7 @@ namespace PileDesign.FEM
             catch (Exception ex)
             {
                 _combinedCurve = null;
-                System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
+                // System.Diagnostics.Debug.WriteLine($"ResolveMPhiForAxial: Beam={Name}, Exception resolving for N={axialN:E}: {ex}");
             }
         }
 
@@ -201,7 +201,7 @@ namespace PileDesign.FEM
             {
                 double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
                 double EIeff = _combinedCurve.EvaluateTangent(phiRes);
-                System.Diagnostics.Debug.WriteLine($"EvaluateEIeff: Beam={Name}, phiRes={phiRes:E6}, EIeff_raw={EIeff:E6}, EI0y={EI0y:E6}, curvePoints={_combinedCurve.Points?.Count ?? 0}");
+                // System.Diagnostics.Debug.WriteLine($"EvaluateEIeff: Beam={Name}, phiRes={phiRes:E6}, EIeff_raw={EIeff:E6}, EI0y={EI0y:E6}, curvePoints={_combinedCurve.Points?.Count ?? 0}");
                 if (!double.IsFinite(EIeff) || EIeff <= 0.0) EIeff = (EI0y > 0.0 ? EI0y : EI0z);
                 return (EIeff, EIeff);
             }
@@ -568,13 +568,13 @@ namespace PileDesign.FEM
                 for (int ki = 0; ki < Math.Min(12, k.RowCount); ki++)
                     if (!double.IsFinite(k[ki, ki])) { keHasNaN = true; break; }
 
-                NaNDiagnostics.LogNaN(
+                /* NaNDiagnostics.LogNaN(
                     $"Beam '{Name}' force NaN! dispNaN={dispHasNaN}, keNaN={keHasNaN}, " +
                     $"NodeI='{NodeI?.Name}' NodeJ='{NodeJ?.Name}' " +
                     $"NodeI.disp=[{NodeI?.CumulativeDisp?.Ux:E3},{NodeI?.CumulativeDisp?.Uy:E3},{NodeI?.CumulativeDisp?.Uz:E3}," +
                     $"{NodeI?.CumulativeDisp?.Rx:E3},{NodeI?.CumulativeDisp?.Ry:E3},{NodeI?.CumulativeDisp?.Rz:E3}] " +
                     $"NodeJ.disp=[{NodeJ?.CumulativeDisp?.Ux:E3},{NodeJ?.CumulativeDisp?.Uy:E3},{NodeJ?.CumulativeDisp?.Uz:E3}," +
-                    $"{NodeJ?.CumulativeDisp?.Rx:E3},{NodeJ?.CumulativeDisp?.Ry:E3},{NodeJ?.CumulativeDisp?.Rz:E3}]");
+                    $"{NodeJ?.CumulativeDisp?.Rx:E3},{NodeJ?.CumulativeDisp?.Ry:E3},{NodeJ?.CumulativeDisp?.Rz:E3}]"); */
             }
 
             // 要素応力を結果用オブジェクトにセット

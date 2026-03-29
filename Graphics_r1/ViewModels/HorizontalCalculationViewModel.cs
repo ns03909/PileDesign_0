@@ -444,7 +444,7 @@ namespace PileDesign.ViewModels
                         errorMessage = ex.Message;
                     }
                 });
-                System.Diagnostics.Debug.WriteLine($"[InitializeModelAsync] AnalysisModelling total: {swTotal.ElapsedMilliseconds}ms");
+                // System.Diagnostics.Debug.WriteLine($"[InitializeModelAsync] AnalysisModelling total: {swTotal.ElapsedMilliseconds}ms");
 
                 if (errorMessage != null || modelling == null)
                 {
@@ -1336,9 +1336,9 @@ namespace PileDesign.ViewModels
                 var pileBody = InputModel.PileBodies[pb - 1];
                 var def = pileBody.GetMThetaRelationship(axialN);
 
-                System.Diagnostics.Debug.WriteLine(
-                    $"[SetupMTheta] {spring.Name}: IsPileNonLinear={loadCase.IsPileNonLinear}, " +
-                    $"def.Mode={def.Mode}, axialN={axialN:F1}kN");
+                // System.Diagnostics.Debug.WriteLine(
+                //     $"[SetupMTheta] {spring.Name}: IsPileNonLinear={loadCase.IsPileNonLinear}, " +
+                //     $"def.Mode={def.Mode}, axialN={axialN:F1}kN");
 
                 // 非線形OFF: つねに剛体相当
                 if (!loadCase.IsPileNonLinear)
@@ -1357,8 +1357,8 @@ namespace PileDesign.ViewModels
                         spring.Mode = RotationalSpringMode.CombinedXY;
                         spring.CurveXY = null;
                         spring.KthetaXY = KBig;
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[SetupMTheta] {spring.Name}: → Rigid (KBig={KBig:E2})");
+                        // System.Diagnostics.Debug.WriteLine(
+                        //     $"[SetupMTheta] {spring.Name}: → Rigid (KBig={KBig:E2})");
                         break;
 
                     case PileHeadRotationMode.CombinedXY:
@@ -1378,9 +1378,9 @@ namespace PileDesign.ViewModels
                         {
                             spring.KthetaXY = KMin;
                         }
-                        System.Diagnostics.Debug.WriteLine(
-                            $"[SetupMTheta] {spring.Name}: → CombinedXY, CurveXY={(spring.CurveXY != null ? $"{spring.CurveXY.Points.Count}pts" : "null")}, " +
-                            $"KthetaXY={spring.KthetaXY:E3}");
+                        // System.Diagnostics.Debug.WriteLine(
+                        //     $"[SetupMTheta] {spring.Name}: → CombinedXY, CurveXY={(spring.CurveXY != null ? $"{spring.CurveXY.Points.Count}pts" : "null")}, " +
+                        //     $"KthetaXY={spring.KthetaXY:E3}");
                         break;
 
                     case PileHeadRotationMode.Separate:
@@ -1562,9 +1562,9 @@ namespace PileDesign.ViewModels
                             targetModel.InitializeNormsqR_onNormsqFint();
 
                             // NaN診断: ステップ開始
-                            if (step == 0)
-                                FEM.NaNDiagnostics.Begin();
-                            FEM.NaNDiagnostics.Log($"=== Step {step + 1}/{nStep}, LC={loadCase.LoadName}, Liq={isLiquefaction} ===");
+                            // if (step == 0)
+                            //     FEM.NaNDiagnostics.Begin();
+                            // FEM.NaNDiagnostics.Log($"=== Step {step + 1}/{nStep}, LC={loadCase.LoadName}, Liq={isLiquefaction} ===");
 
                             int n_iteration = 1;
                             UpdateSoilDisp();
@@ -1681,14 +1681,14 @@ namespace PileDesign.ViewModels
                                         targetModel.FindR();
                                     }
 
-                                    // NaN診断: 反復ごとのチェック
+                                    /* NaN診断: 反復ごとのチェック
                                     FEM.NaNDiagnostics.SetIteration(n_iteration);
                                     if (!double.IsFinite(targetModel.NormsROnNormsFint))
                                     {
                                         FEM.NaNDiagnostics.LogNaN($"NormsROnNormsFint is NaN at iteration {n_iteration}!");
                                         FEM.NaNDiagnostics.CheckNodeDisplacements(targetModel.Nodes);
                                         FEM.NaNDiagnostics.CheckBeamForces(targetModel.Beams);
-                                    }
+                                    } */
 
                                     // 診断値: ばね剛性min/max（PrepareKMatで集計済み）
                                     springKMin = _lastSpringKMin;
@@ -1935,8 +1935,8 @@ namespace PileDesign.ViewModels
                             if (step == 0 || step == nStep - 1)
                             {
                                 var actionPt = targetModel.Nodes[0];
-                                System.Diagnostics.Debug.WriteLine(
-                                    $"[Step{step}] ActionPoint Ux={actionPt.CumulativeDisp?.Ux:E3} Rx={actionPt.CumulativeDisp?.Rx:E3} Ry={actionPt.CumulativeDisp?.Ry:E3}");
+                                // System.Diagnostics.Debug.WriteLine(
+                                //     $"[Step{step}] ActionPoint Ux={actionPt.CumulativeDisp?.Ux:E3} Rx={actionPt.CumulativeDisp?.Rx:E3} Ry={actionPt.CumulativeDisp?.Ry:E3}");
                                 foreach (var pile in InputModel.PileLayoutItems.Take(2))
                                 {
                                     var rxy = pile.PileTopRotationalSpring;
@@ -1946,13 +1946,13 @@ namespace PileDesign.ViewModels
                                     double pileRx = pileHead?.CumulativeDisp?.Rx ?? 0;
                                     double kRx = rxy?.KeTan?[3, 3] ?? -1;
                                     double springMx = rxy?.CumulativeForce?.Mxi ?? 0;
-                                    System.Diagnostics.Debug.WriteLine(
-                                        $"[Step{step}] Pile{pile.No} " +
-                                        $"CapRx={capRx:E3} PileRx={pileRx:E3} dRx={pileRx - capRx:E3} " +
-                                        $"kRx={kRx:E3} CurveXY={(rxy?.CurveXY != null ? $"{rxy.CurveXY.Points.Count}pts" : "null")} " +
-                                        $"KthetaXY={rxy?.KthetaXY:E3} " +
-                                        $"SpringMxI={rxy?.CumulativeForce?.Mxi:E3} SpringMxJ={rxy?.CumulativeForce?.Mxj:E3} " +
-                                        $"SpringMyI={rxy?.CumulativeForce?.Myi:E3} SpringMyJ={rxy?.CumulativeForce?.Myj:E3}");
+                                    // System.Diagnostics.Debug.WriteLine(
+                                    //     $"[Step{step}] Pile{pile.No} " +
+                                    //     $"CapRx={capRx:E3} PileRx={pileRx:E3} dRx={pileRx - capRx:E3} " +
+                                    //     $"kRx={kRx:E3} CurveXY={(rxy?.CurveXY != null ? $"{rxy.CurveXY.Points.Count}pts" : "null")} " +
+                                    //     $"KthetaXY={rxy?.KthetaXY:E3} " +
+                                    //     $"SpringMxI={rxy?.CumulativeForce?.Mxi:E3} SpringMxJ={rxy?.CumulativeForce?.Mxj:E3} " +
+                                    //     $"SpringMyI={rxy?.CumulativeForce?.Myi:E3} SpringMyJ={rxy?.CumulativeForce?.Myj:E3}");
                                 }
                             }
 
@@ -1977,7 +1977,7 @@ namespace PileDesign.ViewModels
                         }
 
                         // NaN診断: 荷重ケース完了
-                        FEM.NaNDiagnostics.End();
+                        // FEM.NaNDiagnostics.End();
                     }
                 }
             }
@@ -2504,7 +2504,7 @@ namespace PileDesign.ViewModels
                 }
 
                 log.AppendLine("=== K対角 診断終了 ===");
-                System.Diagnostics.Debug.WriteLine(log.ToString());
+                // System.Diagnostics.Debug.WriteLine(log.ToString());
             }
 
             if (double.IsInfinity(min)) min = double.NaN;
