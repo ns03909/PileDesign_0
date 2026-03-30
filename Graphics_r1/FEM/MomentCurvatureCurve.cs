@@ -107,45 +107,13 @@ namespace PileDesign.FEM
                 slopes[i] = Math.Abs(denom) <= 1e-15 ? 0.0 : (m1 - m0) / denom;
             }
 
-            // 境界付近のブレンド幅（セグメント長の20%）
-            const double BLEND_RATIO = 0.20;
-
+            // 区分定数: M(φ) が区分線形なので dM/dφ はセグメントの傾き（定数）。
+            // ブレンドすると EvaluateMoment（ブレンドなし）と不整合になり
+            // K_tan ≠ dF/dd → Newton-Raphson 収束停滞の原因になる。
             for (int i = 0; i < Points.Count - 1; i++)
             {
-                var (p0, _) = Points[i];
-                var (p1, _) = Points[i + 1];
-                if (phi >= p0 && phi <= p1)
-                {
-                    double segLen = p1 - p0;
-                    double blendWidth = segLen * BLEND_RATIO;
-
-                    // セグメント中央付近: そのセグメントの傾きをそのまま使用
-                    if (phi >= p0 + blendWidth && phi <= p1 - blendWidth)
-                    {
-                        return slopes[i];
-                    }
-
-                    // セグメント始点付近: 前のセグメントとブレンド
-                    if (phi < p0 + blendWidth && i > 0)
-                    {
-                        double t = (phi - p0) / blendWidth; // 0→1
-                        t = t * t * (3 - 2 * t); // スムーズステップ補間
-                        double blended = slopes[i - 1] * (1 - t) + slopes[i] * t;
-                        return blended;
-                    }
-
-                    // セグメント終点付近: 次のセグメントとブレンド
-                    if (phi > p1 - blendWidth && i < Points.Count - 2)
-                    {
-                        double t = (phi - (p1 - blendWidth)) / blendWidth; // 0→1
-                        t = t * t * (3 - 2 * t); // スムーズステップ補間
-                        double blended = slopes[i] * (1 - t) + slopes[i + 1] * t;
-                        return blended;
-                    }
-
-                    // ブレンド対象がない場合（最初・最後のセグメント端）
+                if (phi >= Points[i].Phi && phi <= Points[i + 1].Phi)
                     return slopes[i];
-                }
             }
 
             // 範囲外の場合は端部の傾きを使用

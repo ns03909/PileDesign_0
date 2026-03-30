@@ -69,42 +69,13 @@ namespace PileDesign.FEM
             }
             else
             {
-                // 改良版: セグメント境界付近でスムーズにブレンドして不連続性を解消
+                // 区分定数: M(θ) が区分線形なので dM/dθ はセグメントの傾き（定数）。
+                // ブレンドすると EvaluateMoment（ブレンドなし）と不整合になり
+                // K_tan ≠ dF/dd → Newton-Raphson 収束停滞の原因になる。
                 int idx = FindSegmentIndex(t);
                 var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
                 var b = Points[idx];
-                double slopeCurrent = SafeSlope(a, b);
-
-                // 境界付近のブレンド幅（セグメント長の20%）
-                const double BLEND_RATIO = 0.20;
-                double segLen = b.Theta - a.Theta;
-                double blendWidth = segLen * BLEND_RATIO;
-
-                // セグメント終点付近で次のセグメントとブレンド
-                if (t > b.Theta - blendWidth && idx < Points.Count - 1)
-                {
-                    var c = Points[idx + 1];
-                    double slopeNext = SafeSlope(b, c);
-                    double blendT = (t - (b.Theta - blendWidth)) / blendWidth;
-                    blendT = blendT * blendT * (3 - 2 * blendT); // スムーズステップ
-                    result = slopeCurrent * (1 - blendT) + slopeNext * blendT;
-                    region = $"blend_{idx}→{idx + 1}";
-                }
-                // セグメント始点付近で前のセグメントとブレンド
-                else if (t < a.Theta + blendWidth && idx > 1)
-                {
-                    var prev = (Theta: Points[idx - 2].Theta, Moment: Points[idx - 2].Moment);
-                    double slopePrev = SafeSlope(prev, a);
-                    double blendT = (t - a.Theta) / blendWidth;
-                    blendT = blendT * blendT * (3 - 2 * blendT); // スムーズステップ
-                    result = slopePrev * (1 - blendT) + slopeCurrent * blendT;
-                    region = $"blend_{idx - 1}→{idx}";
-                }
-                else
-                {
-                    result = slopeCurrent;
-                    region = $"{(idx == 0 ? "origin" : (idx - 1).ToString())}→{idx}";
-                }
+                result = SafeSlope(a, b);
             }
 
             return result;
