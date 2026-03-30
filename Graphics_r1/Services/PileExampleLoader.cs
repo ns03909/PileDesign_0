@@ -388,6 +388,7 @@ namespace PileDesign.Services
             {
                 inputModel.EmbedmentInput.EmbedmentLayers = new ObservableCollection<EmbedmentDataItem>();
                 inputModel.ElementDivision.SoilEmbedment = null;
+                inputModel.ElementDivision.DoatsuGoryokuBane = null;
             }
         }
 

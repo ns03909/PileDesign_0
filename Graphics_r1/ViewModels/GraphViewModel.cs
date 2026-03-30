@@ -756,6 +756,9 @@ namespace PileDesign.ViewModels
                 GraphOptions.Add("杭体M-φ");
                 GraphOptions.Add("水平地盤反力");
                 GraphOptions.Add("水平地盤反力度p-y");
+                // 土圧合力ばねが存在する場合のみ追加
+                if (AnaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "EmbedmentNode"))
+                    GraphOptions.Add("土圧合力ばね");
 
             }
             if (IsVerticalAnalysisDone)
@@ -1026,6 +1029,12 @@ namespace PileDesign.ViewModels
 
                 SelectedPileOption = "All";
 
+                // 杭地盤ばねと土圧合力ばねを分類
+                var pileSoilSprings = AnaModel.HorizontalSoilSprings
+                    .Where(s => s.Name.StartsWith("HorizontalSoilSpring")).ToList();
+                var doatsuSoilSprings = AnaModel.HorizontalSoilSprings
+                    .Where(s => s.NodeI?.Name == "EmbedmentNode").ToList();
+
                 foreach (LoadCase loadCase in GetSelectedLoadCases())
                 {
                     foreach (LoadCombination loadCombination in GetSelectedLoadCombinations()
@@ -1039,15 +1048,73 @@ namespace PileDesign.ViewModels
 
                             List<double> disps = [0];
                             List<double> forces = [0];
+                            List<double> pileSoilForces = [0];
+                            List<double> doatsuSoilForces = [0];
 
                             for (int step = 0; step <= lastStep; step++)
                             {
                                 NodeResult nodeResult = AnaModel.Nodes[0].GetNodeResult(AnaModel, loadCase, loadCombination, isLiquefaction, step);
-                                disps.Add(nodeResult.CumulativeDisp.Uh * 1000.0);
+                                double dispMm = nodeResult.CumulativeDisp.Uh * 1000.0;
+                                disps.Add(dispMm);
                                 forces.Add(nodeResult.CumulativedLoad.GetHorizontalAbsLoad());
+
+                                // 杭地盤ばね反力の合計（作用荷重方向成分）
+                                double pileSumFx = 0, pileSumFy = 0;
+                                foreach (var spring in pileSoilSprings)
+                                {
+                                    var result = spring.HorizontalSpringResults?
+                                        .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                          && r.LoadCombination?.No == loadCombination.No
+                                                          && r.IsLiquefaction == isLiquefaction
+                                                          && r.Step == step);
+                                    if (result?.CumulativeForce != null)
+                                    {
+                                        pileSumFx += result.CumulativeForce.Fxi;
+                                        pileSumFy += result.CumulativeForce.Fyi;
+                                    }
+                                }
+                                // 載荷方向への射影
+                                double radLC = loadCase.LoadAngle * Math.PI / 180.0;
+                                double cosLC = Math.Cos(radLC);
+                                double sinLC = Math.Sin(radLC);
+                                pileSoilForces.Add(pileSumFx * cosLC + pileSumFy * sinLC);
+
+                                // 土圧合力ばね反力の合計（作用荷重方向成分）
+                                double doatsuSumFx = 0, doatsuSumFy = 0;
+                                foreach (var spring in doatsuSoilSprings)
+                                {
+                                    var result = spring.HorizontalSpringResults?
+                                        .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                          && r.LoadCombination?.No == loadCombination.No
+                                                          && r.IsLiquefaction == isLiquefaction
+                                                          && r.Step == step);
+                                    if (result?.CumulativeForce != null)
+                                    {
+                                        doatsuSumFx += result.CumulativeForce.Fxi;
+                                        doatsuSumFy += result.CumulativeForce.Fyi;
+                                    }
+                                }
+                                doatsuSoilForces.Add(doatsuSumFx * cosLC + doatsuSumFy * sinLC);
                             }
+
+                            string legend = GetGeneralLegendText(loadCase, loadCombination, isLiquefaction);
+
                             var scatter = WpfPlot.Plot.Add.Scatter(disps, forces);
-                            scatter.LegendText = GetGeneralLegendText(loadCase, loadCombination, isLiquefaction);
+                            scatter.LegendText = legend;
+
+                            if (pileSoilSprings.Count > 0)
+                            {
+                                var scatterPile = WpfPlot.Plot.Add.Scatter(disps, pileSoilForces);
+                                scatterPile.LegendText = $"杭地盤ばね反力 {legend}";
+                                scatterPile.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                            }
+
+                            if (doatsuSoilSprings.Count > 0)
+                            {
+                                var scatterDoatsu = WpfPlot.Plot.Add.Scatter(disps, doatsuSoilForces);
+                                scatterDoatsu.LegendText = $"土圧合力ばね反力 {legend}";
+                                scatterDoatsu.LineStyle.Pattern = ScottPlot.LinePattern.Dotted;
+                            }
                         }
                     }
                 }
@@ -1591,8 +1658,167 @@ namespace PileDesign.ViewModels
 
                 DrawPyCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
+            else if (SelectedGraphOption == "土圧合力ばね")
+            {
+                // 土圧合力ばね: 1パネルに最上点・最下点の2系列を描画
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = false;
+                IsPileBodyOptionVisible = false;
+                IsPileSegmentOptionVisible = false;
+                IsLiquefactionOptionVisible = true;
+                IsGridOptionVisible = false;
+
+                DrawDoatsuGoryokuBane(WpfPlot, MyCrosshair, "CrosshairPositionText");
+            }
             // レジェンド描画
             UpdateLegendVisibility();
+        }
+
+        // 土圧合力ばね: 1つのグラフに最上点・最下点の相対変位をX軸とした2系列を描画
+        private void DrawDoatsuGoryokuBane(WpfPlot wpfPlot, Crosshair crosshair, string crosshairPositionText)
+        {
+            wpfPlot.Plot.Clear();
+
+            var doatsuSprings = AnaModel.HorizontalSoilSprings
+                .Where(s => s.NodeI?.Name == "EmbedmentNode").ToList();
+            if (doatsuSprings.Count == 0) return;
+
+            // 最上点・最下点のばねを特定（Z座標で判定）
+            var topSpring = doatsuSprings.OrderByDescending(s => s.NodeI.Coord.Z).First();
+            var btmSpring = doatsuSprings.OrderBy(s => s.NodeI.Coord.Z).First();
+
+            double maxDispMm = 0; // 全系列の最大相対変位を追跡
+
+            foreach (LoadCase loadCase in GetSelectedLoadCases())
+            {
+                foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
+                {
+                    foreach (var isLiquefaction in SelectedLiquefactionCases)
+                    {
+                        int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                        if (lastStep < 0) continue;
+
+                        List<double> topRelDisps = [0];
+                        List<double> btmRelDisps = [0];
+                        List<double> totalForcesTop = [0];
+                        List<double> totalForcesBtm = [0];
+
+                        for (int step = 0; step <= lastStep; step++)
+                        {
+                            // 全土圧合力ばねの水平反力合計
+                            double sumFx = 0, sumFy = 0;
+                            foreach (var spring in doatsuSprings)
+                            {
+                                var result = spring.HorizontalSpringResults?
+                                    .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                      && r.LoadCombination?.No == loadCombination.No
+                                                      && r.IsLiquefaction == isLiquefaction
+                                                      && r.Step == step);
+                                if (result?.CumulativeForce != null)
+                                {
+                                    sumFx += result.CumulativeForce.Fxi;
+                                    sumFy += result.CumulativeForce.Fyi;
+                                }
+                            }
+                            // 載荷方向への射影
+                            double radA = loadCase.LoadAngle * Math.PI / 180.0;
+                            double cosA = Math.Cos(radA);
+                            double sinA = Math.Sin(radA);
+                            double totalForce = sumFx * cosA + sumFy * sinA;
+                            totalForcesTop.Add(totalForce);
+                            totalForcesBtm.Add(totalForce);
+
+                            // 最上点の相対変位
+                            var topResult = topSpring.HorizontalSpringResults?
+                                .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                  && r.LoadCombination?.No == loadCombination.No
+                                                  && r.IsLiquefaction == isLiquefaction
+                                                  && r.Step == step);
+                            if (topResult?.CumulativeDisp != null)
+                            {
+                                double dx = topResult.CumulativeDisp.Dxi - topResult.CumulativeDisp.Dxj;
+                                double dy = topResult.CumulativeDisp.Dyi - topResult.CumulativeDisp.Dyj;
+                                topRelDisps.Add(Math.Sqrt(dx * dx + dy * dy) * 1000.0);
+                            }
+                            else topRelDisps.Add(0);
+
+                            // 最下点の相対変位
+                            var btmResult = btmSpring.HorizontalSpringResults?
+                                .FirstOrDefault(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                  && r.LoadCombination?.No == loadCombination.No
+                                                  && r.IsLiquefaction == isLiquefaction
+                                                  && r.Step == step);
+                            if (btmResult?.CumulativeDisp != null)
+                            {
+                                double dx = btmResult.CumulativeDisp.Dxi - btmResult.CumulativeDisp.Dxj;
+                                double dy = btmResult.CumulativeDisp.Dyi - btmResult.CumulativeDisp.Dyj;
+                                btmRelDisps.Add(Math.Sqrt(dx * dx + dy * dy) * 1000.0);
+                            }
+                            else btmRelDisps.Add(0);
+                        }
+
+                        string legend = GetGeneralLegendText(loadCase, loadCombination, isLiquefaction);
+
+                        // 最大相対変位を更新
+                        double seriesMax = Math.Max(topRelDisps.Max(), btmRelDisps.Max());
+                        if (seriesMax > maxDispMm) maxDispMm = seriesMax;
+
+                        var scatterTop = wpfPlot.Plot.Add.Scatter(topRelDisps, totalForcesTop);
+                        scatterTop.LegendText = $"最上点 {legend}";
+
+                        var scatterBtm = wpfPlot.Plot.Add.Scatter(btmRelDisps, totalForcesBtm);
+                        scatterBtm.LegendText = $"最下点 {legend}";
+                        scatterBtm.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+
+                        // 等変形時の理論曲線（loadCase依存、最大変位×1.5まで描画）
+                        var dgb = InputModel.ElementDivision?.DoatsuGoryokuBane;
+                        if (dgb != null && dgb.Items.Count > 0 && dgb.DeltaP > 0 && seriesMax > 0)
+                        {
+                            double radT = loadCase.LoadAngle * Math.PI / 180.0;
+                            double cosT = Math.Cos(radT);
+                            double sinT = Math.Sin(radT);
+                            double theorMaxM = seriesMax * 1.5 / 1000.0; // mm→m、1.5倍
+
+                            var theorDisps = new List<double>();
+                            var theorForces = new List<double>();
+                            int nPoints = 100;
+                            for (int i = 0; i <= nPoints; i++)
+                            {
+                                double d = theorMaxM * i / nPoints; // m単位
+                                double dx = d * cosT;
+                                double dy = d * sinT;
+                                double dgbFx = 0, dgbFy = 0;
+                                foreach (var item in dgb.Items)
+                                {
+                                    double dz = item.ZTop - item.ZBtm;
+                                    dgbFx += item.GetPressure(dx) * dz * Math.Abs(item.Y1 - item.Y2);
+                                    dgbFy += item.GetPressure(dy) * dz * Math.Abs(item.X1 - item.X2);
+                                }
+                                theorDisps.Add(d * 1000.0); // mm
+                                theorForces.Add(dgbFx * cosT + dgbFy * sinT);
+                            }
+                            var scatterTheor = wpfPlot.Plot.Add.Scatter(theorDisps, theorForces);
+                            scatterTheor.LegendText = $"等変形時（理論） {legend}";
+                            scatterTheor.LineStyle.Pattern = ScottPlot.LinePattern.Dotted;
+                            scatterTheor.MarkerSize = 0;
+                        }
+                    }
+                }
+            }
+
+            ConfigurePlot(wpfPlot, crosshair, crosshairPositionText,
+                "土圧合力ばね反力",
+                "相対変位 (mm)", "土圧合力ばね反力合計 (kN)");
+
+            // X軸の最大値を最終ステップの最大変位の1.5倍に制限
+            if (maxDispMm > 0)
+            {
+                wpfPlot.Plot.Axes.SetLimitsX(0, maxDispMm * 1.5);
+            }
+
+            wpfPlot.Plot.ShowLegend();
+            wpfPlot.Refresh();
         }
 
         // M-φ関係描画（任意の杭の任意の要素について軸力に応じたM-φ曲線と最終ステップマーカー）

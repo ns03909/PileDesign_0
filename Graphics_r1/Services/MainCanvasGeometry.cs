@@ -22,6 +22,7 @@ namespace PileDesign.Services
 
         public PathGeometry PathGeoPileNonTopNodes { get; set; } = new();
         public PathGeometry PathGeoPileDividedNonTopNodes { get; set; } = new();
+        public PathGeometry PathGeoEmbedmentNodes { get; set; } = new();
 
         public PathGeometry PathGeoPileElems { get; set; } = new();
         public PathGeometry PathGeoPileDividedElems { get; set; } = new();
@@ -79,6 +80,7 @@ namespace PileDesign.Services
         public PathGeometry PathGeoFoundationNodes { get; set; } = new();
         public PathGeometry PathGeoConnectingNodes { get; set; } = new(); // 接続用節点（杭頭+ΔZc）
         public PathGeometry PathGeoRigidConnections { get; set; } = new(); // 杭頭と接続用節点を結ぶ剛体連結線
+        public PathGeometry PathGeoEmbedmentRigidConnections { get; set; } = new(); // 代表節点と土圧合力節点を結ぶ剛体連結線
         public PathGeometry PathGeoInputNodesPile { get; set; } = new(); // 一般節点（Pile型・青）
         public PathGeometry PathGeoInputNodesGeneral { get; set; } = new(); // 一般節点（General型・オレンジ）
         public PathGeometry PathGeoBeamSections { get; set; } = new(); // 梁要素断面形状
@@ -96,6 +98,7 @@ namespace PileDesign.Services
             PathGeoSelectedElements.Figures.Clear();
             PathGeoPileNonTopNodes.Figures.Clear();
             PathGeoPileDividedNonTopNodes.Figures.Clear();
+            PathGeoEmbedmentNodes.Figures.Clear();
 
             PathGeoPileElems.Figures.Clear();
             PathGeoPileDividedElems.Figures.Clear();
@@ -139,6 +142,7 @@ namespace PileDesign.Services
             PathGeoFoundationNodes.Figures.Clear();
             PathGeoConnectingNodes.Figures.Clear();
             PathGeoRigidConnections.Figures.Clear();
+            PathGeoEmbedmentRigidConnections.Figures.Clear();
             PathGeoInputNodesPile.Figures.Clear();
             PathGeoInputNodesGeneral.Figures.Clear();
             PathGeoBeamSections.Figures.Clear();
@@ -279,6 +283,15 @@ namespace PileDesign.Services
                 StrokeThickness = 0.5,
                 Data = PathGeoPileDividedNonTopNodes,
                 Name = "Node"
+            });
+
+            // 土圧合力節点（根入れ部上下面）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = NikkenBrush.SkyBlue,
+                StrokeThickness = 0.5,
+                Data = PathGeoEmbedmentNodes,
+                Name = "EmbedmentNode"
             });
 
             // 杭要素
@@ -511,6 +524,15 @@ namespace PileDesign.Services
                 StrokeDashArray = [2, 2], // 破線パターン
                 Data = PathGeoRigidConnections,
                 Name = "RigidConnection"
+            });
+
+            // 代表節点と土圧合力節点を結ぶ剛体連結線（緑）
+            canvas.Children.Add(new Path()
+            {
+                Stroke = NikkenBrush.Green,
+                StrokeThickness = 0.5,
+                Data = PathGeoEmbedmentRigidConnections,
+                Name = "EmbedmentRigidConnection"
             });
 
             // 一般節点（Pile型・青）

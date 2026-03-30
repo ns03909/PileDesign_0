@@ -657,6 +657,52 @@ namespace PileDesign.Views
                         double z1 = item.ZBtm;
                         double z2 = item.ZTop;
                         CreateBoxGeometry(x1, x2, y1, y2, z1, z2);
+
+                        // 土圧合力節点を各区間の上面・下面に描画
+                        if (viewModel.IsNodeVisible)
+                        {
+                            double cx = (x1 + x2) * 0.5;
+                            double cy = (y1 + y2) * 0.5;
+                            double r = actualNodeSize * 0.5;
+
+                            // 上面節点（最初の区間のみ）
+                            if (i == 0)
+                            {
+                                Point coordTop = viewModel.CanvasThreeDView.Transformation(new Point3D(cx, cy, z2));
+                                viewModel.CanvasGeometry.PathGeoEmbedmentNodes.AddGeometry(
+                                    new EllipseGeometry(coordTop, r, r));
+                            }
+                            // 下面節点
+                            Point coordBtm = viewModel.CanvasThreeDView.Transformation(new Point3D(cx, cy, z1));
+                            viewModel.CanvasGeometry.PathGeoEmbedmentNodes.AddGeometry(
+                                new EllipseGeometry(coordBtm, r, r));
+                        }
+
+                        // 剛体連結線（代表節点→土圧合力節点）
+                        if (viewModel.IsConnectingNodeVisible)
+                        {
+                            double cx = (x1 + x2) * 0.5;
+                            double cy = (y1 + y2) * 0.5;
+
+                            // 代表節点の位置を取得
+                            var selectedLC = LoadCases.GetLoadCase(
+                                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+                            if (selectedLC != null)
+                            {
+                                Point apCoord = viewModel.CanvasThreeDView.Transformation(
+                                    new Point3D(selectedLC.ForceActionPointX, selectedLC.ForceActionPointY, selectedLC.ForceActionPointAltitude));
+
+                                if (i == 0)
+                                {
+                                    Point topCoord = viewModel.CanvasThreeDView.Transformation(new Point3D(cx, cy, z2));
+                                    viewModel.CanvasGeometry.PathGeoEmbedmentRigidConnections.AddGeometry(
+                                        new LineGeometry { StartPoint = apCoord, EndPoint = topCoord });
+                                }
+                                Point btmCoord = viewModel.CanvasThreeDView.Transformation(new Point3D(cx, cy, z1));
+                                viewModel.CanvasGeometry.PathGeoEmbedmentRigidConnections.AddGeometry(
+                                    new LineGeometry { StartPoint = apCoord, EndPoint = btmCoord });
+                            }
+                        }
                     }
                 }
             }
