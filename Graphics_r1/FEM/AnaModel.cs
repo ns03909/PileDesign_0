@@ -149,7 +149,7 @@ namespace PileDesign.FEM
             // Step 1: トポロジカルソート（Kahn's algorithm）
             // DOF 単位ではなくノード単位で十分（同一ノード内の循環はない）
             var inDegree = new Dictionary<Node, int>();
-            var dependents = new Dictionary<Node, List<Node>>();
+            var dependents = new Dictionary<Node, HashSet<Node>>();
             foreach (var node in Nodes)
             {
                 if (!inDegree.ContainsKey(node)) inDegree[node] = 0;
@@ -162,11 +162,9 @@ namespace PileDesign.FEM
                         if (!inDegree.ContainsKey(master)) inDegree[master] = 0;
                         if (!dependents.ContainsKey(master)) dependents[master] = [];
 
-                        // slave → master の依存関係
-                        inDegree[node] = inDegree.GetValueOrDefault(node, 0);
-                        if (!dependents[master].Contains(node))
+                        // slave → master の依存関係（HashSet で重複チェック O(1)）
+                        if (dependents[master].Add(node))
                         {
-                            dependents[master].Add(node);
                             inDegree[node]++;
                         }
                     }
@@ -195,13 +193,14 @@ namespace PileDesign.FEM
             // 循環検出
             if (topoOrder.Count < Nodes.Count)
             {
-                var missing = Nodes.Where(n => !topoOrder.Contains(n)).Select(n => n.Name);
+                var inOrder = new HashSet<Node>(topoOrder);
+                var missing = Nodes.Where(n => !inOrder.Contains(n)).Select(n => n.Name);
                 System.Diagnostics.Debug.WriteLine(
                     $"[WARNING] Master-Slave 循環検出: {string.Join(", ", missing)}");
                 // 循環ノードも処理するためリストに追加
                 foreach (var node in Nodes)
                 {
-                    if (!topoOrder.Contains(node)) topoOrder.Add(node);
+                    if (!inOrder.Contains(node)) topoOrder.Add(node);
                 }
             }
 

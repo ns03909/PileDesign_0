@@ -3180,13 +3180,9 @@ namespace PileDesign.ViewModels
             // 追加: 杭頭 M-θ を RotationalSpring の Ke に反映
             if (model?.RotationalSprings != null && model.RotationalSprings.Count > 0)
             {
-                // 杭頭回転ばねの最小剛性（小さすぎると発散の原因になる）
-                const double KminRot = 1e1;  // 最小回転剛性 [kNm/rad] - キャプテンパイル等のM-θ曲線を反映できるよう1e3から1e1に低減
-                // const double KBig = 1e12; // 旧: 並進・Rz の剛結用の巨大値
-
+                // M-θ曲線から接線/割線剛性を評価（クランプなし: K/F整合性を保つ）
                 foreach (var pile in InputModel.PileLayoutItems)
                 {
-                    // PileTopRotationalSpring を直接参照（Beams経由のNodeインスタンス一致問題を回避）
                     var rxy = pile.PileTopRotationalSpring;
                     if (rxy == null) continue;
 
@@ -3210,7 +3206,6 @@ namespace PileDesign.ViewModels
                         {
                             kxy = SafeK(rxy.KthetaXY ?? 0.0);
                         }
-                        kxy = Math.Max(kxy, KminRot);
                         kRx = kxy; kRy = kxy;
                     }
                     else
@@ -3221,44 +3216,30 @@ namespace PileDesign.ViewModels
                             double k;
                             if (rxy.Curve != null)
                             {
-                                if (isTan)
-                                {
-                                    k = SafeK(rxy.Curve.EvaluateTangent(dRx));
-                                    k = Math.Min(k, rxy.Kbig);
-                                }
-                                else
-                                {
-                                    k = SafeK(rxy.Curve.EvaluateSecant(dRx));
-                                }
+                                k = isTan
+                                    ? SafeK(rxy.Curve.EvaluateTangent(dRx))
+                                    : SafeK(rxy.Curve.EvaluateSecant(dRx));
                             }
                             else
                             {
                                 k = SafeK(rxy.Ktheta ?? 0.0);
                             }
-                            kRx = Math.Max(k, KminRot);
-                            kRy = KminRot;
+                            kRx = k;
                         }
                         else if (rxy.Dof == RotationalDof.Ry)
                         {
                             double k;
                             if (rxy.Curve != null)
                             {
-                                if (isTan)
-                                {
-                                    k = SafeK(rxy.Curve.EvaluateTangent(dRy));
-                                    k = Math.Min(k, rxy.Kbig);
-                                }
-                                else
-                                {
-                                    k = SafeK(rxy.Curve.EvaluateSecant(dRy));
-                                }
+                                k = isTan
+                                    ? SafeK(rxy.Curve.EvaluateTangent(dRy))
+                                    : SafeK(rxy.Curve.EvaluateSecant(dRy));
                             }
                             else
                             {
                                 k = SafeK(rxy.Ktheta ?? 0.0);
                             }
-                            kRy = Math.Max(k, KminRot);
-                            kRx = KminRot;
+                            kRy = k;
                         }
                     }
 

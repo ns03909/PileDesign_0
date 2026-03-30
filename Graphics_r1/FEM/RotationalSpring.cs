@@ -64,8 +64,10 @@ namespace PileDesign.FEM
             }
             else if (t >= Points[^1].Theta)
             {
-                result = SafeSlope(Points[^2], Points[^1]);
-                region = "above_last";
+                // EvaluateMoment は θ > θ_last で M = M_last（定数）を返すため、
+                // 接線剛性もゼロでなければ K/F 不整合になる
+                result = 0.0;
+                region = "above_last_flat";
             }
             else
             {
