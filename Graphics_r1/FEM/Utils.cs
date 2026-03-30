@@ -209,21 +209,38 @@ namespace PileDesign.FEM
         //    return t;
         //}
 
-        // eqリスト作成
-        public static List<int> GetEquationNumbers(Node nodeI, Node nodeJ)/*, AnaModel anaModel)*/
+        // eqリスト作成（ResolvedDofMap 対応: primary eq を返す）
+        public static List<int> GetEquationNumbers(Node nodeI, Node nodeJ)
         {
             ArgumentNullException.ThrowIfNull(nodeI);
             ArgumentNullException.ThrowIfNull(nodeJ);
 
             var eq = new List<int>(12);
-            Node[] masterNodesI = nodeI.MasterNodes;
-            Node[] masterNodesJ = nodeJ.MasterNodes;
-
-            for (int index = 0; index < 6; index++)
-                eq.Add(masterNodesI[index]?.EquationNumber[index] ?? nodeI.EquationNumber[index]);
-            for (int index = 0; index < 6; index++)
-                eq.Add(masterNodesJ[index]?.EquationNumber[index] ?? nodeJ.EquationNumber[index]);
+            AddNodePrimaryEqs(eq, nodeI);
+            AddNodePrimaryEqs(eq, nodeJ);
             return eq;
+        }
+
+        /// <summary>
+        /// ノードの各 DOF の primary equation number を追加。
+        /// ResolvedDofMap がある場合は先頭 term の eq、なければ従来ロジック。
+        /// </summary>
+        private static void AddNodePrimaryEqs(List<int> eq, Node node)
+        {
+            if (node.ResolvedDofMap != null)
+            {
+                for (int d = 0; d < 6; d++)
+                {
+                    var terms = node.ResolvedDofMap[d];
+                    eq.Add(terms != null && terms.Length > 0 ? terms[0].Eq : node.EquationNumber[d]);
+                }
+            }
+            else
+            {
+                // フォールバック（従来ロジック）
+                for (int d = 0; d < 6; d++)
+                    eq.Add(node.MasterNodes[d]?.EquationNumber[d] ?? node.EquationNumber[d]);
+            }
         }
 
         // ヤング率からせん断剛性を取得
@@ -250,7 +267,12 @@ namespace PileDesign.FEM
             return y[^1]; // 範囲外は最後の値
         }
 
-        // 剛性マトリクス加算（スレイブ回転成分含む）
+        /// <summary>
+        /// 剛性マトリクス加算（ResolvedDofMap scatter 方式）。
+        /// 各要素DOFの ResolvedDofMap terms を展開し、
+        /// K[ti.Eq, tj.Eq] += ti.Coeff * ke[i,j] * tj.Coeff として分配する。
+        /// これは T^T × K × T の一般化であり、異なるDOFが異なるマスターを持つ場合も正しく動作する。
+        /// </summary>
         public static void AddStiffnessToGlobal(
             Matrix<double> matrixGlobalStiffness,
             Matrix<double> localStiffness,
@@ -260,7 +282,57 @@ namespace PileDesign.FEM
             Node nodeI,
             Node nodeJ)
         {
-            // マスター・スレーブ関係がある場合のみ変換行列を構築（大半のノードは恒等）
+            // ResolvedDofMap が利用可能か確認
+            bool useResolvedMap = nodeI.ResolvedDofMap != null && nodeJ.ResolvedDofMap != null;
+
+            if (!useResolvedMap)
+            {
+                // フォールバック: 従来の TransferMatrix 方式
+                AddStiffnessToGlobalLegacy(matrixGlobalStiffness, localStiffness, eq,
+                    isRowFree, isColFree, nodeI, nodeJ);
+                return;
+            }
+
+            // 12 DOF の ResolvedDofMap を結合
+            DofTerm[][] maps = new DofTerm[12][];
+            for (int d = 0; d < 6; d++) maps[d] = nodeI.ResolvedDofMap[d] ?? [];
+            for (int d = 0; d < 6; d++) maps[6 + d] = nodeJ.ResolvedDofMap[d] ?? [];
+
+            // Scatter: ke[i,j] を全 term ペアに分配
+            for (int i = 0; i < 12; i++)
+            {
+                var termsI = maps[i];
+                if (termsI.Length == 0) continue;
+
+                for (int j = 0; j < 12; j++)
+                {
+                    double kval = localStiffness[i, j];
+                    if (kval == 0.0) continue;
+
+                    var termsJ = maps[j];
+                    if (termsJ.Length == 0) continue;
+
+                    foreach (var ti in termsI)
+                    {
+                        if ((isRowFree && ti.Eq < 0) || (!isRowFree && ti.Eq >= 0)) continue;
+                        foreach (var tj in termsJ)
+                        {
+                            if ((isColFree && tj.Eq < 0) || (!isColFree && tj.Eq >= 0)) continue;
+                            matrixGlobalStiffness[ti.Eq, tj.Eq] += ti.Coeff * kval * tj.Coeff;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>従来の TransferMatrix 方式（フォールバック用）</summary>
+        private static void AddStiffnessToGlobalLegacy(
+            Matrix<double> matrixGlobalStiffness,
+            Matrix<double> localStiffness,
+            List<int> eq,
+            bool isRowFree, bool isColFree,
+            Node nodeI, Node nodeJ)
+        {
             Matrix<double> transferedLocalStiffness;
             if (nodeI.HasMasterSlave || nodeJ.HasMasterSlave)
             {
@@ -277,19 +349,15 @@ namespace PileDesign.FEM
             {
                 transferedLocalStiffness = localStiffness;
             }
-            // eqリストを配列に変換
 
-            for (int i_row = 0; i_row < 12; i_row++) // 行
+            for (int i_row = 0; i_row < 12; i_row++)
             {
                 if ((isRowFree && eq[i_row] < 0) || (!isRowFree && eq[i_row] >= 0))
-                    continue; // 負値の場合はスキップ
-
-                for (int i_col = 0; i_col < 12; i_col++) // 列
+                    continue;
+                for (int i_col = 0; i_col < 12; i_col++)
                 {
-
                     if ((isColFree && eq[i_col] < 0) || (!isColFree && eq[i_col] >= 0))
-                        continue; // 負値の場合はスキップ
-
+                        continue;
                     matrixGlobalStiffness[eq[i_row], eq[i_col]] += transferedLocalStiffness[i_row, i_col];
                 }
             }

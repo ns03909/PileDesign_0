@@ -388,9 +388,9 @@ namespace PileDesign.FEM
                         PileBodyNo = pile.PileBodyNo,
                         TieUx = true,
                         TieUy = true,
-                        TieUz = true,
+                        TieUz = false,  // Uz は master-slave チェーン（PileNode→CapNode→AP）で厳密拘束
                         TieRz = true,
-                        Kbig = 1e8  // CapNode-PileNode間のペナルティ剛性（1e6では変位差が生じるため増加）
+                        Kbig = 1e8  // CapNode-PileNode間のペナルティ剛性（Ux/Uy用、Uzはmaster-slaveで不要）
                     };
                     result.RotationalSpring = rxy;
                     prevPileNode = pileNode;
@@ -1095,24 +1095,24 @@ namespace PileDesign.FEM
             var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
             if (pileHeadNode == null) return;
 
-            // ActionPoint（RigidBodies[0] のマスター）を直接マスターにする
             var actionPoint = RigidBodies[0].MasterNode;
 
-            // Uz は master-slave にしない。RotationalSpring のペナルティ（Kbig）で
-            // CapNode.Uz に追従させる。CapNode.Uz は RigidLink beam 経由で
-            // AP.Uz + AP.Rx×ΔY - AP.Ry×ΔX に自然に追従するため、
-            // PileNode-0.Uz にも AP 回転の効果が反映される。
-            // master-slave にすると PileNode.Uz = AP.Uz（回転なし）に固定され、
-            // CapNode.Uz（回転あり）とペナルティが矛盾する。
-            pileHeadNode.SetBoundary(new Boundary(true, true, false, false, false, true));
-            pileHeadNode.SetMasterNode(0, actionPoint); // Ux
-            pileHeadNode.SetMasterNode(1, actionPoint); // Uy
-            pileHeadNode.SetMasterNode(5, actionPoint); // Rz
+            // Uz を CapNode の slave にする。ResolvedDofMap のチェーン解決により
+            // PileNode.Uz → CapNode.Uz → AP.Uz + AP.Rx×ΔY - AP.Ry×ΔX と解決される。
+            // Rx, Ry は free（M-θ 用）。
+            pileHeadNode.SetBoundary(new Boundary(true, true, true, false, false, true));
+            pileHeadNode.SetMasterNode(0, actionPoint); // Ux → AP
+            pileHeadNode.SetMasterNode(1, actionPoint); // Uy → AP
+            pileHeadNode.SetMasterNode(2, capNode);     // Uz → CapNode（チェーン→AP）
+            pileHeadNode.SetMasterNode(5, actionPoint); // Rz → AP
+            // Rx, Ry は free（M-θ 用）
 
-            var arm = pileHeadNode.Coord - actionPoint.Coord;
-            pileHeadNode.SetArmVector(0, arm);
-            pileHeadNode.SetArmVector(1, arm);
-            pileHeadNode.SetArmVector(2, arm);
+            var armToAP = pileHeadNode.Coord - actionPoint.Coord;
+            pileHeadNode.SetArmVector(0, armToAP);
+            pileHeadNode.SetArmVector(1, armToAP);
+            // Uz の arm は CapNode→AP 間の距離（PileNode と CapNode は co-located なので同一）
+            var armCapToAP = capNode.Coord - actionPoint.Coord;
+            pileHeadNode.SetArmVector(2, armCapToAP);
             pileHeadNode.SetTransferMatrix();
         }
 

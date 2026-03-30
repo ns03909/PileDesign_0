@@ -9,6 +9,18 @@ using System.Windows.Media.Media3D;
 
 namespace PileDesign.FEM
 {
+    /// <summary>
+    /// チェーン解決済みDOF写像の1項。
+    /// u_slave = Σ(Coeff × u[Eq]) として独立DOFへの線形写像を表現。
+    /// </summary>
+    public struct DofTerm
+    {
+        public int Eq;       // 独立DOFの方程式番号
+        public double Coeff; // 係数
+
+        public DofTerm(int eq, double coeff) { Eq = eq; Coeff = coeff; }
+    }
+
     public class Node : BaseModel
     {
         public string Name { get; set; }
@@ -61,6 +73,15 @@ namespace PileDesign.FEM
 
         [JsonIgnore]
         public Matrix<double> TransferMatrix { get; set; } = Matrix<double>.Build.DenseIdentity(6);
+
+        /// <summary>
+        /// チェーン解決済みDOF写像。[DOF index 0-5][term index]
+        /// 各DOFを最終的な独立DOF群への線形写像として表現する。
+        /// AnaModel コンストラクタの ResolveConstraintChains() で計算される。
+        /// null の場合は未解決（従来の MasterNodes ロジックにフォールバック）。
+        /// </summary>
+        [JsonIgnore]
+        public DofTerm[][] ResolvedDofMap { get; set; }
 
         public System.Collections.Generic.List<NodeResult> NodeResults { get; set; } = [];
 

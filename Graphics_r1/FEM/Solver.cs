@@ -77,46 +77,65 @@ namespace PileDesign.FEM
             // 節点変位を結果用オブジェクトにセット
             foreach (var node in anaModel.Nodes)
             {
-                //(Node[] masterNodes, Vector3D armVector) = anaModel.GetMasterNodesArmVector(node);
-
                 double[] ddisp = new double[6];
 
-                // クロス項の定義: (クロス先index, arm成分, 符号)
-                (int crossIdx, Func<Vector3S, double> arm, double sign)[][] crossTerms =
-                [
-                    [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)], // 0: Ux
-                    [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)], // 1: Uy
-                    [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)], // 2: Uz
-                    [], [], [], // 3: Rx // 4: Ry // 5: Rz
-                ];
-
-                for (int i = 0; i < 6; i++)
+                if (node.ResolvedDofMap != null)
                 {
-                    int e_num = node.EquationNumber[i];
-                    if (node.MasterNodes[i] != null)
+                    // ResolvedDofMap 方式: 各DOFの全termsから変位を計算
+                    // u_node_d = Σ(coeff_i × Δu[eq_i])
+                    for (int i = 0; i < 6; i++)
                     {
-                        int eq = node.MasterNodes[i].EquationNumber[i];
-                        ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
-
-                        // クロス項の加算（剛体運動学: Uz += Rx×ΔY - Ry×ΔX 等）
-                        // クロス先DOFもslaveの場合のみ追加（TransferMatrixと整合）
-                        foreach (var (crossIdx, arm, sign) in crossTerms[i])
+                        var terms = node.ResolvedDofMap[i];
+                        if (terms == null || terms.Length == 0)
                         {
-                            if (node.MasterNodes[crossIdx] != null)
+                            ddisp[i] = 0;
+                            continue;
+                        }
+                        double disp = 0;
+                        foreach (var term in terms)
+                        {
+                            if (term.Eq >= 0)
+                                disp += term.Coeff * incrementalDispVector[term.Eq];
+                        }
+                        ddisp[i] = disp;
+                    }
+                }
+                else
+                {
+                    // フォールバック: 従来の MasterNodes + crossTerms ロジック
+                    (int crossIdx, Func<Vector3S, double> arm, double sign)[][] crossTerms =
+                    [
+                        [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)], // 0: Ux
+                        [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)], // 1: Uy
+                        [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)], // 2: Uz
+                        [], [], [], // 3: Rx // 4: Ry // 5: Rz
+                    ];
+
+                    for (int i = 0; i < 6; i++)
+                    {
+                        int e_num = node.EquationNumber[i];
+                        if (node.MasterNodes[i] != null)
+                        {
+                            int eq = node.MasterNodes[i].EquationNumber[i];
+                            ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
+                            foreach (var (crossIdx, arm, sign) in crossTerms[i])
                             {
-                                int eqCross = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
-                                if (eqCross >= 0)
-                                    ddisp[i] += incrementalDispVector[eqCross] * arm(node.SlaveArm) * sign;
+                                if (node.MasterNodes[crossIdx] != null)
+                                {
+                                    int eqCross = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
+                                    if (eqCross >= 0)
+                                        ddisp[i] += incrementalDispVector[eqCross] * arm(node.SlaveArm) * sign;
+                                }
                             }
                         }
-                    }
-                    else if (e_num >= 0)
-                    {
-                        ddisp[i] = incrementalDispVector[e_num];
-                    }
-                    else
-                    {
-                        ddisp[i] = 0;
+                        else if (e_num >= 0)
+                        {
+                            ddisp[i] = incrementalDispVector[e_num];
+                        }
+                        else
+                        {
+                            ddisp[i] = 0;
+                        }
                     }
                 }
 

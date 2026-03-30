@@ -109,6 +109,9 @@ namespace PileDesign.FEM
             VectorF = Vector<double>.Build.Sparse(countFree, 0.0); // 荷重ベクトル
             VectorDF = Vector<double>.Build.Sparse(countFree, 0.0); // 荷重増分ベクトル
             VectorD = Vector<double>.Build.Sparse(countFree, 0.0); // 変位ベクトル
+
+            // Master-Slave チェーン解決: 各ノードの ResolvedDofMap を計算
+            ResolveConstraintChains();
         }
 
         // コンストラクタ
@@ -120,6 +123,166 @@ namespace PileDesign.FEM
         {
             foreach (var rigidBody in RigidBodies)
                 rigidBody.SetSlaveNodeRelations();
+        }
+
+        /// <summary>
+        /// Master-Slave チェーンを解決し、各ノードの ResolvedDofMap を計算する。
+        /// ABAQUS/Code_Aster 方式: DOF 単位の依存グラフをトポロジカルソートし、
+        /// 各 slave DOF を最終的な独立 DOF 群への線形写像として表現する。
+        /// </summary>
+        private void ResolveConstraintChains()
+        {
+            // 剛体運動学の cross-term 定義:
+            // Ux(0) += Ry(4)×ΔZ - Rz(5)×ΔY
+            // Uy(1) += Rz(5)×ΔX - Rx(3)×ΔZ
+            // Uz(2) += Rx(3)×ΔY - Ry(4)×ΔX
+            (int crossDof, int armIdx, double sign)[][] crossTermDefs =
+            [
+                [(4, 2, 1.0), (5, 1, -1.0)],   // DOF 0 (Ux): Ry×ΔZ, -Rz×ΔY
+                [(5, 0, 1.0), (3, 2, -1.0)],   // DOF 1 (Uy): Rz×ΔX, -Rx×ΔZ
+                [(3, 1, 1.0), (4, 0, -1.0)],   // DOF 2 (Uz): Rx×ΔY, -Ry×ΔX
+                [],                              // DOF 3 (Rx): 回転にcross-termなし
+                [],                              // DOF 4 (Ry)
+                [],                              // DOF 5 (Rz)
+            ];
+
+            // Step 1: トポロジカルソート（Kahn's algorithm）
+            // DOF 単位ではなくノード単位で十分（同一ノード内の循環はない）
+            var inDegree = new Dictionary<Node, int>();
+            var dependents = new Dictionary<Node, List<Node>>();
+            foreach (var node in Nodes)
+            {
+                if (!inDegree.ContainsKey(node)) inDegree[node] = 0;
+                if (!dependents.ContainsKey(node)) dependents[node] = [];
+
+                foreach (var master in node.MasterNodes)
+                {
+                    if (master != null && master != node)
+                    {
+                        if (!inDegree.ContainsKey(master)) inDegree[master] = 0;
+                        if (!dependents.ContainsKey(master)) dependents[master] = [];
+
+                        // slave → master の依存関係
+                        inDegree[node] = inDegree.GetValueOrDefault(node, 0);
+                        if (!dependents[master].Contains(node))
+                        {
+                            dependents[master].Add(node);
+                            inDegree[node]++;
+                        }
+                    }
+                }
+            }
+
+            // BFS でトポロジカル順序を構築（マスターが先）
+            var queue = new Queue<Node>();
+            foreach (var (node, deg) in inDegree)
+            {
+                if (deg == 0) queue.Enqueue(node);
+            }
+
+            var topoOrder = new List<Node>();
+            while (queue.Count > 0)
+            {
+                var node = queue.Dequeue();
+                topoOrder.Add(node);
+                foreach (var dep in dependents.GetValueOrDefault(node, []))
+                {
+                    inDegree[dep]--;
+                    if (inDegree[dep] == 0) queue.Enqueue(dep);
+                }
+            }
+
+            // 循環検出
+            if (topoOrder.Count < Nodes.Count)
+            {
+                var missing = Nodes.Where(n => !topoOrder.Contains(n)).Select(n => n.Name);
+                System.Diagnostics.Debug.WriteLine(
+                    $"[WARNING] Master-Slave 循環検出: {string.Join(", ", missing)}");
+                // 循環ノードも処理するためリストに追加
+                foreach (var node in Nodes)
+                {
+                    if (!topoOrder.Contains(node)) topoOrder.Add(node);
+                }
+            }
+
+            // Step 2: トポロジカル順序で ResolvedDofMap を計算
+            // マスターが先に処理されるので、slave 処理時に master の map は解決済み
+            foreach (var node in topoOrder)
+            {
+                node.ResolvedDofMap = new DofTerm[6][];
+                double[] armComponents = [node.SlaveArm.X, node.SlaveArm.Y, node.SlaveArm.Z];
+
+                for (int d = 0; d < 6; d++)
+                {
+                    var master = node.MasterNodes[d];
+                    if (master == null)
+                    {
+                        // Free DOF or boundary
+                        int eq = node.EquationNumber[d];
+                        node.ResolvedDofMap[d] = eq >= 0
+                            ? [new DofTerm(eq, 1.0)]
+                            : [];  // boundary (固定)
+                        continue;
+                    }
+
+                    // Slave DOF: master の ResolvedDofMap[d] を取得
+                    var terms = new List<DofTerm>();
+
+                    // Primary: master の同一 DOF の写像
+                    if (master.ResolvedDofMap?[d] != null)
+                    {
+                        foreach (var t in master.ResolvedDofMap[d])
+                            terms.Add(new DofTerm(t.Eq, t.Coeff));
+                    }
+
+                    // Cross-terms: 剛体運動学（並進 DOF のみ）
+                    foreach (var (crossDof, armIdx, sign) in crossTermDefs[d])
+                    {
+                        double armVal = armComponents[armIdx];
+                        if (Math.Abs(armVal) < 1e-15) continue;
+
+                        // master の crossDof の写像を取得
+                        DofTerm[] crossMap = master.ResolvedDofMap?[crossDof];
+                        if (crossMap == null || crossMap.Length == 0) continue;
+
+                        foreach (var ct in crossMap)
+                        {
+                            terms.Add(new DofTerm(ct.Eq, ct.Coeff * armVal * sign));
+                        }
+                    }
+
+                    // 同一 eq の terms をマージ（係数加算）
+                    node.ResolvedDofMap[d] = MergeTerms(terms);
+                }
+            }
+        }
+
+        /// <summary>
+        /// DofTerm リストから同一方程式番号の項をマージし、
+        /// 係数がゼロに近い項を除去して配列化する。
+        /// </summary>
+        private static DofTerm[] MergeTerms(List<DofTerm> terms)
+        {
+            if (terms.Count == 0) return [];
+
+            // 方程式番号でグループ化して係数を合計
+            var merged = new Dictionary<int, double>();
+            foreach (var t in terms)
+            {
+                merged[t.Eq] = merged.GetValueOrDefault(t.Eq, 0.0) + t.Coeff;
+            }
+
+            // 係数が実質ゼロの項を除去
+            var result = new List<DofTerm>();
+            foreach (var (eq, coeff) in merged)
+            {
+                if (Math.Abs(coeff) > 1e-15)
+                    result.Add(new DofTerm(eq, coeff));
+            }
+
+            // primary term（coeff ≈ 1.0）を先頭に配置
+            result.Sort((a, b) => Math.Abs(b.Coeff).CompareTo(Math.Abs(a.Coeff)));
+            return result.ToArray();
         }
 
         // 全体剛性マトリクスの作成
@@ -495,102 +658,76 @@ namespace PileDesign.FEM
             // NaNDiagnostics.CheckVector(VectorT, "VectorT (post-SetT)", this);
         }
 
-        // 梁要素の内力を全体ベクトルに組み立て（要素座標系→全体座標系変換＋マスター節点変換を含む）
+        // 梁要素の内力を全体ベクトルに組み立て（ResolvedDofMap scatter 方式）
         private void AssembleBeamForceToGlobal(Beam beam)
         {
             // 要素内力（要素座標系）
             Vector<double> f_local = beam.CumulativeForce.GetVector();
 
-            // 要素座標系→全体座標系への変換: f_global = T_coord^T * f_local（キャッシュ使用）
+            // 要素座標系→全体座標系への変換: f_global = T_coord^T * f_local
             Matrix<double> coordTransform = beam.GetCachedCoordTransform();
             Vector<double> f_global = coordTransform.Transpose() * f_local;
 
-            // スレーブ節点のマスター変換（TransferMatrix）を適用（恒等の場合はスキップ）
-            Vector<double> f_transformed;
-            if (beam.NodeI.HasMasterSlave || beam.NodeJ.HasMasterSlave)
-            {
-                var slaveTransform = Matrix<double>.Build.DenseIdentity(12);
-                for (int r = 0; r < 6; r++)
-                    for (int c = 0; c < 6; c++)
-                    {
-                        slaveTransform[r, c] = beam.NodeI.TransferMatrix[r, c];
-                        slaveTransform[r + 6, c + 6] = beam.NodeJ.TransferMatrix[r, c];
-                    }
-                f_transformed = slaveTransform.Transpose() * f_global;
-            }
-            else
-            {
-                f_transformed = f_global;
-            }
-
-            // 方程式番号リストを取得（マスター節点を考慮）
-            var eq = Utils.GetEquationNumbers(beam.NodeI, beam.NodeJ);
-
-            // NodeI の内力を VectorT に加算（f_transformed[0:6]）
-            for (int i = 0; i < 6; i++)
-            {
-                int eqNum = eq[i];
-                if (eqNum >= 0) // 自由度のみ（固定DOFは負値）
-                {
-                    VectorT[eqNum] += f_transformed[i];
-                }
-            }
-
-            // NodeJ の内力を VectorT に加算（f_transformed[6:12]）
-            for (int i = 0; i < 6; i++)
-            {
-                int eqNum = eq[6 + i];
-                if (eqNum >= 0)
-                {
-                    VectorT[eqNum] += f_transformed[6 + i];
-                }
-            }
+            // ResolvedDofMap scatter 方式で力を分配
+            // TransferMatrix^T × f の代わりに、各DOFの ResolvedDofMap terms で scatter
+            ScatterForceToGlobal(f_global, beam.NodeI, beam.NodeJ);
         }
 
-        // ばね要素の内力を全体ベクトルに組み立て（マスター節点変換を含む）
+        // ばね要素の内力を全体ベクトルに組み立て（ResolvedDofMap scatter 方式）
         private void AssembleSpringForceToGlobal(Node nodeI, Node nodeJ, BeamForce cumulativeForce)
         {
-            // ばね内力（既に全体座標系）
             Vector<double> f = cumulativeForce.GetVector();
+            ScatterForceToGlobal(f, nodeI, nodeJ);
+        }
 
-            // スレーブ節点のマスター変換（TransferMatrix）を適用（恒等の場合はスキップ）
-            Vector<double> f_transformed;
-            if (nodeI.HasMasterSlave || nodeJ.HasMasterSlave)
+        /// <summary>
+        /// 12成分の力ベクトルを ResolvedDofMap で全体内力ベクトルに分配する。
+        /// TransferMatrix^T × f の一般化。各DOFの全termsに coeff を乗じて分配。
+        /// </summary>
+        private void ScatterForceToGlobal(Vector<double> f, Node nodeI, Node nodeJ)
+        {
+            bool useResolvedMap = nodeI?.ResolvedDofMap != null && nodeJ?.ResolvedDofMap != null;
+            if (useResolvedMap)
             {
-                var slaveTransform = Matrix<double>.Build.DenseIdentity(12);
-                for (int r = 0; r < 6; r++)
-                    for (int c = 0; c < 6; c++)
+                for (int i = 0; i < 12; i++)
+                {
+                    double fval = f[i];
+                    if (fval == 0.0) continue;
+                    int dof = i % 6;
+                    var node = i < 6 ? nodeI : nodeJ;
+                    var terms = node.ResolvedDofMap[dof];
+                    if (terms == null) continue;
+                    foreach (var term in terms)
                     {
-                        slaveTransform[r, c] = nodeI.TransferMatrix[r, c];
-                        slaveTransform[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
+                        if (term.Eq >= 0)
+                            VectorT[term.Eq] += term.Coeff * fval;
                     }
-                f_transformed = slaveTransform.Transpose() * f;
+                }
             }
             else
             {
-                f_transformed = f;
-            }
-
-            // 方程式番号リストを取得（マスター節点を考慮）
-            var eq = Utils.GetEquationNumbers(nodeI, nodeJ);
-
-            // NodeI の内力を VectorT に加算（f_transformed[0:6]）
-            for (int i = 0; i < 6; i++)
-            {
-                int eqNum = eq[i];
-                if (eqNum >= 0)
+                // フォールバック: 従来の TransferMatrix^T × f + GetEquationNumbers
+                Vector<double> f_transformed;
+                if (nodeI.HasMasterSlave || nodeJ.HasMasterSlave)
                 {
-                    VectorT[eqNum] += f_transformed[i];
+                    var slaveTransform = Matrix<double>.Build.DenseIdentity(12);
+                    for (int r = 0; r < 6; r++)
+                        for (int c = 0; c < 6; c++)
+                        {
+                            slaveTransform[r, c] = nodeI.TransferMatrix[r, c];
+                            slaveTransform[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
+                        }
+                    f_transformed = slaveTransform.Transpose() * f;
                 }
-            }
-
-            // NodeJ の内力を VectorT に加算（f_transformed[6:12]）
-            for (int i = 0; i < 6; i++)
-            {
-                int eqNum = eq[6 + i];
-                if (eqNum >= 0)
+                else
                 {
-                    VectorT[eqNum] += f_transformed[6 + i];
+                    f_transformed = f;
+                }
+                var eq = Utils.GetEquationNumbers(nodeI, nodeJ);
+                for (int i = 0; i < 12; i++)
+                {
+                    if (eq[i] >= 0)
+                        VectorT[eq[i]] += f_transformed[i];
                 }
             }
         }
@@ -679,6 +816,130 @@ namespace PileDesign.FEM
                     if (Math.Abs(VectorT[i]) > 1e-10) tNonZero++;
                 }
                 log.AppendLine($"F≠0のDOF数: {fNonZero}, T≠0のDOF数: {tNonZero}, 全自由度: {CountFree}");
+
+                // --- 残差トップDOFの内力分解（要素別寄与） ---
+                log.AppendLine("\n--- 内力分解 (残差トップ5 DOF) ---");
+                foreach (var (eq, r, f, t) in residuals.Take(5))
+                {
+                    if (Math.Abs(r) < 1e-6) continue;
+
+                    // DOF特定
+                    string nodeDof2 = "?";
+                    Node targetNode = null;
+                    int targetDof = -1;
+                    foreach (var node in Nodes)
+                    {
+                        for (int d2 = 0; d2 < 6; d2++)
+                        {
+                            if (node.EquationNumber[d2] == eq)
+                            {
+                                nodeDof2 = $"{node.Name}:{dofNames[d2]}";
+                                targetNode = node;
+                                targetDof = d2;
+                                break;
+                            }
+                        }
+                        if (targetNode != null) break;
+                    }
+
+                    log.AppendLine($"\n  [{nodeDof2}] eq={eq}, R={r:E4}");
+
+                    // Beam寄与: 各beamのT^T×f_localの当該eq成分を再計算
+                    double beamTotal = 0;
+                    foreach (var beam in Beams)
+                    {
+                        var eqList = Utils.GetEquationNumbers(beam.NodeI, beam.NodeJ);
+                        bool involves = false;
+                        for (int k = 0; k < 12; k++) { if (eqList[k] == eq) { involves = true; break; } }
+                        if (!involves) continue;
+
+                        Vector<double> f_local = beam.CumulativeForce.GetVector();
+                        Matrix<double> coordT = beam.GetCachedCoordTransform();
+                        Vector<double> f_global = coordT.Transpose() * f_local;
+
+                        Vector<double> f_trans;
+                        if (beam.NodeI.HasMasterSlave || beam.NodeJ.HasMasterSlave)
+                        {
+                            var slT = Matrix<double>.Build.DenseIdentity(12);
+                            for (int rr = 0; rr < 6; rr++)
+                                for (int cc = 0; cc < 6; cc++)
+                                {
+                                    slT[rr, cc] = beam.NodeI.TransferMatrix[rr, cc];
+                                    slT[rr + 6, cc + 6] = beam.NodeJ.TransferMatrix[rr, cc];
+                                }
+                            f_trans = slT.Transpose() * f_global;
+                        }
+                        else
+                        {
+                            f_trans = f_global;
+                        }
+
+                        double contrib = 0;
+                        for (int k = 0; k < 12; k++)
+                        {
+                            if (eqList[k] == eq) contrib += f_trans[k];
+                        }
+                        if (Math.Abs(contrib) > 1e-10)
+                        {
+                            log.AppendLine($"    Beam[{beam.Name}]: T→{contrib:E4}");
+                            beamTotal += contrib;
+                        }
+                    }
+
+                    // RotationalSpring寄与
+                    double rsTotal = 0;
+                    if (RotationalSprings != null)
+                    {
+                        foreach (var rs in RotationalSprings)
+                        {
+                            var rsF = rs.CumulativeForce.GetVector();
+                            var rsEq = new List<int>(12);
+                            for (int d2 = 0; d2 < 6; d2++)
+                            {
+                                var m = rs.NodeI.MasterNodes[d2];
+                                rsEq.Add(m != null ? m.EquationNumber[d2] : rs.NodeI.EquationNumber[d2]);
+                            }
+                            for (int d2 = 0; d2 < 6; d2++)
+                            {
+                                var m = rs.NodeJ.MasterNodes[d2];
+                                rsEq.Add(m != null ? m.EquationNumber[d2] : rs.NodeJ.EquationNumber[d2]);
+                            }
+
+                            double contrib = 0;
+                            for (int k = 0; k < 12; k++)
+                            {
+                                if (rsEq[k] == eq) contrib += rsF[k];
+                            }
+                            if (Math.Abs(contrib) > 1e-10)
+                            {
+                                // M-θ状態も出力
+                                double dRx = (rs.NodeJ.CumulativeDisp?.Rx ?? 0) - (rs.NodeI.CumulativeDisp?.Rx ?? 0);
+                                double dRy = (rs.NodeJ.CumulativeDisp?.Ry ?? 0) - (rs.NodeI.CumulativeDisp?.Ry ?? 0);
+                                double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
+                                double kSec = rs.KeSec?[10, 10] ?? 0;  // NodeJ Ry diagonal
+                                double kTan = rs.KeTan?[10, 10] ?? 0;
+                                log.AppendLine($"    RotSpring[{rs.Name}]: T→{contrib:E4}  θ={theta:E4} dRx={dRx:E4} dRy={dRy:E4} kSec={kSec:E3} kTan={kTan:E3}");
+                                rsTotal += contrib;
+                            }
+                        }
+                    }
+
+                    // HorizontalSoilSpring寄与
+                    double hsTotal = 0;
+                    foreach (var hs in HorizontalSoilSprings)
+                    {
+                        var hsF = hs.CumulativeForce.GetVector();
+                        var hsEq = Utils.GetEquationNumbers(hs.NodeI, hs.NodeJ);
+                        double contrib = 0;
+                        for (int k = 0; k < 12; k++)
+                        {
+                            if (hsEq[k] == eq) contrib += hsF[k];
+                        }
+                        if (Math.Abs(contrib) > 1e-10) hsTotal += contrib;
+                    }
+
+                    log.AppendLine($"    合計: Beam={beamTotal:E4}, RotSpring={rsTotal:E4}, SoilSpring={hsTotal:E4}, Sum={beamTotal + rsTotal + hsTotal:E4} vs T={t:E4}");
+                }
 
                 log.AppendLine("=== FindR 診断終了 ===");
                 System.Diagnostics.Debug.WriteLine(log.ToString());

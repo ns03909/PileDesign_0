@@ -2182,7 +2182,7 @@ namespace PileDesign.ViewModels
             //                                              ↕ RotationalSpring
             //                                          PileNode-0 (常に自由)
             //
-            // PileNode-0 の並進は RotationalSpring のペナルティ剛性 (Kbig=1e8) で CapNode に追従。
+            // PileNode-0 の並進は RotationalSpring のペナルティ剛性 (Kbig=1e10) で CapNode に追従。
             // PileNode-0 の回転は RotationalSpring の M-θ曲線 or 高回転剛性で決まる。
             // 非線形ON/OFFの切替は SetupNonlinearMThetaForLoadCase で
             // RotationalSpring の回転剛性を変更することで行う。
@@ -2654,36 +2654,53 @@ namespace PileDesign.ViewModels
             {
                 double[] ddisp = new double[6];
 
-                // クロス項の定義: (クロス先index, arm成分, 符号)
-                (int crossIdx, Func<Vector3S, double> arm, double sign)[][] crossTerms =
-                [
-                    [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)], // 0: Ux
-                    [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)], // 1: Uy
-                    [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)], // 2: Uz
-                    [], [], [], // 3: Rx // 4: Ry // 5: Rz
-                ];
-
-                for (int i = 0; i < 6; i++)
+                if (node.ResolvedDofMap != null)
                 {
-                    int e_num = node.EquationNumber[i];
-                    if (node.MasterNodes[i] != null)
+                    // ResolvedDofMap 方式
+                    for (int i = 0; i < 6; i++)
                     {
-                        int eq = node.MasterNodes[i].EquationNumber[i];
-                        ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
-
-                        foreach (var (crossIdx, arm, sign) in crossTerms[i])
+                        var terms = node.ResolvedDofMap[i];
+                        if (terms == null || terms.Length == 0) { ddisp[i] = 0; continue; }
+                        double disp = 0;
+                        foreach (var term in terms)
                         {
-                            if (node.MasterNodes[crossIdx] != null)
+                            if (term.Eq >= 0)
+                                disp += term.Coeff * incrementalDispVector[term.Eq];
+                        }
+                        ddisp[i] = disp;
+                    }
+                }
+                else
+                {
+                    // フォールバック: 従来ロジック
+                    (int crossIdx, Func<Vector3S, double> arm, double sign)[][] crossTerms =
+                    [
+                        [(4, v => v.Z, 1.0), (5, v => v.Y, -1.0)],
+                        [(5, v => v.X, 1.0), (3, v => v.Z, -1.0)],
+                        [(3, v => v.Y, 1.0), (4, v => v.X, -1.0)],
+                        [], [], [],
+                    ];
+                    for (int i = 0; i < 6; i++)
+                    {
+                        int e_num = node.EquationNumber[i];
+                        if (node.MasterNodes[i] != null)
+                        {
+                            int eq = node.MasterNodes[i].EquationNumber[i];
+                            ddisp[i] = eq < 0 ? 0 : incrementalDispVector[eq];
+                            foreach (var (crossIdx, arm, sign) in crossTerms[i])
                             {
-                                int crossEq = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
-                                double armVal = arm(node.SlaveArm);
-                                ddisp[i] += (crossEq >= 0 ? incrementalDispVector[crossEq] : 0.0) * armVal * sign;
+                                if (node.MasterNodes[crossIdx] != null)
+                                {
+                                    int crossEq = node.MasterNodes[crossIdx].EquationNumber[crossIdx];
+                                    double armVal = arm(node.SlaveArm);
+                                    ddisp[i] += (crossEq >= 0 ? incrementalDispVector[crossEq] : 0.0) * armVal * sign;
+                                }
                             }
                         }
-                    }
-                    else
-                    {
-                        ddisp[i] = e_num < 0 ? 0 : incrementalDispVector[e_num];
+                        else
+                        {
+                            ddisp[i] = e_num < 0 ? 0 : incrementalDispVector[e_num];
+                        }
                     }
                 }
 
@@ -3249,6 +3266,9 @@ namespace PileDesign.ViewModels
                     // PileNode-0 は CapNode の master-slave として拘束されるべきだが、
                     // Boundaryの設定タイミングにより拘束が不完全な場合がある。
                     // そのため常にペナルティ剛性を適用して安全にする。
+                    // Uz はペナルティのみで CapNode.Uz に追従させるため、
+                    // Beam 軸剛性 EA/L (~2.7E+8) に対して十分大きい値が必要。
+                    // Kbig=1e8 では EA/L の36%しかなく収束が100反復以上必要だった。
                     const double KBig = 1e8;
                     double kx = rxy.TieUx ? KBig : 0.0;
                     double ky = rxy.TieUy ? KBig : 0.0;

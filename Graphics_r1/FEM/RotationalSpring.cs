@@ -270,17 +270,52 @@ namespace PileDesign.FEM
         {
             var ke = (isTan ? KeTan : KeSec)
                 ?? throw new InvalidOperationException("SetKe が未実行です。");
-            var eq = ResolveEquationNumbers();
-            for (int i = 0; i < 12; i++)
+
+            // ResolvedDofMap が利用可能なら scatter 方式を使用
+            bool useResolvedMap = NodeI?.ResolvedDofMap != null && NodeJ?.ResolvedDofMap != null;
+            if (useResolvedMap)
             {
-                int eqRow = eq[i];
-                if ((isRowFree && eqRow < 0) || (!isRowFree && eqRow >= 0)) continue;
-                for (int j = 0; j < 12; j++)
+                DofTerm[][] maps = new DofTerm[12][];
+                for (int d = 0; d < 6; d++) maps[d] = NodeI.ResolvedDofMap[d] ?? [];
+                for (int d = 0; d < 6; d++) maps[6 + d] = NodeJ.ResolvedDofMap[d] ?? [];
+
+                for (int i = 0; i < 12; i++)
                 {
-                    int eqCol = eq[j];
-                    if ((isColFree && eqCol < 0) || (!isColFree && eqCol >= 0)) continue;
-                    double val = ke[i, j];
-                    if (val != 0.0) K[eqRow, eqCol] += val;
+                    var termsI = maps[i];
+                    if (termsI.Length == 0) continue;
+                    for (int j = 0; j < 12; j++)
+                    {
+                        double val = ke[i, j];
+                        if (val == 0.0) continue;
+                        var termsJ = maps[j];
+                        if (termsJ.Length == 0) continue;
+                        foreach (var ti in termsI)
+                        {
+                            if ((isRowFree && ti.Eq < 0) || (!isRowFree && ti.Eq >= 0)) continue;
+                            foreach (var tj in termsJ)
+                            {
+                                if ((isColFree && tj.Eq < 0) || (!isColFree && tj.Eq >= 0)) continue;
+                                K[ti.Eq, tj.Eq] += ti.Coeff * val * tj.Coeff;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // フォールバック: 従来の直接アセンブリ
+                var eq = ResolveEquationNumbers();
+                for (int i = 0; i < 12; i++)
+                {
+                    int eqRow = eq[i];
+                    if ((isRowFree && eqRow < 0) || (!isRowFree && eqRow >= 0)) continue;
+                    for (int j = 0; j < 12; j++)
+                    {
+                        int eqCol = eq[j];
+                        if ((isColFree && eqCol < 0) || (!isColFree && eqCol >= 0)) continue;
+                        double val = ke[i, j];
+                        if (val != 0.0) K[eqRow, eqCol] += val;
+                    }
                 }
             }
 
@@ -342,13 +377,36 @@ namespace PileDesign.FEM
         public void AssembleInternalForceToGlobal(Vector<double> vectorT)
         {
             var f = CumulativeForce.GetVector();
-            var eq = ResolveEquationNumbers();
-            for (int i = 0; i < 12; i++)
-            {
-                if (eq[i] >= 0)
-                    vectorT[eq[i]] += f[i];
-            }
 
+            // ResolvedDofMap が利用可能なら scatter 方式
+            bool useResolvedMap = NodeI?.ResolvedDofMap != null && NodeJ?.ResolvedDofMap != null;
+            if (useResolvedMap)
+            {
+                for (int i = 0; i < 12; i++)
+                {
+                    double fval = f[i];
+                    if (fval == 0.0) continue;
+                    int dof = i % 6;
+                    var node = i < 6 ? NodeI : NodeJ;
+                    var terms = node.ResolvedDofMap[dof];
+                    if (terms == null) continue;
+                    foreach (var term in terms)
+                    {
+                        if (term.Eq >= 0)
+                            vectorT[term.Eq] += term.Coeff * fval;
+                    }
+                }
+            }
+            else
+            {
+                // フォールバック
+                var eq = ResolveEquationNumbers();
+                for (int i = 0; i < 12; i++)
+                {
+                    if (eq[i] >= 0)
+                        vectorT[eq[i]] += f[i];
+                }
+            }
         }
 
         /// <summary>
