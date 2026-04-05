@@ -1165,8 +1165,8 @@ namespace PileDesign.ViewModels
             // 1回だけ Undo スナップショットを作る（コストの高い DeepCopy を一度に）
             _undoManager.SaveState(SoilPiles.Select(p => p.DeepCopy()).ToList());
 
-            // 元リストを軽量に取得（ローカル List にして編集）
-            var original = SelectedZDataItems.ToList();
+            // 以前の自動分割で追加されたノード（IsChangeable=true）を除去してから再分割
+            var original = SelectedZDataItems.Where(z => !z.IsChangeable).ToList();
             var merged = new List<PileZDataItem>(original.Count * 2);
 
             for (int i = 0; i < original.Count - 1; i++)
@@ -1260,7 +1260,8 @@ namespace PileDesign.ViewModels
             for (int pileIdx = 0; pileIdx < SoilPiles.Count; pileIdx++)
             {
                 var soilPile = SoilPiles[pileIdx];
-                var original = soilPile.ZDataItems.ToList();
+                // 以前の自動分割で追加されたノード（IsChangeable=true）を除去してから再分割
+                var original = soilPile.ZDataItems.Where(z => !z.IsChangeable).ToList();
                 var merged = new List<PileZDataItem>(original.Count * 2);
 
                 for (int i = 0; i < original.Count - 1; i++)
@@ -1318,6 +1319,12 @@ namespace PileDesign.ViewModels
             _suppressUndoSave = false;
 
             OnZDataItemsChanged();
+
+            // 根入れ部がある場合は根入れ部も自動分割
+            if (SoilEmbedment != null && EmbedmentZsOriginalCollection != null && EmbedmentZsOriginalCollection.Count >= 2)
+            {
+                AutoEmbedmentZs();
+            }
         }
 
         // 自動番号づけメソッド

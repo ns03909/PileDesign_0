@@ -93,10 +93,12 @@ namespace PileDesign.FEM
                 step = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
             }
 
+            // 名前ベースで比較（参照比較ではなく、Beam.GetBeamResultと同じ方式）
             foreach (NodeResult nodeResult in NodeResults)
             {
-                if (loadCase == nodeResult.LoadCase &&
-                    loadCombination == nodeResult.LoadCombination &&
+                bool loadCaseMatch = loadCase?.LoadName == nodeResult.LoadCase?.LoadName;
+                bool loadCombMatch = loadCombination?.Name == nodeResult.LoadCombination?.Name;
+                if (loadCaseMatch && loadCombMatch &&
                     isLiquefaction == nodeResult.IsLiquefaction &&
                     step == nodeResult.Step)
                 {
@@ -108,8 +110,9 @@ namespace PileDesign.FEM
             int fallbackStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, !isLiquefaction);
             foreach (NodeResult nodeResult in NodeResults)
             {
-                if (loadCase == nodeResult.LoadCase &&
-                    loadCombination == nodeResult.LoadCombination &&
+                bool loadCaseMatch = loadCase?.LoadName == nodeResult.LoadCase?.LoadName;
+                bool loadCombMatch = loadCombination?.Name == nodeResult.LoadCombination?.Name;
+                if (loadCaseMatch && loadCombMatch &&
                     !isLiquefaction == nodeResult.IsLiquefaction &&
                     fallbackStep == nodeResult.Step)
                 {

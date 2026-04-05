@@ -716,13 +716,13 @@ namespace PileDesign.Models.InputData
                 double xi = 1;
                 double rOnB = 10_000;
 
+                double upper = zDataTop - zTop; // 杭頭基準深さ
+                double lower = zDataBtm - zTop; // 杭頭基準深さ
+
                 foreach (PileBodySegment pileBodySegment in PileBodyInput.PileBodySegments)
                 {
                     double segmentTop = -pileBodySegment.SegmentDepth + pileBodySegment.SegmentLength;
                     double segmentBtm = -pileBodySegment.SegmentDepth;
-
-                    double upper = zDataTop - zTop; // 杭頭基準深さ
-                    double lower = zDataBtm - zTop; // 杭頭基準深さ
 
                     if (segmentBtm - epsilon <= lower && upper <= segmentTop + epsilon)
                     {
@@ -731,10 +731,31 @@ namespace PileDesign.Models.InputData
                     }
                 }
 
-                if (Math.Abs(b) < epsilon)
+                // フォールバック: マッチしない場合は最も近い区間の杭径を使用
+                if (Math.Abs(b) < epsilon && PileBodyInput.PileBodySegments.Count > 0)
                 {
+                    double midDepth = (upper + lower) * 0.5;
+                    PileBodySegment closest = null;
+                    double closestDist = double.MaxValue;
+                    foreach (var seg in PileBodyInput.PileBodySegments)
+                    {
+                        double segMid = (-seg.SegmentDepth + seg.SegmentLength * 0.5);
+                        double dist = Math.Abs(midDepth - segMid);
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            closest = seg;
+                        }
+                    }
+                    if (closest?.PileSection != null)
+                    {
+                        b = closest.PileSection.PileDiameter / 1000.0;
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})の杭区間マッチなし→最近接区間(b={b:F4}m)を使用");
+                    }
                 }
 
+                bool groundFound = false;
                 foreach (GroundLayerInput groundLayer in GroundLayers)
                 {
                     var groundInput = GroundInput;
@@ -746,7 +767,6 @@ namespace PileDesign.Models.InputData
                         cohesive = groundLayer.Cohesive;
                         nValue = groundLayer.NValue;
                         gamma = groundLayer.Density;
-                        //phi = Math.Min(Math.Sqrt(20 * groundLayer.NValue) + 15, 40); // 大崎式
 
                         stressTop = GetEffectiveStress(groundInput, zDataTop);
                         stressBtm = GetEffectiveStress(groundInput, zDataBtm);
@@ -755,7 +775,69 @@ namespace PileDesign.Models.InputData
                         soilType = groundLayer.GranularityClass;
                         e0 = groundLayer.Es;
                         name = groundLayer.Name;
+                        groundFound = true;
                         break;
+                    }
+                }
+
+                // フォールバック: マッチしない場合は入力地盤層から直接検索
+                if (!groundFound && GroundInput?.GroundLayers != null)
+                {
+                    foreach (GroundLayerInput gl in GroundInput.GroundLayers)
+                    {
+                        double top = gl.LayerThickness + gl.BottomAltitude;
+                        double bottom = gl.BottomAltitude;
+
+                        if (bottom - epsilon <= zDataBtm && zDataTop <= top + epsilon)
+                        {
+                            cohesive = gl.Cohesive;
+                            nValue = gl.NValue;
+                            gamma = gl.Density;
+
+                            stressTop = GetEffectiveStress(GroundInput, zDataTop);
+                            stressBtm = GetEffectiveStress(GroundInput, zDataBtm);
+
+                            phi = GroundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
+                            soilType = gl.GranularityClass;
+                            e0 = gl.Es;
+                            name = gl.Name;
+                            groundFound = true;
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})のSoilPile.GroundLayersマッチなし→入力地盤層'{name}'(top={top:F3},btm={bottom:F3})を使用");
+                            break;
+                        }
+                    }
+                }
+
+                // 最終フォールバック: 要素の中点に最も近い入力地盤層を使用
+                if (!groundFound && GroundInput?.GroundLayers != null && GroundInput.GroundLayers.Count > 0)
+                {
+                    double midZ = (zDataTop + zDataBtm) * 0.5;
+                    GroundLayerInput closest = null;
+                    double closestDist = double.MaxValue;
+                    foreach (var gl in GroundInput.GroundLayers)
+                    {
+                        double layerMid = gl.BottomAltitude + gl.LayerThickness * 0.5;
+                        double dist = Math.Abs(midZ - layerMid);
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            closest = gl;
+                        }
+                    }
+                    if (closest != null)
+                    {
+                        cohesive = closest.Cohesive;
+                        nValue = closest.NValue;
+                        gamma = closest.Density;
+                        stressTop = GetEffectiveStress(GroundInput, zDataTop);
+                        stressBtm = GetEffectiveStress(GroundInput, zDataBtm);
+                        phi = GroundInput.GetFrictionAngle(nValue, (stressTop + stressBtm) * 0.5);
+                        soilType = closest.GranularityClass;
+                        e0 = closest.Es;
+                        name = closest.Name;
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[SetHorizontalSoilReaction] WARNING: 要素{i}(Z={zDataTop:F3}~{zDataBtm:F3})の地盤層マッチなし→最近接地盤層'{name}'を使用");
                     }
                 }
 

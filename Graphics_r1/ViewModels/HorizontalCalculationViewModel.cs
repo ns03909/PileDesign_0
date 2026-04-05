@@ -166,6 +166,20 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _skipIteration, value);
         }
 
+        // 杭軸力モード: InputModelに委譲（グラフ・テーブルからも参照可能にするため）
+        public bool UseAnalysisAxialForce
+        {
+            get => InputModel?.UseAnalysisAxialForce ?? false;
+            set
+            {
+                if (InputModel != null && InputModel.UseAnalysisAxialForce != value)
+                {
+                    InputModel.UseAnalysisAxialForce = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         // 収束安定化手法のenum型（排他的選択）
         public enum ConvergenceMethod
         {
@@ -247,9 +261,51 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 基礎梁要素が存在するか（剛床連結の選択可否）
-        public bool HasFoundationBeamElements =>
-            InputModel.FoundationBeamInput?.Beams?.Count > 0;
+        // 基礎梁要素が存在し、使用する材料・断面が定義済みか（剛床連結の選択可否）
+        public bool HasFoundationBeamElements
+        {
+            get
+            {
+                var fbInput = InputModel.FoundationBeamInput;
+                if (fbInput?.Beams == null || fbInput.Beams.Count == 0) return false;
+
+                // 全梁要素の材料No・断面Noに対応する定義が存在するかチェック
+                var materialNos = fbInput.Materials?.Select(m => m.No).ToHashSet() ?? new HashSet<int>();
+                var sectionNos = fbInput.Sections?.Select(s => s.No).ToHashSet() ?? new HashSet<int>();
+
+                foreach (var beam in fbInput.Beams)
+                {
+                    if (!materialNos.Contains(beam.MaterialNo) || !sectionNos.Contains(beam.SectionNo))
+                        return false;
+                }
+
+                return true;
+            }
+        }
+
+        public string FoundationBeamValidationMessage
+        {
+            get
+            {
+                var fbInput = InputModel.FoundationBeamInput;
+                if (fbInput?.Beams == null || fbInput.Beams.Count == 0)
+                    return "基礎梁要素が定義されていません。";
+
+                var materialNos = fbInput.Materials?.Select(m => m.No).ToHashSet() ?? new HashSet<int>();
+                var sectionNos = fbInput.Sections?.Select(s => s.No).ToHashSet() ?? new HashSet<int>();
+
+                var missingMats = fbInput.Beams.Where(b => !materialNos.Contains(b.MaterialNo)).Select(b => b.MaterialNo).Distinct().ToList();
+                var missingSecs = fbInput.Beams.Where(b => !sectionNos.Contains(b.SectionNo)).Select(b => b.SectionNo).Distinct().ToList();
+
+                var msgs = new List<string>();
+                if (missingMats.Count > 0)
+                    msgs.Add($"材料No {string.Join(",", missingMats)} が未定義です。");
+                if (missingSecs.Count > 0)
+                    msgs.Add($"断面No {string.Join(",", missingSecs)} が未定義です。");
+
+                return msgs.Count > 0 ? string.Join("\n", msgs) : "";
+            }
+        }
 
         public AnalysisModelling AnalysisModelling { get; set; }
 
@@ -1066,8 +1122,12 @@ namespace PileDesign.ViewModels
                         new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
                         new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
                         new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
-                    var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN);
-                    curve = (middle.Phis, middle.Moments);
+                    // 単位変換: kN → N（断面計算はN単位を期待）
+                    var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * 1000.0);
+                    // 単位変換: φ [1/mm] → [1/m], M [N·mm] → [kN·m]
+                    var phisConverted = middle.Phis.Select(p => p * 1000.0).ToList();
+                    var msConverted = middle.Moments.Select(m => m * 1e-6).ToList();
+                    curve = ((IList<double>)phisConverted, (IList<double>)msConverted);
                 }
                 else
                 {
@@ -1569,6 +1629,12 @@ namespace PileDesign.ViewModels
                             int n_iteration = 1;
                             UpdateSoilDisp();
                             UpdateF(targetModel);
+
+                            // 入力値＋応力解析結果モード: 前ステップのFxiを入力軸力に加算
+                            if (UseAnalysisAxialForce && step > 0)
+                            {
+                                UpdateAxialForceFromAnalysis(targetModel);
+                            }
 
                             // 現ステップ軸力での M–φ 再解決は、杭非線形ONのときのみ
                             if (loadCase.IsPileNonLinear)
@@ -2346,51 +2412,55 @@ namespace PileDesign.ViewModels
         private void SetupMPhiByCurrentAxialForMiddleBeam(AnaModel model)
         {
             if (model == null) return;
-            // 各杭について
+
+            // SoilPileをPileBodyNoでキャッシュ（初期M-φ設定と同じマッチ済みセグメントを使用）
+            var soilPileByPileBodyNo = new Dictionary<int, SoilPile>();
+            if (InputModel.ElementDivision?.SoilPiles != null)
+            {
+                foreach (var sp in InputModel.ElementDivision.SoilPiles)
+                {
+                    soilPileByPileBodyNo.TryAdd(sp.PileBodyNo, sp);
+                }
+            }
+
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                // 現ステップの解析軸力（UpdateF で積み上がっている）
-                // 注: AxialForce は既に N 単位で格納されている
-                double axialN = pile.AxialForce; // 既にN単位
+                // 現ステップの解析軸力（N → kN）
+                double axialN_kN = pile.AxialForce / 1000.0;
 
-                // セクションは PileBody から取得（セグメントごとに同一 PileSection 系なら同じ曲線が返る）
-                int pbIndex = pile.PileBodyNo - 1;
-                if (pbIndex < 0 || InputModel.PileBodies == null || pbIndex >= InputModel.PileBodies.Count) continue;
-                var pileBody = InputModel.PileBodies[pbIndex];
+                int pb = pile.PileBodyNo;
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;
 
-                // この杭に属する全梁（AnalysisModelling 時に PileLayoutDataItem.Beams に格納済み）
                 foreach (var beam in pile.Beams)
                 {
-                    // RigidLink等の非杭ビームはスキップ（SegmentIndex未設定 = 杭要素ではない）
                     if (beam.SegmentIndex is not int seg) continue;
-                    if (seg < 0 || seg >= pileBody.PileBodySegments.Count) continue;
+                    // SoilPile.PileBodySegments はマッチ済み（要素ごとに1エントリ）
+                    if (seg < 0 || seg >= soilPile.PileBodySegments.Count) continue;
 
-                    var pileSection = pileBody.PileBodySegments[seg].PileSection;
-                    if (pileSection == null) continue;
+                    var section = soilPile.PileBodySegments[seg].PileSection;
+                    if (section == null) continue;
 
-                    //var curve = TryCallMPhiRelationship(pileSection, axialN);
-                    //if (curve is null) continue;
-
-                    //// 合成 M–φ を梁へセット（EvaluateEIeff → KTan/KSec に反映される）
-                    //beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
-                    var curve = TryCallMPhiRelationship(pileSection, axialN);
-                    if (curve is null)
+                    // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
+                    (IList<double> Phis, IList<double> Moments)? curve;
+                    if (!beam.IsPileTop
+                        && section.PileBodyType == "場所打ち鋼管コンクリート杭"
+                        && section.PileSectionType == "鋼管コンクリート部")
                     {
-                        continue;
+                        var sprcSection = new InsituSteelPipeReinforcedConcreteSection(
+                            new InsituSteelPipe(section.PipeGrade, section.PipeDia, section.PipeTs, section.CorrosionDepth),
+                            new InsituConcrete(section.ConcreteOutDia, section.ConcreteGsi, section.ConcreteFc),
+                            new MainBars(section.MainBarDr, section.MainBarNum, section.MainBarSpec, section.MainBarSize));
+                        var middle = sprcSection.GetMPhiRelationshipForMiddle(axialN_kN * 1000.0);
+                        var phisConverted = middle.Phis.Select(p => p * 1000.0).ToList();
+                        var msConverted = middle.Moments.Select(m => m * 1e-6).ToList();
+                        curve = ((IList<double>)phisConverted, (IList<double>)msConverted);
                     }
-                    // ログ: 点数と先頭数点を出力
-                    try
+                    else
                     {
-                        var phisArr = curve.Value.Phis.ToArray();
-                        var msArr = curve.Value.Moments.ToArray();
-                        int cnt = phisArr.Length;
-                        var first5 = string.Join(", ", phisArr.Take(5).Select(x => x.ToString("E6")));
-                        var first5m = string.Join(", ", msArr.Take(5).Select(x => x.ToString("E6")));
-                    }
-                    catch (Exception ex)
-                    {
+                        curve = TryCallMPhiRelationship(section, axialN_kN);
                     }
 
+                    if (curve is null) continue;
                     beam.SetResolvedCombinedMPhi(curve.Value.Phis, curve.Value.Moments);
                 }
             }
@@ -2418,6 +2488,34 @@ namespace PileDesign.ViewModels
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
                 pileLayoutItem.AxialForce += pileLayoutItem.AxialForceIncrement; // 杭軸力の更新 [kN]
+            }
+        }
+
+        /// <summary>
+        /// 入力値＋応力解析結果モード: 各杭の杭頭Beam要素のFxi（解析結果）を入力軸力に加算する
+        /// 入力値は圧縮が正、解析値Fxiは圧縮が負なので、符号を反転して加算
+        /// </summary>
+        private void UpdateAxialForceFromAnalysis(AnaModel targetModel)
+        {
+            if (targetModel.Beams == null || InputModel.PileLayoutItems == null) return;
+
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                // この杭の杭頭Beam要素を検索
+                var topBeam = targetModel.Beams.FirstOrDefault(b =>
+                    b.IsPileTop &&
+                    b.NodeI != null &&
+                    Math.Abs(b.NodeI.Coord.X - pile.Point3D.X) < 0.01 &&
+                    Math.Abs(b.NodeI.Coord.Y - pile.Point3D.Y) < 0.01);
+
+                if (topBeam?.CumulativeForce == null) continue;
+
+                // Fxi: ローカル座標系の軸力（圧縮が負）
+                double fxiAnalysis = topBeam.CumulativeForce.Fxi; // kN（ローカル軸方向）
+
+                // 入力軸力（圧縮が正）に解析結果（圧縮が負）を加算 → 符号反転
+                // AxialForce = 入力値による軸力 + (-Fxi_analysis)
+                pile.AxialForce -= fxiAnalysis; // 圧縮増 → Fxi負 → -(-) = 加算
             }
         }
 
@@ -3143,6 +3241,7 @@ namespace PileDesign.ViewModels
                 var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
                 var isFrontPile = pileLayoutItem.IsFrontPiles[iLC];
 
+                int reactionCount = horizontalReactions.Count;
                 for (int i = 0; i < pileLayoutItem.PileNodes.Count; i++)
                 {
                     var pileNode = pileLayoutItem.PileNodes[i];
@@ -3154,14 +3253,14 @@ namespace PileDesign.ViewModels
                         : 0.0;
 
                     double k = 0.0;
-                    if (i > 0)
+                    if (i > 0 && i - 1 < reactionCount)
                     {
                         bool isTop = false;
                         k += isTan
                             ? horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile)
                             : horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
                     }
-                    if (i < pileLayoutItem.PileNodes.Count - 1)
+                    if (i < pileLayoutItem.PileNodes.Count - 1 && i < reactionCount)
                     {
                         bool isTop = true;
                         k += isTan
@@ -3170,6 +3269,18 @@ namespace PileDesign.ViewModels
                     }
 
                     k = SafeK(k);
+
+                    // 最下端節点でk=0の場合、隣接要素の剛性を使用（剛性マトリクス特異防止）
+                    if (k <= 0.0 && i > 0 && i - 2 >= 0 && i - 2 < reactionCount)
+                    {
+                        k = isTan
+                            ? horizontalReactions[i - 2].GetSoilTangentReactionCoefficient(abs, false, isFrontPile)
+                            : horizontalReactions[i - 2].GetSoilSecantReactionCoefficient(abs, false, isFrontPile);
+                        k = SafeK(k);
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[UpdateSoilSprings] WARNING: Pile-{pileLayoutItem.PileNo} node {i} k=0 → 隣接要素の剛性{k:E3}を代用");
+                    }
+
                     pileLayoutItem.HorizontalSoilSprings[i].SetKe(k, k, 0, 0, 0, 0, isTan);
 
                     springMin = Math.Min(springMin, k);

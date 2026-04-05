@@ -1176,6 +1176,12 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 通り上の基礎梁節点を選択
+            SelectFoundationNodesOnGrid(c => c.X, coord, tolerance);
+
+            // 両端が通り上にある基礎梁要素を選択
+            SelectFoundationBeamsOnGrid(c => c.X, coord, tolerance);
+
             RequestUpdateWindow();
         }
 
@@ -1205,7 +1211,50 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 通り上の基礎梁節点を選択
+            SelectFoundationNodesOnGrid(c => c.Y, coord, tolerance);
+
+            // 両端が通り上にある基礎梁要素を選択
+            SelectFoundationBeamsOnGrid(c => c.Y, coord, tolerance);
+
             RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 通り上の基礎梁節点（FoundationNode）を選択
+        /// </summary>
+        private void SelectFoundationNodesOnGrid(Func<(double X, double Y, double Z), double> getCoord, double coord, double tolerance)
+        {
+            var fbNodes = CurrentInputModel.FoundationBeamInput?.Nodes;
+            if (fbNodes == null) return;
+
+            foreach (var fnode in fbNodes)
+            {
+                if (Math.Abs(getCoord((fnode.X, fnode.Y, 0)) - coord) <= tolerance)
+                    fnode.IsSelected = true;
+            }
+        }
+
+        /// <summary>
+        /// 両端が通り上にある基礎梁要素を選択
+        /// </summary>
+        private void SelectFoundationBeamsOnGrid(Func<(double X, double Y, double Z), double> getCoord, double coord, double tolerance)
+        {
+            var fbBeams = CurrentInputModel.FoundationBeamInput?.Beams;
+            if (fbBeams == null) return;
+
+            foreach (var beam in fbBeams)
+            {
+                var coordsI = CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
+                var coordsJ = CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
+                if (!coordsI.HasValue || !coordsJ.HasValue) continue;
+
+                bool iOnGrid = Math.Abs(getCoord(coordsI.Value) - coord) <= tolerance;
+                bool jOnGrid = Math.Abs(getCoord(coordsJ.Value) - coord) <= tolerance;
+
+                if (iOnGrid && jOnGrid)
+                    beam.IsSelected = true;
+            }
         }
 
         /// <summary>
@@ -1915,7 +1964,6 @@ namespace PileDesign.ViewModels
             TrySaveUndoSnapshotSafely();
 
             var beams = CurrentInputModel.FoundationBeamInput.Beams;
-            int addedCount = 0;
             const double tolerance = 1e-3; // 座標一致の許容誤差 (m)
 
             // 既存ビームのペアセット（重複チェック用）
@@ -1924,12 +1972,13 @@ namespace PileDesign.ViewModels
             {
                 if (b.NodeI_Type == NodeReferenceType.PileLayout && b.NodeJ_Type == NodeReferenceType.PileLayout)
                 {
-                    var pair1 = (b.NodeI_Id, b.NodeJ_Id);
-                    var pair2 = (b.NodeJ_Id, b.NodeI_Id);
-                    existingPairs.Add(pair1);
-                    existingPairs.Add(pair2);
+                    existingPairs.Add((b.NodeI_Id, b.NodeJ_Id));
+                    existingPairs.Add((b.NodeJ_Id, b.NodeI_Id));
                 }
             }
+
+            // 新規要素を一時リストに蓄積（ObservableCollection への逐次Add を回避）
+            var newBeams = new List<FoundationBeamElement>();
 
             // X座標が同一の杭をグルーピング → Y座標昇順でソートし隣接杭間にビーム生成
             var xGroups = piles
@@ -1946,9 +1995,8 @@ namespace PileDesign.ViewModels
                     var pair = (p1.UniqueId, p2.UniqueId);
                     if (existingPairs.Contains(pair)) continue;
 
-                    beams.Add(new FoundationBeamElement
+                    newBeams.Add(new FoundationBeamElement
                     {
-                        No = beams.Count + 1,
                         NodeI_Type = NodeReferenceType.PileLayout,
                         NodeI_Id = p1.UniqueId,
                         NodeJ_Type = NodeReferenceType.PileLayout,
@@ -1959,7 +2007,6 @@ namespace PileDesign.ViewModels
                     });
                     existingPairs.Add(pair);
                     existingPairs.Add((p2.UniqueId, p1.UniqueId));
-                    addedCount++;
                 }
             }
 
@@ -1978,9 +2025,8 @@ namespace PileDesign.ViewModels
                     var pair = (p1.UniqueId, p2.UniqueId);
                     if (existingPairs.Contains(pair)) continue;
 
-                    beams.Add(new FoundationBeamElement
+                    newBeams.Add(new FoundationBeamElement
                     {
-                        No = beams.Count + 1,
                         NodeI_Type = NodeReferenceType.PileLayout,
                         NodeI_Id = p1.UniqueId,
                         NodeJ_Type = NodeReferenceType.PileLayout,
@@ -1991,9 +2037,14 @@ namespace PileDesign.ViewModels
                     });
                     existingPairs.Add(pair);
                     existingPairs.Add((p2.UniqueId, p1.UniqueId));
-                    addedCount++;
                 }
             }
+
+            int addedCount = newBeams.Count;
+
+            // 既存 + 新規を結合して一括セット（CollectionChanged を1回だけ発火）
+            var allBeams = new ObservableCollection<FoundationBeamElement>(beams.Concat(newBeams));
+            CurrentInputModel.FoundationBeamInput.Beams = allBeams;
 
             RenumberFoundationBeams();
             RequestUpdateWindow();
@@ -2229,6 +2280,7 @@ namespace PileDesign.ViewModels
             //IsAnalysisResultVisible = true;
             IsBubbleVisible = true;
             IsArrowVisible = true;
+            DisplacementDiagramRatio = 0.01;
         }
 
         // 自動前方杭設定の処理メソッド
@@ -2699,6 +2751,7 @@ namespace PileDesign.ViewModels
             if (OpenTableWindowCommand is ToolkitRelayCommand tc) tc.NotifyCanExecuteChanged();
             OpenGraphWindowCommand?.NotifyCanExecuteChanged();
             OpenLogWindowCommand?.NotifyCanExecuteChanged();
+            OpenEvaluationWindowCommand?.NotifyCanExecuteChanged();
         }
 
         [RelayCommand(CanExecute = nameof(CanOpenGraphWindow))]
@@ -2762,7 +2815,8 @@ namespace PileDesign.ViewModels
                 result.LoadCase,
                 result.LoadCombination,
                 result.IsLiquefaction,
-                result.Step);
+                result.Step,
+                CurrentInputModel);
 
             OnPropertyChanged(nameof(LatestResultTables));
             RaiseResultCommandsCanExecute();
@@ -2775,6 +2829,8 @@ namespace PileDesign.ViewModels
             try
             {
                 var vm = new TableWindowViewModel();
+                vm.AllSeismicLoadCases = CurrentInputModel.LoadCasesInput.AllSeismicLoadCases;
+                vm.AnaModel = CurrentModel;
                 vm.LoadTables(LatestResultTables);
                 var w = new Views.TableWindow { DataContext = vm };
                 w.Show();
@@ -2807,6 +2863,16 @@ namespace PileDesign.ViewModels
         }
 
         private bool CanOpenLogWindow() => LatestAnalysisLogs != null && LatestAnalysisLogs.Count > 0;
+
+        [RelayCommand(CanExecute = nameof(CanOpenEvaluationWindow))]
+        private void OpenEvaluationWindow()
+        {
+            var vm = new EvaluationWindowViewModel(this);
+            var w = new Views.EvaluationWindow { DataContext = vm };
+            w.Show();
+        }
+
+        private bool CanOpenEvaluationWindow() => IsHorizontalAnalysisDone && CurrentModel != null;
 
         // 解析結果テーブル再生成
         public void RefreshResultTablesFromLastStep()
@@ -2853,7 +2919,8 @@ namespace PileDesign.ViewModels
                     stepResult.LoadCase,
                     stepResult.LoadCombination,
                     stepResult.IsLiquefaction,
-                    stepResult.Step);
+                    stepResult.Step,
+                    CurrentInputModel);
 
                 allTables.AddRange(tables);
             }
@@ -3527,7 +3594,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenGroundWindow()
         {
-            OpenDialogWindowWithUndo<GroundLayerViewModel, GroundWindow>();
+            OpenDialogWindowWithUndo<GroundLayerViewModel, GroundWindow>(() =>
+            {
+                // 地盤変更後は要素分割を再生成（地層境界の節点追加が必要）
+                IsElementSplit = false;
+                RequestGenerateSoilPiles();
+            });
         }
 
         // 基礎梁ウィンドウを開くメソッド
@@ -3541,7 +3613,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void OpenPileBodyWindow()
         {
-            OpenDialogWindowWithUndo<PileBodyViewModel, PileBodyWindow>();
+            OpenDialogWindowWithUndo<PileBodyViewModel, PileBodyWindow>(() =>
+            {
+                // 杭体変更後は要素分割を再生成（地層境界の節点追加が必要）
+                IsElementSplit = false;
+                RequestGenerateSoilPiles();
+            });
         }
 
         // 軸力チェック
@@ -3567,15 +3644,27 @@ namespace PileDesign.ViewModels
                 {
                     var pileSection = pileBody.PileBodySegments[i].PileSection;
 
-                    if (pileSection.FactoredServiceNMax < force)
+                    // 使用限界軸力チェック
+                    // N-M曲線を1回取得して内部プロパティを初期化（ServiceLimitNMax等が転送される）
+                    _ = pileSection.FactoredServiceNM;
+                    double nMax = pileSection.ServiceLimitNMax;
+                    double nMin = pileSection.ServiceLimitNMin;
+                    // ServiceLimitNMax/NMinが0の場合はFactoredServiceNMax/NMinにフォールバック
+                    if (nMax == 0 && nMin == 0)
                     {
-                        hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{pileSection.FactoredServiceNMax:N0}kN < {force:N0}kN\n";
+                        nMax = pileSection.FactoredServiceNMax;
+                        nMin = pileSection.FactoredServiceNMin;
                     }
-                    if (force < pileSection.FactoredServiceNMin)
+
+                    if (nMax < force)
                     {
                         hasWarning = true;
-                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{pileSection.FactoredServiceNMin:N0}kN\n";
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n 使用限界軸力適用範囲Max{nMax:N0}kN < {force:N0}kN\n";
+                    }
+                    if (force < nMin)
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 杭配置番号{pileNo} セグメント{i + 1} 荷重ケース:VL:\n {force:N0}kN < 使用限界軸力適用範囲Min{nMin:N0}kN\n";
                     }
                 }
             }

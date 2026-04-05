@@ -42,9 +42,10 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _selectedGraphOption, value))
                 {
-                    UpdateGraph();
+                    // パネル切替（単一⇔3分割）を先に通知
                     OnPropertyChanged(nameof(IsMultiGraphVisible));
                     OnPropertyChanged(nameof(IsSingleGraphVisible));
+                    UpdateGraph();
                 }
             }
         }
@@ -1712,9 +1713,27 @@ namespace PileDesign.ViewModels
                 IsGridOptionVisible = false;
                 IsLimitStateOptionVisible = true;
 
-                DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm");
-                DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN");
-                DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm");
+                try
+                {
+                    DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm");
+                }
+                catch (Exception)
+                {
+                }
+                try
+                {
+                    DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN");
+                }
+                catch (Exception)
+                {
+                }
+                try
+                {
+                    DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm");
+                }
+                catch (Exception)
+                {
+                }
 
             }
             else if (SelectedGraphOption == "単杭沈下" ||
@@ -1853,6 +1872,7 @@ namespace PileDesign.ViewModels
             }
             // レジェンド描画
             UpdateLegendVisibility();
+
         }
 
         // 土圧合力ばね: 1つのグラフに最上点・最下点の相対変位をX軸とした2系列を描画
@@ -2164,21 +2184,45 @@ namespace PileDesign.ViewModels
 
                             // 曲線プロット
                             bool isEIMode = SelectedGraphOption == "杭体EI-φ";
+                            double[] plotXValues;
                             double[] plotYValues;
                             if (isEIMode)
                             {
-                                // EI = M / φ（割線剛性）、φ=0の点はスキップ
-                                plotYValues = phis.Zip(moments, (phi, m) => phi > 1e-15 ? m / phi : 0.0).ToArray();
+                                // EI = M / φ（割線剛性）はM-φが折線でも非線形
+                                // → M-φ区間を細分化してEI曲線を生成
+                                var eiPhis = new List<double>();
+                                var eiValues = new List<double>();
+                                for (int seg2 = 0; seg2 < phis.Count - 1; seg2++)
+                                {
+                                    double phi0 = phis[seg2], phi1 = phis[seg2 + 1];
+                                    double m0 = moments[seg2], m1 = moments[seg2 + 1];
+                                    int nDiv = 20; // 各区間を20分割
+                                    int jStart = (seg2 == 0) ? 1 : 0; // φ=0はスキップ
+                                    for (int j = jStart; j <= nDiv; j++)
+                                    {
+                                        double t = (double)j / nDiv;
+                                        double phi = phi0 + t * (phi1 - phi0);
+                                        double m = m0 + t * (m1 - m0);
+                                        if (phi > 1e-15)
+                                        {
+                                            eiPhis.Add(phi);
+                                            eiValues.Add(m / phi);
+                                        }
+                                    }
+                                }
+                                plotXValues = eiPhis.ToArray();
+                                plotYValues = eiValues.ToArray();
                             }
                             else
                             {
+                                plotXValues = phis.ToArray();
                                 plotYValues = [.. moments];
                             }
 
                             string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{segLabel}";
-                            var scatter = wpfPlot.Plot.Add.Scatter(phis.ToArray(), plotYValues);
+                            var scatter = wpfPlot.Plot.Add.Scatter(plotXValues, plotYValues);
                             scatter.LineStyle.Width = 2;
-                            scatter.MarkerSize = 5;
+                            scatter.MarkerSize = isEIMode ? 0 : 5; // EIモードはマーカー不要
                             scatter.LegendText = legend;
 
                             // 最終ステップの曲率・モーメント取得（lastStepとbeamResultForCurveは上で取得済み）
@@ -2819,11 +2863,14 @@ namespace PileDesign.ViewModels
                             foreach (var beam in beams)
                             {
                                 if (beam?.NodeI?.Coord == null || beam?.NodeJ?.Coord == null) continue;
-                                beamZs.Add(beam.NodeI.Coord.Z);
-                                beamZs.Add(beam.NodeJ.Coord.Z);
+                                // SegmentIndex未設定の梁（RigidLink等）はスキップ
+                                if (beam.SegmentIndex is null) continue;
 
                                 var result = beam.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction);
                                 if (result?.CumulativeForce == null) continue;
+
+                                beamZs.Add(beam.NodeI.Coord.Z);
+                                beamZs.Add(beam.NodeJ.Coord.Z);
 
                                 if (forceType == "Fy")
                                 {
@@ -2861,7 +2908,7 @@ namespace PileDesign.ViewModels
                             beamZs.Add(beams[^1].NodeJ.Coord.Z);
                             beamForces.Add(0);
 
-                            var scatter = wpfPlot.Plot.Add.Scatter(beamForces, beamZs);
+                            var scatter = wpfPlot.Plot.Add.Scatter(beamForces.ToArray(), beamZs.ToArray());
                             scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
                             var stressColor = scatter.LineStyle.Color; // 応力ラインの色を取得
 
@@ -2916,7 +2963,7 @@ namespace PileDesign.ViewModels
                                 // 限界値ライン（正側のみ、同じ色で破線）
                                 if (limitZs.Count > 0)
                                 {
-                                    var scatterLimit = wpfPlot.Plot.Add.Scatter(limitValues, limitZs);
+                                    var scatterLimit = wpfPlot.Plot.Add.Scatter(limitValues.ToArray(), limitZs.ToArray());
                                     scatterLimit.LineStyle.Pattern = LinePattern.Dashed;
                                     scatterLimit.LineStyle.Width = 1.5f;
                                     scatterLimit.LineStyle.Color = stressColor; // 応力と同じ色
@@ -2951,13 +2998,23 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
+            var selectedPiles = GetSelectedPileLayouts();
+            if (AnaModel == null) return;
+
+            foreach (PileLayoutDataItem pileLayoutDataItem in selectedPiles)
             {
                 var beams = pileLayoutDataItem.Beams;
                 var pileNodes = pileLayoutDataItem.PileNodes;
                 var soilNodes = pileLayoutDataItem.SoilNodes;
+                if (pileNodes == null || pileNodes.Count == 0)
+                {
+                    continue;
+                }
 
-                foreach (LoadCase loadCase in GetSelectedLoadCases())
+                var loadCases = GetSelectedLoadCases();
+                var loadCombinations = GetSelectedLoadCombinations();
+
+                foreach (LoadCase loadCase in loadCases)
                 {
                     foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
                     {
@@ -2979,7 +3036,7 @@ namespace PileDesign.ViewModels
                                 var result = pileNode.GetNodeResult(AnaModel, loadCase, loadCombination, isLiquefaction);
                                 if (result == null || result.CumulativeDisp == null)
                                 {
-                                    pileDisps.Add(0); // または continue; でスキップ
+                                    pileDisps.Add(0);
                                     continue;
                                 }
 
@@ -3028,10 +3085,10 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
-                            var scatterPile = wpfPlot.Plot.Add.Scatter(pileDisps, pileZs);
+                            var scatterPile = wpfPlot.Plot.Add.Scatter(pileDisps.ToArray(), pileZs.ToArray());
                             var pileColor = scatterPile.LineStyle.Color; // 杭変位の色を取得
 
-                            var scatterSoil = wpfPlot.Plot.Add.Scatter(soilDisps, soilZs);
+                            var scatterSoil = wpfPlot.Plot.Add.Scatter(soilDisps.ToArray(), soilZs.ToArray());
                             scatterSoil.LineStyle.Pattern = LinePattern.Dashed;
                             scatterSoil.LineStyle.Color = pileColor; // 杭変位と同じ色を適用
                             scatterSoil.MarkerStyle.FillColor = pileColor;

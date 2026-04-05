@@ -42,6 +42,8 @@ namespace PileDesign.Views
                 await System.Threading.Tasks.Task.Yield();
 
                 // Step 1: SoilPiles/SoilEmbedmentデータ生成（UIスレッド：ObservableCollection操作を含むため）
+                // 杭体・地盤変更後も正しく地層境界節点を再生成するため、IsElementSplitを一時解除
+                _mainWindowViewModel.IsElementSplit = false;
                 _mainWindowViewModel.GenerateSoilPilesImmediate();
                 _mainWindowViewModel.CurrentInputModel.GenerateSoilEmbedment();
 

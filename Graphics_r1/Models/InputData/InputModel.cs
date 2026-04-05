@@ -110,6 +110,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _foundationBeamInput, value);
         }
 
+        // 杭軸力モード: 入力値＋応力解析結果を使用するか
+        private bool _useAnalysisAxialForce = false;
+        public bool UseAnalysisAxialForce
+        {
+            get => _useAnalysisAxialForce;
+            set => SetProperty(ref _useAnalysisAxialForce, value);
+        }
+
         // 一般節点
         private ObservableCollection<InputNode> _inputNodes;
         public ObservableCollection<InputNode> InputNodes
@@ -1129,9 +1137,9 @@ namespace PileDesign.Models.InputData
             FoundationBeamInput ??= new FoundationBeamInput();
 
             // Materialsが空の場合はデフォルトを追加
-            if (FoundationBeamInput.Materials == null || FoundationBeamInput.Materials.Count == 0)
+            FoundationBeamInput.Materials ??= [];
+            if (FoundationBeamInput.Materials.Count == 0)
             {
-                FoundationBeamInput.Materials ??= [];
                 FoundationBeamInput.Materials.Add(new BeamMaterial
                 {
                     No = 1,
@@ -1143,9 +1151,9 @@ namespace PileDesign.Models.InputData
             }
 
             // Sectionsが空の場合はデフォルトを追加
-            if (FoundationBeamInput.Sections == null || FoundationBeamInput.Sections.Count == 0)
+            FoundationBeamInput.Sections ??= [];
+            if (FoundationBeamInput.Sections.Count == 0)
             {
-                FoundationBeamInput.Sections ??= [];
                 FoundationBeamInput.Sections.Add(new BeamSection
                 {
                     No = 1,
@@ -1153,6 +1161,41 @@ namespace PileDesign.Models.InputData
                     Width = 0.8,
                     Height = 2.0
                 });
+            }
+
+            // 梁要素で使用されている材料No・断面Noに対応する定義がない場合は追加
+            if (FoundationBeamInput.Beams != null)
+            {
+                var existingMatNos = new HashSet<int>(FoundationBeamInput.Materials.Select(m => m.No));
+                var existingSecNos = new HashSet<int>(FoundationBeamInput.Sections.Select(s => s.No));
+
+                foreach (var beam in FoundationBeamInput.Beams)
+                {
+                    if (!existingMatNos.Contains(beam.MaterialNo))
+                    {
+                        FoundationBeamInput.Materials.Add(new BeamMaterial
+                        {
+                            No = beam.MaterialNo,
+                            Name = $"C24(自動)",
+                            YoungModulus = 2.5e7,
+                            ShearModulus = 1.04e7,
+                            PoissonRatio = 0.2
+                        });
+                        existingMatNos.Add(beam.MaterialNo);
+                    }
+
+                    if (!existingSecNos.Contains(beam.SectionNo))
+                    {
+                        FoundationBeamInput.Sections.Add(new BeamSection
+                        {
+                            No = beam.SectionNo,
+                            Name = $"G{beam.SectionNo}(自動)",
+                            Width = 0.8,
+                            Height = 2.0
+                        });
+                        existingSecNos.Add(beam.SectionNo);
+                    }
+                }
             }
 
             // NodesとBeamsも初期化
@@ -1337,18 +1380,23 @@ namespace PileDesign.Models.InputData
                     foreach (PileBodySegment pileBodySegment in pileBodySegments)
                         zs.Add(pileTopAltitude - pileBodySegment.SegmentDepth);
 
+                    // 杭先端は杭区間境界の最小値（0.5D点追加前に確定）
+                    double pileBottomAltitude = zs.Min();
+
                     // 場所打ち鋼管コンクリート杭の場合、杭頭から0.5Dの位置に分割点を追加
                     // （杭頭部と杭中間部で異なるM-φ関係を適用するため）
-                    if (pileBodySegments.Count > 0)
+                    if (PileBodies[pileBodyNo - 1].PileBodyType == "場所打ち鋼管コンクリート杭")
                     {
-                        var firstSection = pileBodySegments[0].PileSection;
-                        if (firstSection?.PileBodyType == "場所打ち鋼管コンクリート杭"
-                            && firstSection.PileSectionType == "鋼管コンクリート部")
+                        // 杭頭区間（鋼管コンクリート部）の杭径を取得
+                        var topSection = pileBodySegments
+                            .Select(s => s.PileSection)
+                            .FirstOrDefault(s => s?.PileSectionType == "鋼管コンクリート部");
+                        double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
+                        if (pileDia_m > 0)
                         {
-                            double pileDia_m = firstSection.PipeDia / 1000.0; // mm → m
                             double zHalfD = pileTopAltitude - 0.5 * pileDia_m;
                             // 杭底より上、かつ杭頭より下の場合のみ追加
-                            if (zHalfD > zs[^1] + NumericalConstants.COORDINATE_TOLERANCE
+                            if (zHalfD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
                                 && zHalfD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
                             {
                                 zs.Add(zHalfD);
@@ -1356,15 +1404,20 @@ namespace PileDesign.Models.InputData
                         }
                     }
 
-                    double pileBottomAltitude = zs[^1];
-
+                    int glAdded = 0;
                     foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems)
                     {
                         if (pileTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > pileBottomAltitude)
                         {
                             zs.Add(groundLayerDataItem.BottomAltitude);
+                            glAdded++;
                         }
                     }
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[GenerateSoilPiles] PileBody={pileBodyNo}, Ground={groundNo}, " +
+                        $"top={pileTopAltitude:F2}, btm={pileBottomAltitude:F2}, " +
+                        $"segments={pileBodySegments.Count}, groundLayers={groundLayerDataItems.Count}, " +
+                        $"glBoundariesAdded={glAdded}, totalNodes={zs.Count}");
 
                     // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
                     zs.Sort((a, b) => b.CompareTo(a)); // 降順ソート
