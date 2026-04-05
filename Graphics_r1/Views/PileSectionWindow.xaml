@@ -889,29 +889,29 @@
 
                                                 <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="#3271AD" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
-                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="σce=(0-σ₀ₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="#3271AD" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ₀ₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
+                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σce=(f"/><Run Text="cs" BaselineAlignment="Subscript" FontSize="9"/><Run Text="-σ₀ₑ)"/></TextBlock>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
 
                                                 <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
-                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="σce=(0-σ₀ₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="1"/>
-                                                <TextBlock Text="σ₀ₑ=(45-σₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="σce=(50-σ₀ₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
 
                                                 <TextBlock Text="安全限界" Grid.Row="5" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
                                                 <TextBlock Text="引張側制限値" Grid.Row="5" Grid.Column="1"/>
-                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="σce=(0-σ₀ₑ)" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMinUltimate, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="5" Grid.Column="3" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="安全限界" Grid.Row="6" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
                                                 <TextBlock Text="圧縮側制限値" Grid.Row="6" Grid.Column="1"/>
-                                                <TextBlock Text="σ₀ₑ=(45-σₑ)" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="σce=(50-σ₀ₑ)" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right"/>
                                                 <TextBlock Text="{Binding PileSection.ShearNMaxUltimate, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="6" Grid.Column="3" HorizontalAlignment="Right"/>
                                             </Grid>
                                         </StackPanel>

@@ -58,13 +58,13 @@ namespace PileDesign.Models.InputData
         public double ServiceLimitNMin => (4.0 - SigmaE) * Ae * 1e-3;
         public double ServiceLimitNMax => (Fcs - SigmaE) * Ae * 1e-3;
 
-        // せん断の軸力制限値（表示用・N-Q曲線用、N単位）
-        public double ShearNMinService => (4.0 - SigmaE) * Ae;
-        public double ShearNMaxService => (Fc / 3.5 - SigmaE) * Ae;
-        public double ShearNMinDamage => (4.0 - SigmaE) * Ae;
-        public double ShearNMaxDamage => (45.0 - SigmaE) * Ae;
-        public double ShearNMinUltimate => (4.0 - SigmaE) * Ae;
-        public double ShearNMaxUltimate => (45.0 - SigmaE) * Ae;
+        // せん断の軸力制限値（表示用・N-Q曲線用、N単位）PHC杭用デフォルト
+        public virtual double ShearNMinService => (4.0 - SigmaE) * Ae;
+        public virtual double ShearNMaxService => (Fc / 3.5 - SigmaE) * Ae;
+        public virtual double ShearNMinDamage => (4.0 - SigmaE) * Ae;
+        public virtual double ShearNMaxDamage => (45.0 - SigmaE) * Ae;
+        public virtual double ShearNMinUltimate => (4.0 - SigmaE) * Ae;
+        public virtual double ShearNMaxUltimate => (45.0 - SigmaE) * Ae;
 
         // 断面プロパティ設定メソッド
         internal void SetSectionParameters()
@@ -832,6 +832,14 @@ namespace PileDesign.Models.InputData
     // PRCSection杭クラス ////////////////////////////////////////////////////////////////////////////////////////////
     internal class PRCSection : PrecastPileSection
     {
+        // PRC杭のせん断軸力制限: σce=0〜fcs(使用), σce=0〜50(損傷/安全)
+        public override double ShearNMinService => (0.0 - SigmaE) * Ae;
+        public override double ShearNMaxService => (Fcs - SigmaE) * Ae;
+        public override double ShearNMinDamage => (0.0 - SigmaE) * Ae;
+        public override double ShearNMaxDamage => (50.0 - SigmaE) * Ae;
+        public override double ShearNMinUltimate => (0.0 - SigmaE) * Ae;
+        public override double ShearNMaxUltimate => (50.0 - SigmaE) * Ae;
+
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
@@ -1056,8 +1064,8 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 4 * Ae;
-            double NMax = 45 * Ae;
+            double NMin = ShearNMinService;
+            double NMax = ShearNMaxService;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
@@ -1075,8 +1083,8 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 0.0;
-            double NMax = 45 * Ae;
+            double NMin = ShearNMinDamage;
+            double NMax = ShearNMaxDamage;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
@@ -1094,8 +1102,8 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 4 * Ae;
-            double NMax = 45 * Ae;
+            double NMin = ShearNMinUltimate;
+            double NMax = ShearNMaxUltimate;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
