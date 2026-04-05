@@ -155,6 +155,39 @@ namespace PileDesign.Models.InputData
             private set => SetProperty(ref _ultimateLimitAxialForceThresholds, value);
         }
 
+        private List<double> _damageLimitAxialForceThresholds = [];
+        public List<double> DamageLimitAxialForceThresholds
+        {
+            get => _damageLimitAxialForceThresholds;
+            private set => SetProperty(ref _damageLimitAxialForceThresholds, value);
+        }
+
+        // 使用限界軸力制限値（kN単位、PrecastPileSectionから転送）
+        private double _serviceLimitNMin;
+        public double ServiceLimitNMin
+        {
+            get => _serviceLimitNMin;
+            private set => SetProperty(ref _serviceLimitNMin, value);
+        }
+
+        private double _serviceLimitNMax;
+        public double ServiceLimitNMax
+        {
+            get => _serviceLimitNMax;
+            private set => SetProperty(ref _serviceLimitNMax, value);
+        }
+
+        // せん断の軸力制限値（PHC杭用、N単位 → GetNMRawで転送）
+        private double _shearNMinService, _shearNMaxService;
+        private double _shearNMinDamage, _shearNMaxDamage;
+        private double _shearNMinUltimate, _shearNMaxUltimate;
+        public double ShearNMinService { get => _shearNMinService; private set => SetProperty(ref _shearNMinService, value); }
+        public double ShearNMaxService { get => _shearNMaxService; private set => SetProperty(ref _shearNMaxService, value); }
+        public double ShearNMinDamage { get => _shearNMinDamage; private set => SetProperty(ref _shearNMinDamage, value); }
+        public double ShearNMaxDamage { get => _shearNMaxDamage; private set => SetProperty(ref _shearNMaxDamage, value); }
+        public double ShearNMinUltimate { get => _shearNMinUltimate; private set => SetProperty(ref _shearNMinUltimate, value); }
+        public double ShearNMaxUltimate { get => _shearNMaxUltimate; private set => SetProperty(ref _shearNMaxUltimate, value); }
+
         public (List<double> N, List<double> M) UnfactoredServiceNMRaw => GetNMRaw(nameof(UnfactoredServiceNM));
         public (List<double> N, List<double> M) UnfactoredDamageNMRaw => GetNMRaw(nameof(UnfactoredDamageNM));
         public (List<double> N, List<double> M) UnfactoredUltimateNMRaw => GetNMRaw(nameof(UnfactoredUltimateNM));
@@ -1618,6 +1651,34 @@ namespace PileDesign.Models.InputData
             //return specs;
         }
 
+        /// <summary>
+        /// NM曲線上に、計算で求めた(nTarget, mCalc)の点を適切な位置に挿入する
+        /// Mが最大となる区間の近くに挿入する
+        /// </summary>
+        private static void InsertCalculatedPointNM(List<double> ns, List<double> ms, double nTarget, double mCalc)
+        {
+            // nTargetを跨ぐ全区間を探し、既存Mが最大の区間に挿入
+            int bestIdx = -1;
+            double bestM = double.MinValue;
+            for (int i = 0; i < ns.Count - 1; i++)
+            {
+                if ((ns[i] - nTarget) * (ns[i + 1] - nTarget) <= 0 && Math.Abs(ns[i + 1] - ns[i]) > 1e-10)
+                {
+                    double mMid = (ms[i] + ms[i + 1]) * 0.5;
+                    if (mMid > bestM)
+                    {
+                        bestM = mMid;
+                        bestIdx = i;
+                    }
+                }
+            }
+            if (bestIdx >= 0)
+            {
+                ns.Insert(bestIdx + 1, nTarget);
+                ms.Insert(bestIdx + 1, mCalc);
+            }
+        }
+
         // List<double>型データの構成要素すべてに係数を乗ずるメソッド
         internal static List<double> GetMultipliedListValues(List<double> originalList, double multiplier)
         {
@@ -1639,6 +1700,24 @@ namespace PileDesign.Models.InputData
 
             // 軸力閾値を更新
             UltimateLimitAxialForceThresholds = [.. section.UltimateLimitAxialForceThresholds];
+            if (section is AbstractPileSection abs && abs.DamageLimitAxialForceThresholds != null)
+                DamageLimitAxialForceThresholds = [.. abs.DamageLimitAxialForceThresholds];
+            // 使用限界軸力制限値を転送（PrecastPileSection用）
+            if (section is PrecastPileSection precast)
+            {
+                ServiceLimitNMin = precast.ServiceLimitNMin;
+                ServiceLimitNMax = precast.ServiceLimitNMax;
+            }
+            // せん断の軸力制限値を転送（PHC杭用、N単位のまま、XAMLのMultiplyConverterで0.001倍）
+            if (section is PHCSection phc)
+            {
+                ShearNMinService = phc.ShearNMinService;
+                ShearNMaxService = phc.ShearNMaxService;
+                ShearNMinDamage = phc.ShearNMinDamage;
+                ShearNMaxDamage = phc.ShearNMaxDamage;
+                ShearNMinUltimate = phc.ShearNMinUltimate;
+                ShearNMaxUltimate = phc.ShearNMaxUltimate;
+            }
 
             // プロパティ名に応じた NM を取得
             var (n, m, _, _) = propertyName switch
@@ -1651,6 +1730,23 @@ namespace PileDesign.Models.InputData
                 nameof(FactoredUltimateNM) => section.FactoredUltimateNM,
                 _ => (new List<double>(), new List<double>(), new List<double>(), new List<double>())
             };
+
+            // 低減前安全限界曲線に軸力閾値の計算点を挿入（曲線が閾値を正確に通るようにする）
+            // 場所打ち鋼管コンクリート杭のみ（他の杭種ではNM曲線の非単調性で不正な点が挿入される）
+            if (propertyName == nameof(UnfactoredUltimateNM) && n.Count > 1
+                && section is InsituSteelPipeReinforcedConcreteSection sprcSection)
+            {
+                var thresholds = sprcSection.UltimateLimitAxialForceThresholds;
+                if (thresholds != null)
+                {
+                    foreach (double nThreshold in thresholds)
+                    {
+                        var (mCalc, _) = sprcSection.GetUltimateMomentForSpecificN(nThreshold);
+                        if (mCalc > 0)
+                            InsertCalculatedPointNM(n, m, nThreshold, mCalc);
+                    }
+                }
+            }
 
             return (n, m);
         }

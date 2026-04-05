@@ -606,7 +606,7 @@ namespace PileDesign.ViewModels
         public bool IsMultiGraphVisible
         {
             // 「杭」「水平地盤反力」のとき三分割表示
-            get => SelectedGraphOption == "杭" || SelectedGraphOption == "水平地盤反力";
+            get => SelectedGraphOption == "杭変位応力" || SelectedGraphOption == "杭周地盤変位反力";
         }
 
         public bool IsSingleGraphVisible
@@ -749,16 +749,31 @@ namespace PileDesign.ViewModels
                 //GraphOptions.Add("杭応力F");
                 //GraphOptions.Add("杭応力M");
                 //GraphOptions.Add("杭変位U");
-                GraphOptions.Add("杭");
+                GraphOptions.Add("杭変位応力");
                 GraphOptions.Add("NMINT");
                 GraphOptions.Add("QNINT");
                 GraphOptions.Add("杭頭M-θ");
                 GraphOptions.Add("杭体M-φ");
-                GraphOptions.Add("水平地盤反力");
+                GraphOptions.Add("杭体EI-φ");
+                GraphOptions.Add("杭周地盤変位反力");
                 GraphOptions.Add("水平地盤反力度p-y");
                 // 土圧合力ばねが存在する場合のみ追加
                 if (AnaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "EmbedmentNode"))
                     GraphOptions.Add("土圧合力ばね");
+
+                // FT-Pile / キャプテンパイル M-θ グラフ（該当する杭頭タイプが存在する場合のみ）
+                if (InputModel.PileBodies.Any(pb => pb.PileTopType?.Contains("FT-Pile構法") == true))
+                    GraphOptions.Add("FTPileM-θ");
+                if (InputModel.PileBodies.Any(pb => pb.PileTopType?.Contains("キャプテンパイル工法") == true))
+                    GraphOptions.Add("キャプテンパイルM-θ");
+
+                // 鉄筋定着工法・定着筋方式で、杭頭が設定済みの場合のみ定着部NMINT
+                if (InputModel.PileBodies.Any(pb =>
+                    (pb.PileTopType?.Contains("鉄筋定着工法") == true ||
+                     pb.PileTopType?.Contains("定着筋方式") == true) &&
+                    pb.PileTop?.ConcreteOutDia > 0 &&
+                    pb.PileTop?.MainBarNum1 > 0))
+                    GraphOptions.Add("定着部NMINT");
 
             }
             if (IsVerticalAnalysisDone)
@@ -891,9 +906,9 @@ namespace PileDesign.ViewModels
                 decimalPlacesX = 1;
                 decimalPlacesY = 1;
             }
-            else if (SelectedGraphOption.StartsWith("杭頭M-θ"))
+            else if (SelectedGraphOption.StartsWith("杭頭M-θ") ||
+                     SelectedGraphOption == "FTPileM-θ" || SelectedGraphOption == "キャプテンパイルM-θ")
             {
-                // M-θはθ(M-θ)の見やすさ重視でX=4桁/Y=1桁などに設定可（任意）
                 decimalPlacesX = 4;
                 decimalPlacesY = 1;
             }
@@ -1323,13 +1338,15 @@ namespace PileDesign.ViewModels
                                     if (lastStep < 0) continue;
 
                                     double moment = double.MinValue;
+                                    double analysisFxi = 0; // 解析結果の軸力
 
                                     // PileBodySegmentループ
+                                    bool isAllSegs = SelectedPileSegmentNo <= 0;
                                     var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
                                     for (int i = 0; i < soilPile.PileBodySegments.Count; i++)
                                     {
                                         var pileBodySegment = soilPile.PileBodySegments[i];
-                                        if (pileBodySegment.No == SelectedPileSegmentNo)
+                                        if (isAllSegs || pileBodySegment.No == SelectedPileSegmentNo)
                                         {
                                             // Beamsのnullチェックとインデックス範囲チェック
                                             if (pileLayoutDataItem.Beams != null && i < pileLayoutDataItem.Beams.Count)
@@ -1339,20 +1356,26 @@ namespace PileDesign.ViewModels
                                                 if (beamResult?.CumulativeForce != null)
                                                 {
                                                     moment = Math.Max(moment, beamResult.CumulativeForce.MabsMax);
+                                                    analysisFxi = beamResult.CumulativeForce.Fxi;
                                                 }
                                             }
                                         }
                                     }
 
+                                    // 入力値＋応力解析結果モード: Fxi（圧縮負）を符号反転して加算
+                                    double plotAxialForce = InputModel.UseAnalysisAxialForce
+                                        ? axialForce - analysisFxi
+                                        : axialForce;
+
                                     // セグメントループの外で結果を追加
                                     if (loadCase.Level == 1)
                                     {
-                                        axialForceResultsLevel1.Add(axialForce);
+                                        axialForceResultsLevel1.Add(plotAxialForce);
                                         momentResultsLevel1.Add(moment);
                                     }
                                     else if (loadCase.Level == 2)
                                     {
-                                        axialForceResultsLevel2.Add(axialForce);
+                                        axialForceResultsLevel2.Add(plotAxialForce);
                                         momentResultsLevel2.Add(moment);
                                     }
                                 }
@@ -1372,6 +1395,131 @@ namespace PileDesign.ViewModels
                         WpfPlot.Refresh();
                     }
                 }
+            }
+            else if (SelectedGraphOption == "定着部NMINT")
+            {
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = false;
+                IsPileBodyOptionVisible = true;
+                IsPileSegmentOptionVisible = false;
+                IsLiquefactionOptionVisible = false;
+                IsGridOptionVisible = false;
+
+                WpfPlot.Plot.Clear();
+
+                var pileBody = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
+                if (pileBody?.PileTop == null ||
+                    (pileBody.PileTopType?.Contains("鉄筋定着工法") != true &&
+                     pileBody.PileTopType?.Contains("定着筋方式") != true))
+                {
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "定着部NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                    WpfPlot.Refresh();
+                    return;
+                }
+
+                var pileTop = pileBody.PileTop;
+
+                // 使用限界
+                ScottPlot.Color serviceColor = default;
+                if (pileTop.UnfactoredServiceNM.N?.Count > 0)
+                {
+                    var s = WpfPlot.Plot.Add.ScatterLine(
+                        pileTop.UnfactoredServiceNM.N.ToArray(), pileTop.UnfactoredServiceNM.M.ToArray());
+                    s.LegendText = "使用限界";
+                    serviceColor = s.LineStyle.Color;
+                }
+
+                // 損傷限界
+                if (pileTop.UnfactoredDamageNM.N?.Count > 0)
+                {
+                    var s = WpfPlot.Plot.Add.ScatterLine(
+                        pileTop.UnfactoredDamageNM.N.ToArray(), pileTop.UnfactoredDamageNM.M.ToArray());
+                    s.LegendText = "損傷限界";
+                }
+
+                // 安全限界
+                if (pileTop.UnfactoredUltimateNM.N?.Count > 0)
+                {
+                    var s = WpfPlot.Plot.Add.ScatterLine(
+                        pileTop.UnfactoredUltimateNM.N.ToArray(), pileTop.UnfactoredUltimateNM.M.ToArray());
+                    s.LegendText = "安全限界";
+                }
+
+                // 解析結果プロット（杭頭N,M）
+                List<double> axialForceResultsL1 = [];
+                List<double> momentResultsL1 = [];
+                List<double> axialForceResultsL2 = [];
+                List<double> momentResultsL2 = [];
+
+                foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
+                {
+                    if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
+                        continue;
+
+                    foreach (LoadCase loadCase in GetSelectedLoadCases())
+                    {
+                        var axialForce = pileLayoutDataItem.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+
+                        foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
+                        {
+                            foreach (var isLiquefaction in SelectedLiquefactionCases)
+                            {
+                                int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                if (lastStep < 0) continue;
+
+                                double moment = double.MinValue;
+                                double analysisFxi = 0;
+
+                                // 杭頭（最上端要素の上端）の応力を取得
+                                if (pileLayoutDataItem.Beams != null && pileLayoutDataItem.Beams.Count > 0)
+                                {
+                                    var beamResult = pileLayoutDataItem.Beams[0]?.GetBeamResult(
+                                        AnaModel, loadCase, loadCombination, isLiquefaction);
+                                    if (beamResult?.CumulativeForce != null)
+                                    {
+                                        moment = beamResult.CumulativeForce.MabsMax;
+                                        analysisFxi = beamResult.CumulativeForce.Fxi;
+                                    }
+                                }
+
+                                if (moment <= double.MinValue) continue;
+
+                                double plotAxialForce = InputModel.UseAnalysisAxialForce
+                                    ? axialForce - analysisFxi
+                                    : axialForce;
+
+                                if (loadCase.Level == 1)
+                                {
+                                    axialForceResultsL1.Add(plotAxialForce);
+                                    momentResultsL1.Add(moment);
+                                }
+                                else if (loadCase.Level == 2)
+                                {
+                                    axialForceResultsL2.Add(plotAxialForce);
+                                    momentResultsL2.Add(moment);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (axialForceResultsL1.Count > 0)
+                {
+                    var sc = WpfPlot.Plot.Add.Scatter(axialForceResultsL1.ToArray(), momentResultsL1.ToArray());
+                    sc.LegendText = "レベル1地震時";
+                    sc.LineStyle.Width = 0;
+                }
+                if (axialForceResultsL2.Count > 0)
+                {
+                    var sc = WpfPlot.Plot.Add.Scatter(axialForceResultsL2.ToArray(), momentResultsL2.ToArray());
+                    sc.LegendText = "レベル2地震時";
+                    sc.LineStyle.Width = 0;
+                }
+
+                ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "定着部NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                WpfPlot.Plot.ShowLegend();
+                WpfPlot.Refresh();
             }
             else if (SelectedGraphOption.StartsWith("QNINT"))
             {
@@ -1486,11 +1634,12 @@ namespace PileDesign.ViewModels
 
                                     double shear = double.MinValue;
 
+                                    bool isAllSegsQ = SelectedPileSegmentNo <= 0;
                                     var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
                                     for (int i = 0; i < soilPile.PileBodySegments.Count; i++)
                                     {
                                         var pileBodySegment = soilPile.PileBodySegments[i];
-                                        if (pileBodySegment.No == SelectedPileSegmentNo)
+                                        if (isAllSegsQ || pileBodySegment.No == SelectedPileSegmentNo)
                                         {
                                             if (pileLayoutDataItem.Beams != null && i < pileLayoutDataItem.Beams.Count)
                                             {
@@ -1552,7 +1701,7 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-            else if (SelectedGraphOption == "杭")
+            else if (SelectedGraphOption == "杭変位応力")
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -1617,9 +1766,22 @@ namespace PileDesign.ViewModels
 
                 DrawMThetaCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
-            else if (SelectedGraphOption == "杭体M-φ")
+            else if (SelectedGraphOption == "FTPileM-θ" || SelectedGraphOption == "キャプテンパイルM-θ")
             {
-                // 杭体M-φ: 任意の荷重ケース、任意の杭、任意の要素のM-φ曲線を描画
+                // FT-Pile / キャプテンパイル M-θ: N値ごとの曲線群 + 最終ステップマーカー
+                IsLoadCaseOptionVisible = true;
+                IsLoadCombinationOptionVisible = true;
+                IsPileOptionVisible = true;
+                IsPileBodyOptionVisible = true;
+                IsPileSegmentOptionVisible = false;
+                IsLiquefactionOptionVisible = true;
+                IsGridOptionVisible = false;
+
+                DrawPileHeadTypeMTheta(WpfPlot, MyCrosshair, "CrosshairPositionText");
+            }
+            else if (SelectedGraphOption == "杭体M-φ" || SelectedGraphOption == "杭体EI-φ")
+            {
+                // 杭体M-φ / EI-φ: 任意の荷重ケース、任意の杭、任意の要素のM-φ曲線を描画
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
                 IsPileOptionVisible = true;
@@ -1630,7 +1792,7 @@ namespace PileDesign.ViewModels
 
                 DrawMPhiCurves(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
-            else if (SelectedGraphOption == "水平地盤反力")
+            else if (SelectedGraphOption == "杭周地盤変位反力")
             {
                 // 水平地盤反力: 深さ-相対変位、深さ-水平地盤反力、深さ-ばね割線剛性の3パネル描画
                 IsLoadCaseOptionVisible = true;
@@ -1655,6 +1817,24 @@ namespace PileDesign.ViewModels
                 IsPileSegmentOptionVisible = true;
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
+
+                // 杭区間オプションを要素分割後のセグメント数に更新
+                var firstPile = GetSelectedPileLayouts().FirstOrDefault();
+                if (firstPile != null && firstPile.SoilPileAltNo > 0 && firstPile.SoilPileAltNo <= InputModel.ElementDivision.SoilPiles.Count)
+                {
+                    int reactionCount = InputModel.ElementDivision.SoilPiles[firstPile.SoilPileAltNo - 1].HorizontalSoilReactions?.Count ?? 0;
+                    if (reactionCount > 0)
+                    {
+                        var opts = new ObservableCollection<string> { "All" };
+                        foreach (int i in Enumerable.Range(1, reactionCount)) opts.Add(i.ToString());
+                        if (PileSegmentOptions == null || PileSegmentOptions.Count != opts.Count)
+                        {
+                            PileSegmentOptions = opts;
+                            if (!opts.Contains(SelectedPileSegmentOption))
+                                SelectedPileSegmentOption = "All";
+                        }
+                    }
+                }
 
                 DrawPyCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
@@ -1848,7 +2028,6 @@ namespace PileDesign.ViewModels
                 // 対応するBeam要素を見つける
                 // SoilPileの要素分割（地層境界・0.5D分割）でBeam数 > 入力セグメント数のため、
                 // SegmentIndexからSoilPileのセグメント番号で逆引きする
-                Beam targetBeam = null;
                 SoilPile soilPile = null;
                 {
                     int soilPileAltNo = pileLayout.SoilPileAltNo;
@@ -1860,9 +2039,19 @@ namespace PileDesign.ViewModels
                     }
                 }
 
+                bool isAllSegments = SelectedPileSegmentNo <= 0;
+                var matchedBeams = new List<Beam>();
+
                 foreach (var beam in pileLayout.Beams)
                 {
                     if (beam.SegmentIndex is not int seg) continue;
+
+                    if (isAllSegments)
+                    {
+                        // All: すべてのbeamを追加
+                        matchedBeams.Add(beam);
+                        continue;
+                    }
 
                     // SoilPileのPileBodySegments[seg].No は入力セグメント番号と一致（DeepCopy由来）
                     int inputSegNo = -1;
@@ -1871,14 +2060,17 @@ namespace PileDesign.ViewModels
 
                     if (inputSegNo == SelectedPileSegmentNo)
                     {
-                        targetBeam = beam;
-                        break;
+                        matchedBeams.Add(beam);
                     }
                 }
-                if (targetBeam == null)
+                if (matchedBeams.Count == 0)
                 {
                     continue;
                 }
+
+                foreach (var targetBeam in matchedBeams)
+                {
+                int segLabel = targetBeam.SegmentIndex.HasValue ? targetBeam.SegmentIndex.Value + 1 : 0;
 
                 foreach (var loadCase in selectedLoadCases)
                 {
@@ -1940,10 +2132,10 @@ namespace PileDesign.ViewModels
                             }
 
                             // 方法2: フォールバック - PileSectionから新規取得（解析結果がない場合のみ）
-                            // 注: これは解析で使用したものではないので、マーカーと一致しない可能性あり
-                            if ((phis == null || phis.Count < 2) && SelectedPileSegmentNo > 0 && SelectedPileSegmentNo <= pileBody.PileBodySegments.Count)
+                            if ((phis == null || phis.Count < 2) && targetBeam.SegmentIndex is int fallbackSeg
+                                && soilPile != null && fallbackSeg >= 0 && fallbackSeg < soilPile.PileBodySegments.Count)
                             {
-                                var pileSegment = pileBody.PileBodySegments[SelectedPileSegmentNo - 1];
+                                var pileSegment = soilPile.PileBodySegments[fallbackSeg];
                                 var pileSection = pileSegment.PileSection;
                                 if (pileSection != null)
                                 {
@@ -1971,10 +2163,22 @@ namespace PileDesign.ViewModels
                             }
 
                             // 曲線プロット
-                            string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{SelectedPileSegmentNo}";
-                            var scatter = wpfPlot.Plot.Add.Scatter(phis.ToArray(), [.. moments]);
-                            scatter.LineStyle.Width = 2;  // 線幅を明示的に設定
-                            scatter.MarkerSize = 5;       // マーカーサイズも設定
+                            bool isEIMode = SelectedGraphOption == "杭体EI-φ";
+                            double[] plotYValues;
+                            if (isEIMode)
+                            {
+                                // EI = M / φ（割線剛性）、φ=0の点はスキップ
+                                plotYValues = phis.Zip(moments, (phi, m) => phi > 1e-15 ? m / phi : 0.0).ToArray();
+                            }
+                            else
+                            {
+                                plotYValues = [.. moments];
+                            }
+
+                            string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{segLabel}";
+                            var scatter = wpfPlot.Plot.Add.Scatter(phis.ToArray(), plotYValues);
+                            scatter.LineStyle.Width = 2;
+                            scatter.MarkerSize = 5;
                             scatter.LegendText = legend;
 
                             // 最終ステップの曲率・モーメント取得（lastStepとbeamResultForCurveは上で取得済み）
@@ -2010,9 +2214,10 @@ namespace PileDesign.ViewModels
                                 double mFem = beamResultForCurve.CumulativeForce?.MabsMax ?? 0;
 
                                 // マーカープロット
-                                if (double.IsFinite(phiFinal) && double.IsFinite(mFinal) && mFinal > 0)
+                                double markerY = isEIMode && phiFinal > 1e-15 ? mFinal / phiFinal : mFinal;
+                                if (double.IsFinite(phiFinal) && double.IsFinite(markerY) && markerY > 0)
                                 {
-                                    Scatter marker = wpfPlot.Plot.Add.Scatter([phiFinal], new[] { mFinal });
+                                    Scatter marker = wpfPlot.Plot.Add.Scatter([phiFinal], new[] { markerY });
                                     marker.LineStyle.Width = 0;
                                     marker.MarkerSize = 12;
                                     marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
@@ -2023,14 +2228,135 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
+                } // foreach targetBeam in matchedBeams
             }
 
-            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-φ関係", "φ (rad/m)", "M (kN·m)");
+            bool isEIGraph = SelectedGraphOption == "杭体EI-φ";
+            string plotTitle = isEIGraph ? "EI-φ関係" : "M-φ関係";
+            string yLabel = isEIGraph ? "EI (kN·m²)" : "M (kN·m)";
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, plotTitle, "φ (rad/m)", yLabel);
             wpfPlot.Plot.ShowLegend();
             wpfPlot.Refresh();
         }
 
         // M-θ関係描画（任意の杭の杭頭について軸力に応じたM-θ曲線と最終ステップマーカー）
+        /// <summary>
+        /// FT-Pile / キャプテンパイル M-θ グラフ描画
+        /// N値ごとの曲線群を描画し、最終ステップ位置にマーカーを配置
+        /// </summary>
+        private void DrawPileHeadTypeMTheta(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
+        {
+            wpfPlot.Plot.Clear();
+            var model = AnaModel;
+            if (model == null) { wpfPlot.Refresh(); return; }
+
+            bool isFTPile = SelectedGraphOption == "FTPileM-θ";
+            string targetType = isFTPile ? "FT-Pile構法" : "キャプテンパイル工法";
+
+            var targetPiles = GetSelectedPileLayouts();
+            var selectedLoadCases = GetSelectedLoadCases();
+            var selectedCombinations = GetSelectedLoadCombinations();
+
+            double maxThetaMarker = 0; // マーカーのθ最大値を追跡
+
+            foreach (var pileLayout in targetPiles)
+            {
+                if (pileLayout.PileBodyNo <= 0 || pileLayout.PileBodyNo > InputModel.PileBodies.Count) continue;
+                var pileBody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                if (pileBody.PileTopType?.Contains(targetType) != true) continue;
+
+                var pileTop = pileBody.PileTop;
+                if (pileTop == null) continue;
+
+                // 各荷重ケースごとに、その杭の軸力に応じた1本のM-θ曲線を描画
+                foreach (var loadCase in selectedLoadCases)
+                {
+                    // この杭・荷重ケースの軸力を取得（kN）
+                    double axialN_kN;
+                    try { axialN_kN = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level); }
+                    catch { axialN_kN = pileLayout.AxialForce; }
+                    double axialN_N = axialN_kN * 1000.0; // kN → N
+
+                    // その軸力に対応するM-θ曲線を1本取得
+                    ObservableCollection<double> thetas = null;
+                    ObservableCollection<double> ms = null;
+
+                    if (isFTPile && pileTop.FTPile != null)
+                    {
+                        var result = pileTop.FTPile.GetMThetaRelationship(axialN_N);
+                        thetas = result.Item1;
+                        ms = result.Item2;
+                    }
+                    else if (!isFTPile && pileTop.CaptainPile != null)
+                    {
+                        var result = pileTop.CaptainPile.GetMThetaRelationship(axialN_N);
+                        thetas = result.Item1;
+                        ms = result.Item2;
+                    }
+
+                    if (thetas == null || ms == null || thetas.Count < 2) continue;
+
+                    // 曲線描画（N·mm → kN·m: 1 kN·m = 1e6 N·mm、マーカーなしライン）
+                    var scatter = wpfPlot.Plot.Add.Scatter(
+                        thetas.Select(t => (double)t).ToArray(),
+                        ms.Select(m => m / 1e6).ToArray());
+                    scatter.MarkerSize = 0;
+                    scatter.LegendText = $"杭{pileLayout.No} {loadCase.LoadName} N={axialN_kN:N0}kN";
+
+                    // 最終ステップマーカー
+                    foreach (var loadCombination in selectedCombinations)
+                    {
+                        foreach (var isLiq in SelectedLiquefactionCases)
+                        {
+                            int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiq);
+                            if (lastStep < 0) continue;
+
+                            var rs = model.RotationalSprings?.FirstOrDefault(r =>
+                                r.Name == $"RθXY-{pileLayout.No}");
+                            if (rs == null) continue;
+
+                            var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
+                                r.LoadCase?.No == loadCase.No &&
+                                r.LoadCombination?.No == loadCombination.No &&
+                                r.IsLiquefaction == isLiq &&
+                                r.Step == lastStep);
+                            if (rsResult?.CumulativeDisp == null || rsResult.CumulativeForce == null) continue;
+
+                            double dRx = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
+                            double dRy = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
+                            double thetaFinal = Math.Sqrt(dRx * dRx + dRy * dRy);
+                            double mFinal = Math.Sqrt(
+                                rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi +
+                                rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi);
+
+                            if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
+                            {
+                                var marker = wpfPlot.Plot.Add.Scatter(new[] { thetaFinal }, new[] { mFinal });
+                                marker.LineStyle.Width = 0;
+                                marker.MarkerSize = 12;
+                                marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
+                                marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
+                                marker.LegendText = $"解析結果 杭{pileLayout.No} {loadCase.LoadName}|{(isLiq ? "LIQ" : "非LIQ")}";
+                                if (thetaFinal > maxThetaMarker) maxThetaMarker = thetaFinal;
+                            }
+                        }
+                    }
+                }
+            }
+
+            string title = isFTPile ? "FT-Pile M-θ関係" : "キャプテンパイル M-θ関係";
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, title, "θ (rad)", "M (kN·m)", decimalPlacesX: 3);
+
+            // X軸の表示範囲: 0 ～ マーカー最大θの1.5倍
+            if (maxThetaMarker > 1e-10)
+            {
+                wpfPlot.Plot.Axes.SetLimitsX(0, maxThetaMarker * 1.5);
+            }
+
+            wpfPlot.Plot.ShowLegend();
+            wpfPlot.Refresh();
+        }
+
         private void DrawMThetaCurvesWithMarker(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
         {
             var model = AnaModel;
@@ -2181,7 +2507,7 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-θ関係", "θ (rad)", "M (kN·m)");
+            ConfigurePlot(wpfPlot, crosshair, CrosshairPositionText, "M-θ関係", "θ (rad)", "M (kN·m)", decimalPlacesX: 3);
             wpfPlot.Plot.ShowLegend();
             wpfPlot.Refresh();
         }

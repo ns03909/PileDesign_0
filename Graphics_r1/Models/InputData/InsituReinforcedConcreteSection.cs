@@ -232,7 +232,7 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 0.0;
+            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             double pg = MainBarArea / InsituConcrete.Ac;
             double pt = 100 * pg / 4.0;
@@ -746,6 +746,12 @@ namespace PileDesign.Models.InputData
             (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
             return (N, M);
         }
+
+        /// <summary>
+        /// 純引張時のひずみ度: 鉄筋の引張降伏ひずみ
+        /// </summary>
+        internal override double GetPureTensionStrain()
+            => -MainBars.RSigmaY / MainBars.Er;
 
         // 軸力、曲げモーメント取得メソッド
         internal override (double, double, double) GetAllowableForceAndMoment(

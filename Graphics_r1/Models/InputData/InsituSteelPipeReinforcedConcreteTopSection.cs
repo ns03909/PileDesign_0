@@ -13,6 +13,14 @@ namespace PileDesign.Models.InputData
         public MainBars MainBars1 { get; private set; }
         public MainBars MainBars2 { get; private set; }
 
+        /// <summary>定着筋の引張降伏ひずみ（2段筋の大きい方）</summary>
+        internal override double GetPureTensionStrain()
+        {
+            double s1 = MainBars1 != null ? -MainBars1.RSigmaY / MainBars1.Er : -0.006;
+            double s2 = MainBars2 != null ? -MainBars2.RSigmaY / MainBars2.Er : 0;
+            return Math.Min(s1, s2);
+        }
+
         public double MainBarArea1 { get; private set; }
         public double MainBarPCD1 { get; private set; }
         public double MainBarArea2 { get; private set; }

@@ -8,6 +8,10 @@ namespace PileDesign.Models.InputData
         public double MainBarArea { get; private set; }
         public double MainBarPCD { get; private set; }
 
+        /// <summary>定着筋の引張降伏ひずみ</summary>
+        internal override double GetPureTensionStrain()
+            => MainBars != null ? -MainBars.RSigmaY / MainBars.Er : -0.006;
+
         public double Ft { get; private set; }
 
         //public double PileDia { get; protected set; }

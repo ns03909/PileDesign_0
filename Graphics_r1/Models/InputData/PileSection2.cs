@@ -27,6 +27,7 @@ namespace PileDesign.Models.InputData
         public double DO { get; }
         public string Type { get; }
         public double Gsi { get; }
+        public double BearingFactor { get; private set; } = 1.0;
         public double Fc { get; }
         public double Ec { get; private set; }
         public double Ac { get; private set; }
@@ -85,6 +86,18 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 支圧倍率を適用（既製杭定着部用）
+        /// 許容ひずみ度を倍率倍にし、bilinear降伏応力用にGsiを更新
+        /// Ecは変更しない
+        /// </summary>
+        internal void ApplyBearingFactor(double factor)
+        {
+            BearingFactor = factor;
+            ServiceLimitStrainC *= factor;
+            DamageLimitStrainC *= factor;
+        }
+
         // 密度を計算するメソッド
         internal static double GetDensity(double fc = 27, string type = "普通")
         {
@@ -129,7 +142,7 @@ namespace PileDesign.Models.InputData
             if (type == "linear")
             {
                 //if (epsilon > -EpsilonCr_linear) { return Ec * epsilon; } // 引張側を無視した線形弾性
-                if (epsilon > 0) { return Ec * epsilon; } // 引張側を無視した線形弾性
+                if (epsilon > 0) { return Math.Min(Ec * epsilon, BearingFactor * Gsi * Fc); } // 引張側を無視した線形弾性（支圧Fc上限）
 
                 else
                 { return 0.0; }
@@ -148,7 +161,7 @@ namespace PileDesign.Models.InputData
             {
                 if (-EpsilonCr_bilinear <= epsilon && epsilon <= 0.003)
                 {
-                    return Math.Min(Ec * epsilon, Fc);
+                    return Math.Min(Ec * epsilon, BearingFactor * Gsi * Fc);
                 }
                 else
                 { return 0.0; }
@@ -314,7 +327,7 @@ namespace PileDesign.Models.InputData
         private static readonly Dictionary<string, (double SigmaU, double F)> Properties = new()
         {
             ["SKK400"] = (400.0, 235.0),
-            ["SKK490"] = (490.0, 325.0)
+            ["SKK490"] = (490.0, 315.0)
         };
 
         public static (double SigmaU, double F) GetProperties(string grade)
@@ -763,6 +776,11 @@ namespace PileDesign.Models.InputData
 
         public double PileDia { get; protected set; }
 
+        /// <summary>
+        /// 圧縮縁位置（コンクリート圧縮縁）。鋼管コンクリート杭では鋼管厚を減じた位置。
+        /// </summary>
+        protected virtual double CompressionEdgePosition => -PileDia / 2;
+
         public List<double> ServiceLimitAxialForceThresholds { get; protected set; }
         public List<double> ServiceLimitBendingMomentThresholds { get; protected set; }
         public List<double> ServiceLimitBeta { get; protected set; }
@@ -896,14 +914,13 @@ namespace PileDesign.Models.InputData
         }
 
         // 特定の軸力時の安全限界曲げモーメントを返すメソッド
-        internal (double, double) GetUltimateMomentForSpecificN(double NTarget)
+        internal virtual (double, double) GetUltimateMomentForSpecificN(double NTarget)
         {
             try
             {
                 double N = 0.0; double N1;
                 double M = 0.0;
                 double epsilonC = 0.003;
-                //bool isCompressionSide;
                 double curvature = 1.0 * Math.Pow(10, -6);
                 double deltaCurvature = curvature / 500.0;
 
@@ -934,23 +951,15 @@ namespace PileDesign.Models.InputData
                     N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
                     double deltaN = N1 - N;
                     if (Math.Abs(deltaN) < 1e-8)
-                        break; // 収束不能
+                        break;
 
                     double step = deltaCurvature / deltaN * (NTarget - N);
-
-                    // ステップ幅制限
                     if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
                         step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
 
                     curvature += step;
                     (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
                     iter++;
-                }
-
-                // 収束しなかった場合の対策
-                if (iter >= maxIter)
-                {
-                    // 必要に応じて例外通知やデフォルト値
                 }
 
                 return (M, curvature);
@@ -986,6 +995,12 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 純引張時のひずみ度（全材料が引張耐力に達するひずみの最大値）
+        /// 派生クラスでオーバーライド可能
+        /// </summary>
+        internal virtual double GetPureTensionStrain() => -0.006;
+
         // <抽象> 軸力、曲げモーメント取得メソッド
         internal abstract (double, double, double) GetAllowableForceAndMoment(
             int limitStateNo, bool isCompressionSide, double curvature);
@@ -1008,13 +1023,13 @@ namespace PileDesign.Models.InputData
                 {
                     epsilonC = double.MaxValue;
                     foreach (var pair in allowableStrainCs.Zip(PositionCs, (allowableStrainC, positionC) => (allowableStrainC, positionC)))
-                        epsilonC = Math.Min(epsilonC, -curvature * (-PileDia / 2 - pair.positionC) + pair.allowableStrainC);
+                        epsilonC = Math.Min(epsilonC, -curvature * (CompressionEdgePosition - pair.positionC) + pair.allowableStrainC);
                 }
                 else // (isCompressionSide == false)
                 {
                     epsilonC = double.MinValue;
                     foreach (var pair in allowableStrainTs.Zip(PositionTs, (allowableStrainT, positionT) => (allowableStrainT, positionT)))
-                        epsilonC = Math.Max(epsilonC, -curvature * (-PileDia / 2 - pair.positionT) + pair.allowableStrainT);
+                        epsilonC = Math.Max(epsilonC, -curvature * (CompressionEdgePosition - pair.positionT) + pair.allowableStrainT);
                 }
                 return epsilonC;
             }
@@ -1099,7 +1114,7 @@ namespace PileDesign.Models.InputData
             {
                 if (i == 0)
                 {
-                    epsilonC = -0.006;
+                    epsilonC = GetPureTensionStrain();
                     curvature = 0.0;
                 }
                 else if (i != DivisionNum * 2)
@@ -1109,13 +1124,39 @@ namespace PileDesign.Models.InputData
                 }
                 else { epsilonC = maxEpsilonC; curvature = 0.0; }
 
-                var result = GetUltimateForceAndMoment(epsilonC, curvature); // 引張側 純引張～
-                axialForces.Add(result.Item1); //  * Math.Pow(10, -3));
-                bendingMoments.Add(result.Item2); // * Math.Pow(10, -6));
+                var result = GetUltimateForceAndMoment(epsilonC, curvature);
+                axialForces.Add(result.Item1);
+                bendingMoments.Add(result.Item2);
                 epsilonCs.Add(epsilonC);
                 curvatures.Add(curvature);
             }
+
             return (axialForces, bendingMoments, epsilonCs, curvatures);
+        }
+
+        /// <summary>
+        /// NM曲線上に指定軸力Nの補間点を挿入する
+        /// </summary>
+        private static void InsertInterpolatedPoint(
+            List<double> ns, List<double> ms, List<double> ecs, List<double> ks, double nTarget)
+        {
+            for (int i = 0; i < ns.Count - 1; i++)
+            {
+                double n0 = ns[i], n1 = ns[i + 1];
+                if ((n0 - nTarget) * (n1 - nTarget) <= 0 && Math.Abs(n1 - n0) > 1e-10)
+                {
+                    double t = (nTarget - n0) / (n1 - n0);
+                    double mInterp = ms[i] + t * (ms[i + 1] - ms[i]);
+                    double ecInterp = ecs[i] + t * (ecs[i + 1] - ecs[i]);
+                    double kInterp = ks[i] + t * (ks[i + 1] - ks[i]);
+
+                    ns.Insert(i + 1, nTarget);
+                    ms.Insert(i + 1, mInterp);
+                    ecs.Insert(i + 1, ecInterp);
+                    ks.Insert(i + 1, kInterp);
+                    return; // 最初にヒットした区間のみ
+                }
+            }
         }
 
         // 軸力制限の組み込みメソッド
@@ -1183,7 +1224,7 @@ namespace PileDesign.Models.InputData
         }
 
         // 軸力、曲げモーメント取得メソッド
-        internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 100)
+        internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 200)
         {
             try
             {
@@ -1221,7 +1262,7 @@ namespace PileDesign.Models.InputData
         private double T { get; } = t;
 
         // 軸力、曲げモーメント取得メソッド
-        internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 100)
+        internal (double, double) GetForceAndMoment(string type, Material material, double epsilon0, double curvature, int division = 200)
         {
             try
             {

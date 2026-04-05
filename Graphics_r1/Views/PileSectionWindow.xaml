@@ -29,6 +29,7 @@
 
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
+        <conv:MultiplyConverter x:Key="MultiplyConverter"/>
 
         <!-- DataGridCellのスタイルを定義 -->
         <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
@@ -132,10 +133,6 @@
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <TextBlock Text="※SC杭の安全限界曲線は、未だ基礎部材の強度と変形性能の定義通りではありません。" Foreground="Red"
-                                               Visibility="{Binding PileSection.PileSectionType,
-                                            Converter={StaticResource VisibilityConverter},
-                                            ConverterParameter='SC杭'}"/>
 
                                     <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileBodyType,
                                         Converter={StaticResource VisibilityConverter},
@@ -214,7 +211,7 @@
                                             </StackPanel>
 
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="設計基準強度Fc (N/mm2)"  Width="150" HorizontalAlignment="Right"/>
+                                                <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm2)"/></TextBlock>
                                                 <TextBox  Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}"
                                                           Width="50"  TextAlignment="Right"
                                                           GotFocus="TextBox_GotFocus" 
@@ -284,9 +281,9 @@
                                                 </StackPanel>
 
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="設計基準強度Fc (N/mm2)"  Width="150" HorizontalAlignment="Right"/>
+                                                    <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm2)"/></TextBlock>
                                                     <TextBox  Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
-                                                              GotFocus="TextBox_GotFocus" 
+                                                              GotFocus="TextBox_GotFocus"
                                                               PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               TextChanged="TextBox_TextChanged"
@@ -341,7 +338,7 @@
                                             <StackPanel>
 
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="設計基準強度Fc (N/mm2)" Width="150" HorizontalAlignment="Right"/>
+                                                    <TextBlock Width="150" HorizontalAlignment="Right"><Run Text="設計基準強度F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm2)"/></TextBlock>
                                                     <TextBox  Text="{Binding PileSection.ConcreteFc, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
@@ -601,41 +598,51 @@
                             <avalonDock:LayoutAnchorable Title="軸力制限（基礎部材の強度と変形性能）" CanClose="False" CanHide="False">
 
                                 <StackPanel>
-                                    <Grid Visibility="{Binding PileSection.PileBodyType,
+                                    <StackPanel Visibility="{Binding PileSection.PileBodyType,
                                             Converter={StaticResource VisibilityConverter},
-                                            ConverterParameter='場所打ち鉄筋コンクリート杭'}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="auto"/>
-                                            <RowDefinition Height="auto"/>
-                                            <RowDefinition Height="auto"/>
-                                            <RowDefinition Height="auto"/>
-                                            <RowDefinition Height="auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="2*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="説明" Grid.Row="0" Grid.Column="0"/>
-                                        <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right"/>
-                                        <TextBlock Text="軸力値(N)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            ConverterParameter='場所打ち鉄筋コンクリート杭'}" Margin="0,4">
 
-                                        <TextBlock Text="損傷限界、安全限界曲げモーメント適用範囲圧縮制限値" Grid.Row="1" Grid.Column="0"/>
-                                        <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[3],StringFormat=N0,FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
-                                        <TextBlock Text="σ0=0.4ξ・Fc" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
+                                        <!-- 損傷限界 -->
+                                        <TextBlock Text="【損傷限界】" FontWeight="SemiBold" Foreground="#238966" Margin="0,4,0,2"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/></Grid.RowDefinitions>
+                                            <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                            <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                            <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                            <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=-0.05ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="β2閾値" Grid.Row="2" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=(1/3)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="圧縮側制限値" Grid.Row="3" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=0.4ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                        </Grid>
 
-                                        <TextBlock Text="損傷限界、安全限界曲げモーメント係数β2閾値" Grid.Row="2" Grid.Column="0"/>
-                                        <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2],StringFormat=N0,FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
-                                        <TextBlock Text="σ0=(1/3)ξ・Fc" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"/>
-
-                                        <TextBlock Text="曲げ降伏後の変形性能考慮最大値" Grid.Row="3" Grid.Column="0"/>
-                                        <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1],StringFormat=N0,FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
-                                        <TextBlock Text="σ0=(1/4)ξ・Fc" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"/>
-
-                                        <TextBlock Text="損傷限界、安全限界曲げモーメント適用範囲引張側制限値" Grid.Row="4" Grid.Column="0"/>
-                                        <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0],StringFormat=N0,FallbackValue=-}" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
-                                        <TextBlock Text="σ0=-0.05ξ・Fc" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right"/>
-                                    </Grid>
+                                        <!-- 安全限界 -->
+                                        <TextBlock Text="【安全限界】" FontWeight="SemiBold" Foreground="#D82531" Margin="0,8,0,2"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/></Grid.RowDefinitions>
+                                            <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                            <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                            <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                            <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=-0.05ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="変形性能考慮最大値" Grid.Row="2" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=(1/4)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="β2閾値" Grid.Row="3" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=(1/3)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ0=0.4ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[3], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
+                                        </Grid>
+                                    </StackPanel>
 
                                     <StackPanel Visibility="{Binding PileSection.PileBodyType,
                                         Converter={StaticResource VisibilityConverter},
@@ -657,113 +664,290 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="説明" Grid.Row="0" Grid.Column="0"/>
                                             <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="軸力値(N)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"/>
 
                                             <TextBlock Text="損傷限界、安全限界曲げモーメント適用範囲圧縮制限値" Grid.Row="1" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[3],StringFormat=N0,FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="σ0=0.4ξ・Fc" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[3], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ₀ₑ=0.4ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
 
                                             <TextBlock Text="損傷限界、安全限界曲げモーメント係数β2閾値" Grid.Row="2" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2],StringFormat=N0,FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="σ0=(1/3)ξ・Fc" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ₀ₑ=(1/3)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
 
                                             <TextBlock Text="曲げ降伏後の変形性能考慮最大値" Grid.Row="3" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1],StringFormat=N0,FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="σ0=(1/4)ξ・Fc" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ₀ₑ=(1/4)ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
 
                                             <TextBlock Text="損傷限界、安全限界曲げモーメント適用範囲引張側制限値" Grid.Row="4" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0],StringFormat=N0,FallbackValue=-}" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="σ0=-0.05ξ・Fc" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ₀ₑ=-0.05ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                         </Grid>
+
+                                        <StackPanel Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='鋼管コンクリート部'}" Margin="0,4">
+
+                                            <!-- 安全限界 -->
+                                            <TextBlock Text="【安全限界】" FontWeight="SemiBold" Foreground="#D82531" Margin="0,4,0,2"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="1" Grid.Column="0"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ₀ₑ=0.4ξ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="引張側制限値" Grid.Row="2" Grid.Column="0"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"><Run Text="N=-0.2(ᵣσᵧ·Aᵣ+f"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="·Aₛ)"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                    </StackPanel>
+
+                                    <!-- 既製コンクリート杭（PHC杭・PRC杭）-->
+                                    <StackPanel Visibility="{Binding PileSection.PileBodyType,
+                                        Converter={StaticResource VisibilityConverter},
+                                        ConverterParameter='既製コンクリート杭'}">
+
+                                        <StackPanel Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='PHC杭'}" Margin="0,4">
+
+                                            <!-- 曲げの軸力制限 -->
+                                            <TextBlock Text="【曲げの軸力制限】" FontWeight="SemiBold" Margin="0,4,0,4"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="限界状態" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                                <TextBlock Text="説明" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+
+                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="#3271AD" FontWeight="SemiBold"/>
+                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ServiceLimitNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="#3271AD" FontWeight="SemiBold"/>
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ₀ₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.ServiceLimitNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
+                                                <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
+                                                <TextBlock Text="β2閾値" Grid.Row="4" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(10-σₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="損傷限界" Grid.Row="5" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="5" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(35-σₑ)" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="5" Grid.Column="3" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="安全限界" Grid.Row="6" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
+                                                <TextBlock Text="引張側制限値" Grid.Row="6" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="6" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="安全限界" Grid.Row="7" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
+                                                <TextBlock Text="β2閾値" Grid.Row="7" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(10-σₑ)" Grid.Row="7" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="7" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="安全限界" Grid.Row="8" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="8" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(65-σₑ)" Grid.Row="8" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="8" Grid.Column="3" HorizontalAlignment="Right"/>
+                                            </Grid>
+
+                                            <!-- せん断の軸力制限 -->
+                                            <TextBlock Text="【せん断の軸力制限】" FontWeight="SemiBold" Margin="0,12,0,4"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto"/><RowDefinition Height="auto"/><RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/><RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/><RowDefinition Height="auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="限界状態" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                                <TextBlock Text="説明" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+
+                                                <TextBlock Text="使用限界" Grid.Row="1" Grid.Column="0" Foreground="#3271AD" FontWeight="SemiBold"/>
+                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ShearNMinService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="使用限界" Grid.Row="2" Grid.Column="0" Foreground="#3271AD" FontWeight="SemiBold"/>
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="1"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"><Run Text="σ₀ₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.ShearNMaxService, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="損傷限界" Grid.Row="3" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
+                                                <TextBlock Text="引張側制限値" Grid.Row="3" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ShearNMinDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="損傷限界" Grid.Row="4" Grid.Column="0" Foreground="#238966" FontWeight="SemiBold"/>
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="4" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(45-σₑ)" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ShearNMaxDamage, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="安全限界" Grid.Row="5" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
+                                                <TextBlock Text="引張側制限値" Grid.Row="5" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ShearNMinUltimate, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="5" Grid.Column="3" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="安全限界" Grid.Row="6" Grid.Column="0" Foreground="#D82531" FontWeight="SemiBold"/>
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="6" Grid.Column="1"/>
+                                                <TextBlock Text="σ₀ₑ=(45-σₑ)" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ShearNMaxUltimate, Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="6" Grid.Column="3" HorizontalAlignment="Right"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <StackPanel Visibility="{Binding PileSection.PileSectionType,
+                                            Converter={StaticResource VisibilityConverter},
+                                            ConverterParameter='PRC杭'}"
+                                            Margin="0,4">
+
+                                            <!-- 使用限界 -->
+                                            <TextBlock Text="【使用限界】" FontWeight="SemiBold" Foreground="#3271AD" Margin="0,4,0,2"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+
+                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.ServiceLimitNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="2" Grid.Column="0"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"><Run Text="σ₀ₑ=(F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/3.5-σₑ)"/></TextBlock>
+                                                <TextBlock Text="{Binding PileSection.ServiceLimitNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            </Grid>
+
+                                            <!-- 損傷限界 -->
+                                            <TextBlock Text="【損傷限界】" FontWeight="SemiBold" Foreground="#238966" Margin="0,8,0,2"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+
+                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
+                                                <TextBlock Text="σ₀ₑ=(4-σₑ)" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.FactoredDamageNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="β2閾値" Grid.Row="2" Grid.Column="0"/>
+                                                <TextBlock Text="σ₀ₑ=(10-σₑ)" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.DamageLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="3" Grid.Column="0"/>
+                                                <TextBlock Text="σ₀ₑ=(35-σₑ)" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.FactoredDamageNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            </Grid>
+
+                                            <!-- 安全限界 -->
+                                            <TextBlock Text="【安全限界】" FontWeight="SemiBold" Foreground="#D82531" Margin="0,8,0,2"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="2*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                    <RowDefinition Height="auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                                <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+
+                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
+                                                <TextBlock Text="-0.27(Aᵍ·ᵣσᵧ+Aₚ·Fₚᵧ)" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.FactoredUltimateNMin, StringFormat=N0, FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="β2閾値" Grid.Row="2" Grid.Column="0"/>
+                                                <TextBlock Text="σ₀ₑ=(10-σₑ)" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                                <TextBlock Text="圧縮側制限値" Grid.Row="3" Grid.Column="0"/>
+                                                <TextBlock Text="σ₀ₑ=(60-σₑ)" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"/>
+                                                <TextBlock Text="{Binding PileSection.FactoredUltimateNMax, StringFormat=N0, FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            </Grid>
+                                        </StackPanel>
 
                                         <Grid Visibility="{Binding PileSection.PileSectionType,
                                             Converter={StaticResource VisibilityConverter},
-                                            ConverterParameter='鋼管コンクリート部'}">
+                                            ConverterParameter='SC杭'}">
                                             <Grid.RowDefinitions>
+                                                <RowDefinition Height="auto"/>
+                                                <RowDefinition Height="auto"/>
                                                 <RowDefinition Height="auto"/>
                                                 <RowDefinition Height="auto"/>
                                                 <RowDefinition Height="auto"/>
                                             </Grid.RowDefinitions>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="2*"/>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="説明" Grid.Row="0" Grid.Column="0"/>
-                                            <TextBlock Text="軸力" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="定義" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            
-                                            <TextBlock Text="適用範囲圧縮側制限値" Grid.Row="1" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1],StringFormat=N0,FallbackValue=-}" HorizontalAlignment="Right" Grid.Row="1" Grid.Column="1"/>
-                                            <TextBlock Text="σ0=0.4ξ・Fc" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="説明" Grid.Row="0" Grid.Column="0" FontWeight="SemiBold"/>
+                                            <TextBlock Text="軸力定義" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                                            <TextBlock Text="軸力値(kN)" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right" FontWeight="SemiBold"/>
 
-                                            <TextBlock Text="適用範囲引張側制限値" Grid.Row="2" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0],StringFormat=N0,FallbackValue=-}" HorizontalAlignment="Right" Grid.Row="2" Grid.Column="1"/>
-                                            <TextBlock Text="N=-0.2(rσy・Ar+fcy・As)" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="曲げ 圧縮側制限値" Grid.Row="1" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"><Run Text="0.5·(ᵣσᵧ·1.1·Aₛ+Aᴄ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                            <TextBlock Text="曲げ 引張側制限値" Grid.Row="2" Grid.Column="0"/>
+                                            <TextBlock Text="-0.4·ᵣσᵧ·1.1·Aₛ" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                            <TextBlock Text="せん断 圧縮側制限値" Grid.Row="3" Grid.Column="0"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right"><Run Text="0.5·(ᵣσᵧ·1.1·Aₛ+Aᴄ·F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[3], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right"/>
+
+                                            <TextBlock Text="せん断 引張側制限値" Grid.Row="4" Grid.Column="0"/>
+                                            <TextBlock Text="-0.3·ᵣσᵧ·1.1·Aₛ" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2], Converter={StaticResource MultiplyConverter}, ConverterParameter='0.001|N0', FallbackValue=-}" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right"/>
                                         </Grid>
 
-                                        <StackPanel Orientation="Horizontal" Visibility="{Binding PileSection.PileBodyType,
-                                            Converter={StaticResource VisibilityConverter},
-                                            ConverterParameter='既製コンクリート杭'}">
-                                            <Grid Visibility="{Binding PileSection.PileSectionType,
-                                                Converter={StaticResource VisibilityConverter},
-                                                ConverterParameter='PHC杭'}">
-
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="auto"/>
-                                                    <RowDefinition Height="auto"/>
-                                                    <RowDefinition Height="auto"/>
-                                                </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Text="圧縮側制限値" Grid.Row="0" Grid.Column="0"/>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2],StringFormat=N0,FallbackValue=-}" Grid.Row="0" Grid.Column="1"/>
-                                                <TextBlock Text="σe+σ0e=65N/mm2" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"/>
-
-                                                <TextBlock Text="せん断検定圧縮側制限値" Grid.Row="1" Grid.Column="0"/>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1],StringFormat=N0,FallbackValue=-}" Grid.Row="1" Grid.Column="1"/>
-                                                <TextBlock Text="σe+σ0e=10N/mm2" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
-
-                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0],StringFormat=N0,FallbackValue=-}" Grid.Row="1" Grid.Column="1"/>
-                                                <TextBlock Text="σe+σ0e=4N/mm2" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            </Grid>
-
-                                            <Grid Visibility="{Binding PileSection.PileSectionType,
-                                                Converter={StaticResource VisibilityConverter},
-                                                ConverterParameter='PRC杭'}">
-
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="auto"/>
-                                                    <RowDefinition Height="auto"/>
-                                                    <RowDefinition Height="auto"/>
-                                                </Grid.RowDefinitions>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Text="圧縮側制限値" Grid.Row="0" Grid.Column="0"/>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[2],StringFormat=N0,FallbackValue=-}" Grid.Row="0" Grid.Column="1"/>
-                                                <TextBlock Text="σe+σ0e=65N/mm2" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Right"/>
-
-                                                <TextBlock Text="せん断検定圧縮側制限値" Grid.Row="1" Grid.Column="0"/>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[1],StringFormat=N0,FallbackValue=-}" Grid.Row="1" Grid.Column="1"/>
-                                                <TextBlock Text="σe+σ0e=10N/mm2" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
-
-                                                <TextBlock Text="引張側制限値" Grid.Row="1" Grid.Column="0"/>
-                                                <TextBlock Text="{Binding PileSection.UltimateLimitAxialForceThresholds[0],StringFormat=N0,FallbackValue=-}" Grid.Row="1" Grid.Column="1"/>
-                                                <TextBlock Text="σe+σ0e=4N/mm2" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right"/>
-                                            </Grid>
-                                            
-                                        </StackPanel>
-                                        
-                                        
                                     </StackPanel>
                                     </StackPanel>
 

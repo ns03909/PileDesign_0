@@ -54,6 +54,10 @@ namespace PileDesign.Models.InputData
         public MainBars MainBars { get; protected set; }
         public PrecastSteelPipe PrecastSteelPipe { get; protected set; }
 
+        // 使用限界軸力制限値（直接計算式、kN単位）
+        public double ServiceLimitNMin => (4.0 - SigmaE) * Ae * 1e-3;
+        public double ServiceLimitNMax => (Fcs - SigmaE) * Ae * 1e-3;
+
         // 断面プロパティ設定メソッド
         internal void SetSectionParameters()
         {
@@ -104,6 +108,9 @@ namespace PileDesign.Models.InputData
     // PHC杭断面クラス
     internal class PHCSection : PrecastPileSection ////////////////////////////////////////////////////////////////////////////////////////////
     {
+        /// <summary>PC鋼材の引張破断ひずみ</summary>
+        internal override double GetPureTensionStrain() => -Tendons.EpsilonPu;
+
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
@@ -189,6 +196,13 @@ namespace PileDesign.Models.InputData
             // 低減後損傷限界NMインタラクション
             FactoredDamageNM = GetFactoredDamageLimitMNInteraction();
 
+            // 損傷限界軸力閾値
+            DamageLimitAxialForceThresholds =
+            [
+                (4.0 - SigmaE) * Ae,
+                (10.0 - SigmaE) * Ae,
+                (35.0 - SigmaE) * Ae,
+            ];
 
             // 安全限界軸力低減率
             UltimateLimitAxialForceThresholds =
@@ -298,15 +312,23 @@ namespace PileDesign.Models.InputData
         }
 
 
+        // せん断の軸力制限値（表示用・N-Q曲線用）
+        public double ShearNMinService => (4.0 - SigmaE) * Ae;
+        public double ShearNMaxService => (Fc / 3.5 - SigmaE) * Ae;
+        public double ShearNMinDamage => (4.0 - SigmaE) * Ae;
+        public double ShearNMaxDamage => (45.0 - SigmaE) * Ae;
+        public double ShearNMinUltimate => (4.0 - SigmaE) * Ae;
+        public double ShearNMaxUltimate => (45.0 - SigmaE) * Ae;
+
         /// <summary>
-        /// 使用限界QNを返す。
+        /// 使用限界QNを返す。(σ₀+σ₀ₑ)=4 ～ fc,s=Fc/3.5
         /// </summary>
         public (List<double>, List<double>) GetServiceLimitQNInteraction(double MonQd, bool isFactored, int iCount = 100)
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 4 * Ae;
-            double NMax = 45 * Ae;
+            double NMin = ShearNMinService;
+            double NMax = ShearNMaxService;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
@@ -318,14 +340,14 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 損傷限界QNを返す。
+        /// 損傷限界QNを返す。(σ₀+σ₀ₑ)=4 ～ 45
         /// </summary>
         public (List<double>, List<double>) GetDamageLimitQNInteraction(double MonQd, bool isFactored, int level = 1, int iCount = 100)
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 0.0;
-            double NMax = 45 * Ae;
+            double NMin = ShearNMinDamage;
+            double NMax = ShearNMaxDamage;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
@@ -337,14 +359,14 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 安全限界QNを返す。
+        /// 安全限界QNを返す。(σ₀+σ₀ₑ)=4 ～ 45
         /// </summary>
         public (List<double>, List<double>) GetUltimateQNInteraction(double MonQd, bool isFactored, int iCount = 100)
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = 4 * Ae;
-            double NMax = 45 * Ae;
+            double NMin = ShearNMinUltimate;
+            double NMax = ShearNMaxUltimate;
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
@@ -754,11 +776,11 @@ namespace PileDesign.Models.InputData
             Ns.Add((35.0 - SigmaE) * Ae);
 
             Ms.Add(0.0);
-            Ms.Add(GetDamageLimitMoment(0.65, 4.0 - SigmaE));
-            Ms.Add(GetDamageLimitMoment(0.65, 10.0 - SigmaE));
-            Ms.Add(GetDamageLimitMoment(0.75, 10.0 - SigmaE));
-            Ms.Add(GetDamageLimitMoment(0.75, (Fcd + Ftd) * 0.5 - SigmaE));
-            Ms.Add(GetDamageLimitMoment(0.75, 35.0 - SigmaE));
+            Ms.Add(GetDamageLimitMoment(0.75, 4.0 - SigmaE));       // 10未満: β2=0.75
+            Ms.Add(GetDamageLimitMoment(0.75, 10.0 - SigmaE));      // 10未満: β2=0.75
+            Ms.Add(GetDamageLimitMoment(0.65, 10.0 - SigmaE));      // 10以上: β2=0.65
+            Ms.Add(GetDamageLimitMoment(0.65, (Fcd + Ftd) * 0.5 - SigmaE)); // 10以上: β2=0.65
+            Ms.Add(GetDamageLimitMoment(0.65, 35.0 - SigmaE));      // 10以上: β2=0.65
             Ms.Add(0.0);
 
             for (int i = 0; i < Ns.Count; i++)
@@ -805,6 +827,14 @@ namespace PileDesign.Models.InputData
     // PRCSection杭クラス ////////////////////////////////////////////////////////////////////////////////////////////
     internal class PRCSection : PrecastPileSection
     {
+        /// <summary>PC鋼材と鉄筋の引張耐力ひずみの大きい方</summary>
+        internal override double GetPureTensionStrain()
+        {
+            double tendonStrain = -Tendons.EpsilonPu;
+            double rebarStrain = MainBars != null ? -MainBars.RSigmaY / MainBars.Er : 0;
+            return Math.Min(tendonStrain, rebarStrain);
+        }
+
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
@@ -907,8 +937,8 @@ namespace PileDesign.Models.InputData
             // 損傷限界閾値
             DamageLimitBendingMomentThresholds = GetDamageLimitBendingMomentThresholds();
 
-            // 損傷限界曲げモーメント低減率
-            DamageLimitBeta = [0.0, 0.8 * 0.65, 0.80 * 0.75, 0.0];
+            // 損傷限界曲げモーメント低減率（10N/mm²未満: β2=0.75、10N/mm²以上: β2=0.65）
+            DamageLimitBeta = [0.0, 0.8 * 0.75, 0.80 * 0.65, 0.0];
 
             // 低減後損傷限界NMインタラクション
             FactoredDamageNM = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBeta);
@@ -1522,6 +1552,12 @@ namespace PileDesign.Models.InputData
     // SCSection杭クラス
     internal class SCSection : PrecastPileSection
     {
+        /// <summary>鋼管の引張破断ひずみ</summary>
+        internal override double GetPureTensionStrain()
+            => PrecastSteelPipe != null ? -PrecastSteelPipe.EpsilonY : -0.006;
+
+        protected override double CompressionEdgePosition => -Ro;
+
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionSteelPipe { get; private set; }
@@ -1636,45 +1672,161 @@ namespace PileDesign.Models.InputData
             //安全限界最大曲率時の軸力
             AxialForceCurvatureMaxUltimateLimit = GetAllowableForceAndMoment(2, true, CurvatureMaxUltimateLimit).Item1;
 
-            // 低減前使用限界NMインタラクション
-            FactoredServiceNM = UnfactoredServiceNM;
+            // 曲げに関する軸力制限値
+            double nBendMin = -0.4 * PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As;
+            double nBendMax = 0.5 * (PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As + Ac * Fc);
 
-            // 低減後損傷限界NMインタラクション
-            FactoredDamageNM = UnfactoredDamageNM;
+            // せん断に関する軸力制限値
+            double nShearMin = -0.3 * PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As;
+            double nShearMax = 0.5 * (PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As + Ac * Fc);
 
-            // 安全限界軸力低減率
+            // 軸力制限閾値（表示用: 曲げ引張、曲げ圧縮、せん断引張、せん断圧縮）
             UltimateLimitAxialForceThresholds =
             [
-                -0.4 * PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As,
-                1.0 * PrecastSteelPipe.F * 1.1 * PrecastSteelPipe.As + Ac * Fc,
+                nBendMin,   // [0] 曲げ引張側 -0.4
+                nBendMax,   // [1] 曲げ圧縮側 0.5
+                nShearMin,  // [2] せん断引張側 -0.3
+                nShearMax,  // [3] せん断圧縮側 0.5
             ];
 
-            //// 安全限界閾値
-            //UltimateLimitBendingMomentThresholds = GetUltimateLimitBendingMomentThresholds();
+            // 低減後使用限界NMインタラクション（曲げ制限値外ゼロ）
+            FactoredServiceNM = ApplyAxialForceLimitsToNM(UnfactoredServiceNM, nBendMin, nBendMax);
 
-            //// 安全限界曲げモーメント低減率
+            // 低減後損傷限界NMインタラクション（曲げ制限値外ゼロ）
+            FactoredDamageNM = ApplyAxialForceLimitsToNM(UnfactoredDamageNM, nBendMin, nBendMax);
+
+            // 安全限界曲げモーメント低減率
             UltimateLimitBeta = [0.0, 1.0, 0.0];
 
-            //// 低減後安全限界NMインタラクション
-            //FactoredUltimateNM = GetFactoredMNInterection(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);
+            // 低減後安全限界NMインタラクション（曲げ制限値外ゼロ）
+            FactoredUltimateNM = ApplyAxialForceLimitsToNM(UnfactoredUltimateNM, nBendMin, nBendMax);
 
-            // 低減前使用限界NQインタラクション
+            // 低減前NQインタラクション
             UnfactoredServiceNQ = GetServiceLimitQNInteraction(3.0, false);
-
-            // 低減前損傷限界NQインタラクション
             UnfactoredDamageNQ = GetDamageLimitQNInteraction(3.0, false);
-
-            // 低減前安全限界NQインタラクション
             UnfactoredUltimateNQ = GetUltimateQNInteraction(3.0, false);
 
-            // 低減前使用限界NQインタラクション
-            FactoredServiceNQ = GetServiceLimitQNInteraction(3.0, true);
+            // 低減後NQインタラクション（せん断制限値外ゼロ）
+            FactoredServiceNQ = ApplyAxialForceLimitsToNQ(GetServiceLimitQNInteraction(3.0, true), nShearMin, nShearMax);
+            FactoredDamageNQ = ApplyAxialForceLimitsToNQ(GetDamageLimitQNInteraction(3.0, true), nShearMin, nShearMax);
+            FactoredUltimateNQ = ApplyAxialForceLimitsToNQ(GetUltimateQNInteraction(3.0, true), nShearMin, nShearMax);
+        }
 
-            // 低減前損傷限界NQインタラクション
-            FactoredDamageNQ = GetDamageLimitQNInteraction(3.0, true);
+        /// <summary>
+        /// N-M曲線に軸力制限を適用（制限値外ではM=0）
+        /// </summary>
+        private static (List<double>, List<double>, List<double>, List<double>) ApplyAxialForceLimitsToNM(
+            (List<double> N, List<double> M, List<double> EpsilonC, List<double> Curvature) unfactored,
+            double nMin, double nMax)
+        {
+            var ns = new List<double>();
+            var ms = new List<double>();
+            var uN = unfactored.N;
+            var uM = unfactored.M;
 
-            // 低減前安全限界NQインタラクション
-            FactoredUltimateNQ = GetUltimateQNInteraction(3.0, true);
+            // 制限値下限でM=0を挿入
+            ns.Add(nMin);
+            ms.Add(0.0);
+
+            // 下限境界での補間値を追加（M=0 → M_interpolated の垂直遷移）
+            double mAtMin = InterpolateMAtN(uN, uM, nMin);
+            if (mAtMin > 0)
+            {
+                ns.Add(nMin);
+                ms.Add(mAtMin);
+            }
+
+            // 制限値内の点のみ追加
+            for (int i = 0; i < uN.Count; i++)
+            {
+                if (uN[i] >= nMin && uN[i] <= nMax)
+                {
+                    ns.Add(uN[i]);
+                    ms.Add(uM[i]);
+                }
+            }
+
+            // 上限境界での補間値を追加（M_interpolated → M=0 の垂直遷移）
+            double mAtMax = InterpolateMAtN(uN, uM, nMax);
+            if (mAtMax > 0)
+            {
+                ns.Add(nMax);
+                ms.Add(mAtMax);
+            }
+
+            // 制限値上限でM=0を挿入
+            ns.Add(nMax);
+            ms.Add(0.0);
+
+            return (ns, ms, unfactored.EpsilonC, unfactored.Curvature);
+        }
+
+        /// <summary>
+        /// N-Q曲線に軸力制限を適用（制限値外ではQ=0）
+        /// </summary>
+        private static (List<double>, List<double>) ApplyAxialForceLimitsToNQ(
+            (List<double> N, List<double> Q) unfactored,
+            double nMin, double nMax)
+        {
+            var ns = new List<double>();
+            var qs = new List<double>();
+            var uN = unfactored.N;
+            var uQ = unfactored.Q;
+
+            // 制限値下限でQ=0を挿入
+            ns.Add(nMin);
+            qs.Add(0.0);
+
+            // 下限境界での補間値を追加
+            double qAtMin = InterpolateMAtN(uN, uQ, nMin);
+            if (qAtMin > 0)
+            {
+                ns.Add(nMin);
+                qs.Add(qAtMin);
+            }
+
+            for (int i = 0; i < uN.Count; i++)
+            {
+                if (uN[i] >= nMin && uN[i] <= nMax)
+                {
+                    ns.Add(uN[i]);
+                    qs.Add(uQ[i]);
+                }
+            }
+
+            // 上限境界での補間値を追加
+            double qAtMax = InterpolateMAtN(uN, uQ, nMax);
+            if (qAtMax > 0)
+            {
+                ns.Add(nMax);
+                qs.Add(qAtMax);
+            }
+
+            // 制限値上限でQ=0を挿入
+            ns.Add(nMax);
+            qs.Add(0.0);
+
+            return (ns, qs);
+        }
+
+        /// <summary>
+        /// N-M曲線上で指定軸力Nに対応するMを線形補間で求める。
+        /// 曲線が複数回交差する場合は最大値を返す。
+        /// </summary>
+        private static double InterpolateMAtN(List<double> ns, List<double> ms, double nTarget)
+        {
+            double maxM = 0.0;
+            for (int i = 0; i < ns.Count - 1; i++)
+            {
+                double n0 = ns[i], n1 = ns[i + 1];
+                if ((n0 - nTarget) * (n1 - nTarget) <= 0 && n0 != n1)
+                {
+                    double t = (nTarget - n0) / (n1 - n0);
+                    double m = ms[i] + t * (ms[i + 1] - ms[i]);
+                    maxM = Math.Max(maxM, m);
+                }
+            }
+            return maxM;
         }
 
         /// <summary>
@@ -1803,24 +1955,68 @@ namespace PileDesign.Models.InputData
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MYT, double phiYT) = GetMomentCurvatureForN(Ntarget, "SteelPipeTensionYield");
             (double MYC, double phiYC) = GetMomentCurvatureForN(Ntarget, "SteelPipeCompressionYield_b");
-            (double Mu0, double _) = GetUltimateMomentForSpecificN(Ntarget);
+            (double Mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
 
-            // デバッグ: 特性値を出力
             string caseType = "";
             double phiD;
             List<double> phis;
             List<double> Ms;
 
-            if (phiCr < phiYT && phiYT < phiYC) // a 鋼管が引張降伏する場合
+            // d 軸力のみで鋼管が降伏する場合を先に判定
+            // 一様ひずみ εy のとき: N_yield = fys * As + (Ec/Es) * fys * Ac  [N]
+            double Es = PrecastSteelPipe.SE1;   // N/mm²
+            double fys_local = PrecastSteelPipe.Fys;  // N/mm²
+            double Nyield = fys_local * PrecastSteelPipe.As
+                          + (PrecastConcrete.Ec / Es) * fys_local * Ac; // N
+            bool isAxialYield = Ntarget > 0 && Ntarget >= Nyield;
+
+            if (isAxialYield) // d 軸力のみで鋼管が降伏する場合
+            {
+                caseType = "d";
+                // コンクリート圧縮縁がεcuに達するときのMu0とその曲率phiU
+                phiD = phiU;
+                double beta2 = 0.75;
+                phis = [0.0, beta2 * phiD];
+                Ms = [0.0, beta1 * beta2 * Mu0];
+            }
+            else if (phiCr < phiYT && phiYT < phiYC) // a 鋼管が引張降伏する場合
             {
                 caseType = "a";
-                // ゼロ除算防止
+
+                // MCr≤0 のとき（引張軸力で既にひび割れ）→ MCr=0, phiCr=0 として扱う
+                if (MCr <= 0 || phiCr <= 0)
+                {
+                    MCr = 0;
+                    phiCr = 0;
+                }
+
+                double tc_mm_a = Ro - Ri;
+                double D_mm_a = PrecastSteelPipe.OutDia;
+                double ts_mm_a = PrecastSteelPipe.T;
+                bool isHighDuctility_a = tc_mm_a > 1e-12 && (D_mm_a - 2 * ts_mm_a) / tc_mm_a <= 6.0;
+
+                // N0 算出（N/N0 判定用）
+                double N0_a = (Ntarget > 0)
+                    ? Math.Abs(PrecastSteelPipe.As * PrecastSteelPipe.Fys + Ac * Fc)
+                    : PrecastSteelPipe.As * PrecastSteelPipe.Fys;
+                double nRatio_a = Math.Abs(Ntarget) / Math.Max(1e-12, N0_a);
+
                 double denom = MYT - MCr;
                 if (Math.Abs(denom) < 1e-6) denom = Math.Sign(denom) * 1e-6;
-                phiD = phiCr + (phiYT - phiCr) * (beta1 * Mu0 - MCr) / denom;
 
-                // MCr <= 0 の場合は (phiCr, MCr) をスキップ
-                if (MCr <= 0 || phiCr <= 0)
+                if (isHighDuctility_a && nRatio_a < 0.2)
+                {
+                    // εcu = 0.004: ひび割れ後勾配の延長で beta1*Mu0 に達する曲率
+                    phiD = phiYT + (phiYT - phiCr) / denom * (beta1 * Mu0 - MYT);
+                }
+                else
+                {
+                    // 従来式
+                    phiD = phiCr + (phiYT - phiCr) * (beta1 * Mu0 - MCr) / denom;
+                }
+
+                // ポリライン生成（phiCr=0の場合は原点と重複するため3点）
+                if (phiCr <= 0)
                 {
                     phis = [0.0, phiYT, phiD];
                     Ms = [0.0, MYT, beta1 * Mu0];
@@ -1897,25 +2093,22 @@ namespace PileDesign.Models.InputData
                     Ms = [0.0, MYC, beta1 * beta2 * Mu0];
                 }
             }
-            else // d 軸力のみで鋼管が降伏する場合
+            else // ケースa,b,c,dのいずれにも該当しない場合（フォールバック）
             {
-                caseType = "d";
+                caseType = "fallback";
                 double EcIe = PrecastConcrete.Ec * Ie;
-                if (EcIe < 1e-6) EcIe = 1e6; // 最小剛性
+                if (EcIe < 1e-6) EcIe = 1e6;
                 phiD = beta1 * Mu0 / EcIe;
                 double beta2 = 0.75;
-                // 元のポリリニア形状を維持（2点の線形曲線）
-                phis = [0.0, beta1 * beta2 * phiD];
+                phis = [0.0, beta2 * phiD];
                 Ms = [0.0, beta1 * beta2 * Mu0];
             }
 
-            // 曲率が単調増加するように補正
-            for (int i = 1; i < phis.Count; i++)
+            // 曲率が単調増加しない点を末尾から除去
+            while (phis.Count > 1 && phis[^1] <= phis[^2])
             {
-                if (phis[i] <= phis[i - 1])
-                {
-                    phis[i] = phis[i - 1] + 1e-9;
-                }
+                phis.RemoveAt(phis.Count - 1);
+                Ms.RemoveAt(Ms.Count - 1);
             }
 
             return (phis, Ms);
@@ -2108,7 +2301,7 @@ namespace PileDesign.Models.InputData
             int limitStateNo, bool isCompressionSide, double curvature)
         {
             double epsilonC = GetAllowableCompressionEdgeStrain(limitStateNo, isCompressionSide, curvature);
-            double epsilon0 = epsilonC - (PileDia * 0.5 - T) * curvature;
+            double epsilon0 = epsilonC - Ro * curvature;
             string type = "linear";
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
@@ -2123,7 +2316,7 @@ namespace PileDesign.Models.InputData
         // 軸力、安全限界曲げモーメント取得メソッド
         internal override (double, double) GetUltimateForceAndMoment(double epsilonC, double curvature)
         {
-            double epsilon0 = epsilonC - PileDia * 0.5 * curvature;
+            double epsilon0 = epsilonC - Ro * curvature;
             string type = "linear";
             double N, M;
             var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(type, PrecastConcrete, epsilon0, curvature);
@@ -2136,111 +2329,242 @@ namespace PileDesign.Models.InputData
         }
 
         // 安全限界MN インタラクション取得メソッド
+        /// <summary>
+        /// SC杭の安全限界NMインタラクション（中立軸深さcでパラメタライズ）
+        ///
+        /// 断面配置（圧縮縁が鋼管外面、引張縁が反対側鋼管外面）:
+        ///   鋼管外面(圧縮縁) ─ ts ─ コンクリート内面 ─ tc ─ コンクリート内面 ─ ts ─ 鋼管外面(引張縁)
+        ///   │← ── ── ── ── ── ── D ── ── ── ── ── ── →│
+        ///
+        /// コンクリート内面（圧縮縁からtsの位置）のひずみ = εcu に固定
+        /// 中立軸深さ c（圧縮縁からの距離）をスイープ:
+        ///   c小 → 引張支配（鋼管はεy超でも応力fys一定 = 完全バイリニア）
+        ///   c大 → 圧縮支配
+        ///   c→∞ → 純圧縮（φ→0）
+        ///
+        /// φ = εcu / (c - ts)  (c > ts)
+        /// εC（鋼管圧縮縁ひずみ）= εcu + φ * ts = εcu * c / (c - ts)
+        ///
+        /// εcu は N/N0 に応じた固定点反復で決定
+        /// </summary>
         internal override (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInteraction()
         {
             List<double> axialForces = [];
             List<double> bendingMoments = [];
             List<double> epsilonCs = [];
-            List<double> curvatures = [];
+            List<double> curvaturesList = [];
 
-            double maxCurvature = (0.003 + 0.0025) * 20.0 / Math.Max(1e-6, PileDia);
-            double maxEpsilonCu = 0.003; // 圧縮縁最大ひずみ固定上限（純圧縮用）
+            double tsPipe = PrecastSteelPipe.T;
+            double D = PileDia;
+            double tc_mm = Ro - Ri;
+            double D_mm = PrecastSteelPipe.OutDia;
+            double ts_mm = tsPipe;
+            bool isHighDuctility = tc_mm > 1e-12 && (D_mm - 2 * ts_mm) / tc_mm <= 6.0;
 
-            for (int i = 0; i <= DivisionNum * 2; i++)
+            // === (1) 純引張 (φ = 0): 全断面が鋼管降伏ひずみ ===
             {
-                double curvature;
-                double epsilonC;          // 圧縮縁ひずみ（鋼管側）
-                double epsilonCu;         // コンクリート限界（内縁? 想定）
-                double N = 0.0;
-                double M = 0.0;
+                double epsilonC = -PrecastSteelPipe.EpsilonY;
+                var (N, M) = GetUltimateForceAndMoment(epsilonC, 0.0);
+                axialForces.Add(N);
+                bendingMoments.Add(M);
+                epsilonCs.Add(epsilonC);
+                curvaturesList.Add(0.0);
+            }
 
-                // 1) 曲率設定
-                if (i == 0) // 純引張
+            // === (2) 中立軸スイープ: c を cMin → cMax ===
+            // cMin: 鋼管厚よりわずかに大きい（圧縮域がコンクリートに入り始める）
+            // cMax: 断面全体が圧縮（c ≈ D * 数倍 → φ ≈ 0 に近づく）
+            double cMin = tsPipe + D * 0.001;
+            double cMax = D * 5.0; // 十分大きい値（純圧縮に漸近）
+
+            for (int i = 1; i <= DivisionNum * 2 - 1; i++)
+            {
+                double ratio = (double)i / (DivisionNum * 2);
+                // cMin → cMax を対数スケールでスイープ（引張側の分解能を確保）
+                double c = cMin * Math.Pow(cMax / cMin, ratio);
+
+                double cMinusTsPipe = c - tsPipe;
+                if (cMinusTsPipe < 1e-12) continue;
+
+                // 固定点反復で εcu を決定
+                double epsilonCu = isHighDuctility ? 0.004 : 0.003; // 初期推定
+                double phi = epsilonCu / cMinusTsPipe;
+                double epsilonC = epsilonCu + phi * tsPipe; // = εcu * c / (c - ts)
+                double N = 0.0, M = 0.0;
+
+                const int maxIter = 30;
+                const double tol = 0.00001;
+                double lastEps = epsilonCu;
+
+                for (int iter = 0; iter < maxIter; iter++)
                 {
-                    curvature = 0.0;
-                    // ここでは鋼管引張側が降伏に近づく状況を想定し εC を鋼管引張側降伏で代表
-                    epsilonC = -PrecastSteelPipe.EpsilonY;
-                    epsilonCu = 0.003; // ダミー（使わない）
-                }
-                else if (i == DivisionNum * 2) // 純圧縮
-                {
-                    curvature = 0.0;
-                    epsilonC = maxEpsilonCu;
-                    epsilonCu = maxEpsilonCu; // ここでは εC=εcu
-                }
-                else
-                {
-                    double ratio = (double)(DivisionNum * 2 - i) / (DivisionNum * 2);
-                    curvature = maxCurvature * ratio;
+                    (N, M) = GetUltimateForceAndMoment(epsilonC, phi);
 
-                    // 初期推定値
-                    epsilonCu = 0.003;
-                    // 初期 εC（鋼管圧縮縁）: コンクリート εcu + ϕ * t
-                    epsilonC = epsilonCu + curvature * PrecastSteelPipe.T;
+                    double N0 = (N > 0)
+                        ? Math.Abs(PrecastSteelPipe.As * PrecastSteelPipe.Fys + Ac * Fc)
+                        : PrecastSteelPipe.As * PrecastSteelPipe.Fys;
 
-                    // 2) 固定点反復で εcu 更新
-                    const int maxIter = 30;
-                    const double tol = 0.00001;
-                    double lastEps = epsilonCu;
-                    bool converged = false;
-
-                    for (int iter = 0; iter < maxIter; iter++)
+                    double nRatio = Math.Abs(N) / Math.Max(1e-12, N0);
+                    double candidate;
+                    if (isHighDuctility)
                     {
-                        // 現在 εC で N,M 計算
-                        (double Ntmp, double Mtmp) = GetUltimateForceAndMoment(epsilonC, curvature);
-                        N = Ntmp; M = Mtmp;
+                        if (nRatio < 0.2)
+                            candidate = 0.004;
+                        else if (nRatio < 0.3)
+                            candidate = 0.006 - 0.010 * nRatio;
+                        else
+                            candidate = 0.003;
+                    }
+                    else
+                    {
+                        candidate = 0.003;
+                    }
+
+                    if (Math.Abs(candidate - lastEps) < tol)
+                    {
+                        epsilonCu = candidate;
+                        break;
+                    }
+
+                    lastEps = candidate;
+                    epsilonCu = candidate;
+                    phi = epsilonCu / cMinusTsPipe;
+                    epsilonC = epsilonCu + phi * tsPipe;
+
+                    if (!double.IsFinite(epsilonC)) break;
+                }
+
+                if (!double.IsFinite(N) || !double.IsFinite(M)) continue;
+
+                axialForces.Add(N);
+                bendingMoments.Add(M);
+                epsilonCs.Add(epsilonC);
+                curvaturesList.Add(phi);
+            }
+
+            // === (3) 純圧縮 (φ = 0): 全断面一様 εcu ===
+            {
+                // 純圧縮では N/N0 ≈ 1.0 → εcu = 0.003
+                double epsilonC = 0.003;
+                var (N, M) = GetUltimateForceAndMoment(epsilonC, 0.0);
+                axialForces.Add(N);
+                bendingMoments.Add(M);
+                epsilonCs.Add(epsilonC);
+                curvaturesList.Add(0.0);
+            }
+
+            return (axialForces, bendingMoments, epsilonCs, curvaturesList);
+        }
+
+        /// <summary>
+        /// SC杭用: 特定の軸力時の安全限界曲げモーメントを返す
+        /// εcu を N/N0 に応じて 0.003〜0.004 に反復更新する（GetUltimateMNInteraction と整合）
+        /// </summary>
+        internal new (double, double) GetUltimateMomentForSpecificN(double NTarget)
+        {
+            try
+            {
+                double tsPipe = PrecastSteelPipe.T;
+                double tc_mm = Ro - Ri;
+                double D_mm = PrecastSteelPipe.OutDia;
+                double ts_mm = tsPipe;
+                bool isHighDuctility = tc_mm > 1e-12 && (D_mm - 2 * ts_mm) / tc_mm <= 6.0;
+
+                double N = 0.0, N1;
+                double M = 0.0;
+                double epsilonCu = isHighDuctility ? 0.004 : 0.003;
+                double epsilonC = epsilonCu;
+                double curvature = 1.0e-6;
+                double deltaCurvature = curvature / 500.0;
+
+                List<double> Ns = UnfactoredUltimateNM.Item1;
+                List<double> Ms = UnfactoredUltimateNM.Item2;
+                List<double> curvaturesSrc = UnfactoredUltimateNM.Item4;
+
+                // 初期値の設定（NM曲線から補間）
+                for (int i = 0; i < Ns.Count; i++)
+                {
+                    if (NTarget < Ns[i])
+                    {
+                        if (i == 0) return (0.0, 0.0);
+                        N = (Ns[i - 1] + Ns[i]) * 0.5;
+                        M = (Ms[i - 1] + Ms[i]) * 0.5;
+                        curvature = (curvaturesSrc[i - 1] + curvaturesSrc[i]) * 0.5;
+                        deltaCurvature = (curvaturesSrc[i] - curvaturesSrc[i - 1]) / 100;
+                        break;
+                    }
+                    else if (i == Ns.Count - 1)
+                        return (0.0, 0.0);
+                }
+
+                // 外側ループ: 曲率を調整して目標軸力 NTarget に収束
+                int maxOuterIter = 50;
+                int outerIter = 0;
+                while (Math.Abs(N - NTarget) > 0.1 && outerIter < maxOuterIter)
+                {
+                    // 内側ループ: εcu を N/N0 に応じて反復更新
+                    double lastEps = epsilonCu;
+                    for (int inner = 0; inner < 30; inner++)
+                    {
+                        epsilonC = epsilonCu + curvature * tsPipe;
+                        (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
 
                         double N0 = (N > 0)
                             ? Math.Abs(PrecastSteelPipe.As * PrecastSteelPipe.Fys + Ac * Fc)
                             : PrecastSteelPipe.As * PrecastSteelPipe.Fys;
 
-                        // 次の εcu 推定式 (元コードの式をクランプ)////////////////////////////
-                        //double candidate = 0.006 - 0.010 * N / Math.Max(1e-12, N0);
-                        //candidate = Math.Clamp(candidate, 0.003, 0.004);
-                        double candidate = 0.003;
+                        double nRatio = Math.Abs(N) / Math.Max(1e-12, N0);
+                        double candidate;
+                        if (isHighDuctility)
+                        {
+                            if (nRatio < 0.2)
+                                candidate = 0.004;
+                            else if (nRatio < 0.3)
+                                candidate = 0.006 - 0.010 * nRatio;
+                            else
+                                candidate = 0.003;
+                        }
+                        else
+                        {
+                            candidate = 0.003;
+                        }
 
-                        // 収束判定
-                        if (Math.Abs(candidate - lastEps) < tol)
+                        if (Math.Abs(candidate - lastEps) < 0.00001)
                         {
                             epsilonCu = candidate;
-                            converged = true;
                             break;
                         }
-
-                        // 更新・再計算用 εC 再構築
                         lastEps = candidate;
                         epsilonCu = candidate;
-                        epsilonC = epsilonCu + curvature * PrecastSteelPipe.T;
-
-                        if (!double.IsFinite(epsilonC))
-                        {
-                            Console.WriteLine("Warning: epsilonC 非有限値 (SCSection.GetUltimateMNInterection). 反復中断。");
-                            break;
-                        }
                     }
 
-                    if (!converged)
-                    {
-                        // 最終反復での値を採用（N,M は最後の計算結果）
-                        // 必要ならログ
-                        // Console.WriteLine("Info: εcu 収束未達 (SCSection).");
-                    }
-                }
+                    // 曲率を更新して目標Nに近づける
+                    epsilonC = epsilonCu + (curvature + deltaCurvature) * tsPipe;
+                    N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
+                    double deltaN = N1 - N;
+                    if (Math.Abs(deltaN) < 1e-8)
+                        break;
 
-                // 必要なら最終 N,M 再計算（純引張・純圧縮ケース）
-                if (i == 0 || i == DivisionNum * 2)
-                {
+                    double step = deltaCurvature / deltaN * (NTarget - N);
+                    if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
+                        step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
+
+                    curvature += step;
+                    if (curvature < 1e-12) curvature = 1e-12;
+
+                    epsilonC = epsilonCu + curvature * tsPipe;
                     (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
+                    outerIter++;
                 }
 
-                axialForces.Add(N);
-                bendingMoments.Add(M);
-                epsilonCs.Add(epsilonC);
-                curvatures.Add(curvature);
+                return (M, curvature);
             }
-
-            return (axialForces, bendingMoments, epsilonCs, curvatures);
+            catch
+            {
+                return (0.0, 0.0);
+            }
         }
+
         //internal override (List<double>, List<double>, List<double>, List<double>) GetUltimateMNInterection()
         //{
         //    List<double> axialForces = [];

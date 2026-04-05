@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PileDesign.Models.InputData
 {
@@ -17,6 +18,8 @@ namespace PileDesign.Models.InputData
         public double PipeT { get; private set; }
         public double MainBarArea { get; private set; }
         public double MainBarPCD { get; private set; }
+
+        protected override double CompressionEdgePosition => -(PileDia / 2 - PipeT);
 
         public double Ae { get; private set; }
         public double Ze { get; private set; }
@@ -41,9 +44,9 @@ namespace PileDesign.Models.InputData
             CircularPipeSectionSteelPipe = new CircularPipeSection(PileDia - PipeT, PipeT);
 
             double concreteDia = PileDia - PipeT * 2;
-            //double PipeCenterDia = PileDia - PipeT;
-            PositionCs = [-(PileDia - PipeT * 0.5) * 0.5, -concreteDia * 0.5, -MainBarPCD * 0.5,];
-            PositionTs = [(PileDia - PipeT * 0.5) * 0.5, concreteDia * 0.5, MainBarPCD * 0.5,];
+            double pipeCenterDia = PileDia - PipeT;
+            PositionCs = [-pipeCenterDia * 0.5, -concreteDia * 0.5, -MainBarPCD * 0.5,];
+            PositionTs = [pipeCenterDia * 0.5, concreteDia * 0.5, MainBarPCD * 0.5,];
 
             SetZeFtIe();
 
@@ -77,10 +80,18 @@ namespace PileDesign.Models.InputData
             DamageLimitBeta = [1.0];
 
             // 安全限界軸力閾値
+            // 換算断面積 Aₑ = Aᴄ + n×Aₛ(鋼管) + n×Aᵣ(主筋)
+            // n = Eₛ/Eᴄ（ヤング係数比）
+            double concreteDiaForArea = PileDia - 2 * PipeT;
+            double Ac_area = Math.PI * Math.Pow(concreteDiaForArea, 2) / 4.0; // コンクリート断面積
+            double As_pipe = insituSteelPipe.AMinus; // 鋼管断面積（腐食考慮後）
+            double Ar_bar = mainBars.Ag; // 主筋断面積
+            double n_ratio = insituSteelPipe.SE1 / insituConcrete.Ec; // ヤング係数比 Es/Ec
+            double Ae_equiv = Ac_area + n_ratio * As_pipe + n_ratio * Ar_bar; // 換算断面積
 
             UltimateLimitAxialForceThresholds = [
-                -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.F * insituSteelPipe.AMinus),
-                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Math.PI * Math.Pow(PileDia, 2) / 4.0
+                -0.2 * (mainBars.RSigmaY * mainBars.Ag + insituSteelPipe.Fcy * insituSteelPipe.AMinus),
+                0.4 * insituConcrete.Gsi * insituConcrete.Fc * Ae_equiv
             ];
 
             // 安全限界曲げモーメント低減率
@@ -193,7 +204,7 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
@@ -212,7 +223,7 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
@@ -231,7 +242,7 @@ namespace PileDesign.Models.InputData
         {
             List<double> ns = [];
             List<double> qs = [];
-            double NMin = -0.05 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
+            double NMin = -0.2 * (MainBars.RSigmaY * MainBars.Ag + InsituSteelPipe.Fcy * InsituSteelPipe.AMinus);
             double NMax = 0.4 * InsituConcrete.Gsi * InsituConcrete.Fc * Ae;
             for (int i = 0; i < iCount; i++)
             {
@@ -295,11 +306,12 @@ namespace PileDesign.Models.InputData
                 curvature += step;
                 iter++;
             }
-            // 収束しなかった場合の対策
+            // 収束しなかった場合は最後の計算値を返す（警告のみ）
             if (iter >= maxIter)
             {
-                // 必要なら例外や警告
-                throw new InvalidOperationException("Newton-Raphson法が収束しませんでした。");
+                System.Diagnostics.Debug.WriteLine(
+                    $"[GetYieldMoment] WARNING: NR法が{maxIter}回で収束しませんでした。" +
+                    $" Ntarget={Ntarget:E3}, Nnext={Nnext:E3}, curvature={curvature:E6}");
             }
             return (Mnext, curvature);
         }
@@ -323,9 +335,28 @@ namespace PileDesign.Models.InputData
             (double MCr, double phiCr) = GetCrackMoment(Ntarget);
             (double MY, double phiY) = GetYieldMoment(Ntarget);
             (double Mu0, double phiU) = GetUltimateMomentForSpecificN(Ntarget);
-            //double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
-            List<double> phis = [0.0, phiCr, phiY, phiU];
-            List<double> Ms = [0.0, MCr, MY, beta1 * Mu0];
+
+            List<double> phis;
+            List<double> Ms;
+
+            if (phiU <= 0 || phiU <= phiCr)
+            {
+                // 終局曲率がひび割れ曲率以下 → M≈0
+                phis = [0.0];
+                Ms = [0.0];
+            }
+            else if (phiU <= phiY || phiY <= phiCr || phiY <= 0)
+            {
+                // 降伏前に終局到達、または降伏点が不正（高軸力で鋼材が降伏しない）
+                // → ひび割れ→終局の2点で直線
+                phis = [0.0, phiCr, phiU];
+                Ms = [0.0, MCr, beta1 * Mu0];
+            }
+            else
+            {
+                phis = [0.0, phiCr, phiY, phiU];
+                Ms = [0.0, MCr, MY, beta1 * Mu0];
+            }
 
             return (phis, Ms);
         }
@@ -362,6 +393,66 @@ namespace PileDesign.Models.InputData
             (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
             return (N, M);
         }
+
+        /// <summary>
+        /// 純引張時のひずみ度: 鋼管と鉄筋の引張耐力に至るひずみの大きい方
+        /// </summary>
+        internal override double GetPureTensionStrain()
+        {
+            double pipeTensionStrain = -InsituSteelPipe.SEpsilonU; // 鋼管の引張破断ひずみ
+            double rebarTensionStrain = -MainBars.RSigmaY / MainBars.Er; // 鉄筋の引張降伏ひずみ
+            return Math.Min(pipeTensionStrain, rebarTensionStrain); // 絶対値が大きい方（より負の値）
+        }
+
+        /// <summary>
+        /// 特定の軸力時の安全限界曲げモーメント（全区間で最大Mを採用）
+        /// NM曲線のピーク両側で同じNに対して2つの解がある場合に対応
+        /// </summary>
+        internal override (double, double) GetUltimateMomentForSpecificN(double NTarget)
+        {
+            try
+            {
+                double epsilonC = 0.003;
+                List<double> Ns = UnfactoredUltimateNM.Item1;
+                List<double> Ms = UnfactoredUltimateNM.Item2;
+                List<double> curvatureList = UnfactoredUltimateNM.Item4;
+
+                double bestM = 0.0;
+                double bestCurvature = 0.0;
+
+                for (int seg = 0; seg < Ns.Count - 1; seg++)
+                {
+                    if ((Ns[seg] - NTarget) * (Ns[seg + 1] - NTarget) > 0)
+                        continue;
+
+                    double N = (Ns[seg] + Ns[seg + 1]) * 0.5;
+                    double M = (Ms[seg] + Ms[seg + 1]) * 0.5;
+                    double curvature = (curvatureList[seg] + curvatureList[seg + 1]) * 0.5;
+                    double deltaCurvature = (curvatureList[seg + 1] - curvatureList[seg]) / 100;
+                    if (Math.Abs(deltaCurvature) < 1e-15)
+                        deltaCurvature = curvature / 500.0;
+
+                    for (int iter = 0; iter < 50; iter++)
+                    {
+                        if (Math.Abs(N - NTarget) <= 0.1) break;
+                        double N1 = GetUltimateForceAndMoment(epsilonC, curvature + deltaCurvature).Item1;
+                        double deltaN = N1 - N;
+                        if (Math.Abs(deltaN) < 1e-8) break;
+                        double step = deltaCurvature / deltaN * (NTarget - N);
+                        if (Math.Abs(step) > Math.Abs(curvature) * 0.5)
+                            step = Math.Sign(step) * Math.Abs(curvature) * 0.5;
+                        curvature += step;
+                        (N, M) = GetUltimateForceAndMoment(epsilonC, curvature);
+                    }
+
+                    if (M > bestM) { bestM = M; bestCurvature = curvature; }
+                }
+                return (bestM, bestCurvature);
+            }
+            catch { return (0.0, 0.0); }
+        }
+
+        // 使用/損傷限界は基底クラスのGetAllowableMNInteractionを使用
 
         // 軸力、曲げモーメント取得メソッド
         internal override (double, double, double) GetAllowableForceAndMoment(

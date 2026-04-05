@@ -6,6 +6,7 @@ using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using ScottPlot.Plottables;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -345,12 +346,16 @@ namespace PileDesign.ViewModels
             wpf.Plot.Legend.FontName = Fonts.Detect(yLabel);
 
             double maxN = double.MinValue, minN = double.MaxValue;
-            UpdateSeries("(低減前)使用限界", serviceN, serviceM/*, ref maxN, ref minN*/);
-            UpdateSeries("(低減前)損傷限界", damageN, damageM/*, ref maxN, ref minN*/);
-            UpdateSeries("(低減前)安全限界", ultimateN, ultimateM/*, ref maxN, ref minN*/);
-            UpdateSeries("(低減後)使用限界", factoredServiceN, factoredServiceM/*, ref maxN, ref minN*/);
-            UpdateSeries("(低減後)損傷限界", factoredDamageN, factoredDamageM/*, ref maxN, ref minN*/);
-            UpdateSeries("(低減後)安全限界", factoredUltimateN, factoredUltimateM/*, ref maxN, ref minN*/);
+            UpdateSeries("(低減前)使用限界", serviceN, serviceM, NikkenSKColor.DeepBlue, isDashed: true);
+            UpdateSeries("(低減前)損傷限界", damageN, damageM, NikkenSKColor.Green, isDashed: true);
+            UpdateSeries("(低減前)安全限界", ultimateN, ultimateM, NikkenSKColor.Red, isDashed: true);
+            UpdateSeries("(低減後)使用限界", factoredServiceN, factoredServiceM, NikkenSKColor.DeepBlue);
+            UpdateSeries("(低減後)損傷限界", factoredDamageN, factoredDamageM, NikkenSKColor.Green);
+            UpdateSeries("(低減後)安全限界", factoredUltimateN, factoredUltimateM, NikkenSKColor.Red);
+
+            var black = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, black);
+            wpf.Plot.Add.HorizontalLine(0, 1, black);
 
             wpf.Plot.Axes.AutoScale();
             wpf.Plot.Axes.AutoScaleExpandX();
@@ -397,7 +402,7 @@ namespace PileDesign.ViewModels
 
             wpf.Plot.Clear();
 
-            void TryPlot((List<double> qs, List<double> ns) data, string legend, bool dashed = false, double lineWidth = 1.5)
+            void TryPlot((List<double> qs, List<double> ns) data, string legend, SKColor? color = null, bool dashed = false, double lineWidth = 1.5)
             {
                 var (qs, ns) = data;
                 if (ns == null || qs == null) return;
@@ -410,20 +415,25 @@ namespace PileDesign.ViewModels
                 double[] ys = [.. qs.Select(q => q * 1e-3)]; // Q -> kN
                 var scatter = wpf.Plot.Add.Scatter(xs, ys);
                 scatter.LegendText = legend;
+                if (color.HasValue) scatter.Color = ScottPlot.Color.FromSKColor(color.Value);
                 scatter.LineWidth = (float)lineWidth;
                 scatter.MarkerSize = 0;
                 if (dashed) scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
             }
 
             // プロット順：使用限界・損傷限界・安全限界（それぞれ低減前/後）
-            TryPlot(serviceUnfactored, "(低減前) 使用限界 Q-N", true, 2.0);
-            TryPlot(serviceFactored, "(低減後) 使用限界 Q-N", false, 2.0);
+            TryPlot(serviceUnfactored, "(低減前) 使用限界 Q-N", NikkenSKColor.DeepBlue, true, 1.5);
+            TryPlot(serviceFactored, "(低減後) 使用限界 Q-N", NikkenSKColor.DeepBlue, false, 2.0);
 
-            TryPlot(damageUnfactored, "(低減前) 損傷限界 Q-N", true, 1.5);
-            TryPlot(damageFactored, "(低減後) 損傷限界 Q-N", false, 1.5);
+            TryPlot(damageUnfactored, "(低減前) 損傷限界 Q-N", NikkenSKColor.Green, true, 1.5);
+            TryPlot(damageFactored, "(低減後) 損傷限界 Q-N", NikkenSKColor.Green, false, 2.0);
 
-            TryPlot(ultimateUnfactored, "(低減前) 安全限界 Q-N", true, 1.5);
-            TryPlot(ultimateFactored, "(低減後) 安全限界 Q-N", false, 1.5);
+            TryPlot(ultimateUnfactored, "(低減前) 安全限界 Q-N", NikkenSKColor.Red, true, 1.5);
+            TryPlot(ultimateFactored, "(低減後) 安全限界 Q-N", NikkenSKColor.Red, false, 2.0);
+
+            var blackNQ = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, blackNQ);
+            wpf.Plot.Add.HorizontalLine(0, 1, blackNQ);
 
             wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
             wpf.Plot.Axes.Left.Label.Text = "Q (kN)";
@@ -608,6 +618,10 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
+            var blackMPhi = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, blackMPhi);
+            wpf.Plot.Add.HorizontalLine(0, 1, blackMPhi);
+
             wpf.Plot.Legend.IsVisible = true;
             wpf.Plot.Axes.AutoScale();
             wpf.Refresh();
@@ -672,6 +686,10 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
+            var blackMTheta = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, blackMTheta);
+            wpf.Plot.Add.HorizontalLine(0, 1, blackMTheta);
+
             wpf.Plot.Legend.IsVisible = true;
             wpf.Plot.Axes.AutoScale();
             wpf.Refresh();
@@ -717,14 +735,26 @@ namespace PileDesign.ViewModels
             // 杭中間部 φ の算出（既存式を安全化）
             static List<double>? BuildMiddlePhis(List<double> phis, List<double> Ms)
             {
-                if (phis.Count < 3 || Ms.Count < 4) return null;
-                double denom = (Ms[2] - Ms[1]);
-                if (Math.Abs(denom) < 1e-12) return null;
+                if (phis.Count < 2 || Ms.Count < 2) return null;
 
-                double beta1 = 1.0;
-                var list = new List<double> { phis[0], phis[1], phis[2] };
-                list.Add(phis[1] + (phis[2] - phis[1]) * (beta1 * Ms[3] - Ms[1]) / denom);
-                return list;
+                // 4点の場合（通常ケース: 原点→ひび割れ→降伏→終局）
+                if (phis.Count >= 4 && Ms.Count >= 4)
+                {
+                    double denom = (Ms[2] - Ms[1]);
+                    if (Math.Abs(denom) < 1e-12) return null;
+                    double beta1 = 1.0;
+                    var list = new List<double> { phis[0], phis[1], phis[2] };
+                    list.Add(phis[1] + (phis[2] - phis[1]) * (beta1 * Ms[3] - Ms[1]) / denom);
+                    return list;
+                }
+
+                // 3点の場合（降伏前に終局到達: 原点→ひび割れ→終局）
+                if (phis.Count == 3 && Ms.Count == 3)
+                {
+                    return [phis[0], phis[1], phis[2]];
+                }
+
+                return null;
             }
 
             // M-φ（杭頭部 + 杭中間部(破線)）
@@ -789,12 +819,16 @@ namespace PileDesign.ViewModels
                 notDefinedMessageIfNull: "SC杭の曲げモーメント-回転角関係の定義はありません");
         }
 
-        private void UpdateSeries(string title, List<double> nValues, List<double> mValues/*, ref double maxN, ref double minN*/)
+        private void UpdateSeries(string title, List<double> nValues, List<double> mValues,
+            SKColor? color = null, bool isDashed = false)
         {
             var wpf = PileSectionWindowInstance.wpfPlotMN;
             var scatter = wpf.Plot.Add.Scatter(nValues, mValues);
-            //scatter.Color = Color.Fro;
-            scatter.LineWidth = 1;
+            if (color.HasValue)
+                scatter.Color = ScottPlot.Color.FromSKColor(color.Value);
+            scatter.LineWidth = isDashed ? 1.5f : 2.0f;
+            if (isDashed)
+                scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
             scatter.MarkerSize = 0;
             scatter.MarkerShape = ScottPlot.MarkerShape.None;
             scatter.LegendText = title;

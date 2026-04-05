@@ -399,6 +399,10 @@ namespace PileDesign.ViewModels
             TryPlot(damageN, damageM, "(低減前) 損傷限界", true, 1.5);
             TryPlot(ultimateN, ultimateM, "(低減前) 安全限界", true, 1.5);
 
+            var black = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, black);
+            wpf.Plot.Add.HorizontalLine(0, 1, black);
+
             wpf.Plot.Legend.IsVisible = true;
             wpf.Plot.Axes.AutoScale();
             wpf.Plot.Axes.AutoScaleExpandX();
@@ -529,6 +533,10 @@ namespace PileDesign.ViewModels
                     wpf.Plot.Legend.FontName = Fonts.Detect(legend);
                 }
             }
+
+            var blackTM = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, blackTM);
+            wpf.Plot.Add.HorizontalLine(0, 1, blackTM);
 
             wpf.Plot.Axes.AutoScale();
             wpf.Plot.Axes.AutoScaleExpandX();

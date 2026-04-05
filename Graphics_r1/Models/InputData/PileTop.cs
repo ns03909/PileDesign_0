@@ -333,38 +333,22 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // --- 追加: NMキャッシュ（ウィンドウ起動時の再計算を抑制） ---
-        private (List<double> N, List<double> M)? _unfactoredServiceNMCache;
-        private (List<double> N, List<double> M)? _unfactoredDamageNMCache;
-        private (List<double> N, List<double> M)? _unfactoredUltimateNMCache;
-        //private (List<double> N, List<double> M)? _factoredServiceNMCache;
-        //private (List<double> N, List<double> M)? _factoredDamageNMCache;
-        //private (List<double> N, List<double> M)? _factoredUltimateNMCache;
-
+        // NMキャッシュは使用しない（パラメータ変更の即時反映のため）
         public (List<double> N, List<double> M) UnfactoredServiceNMRaw => GetNMRaw(nameof(UnfactoredServiceNM));
         public (List<double> N, List<double> M) UnfactoredDamageNMRaw => GetNMRaw(nameof(UnfactoredDamageNM));
         public (List<double> N, List<double> M) UnfactoredUltimateNMRaw => GetNMRaw(nameof(UnfactoredUltimateNM));
 
-
-
-        // --- 変更: NMプロパティをキャッシュ ---
         public (List<double> N, List<double> M) UnfactoredServiceNM =>
-            _unfactoredServiceNMCache ??= (
-                GetMultipliedListValues(UnfactoredServiceNMRaw.N, 1e-3),
-                GetMultipliedListValues(UnfactoredServiceNMRaw.M, 1e-6)
-            );
+            (GetMultipliedListValues(UnfactoredServiceNMRaw.N, 1e-3),
+             GetMultipliedListValues(UnfactoredServiceNMRaw.M, 1e-6));
 
         public (List<double> N, List<double> M) UnfactoredDamageNM =>
-            _unfactoredDamageNMCache ??= (
-                GetMultipliedListValues(UnfactoredDamageNMRaw.N, 1e-3),
-                GetMultipliedListValues(UnfactoredDamageNMRaw.M, 1e-6)
-            );
+            (GetMultipliedListValues(UnfactoredDamageNMRaw.N, 1e-3),
+             GetMultipliedListValues(UnfactoredDamageNMRaw.M, 1e-6));
 
         public (List<double> N, List<double> M) UnfactoredUltimateNM =>
-            _unfactoredUltimateNMCache ??= (
-                GetMultipliedListValues(UnfactoredUltimateNMRaw.N, 1e-3),
-                GetMultipliedListValues(UnfactoredUltimateNMRaw.M, 1e-6)
-            );
+            (GetMultipliedListValues(UnfactoredUltimateNMRaw.N, 1e-3),
+             GetMultipliedListValues(UnfactoredUltimateNMRaw.M, 1e-6));
 
         // コンストラクタ
         public PileTop()
@@ -416,6 +400,7 @@ namespace PileDesign.Models.InputData
             {
                 double pileCapGsi = 1.0;
                 var insituConcrete = new InsituConcrete(ConcreteOutDia, pileCapGsi, PileCapFc);
+                insituConcrete.ApplyBearingFactor(2.0); // 支圧係数: 許容ひずみ・降伏応力を2倍（Ecは不変）
                 var mainBars = new MainBars(MainBarDr1, MainBarNum1, MainBarSpec1, MainBarSize1);
                 var pileTop = new PrecastPileTopSection(insituConcrete, mainBars);
 
