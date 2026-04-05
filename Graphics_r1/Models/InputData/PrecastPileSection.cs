@@ -108,8 +108,6 @@ namespace PileDesign.Models.InputData
     // PHC杭断面クラス
     internal class PHCSection : PrecastPileSection ////////////////////////////////////////////////////////////////////////////////////////////
     {
-        /// <summary>PC鋼材の引張破断ひずみ</summary>
-        internal override double GetPureTensionStrain() => -Tendons.EpsilonPu;
 
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
@@ -827,14 +825,6 @@ namespace PileDesign.Models.InputData
     // PRCSection杭クラス ////////////////////////////////////////////////////////////////////////////////////////////
     internal class PRCSection : PrecastPileSection
     {
-        /// <summary>PC鋼材と鉄筋の引張耐力ひずみの大きい方</summary>
-        internal override double GetPureTensionStrain()
-        {
-            double tendonStrain = -Tendons.EpsilonPu;
-            double rebarStrain = MainBars != null ? -MainBars.RSigmaY / MainBars.Er : 0;
-            return Math.Min(tendonStrain, rebarStrain);
-        }
-
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }
