@@ -114,6 +114,11 @@ namespace PileDesign.Models.InputData
         /// 実効ひずみは εC + 2*Prestrain となる。
         /// </summary>
 
+        /// <summary>
+        /// PHC杭用の安全限界MNインタラクション
+        /// 基底クラスのmaxCurvatureはPHC中空断面に対して過大なため、
+        /// CurvatureMaxUltimateLimitを使用する
+        /// </summary>
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
         public CircularPipeSection CircularPipeSectionTendons { get; private set; }

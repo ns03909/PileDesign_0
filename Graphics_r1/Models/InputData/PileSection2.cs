@@ -756,6 +756,7 @@ namespace PileDesign.Models.InputData
     {
         public double CurvatureMaxServiceLimit { get; protected set; }
         public double CurvatureMaxDamageLimit { get; protected set; }
+        public double CurvatureMaxUltimateLimit { get; protected set; }
 
         public double AxialForceCurvatureMaxServiceLimit { get; protected set; }
         public double AxialForceCurvatureMaxDamageLimit { get; protected set; }
@@ -1107,7 +1108,11 @@ namespace PileDesign.Models.InputData
             List<double> curvatures = [];
             double epsilonC;
             double curvature;
-            double maxCurvature = (0.003 + 0.0025) * 20.0 / PileDia;
+            double maxCurvatureDefault = (0.003 + 0.0025) * 20.0 / PileDia;
+            // CurvatureMaxUltimateLimitが設定されている場合、過大な曲率を抑制
+            double maxCurvature = CurvatureMaxUltimateLimit > 0 && CurvatureMaxUltimateLimit < maxCurvatureDefault
+                ? CurvatureMaxUltimateLimit
+                : maxCurvatureDefault;
             double maxEpsilonC = 0.003;
 
             for (int i = 0; i <= DivisionNum * 2; i++)
