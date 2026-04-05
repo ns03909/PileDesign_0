@@ -239,7 +239,9 @@ namespace PileDesign.Views
             var path = viewModel.IsElementSplit
                 ? viewModel.CanvasGeometry.PathGeoPileDividedDias
                 : viewModel.CanvasGeometry.PathGeoPileDias;
-            var dashedPath = viewModel.CanvasGeometry.PathGeoPileToeInnerDashed;
+            var dashedPath = viewModel.IsElementSplit
+                ? viewModel.CanvasGeometry.PathGeoPileToeInnerDashedDivided
+                : viewModel.CanvasGeometry.PathGeoPileToeInnerDashed;
 
             double pileToeDia2D = pileToeDia * viewModel.CanvasThreeDView.Scale;
             double pileDia2D = pileDia * viewModel.CanvasThreeDView.Scale;

@@ -1162,7 +1162,7 @@ namespace PileDesign.ViewModels
                 DrawPileForce(WpfPlot, MyCrosshair, "CrosshairPositionText", forceType, unit);
             }
 
-            else if (SelectedGraphOption.StartsWith("杭変位"))
+            else if (SelectedGraphOption.StartsWith("杭変位") && SelectedGraphOption != "杭変位応力")
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -1713,27 +1713,12 @@ namespace PileDesign.ViewModels
                 IsGridOptionVisible = false;
                 IsLimitStateOptionVisible = true;
 
-                try
-                {
-                    DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm");
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN");
-                }
-                catch (Exception)
-                {
-                }
-                try
-                {
-                    DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm");
-                }
-                catch (Exception)
-                {
-                }
+                try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm"); }
+                catch (Exception) { }
+                try { DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN"); }
+                catch (Exception) { }
+                try { DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm"); }
+                catch (Exception) { }
 
             }
             else if (SelectedGraphOption == "単杭沈下" ||
@@ -2904,8 +2889,16 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
-                            // 杭先端
-                            beamZs.Add(beams[^1].NodeJ.Coord.Z);
+                            // 杭先端: RigidLinkではなく、最後の杭要素のNodeJを使用
+                            var lastPileBeam = beams.LastOrDefault(b => b.SegmentIndex != null);
+                            if (lastPileBeam != null)
+                            {
+                                beamZs.Add(lastPileBeam.NodeJ.Coord.Z);
+                            }
+                            else
+                            {
+                                beamZs.Add(beams[^1].NodeJ.Coord.Z);
+                            }
                             beamForces.Add(0);
 
                             var scatter = wpfPlot.Plot.Add.Scatter(beamForces.ToArray(), beamZs.ToArray());
@@ -3012,7 +3005,6 @@ namespace PileDesign.ViewModels
                 }
 
                 var loadCases = GetSelectedLoadCases();
-                var loadCombinations = GetSelectedLoadCombinations();
 
                 foreach (LoadCase loadCase in loadCases)
                 {

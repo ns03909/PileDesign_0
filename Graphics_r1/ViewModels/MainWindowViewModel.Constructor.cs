@@ -25,6 +25,7 @@ namespace PileDesign.ViewModels
     {
         public string Name { get; }
         public string Unit { get; }
+        public string NameColor { get; }
         public PropertyInputType InputType { get; }
         public IReadOnlyList<string>? Options { get; }
 
@@ -60,7 +61,8 @@ namespace PileDesign.ViewModels
             string unit = "",
             PropertyInputType inputType = PropertyInputType.ReadOnly,
             Action<PropertyPanelItem, string>? commitAction = null,
-            IReadOnlyList<string>? options = null)
+            IReadOnlyList<string>? options = null,
+            string nameColor = null)
         {
             Name = name;
             _value = value;
@@ -68,6 +70,7 @@ namespace PileDesign.ViewModels
             InputType = inputType;
             CommitAction = commitAction;
             Options = options;
+            NameColor = nameColor;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -411,12 +414,13 @@ namespace PileDesign.ViewModels
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.FoundationBeamDeltaZc, v => pile.FoundationBeamDeltaZc = v)));
 
-            // 軸力 VL（VL0 を編集、表示は VL0 の値）
+            // 軸力 VL（VL0 を編集、表示は VL0 の値）— ディープブルー
             SelectedItemProperties.Add(new("軸力 VL", $"{pile.AxialForceVL0:F1}", "kN",
                 PropertyInputType.Number,
-                MakeDoubleCommit(() => pile.AxialForceVL0, v => pile.AxialForceVL0 = v, "F1")));
+                MakeDoubleCommit(() => pile.AxialForceVL0, v => pile.AxialForceVL0 = v, "F1"),
+                nameColor: "#3271AD"));
 
-            // 軸力: レベル1
+            // 軸力: レベル1 — 緑
             for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
             {
                 int idx = i;
@@ -424,10 +428,11 @@ namespace PileDesign.ViewModels
                     PropertyInputType.Number,
                     MakeDoubleCommit(
                         () => pile.AxialForceLevel1s[idx],
-                        v => pile.AxialForceLevel1s[idx] = v, "F1")));
+                        v => pile.AxialForceLevel1s[idx] = v, "F1"),
+                    nameColor: "#238966"));
             }
 
-            // 軸力: レベル2
+            // 軸力: レベル2 — 赤
             for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
             {
                 int idx = i;
@@ -435,7 +440,8 @@ namespace PileDesign.ViewModels
                     PropertyInputType.Number,
                     MakeDoubleCommit(
                         () => pile.AxialForceLevel2s[idx],
-                        v => pile.AxialForceLevel2s[idx] = v, "F1")));
+                        v => pile.AxialForceLevel2s[idx] = v, "F1"),
+                    nameColor: "#D82531"));
             }
         }
 
@@ -593,10 +599,10 @@ namespace PileDesign.ViewModels
                     RequestUpdateWindow();
                 }));
 
-            // 軸力 VL（合計：読み取り専用）
-            SelectedItemProperties.Add(new("軸力 VL (合計)", $"{piles.Sum(p => p.AxialForceVL):F1} kN"));
+            // 軸力 VL（合計：読み取り専用）— ディープブルー
+            SelectedItemProperties.Add(new("軸力 VL (合計)", $"{piles.Sum(p => p.AxialForceVL):F1} kN", nameColor: "#3271AD"));
 
-            // レベル1軸力
+            // レベル1軸力 — 緑
             int level1Count = piles.Min(p => p.AxialForceLevel1s.Count);
             for (int i = 0; i < level1Count; i++)
             {
@@ -611,10 +617,11 @@ namespace PileDesign.ViewModels
                         SaveUndoState();
                         foreach (var p in piles) p.AxialForceLevel1s[idx] = newVal;
                         RequestUpdateWindow();
-                    }));
+                    },
+                    nameColor: "#238966"));
             }
 
-            // レベル2軸力
+            // レベル2軸力 — 赤
             int level2Count = piles.Min(p => p.AxialForceLevel2s.Count);
             for (int i = 0; i < level2Count; i++)
             {
@@ -629,7 +636,8 @@ namespace PileDesign.ViewModels
                         SaveUndoState();
                         foreach (var p in piles) p.AxialForceLevel2s[idx] = newVal;
                         RequestUpdateWindow();
-                    }));
+                    },
+                    nameColor: "#D82531"));
             }
         }
 
@@ -983,9 +991,11 @@ namespace PileDesign.ViewModels
                 .Where(r => r.LoadCase?.LoadName == selectedLoadCase.LoadName);
 
             // 荷重組み合わせが選択されている場合はさらにフィルタリング
+            // SelectedLoadCombinationNameはGetName()形式（"1.00/1.00/1.00"）なので、
+            // LoadCombination.Name（"αL:1.00/βU:1.00/βL:1.00"）ではなくGetName()で比較する
             if (!string.IsNullOrEmpty(SelectedLoadCombinationName))
             {
-                results = results.Where(r => r.LoadCombination?.Name == SelectedLoadCombinationName);
+                results = results.Where(r => r.LoadCombination?.GetName() == SelectedLoadCombinationName);
             }
 
             var resultList = results.ToList();
@@ -2543,8 +2553,8 @@ namespace PileDesign.ViewModels
                     const string nodeSoilSpringLabel = "地盤反力";
                     const string pileHeadMLabel = "杭頭Mマップ";
                     const string pileHeadQLabel = "杭頭Qマップ";
-                    const string capNodeMLabel = "接合点Mマップ";
-                    const string capNodeQLabel = "接合点Qマップ";
+                    const string connectionMLabel = "接合点Mマップ";
+                    const string connectionQLabel = "接合点Qマップ";
                     if (value)
                     {
                         // true: がなければ追加
@@ -2558,10 +2568,10 @@ namespace PileDesign.ViewModels
                             AnalysisResultContentOption.Add(pileHeadMLabel);
                         if (!AnalysisResultContentOption.Contains(pileHeadQLabel))
                             AnalysisResultContentOption.Add(pileHeadQLabel);
-                        if (!AnalysisResultContentOption.Contains(capNodeMLabel))
-                            AnalysisResultContentOption.Add(capNodeMLabel);
-                        if (!AnalysisResultContentOption.Contains(capNodeQLabel))
-                            AnalysisResultContentOption.Add(capNodeQLabel);
+                        if (!AnalysisResultContentOption.Contains(connectionMLabel))
+                            AnalysisResultContentOption.Add(connectionMLabel);
+                        if (!AnalysisResultContentOption.Contains(connectionQLabel))
+                            AnalysisResultContentOption.Add(connectionQLabel);
                     }
                     else
                     {
@@ -2571,8 +2581,8 @@ namespace PileDesign.ViewModels
                         AnalysisResultContentOption.Remove(nodeSoilSpringLabel);
                         AnalysisResultContentOption.Remove(pileHeadMLabel);
                         AnalysisResultContentOption.Remove(pileHeadQLabel);
-                        AnalysisResultContentOption.Remove(capNodeMLabel);
-                        AnalysisResultContentOption.Remove(capNodeQLabel);
+                        AnalysisResultContentOption.Remove(connectionMLabel);
+                        AnalysisResultContentOption.Remove(connectionQLabel);
                     }
 
                     // 解析済みインジケータ更新

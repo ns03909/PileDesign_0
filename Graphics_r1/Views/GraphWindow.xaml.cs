@@ -32,6 +32,17 @@ namespace PileDesign.Views
                     PlotHelper.AddCsvExportMenu(wpfPlot1, "解析結果1");
                     PlotHelper.AddCsvExportMenu(wpfPlot2, "解析結果2");
                     PlotHelper.AddCsvExportMenu(wpfPlot3, "解析結果3");
+
+                    // WpfPlot1がsize=0→有効サイズになった時に再レンダリング（フォールバック）
+                    wpfPlot1.SizeChanged += (sender2, args2) =>
+                    {
+                        if (args2.PreviousSize.Width == 0 && args2.NewSize.Width > 0)
+                        {
+                            wpfPlot1.Refresh();
+                            wpfPlot2.Refresh();
+                            wpfPlot3.Refresh();
+                        }
+                    };
                 }
             };
 
@@ -39,8 +50,8 @@ namespace PileDesign.Views
             {
                 if (DataContext is GraphViewModel vm)
                 {
+                    // setter内でDispatcher経由のUpdateGraphが発火するため、ここでは呼ばない
                     vm.SelectedGraphOption = GraphComboBox.SelectedItem as string;
-                    vm.UpdateGraph();
                 }
             };
         }
