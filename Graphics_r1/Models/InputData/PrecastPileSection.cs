@@ -809,11 +809,6 @@ namespace PileDesign.Models.InputData
             var result3 = CircularPipeSectionTendons.GetForceAndMoment(type, Tendons, epsilon0 + Prestrains[1], curvature);
             var result4 = CircularPipeSectionTendons.GetForceAndMoment(type, PrecastConcrete, epsilon0 + Prestrains[0], curvature);
 
-            //var result1 = CircularSolidSectionConcreteOut.GetForceAndMoment(false, PrecastConcrete, epsilon0, curvature);
-            //var result2 = CircularSolidSectionConcreteIn.GetForceAndMoment(false, PrecastConcrete, epsilon0, curvature);
-            //var result3 = CircularPipeSectionTendons.GetForceAndMoment(false, Tendons, epsilon0, curvature);
-            //var result4 = CircularPipeSectionTendons.GetForceAndMoment(false, PrecastConcrete, epsilon0, curvature);
-
             N = result1.Item1 - result2.Item1 + result3.Item1 - result4.Item1;
             M = result1.Item2 - result2.Item2 + result3.Item2 - result4.Item2;
             return (N, M);
