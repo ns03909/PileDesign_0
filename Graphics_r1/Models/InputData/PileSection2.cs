@@ -1109,8 +1109,10 @@ namespace PileDesign.Models.InputData
             double epsilonC;
             double curvature;
             double maxCurvatureDefault = (0.003 + 0.0025) * 20.0 / PileDia;
-            // CurvatureMaxUltimateLimitが設定されている場合、過大な曲率を抑制
-            double maxCurvature = CurvatureMaxUltimateLimit > 0 && CurvatureMaxUltimateLimit < maxCurvatureDefault
+            // CurvatureMaxUltimateLimitが設定されていて、デフォルトより小さい場合はそちらを使用
+            // ただし極端に小さい値（デフォルトの1/10未満）は無視して退化した曲線を防ぐ
+            double minAllowed = maxCurvatureDefault * 0.1;
+            double maxCurvature = CurvatureMaxUltimateLimit > minAllowed && CurvatureMaxUltimateLimit < maxCurvatureDefault
                 ? CurvatureMaxUltimateLimit
                 : maxCurvatureDefault;
             double maxEpsilonC = 0.003;

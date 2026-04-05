@@ -239,6 +239,7 @@ namespace PileDesign.Views
             var path = viewModel.IsElementSplit
                 ? viewModel.CanvasGeometry.PathGeoPileDividedDias
                 : viewModel.CanvasGeometry.PathGeoPileDias;
+            var dashedPath = viewModel.CanvasGeometry.PathGeoPileToeInnerDashed;
 
             double pileToeDia2D = pileToeDia * viewModel.CanvasThreeDView.Scale;
             double pileDia2D = pileDia * viewModel.CanvasThreeDView.Scale;
@@ -246,13 +247,11 @@ namespace PileDesign.Views
             double height = pileToeDia * 2.0;
             double factoredHeight2D = Math.Cos(phiRad) * height * viewModel.CanvasThreeDView.Scale;
 
+            // 拡大根固め部の外形（実線）
             var ellipseBtm = new EllipseGeometry(pointBtm, pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
             var ellipseTop = new EllipseGeometry(new Point(pointBtm.X, pointBtm.Y - factoredHeight2D), pileToeDia2D * 0.5, pileToeDia2D * 0.5 * flattening);
-            var ellipseCore = new EllipseGeometry(new Point(pointBtm.X, pointBtm.Y - factoredHeight2D), pileDia2D * 0.5, pileDia2D * 0.5 * flattening);
-
             path.AddGeometry(ellipseBtm);
             path.AddGeometry(ellipseTop);
-            path.AddGeometry(ellipseCore);
 
             for (int j = -1; j <= 1; j += 2)
             {
@@ -261,6 +260,24 @@ namespace PileDesign.Views
                     new Point(pointBtm.X + pileToeDia2D * 0.5 * j, pointBtm.Y)
                 );
                 path.AddGeometry(lineGeometry);
+            }
+
+            // 根固め部内部の杭体（破線）: 杭径の楕円と側線
+            var ellipseCore = new EllipseGeometry(new Point(pointBtm.X, pointBtm.Y - factoredHeight2D), pileDia2D * 0.5, pileDia2D * 0.5 * flattening);
+            dashedPath.AddGeometry(ellipseCore);
+
+            // 杭体の底面楕円（根固め底面位置）
+            var ellipseCoreBtm = new EllipseGeometry(pointBtm, pileDia2D * 0.5, pileDia2D * 0.5 * flattening);
+            dashedPath.AddGeometry(ellipseCoreBtm);
+
+            // 杭体の側線（根固め部内部）
+            for (int j = -1; j <= 1; j += 2)
+            {
+                var innerLine = new LineGeometry(
+                    new Point(pointBtm.X + pileDia2D * 0.5 * j, pointBtm.Y - factoredHeight2D),
+                    new Point(pointBtm.X + pileDia2D * 0.5 * j, pointBtm.Y)
+                );
+                dashedPath.AddGeometry(innerLine);
             }
         }
 
