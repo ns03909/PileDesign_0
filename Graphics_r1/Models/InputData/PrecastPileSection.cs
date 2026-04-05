@@ -108,6 +108,11 @@ namespace PileDesign.Models.InputData
     // PHC杭断面クラス
     internal class PHCSection : PrecastPileSection ////////////////////////////////////////////////////////////////////////////////////////////
     {
+        /// <summary>
+        /// 純引張時のεC: PC鋼材が最大引張耐力(-Fpu)に達し、コンクリートが応力ゼロとなるひずみ。
+        /// GetUltimateForceAndMomentでPrestrains加算＋GetStress内でEpsilonPi/EpsilonE加算のため、
+        /// 実効ひずみは εC + 2*Prestrain となる。
+        /// </summary>
 
         public CircularSolidSection CircularSolidSectionConcreteOut { get; private set; }
         public CircularSolidSection CircularSolidSectionConcreteIn { get; private set; }
