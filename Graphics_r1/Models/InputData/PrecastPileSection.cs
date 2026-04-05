@@ -58,6 +58,14 @@ namespace PileDesign.Models.InputData
         public double ServiceLimitNMin => (4.0 - SigmaE) * Ae * 1e-3;
         public double ServiceLimitNMax => (Fcs - SigmaE) * Ae * 1e-3;
 
+        // せん断の軸力制限値（表示用・N-Q曲線用、N単位）
+        public double ShearNMinService => (4.0 - SigmaE) * Ae;
+        public double ShearNMaxService => (Fc / 3.5 - SigmaE) * Ae;
+        public double ShearNMinDamage => (4.0 - SigmaE) * Ae;
+        public double ShearNMaxDamage => (45.0 - SigmaE) * Ae;
+        public double ShearNMinUltimate => (4.0 - SigmaE) * Ae;
+        public double ShearNMaxUltimate => (45.0 - SigmaE) * Ae;
+
         // 断面プロパティ設定メソッド
         internal void SetSectionParameters()
         {
@@ -320,13 +328,7 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // せん断の軸力制限値（表示用・N-Q曲線用）
-        public double ShearNMinService => (4.0 - SigmaE) * Ae;
-        public double ShearNMaxService => (Fc / 3.5 - SigmaE) * Ae;
-        public double ShearNMinDamage => (4.0 - SigmaE) * Ae;
-        public double ShearNMaxDamage => (45.0 - SigmaE) * Ae;
-        public double ShearNMinUltimate => (4.0 - SigmaE) * Ae;
-        public double ShearNMaxUltimate => (45.0 - SigmaE) * Ae;
+        // せん断の軸力制限値は基底クラスPrecastPileSectionで定義
 
         /// <summary>
         /// 使用限界QNを返す。(σ₀+σ₀ₑ)=4 ～ fc,s=Fc/3.5

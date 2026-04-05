@@ -1708,15 +1708,15 @@ namespace PileDesign.Models.InputData
                 ServiceLimitNMin = precast.ServiceLimitNMin;
                 ServiceLimitNMax = precast.ServiceLimitNMax;
             }
-            // せん断の軸力制限値を転送（PHC杭用、N単位のまま、XAMLのMultiplyConverterで0.001倍）
-            if (section is PHCSection phc)
+            // せん断の軸力制限値を転送（既製杭用、N単位のまま、XAMLのMultiplyConverterで0.001倍）
+            if (section is PrecastPileSection precastShear)
             {
-                ShearNMinService = phc.ShearNMinService;
-                ShearNMaxService = phc.ShearNMaxService;
-                ShearNMinDamage = phc.ShearNMinDamage;
-                ShearNMaxDamage = phc.ShearNMaxDamage;
-                ShearNMinUltimate = phc.ShearNMinUltimate;
-                ShearNMaxUltimate = phc.ShearNMaxUltimate;
+                ShearNMinService = precastShear.ShearNMinService;
+                ShearNMaxService = precastShear.ShearNMaxService;
+                ShearNMinDamage = precastShear.ShearNMinDamage;
+                ShearNMaxDamage = precastShear.ShearNMaxDamage;
+                ShearNMinUltimate = precastShear.ShearNMinUltimate;
+                ShearNMaxUltimate = precastShear.ShearNMaxUltimate;
             }
 
             // プロパティ名に応じた NM を取得
