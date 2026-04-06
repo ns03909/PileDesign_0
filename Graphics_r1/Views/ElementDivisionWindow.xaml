@@ -21,6 +21,7 @@
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="A" Modifiers="Control" Command="{Binding AutoZsAllPilesCommand}" />
     </Window.InputBindings>
 
     <Window.Resources>
@@ -159,7 +160,7 @@
             <!-- 全杭セット自動分割ボタン＋パラメータ -->
             <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="8,0"/>
             <Button Command="{Binding AutoZsAllPilesCommand}"
-                    ToolTip="全杭セット自動分割:全ての土層-杭セットに対して自動要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center">
+                    ToolTip="全杭セット自動分割 (Ctrl+A): 全ての土層-杭セットに対して自動要素分割を実行します" Padding="6,2" Margin="2" VerticalAlignment="Center">
                     <svgc:SvgViewbox Source="/Icons/AutoSplitAll.svg" Style="{StaticResource SvgIconStyle24}"/>
             </Button>
 

@@ -71,6 +71,7 @@ namespace PileDesign.ViewModels
             {
                 while (_logQueue.TryDequeue(out var line))
                     CalculationLog.Add(line);
+                OnPropertyChanged(nameof(CalculationLogText));
             });
         }
 
@@ -344,6 +345,9 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _calculationLog, value);
         }
 
+        /// <summary>ログ全体をテキストとして返す（TextBoxバインド用）</summary>
+        public string CalculationLogText => string.Join(Environment.NewLine, CalculationLog);
+
         // 解析実行済みフラグ
         private bool _isAnalysisExecuted = false;
         public bool IsAnalysisExecuted
@@ -408,7 +412,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _stopONMaxDisplacement, value);
         }
 
-        private double _maxAllowedDisplacement = 2.0; // デフォルト: 2.0 (m) - v7で閾値を上げて解析継続
+        private double _maxAllowedDisplacement = 1.0; // デフォルト: 1.0 (m)
         public double MaxAllowedDisplacement
         {
             get => _maxAllowedDisplacement;
@@ -1675,11 +1679,11 @@ namespace PileDesign.ViewModels
 
                             // v16: 診断値をループ外に宣言（Modified NRフェーズでスキップしても前回値を保持）
                             double diagKMin = double.NaN, diagKMax = double.NaN;
+                            double dispMaxAbs = double.NaN;
 
                             while (targetModel.NormsROnNormsFint >= effectiveAlpha && n_iteration <= maxIterations)
                             {
                                 double springKMin = double.NaN, springKMax = double.NaN;
-                                double dispMaxAbs = double.NaN;
                                 double usedRelaxFactor = currentRelaxFactor; // このステップで使う値を保存
 
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
@@ -1949,17 +1953,17 @@ namespace PileDesign.ViewModels
                             }
 
                             // Maximum iteration check
+                            string dispInfo = !double.IsNaN(dispMaxAbs) ? $", max|d|={dispMaxAbs:E3}m" : "";
                             bool converged = !(n_iteration > maxIterations && targetModel.NormsROnNormsFint >= effectiveAlpha);
                             if (!converged)
                             {
                                 double finalResidual = targetModel.NormsROnNormsFint;
-                                await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3})");
+                                await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
                             }
                             else
                             {
-                                // 収束成功のログ
                                 string relaxedNote = effectiveAlpha > alpha ? $" (緩和基準α={effectiveAlpha:E2})" : "";
-                                await AddLogAsync($"  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}");
+                                await AddLogAsync($"  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
                             }
 
                             // v12: ライン探索を自動で有効化した場合、元に戻す

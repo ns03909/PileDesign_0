@@ -15,14 +15,7 @@
         x:Name="LateralCalcWin"
         PreviewKeyDown="Window_PreviewKeyDown">
     
-    <Window.CommandBindings>
-        <CommandBinding Command="ApplicationCommands.SelectAll"
-                        CanExecute="LogListBox_SelectAllCanExecute"
-                        Executed="LogListBox_SelectAllExecuted" />
-        <CommandBinding Command="ApplicationCommands.Copy"
-                        CanExecute="LogListBox_CopyCanExecute"
-                        Executed="LogListBox_CopyExecuted" />
-    </Window.CommandBindings>
+    <!-- TextBoxの標準機能でCtrl+A（全選択）/ Ctrl+C（コピー）が動作 -->
 
     <Window.InputBindings>
         <!--<KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -88,7 +81,7 @@
 
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter"/>
-        <!-- 既存リソース -->
+        <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
 
     </Window.Resources>
 
@@ -137,8 +130,25 @@
                              ToolTip="全杭を代表点に全6DOFで剛体連結"/>
                 <RadioButton Content="剛床連結" GroupName="ConnectionMode" VerticalAlignment="Center"
                              IsChecked="{Binding ConnectionMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=RigidFloor}"
-                             IsEnabled="{Binding HasFoundationBeamElements}"
-                             ToolTip="Ux,Uy,Rz拘束、Uz,Rx,Ry自由。基礎梁が剛性を負担"/>
+                             IsEnabled="{Binding HasFoundationBeamElements}">
+                    <RadioButton.ToolTip>
+                        <StackPanel>
+                            <TextBlock Text="Ux,Uy,Rz拘束、Uz,Rx,Ry自由。基礎梁が剛性を負担"/>
+                            <TextBlock Text="{Binding FoundationBeamValidationMessage}" Foreground="Red">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasFoundationBeamElements}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </RadioButton.ToolTip>
+                </RadioButton>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
@@ -161,7 +171,13 @@
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False">
                 <common:EnhancedDataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
+                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
+                        <DataGridTextColumn.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
+                            </Style>
+                        </DataGridTextColumn.CellStyle>
+                    </DataGridTextColumn>
                     <DataGridCheckBoxColumn Binding="{Binding IsAnalysisTarget, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto"/>
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
@@ -176,7 +192,13 @@
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False">
                 <common:EnhancedDataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True" />
+                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
+                        <DataGridTextColumn.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
+                            </Style>
+                        </DataGridTextColumn.CellStyle>
+                    </DataGridTextColumn>
                     <DataGridCheckBoxColumn Binding="{Binding IsAnalysisTarget, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
@@ -230,6 +252,17 @@
                      PreviewTextInput="NumericOnly_PreviewTextInput"
                      DataObject.Pasting="NumericOnly_Pasting"
                      ToolTip="最大許容代表変位（m）。この値を超えると解析が停止します。"/>
+            </StackPanel>
+
+            <!-- 杭軸力モード -->
+            <StackPanel Orientation="Horizontal" Margin="8,4">
+                <TextBlock Text="杭軸力:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
+                <RadioButton Content="入力値" GroupName="AxialForceMode" Margin="0,0,12,0" VerticalAlignment="Center"
+                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                             ToolTip="入力された軸力値のみを使用（従来動作）"/>
+                <RadioButton Content="入力値＋応力解析結果" GroupName="AxialForceMode" VerticalAlignment="Center"
+                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay}"
+                             ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）"/>
             </StackPanel>
 
             <!-- Newton-Raphson設定 -->
@@ -326,14 +359,24 @@
             </Grid.RowDefinitions>
 
             <TextBlock Text="計算ログ" Grid.Row="0"/>
-            <ListBox x:Name="LogListBox"
-             ItemsSource="{Binding CalculationLog}"
-             Loaded="ListBox_Loaded"
-             Grid.Row="1"
-             SelectionMode="Extended"
-             PreviewMouseLeftButtonDown="LogListBox_PreviewMouseLeftButtonDown"
-             PreviewMouseLeftButtonUp="LogListBox_PreviewMouseLeftButtonUp"
-             MouseMove="LogListBox_MouseMove"/>
+            <TextBox x:Name="LogTextBox"
+                     Text="{Binding CalculationLogText, Mode=OneWay}"
+                     Grid.Row="1"
+                     IsReadOnly="True"
+                     TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     FontFamily="Consolas"
+                     FontSize="12"
+                     Background="#FAFAFA"
+                     AcceptsReturn="True">
+                <TextBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="コピー (Ctrl+C)" Command="ApplicationCommands.Copy"/>
+                        <MenuItem Header="全選択 (Ctrl+A)" Command="ApplicationCommands.SelectAll"/>
+                    </ContextMenu>
+                </TextBox.ContextMenu>
+            </TextBox>
         </Grid>
 
         <!-- 下部ボタン -->

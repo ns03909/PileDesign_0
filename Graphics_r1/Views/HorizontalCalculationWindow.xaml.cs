@@ -66,15 +66,11 @@ namespace PileDesign.Views
 
         private void CalculationLog_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (LogListBox.Items.Count > 0)
+            // TextBoxの末尾にスクロール
+            LogTextBox?.Dispatcher.BeginInvoke(() =>
             {
-                // UIスレッドの描画が終わった後にスクロール
-                LogListBox.Dispatcher.BeginInvoke(() =>
-                {
-                    LogListBox.UpdateLayout();
-                    LogListBox.ScrollIntoView(LogListBox.Items[^1]);
-                });
-            }
+                LogTextBox.ScrollToEnd();
+            });
         }
 
         private async void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
@@ -308,37 +304,7 @@ namespace PileDesign.Views
             return element as ListBoxItem;
         }
 
-        // 既存: Ctrl+A/C のハンドラ（前回答の通り）
-        private void LogListBox_SelectAllCanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            e.CanExecute = LogListBox != null && LogListBox.Items.Count > 0;
-            e.Handled = true;
-        }
-
-        private void LogListBox_SelectAllExecuted(object sender, ExecutedRoutedEventArgs e)
-        {
-            LogListBox.SelectedItems.Clear();
-            foreach (var item in LogListBox.Items)
-                LogListBox.SelectedItems.Add(item);
-            e.Handled = true;
-        }
-
-        private void LogListBox_CopyCanExecute(object sender, CanExecuteRoutedEventArgs e)
-        {
-            e.CanExecute = LogListBox != null && LogListBox.Items.Count > 0;
-            e.Handled = true;
-        }
-
-        private void LogListBox_CopyExecuted(object sender, ExecutedRoutedEventArgs e)
-        {
-            var source = LogListBox.SelectedItems.Count > 0
-                ? LogListBox.SelectedItems.Cast<object>()
-                : LogListBox.Items.Cast<object>(); // 未選択時は全行コピー
-
-            var text = string.Join(Environment.NewLine, source.Select(x => x?.ToString() ?? string.Empty));
-            Clipboard.SetText(text);
-            e.Handled = true;
-        }
+        // TextBoxに変更したため、Ctrl+A（全選択）/ Ctrl+C（コピー）は標準機能で動作
 
 
         // View がメッセージ表示を担当
