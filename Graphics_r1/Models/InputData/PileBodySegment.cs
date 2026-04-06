@@ -21,16 +21,12 @@
             }
         }
 
-        // 要素深さ
+        // 要素深さ（PileBodySegmentsUpdateで累積計算される値のためバリデーション不要）
         private double _segmentDepth;
         public double SegmentDepth
         {
             get => _segmentDepth;
-            set
-            {
-                if (value <= 0 || !double.IsFinite(value)) return;
-                SetProperty(ref _segmentDepth, value);
-            }
+            set => SetProperty(ref _segmentDepth, value);
         }
 
         // 要素断面
