@@ -14,7 +14,11 @@
         public double SegmentLength
         {
             get => _segmentLength;
-            set => SetProperty(ref _segmentLength, value);
+            set
+            {
+                if (value <= 0 || !double.IsFinite(value)) return;
+                SetProperty(ref _segmentLength, value);
+            }
         }
 
         // 要素深さ
@@ -22,7 +26,11 @@
         public double SegmentDepth
         {
             get => _segmentDepth;
-            set => SetProperty(ref _segmentDepth, value);
+            set
+            {
+                if (value <= 0 || !double.IsFinite(value)) return;
+                SetProperty(ref _segmentDepth, value);
+            }
         }
 
         // 要素断面

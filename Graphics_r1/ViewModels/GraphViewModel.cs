@@ -1714,11 +1714,11 @@ namespace PileDesign.ViewModels
                 IsLimitStateOptionVisible = true;
 
                 try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm"); }
-                catch (Exception) { }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}"); }
                 try { DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN"); }
-                catch (Exception) { }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Force] {ex.GetType().Name}: {ex.Message}"); }
                 try { DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm"); }
-                catch (Exception) { }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Moment] {ex.GetType().Name}: {ex.Message}"); }
 
             }
             else if (SelectedGraphOption == "単杭沈下" ||

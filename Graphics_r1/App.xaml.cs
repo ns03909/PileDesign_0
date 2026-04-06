@@ -47,8 +47,12 @@ namespace PileDesign
         {
             try
             {
-                // アプリ起動確認ログ
-                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup.log");
+                // アプリ起動確認ログ（AppData/Local/PileDesign/Logs/に書き込み）
+                var logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PileDesign", "Logs");
+                Directory.CreateDirectory(logDir);
+                string path = Path.Combine(logDir, "startup.log");
                 File.AppendAllText(path, $"[{DateTime.Now}] App constructor start\n");
                 // MainWindowViewModelを先に生成
                 var mainWindowViewModel = new MainWindowViewModel();
@@ -61,7 +65,11 @@ namespace PileDesign
             }
             catch (Exception ex)
             {
-                File.AppendAllText("startup_error.log", $"[{DateTime.Now}] 例外: {ex}\n");
+                var errorLogDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PileDesign", "Logs");
+                try { Directory.CreateDirectory(errorLogDir); } catch { }
+                File.AppendAllText(Path.Combine(errorLogDir, "startup_error.log"), $"[{DateTime.Now}] 例外: {ex}\n");
                 MessageBox.Show($"アプリ起動時に致命的なエラーが発生しました。\n{ex.Message}", "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 Environment.Exit(1);
             }
@@ -141,10 +149,14 @@ namespace PileDesign
 
         private void ShowAndLogException(Exception ex)
         {
-            // ログファイルに出力
+            // ログファイルに出力（AppData/Local/PileDesign/Logs/）
             try
             {
-                File.WriteAllText("error.log", ex.ToString());
+                var logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PileDesign", "Logs");
+                Directory.CreateDirectory(logDir);
+                File.WriteAllText(Path.Combine(logDir, "error.log"), ex.ToString());
             }
             catch (UnauthorizedAccessException)
             {

@@ -51,11 +51,38 @@ namespace PileDesign.Services
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("ファイルが見つかりません。", filePath);
 
-            string json = File.ReadAllText(filePath);
-            var projectData = JsonSerializer.Deserialize<ProjectData>(json, _jsonOptions);
+            string json;
+            try
+            {
+                json = File.ReadAllText(filePath);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException($"ファイルの読込に失敗しました。\n別のプロセスで使用中の可能性があります。\n{filePath}", ex);
+            }
+
+            ProjectData projectData;
+            try
+            {
+                projectData = JsonSerializer.Deserialize<ProjectData>(json, _jsonOptions);
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                throw new InvalidOperationException(
+                    $"ファイルのJSON形式が不正です。ファイルが破損しているか、対応していない形式です。\n{filePath}", ex);
+            }
 
             if (projectData == null)
                 throw new InvalidOperationException("ファイル形式が不正です。");
+
+            // バージョン0はFormatVersionプロパティ追加前の旧ファイル → 互換あり
+            const int currentVersion = 1;
+            if (projectData.FormatVersion > currentVersion)
+            {
+                throw new InvalidOperationException(
+                    $"このファイルは新しいバージョン（v{projectData.FormatVersion}）で保存されています。\n" +
+                    $"現在のプログラム（v{currentVersion}）では読み込めません。プログラムを更新してください。");
+            }
 
             return projectData;
         }

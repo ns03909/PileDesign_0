@@ -7,6 +7,12 @@ namespace PileDesign.Models
 {
     public class ProjectData
     {
+        /// <summary>
+        /// ファイルフォーマットのバージョン番号。
+        /// スキーマ変更時にインクリメントし、読込時の互換性チェックに使用する。
+        /// </summary>
+        public int FormatVersion { get; set; } = 1;
+
         public InputModel InputModel { get; set; }
         public AnaModel AnaModel { get; set; }
 

@@ -1097,7 +1097,16 @@ namespace PileDesign.ViewModels
             set
             {
                 if (SetProperty(ref _analysisResultContent, value))
+                {
+                    // 杭頭Mマップ/Qマップ選択時は応力ダイアグラムスケールを0.1、値表示をON
+                    if (value == "杭頭Mマップ" || value == "杭頭Qマップ")
+                    {
+                        ForceDiagramRatio = 0.1;
+                        IsResultValueVisible = true;
+                    }
+
                     UpdateCanvas3DAction?.Invoke();
+                }
             }
         }
 

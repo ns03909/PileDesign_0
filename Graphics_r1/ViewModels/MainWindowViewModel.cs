@@ -2430,6 +2430,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[TrySaveUndoSnapshotSafely] Exception: {ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -2501,9 +2502,6 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    // Undoポイントを追加（読込前の状態を保存）
-                    SaveUndoState();
-
                     var projectData = _fileOperationService.LoadProjectData(openFileDialog.FileName);
 
                     if (projectData != null)
@@ -2554,6 +2552,10 @@ namespace PileDesign.ViewModels
                     CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
                     CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
                     CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
+
+                    // Undo履歴をクリアして新規プロジェクトの初期状態を保存
+                    _undoManager.Clear();
+                    SaveUndoState();
 
                     UpdateWindowImmediate();
                     ShowToast("読込が完了しました。");
@@ -4491,9 +4493,6 @@ namespace PileDesign.ViewModels
 
             try
             {
-                // Undoポイントを追加
-                SaveUndoState();
-
                 var projectData = _fileOperationService.LoadProjectData(filePath);
 
                 if (projectData != null)
@@ -4536,6 +4535,10 @@ namespace PileDesign.ViewModels
                 CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
                 CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
                 CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
+
+                // Undo履歴をクリアして新規プロジェクトの初期状態を保存
+                _undoManager.Clear();
+                SaveUndoState();
 
                 UpdateWindowImmediate();
                 ShowToast("読込が完了しました。");
@@ -4616,6 +4619,10 @@ namespace PileDesign.ViewModels
                         CurrentInputModel.PileGroupSettlement?.SettlementGridData?.Clear();
                         CurrentInputModel.PileGroupSettlement?.SettlementGridX?.Clear();
                         CurrentInputModel.PileGroupSettlement?.SettlementGridY?.Clear();
+
+                        // Undo履歴をクリアして復元状態を初期状態として保存
+                        _undoManager.Clear();
+                        SaveUndoState();
 
                         UpdateWindowImmediate();
                         ShowToast("自動保存ファイルの復元が完了しました。");
