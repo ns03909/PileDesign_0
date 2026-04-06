@@ -4200,20 +4200,21 @@ namespace PileDesign.ViewModels
             // Undoポイントを追加
             SaveUndoState();
 
-            // Undo用にまとめる
-            var scope = new PileDesign.Common.Undo.CompositeUndoAction("Delete piles");
-            foreach (var item in itemsToRemove)
+            // 削除対象の杭に接合された梁要素も同時に削除
+            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
+            if (beams != null)
             {
-                int index = col.IndexOf(item);
-                if (index < 0) continue;
-                scope.Add(
-                    PileDesign.Common.Undo.CollectionChangeAction<PileLayoutDataItem>
-                        .ForRemove(col, item, index)
-                );
-            }
-            UndoService.Instance.Push(scope);
+                var pileIds = new HashSet<Guid>(itemsToRemove.Select(p => p.UniqueId));
+                var beamsToRemove = beams.Where(b =>
+                    (b.NodeI_Type == Models.InputData.NodeReferenceType.PileLayout && pileIds.Contains(b.NodeI_Id)) ||
+                    (b.NodeJ_Type == Models.InputData.NodeReferenceType.PileLayout && pileIds.Contains(b.NodeJ_Id))
+                ).ToList();
 
-            // 実削除
+                foreach (var beam in beamsToRemove)
+                    beams.Remove(beam);
+            }
+
+            // 杭の実削除
             foreach (var item in itemsToRemove)
                 col.Remove(item);
 
