@@ -1976,17 +1976,36 @@ namespace PileDesign.Views
             Point nearestElemStart = default;
             Point nearestElemEnd = default;
 
-            // 杭節点
+            // 杭節点: 要素追加モードでは杭頭ではなく接合節点（杭頭+ΔZc）にスナップ
+            bool isAddElementMode = viewModel.CurrentEditMode == CanvasEditMode.AddElement;
             foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
             {
                 if (!pile.IsVisible) continue;
-                Point coord = viewModel.CanvasThreeDView.Transformation(pile.Point3D);
-                double dist = GetDistanceBetweenTwoNodes(mousePos, coord);
-                if (dist < nearestNodeDist)
+                if (isAddElementMode)
                 {
-                    nearestNodeDist = dist;
-                    nearestNodeCoord = coord;
-                    nearestPileOrGeneralZ = pile.Z;
+                    // 要素追加モード: 接合節点位置にスナップ
+                    double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
+                    Point3D connectingLoc = new(pile.X, pile.Y, connectingZ);
+                    Point coord = viewModel.CanvasThreeDView.Transformation(connectingLoc);
+                    double dist = GetDistanceBetweenTwoNodes(mousePos, coord);
+                    if (dist < nearestNodeDist)
+                    {
+                        nearestNodeDist = dist;
+                        nearestNodeCoord = coord;
+                        nearestPileOrGeneralZ = connectingZ;
+                    }
+                }
+                else
+                {
+                    // 通常モード: 杭頭位置にスナップ
+                    Point coord = viewModel.CanvasThreeDView.Transformation(pile.Point3D);
+                    double dist = GetDistanceBetweenTwoNodes(mousePos, coord);
+                    if (dist < nearestNodeDist)
+                    {
+                        nearestNodeDist = dist;
+                        nearestNodeCoord = coord;
+                        nearestPileOrGeneralZ = pile.Z;
+                    }
                 }
             }
 
