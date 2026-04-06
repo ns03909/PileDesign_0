@@ -1144,8 +1144,8 @@ namespace PileDesign.Views
                 }
             }
 
-            // 基礎梁節点の選択描画（梁要素表示がONの場合のみ）
-            if (viewModel.IsFoundationBeamVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            // 基礎梁節点の選択描画（節点表示がONの場合のみ）
+            if (viewModel.IsNodeVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
             {
                 foreach (FoundationNode node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
                 {
@@ -2008,8 +2008,8 @@ namespace PileDesign.Views
                 }
             }
 
-            // 基礎梁節点（ハイライト対象だがスナップZ更新対象外）
-            if (viewModel.IsFoundationBeamVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
+            // 基礎梁節点（ハイライト対象だがスナップZ更新対象外）— 「節点」トグルで制御
+            if (viewModel.IsNodeVisible && viewModel.CurrentInputModel.FoundationBeamInput?.Nodes != null)
             {
                 foreach (var node in viewModel.CurrentInputModel.FoundationBeamInput.Nodes)
                 {

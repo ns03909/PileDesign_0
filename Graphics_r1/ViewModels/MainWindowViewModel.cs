@@ -1356,6 +1356,119 @@ namespace PileDesign.ViewModels
                 return;
         }
 
+        /// <summary>X優先整列: X昇順 → Y昇順でPileLayoutItemsをソート</summary>
+        [RelayCommand]
+        private void SortPileLayoutXFirst()
+        {
+            if (CurrentInputModel.PileLayoutItems.Count == 0) return;
+            TrySaveUndoSnapshotSafely();
+
+            var sorted = CurrentInputModel.PileLayoutItems
+                .OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
+
+            CurrentInputModel.PileLayoutItems.Clear();
+            foreach (var p in sorted)
+                CurrentInputModel.PileLayoutItems.Add(p);
+
+            UpdatePileLayoutNo();
+            RequestUpdateWindow();
+        }
+
+        /// <summary>Y優先整列: Y昇順 → X昇順でPileLayoutItemsをソート</summary>
+        [RelayCommand]
+        private void SortPileLayoutYFirst()
+        {
+            if (CurrentInputModel.PileLayoutItems.Count == 0) return;
+            TrySaveUndoSnapshotSafely();
+
+            var sorted = CurrentInputModel.PileLayoutItems
+                .OrderBy(p => p.Y).ThenBy(p => p.X).ToList();
+
+            CurrentInputModel.PileLayoutItems.Clear();
+            foreach (var p in sorted)
+                CurrentInputModel.PileLayoutItems.Add(p);
+
+            UpdatePileLayoutNo();
+            RequestUpdateWindow();
+        }
+
+        /// <summary>一般節点: X優先整列</summary>
+        [RelayCommand]
+        private void SortInputNodesXFirst()
+        {
+            if (CurrentInputModel.InputNodes == null || CurrentInputModel.InputNodes.Count == 0) return;
+            TrySaveUndoSnapshotSafely();
+
+            var sorted = CurrentInputModel.InputNodes
+                .OrderBy(n => n.X).ThenBy(n => n.Y).ToList();
+
+            CurrentInputModel.InputNodes.Clear();
+            foreach (var n in sorted)
+                CurrentInputModel.InputNodes.Add(n);
+
+            for (int i = 0; i < CurrentInputModel.InputNodes.Count; i++)
+                CurrentInputModel.InputNodes[i].No = i + 1;
+
+            RequestUpdateWindow();
+        }
+
+        /// <summary>一般節点: Y優先整列</summary>
+        [RelayCommand]
+        private void SortInputNodesYFirst()
+        {
+            if (CurrentInputModel.InputNodes == null || CurrentInputModel.InputNodes.Count == 0) return;
+            TrySaveUndoSnapshotSafely();
+
+            var sorted = CurrentInputModel.InputNodes
+                .OrderBy(n => n.Y).ThenBy(n => n.X).ToList();
+
+            CurrentInputModel.InputNodes.Clear();
+            foreach (var n in sorted)
+                CurrentInputModel.InputNodes.Add(n);
+
+            for (int i = 0; i < CurrentInputModel.InputNodes.Count; i++)
+                CurrentInputModel.InputNodes[i].No = i + 1;
+
+            RequestUpdateWindow();
+        }
+
+        /// <summary>梁要素: 要素番号昇順で整列</summary>
+        [RelayCommand]
+        private void SortBeamsByNo()
+        {
+            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
+            if (beams == null || beams.Count == 0) return;
+            TrySaveUndoSnapshotSafely();
+
+            var sorted = beams.OrderBy(b => b.No).ToList();
+
+            beams.Clear();
+            foreach (var b in sorted)
+                beams.Add(b);
+
+            RequestUpdateWindow();
+        }
+
+        /// <summary>梁要素: I端節点→J端節点昇順で整列</summary>
+        [RelayCommand]
+        private void SortBeamsByNode()
+        {
+            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
+            if (beams == null || beams.Count == 0) return;
+            TrySaveUndoSnapshotSafely();
+
+            var sorted = beams.OrderBy(b => b.NodeI_No).ThenBy(b => b.NodeJ_No).ToList();
+
+            beams.Clear();
+            foreach (var b in sorted)
+                beams.Add(b);
+
+            for (int i = 0; i < beams.Count; i++)
+                beams[i].No = i + 1;
+
+            RequestUpdateWindow();
+        }
+
         // 要素の節点位置での分割
         [RelayCommand]
         public void OnSplitElementsByNodes()

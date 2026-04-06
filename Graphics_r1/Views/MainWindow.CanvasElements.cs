@@ -289,8 +289,8 @@ namespace PileDesign.Views
             if (Canvas3DLayout == null) return;
             if (DataContext is not MainWindowViewModel viewModel) return;
 
-            // 接続用節点を描画（杭頭+ΔZc位置） - FoundationBeamInputとは独立
-            if (viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            // 接続用節点を描画（杭頭+ΔZc位置） - 「節点」トグルで表示制御
+            if (viewModel.IsNodeVisible && viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
             {
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
