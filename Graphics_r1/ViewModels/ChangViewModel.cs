@@ -14,7 +14,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace PileDesign.ViewModels
@@ -670,7 +672,7 @@ namespace PileDesign.ViewModels
 
 
         [RelayCommand]
-        public void Analysis()
+        public async Task Analysis()
         {
             // Changs が空なら中止
             if (Changs == null || Changs.Count == 0)
@@ -708,42 +710,53 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 登録済みのチェックをパスしたら通常の解析を行う
-            double pileTopDisplacement = 0.0; // 杭頭変位
-            const double deltaPileTopDisplacement = 0.00001;
-            double computedTotalHorizontalForce = 0.0;
-            double computedTotalHorizontalForcePlus = 0.0;
+            // バックグラウンドで解析実行（UIスレッドブロッキング防止）
+            Mouse.OverrideCursor = Cursors.Wait;
+            var changsSnapshot = Changs.ToList();
+            double totalLoad = TotalHorizontalLoad;
 
-            while (TotalHorizontalLoad - computedTotalHorizontalForce > 0.0000001)
+            var result = await Task.Run(() =>
             {
-                computedTotalHorizontalForce = 0.0;
-                computedTotalHorizontalForcePlus = 0.0;
+                double pileTopDisplacement = 0.0;
+                const double deltaPileTopDisplacement = 0.00001;
+                double computedTotalHorizontalForce = 0.0;
+                double computedTotalHorizontalForcePlus = 0.0;
 
-                foreach (var chang in Changs)
+                while (totalLoad - computedTotalHorizontalForce > 0.0000001)
                 {
-                    double pileTopForce = chang.GetHorizontalForce(pileTopDisplacement);
-                    double pileTopForcePlusDelta = chang.GetHorizontalForce(pileTopDisplacement + deltaPileTopDisplacement);
-                    computedTotalHorizontalForce += pileTopForce * chang.Number;
-                    computedTotalHorizontalForcePlus += pileTopForcePlusDelta * chang.Number;
-                }
-                double stiffness = (computedTotalHorizontalForcePlus - computedTotalHorizontalForce) / deltaPileTopDisplacement;
+                    computedTotalHorizontalForce = 0.0;
+                    computedTotalHorizontalForcePlus = 0.0;
 
-                // 安全チェック: stiffness が不正なら中止
-                if (!double.IsFinite(stiffness) || Math.Abs(stiffness) < 1e-12)
-                {
-                    MessageBox.Show("剛性が不正のため解析を中止します。", "計算エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
+                    foreach (var chang in changsSnapshot)
+                    {
+                        double pileTopForce = chang.GetHorizontalForce(pileTopDisplacement);
+                        double pileTopForcePlusDelta = chang.GetHorizontalForce(pileTopDisplacement + deltaPileTopDisplacement);
+                        computedTotalHorizontalForce += pileTopForce * chang.Number;
+                        computedTotalHorizontalForcePlus += pileTopForcePlusDelta * chang.Number;
+                    }
+                    double stiffness = (computedTotalHorizontalForcePlus - computedTotalHorizontalForce) / deltaPileTopDisplacement;
 
-                pileTopDisplacement += (TotalHorizontalLoad - computedTotalHorizontalForce) / stiffness;
+                    if (!double.IsFinite(stiffness) || Math.Abs(stiffness) < 1e-12)
+                        return (Success: false, Displacement: 0.0, Error: "剛性が不正のため解析を中止します。");
+
+                    pileTopDisplacement += (totalLoad - computedTotalHorizontalForce) / stiffness;
+                }
+                return (Success: true, Displacement: pileTopDisplacement, Error: (string)null);
+            });
+
+            Mouse.OverrideCursor = null;
+
+            if (!result.Success)
+            {
+                MessageBox.Show(result.Error, "計算エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
             }
 
-            // 各 Chang の結果を更新
+            // UIスレッドで結果を更新
             foreach (var chang in Changs)
             {
-                chang.HorizontalLoad = chang.GetHorizontalForce(pileTopDisplacement);
+                chang.HorizontalLoad = chang.GetHorizontalForce(result.Displacement);
                 chang.Update();
-
             }
             DrawGraph();
         }

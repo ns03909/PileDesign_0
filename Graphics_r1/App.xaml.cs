@@ -86,14 +86,13 @@ namespace PileDesign
                 // ウェルカムダイアログ表示
                 WelcomeDialogResult welcomeResult = WelcomeDialogResult.None;
 
-                // TODO: サンプルプロジェクト実装後に有効化する
-                //if (PileDesign.Properties.Settings.Default.ShowWelcomeDialog)
-                //{
-                //    var welcomeVm = new WelcomeDialogViewModel();
-                //    var welcomeDialog = new WelcomeDialog { DataContext = welcomeVm };
-                //    welcomeDialog.ShowDialog();
-                //    welcomeResult = welcomeVm.Result;
-                //}
+                if (PileDesign.Properties.Settings.Default.ShowWelcomeDialog)
+                {
+                    var welcomeVm = new WelcomeDialogViewModel();
+                    var welcomeDialog = new WelcomeDialog { DataContext = welcomeVm };
+                    welcomeDialog.ShowDialog();
+                    welcomeResult = welcomeVm.Result;
+                }
 
                 // MainWindowを手動で生成・表示（StartupUri削除のため）
                 var mainWindow = new MainWindow();

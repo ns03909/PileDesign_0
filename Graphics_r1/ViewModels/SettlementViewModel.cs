@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -446,27 +447,30 @@ namespace PileDesign.ViewModels
 
         // 荷重沈下解析実行
         [RelayCommand]
-        public void ExecuteAnalysis()
+        public async Task ExecuteAnalysis()
         {
             try
             {
                 // 砂時計カーソルを表示
                 Mouse.OverrideCursor = Cursors.Wait;
 
-                // コンストラクタで保存した_mainWindowViewModelを使用
-                VerticalLoadTransferMethod = new(InputModel, SoilPile, SelectedAnalysisMode);
+                // バックグラウンドで解析実行（UIスレッドブロッキング防止）
+                var inputModelRef = InputModel;
+                var soilPileRef = SoilPile;
+                var mode = SelectedAnalysisMode;
 
-                // チャートの更新
+                var vtm = await Task.Run(() => new VerticalLoadTransferMethod(inputModelRef, soilPileRef, mode));
+                VerticalLoadTransferMethod = vtm;
+
+                // UIスレッドでチャートと結果を更新
                 UpdateSettlementChart();
-                UpdateCircumstanceSeries();  // 土層の杭周面抵抗力グラフを更新
+                UpdateCircumstanceSeries();
 
-                // SoilPileに計算結果を保存
                 SoilPile.LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
                 SoilPile.LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
             }
             finally
             {
-                // カーソルを元に戻す
                 Mouse.OverrideCursor = null;
             }
         }

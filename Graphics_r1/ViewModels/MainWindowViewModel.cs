@@ -2273,7 +2273,7 @@ namespace PileDesign.ViewModels
 
             CurrentInputModel.PileGroupSettlement.SettlementGridData = result.SettlementGridData;
 
-            MessageBox.Show("スタインブレナーの近似式による解析が終了しました。");
+            ShowToast("スタインブレナーの近似式による解析が終了しました。");
 
             IsGroupPileGridDeformationVisible = true;
             IsGroupPileSettlementAnalysisDone = true;
@@ -2568,7 +2568,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"読込に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Services.MessageService.ShowError($"読込に失敗しました。\n{ex.Message}");
                 }
             }
         }
@@ -2589,7 +2589,7 @@ namespace PileDesign.ViewModels
                 {
                     var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
                     doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
-                    MessageBox.Show($"docxファイルが作成されました。\n{saveFileDialog.FileName}\nMSWordでファイルを開き、ctrl + aで全選択した後, F9によりフィールドを更新してください。");
+                    ShowToast($"docxファイルが作成されました。Wordで開き、Ctrl+A → F9でフィールドを更新してください。");
 
                     // 作成したdocxファイルを自動的に開く
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -3674,7 +3674,7 @@ namespace PileDesign.ViewModels
             if (hasWarning)
                 MessageBox.Show(warningMessage, "警告", MessageBoxButton.OK, MessageBoxImage.Information);
             else
-                MessageBox.Show("各杭配置の軸力は各断面の軸力適用範囲内です。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowToast("各杭配置の軸力は各断面の軸力適用範囲内です。");
         }
 
         // 要素分割ウィンドウを開くメソッド
@@ -4727,8 +4727,7 @@ namespace PileDesign.ViewModels
 
             if (toRemove.Count == 0)
             {
-                MessageBox.Show("重複する一般節点はありませんでした。", "重複節点削除",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                ShowToast("重複する一般節点はありませんでした。");
                 return;
             }
 
