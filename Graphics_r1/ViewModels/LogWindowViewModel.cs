@@ -72,6 +72,16 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
+        private void CopyLog()
+        {
+            if (!string.IsNullOrEmpty(LogText))
+            {
+                Clipboard.SetText(LogText);
+                StatusText = "ログをクリップボードにコピーしました";
+            }
+        }
+
+        [RelayCommand]
         private void ClearLog()
         {
             var result = MessageBox.Show(

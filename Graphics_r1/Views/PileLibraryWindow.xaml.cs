@@ -60,6 +60,25 @@ namespace PileDesign.Views
                             ClipboardCopyMode = DataGridClipboardCopyMode.IncludeHeader,
                             SelectionUnit = DataGridSelectionUnit.CellOrRowHeader
                         };
+                        // 数値列を右揃えにする
+                        dg.AutoGeneratingColumn += (s, args) =>
+                        {
+                            // 列のサンプル値が数値かどうか判定
+                            if (dt.Rows.Count > 0)
+                            {
+                                string sample = dt.Rows[0][args.Column.Header.ToString()]?.ToString() ?? "";
+                                if (double.TryParse(sample, NumberStyles.Any, CultureInfo.InvariantCulture, out _))
+                                {
+                                    args.Column.CellStyle = new Style(typeof(DataGridCell))
+                                    {
+                                        Setters =
+                                        {
+                                            new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right)
+                                        }
+                                    };
+                                }
+                            }
+                        };
                         tab.Content = dg;
                         TabControlLibraries.Items.Add(tab);
                     }

@@ -27,6 +27,7 @@
     <Window.Resources>
         <local:DoubleLessThanConverter x:Key="DoubleLessThanConverter"/>
         <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
         <!-- 共通フォームスタイル（Window.Resources に追加） -->
         <Style x:Key="FormLabelStyle" TargetType="TextBlock">
@@ -961,6 +962,21 @@
                   HorizontalContentAlignment="Right"
                   PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                             </StackPanel>
+
+                            <!-- 任意地盤変位プロファイル入力 -->
+                            <Separator Margin="0,8,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <TextBlock Text="地盤変位:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <RadioButton Content="基礎指針'19 4.5自動計算" GroupName="DispMode" Margin="0,0,12,0" VerticalAlignment="Center"
+                                             IsChecked="{Binding IsCustomDisplacementDisabled}"
+                                             ToolTip="基礎指針2019 4.5節の地盤変位算定法で自動計算された値を使用"/>
+                                <RadioButton Content="任意入力" GroupName="DispMode" VerticalAlignment="Center"
+                                             IsChecked="{Binding GroundInput.CustomDisplacementProfile.IsEnabled, Mode=TwoWay}"
+                                             ToolTip="下のテーブルに入力した標高-変位プロファイルを使用&#x0a;Excelからコピーペースト可能（標高(m), 変位(mm)の2列）"/>
+                            </StackPanel>
+
+                            <!-- 任意入力のテーブルは右ペインの「任意地盤変位」タブに配置 -->
+
                         </StackPanel>
                     </TabItem>
                 </TabControl>
@@ -2564,6 +2580,122 @@
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
+
+                            <avalonDock:LayoutAnchorable x:Name="CustomDispTab" Title="任意地盤変位" CanClose="False" CanHide="False">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <ComboBox Grid.Row="0" x:Name="CustomDispCaseCombo" Margin="4"
+                                              ItemsSource="{Binding CustomDispCaseOptions}"
+                                              SelectedIndex="{Binding SelectedCustomDispCaseIndex, Mode=TwoWay}"
+                                              SelectionChanged="CustomDispCase_SelectionChanged"/>
+
+                                    <WrapPanel Grid.Row="1" Margin="4,0,4,4">
+                                        <Button Content="行追加" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispAddRow_Click"
+                                                ToolTip="末尾に新しい行を追加"/>
+                                        <Button Content="選択行下行追加" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispInsertBelowRow_Click"
+                                                ToolTip="選択行の下に新しい行を挿入"/>
+                                        <Button Content="選択行削除" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispDeleteRow_Click"/>
+                                        <Button Content="全削除" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispClearAll_Click"/>
+                                        <Button Content="標高整列" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispSortAndDedupe_Click"
+                                                ToolTip="標高Zの重複を削除し、上から単調減少するように並び替えます"/>
+                                    </WrapPanel>
+
+                                    <common:EnhancedDataGrid x:Name="DataGridCustomDisplacement" Grid.Row="2"
+                                        ItemsSource="{Binding SelectedCustomDispProfile}"
+                                        CellEditEnding="CustomDispDataGrid_CellEditEnding"
+                                        PasteCompleted="CustomDispDataGrid_PasteCompleted"
+                                        AutoGenerateColumns="False"
+                                        CanUserAddRows="False"
+                                        CanUserDeleteRows="False"
+                                        CanUserSortColumns="False"
+                                        HeadersVisibility="All"
+                                        RowHeaderWidth="30"
+                                        GridLinesVisibility="All"
+                                        HorizontalGridLinesBrush="#E0E0E0"
+                                        VerticalGridLinesBrush="#E0E0E0"
+                                        LoadingRow="DataGrid_LoadingRow_Numbering"
+                                        ToolTip="Excelから標高(m)・変位(mm)の2列をコピーしてCtrl+Vでペースト可能">
+                                        <common:EnhancedDataGrid.ColumnHeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                        </common:EnhancedDataGrid.ColumnHeaderStyle>
+                                        <common:EnhancedDataGrid.Columns>
+                                            <DataGridTextColumn Width="*" MinWidth="100">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="標高 Z" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                    </StackPanel>
+                                                    
+                                                </DataGridTextColumn.Header>
+                                                <DataGridTextColumn.Binding>
+                                                    <Binding Path="Z" StringFormat="N3" UpdateSourceTrigger="LostFocus"/>
+                                                </DataGridTextColumn.Binding>
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                        <Setter Property="Padding" Value="4,2"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                                <DataGridTextColumn.EditingElementStyle>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                                                    </Style>
+                                                </DataGridTextColumn.EditingElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Width="*" MinWidth="100">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="変位" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                        <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                                <DataGridTextColumn.Binding>
+                                                    <Binding Path="Displacement" StringFormat="N2" UpdateSourceTrigger="LostFocus"/>
+                                                </DataGridTextColumn.Binding>
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                        <Setter Property="Padding" Value="4,2"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                                <DataGridTextColumn.EditingElementStyle>
+                                                    <Style TargetType="TextBox">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                                                    </Style>
+                                                </DataGridTextColumn.EditingElementStyle>
+                                            </DataGridTextColumn>
+                                        </common:EnhancedDataGrid.Columns>
+                                    </common:EnhancedDataGrid>
+
+                                    <StackPanel Grid.Row="3" Margin="4,4">
+                                        <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap"
+                                                   Text="※任意地盤変位を適用するには、「地盤変位」タブ中「地盤変位」で「任意入力」を選択してください。"/>
+                                        <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   Text="※データ作成に関する注意&#x0a;土質点入力範囲をカバーする標高Z範囲のデータが必要です。"/>
+                                        <Border Margin="0,4,0,0" Padding="4" Background="#FFF3E0" BorderBrush="#FF9800" BorderThickness="1" CornerRadius="3"
+                                                Visibility="{Binding HasCustomDispWarnings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <StackPanel>
+                                                <TextBlock Text="⚠ Warning" FontWeight="Bold" Foreground="#E65100" FontSize="12"/>
+                                                <TextBlock Text="{Binding CustomDispWarnings}" Foreground="#BF360C" FontSize="11" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </avalonDock:LayoutAnchorable>
+
                         </avalonDock:LayoutDocumentPane>
 
                         <avalonDock:LayoutDocumentPane>

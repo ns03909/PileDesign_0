@@ -963,20 +963,22 @@ namespace PileDesign.ViewModels
             {
                 await AddLogAsync("計算がキャンセルされました。");
                 IsAnalysisExecuted = false;
-                // UI にアニメーションでクリアするよう要求
+                // キャンセル時もログをメイン画面に保存（後で確認可能にする）
+                Application.Current?.Dispatcher.Invoke(() =>
+                    _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog));
                 RequestClearProgressAnimation?.Invoke();
             }
             catch (Exception ex)
             {
-                // ログ出力（詳細なエラー情報を記録）
                 await AddLogAsync($"解析中にエラーが発生しました: {ex.Message}");
                 await AddLogAsync($"スタックトレース: {ex.StackTrace}");
 
-                // ユーザー通知
                 Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                {
+                    _mainWindowViewModel.SetLatestAnalysisLogs(CalculationLog);
+                    MessageBox.Show($"解析中にエラーが発生しました:\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                });
 
-                // 必要なら状態リセット
                 IsAnalysisExecuted = false;
                 RequestClearProgressAnimation?.Invoke();
             }
@@ -1947,48 +1949,23 @@ namespace PileDesign.ViewModels
                             }
 
                             // Maximum iteration check
-                            if (n_iteration > maxIterations && targetModel.NormsROnNormsFint >= effectiveAlpha)
+                            bool converged = !(n_iteration > maxIterations && targetModel.NormsROnNormsFint >= effectiveAlpha);
+                            if (!converged)
                             {
                                 double finalResidual = targetModel.NormsROnNormsFint;
-                                await AddLogAsync($"Warning: Maximum iterations {maxIterations} reached. Residual norm={finalResidual:E3} (tolerance={effectiveAlpha:E3})");
-
-                                // v12: 発散か停滞かで異なるアドバイスを提供
-                                string advice;
-                                if (finalResidual > initialResidual * 10 || finalResidual > 1.0)
-                                {
-                                    // 発散している場合
-                                    advice = "解が発散しています。\n\n対策（優先順）:\n" +
-                                             "1. 荷重ステップ数を増やす（推奨: 現在の2〜3倍）\n" +
-                                             "2. 「ライン探索」収束法を選択する\n" +
-                                             "3. M-φ曲線の設定を確認する";
-                                    if (autoSwitchedToLineSearch)
-                                    {
-                                        advice += "\n\n※ライン探索は自動で有効化されましたが、\n荷重ステップの細分化が必要です。";
-                                    }
-                                }
-                                else
-                                {
-                                    // 停滞している場合
-                                    advice = "収束が停滞しています。\n\n対策:\n" +
-                                             "1. 「反復なし」オプションを試す\n" +
-                                             "2. 荷重ステップ数を増やす\n" +
-                                             "3. モデルを確認する";
-                                }
-
-                                string warnMsg = $"収束失敗\n最大反復回数 {maxIterations} に到達しました。\n残差ノルム={finalResidual:E3}\n\n{advice}";
-                                Application.Current?.Dispatcher.Invoke(() => RequestShowWarning?.Invoke(warnMsg));
-                            }
-
-                            // v12: ライン探索を自動で有効化した場合、元に戻す（ユーザー設定を変更しない）
-                            if (autoSwitchedToLineSearch)
-                            {
-                                _useLineSearch = false;
+                                await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3})");
                             }
                             else
                             {
-                                // Log successful convergence
+                                // 収束成功のログ
                                 string relaxedNote = effectiveAlpha > alpha ? $" (緩和基準α={effectiveAlpha:E2})" : "";
                                 await AddLogAsync($"  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}");
+                            }
+
+                            // v12: ライン探索を自動で有効化した場合、元に戻す
+                            if (autoSwitchedToLineSearch)
+                            {
+                                _useLineSearch = false;
                             }
 
                             // v15: このステップの変位増分を記録（次ステップの予測器用）

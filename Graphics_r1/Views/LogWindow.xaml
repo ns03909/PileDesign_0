@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
-        Title="Analysis Log" Height="600" Width="900"
+        Title="解析ログ" Height="600" Width="900"
         WindowStartupLocation="CenterOwner"
         DataContextChanged="OnDataContextChanged"
         common:EscapeKeyBehavior.Enable="True">
@@ -18,11 +18,13 @@
 
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Padding="5">
-            <Button Content="Clear Log" Command="{Binding ClearLogCommand}" Padding="10,2"/>
+            <Button Content="コピー (Ctrl+C)" Command="{Binding CopyLogCommand}" Padding="10,2"/>
             <Separator/>
-            <Button Content="Export to File" Command="{Binding ExportLogCommand}" Padding="10,2"/>
+            <Button Content="ファイル出力" Command="{Binding ExportLogCommand}" Padding="10,2"/>
             <Separator/>
-            <CheckBox Content="Auto-scroll" IsChecked="{Binding AutoScroll}" VerticalAlignment="Center" Margin="5,0"/>
+            <Button Content="クリア" Command="{Binding ClearLogCommand}" Padding="10,2"/>
+            <Separator/>
+            <CheckBox Content="自動スクロール" IsChecked="{Binding AutoScroll}" VerticalAlignment="Center" Margin="5,0"/>
         </ToolBar>
 
         <!-- Log Content -->
