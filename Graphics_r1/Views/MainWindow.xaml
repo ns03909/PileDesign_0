@@ -2347,6 +2347,7 @@
                                                 AutoGenerateColumns="False"
                                                 CanUserAddRows="False"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
+                                                BeginningEdit="DataGridFoundationBeams_BeginningEdit"
                                                 EnableRowVirtualization="True"
                                                 EnableColumnVirtualization="True"
                                                 VirtualizingPanel.IsVirtualizing="True"

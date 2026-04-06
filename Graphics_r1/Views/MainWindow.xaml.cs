@@ -491,6 +491,14 @@ namespace PileDesign.Views
 
 
         // 材料・断面DataGridのセル編集時に解析結果を自動削除
+        private void DataGridFoundationBeams_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm && !vm.CheckAndResetElementSplit("梁要素"))
+            {
+                e.Cancel = true;
+            }
+        }
+
         private void DataGridBeamMaterialsOrSections_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (e.EditAction != DataGridEditAction.Commit) return;
@@ -3186,6 +3194,12 @@ namespace PileDesign.Views
 
         private void DataGridInputNodes_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
         {
+            if (DataContext is MainWindowViewModel vm && !vm.CheckAndResetElementSplit("一般節点"))
+            {
+                e.Cancel = true;
+                return;
+            }
+
             var path = GetBindingPath(e.Column);
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;

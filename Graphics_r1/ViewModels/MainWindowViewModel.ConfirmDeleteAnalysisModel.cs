@@ -49,8 +49,12 @@ namespace PileDesign.ViewModels
         {
             if (IsHorizontalAnalysisDone || IsVerticalAnalysisDone)
             {
-                // 既存と同等のメッセージ／アイコンを渡してヘルパを呼ぶ
                 string msg = "要素分割内容、水平解析結果、単杭沈下解析結果が削除されます。続けますか？";
+                return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
+            }
+            if (IsElementSplit)
+            {
+                string msg = "要素分割内容が削除されます。続けますか？";
                 return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
             }
             return true; // 操作を続ける
