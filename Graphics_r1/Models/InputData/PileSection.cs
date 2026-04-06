@@ -54,15 +54,8 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        /// <summary>有効せい [mm]（MonQd計算用）</summary>
-        public double EffectiveDepth
-        {
-            get
-            {
-                // TODO: AbstractPileSection に EffectiveDepth を追加後に復元
-                return PileDiameter * 0.8; // 暫定: 杭径の80%
-            }
-        }
+        /// <summary>有効せい d [mm]（MonQd計算用）: d = 0.9D（基礎指針'19）</summary>
+        public double EffectiveDepth => PileDiameter * 0.9;
 
         // フィールド
         private int _pileBodyNo;

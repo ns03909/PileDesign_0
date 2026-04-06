@@ -1870,8 +1870,9 @@ namespace PileDesign.ViewModels
             if (doatsuSprings.Count == 0) return;
 
             // 最上点・最下点のばねを特定（Z座標で判定）
-            var topSpring = doatsuSprings.OrderByDescending(s => s.NodeI.Coord.Z).First();
-            var btmSpring = doatsuSprings.OrderBy(s => s.NodeI.Coord.Z).First();
+            var topSpring = doatsuSprings.OrderByDescending(s => s.NodeI.Coord.Z).FirstOrDefault();
+            var btmSpring = doatsuSprings.OrderBy(s => s.NodeI.Coord.Z).FirstOrDefault();
+            if (topSpring == null || btmSpring == null) return;
 
             double maxDispMm = 0; // 全系列の最大相対変位を追跡
 

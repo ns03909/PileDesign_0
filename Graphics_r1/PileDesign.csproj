@@ -8,11 +8,14 @@
     <UseWPF>true</UseWPF>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
 
+    <!-- アプリケーションアイコン -->
+    <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
+
     <!-- バージョン管理 -->
-    <Version>1.0.0</Version>
+    <Version>1.0.0-beta</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0</InformationalVersion>
+    <InformationalVersion>1.0.0-beta</InformationalVersion>
   </PropertyGroup>
 
   <!-- テストプロジェクトからinternalクラスにアクセス可能にする -->
@@ -129,6 +132,7 @@
     <None Remove="Icons\AutoSplit.svg" />
     <None Remove="Icons\AutoSplitAll.png" />
     <None Remove="Icons\AutoSplitAll.svg" />
+    <None Remove="Icons\AutoSplitD.svg" />
     <None Remove="Icons\AxesVisible.png" />
     <None Remove="Icons\AxesVisible.svg" />
     <None Remove="Icons\AxialForceVeirification.png" />
@@ -159,6 +163,9 @@
     <None Remove="Icons\ChangeProperty.svg" />
     <None Remove="Icons\ChangPile.png" />
     <None Remove="Icons\ChangPile.svg" />
+    <None Remove="Icons\Check.png" />
+    <None Remove="Icons\ClaudeMCP.png" />
+    <None Remove="Icons\ClaudeMCP.svg" />
     <None Remove="Icons\CollapseRibbon.png" />
     <None Remove="Icons\CollapseRibbon.svg" />
     <None Remove="Icons\ConnectionNodeVisible.png" />
@@ -765,6 +772,9 @@
     <Resource Include="Icons\AutoSplitAll.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\AutoSplitD.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\AxesVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -853,6 +863,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ChangPile.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Check.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ClaudeMCP.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\ClaudeMCP.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CollapseRibbon.png">
@@ -1689,15 +1708,15 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ACadSharp" Version="3.4.9" />
+    <PackageReference Include="ACadSharp" Version="3.4.24" />
     <PackageReference Include="CSparse" Version="4.3.0" />
     <PackageReference Include="HelixToolkit.Geometry" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.Maths" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.Wpf" Version="3.1.2" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
     <PackageReference Include="Rhino3dm" Version="8.17.0" />
-    <PackageReference Include="ScottPlot" Version="5.1.57" />
-    <PackageReference Include="ScottPlot.WPF" Version="5.1.57" />
+    <PackageReference Include="ScottPlot" Version="5.1.58" />
+    <PackageReference Include="ScottPlot.WPF" Version="5.1.58" />
     <PackageReference Include="SharpVectors" Version="1.8.5" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
@@ -1709,7 +1728,7 @@
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="WebView2.Runtime.X64" Version="146.0.3856.72" />
+    <PackageReference Include="WebView2.Runtime.X64" Version="146.0.3856.84" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
@@ -1718,7 +1737,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="Cyotek.Drawing.BitmapFont" Version="2.0.4" />
     <PackageReference Include="Dirkster.AvalonDock" Version="4.72.1" />
