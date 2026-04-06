@@ -2520,7 +2520,7 @@
                         </TabControl>
                     </avalonDock:LayoutDocument>
 
-                            <avalonDock:LayoutDocument Title="杭" CanClose="False" x:Name="PileLayoutDocument">
+                            <avalonDock:LayoutDocument Title="杭" CanClose="False" x:Name="PileLayoutDocument" IsSelected="True">
                                 <TabControl x:Name="PileTabControl">
                                     <TabItem Header="配置" ToolTip="杭配置を編集します">
                                         <Grid>

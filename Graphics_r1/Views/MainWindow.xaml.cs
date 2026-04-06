@@ -387,6 +387,9 @@ namespace PileDesign.Views
             viewModel.CanvasThreeDView.Tht = -45;
             viewModel.CanvasThreeDView.Phi = 45;
 
+            // 左ペインの「杭」タブを選択状態にする
+            PileLayoutDocument.IsSelected = true;
+
             // Canvas にフォーカスを設定
             Canvas3DLayout.Focus();
 

@@ -192,7 +192,20 @@ namespace PileDesign.Views
 
                 UpdateSelectedNodesAndElements3D(); // 選択節点描画の更新
 
-                if (viewModel.IsEmbedmentBoxVisible) UpdateEmbedment3D(); // 根入部描画の更新
+                if (viewModel.IsEmbedmentBoxVisible)
+                {
+                    UpdateEmbedment3D(); // 根入部描画の更新
+                }
+                else
+                {
+                    // 根入部非表示: 他メソッド(CreateBoxGeometry等)が書き込んだジオメトリをクリア
+                    viewModel.CanvasGeometry.PathGeoEmbedmenSides.Figures.Clear();
+                    viewModel.CanvasGeometry.PathGeoDividedEmbedmenSides.Figures.Clear();
+                    viewModel.CanvasGeometry.PathGeoEmbedmentDiagonals.Figures.Clear();
+                    viewModel.CanvasGeometry.PathGeoDividedEmbedmentDiagonals.Figures.Clear();
+                    viewModel.CanvasGeometry.PathGeoEmbedmentNodes.Figures.Clear();
+                    viewModel.CanvasGeometry.PathGeoEmbedmentRigidConnections.Figures.Clear();
+                }
 
                 if (viewModel.IsXYZAxesVisible) UpdateAxes3D(); // XYZ軸の更新
 
@@ -278,6 +291,10 @@ namespace PileDesign.Views
 
                 // 解析結果の描画
                 if (viewModel.IsAnalysisResultVisible) UpdateAnalysisResult3D();
+
+                // 変形後形状の描画（解析結果表示OFFでも独立して動作）
+                if (viewModel.IsDeformedElementVisible && !viewModel.IsAnalysisResultVisible)
+                    UpdateDeformedElementsStandalone();
 
                 // 追加: 「沈下」のバブル/矢印は最後に描いて最前面に
                 if (_pendingSettlementPoints != null &&

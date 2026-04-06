@@ -7,9 +7,11 @@
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:controls="clr-namespace:WpfMath.Controls;assembly=WpfMath"
+        xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:GroupPileFactorViewModel}"
-        Title="基礎指針'19　群杭係数" Height="700" Width="500">
+        Title="基礎指針'19　群杭係数" Height="700" Width="500"
+        common:EscapeKeyBehavior.Enable="True">
     
     <Window.InputBindings>
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
@@ -52,7 +54,7 @@
                 <controls:FormulaControl Formula="N_p" Style="{StaticResource FormulaControlStyle}" Width="30" HorizontalContentAlignment="Right"/>
                 <TextBox x:Name="TextBoxPileNumber"
                          Text="{Binding TotalPileCount, StringFormat=F0, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Width="50" HorizontalAlignment="Right" TextChanged="TextBoxPileNumberTextChanged"/>
+                         Width="50" HorizontalAlignment="Right" HorizontalContentAlignment="Right" TextChanged="TextBoxPileNumberTextChanged"/>
             </StackPanel>
 
 
@@ -61,7 +63,7 @@
                 <controls:FormulaControl Formula="R" Style="{StaticResource FormulaControlStyle}" Width="30"  HorizontalContentAlignment="Right"/>
                 <TextBox x:Name="TextBoxPileSpacing"
                          Text="{Binding PileSpacing, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Width="50" HorizontalAlignment="Right" TextChanged="TextBoxPileSpacingTextChanged"/>
+                         Width="50" HorizontalAlignment="Right" HorizontalContentAlignment="Right" TextChanged="TextBoxPileSpacingTextChanged"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
@@ -69,7 +71,7 @@
                 <controls:FormulaControl Formula="B" Style="{StaticResource FormulaControlStyle}" Width="30" HorizontalContentAlignment="Right"/>
                 <TextBox x:Name="TextBoxPileDia"
                          Text="{Binding PileDia, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Width="50" HorizontalAlignment="Right" TextChanged="TextBoxPileDiaTextChanged"/>
+                         Width="50" HorizontalAlignment="Right" HorizontalContentAlignment="Right" TextChanged="TextBoxPileDiaTextChanged"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
@@ -77,7 +79,7 @@
                 <controls:FormulaControl Formula="R/B" Style="{StaticResource FormulaControlStyle}" Width="30" HorizontalContentAlignment="Right"/>
                 <TextBox x:Name="TextBoxPileSpacingDiaRatio"
                          Text="{Binding PileSpacingDiaRatio, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         Width="50" HorizontalAlignment="Right" TextChanged="TextBoxPileSpacingDiaRatioTextChanged"/>
+                         Width="50" HorizontalAlignment="Right" HorizontalContentAlignment="Right" TextChanged="TextBoxPileSpacingDiaRatioTextChanged"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
@@ -85,7 +87,7 @@
                 <controls:FormulaControl Formula="\xi" Style="{StaticResource FormulaControlStyle}" Width="30" HorizontalContentAlignment="Right"/>
                 <TextBox x:Name="TextBoxPileGroupFactor" IsReadOnly="True" Foreground="Gray"
                          Text="{Binding PileGroupFactor, StringFormat=F2}"
-                         HorizontalAlignment="Right" Width="50" />
+                         HorizontalAlignment="Right" HorizontalContentAlignment="Right" Width="50" />
             </StackPanel>
         </StackPanel>
 
@@ -103,7 +105,7 @@
             <Button Content="上記杭間隔比のモデル全杭への適用" Command="{Binding ApplyPileDistanceFactorToModelsAllPilesCommand}"/>
             <Button Content="上記群杭係数のモデル全杭への適用" Command="{Binding ApplyPileGroupFactorToModelsAllPilesCommand}"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
-                <Button x:Name="ButtonClose" Content="Close" Height="30" VerticalAlignment="Top"
+                <Button x:Name="ButtonClose" Content="Close (Esc)" Height="30" VerticalAlignment="Top"
                     Width="100" Command="{Binding CloseCommand}"/>
             </StackPanel>
         </StackPanel>

@@ -1839,7 +1839,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isEmbedmentBoxVisible, value))
                 {
-                    RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                    RequestUpdateWindow();
                 }
             }
         }
