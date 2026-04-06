@@ -16,7 +16,7 @@
             get => _segmentLength;
             set
             {
-                if (value <= 0 || !double.IsFinite(value)) return;
+                if (!double.IsFinite(value)) return;
                 SetProperty(ref _segmentLength, value);
             }
         }

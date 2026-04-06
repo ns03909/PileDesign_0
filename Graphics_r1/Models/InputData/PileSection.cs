@@ -654,7 +654,7 @@ namespace PileDesign.Models.InputData
             get => _pileDiameter;
             set
             {
-                if (value <= 0 || !double.IsFinite(value)) return;
+                if (!double.IsFinite(value)) return;
                 if (SetProperty(ref _pileDiameter, value))
                 {
                     RecalculatePileDia();

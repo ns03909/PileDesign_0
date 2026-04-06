@@ -252,7 +252,7 @@ namespace PileDesign.Models.InputData
             get => _insituPileToeHeight;
             set
             {
-                if (value < 0 || 1 < value) return;
+                if (value < 0 || value > 5000) return; // mm単位: 0～5000mm
                 SetProperty(ref _insituPileToeHeight, value);
             }
         }
