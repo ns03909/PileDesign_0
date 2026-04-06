@@ -1370,15 +1370,17 @@ namespace PileDesign.ViewModels
             SortPileLayoutCore(piles => piles.OrderBy(p => p.Y).ThenBy(p => p.X));
         }
 
-        /// <summary>杭配置ソート共通処理: 番号振り直し＋梁要素のNodeI_No/NodeJ_Noを追従更新</summary>
+        /// <summary>杭配置ソート共通処理: 番号振り直し＋梁要素・LinkedPileNoの追従更新</summary>
         private void SortPileLayoutCore(Func<IEnumerable<PileLayoutDataItem>, IOrderedEnumerable<PileLayoutDataItem>> orderFunc)
         {
             if (CurrentInputModel.PileLayoutItems.Count == 0) return;
+            // 分割済み・解析済みの場合は確認してリセット
+            if (!CheckAndResetAnalysisResults()) return;
             TrySaveUndoSnapshotSafely();
 
             var sorted = orderFunc(CurrentInputModel.PileLayoutItems).ToList();
 
-            // 旧No→新Noマッピングを構築
+            // 旧No→新Noマッピングを構築（PileNoも同様）
             var oldToNewNo = new Dictionary<int, int>();
             for (int i = 0; i < sorted.Count; i++)
                 oldToNewNo[sorted[i].No] = i + 1;
@@ -1407,6 +1409,16 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            // 一般節点のLinkedPileNoを追従更新
+            if (CurrentInputModel.InputNodes != null)
+            {
+                foreach (var node in CurrentInputModel.InputNodes)
+                {
+                    if (node.LinkedPileNo.HasValue && oldToNewNo.TryGetValue(node.LinkedPileNo.Value, out int newPileNo))
+                        node.LinkedPileNo = newPileNo;
+                }
+            }
+
             RequestUpdateWindow();
         }
 
@@ -1428,6 +1440,8 @@ namespace PileDesign.ViewModels
         private void SortInputNodesCore(Func<IEnumerable<InputNode>, IOrderedEnumerable<InputNode>> orderFunc)
         {
             if (CurrentInputModel.InputNodes == null || CurrentInputModel.InputNodes.Count == 0) return;
+            // 分割済み・解析済みの場合は確認してリセット
+            if (!CheckAndResetAnalysisResults()) return;
             TrySaveUndoSnapshotSafely();
 
             // 旧No → ノードのマッピングを記録
@@ -1476,6 +1490,7 @@ namespace PileDesign.ViewModels
         {
             var beams = CurrentInputModel.FoundationBeamInput?.Beams;
             if (beams == null || beams.Count == 0) return;
+            if (!CheckAndResetAnalysisResults()) return;
             TrySaveUndoSnapshotSafely();
 
             var sorted = beams.OrderBy(b => b.No).ToList();
@@ -1493,6 +1508,7 @@ namespace PileDesign.ViewModels
         {
             var beams = CurrentInputModel.FoundationBeamInput?.Beams;
             if (beams == null || beams.Count == 0) return;
+            if (!CheckAndResetAnalysisResults()) return;
             TrySaveUndoSnapshotSafely();
 
             var sorted = beams.OrderBy(b => b.NodeI_No).ThenBy(b => b.NodeJ_No).ToList();
