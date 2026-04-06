@@ -4,11 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
-        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         d:DataContext="{d:DesignInstance Type=local:WelcomeDialogViewModel}"
         mc:Ignorable="d"
         Title="杭基礎検討プログラム"
-        Width="560" Height="420"
+        Width="640" Height="460"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -16,70 +15,34 @@
         Background="Transparent">
 
     <Window.Resources>
-        <!-- ボタン共通スタイル（ホバー・押下アニメーション付き） -->
-        <Style x:Key="WelcomeButtonStyle" TargetType="Button">
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Height" Value="48"/>
-            <Setter Property="Width" Value="340"/>
-            <Setter Property="Margin" Value="0,5"/>
+        <!-- テキストリンク風ボタン -->
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="#555555"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="border"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6" Padding="16,0"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <TextBlock x:Name="text"
+                                       Text="{TemplateBinding Content}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Opacity" Value="0.85"/>
-                                <Setter TargetName="border" Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.2"/>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter TargetName="text" Property="Foreground" Value="#3271AD"/>
+                                <Setter TargetName="text" Property="TextDecorations" Value="Underline"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Opacity" Value="0.7"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- アウトラインボタン -->
-        <Style x:Key="WelcomeOutlineButtonStyle" TargetType="Button" BasedOn="{StaticResource WelcomeButtonStyle}">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#333333"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1.5"
-                                CornerRadius="6" Padding="16,0"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#F0F8FF"/>
-                                <Setter TargetName="border" Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.15"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#E0F0FA"/>
+                                <Setter TargetName="text" Property="Foreground" Value="#62B0E2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -88,127 +51,80 @@
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="10"
-            BorderThickness="0"
-            Margin="12">
+    <Border CornerRadius="10" Margin="16">
         <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="White" Offset="0"/>
-                <GradientStop Color="#F8FBFF" Offset="1"/>
-            </LinearGradientBrush>
+            <SolidColorBrush Color="White"/>
         </Border.Background>
         <Border.Effect>
-            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.25" Color="#3271AD"/>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="4" Opacity="0.18" Color="#333333"/>
         </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- ヘッダー: アクセントバー + ロゴ + タイトル -->
-            <Border Grid.Row="0" CornerRadius="10,10,0,0" Padding="28,20,28,16">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="#3271AD" Offset="0"/>
-                        <GradientStop Color="#62B0E2" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- アプリアイコン -->
-                    <Border Grid.Column="0" Width="52" Height="52"
-                            CornerRadius="10" Background="#FFFFFF30"
-                            Margin="0,0,16,0" VerticalAlignment="Center">
-                        <svgc:SvgViewbox Source="/Icons/ApplicationIcon.svg"
-                                         Width="36" Height="36"/>
-                    </Border>
-
-                    <!-- タイトル＋サブタイトル -->
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="杭基礎検討プログラム"
-                                   FontSize="22" FontWeight="Bold"
-                                   Foreground="White"/>
-                        <TextBlock Text="Pile Foundation Design Tool"
-                                   FontSize="11" Foreground="#FFFFFFBB"
-                                   Margin="0,2,0,0"/>
-                    </StackPanel>
-
-                    <!-- バージョン -->
-                    <Border Grid.Column="2" VerticalAlignment="Top"
-                            Background="#FFFFFF20" CornerRadius="4"
-                            Padding="8,3" Margin="0,2,0,0">
-                        <TextBlock Text="{Binding AppVersion, Source={x:Static local:WelcomeDialogViewModel.Instance}}"
-                                   FontSize="11" Foreground="#FFFFFFCC"/>
-                    </Border>
-                </Grid>
+            <!-- Row 0: NIKKENロゴ（大きく、空間の中心） -->
+            <Border Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Padding="40,0">
+                <Image Source="pack://application:,,,/NikkenLogo/170703_Nikken_Brandmark_Tagline.jpg"
+                       Height="120" Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
             </Border>
 
-            <!-- メインコンテンツ: ボタン -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center"
-                        HorizontalAlignment="Center" Margin="0,10,0,0">
-
-                <TextBlock Text="作業を開始してください"
-                           FontSize="13" Foreground="#888888"
-                           HorizontalAlignment="Center" Margin="0,0,0,16"/>
-
-                <!-- 新規プロジェクト -->
-                <Button Command="{Binding NewProjectCommand}"
-                        Style="{StaticResource WelcomeButtonStyle}"
-                        Background="#62B0E2" Foreground="White">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets"
-                                   FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="新規プロジェクト" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- 既存ファイルを開く -->
-                <Button Command="{Binding OpenExistingCommand}"
-                        Style="{StaticResource WelcomeOutlineButtonStyle}"
-                        BorderBrush="#62B0E2">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets"
-                                   FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="既存ファイルを開く" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- サンプルプロジェクトを開く -->
-                <Button Command="{Binding OpenSampleCommand}"
-                        Style="{StaticResource WelcomeOutlineButtonStyle}"
-                        BorderBrush="#F7B515">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE82D;" FontFamily="Segoe MDL2 Assets"
-                                   FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"
-                                   Foreground="#F7B515"/>
-                        <TextBlock Text="サンプルプロジェクトを開く" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+            <!-- Row 1: プログラム名 + バージョン（控えめ） -->
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,24">
+                <TextBlock Text="杭基礎検討プログラム"
+                           FontSize="14" FontWeight="Normal"
+                           Foreground="#888888" HorizontalAlignment="Center"
+                           LetterSpacing="0.5"/>
+                <TextBlock Text="{Binding AppVersion, Source={x:Static local:WelcomeDialogViewModel.Instance}}"
+                           FontSize="10.5" Foreground="#BBBBBB"
+                           HorizontalAlignment="Center" Margin="0,3,0,0"/>
             </StackPanel>
 
-            <!-- フッター -->
-            <StackPanel Grid.Row="2" Margin="28,0,28,16">
-                <Separator Margin="0,0,0,10" Background="#E0E0E0"/>
-                <Grid>
-                    <CheckBox Content="次回から表示しない"
-                              IsChecked="{Binding DoNotShowAgain}"
-                              HorizontalAlignment="Left"
-                              Foreground="#999999" FontSize="12"/>
-                    <TextBlock Text="基礎地盤研究会"
-                               HorizontalAlignment="Right"
-                               Foreground="#BBBBBB" FontSize="11"
-                               VerticalAlignment="Center"/>
-                </Grid>
+            <!-- Row 2: 選択肢（横並びテキストリンク） -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal"
+                        HorizontalAlignment="Center" Margin="0,0,0,20">
+
+                <Button Content="新規プロジェクト"
+                        Command="{Binding NewProjectCommand}"
+                        Style="{StaticResource LinkButtonStyle}"/>
+
+                <TextBlock Text="|" Foreground="#DDDDDD" FontSize="14"
+                           VerticalAlignment="Center" Margin="4,0"/>
+
+                <Button Content="ファイルを開く"
+                        Command="{Binding OpenExistingCommand}"
+                        Style="{StaticResource LinkButtonStyle}"/>
+
+                <TextBlock Text="|" Foreground="#DDDDDD" FontSize="14"
+                           VerticalAlignment="Center" Margin="4,0"/>
+
+                <Button Content="サンプル"
+                        Command="{Binding OpenSampleCommand}"
+                        Style="{StaticResource LinkButtonStyle}"/>
             </StackPanel>
+
+            <!-- Row 3: フッター -->
+            <Border Grid.Row="3" Padding="28,0,28,16">
+                <StackPanel>
+                    <Separator Margin="0,0,0,10" Background="#EEEEEE"/>
+                    <Grid>
+                        <CheckBox Content="次回から表示しない"
+                                  IsChecked="{Binding DoNotShowAgain}"
+                                  HorizontalAlignment="Left"
+                                  Foreground="#BBBBBB" FontSize="11"/>
+                        <TextBlock Text="基礎地盤研究会"
+                                   HorizontalAlignment="Right"
+                                   Foreground="#CCCCCC" FontSize="10.5"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
         </Grid>
     </Border>
 </Window>

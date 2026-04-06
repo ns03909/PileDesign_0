@@ -1732,6 +1732,7 @@
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="NikkenLogo\170703_Nikken_Brandmark_Tagline.jpg" />
     <Content Include="NikkenLogo\170703_Nikken_Brandmark_Tagline.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
