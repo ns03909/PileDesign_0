@@ -240,7 +240,7 @@ namespace PileDesign.Models.InputData
             get => _precastConcretePileToeHeightRatio;
             set
             {
-                if (value < 0 || 5 < value) return;
+                if (!double.IsFinite(value)) return;
                 SetProperty(ref _precastConcretePileToeHeightRatio, value);
             }
         }
@@ -252,7 +252,7 @@ namespace PileDesign.Models.InputData
             get => _insituPileToeHeight;
             set
             {
-                if (value < 0 || value > 5000) return; // mm単位: 0～5000mm
+                if (!double.IsFinite(value)) return;
                 SetProperty(ref _insituPileToeHeight, value);
             }
         }
@@ -264,7 +264,7 @@ namespace PileDesign.Models.InputData
             get => _insituPileToeAngle;
             set
             {
-                if (value < 10 || 45 < value) return;
+                if (!double.IsFinite(value)) return;
                 SetProperty(ref _insituPileToeAngle, value);
             }
         }
