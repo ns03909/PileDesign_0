@@ -1360,35 +1360,53 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void SortPileLayoutXFirst()
         {
-            if (CurrentInputModel.PileLayoutItems.Count == 0) return;
-            TrySaveUndoSnapshotSafely();
-
-            var sorted = CurrentInputModel.PileLayoutItems
-                .OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
-
-            CurrentInputModel.PileLayoutItems.Clear();
-            foreach (var p in sorted)
-                CurrentInputModel.PileLayoutItems.Add(p);
-
-            UpdatePileLayoutNo();
-            RequestUpdateWindow();
+            SortPileLayoutCore(piles => piles.OrderBy(p => p.X).ThenBy(p => p.Y));
         }
 
         /// <summary>Y優先整列: Y昇順 → X昇順でPileLayoutItemsをソート</summary>
         [RelayCommand]
         private void SortPileLayoutYFirst()
         {
+            SortPileLayoutCore(piles => piles.OrderBy(p => p.Y).ThenBy(p => p.X));
+        }
+
+        /// <summary>杭配置ソート共通処理: 番号振り直し＋梁要素のNodeI_No/NodeJ_Noを追従更新</summary>
+        private void SortPileLayoutCore(Func<IEnumerable<PileLayoutDataItem>, IOrderedEnumerable<PileLayoutDataItem>> orderFunc)
+        {
             if (CurrentInputModel.PileLayoutItems.Count == 0) return;
             TrySaveUndoSnapshotSafely();
 
-            var sorted = CurrentInputModel.PileLayoutItems
-                .OrderBy(p => p.Y).ThenBy(p => p.X).ToList();
+            var sorted = orderFunc(CurrentInputModel.PileLayoutItems).ToList();
+
+            // 旧No→新Noマッピングを構築
+            var oldToNewNo = new Dictionary<int, int>();
+            for (int i = 0; i < sorted.Count; i++)
+                oldToNewNo[sorted[i].No] = i + 1;
 
             CurrentInputModel.PileLayoutItems.Clear();
             foreach (var p in sorted)
                 CurrentInputModel.PileLayoutItems.Add(p);
 
             UpdatePileLayoutNo();
+
+            // 梁要素のNodeI_No/NodeJ_Noを追従更新（PileLayout参照の場合）
+            if (CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    if (beam.NodeI_Type == Models.InputData.NodeReferenceType.PileLayout)
+                    {
+                        if (oldToNewNo.TryGetValue(beam.NodeI_No, out int newI))
+                            beam.NodeI_No = newI;
+                    }
+                    if (beam.NodeJ_Type == Models.InputData.NodeReferenceType.PileLayout)
+                    {
+                        if (oldToNewNo.TryGetValue(beam.NodeJ_No, out int newJ))
+                            beam.NodeJ_No = newJ;
+                    }
+                }
+            }
+
             RequestUpdateWindow();
         }
 
@@ -1396,38 +1414,58 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void SortInputNodesXFirst()
         {
-            if (CurrentInputModel.InputNodes == null || CurrentInputModel.InputNodes.Count == 0) return;
-            TrySaveUndoSnapshotSafely();
-
-            var sorted = CurrentInputModel.InputNodes
-                .OrderBy(n => n.X).ThenBy(n => n.Y).ToList();
-
-            CurrentInputModel.InputNodes.Clear();
-            foreach (var n in sorted)
-                CurrentInputModel.InputNodes.Add(n);
-
-            for (int i = 0; i < CurrentInputModel.InputNodes.Count; i++)
-                CurrentInputModel.InputNodes[i].No = i + 1;
-
-            RequestUpdateWindow();
+            SortInputNodesCore(nodes => nodes.OrderBy(n => n.X).ThenBy(n => n.Y));
         }
 
         /// <summary>一般節点: Y優先整列</summary>
         [RelayCommand]
         private void SortInputNodesYFirst()
         {
+            SortInputNodesCore(nodes => nodes.OrderBy(n => n.Y).ThenBy(n => n.X));
+        }
+
+        /// <summary>一般節点ソート共通処理: 番号振り直し＋梁要素のNodeI_No/NodeJ_Noを追従更新</summary>
+        private void SortInputNodesCore(Func<IEnumerable<InputNode>, IOrderedEnumerable<InputNode>> orderFunc)
+        {
             if (CurrentInputModel.InputNodes == null || CurrentInputModel.InputNodes.Count == 0) return;
             TrySaveUndoSnapshotSafely();
 
-            var sorted = CurrentInputModel.InputNodes
-                .OrderBy(n => n.Y).ThenBy(n => n.X).ToList();
+            // 旧No → ノードのマッピングを記録
+            var oldNoToNode = CurrentInputModel.InputNodes.ToDictionary(n => n.No, n => n);
+
+            var sorted = orderFunc(CurrentInputModel.InputNodes).ToList();
 
             CurrentInputModel.InputNodes.Clear();
             foreach (var n in sorted)
                 CurrentInputModel.InputNodes.Add(n);
 
+            // 新Noを振り直し、旧No→新Noマッピングを構築
+            var oldToNewNo = new Dictionary<int, int>();
             for (int i = 0; i < CurrentInputModel.InputNodes.Count; i++)
-                CurrentInputModel.InputNodes[i].No = i + 1;
+            {
+                int oldNo = CurrentInputModel.InputNodes[i].No;
+                int newNo = i + 1;
+                oldToNewNo[oldNo] = newNo;
+                CurrentInputModel.InputNodes[i].No = newNo;
+            }
+
+            // 梁要素のNodeI_No/NodeJ_Noを追従更新（旧方式参照の場合）
+            if (CurrentInputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var beam in CurrentInputModel.FoundationBeamInput.Beams)
+                {
+                    if (beam.NodeI_Type == Models.InputData.NodeReferenceType.GeneralNode)
+                    {
+                        if (oldToNewNo.TryGetValue(beam.NodeI_No, out int newI))
+                            beam.NodeI_No = newI;
+                    }
+                    if (beam.NodeJ_Type == Models.InputData.NodeReferenceType.GeneralNode)
+                    {
+                        if (oldToNewNo.TryGetValue(beam.NodeJ_No, out int newJ))
+                            beam.NodeJ_No = newJ;
+                    }
+                }
+            }
 
             RequestUpdateWindow();
         }
