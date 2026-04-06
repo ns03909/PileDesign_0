@@ -14,6 +14,11 @@ namespace PileDesign.ViewModels
 
     public partial class WelcomeDialogViewModel : ObservableObject
     {
+        /// <summary>XAMLからバージョンを参照するためのシングルトン</summary>
+        public static WelcomeDialogViewModel Instance { get; } = new();
+
+        public string AppVersion => $"v{MainWindowViewModel.AppVersion}";
+
         [ObservableProperty]
         private bool _doNotShowAgain;
 
