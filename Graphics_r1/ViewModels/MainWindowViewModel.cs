@@ -2819,6 +2819,31 @@ namespace PileDesign.ViewModels
             }
         }
 
+        [RelayCommand]
+        public void ExportDxfPlanFile()
+        {
+            Microsoft.Win32.SaveFileDialog saveFileDialog = new()
+            {
+                Filter = "DXF (*.dxf)|*.dxf|All files (*.*)|*.*",
+                DefaultExt = ".dxf",
+                FileName = "PilePlan_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".dxf"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var exporter = new Output.DxfPlanExporter(CurrentInputModel);
+                    exporter.Export(saveFileDialog.FileName);
+                    ShowToast($"伏図DXFファイルを作成しました。\n{saveFileDialog.FileName}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"伏図DXF出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
         // midas Gen MGT ファイルにエクスポートするメソッド
         [RelayCommand]
         public void ExportMgtFile()
