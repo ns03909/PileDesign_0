@@ -51,7 +51,6 @@ namespace PileDesign.Output
             WriteElements(writer, nodeIdMap, materialIdMap, sectionIdMap);
             WriteElasticLinks(writer, nodeIdMap);
             WriteConstraints(writer, nodeIdMap);
-            WriteSprings(writer, nodeIdMap);
             WriteRigidLinks(writer, nodeIdMap);
 
             // 非線形曲線データ（コメント形式）
@@ -64,15 +63,17 @@ namespace PileDesign.Output
 
         private static void WriteHeader(StreamWriter writer)
         {
-            writer.WriteLine("; MGT file exported by PileDesign");
+            writer.WriteLine("*HEADER");
+            writer.WriteLine($"; MGT file exported by PileDesign");
             writer.WriteLine($"; Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             writer.WriteLine();
         }
 
         private static void WriteUnit(StreamWriter writer)
         {
+            // MIDAS GEN: *UNIT, Force, Length, Heat, Temper
             writer.WriteLine("*UNIT");
-            writer.WriteLine("   kN, m, degC");
+            writer.WriteLine("   kN, m, kJ, C");
             writer.WriteLine();
         }
 
@@ -91,11 +92,12 @@ namespace PileDesign.Output
             writer.WriteLine("*MATERIAL");
             foreach (var (material, id) in materialIdMap)
             {
-                // ISOTROPIC material: ID, TYPE, NAME, STYPE(=1)
-                // followed by: E, Poisson, ThermalExp, Density, DampRatio, ...
+                // MIDAS GEN MGT Material format:
+                // ID, TYPE, NAME
+                // , E, Poisson, ThermalExp, Density
                 string name = $"Mat{id}";
-                writer.WriteLine($"   {id}, ISOTROPIC, {name}, 1, 0, 0, 0, 0, 0, 0");
-                writer.WriteLine($"   , {material.E:E6}, {material.P:F4}, 0, 0, 0, 0");
+                writer.WriteLine($"   {id}, STEEL, {name},  0, 0, , C, NO, 0.02, 1");
+                writer.WriteLine($"   , YES, {material.E:E6}, {material.P:F4}, 1.200E-005, 7.698E+001");
             }
             writer.WriteLine();
         }
@@ -105,11 +107,12 @@ namespace PileDesign.Output
             writer.WriteLine("*SECTION");
             foreach (var (section, id) in sectionIdMap)
             {
-                // DBUSER (user-defined general section)
+                // MIDAS GEN: DBUSER section
+                // ID, DBUSER, Name, OFFSET, iCENT, iREF, iHORZ, SHAPE, 0, 0, YES, NO, YES
+                // , AX, ASy, ASz, IXX, IYY, IZZ
                 string name = $"Sec{id}";
-                writer.WriteLine($"   {id}, DBUSER, {name}, CC, 0, 0, 0, 0, 0, 0, YES, NO");
-                // AX, ASy, IZ, IY, AX2, IX
-                writer.WriteLine($"   , {section.AX:E6}, {section.AY:E6}, {section.IZ:E6}, {section.IY:E6}, {section.AZ:E6}, {section.IX:E6}");
+                writer.WriteLine($"   {id}, DBUSER, {name}, , 0, 0, 0, 0, 0, 0, YES, NO, YES");
+                writer.WriteLine($"   , {section.AX:E6}, {section.AY:E6}, {section.AZ:E6}, {section.IX:E6}, {section.IY:E6}, {section.IZ:E6}");
             }
             writer.WriteLine();
         }
@@ -144,6 +147,9 @@ namespace PileDesign.Output
 
             if (allSprings.Count == 0) return;
 
+            // MIDAS GEN: *ELASTICLINK
+            // ID, TYPE(integer), NodeI, NodeJ, SDx, SDy, SDz, SRx, SRy, SRz
+            // TYPE: 1=RIGID, 2=弾性リンク
             writer.WriteLine("*ELASTICLINK");
             int linkId = 1;
             foreach (var spring in allSprings)
@@ -152,7 +158,6 @@ namespace PileDesign.Output
                 if (!nodeIdMap.TryGetValue(spring.NodeI, out int nodeI)) continue;
                 if (!nodeIdMap.TryGetValue(spring.NodeJ, out int nodeJ)) continue;
 
-                // KeTan の対角成分から6成分を抽出
                 var ke = spring.KeTan;
                 if (ke == null) continue;
 
@@ -163,7 +168,8 @@ namespace PileDesign.Output
                 double kRy = ke[4, 4];
                 double kRz = ke[5, 5];
 
-                writer.WriteLine($"   {linkId}, COMP/TENS, {nodeI}, {nodeJ}, {kx:E6}, {ky:E6}, {kz:E6}, {kRx:E6}, {kRy:E6}, {kRz:E6}");
+                // TYPE=2: 弾性リンク（General type）
+                writer.WriteLine($"   {linkId}, 2, {nodeI}, {nodeJ}, {kx:E6}, {ky:E6}, {kz:E6}, {kRx:E6}, {kRy:E6}, {kRz:E6}");
                 linkId++;
             }
             writer.WriteLine();
@@ -171,10 +177,11 @@ namespace PileDesign.Output
 
         private void WriteConstraints(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
         {
+            // MIDAS GEN: *CONSTRAINT → *BNDR-GROUP (boundary group)
+            // or simply *CONSTRAINT with format: NodeID, DOF1, DOF2, DOF3, DOF4, DOF5, DOF6
             writer.WriteLine("*CONSTRAINT");
             foreach (var (node, id) in nodeIdMap)
             {
-                // 各DOFについて、genuinely fixed (not slave) かどうかを判定
                 char[] dofCode = new char[6];
                 bool hasConstraint = false;
                 for (int i = 0; i < 6; i++)
@@ -200,37 +207,18 @@ namespace PileDesign.Output
             writer.WriteLine();
         }
 
-        private void WriteSprings(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            bool headerWritten = false;
-            foreach (var (node, id) in nodeIdMap)
-            {
-                if (!node.IsSpringed) continue;
-
-                if (!headerWritten)
-                {
-                    writer.WriteLine("*SPRING");
-                    headerWritten = true;
-                }
-
-                var sp = node.TangentSpring;
-                writer.WriteLine($"   {id}, {sp.Kx:E6}, {sp.Ky:E6}, {sp.Kz:E6}, {sp.Kxx:E6}, {sp.Kyy:E6}, {sp.Kzz:E6}");
-            }
-            if (headerWritten)
-                writer.WriteLine();
-        }
-
         private void WriteRigidLinks(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
         {
             if (_anaModel.RigidBodies == null || _anaModel.RigidBodies.Count == 0) return;
 
+            // MIDAS GEN: *RIGIDLINK
+            // MasterNodeID, SlaveNodeID, DOFs
             writer.WriteLine("*RIGIDLINK");
             foreach (var rb in _anaModel.RigidBodies)
             {
                 if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
                 if (!nodeIdMap.TryGetValue(rb.MasterNode, out int masterId)) continue;
 
-                // DOFフラグ文字列
                 string dofStr = string.Concat(rb.Dofs.Select(d => d ? "1" : "0"));
 
                 foreach (var slave in rb.SlaveNodes)
@@ -243,9 +231,8 @@ namespace PileDesign.Output
             writer.WriteLine();
         }
 
-        // ─── 非線形曲線データ ──────────────────────────
+        // ─── 非線形曲線データ（コメント形式で参考出力） ──────────────────────────
 
-        // サンプリング用変位値 (m)
         private static readonly double[] SoilDisplacementSamples =
         [
             0, 0.0001, 0.0005, 0.001, 0.002, 0.005,
@@ -256,7 +243,6 @@ namespace PileDesign.Output
         {
             if (_anaModel.HorizontalSoilSprings == null || _anaModel.HorizontalSoilSprings.Count == 0) return;
 
-            // Node → HorizontalSoilReactionItem マッピング構築
             var soilReactionByNode = new Dictionary<Node, HorizontalSoilReactionItem>();
             foreach (var beam in _anaModel.Beams)
             {
@@ -277,19 +263,17 @@ namespace PileDesign.Output
 
                 if (!headerWritten)
                 {
+                    writer.WriteLine();
                     writer.WriteLine("; ==== NONLINEAR SOIL SPRING CURVES ====");
                     headerWritten = true;
                 }
 
-                writer.WriteLine($"; Spring NodeI={nI}, NodeJ={nJ}, Layer={reaction.Name}");
-                writer.WriteLine($"; Kh0={reaction.Kh0:F1} kN/m3, PyFrontTop={reaction.PyFrontTop:F1} kN/m2, B={reaction.B:F3} m");
-                writer.WriteLine("; Displacement(m), Force(kN)");
+                string layerName = reaction.Name ?? reaction.SoilType ?? "Unknown";
+                double kh0 = reaction.Kh0;
+                double pyTop = reaction.PyFrontTop;
 
-                foreach (double y in SoilDisplacementSamples)
-                {
-                    double force = reaction.GetSoilReaction(y, isTop: true, isFront: true);
-                    writer.WriteLine($";   {y:F6}, {force:F6}");
-                }
+                writer.WriteLine($"; Spring NodeI={nI}, NodeJ={nJ}, Layer={layerName}");
+                writer.WriteLine($"; Kh0={kh0:F1} kN/m3, PyFrontTop={pyTop:F1} kN/m2");
                 writer.WriteLine();
             }
         }
@@ -298,29 +282,16 @@ namespace PileDesign.Output
         {
             if (_anaModel.RotationalSprings == null || _anaModel.RotationalSprings.Count == 0) return;
 
-            bool headerWritten = false;
-            foreach (var rs in _anaModel.RotationalSprings)
+            writer.WriteLine();
+            writer.WriteLine("; ==== ROTATIONAL SPRING (M-theta) CURVES ====");
+            foreach (var rspring in _anaModel.RotationalSprings)
             {
-                if (!rs.IsNonlinear) continue;
-                if (rs.NodeI == null || rs.NodeJ == null) continue;
-                if (!nodeIdMap.TryGetValue(rs.NodeI, out int nI)) continue;
-                if (!nodeIdMap.TryGetValue(rs.NodeJ, out int nJ)) continue;
+                if (rspring.NodeI == null || rspring.NodeJ == null) continue;
+                if (!nodeIdMap.TryGetValue(rspring.NodeI, out int nI)) continue;
+                if (!nodeIdMap.TryGetValue(rspring.NodeJ, out int nJ)) continue;
 
-                var curve = rs.Mode == RotationalSpringMode.CombinedXY ? rs.CurveXY : rs.Curve;
-                if (curve == null || curve.Points.Count == 0) continue;
-
-                if (!headerWritten)
-                {
-                    writer.WriteLine("; ==== NONLINEAR ROTATIONAL SPRING CURVES ====");
-                    headerWritten = true;
-                }
-
-                writer.WriteLine($"; RotSpring NodeI={nI}, NodeJ={nJ}, Mode={rs.Mode}");
-                writer.WriteLine("; Rotation(rad), Moment(kNm)");
-                foreach (var (theta, moment) in curve.Points)
-                {
-                    writer.WriteLine($";   {theta:E6}, {moment:F6}");
-                }
+                writer.WriteLine($"; RotationalSpring NodeI={nI}, NodeJ={nJ}, Name={rspring.Name}");
+                writer.WriteLine($"; Ktheta={rspring.Ktheta:E3}, KthetaXY={rspring.KthetaXY:E3}");
                 writer.WriteLine();
             }
         }
@@ -328,26 +299,23 @@ namespace PileDesign.Output
         private void WriteBeamMPhiCurves(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
         {
             bool headerWritten = false;
+            int elemId = 0;
             foreach (var beam in _anaModel.Beams)
             {
+                elemId++;
                 var curve = beam.ResolvedCombinedCurve;
-                if (curve == null || curve.Points.Count == 0) continue;
-                if (beam.NodeI == null || beam.NodeJ == null) continue;
-                if (!nodeIdMap.TryGetValue(beam.NodeI, out int nI)) continue;
-                if (!nodeIdMap.TryGetValue(beam.NodeJ, out int nJ)) continue;
+                if (curve == null) continue;
 
                 if (!headerWritten)
                 {
-                    writer.WriteLine("; ==== BEAM MOMENT-CURVATURE CURVES ====");
+                    writer.WriteLine();
+                    writer.WriteLine("; ==== BEAM M-PHI CURVES ====");
                     headerWritten = true;
                 }
 
-                writer.WriteLine($"; Beam \"{beam.Name}\", NodeI={nI}, NodeJ={nJ}");
-                writer.WriteLine("; Curvature(1/m), Moment(kNm)");
-                foreach (var (phi, moment) in curve.Points)
-                {
-                    writer.WriteLine($";   {phi:E6}, {moment:F6}");
-                }
+                writer.WriteLine($"; Element {elemId}: {beam.Name}");
+                writer.WriteLine($"; Curvature(1/m), Moment(kN*m)");
+                writer.WriteLine($"; InitialCurveTangent={beam.InitialCurveTangent:E6}");
                 writer.WriteLine();
             }
         }
