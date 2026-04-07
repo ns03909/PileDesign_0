@@ -109,10 +109,11 @@ namespace PileDesign.Output
             writer.WriteLine("*SECTION    ; Section");
             foreach (var (section, id) in sectionIdMap)
             {
+                // DBUSER + SR形式 (1行): iSEC, DBUSER, SNAME, CC, 0,0,0,0,0,0, YES, NO, SR, 2, D1..D10
+                // D1=杭径相当の代表寸法, D2～D10=0
                 string name = $"Sec{id}";
-                writer.WriteLine($"   {id}, DBUSER, {name}, , 0, 0, 0, 0, 0, 0, YES, NO, YES");
-                // AX, ASy, ASz, IXX, IYY, IZZ
-                writer.WriteLine($"   , {section.AX:E6}, {section.AY:E6}, {section.AZ:E6}, {section.IX:E6}, {section.IY:E6}, {section.IZ:E6}");
+                double reprDim = Math.Sqrt(section.AX / Math.PI) * 2; // 断面積から直径を推定
+                writer.WriteLine($"   {id,3}, DBUSER    , {name,-18}, CC, 0, 0, 0, 0, 0, 0, YES, NO, SR , 2, {reprDim:G6}, 0, 0, 0, 0, 0, 0, 0, 0, 0");
             }
             writer.WriteLine();
         }
@@ -121,7 +122,7 @@ namespace PileDesign.Output
             Dictionary<Material, int> materialIdMap, Dictionary<Section, int> sectionIdMap)
         {
             writer.WriteLine("*ELEMENT    ; Elements");
-            writer.WriteLine("; iEL, TYPE, iMAT, iPRO, iNOD1, iNOD2, ANGLE");
+            writer.WriteLine("; iEL, TYPE, iMAT, iPRO, iN1, iN2, ANGLE, iSUB");
             int elemId = 1;
             foreach (var beam in _anaModel.Beams)
             {
@@ -131,7 +132,7 @@ namespace PileDesign.Output
                 if (!materialIdMap.TryGetValue(beam.Section.Material, out int mId)) continue;
                 if (!sectionIdMap.TryGetValue(beam.Section, out int sId)) continue;
 
-                writer.WriteLine($"   {elemId}, BEAM, {mId}, {sId}, {nodeI}, {nodeJ}, 0");
+                writer.WriteLine($"   {elemId,5}, BEAM  , {mId,4}, {sId,5}, {nodeI,5}, {nodeJ,5}, {0,5}, {0,5}");
                 elemId++;
             }
             writer.WriteLine();
@@ -149,6 +150,7 @@ namespace PileDesign.Output
             if (allSprings.Count == 0) return;
 
             writer.WriteLine("*ELASTICLINK    ; Elastic Link");
+            writer.WriteLine("; iNO, iNODE1, iNODE2, LINK, ANGLE, R_SDx, R_SDy, R_SDz, R_SRx, R_SRy, R_SRz, SDx, SDy, SDz, SRx, SRy, SRz, bSHEAR, DRy, DRz, GROUP");
             int linkId = 1;
             foreach (var spring in allSprings)
             {
@@ -166,8 +168,15 @@ namespace PileDesign.Output
                 double kRy = ke[4, 4];
                 double kRz = ke[5, 5];
 
-                // TYPE=2: 弾性リンク（General type）
-                writer.WriteLine($"   {linkId}, 2, {nodeI}, {nodeJ}, {kx:E6}, {ky:E6}, {kz:E6}, {kRx:E6}, {kRy:E6}, {kRz:E6}");
+                // GEN形式: iNO, iNODE1, iNODE2, GEN, ANGLE, R_SDx..R_SRz(6), SDx..SRz(6), bSHEAR, DRy, DRz, GROUP
+                // R_SD/R_SR: YES=拘束あり, NO=拘束なし（ばね剛性が0でなければYES）
+                string rDx = kx > 0 ? "YES" : "NO";
+                string rDy = ky > 0 ? "YES" : "NO";
+                string rDz = kz > 0 ? "YES" : "NO";
+                string rRx = kRx > 0 ? "YES" : "NO";
+                string rRy = kRy > 0 ? "YES" : "NO";
+                string rRz = kRz > 0 ? "YES" : "NO";
+                writer.WriteLine($"   {linkId,5}, {nodeI,5}, {nodeJ,5}, GEN, 0, {rDx}, {rDy}, {rDz}, {rRx}, {rRy}, {rRz}, {kx:E4}, {ky:E4}, {kz:E4}, {kRx:E4}, {kRy:E4}, {kRz:E4}, NO, 0, 0, ");
                 linkId++;
             }
             writer.WriteLine();
@@ -176,6 +185,7 @@ namespace PileDesign.Output
         private void WriteConstraints(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
         {
             writer.WriteLine("*CONSTRAINT    ; Supports");
+            writer.WriteLine("; NODE_LIST, CONST(Dx,Dy,Dz,Rx,Ry,Rz), GROUP");
             foreach (var (node, id) in nodeIdMap)
             {
                 char[] dofCode = new char[6];
@@ -197,7 +207,7 @@ namespace PileDesign.Output
 
                 if (hasConstraint)
                 {
-                    writer.WriteLine($"   {id}, {new string(dofCode)}");
+                    writer.WriteLine($"   {id}, {new string(dofCode)}, ");
                 }
             }
             writer.WriteLine();
@@ -208,6 +218,7 @@ namespace PileDesign.Output
             if (_anaModel.RigidBodies == null || _anaModel.RigidBodies.Count == 0) return;
 
             writer.WriteLine("*RIGIDLINK    ; Rigid Link");
+            writer.WriteLine("; M-NODE, DOF, S-NODE LIST, GROUP");
             foreach (var rb in _anaModel.RigidBodies)
             {
                 if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
@@ -215,11 +226,17 @@ namespace PileDesign.Output
 
                 string dofStr = string.Concat(rb.Dofs.Select(d => d ? "1" : "0"));
 
+                // スレーブノードをカンマ区切りリストで出力
+                var slaveIds = new List<string>();
                 foreach (var slave in rb.SlaveNodes)
                 {
                     if (slave == null) continue;
-                    if (!nodeIdMap.TryGetValue(slave, out int slaveId)) continue;
-                    writer.WriteLine($"   {masterId}, {slaveId}, {dofStr}");
+                    if (nodeIdMap.TryGetValue(slave, out int slaveId))
+                        slaveIds.Add(slaveId.ToString());
+                }
+                if (slaveIds.Count > 0)
+                {
+                    writer.WriteLine($" {masterId}, {dofStr}, {string.Join(" ", slaveIds)}, ");
                 }
             }
             writer.WriteLine();
