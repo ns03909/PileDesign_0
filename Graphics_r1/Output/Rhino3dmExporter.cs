@@ -181,12 +181,22 @@ namespace PileDesign.Output
                     AddCylinder(file, layerIdx, x, y, z1, z2, dia);
                 }
 
-                // 拡底部 (pileToeDia > pileDia)
+                double pileBottomZ = z - segments[^1].SegmentDepth;
                 double toeDia = body.PileToeDia / 1000.0;
-                if (toeDia > lastDia && lastDia > 0)
+
+                // 場所打ち杭の拡底部（円柱+円錐台）
+                if (toeDia > lastDia && lastDia > 0 &&
+                    (body.PileBodyType == "場所打ち鉄筋コンクリート杭" || body.PileBodyType == "場所打ち鋼管コンクリート杭"))
                 {
-                    double pileBottomZ = z - segments[^1].SegmentDepth;
                     AddPileToe(file, layerIdx, x, y, pileBottomZ, toeDia, lastDia);
+                }
+
+                // 既製コンクリート杭の拡大根固め部（円筒）
+                if (toeDia > lastDia && body.PileBodyType == "既製コンクリート杭")
+                {
+                    double toeHeight = toeDia * body.PrecastConcretePileToeHeightRatio;
+                    double toeBottomZ = pileBottomZ - toeHeight;
+                    AddCylinder(file, layerIdx, x, y, pileBottomZ, toeBottomZ, toeDia);
                 }
             }
         }

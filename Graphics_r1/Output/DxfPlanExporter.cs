@@ -76,10 +76,23 @@ namespace PileDesign.Output
                     Layer = pileLayer
                 });
 
-                // 杭番号テキスト
+                // 拡底部・拡大根固め部の外径円（破線）
+                double toeDia = body.PileToeDia / 1000.0;
+                if (toeDia > dia)
+                {
+                    doc.Entities.Add(new Circle
+                    {
+                        Center = new XYZ(pile.X, pile.Y, 0),
+                        Radius = toeDia * 0.5,
+                        Layer = pileLayer
+                    });
+                }
+
+                // 杭番号テキスト（拡底がある場合は外径の外に配置）
+                double labelOffset = Math.Max(dia, toeDia) * 0.5 + TextHeight * 0.5;
                 doc.Entities.Add(new MText
                 {
-                    InsertPoint = new XYZ(pile.X, pile.Y - dia * 0.5 - TextHeight * 0.5, 0),
+                    InsertPoint = new XYZ(pile.X, pile.Y - labelOffset, 0),
                     Height = TextHeight,
                     Value = pile.No.ToString(),
                     Layer = textLayer,
