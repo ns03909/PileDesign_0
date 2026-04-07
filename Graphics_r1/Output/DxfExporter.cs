@@ -30,17 +30,30 @@ namespace PileDesign.Output
             var doc = new CadDocument();
 
             // レイヤー作成
-            var pileLayer = CreateLayer(doc, "杭", new Color(150, 180, 220));        // SteelBlue風
-            var embedLayer = CreateLayer(doc, "根入れ部", new Color(192, 192, 192));  // LightGray
-            var beamLayer = CreateLayer(doc, "基礎梁", new Color(139, 90, 43));       // SaddleBrown風
+            var pileLayer = CreateLayer(doc, "杭", new Color(150, 180, 220));
+            var embedLayer = CreateLayer(doc, "根入れ部", new Color(192, 192, 192));
+            var beamLayer = CreateLayer(doc, "基礎梁", new Color(139, 90, 43));
+            var gridLayer = CreateLayer(doc, "通り心", new Color(255, 0, 255));
+            var gridSymbolLayer = CreateLayer(doc, "通り心シンボル", new Color(255, 0, 255));
+            var dimLayer = CreateLayer(doc, "寸法", new Color(0, 128, 0));
 
             // ジオメトリ追加
             AddPiles(doc, pileLayer);
             AddEmbedment(doc, embedLayer);
             AddBeams(doc, beamLayer);
 
+            // 通り心・寸法を杭頭最高レベルのXY平面に追加
+            double topZ = GetMaxPileTopZ();
+            GridDimHelper.AddGridAndDimensions(doc, _inputModel, gridLayer, gridSymbolLayer, dimLayer, topZ);
+
             using var writer = new DxfWriter(filePath, doc, false);
             writer.Write();
+        }
+
+        private double GetMaxPileTopZ()
+        {
+            if (_inputModel.PileLayoutItems == null || _inputModel.PileLayoutItems.Count == 0) return 0;
+            return _inputModel.PileLayoutItems.Max(p => p.Z);
         }
 
         private static Layer CreateLayer(CadDocument doc, string name, Color color)

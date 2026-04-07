@@ -29,13 +29,114 @@ namespace PileDesign.Output
             int pileLayerIdx = AddLayer(file, "杭", System.Drawing.Color.SteelBlue);
             int embedLayerIdx = AddLayer(file, "根入れ部", System.Drawing.Color.LightGray);
             int beamLayerIdx = AddLayer(file, "基礎梁", System.Drawing.Color.SaddleBrown);
+            int gridLayerIdx = AddLayer(file, "通り心", System.Drawing.Color.Magenta);
+            int dimLayerIdx = AddLayer(file, "寸法", System.Drawing.Color.Green);
 
             // ジオメトリ追加
             AddPiles(file, pileLayerIdx);
             AddEmbedment(file, embedLayerIdx);
             AddBeams(file, beamLayerIdx);
 
+            // 通り心・寸法を杭頭最高レベルのXY平面に追加
+            double topZ = GetMaxPileTopZ();
+            AddGridAndDimensions(file, gridLayerIdx, dimLayerIdx, topZ);
+
             file.Write(filePath, 8);
+        }
+
+        private double GetMaxPileTopZ()
+        {
+            if (_inputModel.PileLayoutItems == null || _inputModel.PileLayoutItems.Count == 0) return 0;
+            return _inputModel.PileLayoutItems.Max(p => p.Z);
+        }
+
+        private void AddGridAndDimensions(File3dm file, int gridLayerIdx, int dimLayerIdx, double z)
+        {
+            double xMin = double.MaxValue, xMax = double.MinValue;
+            double yMin = double.MaxValue, yMax = double.MinValue;
+
+            if (_inputModel.PileLayoutItems != null)
+                foreach (var p in _inputModel.PileLayoutItems)
+                { xMin = Math.Min(xMin, p.X); xMax = Math.Max(xMax, p.X); yMin = Math.Min(yMin, p.Y); yMax = Math.Max(yMax, p.Y); }
+            if (_inputModel.GridXItems != null)
+                foreach (var g in _inputModel.GridXItems)
+                { xMin = Math.Min(xMin, g.Coord); xMax = Math.Max(xMax, g.Coord); }
+            if (_inputModel.GridYItems != null)
+                foreach (var g in _inputModel.GridYItems)
+                { yMin = Math.Min(yMin, g.Coord); yMax = Math.Max(yMax, g.Coord); }
+
+            if (xMin > xMax) return;
+
+            const double ext = 2.0;
+            const double symR = 0.4;
+            const double dimOff = 1.5;
+
+            var gridAttrs = MakeAttrs(gridLayerIdx);
+            var dimAttrs = MakeAttrs(dimLayerIdx);
+
+            // X方向通り心（Y軸平行）
+            if (_inputModel.GridXItems != null)
+                foreach (var grid in _inputModel.GridXItems)
+                {
+                    double x = grid.Coord;
+                    file.Objects.AddLine(new Rhino.Geometry.Line(
+                        new Rhino.Geometry.Point3d(x, yMin - ext, z),
+                        new Rhino.Geometry.Point3d(x, yMax + ext, z)), gridAttrs);
+                    // シンボル（下端）
+                    double symY = yMin - ext - symR * 1.5;
+                    file.Objects.AddCircle(new Rhino.Geometry.Circle(
+                        new Rhino.Geometry.Point3d(x, symY, z), symR), gridAttrs);
+                    file.Objects.AddTextDot(grid.Name ?? "", new Rhino.Geometry.Point3d(x, symY, z), gridAttrs);
+                }
+
+            // Y方向通り心（X軸平行）
+            if (_inputModel.GridYItems != null)
+                foreach (var grid in _inputModel.GridYItems)
+                {
+                    double y = grid.Coord;
+                    file.Objects.AddLine(new Rhino.Geometry.Line(
+                        new Rhino.Geometry.Point3d(xMin - ext, y, z),
+                        new Rhino.Geometry.Point3d(xMax + ext, y, z)), gridAttrs);
+                    // シンボル（右端）
+                    double symX = xMax + ext + symR * 1.5;
+                    file.Objects.AddCircle(new Rhino.Geometry.Circle(
+                        new Rhino.Geometry.Point3d(symX, y, z), symR), gridAttrs);
+                    file.Objects.AddTextDot(grid.Name ?? "", new Rhino.Geometry.Point3d(symX, y, z), gridAttrs);
+                }
+
+            // X方向寸法（下側）
+            if (_inputModel.GridXItems != null && _inputModel.GridXItems.Count >= 2)
+            {
+                var sorted = _inputModel.GridXItems.OrderBy(g => g.Coord).ToList();
+                double dimY = yMin - ext - symR * 3 - dimOff;
+                for (int i = 0; i < sorted.Count - 1; i++)
+                {
+                    double x1 = sorted[i].Coord, x2 = sorted[i + 1].Coord;
+                    file.Objects.AddLine(new Rhino.Geometry.Line(
+                        new Rhino.Geometry.Point3d(x1, dimY, z),
+                        new Rhino.Geometry.Point3d(x2, dimY, z)), dimAttrs);
+                    double dist = Math.Abs(x2 - x1);
+                    string txt = dist >= 1000 ? $"{dist:N0}" : $"{dist:N3}";
+                    file.Objects.AddTextDot(txt, new Rhino.Geometry.Point3d((x1 + x2) * 0.5, dimY, z), dimAttrs);
+                }
+            }
+
+            // Y方向寸法（右側）
+            if (_inputModel.GridYItems != null && _inputModel.GridYItems.Count >= 2)
+            {
+                var sorted = _inputModel.GridYItems.OrderBy(g => g.Coord).ToList();
+                double dimX = xMax + ext + symR * 3 + dimOff;
+                for (int i = 0; i < sorted.Count - 1; i++)
+                {
+                    double y1 = sorted[i].Coord, y2 = sorted[i + 1].Coord;
+                    file.Objects.AddLine(new Rhino.Geometry.Line(
+                        new Rhino.Geometry.Point3d(dimX, y1, z),
+                        new Rhino.Geometry.Point3d(dimX, y2, z)), dimAttrs);
+                    double dist = Math.Abs(y2 - y1);
+                    string txt = dist >= 1000 ? $"{dist:N0}" : $"{dist:N3}";
+                    file.Objects.AddTextDot(txt, new Rhino.Geometry.Point3d(dimX, (y1 + y2) * 0.5, z), dimAttrs);
+                }
+            }
         }
 
         private static int AddLayer(File3dm file, string name, System.Drawing.Color color)
