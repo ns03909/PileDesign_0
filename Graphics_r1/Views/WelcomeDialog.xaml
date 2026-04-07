@@ -98,10 +98,6 @@
                                 Command="{Binding OpenExistingCommand}"
                                 Style="{StaticResource LinkButtonStyle}"
                                 HorizontalAlignment="Center"/>
-                        <Button Content="サンプルを開く"
-                                Command="{Binding OpenSampleCommand}"
-                                Style="{StaticResource LinkButtonStyle}"
-                                HorizontalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Row 1: セパレータ -->

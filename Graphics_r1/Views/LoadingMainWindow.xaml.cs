@@ -1,11 +1,11 @@
-﻿using System.Threading.Tasks;
+using PileDesign.ViewModels;
+using System.Threading.Tasks;
 using System.Windows;
-
 
 namespace PileDesign.Views
 {
     /// <summary>
-    /// LoadingMainWindow.xaml の相互作用ロジック
+    /// スプラッシュスクリーン: NIKKENロゴを2秒表示して自動で閉じる
     /// </summary>
     public partial class LoadingMainWindow : Window
     {
@@ -13,15 +13,13 @@ namespace PileDesign.Views
         {
             InitializeComponent();
 
-            //// フェードアウトアニメーションを開始
-            //fadeOutStoryboard.Begin();
-            // 3秒間待機してからウィンドウを閉じる
-            Task.Delay(3000).ContinueWith(t =>
+            // バージョン表示
+            VersionText.Text = $"v{MainWindowViewModel.AppVersion}";
+
+            // 2秒後に自動で閉じる
+            Task.Delay(2000).ContinueWith(t =>
             {
-                Dispatcher.Invoke(() =>
-                {
-                    Close();
-                });
+                Dispatcher.Invoke(() => Close());
             });
         }
     }

@@ -80,48 +80,11 @@ namespace PileDesign
             {
                 base.OnStartup(e);
 
-                // WelcomeDialog閉時にアプリが終了しないようにする
-                this.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-                // ウェルカムダイアログ表示
-                WelcomeDialogResult welcomeResult = WelcomeDialogResult.None;
-
-                if (PileDesign.Properties.Settings.Default.ShowWelcomeDialog)
-                {
-                    var welcomeVm = new WelcomeDialogViewModel();
-                    var welcomeDialog = new WelcomeDialog { DataContext = welcomeVm };
-                    welcomeDialog.ShowDialog();
-                    welcomeResult = welcomeVm.Result;
-                }
-
-                // MainWindowを手動で生成・表示（StartupUri削除のため）
+                // MainWindowを生成・表示
+                // （スプラッシュはMainWindowコンストラクタ内のLoadingMainWindowで表示）
                 var mainWindow = new MainWindow();
                 this.MainWindow = mainWindow;
                 mainWindow.Show();
-
-                // MainWindow表示後、通常のシャットダウンモードに戻す
-                this.ShutdownMode = ShutdownMode.OnMainWindowClose;
-
-                // ウェルカムダイアログの結果に応じてアクションを実行
-                if (mainWindow.DataContext is MainWindowViewModel vm)
-                {
-                    switch (welcomeResult)
-                    {
-                        case WelcomeDialogResult.OpenExisting:
-                            vm.OpenInputModelFileSimple();
-                            break;
-                        case WelcomeDialogResult.OpenSample:
-                            string examplePath = Path.Combine(
-                                AppDomain.CurrentDomain.BaseDirectory, "Examples", "Example3_2.json");
-                            if (File.Exists(examplePath))
-                                vm.TryLoadInputModelFileUsingInputModelLoader(examplePath);
-                            break;
-                        case WelcomeDialogResult.NewProject:
-                        case WelcomeDialogResult.None:
-                        default:
-                            break;
-                    }
-                }
             }
             catch (Exception ex)
             {
