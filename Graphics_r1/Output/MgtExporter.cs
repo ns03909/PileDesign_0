@@ -63,40 +63,42 @@ namespace PileDesign.Output
 
         private static void WriteHeader(StreamWriter writer)
         {
-            writer.WriteLine("*HEADER");
-            writer.WriteLine($"; MGT file exported by PileDesign");
-            writer.WriteLine($"; Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            writer.WriteLine(";---------------------------------------------------------------------------");
+            writer.WriteLine(";  MGT file exported by PileDesign");
+            writer.WriteLine($";  Date : {DateTime.Now:yyyy/M/d}");
+            writer.WriteLine(";---------------------------------------------------------------------------");
+            writer.WriteLine();
+            writer.WriteLine("*VERSION");
+            writer.WriteLine("   9.4.5");
             writer.WriteLine();
         }
 
         private static void WriteUnit(StreamWriter writer)
         {
-            // MIDAS GEN: *UNIT, Force, Length, Heat, Temper
-            writer.WriteLine("*UNIT");
-            writer.WriteLine("   kN, m, kJ, C");
+            writer.WriteLine("*UNIT    ; Unit System");
+            writer.WriteLine("; FORCE, LENGTH, HEAT, TEMPER");
+            writer.WriteLine("   KN   , M, KJ, C");
             writer.WriteLine();
         }
 
         private static void WriteNodes(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
         {
-            writer.WriteLine("*NODE");
+            writer.WriteLine("*NODE    ; Nodes");
+            writer.WriteLine("; iNO, X, Y, Z");
             foreach (var (node, id) in nodeIdMap)
             {
-                writer.WriteLine($"   {id}, {node.Coord.X:F6}, {node.Coord.Y:F6}, {node.Coord.Z:F6}");
+                writer.WriteLine($"   {id,5}, {node.Coord.X}, {node.Coord.Y}, {node.Coord.Z}");
             }
             writer.WriteLine();
         }
 
         private static void WriteMaterials(StreamWriter writer, Dictionary<Material, int> materialIdMap)
         {
-            writer.WriteLine("*MATERIAL");
+            writer.WriteLine("*MATERIAL    ; Material");
             foreach (var (material, id) in materialIdMap)
             {
-                // MIDAS GEN MGT Material format:
-                // ID, TYPE, NAME
-                // , E, Poisson, ThermalExp, Density
                 string name = $"Mat{id}";
-                writer.WriteLine($"   {id}, STEEL, {name},  0, 0, , C, NO, 0.02, 1");
+                writer.WriteLine($"   {id}, STEEL, {name}, 0, 0, , C, NO, 0.02, 1");
                 writer.WriteLine($"   , YES, {material.E:E6}, {material.P:F4}, 1.200E-005, 7.698E+001");
             }
             writer.WriteLine();
@@ -104,14 +106,12 @@ namespace PileDesign.Output
 
         private static void WriteSections(StreamWriter writer, Dictionary<Section, int> sectionIdMap, Dictionary<Material, int> materialIdMap)
         {
-            writer.WriteLine("*SECTION");
+            writer.WriteLine("*SECTION    ; Section");
             foreach (var (section, id) in sectionIdMap)
             {
-                // MIDAS GEN: DBUSER section
-                // ID, DBUSER, Name, OFFSET, iCENT, iREF, iHORZ, SHAPE, 0, 0, YES, NO, YES
-                // , AX, ASy, ASz, IXX, IYY, IZZ
                 string name = $"Sec{id}";
                 writer.WriteLine($"   {id}, DBUSER, {name}, , 0, 0, 0, 0, 0, 0, YES, NO, YES");
+                // AX, ASy, ASz, IXX, IYY, IZZ
                 writer.WriteLine($"   , {section.AX:E6}, {section.AY:E6}, {section.AZ:E6}, {section.IX:E6}, {section.IY:E6}, {section.IZ:E6}");
             }
             writer.WriteLine();
@@ -120,7 +120,8 @@ namespace PileDesign.Output
         private void WriteElements(StreamWriter writer, Dictionary<Node, int> nodeIdMap,
             Dictionary<Material, int> materialIdMap, Dictionary<Section, int> sectionIdMap)
         {
-            writer.WriteLine("*ELEMENT");
+            writer.WriteLine("*ELEMENT    ; Elements");
+            writer.WriteLine("; iEL, TYPE, iMAT, iPRO, iNOD1, iNOD2, ANGLE");
             int elemId = 1;
             foreach (var beam in _anaModel.Beams)
             {
@@ -147,10 +148,7 @@ namespace PileDesign.Output
 
             if (allSprings.Count == 0) return;
 
-            // MIDAS GEN: *ELASTICLINK
-            // ID, TYPE(integer), NodeI, NodeJ, SDx, SDy, SDz, SRx, SRy, SRz
-            // TYPE: 1=RIGID, 2=弾性リンク
-            writer.WriteLine("*ELASTICLINK");
+            writer.WriteLine("*ELASTICLINK    ; Elastic Link");
             int linkId = 1;
             foreach (var spring in allSprings)
             {
@@ -177,9 +175,7 @@ namespace PileDesign.Output
 
         private void WriteConstraints(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
         {
-            // MIDAS GEN: *CONSTRAINT → *BNDR-GROUP (boundary group)
-            // or simply *CONSTRAINT with format: NodeID, DOF1, DOF2, DOF3, DOF4, DOF5, DOF6
-            writer.WriteLine("*CONSTRAINT");
+            writer.WriteLine("*CONSTRAINT    ; Supports");
             foreach (var (node, id) in nodeIdMap)
             {
                 char[] dofCode = new char[6];
@@ -211,9 +207,7 @@ namespace PileDesign.Output
         {
             if (_anaModel.RigidBodies == null || _anaModel.RigidBodies.Count == 0) return;
 
-            // MIDAS GEN: *RIGIDLINK
-            // MasterNodeID, SlaveNodeID, DOFs
-            writer.WriteLine("*RIGIDLINK");
+            writer.WriteLine("*RIGIDLINK    ; Rigid Link");
             foreach (var rb in _anaModel.RigidBodies)
             {
                 if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
