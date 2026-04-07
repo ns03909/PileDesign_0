@@ -18,6 +18,12 @@
     <InformationalVersion>1.0.0-beta</InformationalVersion>
   </PropertyGroup>
 
+  <!-- Release時のPDB除外（publish時のサイズ削減） -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
   <!-- テストプロジェクトからinternalクラスにアクセス可能にする -->
   <ItemGroup>
     <InternalsVisibleTo Include="TestProject1" />
@@ -589,12 +595,14 @@
     <Content Include="Help\images\図3.2.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- 参考資料（ヘルプHTMLから未参照のため配布対象外）
     <Content Include="Help\images\基礎構造部材の強度変形性能(５月20日版全章).docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\images\基礎構造部材の強度変形性能(５月20日版全章).pdf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    -->
     <Content Include="Help\images\解説図1.1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -1728,7 +1736,9 @@
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageReference Include="WebView2.Runtime.X64" Version="146.0.3856.84" />
+    <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
+         Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
