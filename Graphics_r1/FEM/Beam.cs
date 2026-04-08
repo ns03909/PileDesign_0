@@ -122,7 +122,7 @@ namespace PileDesign.FEM
                 var last = cleanPts.Last();
                 // System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SetResolvedCombinedMPhi: {ex.Message}"); }
         }
 
         // 荷重ケースの代表軸力 N を与えて、そのケース用の曲線を解決（線形補間）

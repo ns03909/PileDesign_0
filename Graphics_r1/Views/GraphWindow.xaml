@@ -21,6 +21,10 @@
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:LoadCaseNameToColorConverter x:Key="LoadCaseNameToColorConverter"/>
+        <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
+        <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
+        <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -45,14 +49,58 @@
                 <TextBlock Text="荷重ケース:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="LoadCaseComboBox"
                 ItemsSource="{Binding LoadCaseOptions}"
-                SelectedItem="{Binding SelectedLoadCaseOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                SelectedItem="{Binding SelectedLoadCaseOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                                    <Ellipse.Visibility>
+                                        <MultiBinding Converter="{StaticResource LoadCaseAnalyzedConverter}">
+                                            <Binding/>
+                                            <Binding Path="DataContext.AnaModel"
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        </MultiBinding>
+                                    </Ellipse.Visibility>
+                                </Ellipse>
+                                <TextBlock Text="{Binding}">
+                                    <TextBlock.Foreground>
+                                        <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
+                                            <Binding/>
+                                            <Binding Path="DataContext.InputModel.LoadCasesInput.AllSeismicLoadCases"
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        </MultiBinding>
+                                    </TextBlock.Foreground>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsLoadCombinationOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="荷重組み合わせ:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="LoadCombinationComboBox"
                 ItemsSource="{Binding LoadCombinationOptions}"
-                SelectedItem="{Binding SelectedLoadCombinationOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                SelectedItem="{Binding SelectedLoadCombinationOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                                    <Ellipse.Visibility>
+                                        <MultiBinding Converter="{StaticResource LoadCombinationAnalyzedConverter}">
+                                            <Binding/>
+                                            <Binding Path="DataContext.SelectedLoadCaseOption"
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                            <Binding Path="DataContext.AnaModel"
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        </MultiBinding>
+                                    </Ellipse.Visibility>
+                                </Ellipse>
+                                <TextBlock Text="{Binding}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsPileOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -80,7 +128,24 @@
             <StackPanel Visibility="{Binding IsLiquefactionOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                 <TextBlock Text="液状化:" VerticalAlignment="Center"/>
-                <ComboBox ItemsSource="{Binding LiquefactionOptions}" SelectedItem="{Binding SelectedLiquefaction}"/>
+                <ComboBox ItemsSource="{Binding LiquefactionOptions}" SelectedItem="{Binding SelectedLiquefaction}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                                    <Ellipse.Visibility>
+                                        <MultiBinding Converter="{StaticResource LiquefactionAnalyzedConverter}">
+                                            <Binding/>
+                                            <Binding Path="DataContext.AnaModel"
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        </MultiBinding>
+                                    </Ellipse.Visibility>
+                                </Ellipse>
+                                <TextBlock Text="{Binding}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsGridOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -128,7 +193,7 @@
         </Grid>
 
         <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="1" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="Close" Height="30" VerticalAlignment="Top"
+            <Button x:Name="ButtonOk" Content="閉じる (Esc)" Height="30" VerticalAlignment="Top"
                     Width="100" Command="{Binding CloseCommand}"/>
         </StackPanel>
     </Grid>

@@ -2876,7 +2876,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isQuickHintVisible, value))
                 {
-                    Console.WriteLine($"IsQuickHintVisible changed to: {value}");
+
                 }
             }
         }

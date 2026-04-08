@@ -2099,7 +2099,7 @@ namespace PileDesign.ViewModels
                                     if (double.IsFinite(nSeis) && nSeis != 0.0)
                                         axialN = nSeis;
                                 }
-                                catch { }
+                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[GraphVM] GetSeismicAxialForce: {ex.Message}"); }
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
                             }
@@ -2452,7 +2452,7 @@ namespace PileDesign.ViewModels
                                     if (double.IsFinite(nSeis) && nSeis != 0.0)
                                         axialN = nSeis;
                                 }
-                                catch { }
+                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[GraphVM] GetSeismicAxialForce: {ex.Message}"); }
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
                             }

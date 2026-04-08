@@ -25,19 +25,19 @@
             
         <StackPanel Grid.Row="0">
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxPileRef" Content="杭体番号" Width="150" IsChecked="{Binding IsApplicablePileRefNo}"></CheckBox>
+                <CheckBox x:Name="CheckBoxPileRef" Content="杭体番号" Width="150" IsChecked="{Binding IsApplicablePileRefNo}" ToolTip="チェックすると杭体番号を一括変更します"></CheckBox>
                 <ComboBox x:Name="ComboBoxPileRef" ItemsSource="{Binding PileRefNos}" SelectedItem="{Binding SelectedPileRefNo}" Width="100"
                           SelectionChanged="ComboBoxPileRef_SelectionChanged"></ComboBox>
             </StackPanel>
             
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxGroundRef" Content="地盤番号" Width="150" IsChecked="{Binding IsApplicableGroundRefNo}"></CheckBox>
+                <CheckBox x:Name="CheckBoxGroundRef" Content="地盤番号" Width="150" IsChecked="{Binding IsApplicableGroundRefNo}" ToolTip="チェックすると地盤番号を一括変更します"></CheckBox>
                 <ComboBox x:Name="ComboBoxGroundRef" ItemsSource="{Binding GroundRefNos}" SelectedItem="{Binding SelectedGroundRefNo}" Width="100"
                           SelectionChanged="ComboBoxGroundRef_SelectionChanged"></ComboBox>
             </StackPanel>
             
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxPileTopLevel" Content="杭頭Z (m)" Width="150" IsChecked="{Binding IsApplicablePileTopLevel}"></CheckBox>
+                <CheckBox x:Name="CheckBoxPileTopLevel" Content="杭頭Z (m)" Width="150" IsChecked="{Binding IsApplicablePileTopLevel}" ToolTip="チェックすると杭頭高さを一括変更します"></CheckBox>
                 <TextBox x:Name="TextBoxPileTopLevel" Text="{Binding PileTopLevel, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxPileTopLevel_TextChanged"></TextBox>
@@ -46,7 +46,7 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxFoundationBeamDeltaZc" Content="接合節点ΔZc (m)" Width="150" IsChecked="{Binding IsApplicableFoundationBeamDeltaZc}"></CheckBox>
+                <CheckBox x:Name="CheckBoxFoundationBeamDeltaZc" Content="接合節点ΔZc (m)" Width="150" IsChecked="{Binding IsApplicableFoundationBeamDeltaZc}" ToolTip="杭頭から基礎梁接合節点までの高さ差"></CheckBox>
                 <TextBox x:Name="TextBoxFoundationBeamDeltaZc" Text="{Binding FoundationBeamDeltaZc, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxFoundationBeamDeltaZc_TextChanged"></TextBox>
@@ -55,7 +55,7 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxGroupPileFactor" Content="群杭係数" Width="150" IsChecked="{Binding IsApplicablePileGroupFactor}"></CheckBox>
+                <CheckBox x:Name="CheckBoxGroupPileFactor" Content="群杭係数" Width="150" IsChecked="{Binding IsApplicablePileGroupFactor}" ToolTip="水平地盤反力係数の低減係数（群杭効果）"></CheckBox>
                 <TextBox x:Name="TextBoxGroupPileFactor" Text="{Binding PileGroupFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxGroupPileFactor_TextChanged"></TextBox>
@@ -64,7 +64,7 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
-                <CheckBox x:Name="CheckBoxVL" Content="軸力 VL (kN)" Width="150" IsChecked="{Binding IsApplicableVL}"></CheckBox>
+                <CheckBox x:Name="CheckBoxVL" Content="軸力 VL (kN)" Width="150" IsChecked="{Binding IsApplicableVL}" ToolTip="長期軸力（下向き正）"></CheckBox>
                 <TextBox x:Name="TextBoxVL" Text="{Binding VL, StringFormat=N0}" Width="100" HorizontalContentAlignment="Right"
                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          TextChanged="TextBoxVL_TextChanged"></TextBox>
@@ -198,8 +198,8 @@
         </StackPanel>
         
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="1">
-            <Button Content="Ok" Width="60" Click="OkButton_Click" />
-            <Button Content="Cancel" Width="60" Click="CancelButton_Click" />
+            <Button Content="OK" Width="60" Click="OkButton_Click" />
+            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" />
         </StackPanel>
 
     </Grid>

@@ -227,6 +227,17 @@ namespace PileDesign.ViewModels
             }
             catch { }
 
+            // イベントハンドラの解除
+            try
+            {
+                if (CurrentInputModel != null)
+                {
+                    // PropertyChanged ハンドラは lambda で登録されているため個別解除は不可。
+                    // CurrentInputModel 自体が GC されれば問題ないが、念のため参照をクリア。
+                }
+            }
+            catch { }
+
             // Clear delegates to avoid leaks
             UpdateWindowAction = null;
             UpdateCanvas3DAction = null;

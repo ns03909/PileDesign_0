@@ -28,11 +28,15 @@ namespace PileDesign.Views
 
             double flattening = viewModel.CanvasThreeDView.Flattening;
 
+            double maxValue = values.Max(v => Math.Abs(v));
+
             for (int i = 0; i < points.Count; i++)
             {
                 double valueMm = values[i];
-                // 直径(px) = mm → m → px
-                double bubbleDia2D = Math.Abs(valueMm) / 1000.0 * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
+                // 直径(px) = BubbleDia(px) × |value| / maxValue
+                double bubbleDia2D = maxValue > 1e-15
+                    ? viewModel.BubbleDia * Math.Abs(valueMm) / maxValue
+                    : 0;
 
                 if (bubbleDia2D <= 0) continue;
 
@@ -220,6 +224,15 @@ namespace PileDesign.Views
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
             if (viewModel == null || values.Count == 0) return;
 
+            // Brushをキャッシュ（ループ内での都度生成を回避）
+            var brushCache = new SolidColorBrush[colorBaredGeometries.Count];
+            for (int j = 0; j < colorBaredGeometries.Count; j++)
+            {
+                var brush = new SolidColorBrush(colorBaredGeometries[j].Color);
+                brush.Freeze();
+                brushCache[j] = brush;
+            }
+
             for (int i = 0; i < points.Count; i++)
             {
                 double value = values[i];
@@ -230,7 +243,7 @@ namespace PileDesign.Views
                         (j != 0 && colorBaredGeometries[j].BottomRange < value && value <= colorBaredGeometries[j].TopRange))
                     {
                         AddText3D(
-                            new SolidColorBrush(colorBaredGeometries[j].Color),
+                            brushCache[j],
                             GetNumberString(value, decimalPlaces),
                             point2D.X,
                             point2D.Y,
@@ -457,7 +470,7 @@ namespace PileDesign.Views
         //        }
         //    }
 
-        //    if (viewModel.IsDeformedElementVisible) // 変形後要素
+        //    if (viewModel.IsDeformedElementVisible) // 変形後形状
         //    { UpdateDeformedGeneralelement3D(values); }
 
         //    UpdateValueTexts(points, values, colorBaredGeometries); // テキスト

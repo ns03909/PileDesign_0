@@ -7,6 +7,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=viewmodels:TableWindowViewModel}"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         Title="解析結果テーブル" Width="1150" Height="680"
         common:EscapeKeyBehavior.Enable="True">
@@ -26,6 +27,9 @@
               CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
 
         </ContextMenu>
+        <conv:LoadCaseNameToColorConverter x:Key="LoadCaseNameToColorConverter"/>
+        <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
+        <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
     </Window.Resources>
     
     <DockPanel>
@@ -42,7 +46,32 @@
             <TextBlock Text="荷重条件フィルタ" Margin="0,0,0,2"/>
             <ComboBox ItemsSource="{Binding LoadCaseFilterOptions}"
                       SelectedItem="{Binding SelectedLoadCaseFilter}"
-                      Margin="0,0,0,6"/>
+                      Margin="0,0,0,6">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                                <Ellipse.Visibility>
+                                    <MultiBinding Converter="{StaticResource LoadCaseAnalyzedConverter}">
+                                        <Binding/>
+                                        <Binding Path="DataContext.AnaModel"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </Ellipse.Visibility>
+                            </Ellipse>
+                            <TextBlock Text="{Binding}">
+                                <TextBlock.Foreground>
+                                    <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
+                                        <Binding/>
+                                        <Binding Path="DataContext.AllSeismicLoadCases"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
             <TextBlock Text="荷重組合せフィルタ" Margin="0,0,0,2"/>
             <ComboBox ItemsSource="{Binding LoadCombinationFilterOptions}"
@@ -52,7 +81,24 @@
             <TextBlock Text="液状化フィルタ" Margin="0,0,0,2"/>
             <ComboBox ItemsSource="{Binding LiquefactionFilterOptions}"
                       SelectedItem="{Binding SelectedLiquefactionFilter}"
-                      Margin="0,0,0,12"/>
+                      Margin="0,0,0,12">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                                <Ellipse.Visibility>
+                                    <MultiBinding Converter="{StaticResource LiquefactionAnalyzedConverter}">
+                                        <Binding/>
+                                        <Binding Path="DataContext.AnaModel"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </Ellipse.Visibility>
+                            </Ellipse>
+                            <TextBlock Text="{Binding}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
             <Button Content="CSV出力"
                     Command="{Binding ExportCsvCommand}"

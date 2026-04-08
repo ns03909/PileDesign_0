@@ -24,6 +24,8 @@ namespace PileDesign.ViewModels
         public List<SettlementIsoBand> IsoBands3D { get; set; } = new();
         // 等高線(3D)
         public List<List<Point3D>> Contours3D { get; set; } = new();
+        // 等高線のレベル値（Contours3Dと同じインデックス）
+        public List<double> ContourLevels3D { get; set; } = new();
         // カラーバー(色と範囲のみ)
         public List<(double Bottom, double Top, Color Color)> ColorBands { get; set; } = new();
         // フィンガープリント

@@ -1,4 +1,5 @@
 ﻿using PileDesign.ViewModels;
+using System;
 using System.Collections.ObjectModel;
 using System.Windows.Media.Media3D;
 
@@ -191,6 +192,47 @@ namespace PileDesign.Models.InputData
         }
 
         public string GetLoadName() => LoadName;
+
+        /// <summary>杭軸力の合計 ΣV (kN) — 全杭配置の地震時軸力を合算</summary>
+        public double SumV
+        {
+            get
+            {
+                var pileLayouts = InputModel?.PileLayoutItems;
+                if (pileLayouts == null || pileLayouts.Count == 0) return 0;
+                double sum = 0;
+                int idx = No - 1;
+                foreach (var p in pileLayouts)
+                {
+                    var forces = Level == 1 ? p.AxialForceLevel1s : p.AxialForceLevel2s;
+                    if (forces != null && idx >= 0 && idx < forces.Count)
+                        sum += forces[idx];
+                }
+                return sum;
+            }
+        }
+
+        /// <summary>代表節点への水平力の合計 ΣH (kN) — 上部構造慣性力＋基礎構造慣性力</summary>
+        public double SumH => UpperMassForce + FoundationMassForce;
+
+        /// <summary>ΣH/ΣV 比</summary>
+        public string SumHOverSumVText
+        {
+            get
+            {
+                double v = SumV;
+                if (Math.Abs(v) < 1e-6) return "-";
+                return (SumH / Math.Abs(v)).ToString("F3");
+            }
+        }
+
+        /// <summary>ΣV, ΣH, ΣH/ΣV の変更通知を発行</summary>
+        public void RaiseForceSummaryChanged()
+        {
+            OnPropertyChanged(nameof(SumV));
+            OnPropertyChanged(nameof(SumH));
+            OnPropertyChanged(nameof(SumHOverSumVText));
+        }
 
         // 深いコピー
         public LoadCase DeepCopy()

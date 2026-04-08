@@ -3,6 +3,7 @@ using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace PileDesign.FEM
 {
@@ -40,12 +41,16 @@ namespace PileDesign.FEM
         public Matrix<double> KAB_sec { get; private set; }
         public Matrix<double> KBB_sec { get; private set; }
 
+        [JsonIgnore]
         public List<bool> VectorDOFForcedDisp { get; private set; } = [];
 
+        [JsonIgnore]
         public double NormsROnNormsFint { get; private set; }
 
         // 安定性チェック用: ゼロ/負の対角成分を持つ自由度のリスト
+        [JsonIgnore]
         public List<(int eq, string nodeName, double val)> ZeroDiagDofs { get; private set; } = [];
+        [JsonIgnore]
         public List<(int eq, string nodeName, double val)> SmallDiagDofs { get; private set; } = [];
 
         // コンストラクタ
@@ -102,7 +107,7 @@ namespace PileDesign.FEM
             if (CountFree > MaxReasonableDofs)
             {
                 // 重大な入力/設定ミスの可能性。詳細を出力して例外にする。
-                Console.WriteLine($"[ERROR] CountFree is very large: {CountFree}. Aborting to avoid OOM.");
+                System.Diagnostics.Debug.WriteLine($"[ERROR] CountFree is very large: {CountFree}. Aborting to avoid OOM.");
                 throw new InvalidOperationException($"自由度が大きすぎます: {CountFree}. 入力データ／境界条件を確認してください。");
             }
 

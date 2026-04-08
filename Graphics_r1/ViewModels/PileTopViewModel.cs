@@ -69,7 +69,7 @@ namespace PileDesign.ViewModels
                 // Canvas が既にセットされていれば描画
                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                 {
-                    try { RedrawShapes(); } catch { }
+                    try { RedrawShapes(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PileTopVM] RedrawShapes: {ex.Message}"); }
                 }), System.Windows.Threading.DispatcherPriority.Loaded);
 
                 ChartUpdate();
@@ -103,7 +103,7 @@ namespace PileDesign.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"PileTop_PropertyChanged redraw failed: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"PileTop_PropertyChanged redraw failed: {ex.Message}");
                     }
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
@@ -277,7 +277,7 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 // 安全のため例外を握りつぶすがログに出す
-                Console.WriteLine($"RefreshTopSectionDisplayFromProvidedSection failed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"RefreshTopSectionDisplayFromProvidedSection failed: {ex.Message}");
             }
         }
 
@@ -339,7 +339,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"ChartUpdate: DrawRebarAnchorage_MN failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"ChartUpdate: DrawRebarAnchorage_MN failed: {ex.Message}");
                 }
             }
         }
@@ -389,7 +389,7 @@ namespace PileDesign.ViewModels
                 scatter.MarkerSize = 0;
                 if (dashed)
                 {
-                    try { scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; } catch { }
+                    try { scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PileTopVM] LinePattern: {ex.Message}"); }
                 }
                 wpf.Plot.Legend.FontName = Fonts.Detect(legend ?? "メイリオ");
             }

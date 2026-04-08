@@ -28,31 +28,12 @@ namespace PileDesign.Views
         private bool _mouseMoveQRegistered = false;
         private bool _mouseMoveDRegistered = false;
 
-        // コンストラクタ
-        //public ChangWindow()
-        //{
-        //    InitializeComponent();
-
-        //    Loaded += ChangWindow_Loaded;
-        //    DataContextChanged += ChangWindow_DataContextChanged;
-        //    //MainTab.SelectionChanged += MainTab_SelectionChanged;
-
-        //}
         public ChangWindow()
         {
             InitializeComponent();
             Loaded += ChangWindow_Loaded;
             DataContextChanged += ChangWindow_DataContextChanged;
         }
-
-
-        //private void ChangWindow_Loaded(object? sender, RoutedEventArgs e)
-        //{
-        //    // Loaded 時にも DataContext が既にあるなら登録を行う
-        //    if (DataContext is ChangViewModel vm)
-        //        InitializePlotsForViewModel(vm);
-
-        //}
 
 
         private async void ChangWindow_Loaded(object? sender, RoutedEventArgs e)
@@ -72,12 +53,8 @@ namespace PileDesign.Views
             }
         }
 
-        // ここに既存の ScottPlot/Skia 初期化を移動
         private void InitChartsSafe()
         {
-            // 例: コメントアウトしてから段階的に戻してください
-            //InitializeScottPlot();
-            // InitializeOtherControls();
         }
 
 
@@ -362,7 +339,7 @@ namespace PileDesign.Views
                 string json = JsonSerializer.Serialize(payload, opts);
                 await File.WriteAllTextAsync(sfd.FileName, json, System.Text.Encoding.UTF8);
 
-                MessageBox.Show(this, "保存しました。", "保存完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                // 保存完了（SaveFileDialogで選択済みのため、追加の通知は不要）
             }
             catch (Exception ex)
             {
@@ -491,7 +468,7 @@ namespace PileDesign.Views
                                     }
                                     if (val != null) pi.SetValue(newItem, Convert.ChangeType(val, pi.PropertyType));
                                 }
-                                catch { }
+                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
                             }
 
                             foreach (var name in new[] { "SelectedSoilPileIndex", "Number", "Ar", "HorizontalLoad", "H", "EI", "Kh0", "Beta0", "PileHeadMoment", "PileHeadDisplacement", "Kh", "Beta", "MaxBendingMoment", "DepthOfMaxBendingMoment" })
@@ -506,7 +483,7 @@ namespace PileDesign.Views
                 // 読み込み後に再描画
                 vm.RefreshPlots();
 
-                MessageBox.Show(this, "読み込みが完了しました。", "読み込み完了", MessageBoxButton.OK, MessageBoxImage.Information);
+                // 読み込み完了（OpenFileDialogで選択済みで、RefreshPlotsで結果が画面に反映される）
             }
             catch (Exception ex)
             {

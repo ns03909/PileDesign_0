@@ -133,6 +133,7 @@ namespace PileDesign.ViewModels
         private readonly ConcurrentQueue<string> _logQueue = new();
         private readonly System.Timers.Timer _logFlushTimer = new(200) { AutoReset = true };
         private volatile bool _logTimerStarted;
+        private System.Timers.ElapsedEventHandler? _logFlushHandler;
 
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -148,7 +149,8 @@ namespace PileDesign.ViewModels
         private void StartLogTimerIfNeeded()
         {
             if (_logTimerStarted) return;
-            _logFlushTimer.Elapsed += (_, __) => FlushLogsToUi();
+            _logFlushHandler ??= (_, __) => FlushLogsToUi();
+            _logFlushTimer.Elapsed += _logFlushHandler;
             _logFlushTimer.Start();
             _logTimerStarted = true;
         }
@@ -225,6 +227,8 @@ namespace PileDesign.ViewModels
                 _cancellationTokenSource = null;
                 FlushLogsToUi();
                 _logFlushTimer.Stop();
+                if (_logFlushHandler != null)
+                    _logFlushTimer.Elapsed -= _logFlushHandler;
                 _logTimerStarted = false;
             }
         }

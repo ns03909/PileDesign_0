@@ -552,7 +552,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"RenderPileForceElevationPngBytes error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"RenderPileForceElevationPngBytes error: {ex.Message}");
                 return Array.Empty<byte>();
             }
         }
@@ -744,7 +744,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"RenderPilingLayoutPngBytes error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"RenderPilingLayoutPngBytes error: {ex.Message}");
                 return Array.Empty<byte>();
             }
         }
@@ -1226,7 +1226,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"DiagramRenderer error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"DiagramRenderer error: {ex.Message}");
                 return [];
             }
         }

@@ -33,6 +33,13 @@ namespace PileDesign.Views
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            // OKボタン押下時にも角度を再検証
+            if (viewModel.Angle <= 0 || viewModel.Angle >= 90)
+            {
+                MessageBox.Show("角度は0より大きく90より小さい値を入力してください。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             AutoIsFrontEventArgs args = new()
             {
                 Angle = viewModel.Angle,

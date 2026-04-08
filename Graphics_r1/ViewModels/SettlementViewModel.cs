@@ -424,7 +424,7 @@ namespace PileDesign.ViewModels
                 SoilPiles.Select(pile => pile.DeepCopy())
             );
             // MainWindowViewModelのインスタンスにアクセスしてIsElementSplitをtrueに設定
-            if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
+            if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 mainWindowViewModel.IsVerticalAnalysisDone = true;
             }

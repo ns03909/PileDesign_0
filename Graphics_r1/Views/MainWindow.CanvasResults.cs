@@ -280,9 +280,7 @@ namespace PileDesign.Views
                         continue;
                     }
 
-                    // 接続用節点が非表示の場合、RigidLinkビームもスキップ
-                    if (!viewModel.IsConnectingNodeVisible && beam.Name.StartsWith("RigidLink-"))
-                        continue;
+                    // 接続用節点が非表示でもRigidLinkの応力図は描画する（スキップしない）
 
                     beamCount++;
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -388,6 +386,20 @@ namespace PileDesign.Views
                     var beamResult = beam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                     if (beamResult == null) continue;
 
+                    bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
+
+                    // Mh/Fh選択時の基礎梁: 個別成分を描画
+                    if (isDerivedMagnitude && isFoundationBeam)
+                    {
+                        if (derivedMagnitudeType == "Mh")
+                            DrawFoundationBeamMyMz(viewModel, beam, beamResult, maxAbsValue,
+                                colorBaredGeometries, rigidLinkBoundaryGeo);
+                        else if (derivedMagnitudeType == "Fh")
+                            DrawFoundationBeamFyFz(viewModel, beam, beamResult, maxAbsValue,
+                                colorBaredGeometries, rigidLinkBoundaryGeo);
+                        continue;
+                    }
+
                     // ビームの方向ベクトルから変換行列を計算（各ビーム固有）
                     var beamDir = new Vector3D(
                         beam.NodeJ.Coord.X - beam.NodeI.Coord.X,
@@ -465,21 +477,20 @@ namespace PileDesign.Views
                     Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
 
                     var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
-                    //List<double> values = [Math.Abs(originalForceI), Math.Abs(originalForceI), Math.Abs(originalForceJ), Math.Abs(originalForceJ)];
                     List<double> values = [originalForceI, originalForceI, -originalForceJ, -originalForceJ];
                     AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
-                    // RigidLinkのJ端（杭頭）に境界ラインを追加
-                    if (beam.Name.StartsWith("RigidLink-")
-                        && double.IsFinite(nodeJ2D.X) && double.IsFinite(nodeJ2D.Y)
-                        && double.IsFinite(nodeJForce2D.X) && double.IsFinite(nodeJForce2D.Y))
+                    // RigidLinkの杭頭側（J端）と接合点側（I端）に境界ラインを追加
+                    if (beam.Name.StartsWith("RigidLink-"))
                     {
-                        rigidLinkBoundaryGeo.AddGeometry(new LineGeometry(nodeJ2D, nodeJForce2D));
+                        if (double.IsFinite(nodeJ2D.X) && double.IsFinite(nodeJForce2D.X))
+                            rigidLinkBoundaryGeo.AddGeometry(new LineGeometry(nodeJ2D, nodeJForce2D));
+                        if (double.IsFinite(nodeI2D.X) && double.IsFinite(nodeIForce2D.X))
+                            rigidLinkBoundaryGeo.AddGeometry(new LineGeometry(nodeI2D, nodeIForce2D));
                     }
 
                     if (viewModel.IsResultValueVisible)
                     {
-                        bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
                         string format = "{0:N" + viewModel.DecimalPlaces + "}";
                         if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                         {
@@ -507,15 +518,14 @@ namespace PileDesign.Views
                     colorBaredGeometry.DrawPathes(Canvas3DLayout);
                 }
 
-                // RigidLink-杭頭境界ラインを描画（色付きエリアの上に重ねて表示）
+                // RigidLink境界ラインを描画（杭頭とRigidLinkの接点に白いラインを表示）
                 if (rigidLinkBoundaryGeo.Figures.Count > 0)
                 {
                     var boundaryPath = new System.Windows.Shapes.Path
                     {
                         Data = rigidLinkBoundaryGeo,
-                        Stroke = Brushes.Gray,
-                        StrokeThickness = 1.0,
-                        StrokeDashArray = [4, 2],
+                        Stroke = Brushes.White,
+                        StrokeThickness = 1.5,
                     };
                     Canvas3DLayout.Children.Add(boundaryPath);
                 }
@@ -660,15 +670,7 @@ namespace PileDesign.Views
                         Math.Pow(nd.Ry * effectiveVector[4], 2) +
                         Math.Pow(nd.Rz * effectiveVector[5], 2));
                     if (!double.IsFinite(val)) continue; // NaN/Infinity防止
-                    if (isThetaLocal)
-                    {
-                        // θ 系は表示上の値領域とカラーバーを揃えるため比率×ModelExtentを乗ずる
-                        allValues.Add(Math.Abs(val) * multiplier * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent);
-                    }
-                    else
-                    {
-                        allValues.Add(Math.Abs(val) * multiplier);
-                    }
+                    allValues.Add(Math.Abs(val) * multiplier);
                 }
 
                 // 2) カラーバー作成
@@ -758,9 +760,7 @@ namespace PileDesign.Views
                         }
                         else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam)) continue;
 
-                        // 接続用節点が非表示の場合、RigidLinkビームもスキップ
-                        if (!viewModel.IsConnectingNodeVisible && beam.Name.StartsWith("RigidLink-"))
-                            continue;
+                        // RigidLinkの変位図も描画する（スキップしない）
 
                         var nrI = beam.NodeI?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                         var nrJ = beam.NodeJ?.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
@@ -820,6 +820,13 @@ namespace PileDesign.Views
                                 DrawResultValueTexts(viewModel.IsResultValueVisible, Brushes.Black, origI * multiplier, origJ * multiplier, nodeIDisp2D, nodeJDisp2D, nodeJ2D, nodeI2D, format, format, isFoundationBeam);
                             }
                         }
+                    }
+
+                    // 変形後形状の描画（3次Hermite補間）- U系のみ
+                    if (viewModel.IsDeformedElementVisible)
+                    {
+                        DrawDeformedElements(viewModel, anaModel, selectedLoadCase, selectedLoadCombination, dispScale,
+                            hasInvisiblePile, visibleBeams, invisibleFBNames);
                     }
                 }
                 else
@@ -931,6 +938,7 @@ namespace PileDesign.Views
                         ColorBarCanvas.Children.Clear();
                     }
                 }
+
             }
             else if (viewModel.AnalysisResultContent == "地盤反力")
             {
@@ -940,13 +948,737 @@ namespace PileDesign.Views
                 DrawHorizontalSoilSpringsResult3D(viewModel, anaModel, hasInvisiblePile ? visibleSoilSprings : null);
             }
             else if (viewModel.AnalysisResultContent == "杭頭Mマップ" ||
-                     viewModel.AnalysisResultContent == "杭頭Qマップ" ||
-                     viewModel.AnalysisResultContent == "接合点Mマップ" ||
+                     viewModel.AnalysisResultContent == "杭頭Qマップ")
+            {
+                var anaModel = viewModel.CurrentModel;
+                if (anaModel?.Beams == null) return;
+                DrawPileHeadForceMap(viewModel, anaModel);
+            }
+            else if (viewModel.AnalysisResultContent == "接合点Mマップ" ||
                      viewModel.AnalysisResultContent == "接合点Qマップ")
             {
                 var anaModel = viewModel.CurrentModel;
-                if (anaModel?.RotationalSprings == null) return;
-                DrawPileHeadForceMap(viewModel, anaModel);
+                if (anaModel?.Beams == null) return;
+                DrawConnectionPointForceMap(viewModel, anaModel);
+            }
+
+            // 全モード共通: 変形後形状の描画
+            // （節点変位U系では既に描画済みなので重複を避ける）
+            bool alreadyDrawnDeformed = viewModel.AnalysisResultContent == "節点変位"
+                && !viewModel.AnalysisResultNodeDisplacementType.StartsWith("θ");
+            if (viewModel.IsDeformedElementVisible && !alreadyDrawnDeformed)
+            {
+                UpdateDeformedElementsStandalone(viewModel, hasInvisiblePile, visibleBeams, invisibleFBNames);
+            }
+        }
+
+        /// <summary>
+        /// 解析結果表示と独立して変形後形状を描画する
+        /// </summary>
+        private void UpdateDeformedElementsStandalone(
+            MainWindowViewModel viewModel = null,
+            bool? hasInvisiblePileOverride = null,
+            HashSet<Beam> visibleBeamsOverride = null,
+            HashSet<string> invisibleFBNamesOverride = null)
+        {
+            viewModel ??= DataContext as MainWindowViewModel;
+            if (viewModel == null) return;
+
+            var anaModelDef = viewModel.CurrentModel;
+            if (anaModelDef?.Beams == null) return;
+
+            // visibleBeams/invisibleFBNames が未指定の場合は自前で構築
+            bool hasInvisiblePile = hasInvisiblePileOverride ?? false;
+            HashSet<Beam> visibleBeams = visibleBeamsOverride;
+            HashSet<string> invisibleFBNames = invisibleFBNamesOverride;
+
+            if (visibleBeams == null || invisibleFBNames == null)
+            {
+                visibleBeams = new HashSet<Beam>();
+                invisibleFBNames = new HashSet<string>();
+                hasInvisiblePile = false;
+
+                if (viewModel.CurrentInputModel?.PileLayoutItems != null)
+                {
+                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    {
+                        if (pile.IsVisible)
+                            foreach (var beam in pile.Beams) visibleBeams.Add(beam);
+                        else
+                            hasInvisiblePile = true;
+                    }
+                }
+                if (viewModel.CurrentInputModel?.FoundationBeamInput?.Beams != null)
+                {
+                    foreach (var fb in viewModel.CurrentInputModel.FoundationBeamInput.Beams)
+                    {
+                        if (!fb.IsVisible)
+                            invisibleFBNames.Add($"FoundationBeam-{fb.No}");
+                    }
+                }
+            }
+
+            var lc = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+            var lcomb = LoadCombinations.GetLoadCombination(
+                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+            if (lc == null || lcomb == null) return;
+
+            double maxDisp = 0;
+            foreach (var node in anaModelDef.Nodes)
+            {
+                var nr = node?.GetNodeResult(anaModelDef, lc, lcomb, viewModel.IsLiquefaction);
+                if (nr?.CumulativeDisp == null) continue;
+                var nd = nr.CumulativeDisp;
+                double uh = Math.Sqrt(nd.Ux * nd.Ux + nd.Uy * nd.Uy + nd.Uz * nd.Uz);
+                if (uh > maxDisp) maxDisp = uh;
+            }
+            double ds = maxDisp > 1e-15
+                ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxDisp
+                : 0;
+
+            DrawDeformedElements(viewModel, anaModelDef, lc, lcomb, ds,
+                hasInvisiblePile, visibleBeams, invisibleFBNames);
+        }
+
+        /// <summary>
+        /// 変形後形状を3次Hermite補間で描画
+        /// Beam要素（杭体・FoundationBeam・RigidLink）、DummyBeamの変形後形状を描画
+        /// </summary>
+        private void DrawDeformedElements(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale,
+            bool hasInvisiblePile, HashSet<Beam> visibleBeams, HashSet<string> invisibleFBNames)
+        {
+            if (Canvas3DLayout == null) return;
+
+            var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 100, 100, 100)); // 半透明グレー
+            var pen = new Pen(brush, 1.0);
+
+            var pathGeo = new PathGeometry();
+
+            // Beam要素（杭体 + FoundationBeam + RigidLink）
+            if (anaModel.Beams != null)
+            {
+                foreach (var beam in anaModel.Beams)
+                {
+                    // 表示フィルタ
+                    if (beam.Name.StartsWith("FoundationBeam-"))
+                    {
+                        if (invisibleFBNames.Contains(beam.Name)) continue;
+                    }
+                    else if (hasInvisiblePile && visibleBeams.Count > 0 && !visibleBeams.Contains(beam))
+                        continue;
+
+                    DrawDeformedBeam(viewModel, anaModel, beam, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                }
+            }
+
+            // DummyBeam（座標変換なし → 直線補間で変形後位置を描画）
+            if (!hasInvisiblePile && anaModel.DummyBeams != null)
+            {
+                foreach (var db in anaModel.DummyBeams)
+                {
+                    DrawDeformedDummyBeam(viewModel, anaModel, db, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                }
+            }
+
+            // RotationalSpring（杭頭～接合節点のリンク要素）
+            if (anaModel.RotationalSprings != null)
+            {
+                foreach (var rs in anaModel.RotationalSprings)
+                {
+                    DrawDeformedTwoNodeLink(viewModel, anaModel, rs.NodeI, rs.NodeJ, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                }
+            }
+
+            // RigidBody（剛体連結: Master→各Slave）
+            if (anaModel.RigidBodies != null)
+            {
+                foreach (var rb in anaModel.RigidBodies)
+                {
+                    if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
+                    foreach (var slave in rb.SlaveNodes)
+                    {
+                        DrawDeformedTwoNodeLink(viewModel, anaModel, rb.MasterNode, slave, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                    }
+                }
+            }
+
+            // PathGeometryをCanvasに描画
+            if (!pathGeo.IsEmpty())
+            {
+                var path = new System.Windows.Shapes.Path
+                {
+                    Stroke = brush,
+                    StrokeThickness = 1.0,
+                    Data = pathGeo
+                };
+                Canvas3DLayout.Children.Add(path);
+            }
+
+            // 変形後杭体形状の描画
+            if (viewModel.IsPileSectionVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            {
+                DrawDeformedPileSections(viewModel, anaModel, selectedLoadCase, selectedLoadCombination,
+                    dispScale, hasInvisiblePile, brush);
+            }
+
+            // 変形後基礎梁断面形状の描画
+            if (viewModel.IsBeamElementSectionVisible && anaModel.Beams != null)
+            {
+                DrawDeformedBeamSections(viewModel, anaModel, selectedLoadCase, selectedLoadCombination,
+                    dispScale, invisibleFBNames, brush);
+            }
+        }
+
+        /// <summary>
+        /// 変形後の基礎梁断面形状を描画する
+        /// Hermite補間で変形後の中心線点列を生成し、各点で断面の4隅を計算して
+        /// 曲がった梁の断面形状を描画する
+        /// </summary>
+        private void DrawDeformedBeamSections(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale, HashSet<string> invisibleFBNames, Brush brush)
+        {
+            var fbInput = viewModel.CurrentInputModel?.FoundationBeamInput;
+            if (fbInput?.Beams == null || fbInput.Sections == null) return;
+
+            var fbElemDict = new Dictionary<string, FoundationBeamElement>();
+            foreach (var fb in fbInput.Beams)
+                fbElemDict[$"FoundationBeam-{fb.No}"] = fb;
+
+            var secDict = fbInput.Sections.ToDictionary(s => s.No, s => s);
+
+            var sectionPathGeo = new PathGeometry();
+            var transform = viewModel.CanvasThreeDView;
+
+            foreach (var beam in anaModel.Beams)
+            {
+                if (!beam.Name.StartsWith("FoundationBeam-")) continue;
+                if (invisibleFBNames.Contains(beam.Name)) continue;
+                if (beam.NodeI == null || beam.NodeJ == null) continue;
+
+                if (!fbElemDict.TryGetValue(beam.Name, out var fbElem)) continue;
+                double bw = fbElem.Width;
+                double bh = fbElem.Height;
+                if (secDict.TryGetValue(fbElem.SectionNo, out var sec))
+                {
+                    bw = sec.Width;
+                    bh = sec.Height;
+                }
+                if (bw <= 0 || bh <= 0) continue;
+
+                var nrI = beam.NodeI.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                var nrJ = beam.NodeJ.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) continue;
+
+                // Hermite補間で変形後3D中心線点列を取得
+                var points3D = Common.HermiteBeamInterpolation.GetDeformedPoints(
+                    beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale);
+                if (points3D.Count < 2) continue;
+
+                double hw = bw / 2.0;
+                double hh = bh / 2.0;
+                double angleBetaDeg = fbElem.AngleBeta;
+
+                // 各補間点で4隅の2D座標を計算
+                var allCorners2D = new Point[points3D.Count][];
+                bool hasInvalid = false;
+
+                for (int k = 0; k < points3D.Count; k++)
+                {
+                    // 接線方向を前後の差分で算出
+                    Vector3D tangent;
+                    if (k == 0)
+                        tangent = points3D[1] - points3D[0];
+                    else if (k == points3D.Count - 1)
+                        tangent = points3D[k] - points3D[k - 1];
+                    else
+                        tangent = points3D[k + 1] - points3D[k - 1];
+
+                    double tLen = tangent.Length;
+                    if (tLen < 1e-12) tangent = new Vector3D(1, 0, 0);
+                    else tangent.Normalize();
+
+                    // 局所座標系（接線方向に追従）
+                    Vector3D up = new(0, 0, 1);
+                    Vector3D localZ;
+                    if (Math.Abs(Vector3D.DotProduct(tangent, up)) > 0.999)
+                        localZ = new Vector3D(0, 1, 0);
+                    else
+                    {
+                        localZ = up - Vector3D.DotProduct(up, tangent) * tangent;
+                        localZ.Normalize();
+                    }
+                    Vector3D localY = Vector3D.CrossProduct(localZ, tangent);
+                    localY.Normalize();
+
+                    // AngleBeta 回転
+                    if (Math.Abs(angleBetaDeg) > 1e-9)
+                    {
+                        double rad = angleBetaDeg * Math.PI / 180.0;
+                        double cosB = Math.Cos(rad);
+                        double sinB = Math.Sin(rad);
+                        Vector3D newY = cosB * localY + sinB * localZ;
+                        Vector3D newZ = -sinB * localY + cosB * localZ;
+                        localY = newY;
+                        localZ = newZ;
+                    }
+
+                    var c = points3D[k];
+                    allCorners2D[k] =
+                    [
+                        transform.Transformation(new Point3D(c.X - hw * localY.X - hh * localZ.X, c.Y - hw * localY.Y - hh * localZ.Y, c.Z - hw * localY.Z - hh * localZ.Z)),
+                        transform.Transformation(new Point3D(c.X + hw * localY.X - hh * localZ.X, c.Y + hw * localY.Y - hh * localZ.Y, c.Z + hw * localY.Z - hh * localZ.Z)),
+                        transform.Transformation(new Point3D(c.X + hw * localY.X + hh * localZ.X, c.Y + hw * localY.Y + hh * localZ.Y, c.Z + hw * localY.Z + hh * localZ.Z)),
+                        transform.Transformation(new Point3D(c.X - hw * localY.X + hh * localZ.X, c.Y - hw * localY.Y + hh * localZ.Y, c.Z - hw * localY.Z + hh * localZ.Z)),
+                    ];
+
+                    foreach (var pt in allCorners2D[k])
+                    {
+                        if (!double.IsFinite(pt.X) || !double.IsFinite(pt.Y)) { hasInvalid = true; break; }
+                    }
+                    if (hasInvalid) break;
+                }
+                if (hasInvalid) continue;
+
+                // 端面の矩形（I端, J端のみ）
+                for (int e = 0; e < allCorners2D.Length; e += allCorners2D.Length - 1)
+                {
+                    for (int i = 0; i < 4; i++)
+                        sectionPathGeo.AddGeometry(new LineGeometry(allCorners2D[e][i], allCorners2D[e][(i + 1) % 4]));
+                }
+
+                // 4本の稜線（Hermite補間に沿った曲線）
+                for (int corner = 0; corner < 4; corner++)
+                {
+                    for (int k = 0; k < allCorners2D.Length - 1; k++)
+                        sectionPathGeo.AddGeometry(new LineGeometry(allCorners2D[k][corner], allCorners2D[k + 1][corner]));
+                }
+            }
+
+            if (!sectionPathGeo.IsEmpty())
+            {
+                var path = new System.Windows.Shapes.Path
+                {
+                    Stroke = brush,
+                    StrokeThickness = 0.7,
+                    Data = sectionPathGeo
+                };
+                Canvas3DLayout.Children.Add(path);
+            }
+        }
+
+        /// <summary>
+        /// 変形後の杭体形状を描画する
+        /// Hermite補間の変形後中心線に沿って、法線方向にオフセットした左右の輪郭線＋端部楕円を描画
+        /// </summary>
+        private void DrawDeformedPileSections(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale, bool hasInvisiblePile, Brush brush)
+        {
+            var sectionPathGeo = new PathGeometry();
+            double flattening = viewModel.CanvasThreeDView.Flattening;
+            double scale = viewModel.CanvasThreeDView.Scale;
+
+            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            {
+                if (!pile.IsVisible) continue;
+                if (pile.PileNodes == null || pile.PileNodes.Count < 2) continue;
+                if (pile.Beams == null || pile.Beams.Count == 0) continue;
+
+                // 要素分割後のセグメント情報を取得（SoilPile経由）
+                ObservableCollection<PileBodySegment> soilPileSegments = null;
+                if (pile.SoilPileAltNo > 0 &&
+                    pile.SoilPileAltNo <= viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count)
+                {
+                    soilPileSegments = viewModel.CurrentInputModel.ElementDivision
+                        .SoilPiles[pile.SoilPileAltNo - 1].PileBodySegments;
+                }
+
+                // 杭全体の左右輪郭線用ポイントリスト
+                var leftPoints = new List<Point>();
+                var rightPoints = new List<Point>();
+                // 各輪郭点に対応する中心点と接線（楕円描画用）
+                var centerPoints = new List<Point>();
+                var tangentVectors = new List<Vector>();
+                var radiusList = new List<double>();
+                // 要素境界のインデックス（楕円を描画する位置）
+                var boundaryIndices = new List<int>();
+
+                // 各Beam要素の変形後中心線を連結して輪郭線を生成
+                for (int i = 0; i < pile.Beams.Count; i++)
+                {
+                    var beam = pile.Beams[i];
+                    if (beam.NodeI == null || beam.NodeJ == null) continue;
+
+                    // 杭径を取得
+                    double pileDia = 0;
+                    if (beam.SegmentIndex.HasValue && soilPileSegments != null)
+                    {
+                        int segIdx = beam.SegmentIndex.Value;
+                        if (segIdx >= 0 && segIdx < soilPileSegments.Count)
+                            pileDia = soilPileSegments[segIdx].PileSection.PileDiameter / 1000.0;
+                    }
+                    if (pileDia <= 0) continue;
+
+                    double radius2D = pileDia * 0.5 * scale;
+
+                    var nrI = beam.NodeI.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                    var nrJ = beam.NodeJ.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                    if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) continue;
+
+                    // Hermite補間で変形後3D点列を取得
+                    var points3D = Common.HermiteBeamInterpolation.GetDeformedPoints(
+                        beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale);
+                    if (points3D.Count < 2) continue;
+
+                    // 3D → 2D変換
+                    var pts2D = new List<Point>(points3D.Count);
+                    bool hasInvalid = false;
+                    foreach (var p3 in points3D)
+                    {
+                        var p2 = viewModel.CanvasThreeDView.Transformation(p3);
+                        if (!double.IsFinite(p2.X) || !double.IsFinite(p2.Y)) { hasInvalid = true; break; }
+                        pts2D.Add(p2);
+                    }
+                    if (hasInvalid || pts2D.Count < 2) continue;
+
+                    // 各補間点で法線方向にオフセットして左右の輪郭点を算出
+                    bool isFirstBeam = (leftPoints.Count == 0);
+                    int startK = isFirstBeam ? 0 : 1; // 2要素目以降は始点を重複させない
+
+                    // 要素I端（最初の要素のみ）の境界インデックスを記録
+                    if (isFirstBeam)
+                        boundaryIndices.Add(0);
+
+                    for (int k = startK; k < pts2D.Count; k++)
+                    {
+                        // 接線方向を前後の差分で算出
+                        Vector tangent;
+                        if (k == 0)
+                            tangent = pts2D[1] - pts2D[0];
+                        else if (k == pts2D.Count - 1)
+                            tangent = pts2D[k] - pts2D[k - 1];
+                        else
+                            tangent = pts2D[k + 1] - pts2D[k - 1];
+
+                        double len = tangent.Length;
+                        if (len < 1e-10)
+                        {
+                            tangent = new Vector(0, 1);
+                            len = 1;
+                        }
+
+                        // 2D画面上の法線（接線を90度回転）
+                        Vector normal = new Vector(-tangent.Y / len, tangent.X / len);
+
+                        leftPoints.Add(new Point(pts2D[k].X + normal.X * radius2D, pts2D[k].Y + normal.Y * radius2D));
+                        rightPoints.Add(new Point(pts2D[k].X - normal.X * radius2D, pts2D[k].Y - normal.Y * radius2D));
+                        centerPoints.Add(pts2D[k]);
+                        tangentVectors.Add(tangent);
+                        radiusList.Add(radius2D);
+                    }
+
+                    // 要素J端の境界インデックスを記録
+                    boundaryIndices.Add(centerPoints.Count - 1);
+                }
+
+                if (leftPoints.Count < 2) continue;
+
+                // 左右の輪郭線をPathGeometryに追加
+                for (int k = 0; k < leftPoints.Count - 1; k++)
+                    sectionPathGeo.AddGeometry(new LineGeometry(leftPoints[k], leftPoints[k + 1]));
+                for (int k = 0; k < rightPoints.Count - 1; k++)
+                    sectionPathGeo.AddGeometry(new LineGeometry(rightPoints[k], rightPoints[k + 1]));
+
+                // 全要素境界に楕円を描画
+                foreach (int idx in boundaryIndices)
+                {
+                    AddDeformedEllipse(sectionPathGeo, centerPoints[idx], tangentVectors[idx], radiusList[idx], flattening);
+                }
+            }
+
+            if (!sectionPathGeo.IsEmpty())
+            {
+                var path = new System.Windows.Shapes.Path
+                {
+                    Stroke = brush,
+                    StrokeThickness = 0.7,
+                    Data = sectionPathGeo
+                };
+                Canvas3DLayout.Children.Add(path);
+            }
+        }
+
+        /// <summary>
+        /// 変形後の楕円を中心線の傾きに合わせて回転して描画
+        /// 楕円の長軸は梁軸に直交する方向に配置する
+        /// </summary>
+        private static void AddDeformedEllipse(
+            PathGeometry pathGeo, Point center, Vector tangent, double radius2D, double flattening)
+        {
+            // 梁軸の角度を求め、楕円の長軸を直交方向に配置するため +90°
+            double angle = Math.Atan2(tangent.Y, tangent.X) * 180.0 / Math.PI + 90.0;
+
+            var ellipse = new EllipseGeometry(center, radius2D, radius2D * flattening);
+            ellipse.Transform = new RotateTransform(angle, center.X, center.Y);
+            pathGeo.AddGeometry(ellipse);
+        }
+
+        /// <summary>
+        /// 1つのBeam要素の変形後形状を3次Hermite補間で描画
+        /// </summary>
+        private void DrawDeformedBeam(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            Beam beam,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale, PathGeometry pathGeo)
+        {
+            if (beam.NodeI == null || beam.NodeJ == null) return;
+
+            var nrI = beam.NodeI.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            var nrJ = beam.NodeJ.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) return;
+
+            var points3D = Common.HermiteBeamInterpolation.GetDeformedPoints(
+                beam, nrI.CumulativeDisp, nrJ.CumulativeDisp, dispScale);
+
+            if (points3D.Count < 2) return;
+
+            // 3D → 2D変換してPathGeometryに追加
+            for (int k = 0; k < points3D.Count - 1; k++)
+            {
+                var p1 = viewModel.CanvasThreeDView.Transformation(points3D[k]);
+                var p2 = viewModel.CanvasThreeDView.Transformation(points3D[k + 1]);
+
+                if (!double.IsFinite(p1.X) || !double.IsFinite(p1.Y) ||
+                    !double.IsFinite(p2.X) || !double.IsFinite(p2.Y))
+                    continue;
+
+                pathGeo.AddGeometry(new LineGeometry(p1, p2));
+            }
+        }
+
+        /// <summary>
+        /// 2節点間（RotationalSpring/RigidBody）の変形後形状を直線で描画
+        /// </summary>
+        private void DrawDeformedTwoNodeLink(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            Node nodeI, Node nodeJ,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale, PathGeometry pathGeo)
+        {
+            if (nodeI == null || nodeJ == null) return;
+
+            var nrI = nodeI.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            var nrJ = nodeJ.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) return;
+
+            var ndI = nrI.CumulativeDisp;
+            var ndJ = nrJ.CumulativeDisp;
+
+            Point3D pI3D = new(
+                nodeI.Coord.X + ndI.Ux * dispScale,
+                nodeI.Coord.Y + ndI.Uy * dispScale,
+                nodeI.Coord.Z + ndI.Uz * dispScale);
+            Point3D pJ3D = new(
+                nodeJ.Coord.X + ndJ.Ux * dispScale,
+                nodeJ.Coord.Y + ndJ.Uy * dispScale,
+                nodeJ.Coord.Z + ndJ.Uz * dispScale);
+
+            var p1 = viewModel.CanvasThreeDView.Transformation(pI3D);
+            var p2 = viewModel.CanvasThreeDView.Transformation(pJ3D);
+
+            if (!double.IsFinite(p1.X) || !double.IsFinite(p1.Y) ||
+                !double.IsFinite(p2.X) || !double.IsFinite(p2.Y))
+                return;
+
+            pathGeo.AddGeometry(new LineGeometry(p1, p2));
+        }
+
+        /// <summary>
+        /// 1つのDummyBeamの変形後形状を直線補間で描画（座標変換なし）
+        /// </summary>
+        private void DrawDeformedDummyBeam(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            DummyBeam db,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale, PathGeometry pathGeo)
+        {
+            if (db.NodeI == null || db.NodeJ == null) return;
+
+            var nrI = db.NodeI.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            var nrJ = db.NodeJ.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null) return;
+
+            var ndI = nrI.CumulativeDisp;
+            var ndJ = nrJ.CumulativeDisp;
+
+            Point3D pI3D = new(
+                db.NodeI.Coord.X + ndI.Ux * dispScale,
+                db.NodeI.Coord.Y + ndI.Uy * dispScale,
+                db.NodeI.Coord.Z + ndI.Uz * dispScale);
+            Point3D pJ3D = new(
+                db.NodeJ.Coord.X + ndJ.Ux * dispScale,
+                db.NodeJ.Coord.Y + ndJ.Uy * dispScale,
+                db.NodeJ.Coord.Z + ndJ.Uz * dispScale);
+
+            var p1 = viewModel.CanvasThreeDView.Transformation(pI3D);
+            var p2 = viewModel.CanvasThreeDView.Transformation(pJ3D);
+
+            if (!double.IsFinite(p1.X) || !double.IsFinite(p1.Y) ||
+                !double.IsFinite(p2.X) || !double.IsFinite(p2.Y))
+                return;
+
+            pathGeo.AddGeometry(new LineGeometry(p1, p2));
+        }
+
+        /// <summary>
+        /// 基礎梁のMh選択時にMyとMzを個別にダイアグラム描画する
+        /// </summary>
+        private void DrawFoundationBeamMyMz(
+            MainWindowViewModel viewModel, Beam beam, BeamResult beamResult,
+            double maxAbsValue,
+            List<ColorBaredGeometry> colorBaredGeometries,
+            PathGeometry rigidLinkBoundaryGeo)
+        {
+            var bf = beamResult.CumulativeForce;
+
+            var beamDir = new Vector3D(
+                beam.NodeJ.Coord.X - beam.NodeI.Coord.X,
+                beam.NodeJ.Coord.Y - beam.NodeI.Coord.Y,
+                beam.NodeJ.Coord.Z - beam.NodeI.Coord.Z);
+            Matrix<double> t = Utils.GetNodeTransformMatrix(beamDir);
+
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+            string format = "{0:N" + viewModel.DecimalPlaces + "}";
+
+            // My: indices [4, 10], forceDirection [0, 0, -1]
+            // Mz: indices [5, 11], forceDirection [0, 1, 0]
+            var components = new[]
+            {
+                (name: "My", idxI: 4, idxJ: 10, dir: Vector<double>.Build.DenseOfArray(new[] { 0.0, 0.0, -1.0 })),
+                (name: "Mz", idxI: 5, idxJ: 11, dir: Vector<double>.Build.DenseOfArray(new[] { 0.0, 1.0, 0.0 })),
+            };
+
+            foreach (var (name, idxI, idxJ, dir) in components)
+            {
+                double origI = bf.GetByIndex(idxI);
+                double origJ = bf.GetByIndex(idxJ);
+                if (!double.IsFinite(origI) || !double.IsFinite(origJ)) continue;
+
+                var transformedDir = t.Transpose() * dir;
+
+                double fI = maxAbsValue == 0 ? 0 : origI / maxAbsValue * forceScale;
+                double fJ = maxAbsValue == 0 ? 0 : origJ / maxAbsValue * forceScale;
+
+                Point3D nodeI3D = beam.NodeI.Coord;
+                Point3D nodeJ3D = beam.NodeJ.Coord;
+
+                Point3D nodeIForce3D = new(
+                    nodeI3D.X + fI * transformedDir[0],
+                    nodeI3D.Y + fI * transformedDir[1],
+                    nodeI3D.Z + fI * transformedDir[2]);
+                Point3D nodeJForce3D = new(
+                    nodeJ3D.X + -fJ * transformedDir[0],
+                    nodeJ3D.Y + -fJ * transformedDir[1],
+                    nodeJ3D.Z + -fJ * transformedDir[2]);
+
+                Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
+                Point nodeIForce2D = viewModel.CanvasThreeDView.Transformation(nodeIForce3D);
+                Point nodeJForce2D = viewModel.CanvasThreeDView.Transformation(nodeJForce3D);
+                Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
+
+                var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
+                List<double> values = [origI, origI, -origJ, -origJ];
+                AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
+
+                if (viewModel.IsResultValueVisible)
+                {
+                    DrawResultValueTexts(
+                        viewModel.IsResultValueVisible, Brushes.Black,
+                        origI, -origJ,
+                        nodeIForce2D, nodeJForce2D,
+                        nodeJ2D, nodeI2D,
+                        format, format, true);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 基礎梁のFh選択時にFyとFzを個別にダイアグラム描画する
+        /// </summary>
+        private void DrawFoundationBeamFyFz(
+            MainWindowViewModel viewModel, Beam beam, BeamResult beamResult,
+            double maxAbsValue,
+            List<ColorBaredGeometry> colorBaredGeometries,
+            PathGeometry rigidLinkBoundaryGeo)
+        {
+            var bf = beamResult.CumulativeForce;
+
+            var beamDir = new Vector3D(
+                beam.NodeJ.Coord.X - beam.NodeI.Coord.X,
+                beam.NodeJ.Coord.Y - beam.NodeI.Coord.Y,
+                beam.NodeJ.Coord.Z - beam.NodeI.Coord.Z);
+            Matrix<double> t = Utils.GetNodeTransformMatrix(beamDir);
+
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+            string format = "{0:N" + viewModel.DecimalPlaces + "}";
+
+            // Fy: indices [1, 7], forceDirection [0, 1, 0]
+            // Fz: indices [2, 8], forceDirection [0, 0, 1]
+            var components = new[]
+            {
+                (name: "Fy", idxI: 1, idxJ: 7, dir: Vector<double>.Build.DenseOfArray(new[] { 0.0, 1.0, 0.0 })),
+                (name: "Fz", idxI: 2, idxJ: 8, dir: Vector<double>.Build.DenseOfArray(new[] { 0.0, 0.0, 1.0 })),
+            };
+
+            foreach (var (name, idxI, idxJ, dir) in components)
+            {
+                double origI = bf.GetByIndex(idxI);
+                double origJ = bf.GetByIndex(idxJ);
+                if (!double.IsFinite(origI) || !double.IsFinite(origJ)) continue;
+
+                var transformedDir = t.Transpose() * dir;
+
+                double fI = maxAbsValue == 0 ? 0 : origI / maxAbsValue * forceScale;
+                double fJ = maxAbsValue == 0 ? 0 : origJ / maxAbsValue * forceScale;
+
+                Point3D nodeI3D = beam.NodeI.Coord;
+                Point3D nodeJ3D = beam.NodeJ.Coord;
+
+                Point3D nodeIForce3D = new(
+                    nodeI3D.X + fI * transformedDir[0],
+                    nodeI3D.Y + fI * transformedDir[1],
+                    nodeI3D.Z + fI * transformedDir[2]);
+                Point3D nodeJForce3D = new(
+                    nodeJ3D.X + -fJ * transformedDir[0],
+                    nodeJ3D.Y + -fJ * transformedDir[1],
+                    nodeJ3D.Z + -fJ * transformedDir[2]);
+
+                Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
+                Point nodeIForce2D = viewModel.CanvasThreeDView.Transformation(nodeIForce3D);
+                Point nodeJForce2D = viewModel.CanvasThreeDView.Transformation(nodeJForce3D);
+                Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
+
+                var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
+                List<double> values = [origI, origI, -origJ, -origJ];
+                AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
+
+                if (viewModel.IsResultValueVisible)
+                {
+                    DrawResultValueTexts(
+                        viewModel.IsResultValueVisible, Brushes.Black,
+                        origI, -origJ,
+                        nodeIForce2D, nodeJForce2D,
+                        nodeJ2D, nodeI2D,
+                        format, format, true);
+                }
             }
         }
 
@@ -985,6 +1717,23 @@ namespace PileDesign.Views
             if (anaModel.HorizontalSoilSprings == null || anaModel.HorizontalSoilSprings.Count == 0) return;
             if (Canvas3DLayout == null || ColorBarCanvas == null) return;
 
+            // 選択された荷重ケース・組み合わせを取得
+            var selectedLoadCase = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+            var selectedLoadCombination = LoadCombinations.GetLoadCombination(
+                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+
+            // 荷重ケースに対応する結果を検索するヘルパー
+            HorizontalSpringResult FindSpringResult(HorizontalSoilSpring spring)
+            {
+                if (spring.HorizontalSpringResults == null || selectedLoadCase == null || selectedLoadCombination == null)
+                    return null;
+                return spring.HorizontalSpringResults.FirstOrDefault(r =>
+                    r.LoadCase?.LoadName == selectedLoadCase.LoadName &&
+                    r.LoadCombination?.Name == selectedLoadCombination.Name &&
+                    r.IsLiquefaction == viewModel.IsLiquefaction);
+            }
+
             // 選択されたタイプを取得
             string springType = viewModel.AnalysisResultSoilSpringType ?? "R";
 
@@ -996,8 +1745,13 @@ namespace PileDesign.Views
 
                 try
                 {
-                    // 最新の要素内力をセット（secant を想定）
-                    s.SetBeamDispAndForce(isTan: false);
+                    // 選択された荷重ケースの結果を取得
+                    var result = FindSpringResult(s);
+                    if (result?.CumulativeForce == null) continue; // 結果がない場合はスキップ
+
+                    // 結果をばねに復元してから値を取得
+                    s.CumulativeForce = result.CumulativeForce;
+                    if (result.CumulativeDisp != null) s.CumulativeDisp = result.CumulativeDisp;
 
                     // 選択されたタイプに応じた値を取得
                     double value = GetSoilSpringValue(s, springType);
@@ -1023,18 +1777,19 @@ namespace PileDesign.Views
             string unit = (springType == "MX" || springType == "MY" || springType == "MZ" || springType == "MH") ? "kNm" : "kN";
             string colorBarTitle = GetSoilSpringTypeName(springType);
 
-            // 2) 反力の最大絶対値を求める（正規化用プレパス）
+            // 2) 反力の最大絶対値を求める（正規化用プレパス）— 結果は既に復元済み
             double maxAbsValue = 0;
             foreach (var s in anaModel.HorizontalSoilSprings)
             {
                 if (visibleSoilSprings != null && visibleSoilSprings.Count > 0 && !visibleSoilSprings.Contains(s)) continue;
                 try
                 {
-                    s.SetBeamDispAndForce(isTan: false);
+                    var result = FindSpringResult(s);
+                    if (result?.CumulativeForce == null) continue;
                     double v = Math.Abs(GetSoilSpringValue(s, springType));
                     if (double.IsFinite(v) && v > maxAbsValue) maxAbsValue = v;
                 }
-                catch { }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CanvasResults] ばね反力取得失敗: {ex.Message}"); }
             }
             double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
 
@@ -1046,8 +1801,9 @@ namespace PileDesign.Views
 
                 try
                 {
-                    // 要素内力を更新（安全）
-                    s.SetBeamDispAndForce(isTan: false);
+                    // 選択された荷重ケースの結果がない場合はスキップ
+                    var result = FindSpringResult(s);
+                    if (result?.CumulativeForce == null) continue;
 
                     // 選択されたタイプに応じた値を取得
                     double displayValue = GetSoilSpringValue(s, springType);
@@ -1297,7 +2053,8 @@ namespace PileDesign.Views
         // ========================================
 
         /// <summary>
-        /// 杭頭Mマップ / 杭頭Qマップ / 接合点Mマップ / 接合点Qマップ を描画
+        /// 杭頭Mマップ / 杭頭Qマップ を描画
+        /// 最も上の杭要素（IsPileTop）のi端応力を使用
         /// </summary>
         private void DrawPileHeadForceMap(MainWindowViewModel viewModel, AnaModel anaModel)
         {
@@ -1305,34 +2062,58 @@ namespace PileDesign.Views
 
             string content = viewModel.AnalysisResultContent;
             bool isMoment = content.Contains('M');
-            bool isPileHead = content.StartsWith("杭頭"); // true: j端(杭頭), false: i端(接合点)
 
-            // 各杭のリンク要素から値を収集
+            // 選択された荷重ケース・組み合わせ
+            var selectedLoadCase = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+            var selectedLoadCombination = LoadCombinations.GetLoadCombination(
+                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+
             var entries = new System.Collections.Generic.List<(Point3D location, double valueX, double valueY, double valueMag)>();
+
+            // 杭頭Beam要素のリスト（IsPileTop）
+            var pileTopBeams = anaModel.Beams?.Where(b => b.IsPileTop).ToList()
+                               ?? new System.Collections.Generic.List<FEM.Beam>();
 
             foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
             {
                 if (!pile.IsVisible) continue;
-                var rs = pile.PileTopRotationalSpring;
-                if (rs?.CumulativeForce == null) continue;
 
-                var bf = rs.CumulativeForce;
-                var node = isPileHead ? rs.NodeJ : rs.NodeI;
+                // 杭配置のXY座標に最も近い杭頭Beam要素を検索
+                var topBeam = pileTopBeams.FirstOrDefault(b =>
+                    b.PileBodyNo is int pb && pb == pile.PileBodyNo &&
+                    b.NodeI != null &&
+                    Math.Abs(b.NodeI.Coord.X - pile.Point3D.X) < 0.01 &&
+                    Math.Abs(b.NodeI.Coord.Y - pile.Point3D.Y) < 0.01);
+                if (topBeam == null) continue;
+                var node = topBeam.NodeI;
                 if (node == null) continue;
 
+                // 選択された荷重ケースの結果を取得
+                var beamResult = topBeam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                var bf = beamResult?.CumulativeForce;
+                if (bf == null) continue; // 結果がない場合はスキップ
+
+                // 要素座標系 → 全体座標系に変換: f_global = T^T * f_local
+                var f_local = bf.GetVector();
+                var T = topBeam.GetCachedCoordTransform();
+                var f_global = T.Transpose() * f_local;
+
+                // f_global: [Fxi,Fyi,Fzi,Mxi,Myi,Mzi, Fxj,Fyj,Fzj,Mxj,Myj,Mzj] (全体座標系)
                 double vx, vy;
                 if (isMoment)
                 {
-                    // i端: Mxi=bf[3], Myi=bf[4], j端: Mxj=bf[9], Myj=bf[10]
-                    if (isPileHead) { vx = bf.GetByIndex(9); vy = bf.GetByIndex(10); }
-                    else { vx = bf.GetByIndex(3); vy = bf.GetByIndex(4); }
+                    // 杭頭Mマップ: i端モーメント（全体座標系 Mx, My）
+                    vx = f_global[3]; // Mxi_global
+                    vy = f_global[4]; // Myi_global
                 }
                 else
                 {
-                    // i端: Fxi=bf[0], Fyi=bf[1], j端: Fxj=bf[6], Fyj=bf[7]
-                    if (isPileHead) { vx = bf.GetByIndex(6); vy = bf.GetByIndex(7); }
-                    else { vx = bf.GetByIndex(0); vy = bf.GetByIndex(1); }
+                    // 杭頭Qマップ: i端せん断力（全体座標系 Fx, Fy）
+                    vx = f_global[0]; // Fxi_global
+                    vy = f_global[1]; // Fyi_global
                 }
+
                 double mag = Math.Sqrt(vx * vx + vy * vy);
                 if (!double.IsFinite(mag)) continue;
 
@@ -1432,6 +2213,159 @@ namespace PileDesign.Views
                 geo.DrawPathes(Canvas3DLayout);
 
             // カラーバー
+            if (allValues.Count > 0)
+            {
+                ColorBar.DrawStepColorBar(
+                    ColorBarCanvas, colorBaredGeometries, title, unit,
+                    allValues.Min(), allValues.Max(),
+                    "{0:N" + viewModel.DecimalPlaces + "}", viewModel.LabelSize);
+            }
+        }
+
+        /// <summary>
+        /// 接合点（ConnectionNode）の力マップを描画する
+        /// RigidLinkビームのI端（ConnectionNode側）の力/モーメントを使用
+        /// </summary>
+        private void DrawConnectionPointForceMap(MainWindowViewModel viewModel, AnaModel anaModel)
+        {
+            if (Canvas3DLayout == null || ColorBarCanvas == null) return;
+
+            string content = viewModel.AnalysisResultContent;
+            bool isMoment = content.Contains('M');
+
+            var selectedLoadCase = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
+            var selectedLoadCombination = LoadCombinations.GetLoadCombination(
+                viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
+            if (selectedLoadCase == null || selectedLoadCombination == null) return;
+
+            var entries = new System.Collections.Generic.List<(Point3D location, double valueX, double valueY, double valueMag)>();
+
+            // RigidLinkビームを検索
+            var rigidLinkBeams = anaModel.Beams?.Where(b => b.Name.StartsWith("RigidLink-")).ToList()
+                                 ?? new System.Collections.Generic.List<FEM.Beam>();
+
+            foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+            {
+                if (!pile.IsVisible) continue;
+
+                var rigidLink = rigidLinkBeams.FirstOrDefault(b =>
+                    b.Name == $"RigidLink-{pile.No}" && b.NodeI != null);
+                if (rigidLink == null) continue;
+
+                var beamResult = rigidLink.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                var bf = beamResult?.CumulativeForce;
+                if (bf == null) continue; // 結果がない場合はスキップ
+
+                var node = rigidLink.NodeI; // ConnectionNode
+                if (node == null) continue;
+
+                // 要素座標系 → 全体座標系に変換
+                var f_local = bf.GetVector();
+                var T = rigidLink.GetCachedCoordTransform();
+                var f_global = T.Transpose() * f_local;
+
+                double vx, vy;
+                if (isMoment)
+                {
+                    vx = f_global[3]; // Mxi_global
+                    vy = f_global[4]; // Myi_global
+                }
+                else
+                {
+                    vx = f_global[0]; // Fxi_global
+                    vy = f_global[1]; // Fyi_global
+                }
+
+                double mag = Math.Sqrt(vx * vx + vy * vy);
+                if (!double.IsFinite(mag)) continue;
+
+                entries.Add((node.Coord, vx, vy, mag));
+            }
+
+            if (entries.Count == 0) { ColorBarCanvas.Children.Clear(); return; }
+
+            // カラーバー
+            var allValues = new ObservableCollection<double>(entries.Select(e => e.valueMag));
+            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+            double maxVal = entries.Max(e => e.valueMag);
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+            string unit = isMoment ? "kNm" : "kN";
+            string title = content;
+
+            foreach (var (location, vx, vy, mag) in entries)
+            {
+                if (mag < 1e-15) continue;
+
+                Point center2D = viewModel.CanvasThreeDView.Transformation(location);
+                if (!double.IsFinite(center2D.X)) continue;
+
+                double arrowLen = maxVal > 1e-15 ? mag / maxVal * forceScale : 0;
+
+                var picked = ColorBarUtils.PickColorGeometry(mag, colorBaredGeometries)
+                             ?? ColorBarUtils.PickColorGeometryInclusiveTop(mag, colorBaredGeometries)
+                             ?? (colorBaredGeometries.Count > 0 ? colorBaredGeometries.Last() : null);
+                if (picked == null) continue;
+
+                if (isMoment)
+                {
+                    var forceDir3D = new Vector3D(vx, vy, 0);
+                    double forceDirLen = forceDir3D.Length;
+                    var dirNorm3D = forceDirLen > 1e-15 ? forceDir3D / forceDirLen : new Vector3D(1, 0, 0);
+
+                    var tail3D = location;
+                    var head3D = new Point3D(
+                        location.X + dirNorm3D.X * arrowLen,
+                        location.Y + dirNorm3D.Y * arrowLen,
+                        location.Z);
+
+                    Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
+                    Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
+                    if (!double.IsFinite(head2D.X) || !double.IsFinite(tail2D.X)) continue;
+
+                    picked.PathGeometry.AddGeometry(new LineGeometry(tail2D, head2D));
+                    double headLen = viewModel.ArrowHeadLength * 0.8;
+                    DrawDoubleArrowHead(picked.PathGeometry, head2D, tail2D, headLen);
+                }
+                else
+                {
+                    var forceDir3D = new Vector3D(vx, vy, 0);
+                    double forceDirLen = forceDir3D.Length;
+                    var dirNorm3D = forceDirLen > 1e-15 ? forceDir3D / forceDirLen : new Vector3D(1, 0, 0);
+
+                    var head3D = location;
+                    var tail3D = new Point3D(
+                        head3D.X - dirNorm3D.X * arrowLen,
+                        head3D.Y - dirNorm3D.Y * arrowLen,
+                        head3D.Z - dirNorm3D.Z * arrowLen);
+
+                    Point head2D = viewModel.CanvasThreeDView.Transformation(head3D);
+                    Point tail2D = viewModel.CanvasThreeDView.Transformation(tail3D);
+                    if (!double.IsFinite(head2D.X) || !double.IsFinite(tail2D.X)) continue;
+
+                    picked.PathGeometry.AddGeometry(new LineGeometry(tail2D, head2D));
+
+                    Vector dir2D = head2D - tail2D;
+                    double dirLen2D = dir2D.Length;
+                    Vector dirNorm2D = dirLen2D > 1e-9 ? dir2D / dirLen2D : new Vector(0, -1);
+                    double headLen = viewModel.ArrowHeadLength;
+                    Vector ortho = GetUnitOrthogonalVector(dirNorm2D);
+                    Point side1 = head2D - dirNorm2D * headLen + ortho * (headLen * 0.4);
+                    Point side2 = head2D - dirNorm2D * headLen - ortho * (headLen * 0.4);
+                    picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side1));
+                    picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side2));
+                }
+
+                if (viewModel.IsResultValueVisible)
+                {
+                    string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+                    AddText3D(Brushes.Black, string.Format(fmt, mag), center2D.X, center2D.Y + 8, "C", "T", 0);
+                }
+            }
+
+            foreach (var geo in colorBaredGeometries)
+                geo.DrawPathes(Canvas3DLayout);
+
             if (allValues.Count > 0)
             {
                 ColorBar.DrawStepColorBar(
@@ -1561,7 +2495,7 @@ namespace PileDesign.Views
             string tooltipContent;
             if (viewModel.AnalysisResultContent == "梁応力")
             {
-                tooltipContent = BuildBeamForceTooltip(viewModel, beamResult, closestT, depth);
+                tooltipContent = BuildBeamForceTooltip(viewModel, beamResult, closestT, depth, closestBeam);
             }
             else // 節点変位
             {
@@ -1579,15 +2513,43 @@ namespace PileDesign.Views
         /// <summary>
         /// 梁応力のツールチップテキストを構築
         /// </summary>
-        private static string BuildBeamForceTooltip(MainWindowViewModel viewModel, BeamResult beamResult, double t, double depth)
+        private static string BuildBeamForceTooltip(MainWindowViewModel viewModel, BeamResult beamResult, double t, double depth, Beam beam = null)
         {
             var bf = beamResult.CumulativeForce;
             if (bf == null) return $"深度: {depth:F2} m";
 
+            string typeName = viewModel.AnalysisResultBeamForceType;
+            bool isFoundationBeam = beam?.Name.StartsWith("FoundationBeam-") ?? false;
+
+            // Mh選択時の基礎梁: MyとMz両方を表示
+            if (typeName == "Mh" && isFoundationBeam)
+            {
+                double myI = bf.GetByIndex(4);
+                double myJ = bf.GetByIndex(10);
+                double mzI = bf.GetByIndex(5);
+                double mzJ = bf.GetByIndex(11);
+                double interpMy = myI * (1 - t) + (-myJ) * t;
+                double interpMz = mzI * (1 - t) + (-mzJ) * t;
+                double interpMh = Math.Sqrt(interpMy * interpMy + interpMz * interpMz);
+                return $"Mh: {interpMh:F1} kNm\nMy: {interpMy:F1} kNm\nMz: {interpMz:F1} kNm\n深度: {depth:F2} m";
+            }
+
+            // Fh選択時の基礎梁: FyとFz両方を表示
+            if (typeName == "Fh" && isFoundationBeam)
+            {
+                double fyI = bf.GetByIndex(1);
+                double fyJ = bf.GetByIndex(7);
+                double fzI = bf.GetByIndex(2);
+                double fzJ = bf.GetByIndex(8);
+                double interpFy = fyI * (1 - t) + (-fyJ) * t;
+                double interpFz = fzI * (1 - t) + (-fzJ) * t;
+                double interpFh = Math.Sqrt(interpFy * interpFy + interpFz * interpFz);
+                return $"Fh: {interpFh:F1} kN\nFy: {interpFy:F1} kN\nFz: {interpFz:F1} kN\n深度: {depth:F2} m";
+            }
+
             // I端とJ端の値を取得して線形補間
             double valueI, valueJ;
             string unit;
-            string typeName = viewModel.AnalysisResultBeamForceType;
 
             switch (typeName)
             {

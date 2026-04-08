@@ -408,6 +408,7 @@ namespace PileDesign.Views
                             if (contour3D.Count >= 2)
                             {
                                 cache.Contours3D.Add(contour3D);
+                                cache.ContourLevels3D.Add(contour);
                             }
                         }
                     }
@@ -535,6 +536,43 @@ namespace PileDesign.Views
                 Canvas3DLayout.Children.Add(_settlementContoursPath);
             }
             _settlementContoursPath.Data = contoursGeometry;
+
+            // 等高線ラベル（値表示ONの場合、コンタ線上に沈下量を表示）
+            if (viewModel.IsResultValueVisible && viewModel.SettlementWorldCache.ContourLevels3D.Count > 0)
+            {
+                string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
+
+                // 各contourレベルごとにセグメントを集約し、適度な間隔でラベルを配置
+                var levelSegments = new Dictionary<double, List<List<Point3D>>>();
+                for (int i = 0; i < viewModel.SettlementWorldCache.Contours3D.Count; i++)
+                {
+                    double level = viewModel.SettlementWorldCache.ContourLevels3D[i];
+                    if (!levelSegments.ContainsKey(level))
+                        levelSegments[level] = new List<List<Point3D>>();
+                    levelSegments[level].Add(viewModel.SettlementWorldCache.Contours3D[i]);
+                }
+
+                foreach (var (level, segments) in levelSegments)
+                {
+                    // セグメント数に応じて間引き（多すぎるとラベルが重なる）
+                    int labelInterval = Math.Max(1, segments.Count / 3);
+                    for (int i = 0; i < segments.Count; i += labelInterval)
+                    {
+                        var seg = segments[i];
+                        if (seg.Count < 2) continue;
+                        // セグメントの中点にラベルを配置
+                        var mid3D = new Point3D(
+                            (seg[0].X + seg[^1].X) * 0.5,
+                            (seg[0].Y + seg[^1].Y) * 0.5,
+                            (seg[0].Z + seg[^1].Z) * 0.5);
+                        var mid2D = viewModel.CanvasThreeDView.Transformation(mid3D);
+                        if (!double.IsFinite(mid2D.X)) continue;
+
+                        AddText3D(Brushes.White, string.Format(fmt, level),
+                            mid2D.X, mid2D.Y, "C", "C", 0);
+                    }
+                }
+            }
 
             // カラーバー（キャッシュの範囲から再構築）
             if (viewModel.SettlementWorldCache.ColorBands.Count > 0)

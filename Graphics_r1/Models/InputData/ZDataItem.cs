@@ -49,7 +49,6 @@ namespace PileDesign.Models.InputData
             {
                 if (SetProperty(ref _groundInput, value))
                 {
-                    Console.WriteLine($"GroundLayerNo set to {value} in ZDataItem");
                     SetSoilDisplacement(); // Zが設定されたときにSetSoilDisplacementを呼び出す
                 }
             }
@@ -63,11 +62,19 @@ namespace PileDesign.Models.InputData
         // 地盤変位のセットメソッド
         public void SetSoilDisplacement(/*GroundInput groundInput*/)
         {
-            //if (GroundLayerNo == null || GroundLayerNo < 1) return;
             if (GroundInput == null) return;
-            // 地盤深さ
-            //GroundInput groundInput = inputModel.GroundsInput[GroundLayerNo.GetValueOrDefault() - 1];
             GroundInput groundInput = GroundInput;
+
+            // 任意地盤変位プロファイルが有効な場合はそちらを使用
+            var custom = groundInput.CustomDisplacementProfile;
+            if (custom != null && custom.IsEnabled)
+            {
+                GroundDisp1 = custom.Interpolate(custom.Level1NonLiq, Z);
+                GroundDisp2 = custom.Interpolate(custom.Level2NonLiq, Z);
+                GroundDisp1L = custom.Interpolate(custom.Level1Liq, Z);
+                GroundDisp2L = custom.Interpolate(custom.Level2Liq, Z);
+                return;
+            }
             for (int i = 0; i < groundInput.GroundMassesData.Count; i++)
             {
                 if (groundInput.GroundMassesData[i].AltitudeDepth < Z)

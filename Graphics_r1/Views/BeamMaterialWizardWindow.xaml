@@ -6,10 +6,12 @@
         xmlns:local="clr-namespace:PileDesign.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:BeamMaterialWizardViewModel}"
+        xmlns:common="clr-namespace:PileDesign.Common"
         Title="材料ウィザード" Height="500" Width="400"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        PreviewKeyDown="Window_PreviewKeyDown">
+        PreviewKeyDown="Window_PreviewKeyDown"
+        common:EscapeKeyBehavior.Enable="True">
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -81,7 +83,7 @@
                     ToolTip="現在の設定を適用して編集を続けます"/>
             <Button Content="OK" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"
                     ToolTip="現在の設定を適用して閉じます"/>
-            <Button Content="Cancel" Width="80" Click="CancelButton_Click" IsCancel="True"/>
+            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" IsCancel="True"/>
         </StackPanel>
     </Grid>
 </Window>

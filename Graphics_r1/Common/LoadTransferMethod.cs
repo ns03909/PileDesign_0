@@ -361,7 +361,8 @@ namespace PileDesign.Common
             }
             else
             {
-                ksec = GetRp(settlement, dp, rpu, alpha, n) / settlement;
+                double safeSettlement = Math.Max(settlement, 1e-12);
+                ksec = GetRp(settlement, dp, rpu, alpha, n) / safeSettlement;
             }
             return ksec;
         }
@@ -575,7 +576,8 @@ namespace PileDesign.Common
             F += DeltaF;
             R -= DeltaF;
 
-            if (R.L2Norm() / F.L2Norm() != 0)
+            double fNorm = F.L2Norm();
+            if (fNorm > 1e-20 && R.L2Norm() / fNorm != 0)
             {
                 ConvergenceCalculation(state);
                 X0 = X.Clone();
@@ -873,7 +875,8 @@ namespace PileDesign.Common
 
             int k = 1;
 
-            if (R.L2Norm() / F.L2Norm() != 0)
+            double fNorm2 = F.L2Norm();
+            if (fNorm2 > 1e-20 && R.L2Norm() / fNorm2 != 0)
             {
                 // 初期状態
                 ConvergenceCalculation(state);
@@ -1140,7 +1143,8 @@ namespace PileDesign.Common
 
                 // Find R 残差ベクトル
                 R = T - F;
-                norm = R.L2Norm() / F.L2Norm();
+                double fNormConv = F.L2Norm();
+                norm = fNormConv > 1e-20 ? R.L2Norm() / fNormConv : R.L2Norm();
             }
         }
 

@@ -66,7 +66,7 @@ namespace PileDesign.Output
                 var body = _inputModel.PileBodies[bodyIndex];
                 double dia = 1.0; // デフォルト
                 if (body.PileBodySegments != null && body.PileBodySegments.Count > 0)
-                    dia = body.PileBodySegments[0].PileSection.PileDiameter / 1000.0;
+                    dia = (body.PileBodySegments[0].PileSection?.PileDiameter ?? 1000) / 1000.0;
 
                 // 杭の円
                 doc.Entities.Add(new Circle

@@ -1106,8 +1106,9 @@ namespace PileDesign.Models.InputData
             {
                 loaded = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions);
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[InputModel] System.Text.Jsonデシリアライズ失敗、Newtonsoft.Jsonにフォールバック: {ex.Message}");
                 // フォールバック: Newtonsoft.Json
                 var settings = new Newtonsoft.Json.JsonSerializerSettings
                 {

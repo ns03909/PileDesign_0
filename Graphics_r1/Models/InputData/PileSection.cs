@@ -34,8 +34,9 @@ namespace PileDesign.Models.InputData
                 string filePath = Path.Combine(baseDir, "Models", "PileLibrary", fileName);
                 return PrecastPileLoader.LoadFromCsv(filePath) ?? [];
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[PileSection] 杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
                 return [];
             }
         }
@@ -48,8 +49,9 @@ namespace PileDesign.Models.InputData
                 string filePath = Path.Combine(baseDir, "Models", "PileLibrary", fileName);
                 return SteelPipePileLoader.LoadFromCsv(filePath) ?? [];
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[PileSection] 鋼管杭ライブラリ読込失敗 ({fileName}): {ex.Message}");
                 return [];
             }
         }
@@ -1029,7 +1031,7 @@ namespace PileDesign.Models.InputData
             if (!isFound)
             {
                 // 一致するものが見つからなかった場合の処理
-                Console.WriteLine($"Error: SelectedPrecastPile.Name '{SelectedPrecastPile.Name}' not found in precastPiles.");
+                System.Diagnostics.Debug.WriteLine($"Error: SelectedPrecastPile.Name '{SelectedPrecastPile.Name}' not found in precastPiles.");
                 // 必要に応じてデフォルト値を設定するなどの処理を追加
             }
         }

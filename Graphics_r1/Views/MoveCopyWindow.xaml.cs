@@ -201,7 +201,6 @@ namespace PileDesign.Views
         {
             if (DataContext is MoveCopyViewModel viewModel)
             {
-                Console.WriteLine($"IsCopySelected: {viewModel.IsCopySelected}, IsMoveSelected: {viewModel.IsMoveSelected}");
             }
         }
 

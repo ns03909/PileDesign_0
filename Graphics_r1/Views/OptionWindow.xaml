@@ -130,7 +130,7 @@
                     <ToggleButton ToolTip="矢印" IsChecked="{Binding IsArrowVisible, UpdateSourceTrigger=PropertyChanged}">
                         <svgc:SvgViewbox Source="/Icons/ArrowVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
-                    <ToggleButton ToolTip="変形後要素" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}">
+                    <ToggleButton ToolTip="変形後形状" IsChecked="{Binding IsDeformedElementVisible, UpdateSourceTrigger=PropertyChanged}">
                         <svgc:SvgViewbox Source="/Icons/DeformedElementVisible.svg" Style="{StaticResource SvgIconStyle}"/>
                     </ToggleButton>
                 </StackPanel>

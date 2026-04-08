@@ -7,7 +7,7 @@
   "groundAcceleration1": 2.0,
   "shallowSoilType": "粘性土",
   "groundLayers": [
-    { "no": 1, "bottomGLDepth": -1.7, "layerThickness": 1.7, "bottomAltitude": -1.7, "name": "表土(粘性土)", "granularityClass": "粘性土", "density": 17.3, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 4.5, "cohesive": 0.0, "vs": 90.0, "es": 1000.0, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
+    { "no": 1, "bottomGLDepth": -1.7, "layerThickness": 1.7, "bottomAltitude": -1.7, "name": "表土(粘性土)", "granularityClass": "粘性土", "density": 17.3, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 4.5, "cohesive": 5.0, "vs": 90.0, "es": 1000.0, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
     { "no": 2, "bottomGLDepth": -4.6, "layerThickness": 2.9, "bottomAltitude": -4.6, "name": "上部有楽町層砂質シルト", "granularityClass": "粘性土", "density": 17.6, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 1.0, "cohesive": 5.0, "vs": 90.0, "es": 1000.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
     { "no": 3, "bottomGLDepth": -9.85, "layerThickness": 5.25, "bottomAltitude": -9.85, "name": "下部有楽町層シルト", "granularityClass": "粘性土", "density": 16.3, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 1.0, "cohesive": 5.0, "vs": 90.0, "es": 1500.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
     { "no": 4, "bottomGLDepth": -25.8, "layerThickness": 15.95, "bottomAltitude": -25.8, "name": "下部有楽町層砂質シルト", "granularityClass": "粘性土", "density": 16.6, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 2.0, "cohesive": 5.0, "vs": 130.0, "es": 4200.0, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },

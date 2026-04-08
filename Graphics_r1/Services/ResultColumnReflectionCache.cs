@@ -22,7 +22,8 @@ namespace PileDesign.Services
                  Header = x.Attr!.Header,
                  Order = x.Attr.Order,
                  Property = x.Prop,
-                 Format = x.Attr.Format
+                 Format = x.Attr.Format,
+                 Tooltip = x.Attr.Tooltip
              })
              .OrderBy(c => c.Order)
              .ToArray();

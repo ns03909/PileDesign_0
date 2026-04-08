@@ -79,6 +79,12 @@
             <Setter Property="Foreground" Value="#D82531"/>
         </Style>
 
+        <!-- 読み取り専用数値列の共通スタイル（灰色・右寄せ） -->
+        <Style x:Key="ReadOnlyNumericCellStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Foreground" Value="Gray"/>
+        </Style>
+
         <conv:EnumToBooleanConverter x:Key="EnumToBooleanConverter"/>
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter"/>
         <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
@@ -168,15 +174,30 @@
                 <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
             </StackPanel>
 
-            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="None"
-                      CanUserAddRows="False">
+            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="Column"
+                      CanUserAddRows="False" CanUserResizeRows="False">
                 <common:EnhancedDataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
+                    <DataGridTextColumn Header="ケース" Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
                             </Style>
                         </DataGridTextColumn.CellStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ΣV(kN)" Binding="{Binding SumV, Mode=OneWay, StringFormat=N0}" Width="Auto" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyNumericCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ΣH(kN)" Binding="{Binding SumH, Mode=OneWay, StringFormat=N0}" Width="Auto" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyNumericCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ΣH/ΣV" Binding="{Binding SumHOverSumVText, Mode=OneWay}" Width="Auto" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyNumericCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridCheckBoxColumn Binding="{Binding IsAnalysisTarget, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto"/>
                 </common:EnhancedDataGrid.Columns>
@@ -189,15 +210,30 @@
                 <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
             </StackPanel>
 
-            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="None"
-                      CanUserAddRows="False">
+            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="Column"
+                      CanUserAddRows="False" CanUserResizeRows="False">
                 <common:EnhancedDataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
+                    <DataGridTextColumn Header="ケース" Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
                             </Style>
                         </DataGridTextColumn.CellStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ΣV(kN)" Binding="{Binding SumV, Mode=OneWay, StringFormat=N0}" Width="Auto" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyNumericCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ΣH(kN)" Binding="{Binding SumH, Mode=OneWay, StringFormat=N0}" Width="Auto" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyNumericCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="ΣH/ΣV" Binding="{Binding SumHOverSumVText, Mode=OneWay}" Width="Auto" IsReadOnly="True">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource ReadOnlyNumericCellStyle}"/>
+                        </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridCheckBoxColumn Binding="{Binding IsAnalysisTarget, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
                 </common:EnhancedDataGrid.Columns>
@@ -209,7 +245,7 @@
                       CanUserAddRows="False">
                 <common:EnhancedDataGrid.Columns>
                     <!--<DataGridTextColumn Binding="{Binding Name}" Width="*" IsReadOnly="True" />-->
-                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" />
+                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" Foreground="Gray"/>
                     <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>

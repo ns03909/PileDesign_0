@@ -684,7 +684,35 @@ namespace PileDesign.ViewModels
             wpf.Plot.Clear();
             DrawSoilLayer(wpf);
 
-            if (GroundInput.GroundLayers.Count != 0)
+            // 任意入力モードの場合はカスタムプロファイルを描画
+            var custom = GroundInput.CustomDisplacementProfile;
+            if (custom != null && custom.IsEnabled)
+            {
+                var caseProfiles = new (ObservableCollection<DisplacementPoint> profile, string label, SKColor color)[]
+                {
+                    (custom.Level1NonLiq, "L1 非液状化", NikkenSKColor.Green),
+                    (custom.Level1Liq, "L1 液状化", NikkenSKColor.SkyBlue),
+                    (custom.Level2NonLiq, "L2 非液状化", NikkenSKColor.Red),
+                    (custom.Level2Liq, "L2 液状化", NikkenSKColor.PaleRed),
+                };
+
+                foreach (var (profile, label, color) in caseProfiles)
+                {
+                    if (profile == null || profile.Count < 2) continue;
+
+                    // 標高 → GL基準深さに変換
+                    double groundTopAlt = GroundInput.GroundTopAltitude;
+                    var disps = profile.Select(p => p.Displacement).ToArray();
+                    var depths = profile.Select(p => p.Z - groundTopAlt).ToArray();
+
+                    var scatter = wpf.Plot.Add.Scatter(disps, depths);
+                    scatter.Color = Color.FromSKColor(color);
+                    scatter.LineWidth = 2;
+                    scatter.LegendText = label;
+                    scatter.MarkerSize = 5;
+                }
+            }
+            else if (GroundInput.GroundLayers.Count != 0)
             {
                 if (ChartDispContent.Contains("DmaxU*(レベル1)") || ChartDispContent.Contains("DmaxU*(レベル1,2)"))
                 {
@@ -777,6 +805,7 @@ namespace PileDesign.ViewModels
                 }
             }
             wpf.Plot.Legend.IsVisible = true;
+            wpf.Plot.Legend.FontName = Fonts.Detect("日本語");
 
             string title = "地盤変位";
             wpf.Plot.Axes.Title.Label.Text = title;
@@ -1729,6 +1758,28 @@ namespace PileDesign.ViewModels
                     if (result == MessageBoxResult.Cancel) return;
                 }
 
+                // 任意地盤変位のバリデーション
+                for (int i = 0; i < GroundsInput.Count; i++)
+                {
+                    var gi = GroundsInput[i];
+                    if (gi.CustomDisplacementProfile?.IsEnabled == true)
+                    {
+                        // GroundInputを一時的にセットしてバリデーション
+                        var prevGI = GroundInput;
+                        GroundInput = gi;
+                        ValidateCustomDisplacementProfiles();
+                        GroundInput = prevGI;
+
+                        if (HasCustomDispWarnings)
+                        {
+                            MessageBoxResult dispResult = MessageBox.Show(
+                                $"地盤番号{i + 1}の任意地盤変位に警告があります:\n\n{CustomDispWarnings}\n\n状態を保存してウィンドウを閉じますか？",
+                                "任意地盤変位 警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                            if (dispResult == MessageBoxResult.Cancel) return;
+                        }
+                    }
+                }
+
                 // 深いコピーを作成して代入
                 InputModel.GroundsInput.Clear();
 
@@ -1785,6 +1836,9 @@ namespace PileDesign.ViewModels
                 _updatePending = false;
                 UpdateCore();
             }
+
+            // 任意地盤変位バリデーション更新（孔口標高・土質点変更時にも反映）
+            ValidateCustomDisplacementProfiles();
         }
 
         /// <summary>
@@ -2600,6 +2654,113 @@ namespace PileDesign.ViewModels
         public void ComboBox_SelectionChangedCommand()
         {
             ScheduleUpdate(); // デバウンス付きで再計算・グラフ更新
+        }
+
+        // ======== 任意地盤変位プロファイル ========
+
+        // 計算値モード（IsEnabled の反転）
+        public bool IsCustomDisplacementDisabled
+        {
+            get => !(GroundInput?.CustomDisplacementProfile?.IsEnabled ?? false);
+            set
+            {
+                if (GroundInput?.CustomDisplacementProfile != null)
+                {
+                    GroundInput.CustomDisplacementProfile.IsEnabled = !value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(SelectedCustomDispProfile));
+                    ScheduleUpdate(); // グラフ更新
+                    ValidateCustomDisplacementProfiles();
+
+                    // 任意入力モードON時に「任意地盤変位」タブを前面に表示
+                    if (!value)
+                        ActivateCustomDispTab?.Invoke();
+                }
+            }
+        }
+
+        /// <summary>任意地盤変位タブを前面に表示するコールバック（Windowから設定）</summary>
+        public Action ActivateCustomDispTab { get; set; }
+
+        // ケース選択肢
+        public ObservableCollection<string> CustomDispCaseOptions { get; } =
+        [
+            "レベル1 液状化なし",
+            "レベル1 液状化あり",
+            "レベル2 液状化なし",
+            "レベル2 液状化あり"
+        ];
+
+        private int _selectedCustomDispCaseIndex = 0;
+        public int SelectedCustomDispCaseIndex
+        {
+            get => _selectedCustomDispCaseIndex;
+            set
+            {
+                if (SetProperty(ref _selectedCustomDispCaseIndex, value))
+                    OnPropertyChanged(nameof(SelectedCustomDispProfile));
+            }
+        }
+
+        // 選択中のプロファイル
+        public ObservableCollection<DisplacementPoint>? SelectedCustomDispProfile =>
+            GroundInput?.CustomDisplacementProfile?.GetProfile(_selectedCustomDispCaseIndex);
+
+        // ======== 任意地盤変位 バリデーション ========
+
+        private string _customDispWarnings = "";
+        public string CustomDispWarnings
+        {
+            get => _customDispWarnings;
+            set => SetProperty(ref _customDispWarnings, value);
+        }
+
+        public bool HasCustomDispWarnings => !string.IsNullOrEmpty(CustomDispWarnings);
+
+        /// <summary>
+        /// 4ケースすべてについてバリデーションを実行し、警告メッセージを更新する
+        /// </summary>
+        public void ValidateCustomDisplacementProfiles()
+        {
+            if (GroundInput?.CustomDisplacementProfile == null || !GroundInput.CustomDisplacementProfile.IsEnabled)
+            {
+                CustomDispWarnings = "";
+                OnPropertyChanged(nameof(HasCustomDispWarnings));
+                return;
+            }
+
+            var warnings = new List<string>();
+            double boreholeAlt = GroundInput.GroundTopAltitude;
+
+            // 土質点の最下面標高
+            double bottomAlt = double.MaxValue;
+            if (GroundInput.GroundMassesData != null && GroundInput.GroundMassesData.Count > 0)
+                bottomAlt = GroundInput.GroundMassesData.Min(m => m.AltitudeDepth);
+
+            var caseNames = new[] { "L1 非液状化", "L1 液状化", "L2 非液状化", "L2 液状化" };
+            var custom = GroundInput.CustomDisplacementProfile;
+
+            for (int i = 0; i < 4; i++)
+            {
+                var profile = custom.GetProfile(i);
+                if (profile == null || profile.Count == 0)
+                {
+                    warnings.Add($"[{caseNames[i]}] データが入力されていません。");
+                    continue;
+                }
+
+                double maxZ = profile.Max(p => p.Z);
+                double minZ = profile.Min(p => p.Z);
+
+                if (Math.Abs(maxZ - boreholeAlt) > 0.001)
+                    warnings.Add($"[{caseNames[i]}] 最高標高({maxZ:F3}m)が孔口標高({boreholeAlt:F3}m)と異なります。");
+
+                if (bottomAlt < double.MaxValue && minZ > bottomAlt + 0.001)
+                    warnings.Add($"[{caseNames[i]}] 最低標高({minZ:F3}m)が土質点最下面標高({bottomAlt:F3}m)より高いです。");
+            }
+
+            CustomDispWarnings = string.Join("\n", warnings);
+            OnPropertyChanged(nameof(HasCustomDispWarnings));
         }
     }
 }

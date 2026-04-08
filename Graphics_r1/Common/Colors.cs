@@ -25,12 +25,14 @@ namespace PileDesign.Common
 
     public static class NikkenBrush
     {
-        public static readonly SolidColorBrush SkyBlue = new(NikkenWindowsMediaColors.SkyBlue);
-        public static readonly SolidColorBrush PaleRed = new(NikkenWindowsMediaColors.PaleRed);
-        public static readonly SolidColorBrush Red = new(NikkenWindowsMediaColors.Red);
-        public static readonly SolidColorBrush DeepBlue = new(NikkenWindowsMediaColors.DeepBlue);
-        public static readonly SolidColorBrush Yellow = new(NikkenWindowsMediaColors.Yellow);
-        public static readonly SolidColorBrush Green = new(NikkenWindowsMediaColors.Green);
+        public static readonly SolidColorBrush SkyBlue = Freeze(new(NikkenWindowsMediaColors.SkyBlue));
+        public static readonly SolidColorBrush PaleRed = Freeze(new(NikkenWindowsMediaColors.PaleRed));
+        public static readonly SolidColorBrush Red = Freeze(new(NikkenWindowsMediaColors.Red));
+        public static readonly SolidColorBrush DeepBlue = Freeze(new(NikkenWindowsMediaColors.DeepBlue));
+        public static readonly SolidColorBrush Yellow = Freeze(new(NikkenWindowsMediaColors.Yellow));
+        public static readonly SolidColorBrush Green = Freeze(new(NikkenWindowsMediaColors.Green));
+
+        private static SolidColorBrush Freeze(SolidColorBrush brush) { brush.Freeze(); return brush; }
     }
 
     public static class NikkenSKColor

@@ -13,6 +13,21 @@
             <g transform="matrix(-0.526595,0.91209,-1.174539,-0.678121,966.69912,1212.065493)">
                 <path d="M1156.415,57.848L1201.793,78.193L1156.415,98.537L1111.037,78.193L1156.415,57.848Z" style="fill:rgb(255,239,239);fill-opacity:0;stroke:black;stroke-width:6.86px;"/>
             </g>
+            <g transform="matrix(1,0,0,1,-917.023664,2112.506875)">
+                <g transform="matrix(37.5,0,0,37.5,1207.144545,116.364418)">
+                </g>
+                <text x="1158.695px" y="116.364px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:37.5px;fill:rgb(255,0,0);">+X</text>
+            </g>
+            <g transform="matrix(1,0,0,1,-966.833348,2112.506875)">
+                <g transform="matrix(37.5,0,0,37.5,1206.900795,116.364418)">
+                </g>
+                <text x="1158.938px" y="116.364px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:37.5px;fill:rgb(0,255,0);">+Y</text>
+            </g>
+            <g transform="matrix(1,0,0,1,-940.919545,2071.117995)">
+                <g transform="matrix(37.5,0,0,37.5,1206.525795,116.364418)">
+                </g>
+                <text x="1159.313px" y="116.364px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:37.5px;fill:rgb(0,0,255);">+Z</text>
+            </g>
         </g>
     </g>
 </svg>

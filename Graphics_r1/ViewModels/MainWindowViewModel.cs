@@ -75,8 +75,12 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void SaveUndoState()
         {
-            _undoManager.SaveState(CurrentInputModel.DeepCopy());
-            RaiseUndoStateChanged();
+            var copy = CurrentInputModel.DeepCopy();
+            if (copy != null)
+            {
+                _undoManager.SaveState(copy);
+                RaiseUndoStateChanged();
+            }
         }
         private readonly FileOperationService _fileOperationService;
         private readonly PileLayoutService _pileLayoutService;
@@ -1320,20 +1324,17 @@ namespace PileDesign.ViewModels
                 nextPoint3D = CurrentInputModel.PileLayoutItems.Last().Point3D + new Vector3D() { X = 7.2 };
             }
 
-            // UI スレッドでコレクションへ追加
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem() { X = nextPoint3D.X, Y = nextPoint3D.Y, Z = nextPoint3D.Z });
-                CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
-                // 要素未分割の場合は自動で SoiPile を再生成
-                if (!IsElementSplit)
-                    RequestGenerateSoilPiles();
+            // UIスレッドから呼ばれるため直接実行
+            CurrentInputModel.PileLayoutItems.Add(new PileLayoutDataItem() { X = nextPoint3D.X, Y = nextPoint3D.Y, Z = nextPoint3D.Z });
+            CurrentInputModel.PileLayoutItems[^1].SetMainWindowViewModel(this);
+            // 要素未分割の場合は自動で SoiPile を再生成
+            if (!IsElementSplit)
+                RequestGenerateSoilPiles();
 
-                // 変更後（以下の箇所で適用）
-                RequestUpdateWindow();
-                UpdatePileLayoutNo();
-                UpdateTreeView();
-            });
+            // 変更後（以下の箇所で適用）
+            RequestUpdateWindow();
+            UpdatePileLayoutNo();
+            UpdateTreeView();
         }
 
         [RelayCommand]
@@ -3277,7 +3278,7 @@ namespace PileDesign.ViewModels
                         candidates.Add(candidate);
                     }
                 }
-                catch { }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainVM] Claude設定探索: {ex.Message}"); }
             }
 
             // 通常インストール版
@@ -3887,8 +3888,11 @@ namespace PileDesign.ViewModels
 
                 // ダイアログ終了後にUndo保存
                 var undoCopy = await undoTask;
-                _undoManager.SaveState(undoCopy);
-                RaiseUndoStateChanged();
+                if (undoCopy != null)
+                {
+                    _undoManager.SaveState(undoCopy);
+                    RaiseUndoStateChanged();
+                }
 
                 UpdateCanvas3DAction?.Invoke();
                 UpdateTreeView();

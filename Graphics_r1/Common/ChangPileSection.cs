@@ -440,7 +440,7 @@ namespace PileDesign.Common
                                 if (!string.IsNullOrEmpty(s)) parts.Add($"{p.Name}={s}");
                             }
                         }
-                        catch { }
+                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangPileSection] プロパティ読取失敗: {ex.Message}"); }
                     }
                     CaptainPileSummary = parts.Count > 0 ? string.Join(", ", parts) : cp.GetType().Name;
                 }

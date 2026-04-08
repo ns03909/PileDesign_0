@@ -424,6 +424,12 @@ namespace PileDesign.ViewModels
         private double originalValue;
         private bool isEditingCancelled = false;
 
+        /// <summary>ウィンドウを開く前のIsElementSplit状態（キャンセル時に復元用）</summary>
+        public bool WasElementSplitBeforeOpen { get; set; }
+
+        /// <summary>OKボタンが押されたかどうか</summary>
+        public bool IsOkPressed { get; private set; }
+
         // コンストラクタ //
         /// <summary>
         /// 標準コンストラクタ（UIスレッドでDeepCopyを実行）
@@ -1735,11 +1741,12 @@ namespace PileDesign.ViewModels
             }
 
             // MainWindowViewModelのインスタンスにアクセスしてIsElementSplitをtrueに設定
-            if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
+            if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 mainWindowViewModel.IsElementSplit = true;
             }
 
+            IsOkPressed = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 

@@ -34,6 +34,7 @@
         <conv:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
         <conv:DoubleEqualsToVisibilityConverter x:Key="DoubleEqualsToVisibilityConverter"/>
         <conv:DoubleNotEqualsToVisibilityConverter x:Key="DoubleNotEqualsToVisibilityConverter"/>
+        <conv:LoadCaseLevelToColorConverter x:Key="LoadCaseLevelToColorConverter"/>
 
         <!-- FormulaControlに適用するスタイルを定義 -->
         <Style x:Key="FormulaControlStyle" TargetType="controls:FormulaControl">
@@ -765,6 +766,11 @@
                                                 <Binding.StringFormat>{0:N0}</Binding.StringFormat>
                                             </Binding>
                                         </DataGridTextColumn.Binding>
+                                        <DataGridTextColumn.CellStyle>
+                                            <Style TargetType="DataGridCell">
+                                                <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
+                                            </Style>
+                                        </DataGridTextColumn.CellStyle>
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="HorizontalAlignment" Value="Center" />
@@ -1419,6 +1425,11 @@
                                                 <Binding.StringFormat>{0:N0}</Binding.StringFormat>
                                             </Binding>
                                         </DataGridTextColumn.Binding>
+                                        <DataGridTextColumn.CellStyle>
+                                            <Style TargetType="DataGridCell">
+                                                <Setter Property="Foreground" Value="{Binding Level, Converter={StaticResource LoadCaseLevelToColorConverter}}"/>
+                                            </Style>
+                                        </DataGridTextColumn.CellStyle>
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="HorizontalAlignment" Value="Center" />

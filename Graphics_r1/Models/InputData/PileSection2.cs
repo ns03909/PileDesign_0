@@ -300,7 +300,7 @@ namespace PileDesign.Models.InputData
                 if (!BarAreas.TryGetValue(BarSize, out double area))
                 {
                     area = 0.0;
-                    Console.WriteLine($"Warning: Invalid BarSize '{BarSize}' detected.");
+                    System.Diagnostics.Debug.WriteLine($"Warning: Invalid BarSize '{BarSize}' detected.");
                 }
                 Ag = Number * area;
             }

@@ -55,11 +55,13 @@ namespace PileDesign.ViewModels
         private readonly ConcurrentQueue<string> _logQueue = new();
         private readonly System.Timers.Timer _logFlushTimer = new(200) { AutoReset = true };
         private volatile bool _logTimerStarted;
+        private System.Timers.ElapsedEventHandler? _logFlushHandler;
 
         private void StartLogTimerIfNeeded()
         {
             if (_logTimerStarted) return;
-            _logFlushTimer.Elapsed += (_, __) => FlushLogsToUi();
+            _logFlushHandler = (_, __) => FlushLogsToUi();
+            _logFlushTimer.Elapsed += _logFlushHandler;
             _logFlushTimer.Start();
             _logTimerStarted = true;
         }
@@ -587,27 +589,48 @@ namespace PileDesign.ViewModels
         // コレクション変更時のハンドラ
         private void LoadCasesLevel1_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
+            if (e.OldItems != null)
+                foreach (LoadCase item in e.OldItems)
+                    item.PropertyChanged -= LoadCase_PropertyChanged;
             if (e.NewItems != null)
-            {
                 foreach (LoadCase item in e.NewItems)
                     item.PropertyChanged += LoadCase_PropertyChanged;
-            }
         }
         private void LoadCasesLevel2_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
+            if (e.OldItems != null)
+                foreach (LoadCase item in e.OldItems)
+                    item.PropertyChanged -= LoadCase_PropertyChanged;
             if (e.NewItems != null)
-            {
                 foreach (LoadCase item in e.NewItems)
                     item.PropertyChanged += LoadCase_PropertyChanged;
-            }
         }
         private void LoadCombinations_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
+            if (e.OldItems != null)
+                foreach (LoadCombination item in e.OldItems)
+                    item.PropertyChanged -= LoadCase_PropertyChanged;
             if (e.NewItems != null)
-            {
                 foreach (LoadCombination item in e.NewItems)
                     item.PropertyChanged += LoadCase_PropertyChanged;
-            }
+        }
+
+        /// <summary>
+        /// イベントハンドラの購読を解除してメモリリークを防止する。
+        /// ウィンドウクローズ時に呼び出す。
+        /// </summary>
+        public void UnsubscribeEvents()
+        {
+            foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
+                item.PropertyChanged -= LoadCase_PropertyChanged;
+            foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel2)
+                item.PropertyChanged -= LoadCase_PropertyChanged;
+            foreach (var item in InputModel.LoadCasesInput.AllLoadCombinations)
+                item.PropertyChanged -= LoadCase_PropertyChanged;
+
+            InputModel.LoadCasesInput.LoadCasesLevel1.CollectionChanged -= LoadCasesLevel1_CollectionChanged;
+            InputModel.LoadCasesInput.LoadCasesLevel2.CollectionChanged -= LoadCasesLevel2_CollectionChanged;
+            InputModel.LoadCasesInput.LoadCombinations.CollectionChanged -= LoadCombinations_CollectionChanged;
         }
 
         private void LoadCase_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -685,7 +708,7 @@ namespace PileDesign.ViewModels
             }
 
             // MainWindowViewModelにCurrentModelをセット
-            if (Application.Current.MainWindow.DataContext is MainWindowViewModel vm)
+            if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel vm)
             {
                 vm.CurrentModel = this.CurrentModel; // AnaModels[0]など
                 vm.IsHorizontalAnalysisDone = this.CurrentModel != null;
@@ -720,7 +743,7 @@ namespace PileDesign.ViewModels
             }
 
             // MainWindowViewModelにCurrentModelをセット
-            if (Application.Current.MainWindow.DataContext is MainWindowViewModel mainWindowViewModel)
+            if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
             {
                 mainWindowViewModel.CurrentModel = this.CurrentModel; // AnaModels[0]など
             }
@@ -1006,6 +1029,8 @@ namespace PileDesign.ViewModels
             if (_logTimerStarted)
             {
                 _logFlushTimer.Stop();
+                if (_logFlushHandler != null)
+                    _logFlushTimer.Elapsed -= _logFlushHandler;
                 _logFlushTimer.Dispose();
             }
 

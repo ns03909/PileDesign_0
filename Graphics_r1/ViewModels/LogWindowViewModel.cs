@@ -114,11 +114,6 @@ namespace PileDesign.ViewModels
                 {
                     File.WriteAllText(dialog.FileName, LogText, Encoding.UTF8);
                     StatusText = $"Log exported to: {Path.GetFileName(dialog.FileName)}";
-                    MessageBox.Show(
-                        $"Log successfully exported to:\n{dialog.FileName}",
-                        "Export Complete",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)

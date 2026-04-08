@@ -21,7 +21,7 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,5">
                 <CheckBox x:Name="CheckBoxMaterialNo" Content="材料No" Width="150"
-                          IsChecked="{Binding IsApplicableMaterialNo}"/>
+                          IsChecked="{Binding IsApplicableMaterialNo}" ToolTip="チェックすると材料番号を一括変更します"/>
                 <ComboBox x:Name="ComboBoxMaterialNo"
                           ItemsSource="{Binding Materials}"
                           SelectedItem="{Binding SelectedMaterial}"
@@ -31,7 +31,7 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,5">
                 <CheckBox x:Name="CheckBoxSectionNo" Content="断面No" Width="150"
-                          IsChecked="{Binding IsApplicableSectionNo}"/>
+                          IsChecked="{Binding IsApplicableSectionNo}" ToolTip="チェックすると断面番号を一括変更します"/>
                 <ComboBox x:Name="ComboBoxSectionNo"
                           ItemsSource="{Binding Sections}"
                           SelectedItem="{Binding SelectedSection}"
@@ -42,7 +42,7 @@
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
             <Button Content="OK" Width="80" Click="OkButton_Click" IsDefault="True" Margin="0,0,5,0"/>
-            <Button Content="Cancel" Width="80" Click="CancelButton_Click" IsCancel="True"/>
+            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" IsCancel="True"/>
         </StackPanel>
     </Grid>
 </Window>

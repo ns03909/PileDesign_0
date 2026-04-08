@@ -63,7 +63,6 @@ namespace PileDesign.Output
             if (saveFileDialog.ShowDialog() == true)
             {
                 CreateCsv(data, dataGrid, saveFileDialog.FileName);
-                MessageBox.Show("CSVファイルにエクスポートしました。", "エクスポート完了", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
     }

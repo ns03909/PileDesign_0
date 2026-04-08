@@ -363,10 +363,10 @@
         </avalonDock:DockingManager>
 
         <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="Ok" Height="30" VerticalAlignment="Top"
+            <Button x:Name="ButtonOk" Content="OK" Height="30" VerticalAlignment="Top"
                     Width="100" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="Cancel" Height="30" VerticalAlignment="Top"
-                    Width="100" Command="{Binding CancelCommand}"/>
+            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" Height="30" VerticalAlignment="Top"
+                    Width="120" Command="{Binding CancelCommand}"/>
         </StackPanel>
     </Grid>
 </Window>

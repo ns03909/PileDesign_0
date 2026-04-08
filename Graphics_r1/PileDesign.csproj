@@ -126,6 +126,7 @@
     <None Remove="Icons\AnalysisResultVisilbe.svg" />
     <None Remove="Icons\AnyFormPressure.png" />
     <None Remove="Icons\AnyFormPressure.svg" />
+    <None Remove="Icons\ApplicationIcon.svg" />
     <None Remove="Icons\ArrowHeadDia.svg" />
     <None Remove="Icons\ArrowHeadLength.svg" />
     <None Remove="Icons\ArrowLength.svg" />
@@ -177,6 +178,10 @@
     <None Remove="Icons\ConnectionNodeVisible.png" />
     <None Remove="Icons\ConnectionNodeVisible.svg" />
     <None Remove="Icons\CopyMove.svg" />
+    <None Remove="Icons\CopyPicture1.png" />
+    <None Remove="Icons\CopyPicture1.svg" />
+    <None Remove="Icons\CopyPicture2.png" />
+    <None Remove="Icons\CopyPicture2.svg" />
     <None Remove="Icons\CopySoilLayer.png" />
     <None Remove="Icons\CopySoilLayer.svg" />
     <None Remove="Icons\cover.png" />
@@ -373,6 +378,10 @@
     <None Remove="Icons\SaveFile.svg" />
     <None Remove="Icons\SaveFileAs.png" />
     <None Remove="Icons\SaveFileAs.svg" />
+    <None Remove="Icons\SavePicture1.png" />
+    <None Remove="Icons\SavePicture1.svg" />
+    <None Remove="Icons\SavePicture2.png" />
+    <None Remove="Icons\SavePicture2.svg" />
     <None Remove="Icons\Scale.svg" />
     <None Remove="Icons\SectionWizard.eps" />
     <None Remove="Icons\SectionWizard.png" />
@@ -396,6 +405,8 @@
     <None Remove="Icons\ShortcutKeys.svg" />
     <None Remove="Icons\ShrinkElementMode.png" />
     <None Remove="Icons\ShrinkElementMode.svg" />
+    <None Remove="Icons\slice.png" />
+    <None Remove="Icons\slice.svg" />
     <None Remove="Icons\SoilLayerVisible.png" />
     <None Remove="Icons\SoilLayerVisible.svg" />
     <None Remove="Icons\SplitElementByNodes.png" />
@@ -744,6 +755,9 @@
     <Resource Include="Icons\AnyFormPressure.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\ApplicationIcon.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ArrowHeadDia.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -895,6 +909,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CopyMove.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopyPicture1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopyPicture1.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopyPicture2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CopyPicture2.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CopySoilLayer.png">
@@ -1485,6 +1511,18 @@
     <Resource Include="Icons\SaveFileAs.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\SavePicture1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SavePicture1.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SavePicture2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SavePicture2.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\Scale.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1552,6 +1590,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\ShrinkElementMode.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\slice.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\slice.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SoilLayerVisible.png">
@@ -1729,13 +1773,10 @@
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
     <PackageReference Include="Svg.Skia" Version="3.7.0" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.6.0-preview3.19128.7" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="System.Net.Http" Version="4.3.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
     <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
          Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />

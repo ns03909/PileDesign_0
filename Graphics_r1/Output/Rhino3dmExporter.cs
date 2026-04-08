@@ -175,7 +175,7 @@ namespace PileDesign.Output
                 {
                     double z1 = (i == 0) ? z : z - segments[i - 1].SegmentDepth;
                     double z2 = z - segments[i].SegmentDepth;
-                    double dia = segments[i].PileSection.PileDiameter / 1000.0; // mm→m
+                    double dia = (segments[i].PileSection?.PileDiameter ?? 0) / 1000.0; // mm→m
                     lastDia = dia;
 
                     AddCylinder(file, layerIdx, x, y, z1, z2, dia);

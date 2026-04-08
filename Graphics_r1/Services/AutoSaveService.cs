@@ -180,9 +180,10 @@ namespace PileDesign.Services
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // クリーンアップ失敗は無視（次回に再試行）
+                // クリーンアップ失敗は次回に再試行
+                System.Diagnostics.Debug.WriteLine($"[AutoSave] クリーンアップ失敗: {ex.Message}");
             }
         }
 

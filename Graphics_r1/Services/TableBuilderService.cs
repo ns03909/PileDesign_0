@@ -106,7 +106,7 @@ namespace PileDesign.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"BuildTableでエラーが発生しました: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"BuildTableでエラーが発生しました: {ex.Message}");
             }
         }
 
@@ -157,7 +157,7 @@ namespace PileDesign.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"BuildKeyValueTableでエラーが発生しました: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"BuildKeyValueTableでエラーが発生しました: {ex.Message}");
             }
         }
 

@@ -144,8 +144,6 @@ namespace PileDesign.Views
 
         private void SetComboBoxSelectedItem()
         {
-            Console.WriteLine($"Before setting ComboBox: {_viewModel.PileSection.SelectedPrecastPile?.Name}");
-
             if (_viewModel.PileSection.PileSectionType == "PHC杭")
             {
                 ComboBoxPHCPileType.ItemsSource = PileSection.PHCOption;
@@ -162,7 +160,6 @@ namespace PileDesign.Views
                 ComboBoxSCPileType.SelectedItem = _viewModel.PileSection.SelectedPrecastPile.Name;
             }
 
-            Console.WriteLine($"After setting ComboBox: {_viewModel.PileSection.SelectedPrecastPile.Name}");
         }
 
         // キャンバスのサイズが変更されたときに描画を行うメソッド
@@ -414,7 +411,6 @@ namespace PileDesign.Views
             if (dlg.ShowDialog() == true)
             {
                 System.IO.File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
-                MessageBox.Show("CSV出力が完了しました。", "出力", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 

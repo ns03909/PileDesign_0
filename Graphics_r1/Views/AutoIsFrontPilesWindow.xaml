@@ -7,7 +7,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:AutoIsFrontPileViewModel}"
-        Title="AutoIsFrontPilesWindow" Height= "200" Width="300"
+        Title="前後方杭自動設定" Height= "200" Width="300"
         common:EscapeKeyBehavior.Enable="True">
 
     <Grid>
@@ -26,7 +26,7 @@
 
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Label Content="角度a (°)"/>
+                <Label Content="角度a (°)" ToolTip="荷重方向を中心に両側この角度以内に他の杭があれば後方杭とする"/>
                 <!--<TextBox x:Name="TextBoxAngle" Text="{Binding Angle, UpdateSourceTrigger=PropertyChanged}"
                     Width="50" HorizontalContentAlignment="Right"
                          TextChanged="TextBoxAngle_TextChanged"
@@ -57,15 +57,15 @@
                     </TextBox.Text>
                 </TextBox>
             </StackPanel>
-            <CheckBox Content="方向1" IsChecked="{Binding IsChecked[0]}"/>
-            <CheckBox Content="方向2" IsChecked="{Binding IsChecked[1]}"/>
-            <CheckBox Content="方向3" IsChecked="{Binding IsChecked[2]}"/>
-            <CheckBox Content="方向4" IsChecked="{Binding IsChecked[3]}"/>
+            <CheckBox Content="方向1" IsChecked="{Binding IsChecked[0]}" ToolTip="この方向について前後方杭を自動設定する"/>
+            <CheckBox Content="方向2" IsChecked="{Binding IsChecked[1]}" ToolTip="この方向について前後方杭を自動設定する"/>
+            <CheckBox Content="方向3" IsChecked="{Binding IsChecked[2]}" ToolTip="この方向について前後方杭を自動設定する"/>
+            <CheckBox Content="方向4" IsChecked="{Binding IsChecked[3]}" ToolTip="この方向について前後方杭を自動設定する"/>
 
             <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right">
 
-                <Button Content="Ok" Width="60" Click="OkButton_Click"/>
-                <Button Content="Cancel" Width="60" Click="CancelButton_Click"/>
+                <Button Content="OK" Width="60" Click="OkButton_Click"/>
+                <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click"/>
 
             </StackPanel>
         </StackPanel>

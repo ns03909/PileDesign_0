@@ -290,7 +290,7 @@ common:EscapeKeyBehavior.Enable="True">
 
         <StackPanel Orientation="Horizontal" Grid.Row="1" HorizontalAlignment="Right">
             <Button Content="計算書作成" Width="100" Click="OkButton_Click" Command="{Binding OutputWordFileCommand}"/>
-            <Button Content="Cancel" Width="100" Click="CancelButton_Click"/>
+            <Button Content="キャンセル (Esc)" Width="120" Click="CancelButton_Click"/>
         </StackPanel>
     </Grid>
 </Window>

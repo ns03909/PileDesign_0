@@ -19,6 +19,9 @@ namespace PileDesign.Views
         private readonly MainWindowViewModel _mainWindowViewModel;
         private bool _isLoaded = false; // フラグを追加
         private bool _isClosingHandled = false;
+        private bool _wasElementSplitBeforeOpen; // ウィンドウを開く前のIsElementSplit状態
+        private List<SoilPile>? _savedSoilPiles; // キャンセル時に復元するための分割前データ
+        private SoilEmbedment? _savedSoilEmbedment; // キャンセル時に復元するための根入れ前データ
 
         public ElementDivisionWindow(MainWindowViewModel mainWindowViewModel)
         {
@@ -27,6 +30,25 @@ namespace PileDesign.Views
 
             Loaded += ElementDivisionWindow_Loaded;
             ContentRendered += ElementDivisionWindow_ContentRendered;
+            Closing += ElementDivisionWindow_Closing;
+        }
+
+        private void ElementDivisionWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            // OKボタンが押されずに閉じられた場合（Escape, ×ボタン, キャンセル）、
+            // ウィンドウを開く前のIsElementSplit状態と分割データを復元する
+            if (_viewModel != null && !_viewModel.IsOkPressed && _wasElementSplitBeforeOpen)
+            {
+                // 分割データを復元（GenerateSoilPilesImmediate()で最小分割に上書きされたため）
+                var ed = _mainWindowViewModel.CurrentInputModel.ElementDivision;
+                if (ed != null && _savedSoilPiles != null)
+                {
+                    ed.SoilPiles = new ObservableCollection<SoilPile>(_savedSoilPiles);
+                    ed.SoilEmbedment = _savedSoilEmbedment;
+                }
+
+                _mainWindowViewModel.IsElementSplit = true;
+            }
         }
 
         /// <summary>
@@ -43,6 +65,18 @@ namespace PileDesign.Views
 
                 // Step 1: SoilPiles/SoilEmbedmentデータ生成（UIスレッド：ObservableCollection操作を含むため）
                 // 杭体・地盤変更後も正しく地層境界節点を再生成するため、IsElementSplitを一時解除
+                _wasElementSplitBeforeOpen = _mainWindowViewModel.IsElementSplit;
+
+                // キャンセル時に復元するため、再生成前の分割データを保存
+                if (_wasElementSplitBeforeOpen)
+                {
+                    var ed = _mainWindowViewModel.CurrentInputModel.ElementDivision;
+                    var srcPiles = ed?.SoilPiles?.ToList() ?? new List<SoilPile>();
+                    var srcEmbed = ed?.SoilEmbedment;
+                    _savedSoilPiles = srcPiles.Select(sp => sp.DeepCopy()).ToList();
+                    _savedSoilEmbedment = srcEmbed?.DeepCopy();
+                }
+
                 _mainWindowViewModel.IsElementSplit = false;
                 _mainWindowViewModel.GenerateSoilPilesImmediate();
                 _mainWindowViewModel.CurrentInputModel.GenerateSoilEmbedment();
@@ -61,6 +95,7 @@ namespace PileDesign.Views
 
                 // Step 3: ViewModel作成（UIスレッド、事前コピー済みデータを渡す）
                 _viewModel = new ElementDivisionViewModel(_mainWindowViewModel, copiedPiles, copiedEmbedment);
+                _viewModel.WasElementSplitBeforeOpen = _wasElementSplitBeforeOpen;
                 DataContext = _viewModel;
 
                 // UI初期化

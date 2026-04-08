@@ -8,5 +8,6 @@ namespace PileDesign.Models.Results
         public int Order { get; init; }
         public PropertyInfo Property { get; init; } = null!;
         public string? Format { get; init; }
+        public string? Tooltip { get; init; }
     }
 }

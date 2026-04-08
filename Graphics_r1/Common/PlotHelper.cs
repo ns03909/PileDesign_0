@@ -301,8 +301,6 @@ namespace PileDesign.Common
                     }
 
                     File.WriteAllText(saveFileDialog.FileName, sb.ToString(), Encoding.UTF8);
-                    MessageBox.Show($"CSVファイルを保存しました:\n{saveFileDialog.FileName}",
-                        "エクスポート完了", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {

@@ -13,15 +13,32 @@ namespace PileDesign.Converters
             if (!double.TryParse(System.Convert.ToString(value, culture), NumberStyles.Any, culture, out double d))
                 return Binding.DoNothing;
 
+            // パラメータ: "factor" or "factor|format"
             double factor = 1.0;
+            string format = null;
             if (parameter != null)
-                double.TryParse(System.Convert.ToString(parameter, culture), NumberStyles.Any, culture, out factor);
+            {
+                string paramStr = System.Convert.ToString(parameter, culture);
+                if (paramStr.Contains('|'))
+                {
+                    var parts = paramStr.Split('|');
+                    double.TryParse(parts[0], NumberStyles.Any, CultureInfo.InvariantCulture, out factor);
+                    format = parts[1];
+                }
+                else
+                {
+                    double.TryParse(paramStr, NumberStyles.Any, CultureInfo.InvariantCulture, out factor);
+                }
+            }
 
             double result = d * factor;
 
-            // 重要: 常に数値を返す（string を返すと StringFormat が効かない）
             if (double.IsNaN(result) || double.IsInfinity(result))
                 return Binding.DoNothing;
+
+            // フォーマット指定がある場合はstringで返す
+            if (format != null)
+                return result.ToString(format, culture);
 
             return result;
         }

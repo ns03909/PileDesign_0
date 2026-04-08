@@ -432,7 +432,8 @@ namespace PileDesign.Views
                 var line = new System.Windows.Shapes.Line
                 {
                     X1 = p0.X, Y1 = p0.Y, X2 = p1.X, Y2 = p1.Y,
-                    Stroke = Brushes.Goldenrod, StrokeThickness = 0.5,
+                    Stroke = element.IsSelected ? Brushes.Red : Brushes.Goldenrod,
+                    StrokeThickness = element.IsSelected ? 1.0 : 0.5,
                     IsHitTestVisible = false
                 };
                 MinimapCanvas.Children.Add(line);
@@ -471,7 +472,8 @@ namespace PileDesign.Views
                     MinimapCanvas.Children.Add(new System.Windows.Shapes.Line
                     {
                         X1 = p0.X, Y1 = p0.Y, X2 = p1.X, Y2 = p1.Y,
-                        Stroke = Brushes.DarkOrange, StrokeThickness = 0.5,
+                        Stroke = beam.IsSelected ? Brushes.Red : Brushes.DarkOrange,
+                        StrokeThickness = beam.IsSelected ? 1.0 : 0.5,
                         IsHitTestVisible = false
                     });
                 }

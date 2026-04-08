@@ -78,9 +78,19 @@ namespace PileDesign.Views
             // 動的列
             foreach (var col in vm.SelectedTable.Columns)
             {
+                object header = col.Header;
+                if (!string.IsNullOrEmpty(col.Tooltip))
+                {
+                    header = new System.Windows.Controls.TextBlock
+                    {
+                        Text = col.Header,
+                        ToolTip = col.Tooltip
+                    };
+                }
+
                 ResultGrid.Columns.Add(new DataGridTextColumn
                 {
-                    Header = col.Header,
+                    Header = header,
                     Binding = new Binding(col.Property.Name)
                     {
                         StringFormat = col.Format

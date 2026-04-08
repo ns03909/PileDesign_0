@@ -17,6 +17,9 @@ namespace PileDesign.Common
 {
     public class EnhancedDataGrid : DataGrid
     {
+        /// <summary>ペースト完了時に発火するイベント</summary>
+        public event EventHandler PasteCompleted;
+
         public EnhancedDataGrid()
         {
             // Excel貼付け互換のためヘッダ除外コピー
@@ -100,6 +103,7 @@ namespace PileDesign.Common
             {
                 if (TryPasteFromClipboard())
                 {
+                    PasteCompleted?.Invoke(this, EventArgs.Empty);
                     e.Handled = true;
                     return;
                 }
@@ -254,6 +258,20 @@ namespace PileDesign.Common
 
                 if (rows.Length == 0) return false;
 
+                // ヘッダー行スキップ: 先頭行の全セルが数値変換不可の場合はヘッダーとみなす
+                if (rows.Length > 1 && rows[0].Length > 0)
+                {
+                    bool firstRowAllNonNumeric = rows[0].All(cell =>
+                        !double.TryParse(cell.Trim(), NumberStyles.Float | NumberStyles.AllowThousands,
+                            CultureInfo.CurrentCulture, out _) &&
+                        !double.TryParse(cell.Trim(), NumberStyles.Float | NumberStyles.AllowThousands,
+                            CultureInfo.InvariantCulture, out _));
+                    if (firstRowAllNonNumeric)
+                        rows = rows.Skip(1).ToArray();
+                }
+
+                if (rows.Length == 0) return false;
+
                 int pasteRowCount = rows.Length;
                 int pasteColCount = rows.Max(r => r.Length);
 
@@ -265,10 +283,28 @@ namespace PileDesign.Common
 
                 var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
 
+                // 行数不足時: ItemsSourceがObservableCollectionの場合は自動追加
                 if (startRowIndex + pasteRowCount > Items.Count)
                 {
-                    MessageBox.Show(OwnerWindow, "貼り付け範囲が行数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return false;
+                    if (ItemsSource is System.Collections.IList list)
+                    {
+                        var itemType = list.GetType().GetGenericArguments().FirstOrDefault();
+                        if (itemType != null)
+                        {
+                            int needRows = startRowIndex + pasteRowCount - Items.Count;
+                            for (int i = 0; i < needRows; i++)
+                            {
+                                try { list.Add(Activator.CreateInstance(itemType)); }
+                                catch { break; }
+                            }
+                        }
+                    }
+                    // それでも足りない場合はエラー
+                    if (startRowIndex + pasteRowCount > Items.Count)
+                    {
+                        MessageBox.Show(OwnerWindow, "貼り付け範囲が行数を超えています。", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return false;
+                    }
                 }
                 if (startDisplayIndex + pasteColCount > displayOrderedCols.Count)
                 {
@@ -452,6 +488,9 @@ namespace PileDesign.Common
             }
 
             var (underlying, _) = UnwrapNullable(targetType);
+
+            // 前後の空白・全角スペース・不可視文字を除去
+            input = input.Trim().Trim('\u200B', '\uFEFF', '\u00A0');
 
             if (kind == ColumnKind.CheckBox || underlying == typeof(bool))
             {

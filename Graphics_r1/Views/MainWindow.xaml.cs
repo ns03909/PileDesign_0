@@ -116,6 +116,7 @@ namespace PileDesign.Views
             loadingMainWindow.ShowDialog();
 
             Loaded += MainWindow_Loaded;
+            Deactivated += MainWindow_Deactivated;
 
             viewModel.TreeViewControl = TreeViewControl;
             // ViewModelのActionにUpdateCanvas3Dを設定
@@ -447,7 +448,7 @@ namespace PileDesign.Views
                                 popup.IsOpen = false;
                             }
                         }
-                        catch { }
+                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"QuickHint close: {ex.Message}"); }
                     });
                 });
             }
@@ -458,6 +459,15 @@ namespace PileDesign.Views
 
             // レイアウトを復元
             //_layoutService.RestoreDockLayout(dockingManager);
+        }
+
+        private void MainWindow_Deactivated(object sender, EventArgs e)
+        {
+            // メイン画面がフォーカスを失ったとき（ダイアログ表示等）、入力状況表示をリセット
+            if (DataContext is MainWindowViewModel vm && vm.IsInputVisualizerVisible)
+            {
+                vm.IsInputVisualizerVisible = false;
+            }
         }
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
@@ -908,14 +918,6 @@ namespace PileDesign.Views
             UpdatePerspectiveView();
         }
 
-        //private void ComboBoxLabelContent_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem selectedItem)
-        //    {
-        //        var viewModel = DataContext as MainWindowViewModel;
-        //        viewModel.ComboBox3DLabelContent_LabelContent = selectedItem.Content.ToString();
-        //    }
-        //}
 
 
         private void ComboBoxLabelSize_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1031,43 +1033,6 @@ namespace PileDesign.Views
         {
             await AnimateToAnglesAsync(-45, 45);
         }
-
-        //// XY平面モードに切り替えるボタンがクリックされた時のメソッド
-        //private void ButtonXYPlane_Clicked(object sender, RoutedEventArgs e)
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-        //    viewModel.CanvasThreeDView.Tht = -90;
-        //    viewModel.CanvasThreeDView.Phi = 90;
-        //    UpdateCanvas3D();
-        //}
-
-        //// YZ平面モードに切り替えるボタンがクリックされた時のメソッド
-        //private void ButtonYZPlane_Clicked(object sender, RoutedEventArgs e)
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-        //    viewModel.CanvasThreeDView.Tht = 0;
-        //    viewModel.CanvasThreeDView.Phi = 0;
-
-        //    UpdateCanvas3D();
-        //}
-
-        //// XZ平面モードに切り替えるボタンがクリックされた時のメソッド
-        //private void ButtonXZPlane_Clicked(object sender, RoutedEventArgs e)
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-        //    viewModel.CanvasThreeDView.Tht = -90;
-        //    viewModel.CanvasThreeDView.Phi = 0;
-        //    UpdateCanvas3D();
-        //}
-
-        //// 3D平面モードに切り替えるボタンがクリックされた時のメソッド
-        //private void ButtonIsometric_Clicked(object sender, RoutedEventArgs e)
-        //{
-        //    MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-        //    viewModel.CanvasThreeDView.Tht = -45;
-        //    viewModel.CanvasThreeDView.Phi = 45;
-        //    UpdateCanvas3D();
-        //}
 
 
         //// Mouse Event ////
@@ -1244,28 +1209,6 @@ namespace PileDesign.Views
             // Canvas にキーボードフォーカスを設定
             Canvas3DLayout.Focus();
 
-            //// Shiftキーが押されている場合の処理
-            //if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
-            //{
-            //    // クリック位置の周辺に節点があるかチェック
-            //    if (SelectNode3DIfNearby(startPoint, true))
-            //    { return; }
-            //}
-            //// Shiftキーが押されていない場合の処理
-            //else
-            //{
-            //    ClearCanvasSelection();
-
-            //    // クリック位置の周辺に節点があるかチェック
-            //    if (SelectNode3DIfNearby(startPoint, false))
-            //    { return; }
-
-            //    var elementToRemove = Canvas3DLayout.Children.OfType<Path>().FirstOrDefault(p => p.Name == "Selection");
-            //    if (elementToRemove != null)
-            //    {
-            //        Canvas3DLayout.Children.Remove(elementToRemove);
-            //    }
-            //}
             // Shiftキーが押されている場合の処理
             if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
@@ -1633,7 +1576,7 @@ namespace PileDesign.Views
             {
                 ClearHoverHighlight();
                 HideSettlementTooltip();
-                try { HideBeamResultTooltip(); } catch { }
+                try { HideBeamResultTooltip(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"HideBeamResultTooltip: {ex.Message}"); }
             }
         }
 
@@ -2095,7 +2038,7 @@ namespace PileDesign.Views
                 }
                 else
                 {
-                    Console.WriteLine("ContextMenu is null");
+                    System.Diagnostics.Debug.WriteLine("ContextMenu is null");
                 }
                 startPoint = e.GetPosition(Canvas3DLayout);
             }
@@ -2185,7 +2128,6 @@ namespace PileDesign.Views
         // キーを押したときの処理
         private void HandleKeyDown(KeyEventArgs e)
         {
-            Console.WriteLine($"Key pressed: {e.Key}, Modifiers: {Keyboard.Modifiers}");
             if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
                 // Ctrl + Shift + A が押されたときの処理

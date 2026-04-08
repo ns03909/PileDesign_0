@@ -855,8 +855,6 @@ namespace PileDesign.Models.InputData
             // 安全限界軸力閾値
             UltimateLimitAxialForceThresholds = [];
 
-            Console.WriteLine($"MainBars.PCD: {mainBars.PCD}, MainBars.Number: {mainBars.Number}, MainBars.Grade: {mainBars.Grade}, MainBars.BarSize: {mainBars.BarSize}, MainBars.Ag: {mainBars.Ag}");
-
 
             PrecastConcrete = precastConcrete;
             MainBars = mainBars;
@@ -1598,7 +1596,7 @@ namespace PileDesign.Models.InputData
                 CircularSolidSectionConcreteIn = new CircularSolidSection(precastConcrete?.DI ?? 0.0);
                 CircularPipeSectionSteelPipe = null;
 
-                Console.WriteLine("SCSection: PrecastSteelPipe.T is zero or PrecastSteelPipe is null. SCSection initialization skipped.");
+                System.Diagnostics.Debug.WriteLine("SCSection: PrecastSteelPipe.T is zero or PrecastSteelPipe is null. SCSection initialization skipped.");
                 return;
             }
 

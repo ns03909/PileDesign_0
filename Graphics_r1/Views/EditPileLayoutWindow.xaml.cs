@@ -65,16 +65,6 @@ namespace PileDesign.Views
             public bool IsReplaceVLadd = true;
             public bool IsAddVLadd = false;
 
-            //public bool IsApplicableE1 = false;
-            //public double E1 = 0;
-            //public bool IsReplaceE1 = true;
-            //public bool IsAddE1 = false;
-
-            //public bool IsApplicableE2 = false;
-            //public double E2 = 0;
-            //public bool IsReplaceE2 = true;
-            //public bool IsAddE2 = false;
-
             public bool IsApplicableE1_1 = false;
             public double E1_1 = 0;
             public bool IsReplaceE1_1 = true;
@@ -168,16 +158,6 @@ namespace PileDesign.Views
                 VLadd = viewModel.VLadd,
                 IsReplaceVLadd = viewModel.IsReplaceVLadd,
                 IsAddVLadd = viewModel.IsAddVLadd,
-
-                //IsApplicableE1 = viewModel.IsApplicableE1,
-                //E1 = viewModel.E1,
-                //IsReplaceE1 = viewModel.IsReplaceE1,
-                //IsAddE1 = viewModel.IsAddE1,
-
-                //IsApplicableE2 = viewModel.IsApplicableE2,
-                //E2 = viewModel.E2,
-                //IsReplaceE2 = viewModel.IsReplaceE2,
-                //IsAddE2 = viewModel.IsAddE2,
 
                 IsApplicableE1_1 = viewModel.IsApplicableE1_1,
                 E1_1 = viewModel.E1_1,
@@ -305,16 +285,6 @@ namespace PileDesign.Views
             if (!_isInitialized) return; // 初期化中は無視
             CheckBoxVLadd.IsChecked = true;
         }
-
-        //private void TextBoxE1_TextChanged(object sender, TextChangedEventArgs e)
-        //{
-        //    CheckBoxE1.IsChecked = true;
-        //}
-
-        //private void TextBoxE2_TextChanged(object sender, TextChangedEventArgs e)
-        //{
-        //    CheckBoxE2.IsChecked = true;
-        //}
 
         private void TextBox1_1_TextChanged(object sender, TextChangedEventArgs e)
         {

@@ -3,7 +3,7 @@ using PileDesign.FEM;
 namespace PileDesign.Models.Results
 {
     /// <summary>
-    /// 杭頭応力テーブル行（リンク要素の杭頭側＝j端の断面力）
+    /// 杭頭応力テーブル行（最も上の杭要素のi端断面力）
     /// </summary>
     public sealed class PileHeadForceRow
     {
@@ -29,40 +29,15 @@ namespace PileDesign.Models.Results
         [ResultColumn("|V|max(kN)", 21, "N2")] public double FabsMax { get; init; }
 
         /// <summary>
-        /// 杭頭応力行を生成（リンク要素の j 端 = PileNode 側）
+        /// 杭頭応力行を生成（最も上の杭要素の i 端応力）
         /// </summary>
-        public static PileHeadForceRow FromPileTop(int pileNo, RotationalSpring rs, BeamForce bf)
+        public static PileHeadForceRow FromBeamIEnd(int pileNo, Beam beam, BeamForce bf)
         {
-            var node = rs.NodeJ; // 杭頭節点
+            var node = beam.NodeI;
             return new PileHeadForceRow
             {
                 PileNo = pileNo,
-                ElementName = rs.Name,
-                NodeName = node?.Name ?? "",
-                X = node?.Coord.X ?? 0,
-                Y = node?.Coord.Y ?? 0,
-                Z = node?.Coord.Z ?? 0,
-                Fx = bf.Fxj,
-                Fy = bf.Fyj,
-                Fz = bf.Fzj,
-                Mx = bf.Mxj,
-                My = bf.Myj,
-                Mz = bf.Mzj,
-                MabsMax = bf.MabsMax,
-                FabsMax = bf.FabsMax
-            };
-        }
-
-        /// <summary>
-        /// 杭接合節点応力行を生成（リンク要素の i 端 = CapNode 側）
-        /// </summary>
-        public static PileHeadForceRow FromCapNode(int pileNo, RotationalSpring rs, BeamForce bf)
-        {
-            var node = rs.NodeI; // 杭接合（キャップ）節点
-            return new PileHeadForceRow
-            {
-                PileNo = pileNo,
-                ElementName = rs.Name,
+                ElementName = beam.Name,
                 NodeName = node?.Name ?? "",
                 X = node?.Coord.X ?? 0,
                 Y = node?.Coord.Y ?? 0,

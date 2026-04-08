@@ -172,11 +172,11 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Word 出力中にエラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Word 出力中にエラー: {ex.Message}");
                 throw;
             }
 
-            Console.WriteLine("Word文書を出力しました。開いて Ctrl+A → F9 でフィールド更新してください。");
+            System.Diagnostics.Debug.WriteLine("Word文書を出力しました。開いて Ctrl+A → F9 でフィールド更新してください。");
         }
 
 
@@ -1454,7 +1454,7 @@ namespace PileDesign.Output
                                 uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                 uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                             }
-                            catch { }
+                            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[WordDoc] NodeResult取得失敗: {ex.Message}"); }
                             disps.Add(uhI);
                             disps.Add(uhJ);
                         }
@@ -2508,6 +2508,8 @@ namespace PileDesign.Output
             table.AppendChild(new TableProperties(borders));
 
             var loadCasesInput = inputModel.LoadCasesInput;
+            if (loadCasesInput?.LoadCombinations == null || loadCasesInput.LoadCombinations.Count == 0)
+                return;
             int loadCombinationCount = loadCasesInput.LoadCombinations.Count;
 
             // テーブルの行を作成
@@ -3215,7 +3217,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddScottPlotGraphToBody: エラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddScottPlotGraphToBody: エラー: {ex.Message}");
             }
         }
         //{
@@ -3404,7 +3406,7 @@ namespace PileDesign.Output
         //    }
         //    catch (Exception ex)
         //    {
-        //        Console.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
+        //        System.Diagnostics.Debug.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
         //    }
         //}
         public static void AddNMinTScottPlotGraphToBody(
@@ -3497,7 +3499,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
             }
         }
 
@@ -3591,7 +3593,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddScottPlotGraphWithMultipleDataToBody: エラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddScottPlotGraphWithMultipleDataToBody: エラー: {ex.Message}");
             }
         }
 
@@ -3980,7 +3982,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"図の作成でエラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"図の作成でエラー: {ex.Message}");
                 // フォールバック: 何もしないか、プレースホルダを追加する
             }
         }
@@ -4212,7 +4214,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddPileForceDiagramByMm: 図作成エラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddPileForceDiagramByMm: 図作成エラー: {ex.Message}");
                 // 必要ならプレースホルダ段落を追加
             }
         }
@@ -4268,7 +4270,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddPilingLayoutDiagramByMm: 図作成エラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddPilingLayoutDiagramByMm: 図作成エラー: {ex.Message}");
                 // 必要に応じプレースホルダ段落を追加するなどのフォールバック処理を入れてください
             }
         }
@@ -4317,7 +4319,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddGroupPileSettlementContourDiagram: 図作成エラー: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddGroupPileSettlementContourDiagram: 図作成エラー: {ex.Message}");
             }
         }
 
@@ -5321,7 +5323,7 @@ diameterSelector,
             {
                 var locX = pileLayoutItem.Point3D.X;
                 var locY = pileLayoutItem.Point3D.Y;
-                var dia = inputModel.PileBodies[pileLayoutItem.PileBodyNo - 1].PileBodySegments[0].PileSection.PileDiameter;
+                var dia = inputModel.PileBodies[pileLayoutItem.PileBodyNo - 1].PileBodySegments[0].PileSection?.PileDiameter ?? 0;
                 maxX = Math.Max(maxX, locX);
                 minX = Math.Min(minX, locX);
                 maxY = Math.Max(maxY, locY);
@@ -5359,7 +5361,7 @@ diameterSelector,
                     var locX = pileLayoutItem.Point3D.X;
                     var locY = pileLayoutItem.Point3D.Y;
                     var pileBody = inputModel.PileBodies[pileLayoutItem.PileBodyNo - 1];
-                    var dia = pileBody.PileBodySegments[0].PileSection.PileDiameter * 0.001;
+                    var dia = (pileBody.PileBodySegments[0].PileSection?.PileDiameter ?? 0) * 0.001;
                     var toeDia = pileBody.PileToeDia * 0.001;
                     // 円
                     dc.DrawEllipse(null, new Pen(Brushes.Blue, pileWidth),
@@ -5831,7 +5833,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"SetColumnWidthでエラーが発生しました: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SetColumnWidthでエラーが発生しました: {ex.Message}");
             }
         }
 
@@ -5875,7 +5877,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"AddFundamentalTableでエラーが発生しました: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"AddFundamentalTableでエラーが発生しました: {ex.Message}");
             }
         }
 

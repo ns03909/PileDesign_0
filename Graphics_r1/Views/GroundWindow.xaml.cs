@@ -40,7 +40,13 @@ namespace PileDesign.Views
             if (DataContext is GroundLayerViewModel viewModel)
             {
                 var _viewModel = viewModel;
-                _viewModel.GroundWindowInstance = this; // MainWindow のインスタンスを渡す
+                _viewModel.GroundWindowInstance = this;
+                _viewModel.ActivateCustomDispTab = () =>
+                {
+                    // 任意地盤変位タブを前面に表示
+                    if (CustomDispTab != null)
+                        CustomDispTab.IsSelected = true;
+                };
 
                 //_viewModel.RequestClose += (s, e)
                 _viewModel.RequestClose += (s, e2) =>
@@ -238,6 +244,113 @@ namespace PileDesign.Views
                     viewModel.ScheduleUpdate();
                 }
             }
+        }
+
+        private void CustomDispCase_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // ケース切り替え時にDataGridのItemsSourceが更新される（VMのPropertyChanged経由）
+        }
+
+        private void CustomDispAddRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is GroundLayerViewModel vm && vm.SelectedCustomDispProfile != null)
+            {
+                vm.SelectedCustomDispProfile.Add(new Models.InputData.DisplacementPoint(0, 0));
+            }
+        }
+
+        private void CustomDispInsertBelowRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is GroundLayerViewModel vm && vm.SelectedCustomDispProfile != null)
+            {
+                var profile = vm.SelectedCustomDispProfile;
+
+                // CurrentCellからアイテムを取得してインデックスを特定
+                int idx = -1;
+                if (DataGridCustomDisplacement.CurrentCell.Item is Models.InputData.DisplacementPoint currentItem)
+                {
+                    idx = profile.IndexOf(currentItem);
+                }
+                // フォールバック: SelectedIndex
+                if (idx < 0)
+                    idx = DataGridCustomDisplacement.SelectedIndex;
+
+                if (idx >= 0 && idx < profile.Count)
+                {
+                    profile.Insert(idx + 1, new Models.InputData.DisplacementPoint(0, 0));
+                }
+                else
+                {
+                    profile.Add(new Models.InputData.DisplacementPoint(0, 0));
+                }
+            }
+        }
+
+        private void CustomDispDeleteRow_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not GroundLayerViewModel vm || vm.SelectedCustomDispProfile == null) return;
+
+            // CurrentCellまたはSelectedItemからアイテムを取得
+            var point = DataGridCustomDisplacement.CurrentCell.Item as Models.InputData.DisplacementPoint
+                        ?? DataGridCustomDisplacement.SelectedItem as Models.InputData.DisplacementPoint;
+            if (point != null)
+            {
+                vm.SelectedCustomDispProfile.Remove(point);
+                vm.ScheduleUpdate();
+                vm.ValidateCustomDisplacementProfiles();
+            }
+        }
+
+        private void CustomDispClearAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is GroundLayerViewModel vm && vm.SelectedCustomDispProfile != null)
+            {
+                vm.SelectedCustomDispProfile.Clear();
+                vm.ScheduleUpdate();
+                vm.ValidateCustomDisplacementProfiles();
+            }
+        }
+
+        private void CustomDispSortAndDedupe_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is GroundLayerViewModel vm && vm.SelectedCustomDispProfile != null)
+            {
+                var profile = vm.SelectedCustomDispProfile;
+                // 標高Zで降順ソートし、重複するZは最初の1つだけ残す
+                var sorted = profile
+                    .OrderByDescending(p => p.Z)
+                    .GroupBy(p => Math.Round(p.Z, 6))
+                    .Select(g => g.First())
+                    .ToList();
+
+                profile.Clear();
+                foreach (var p in sorted)
+                    profile.Add(p);
+
+                vm.ScheduleUpdate();
+                vm.ValidateCustomDisplacementProfiles();
+            }
+        }
+
+        private void CustomDispDataGrid_PasteCompleted(object sender, EventArgs e)
+        {
+            if (DataContext is GroundLayerViewModel vm)
+            {
+                vm.ScheduleUpdate();
+                vm.ValidateCustomDisplacementProfiles();
+            }
+        }
+
+        private void CustomDispDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (DataContext is GroundLayerViewModel vm)
+                {
+                    vm.ScheduleUpdate();
+                    vm.ValidateCustomDisplacementProfiles();
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void HandleTextBoxValueConfirmed(TextBox textBox)

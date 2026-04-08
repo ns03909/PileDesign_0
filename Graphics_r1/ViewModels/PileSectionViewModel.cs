@@ -144,7 +144,7 @@ namespace PileDesign.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"MonQd change: failed to refresh NQ plot: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"MonQd change: failed to refresh NQ plot: {ex.Message}");
                     }
                 }
             }
@@ -210,7 +210,7 @@ namespace PileDesign.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"SeismicLevel change: failed to refresh NQ plot: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"SeismicLevel change: failed to refresh NQ plot: {ex.Message}");
                     }
 
                     // IsSeismicLevel1/2 のバインディング更新通知
@@ -256,7 +256,7 @@ namespace PileDesign.ViewModels
             PileSegmentNo = segmentNo;
             PileSection = pileSection;
 
-            Console.WriteLine($"Constructor: {PileSection.SelectedPrecastPile?.Name}");
+            System.Diagnostics.Debug.WriteLine($"Constructor: {PileSection.SelectedPrecastPile?.Name}");
 
             PrevPileSection = pileSection.DeepCopy(); // ShallowCopyメソッドを使用して値渡し
 
@@ -787,7 +787,7 @@ namespace PileDesign.ViewModels
         {
             if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.MainBarSize == null)
             {
-                Console.WriteLine("Invalid MainBars properties. Skipping graph generation.");
+                System.Diagnostics.Debug.WriteLine("Invalid MainBars properties. Skipping graph generation.");
                 return;
             }
 
@@ -981,7 +981,7 @@ namespace PileDesign.ViewModels
             {
                 if (PileSection.MainBarDr <= 0 || PileSection.MainBarNum <= 0 || PileSection.PileDiameter <= 0)
                 {
-                    Console.WriteLine("ChartUpdate skipped due to incomplete PileSection properties.");
+                    System.Diagnostics.Debug.WriteLine("ChartUpdate skipped due to incomplete PileSection properties.");
                     return;
                 }
 

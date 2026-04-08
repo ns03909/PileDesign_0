@@ -30,7 +30,7 @@
       "settleAlpha": 0.3,
       "settleN": 2,
       "segments": [
-        { "no": 1, "segmentLength": 7.0, "segmentDepth": 7.0, "pileSectionType": "PHC杭", "precastPileName": "PHC-500-標準-85-C" }
+        { "no": 1, "segmentLength": 7.0, "segmentDepth": 7.0, "pileSectionType": "PHC杭", "precastPileName": "PHC-500-特厚-105-C" }
       ]
     }
   ],

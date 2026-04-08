@@ -157,6 +157,7 @@ namespace PileDesign.Views
                 }
 
                 // 2) 縦目盛りと上端水平線
+                if (ground.GroundLayers == null || ground.GroundLayers.Count == 0) continue;
                 double topZ = ground.GroundTopAltitude;
                 double btmZ = ground.GroundLayers[^1].BottomAltitude;
 

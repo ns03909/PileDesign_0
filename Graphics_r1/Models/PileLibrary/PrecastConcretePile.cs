@@ -91,8 +91,8 @@ namespace PileDesign.Models.PileLibrary
                 {
                     // フィールドの読み取りに失敗した場合の処理
                     // 例外を適切にハンドリングする
-                    Console.WriteLine("CSVファイルの形式が正しくありません。");
-                    Console.WriteLine(ex.Message);
+                    System.Diagnostics.Debug.WriteLine("CSVファイルの形式が正しくありません。");
+                    System.Diagnostics.Debug.WriteLine(ex.Message);
                 }
             }
             return precastPiles;

@@ -185,6 +185,8 @@ namespace PileDesign.ViewModels
                         {
                             PileBodyNo = idx + 1;
                             PileBody = PileBodies[idx];
+                            // 杭体タイプに応じて杭頭タイプオプションを再設定
+                            SyncPileTopTypeOption();
                         }
                     }
                     DrawShapes();
@@ -805,6 +807,47 @@ namespace PileDesign.ViewModels
                     UpdatePileOptions(PileBodyInput.SteelPileTopTypeOption,
                         PileBodyInput.SteelPileConstructionTypeOption);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 現在の杭体タイプに基づいて PileTopTypeOption を再設定する（杭体番号切り替え時用）
+        /// PileTopType は変更しない（既存の選択を維持）
+        /// </summary>
+        private void SyncPileTopTypeOption()
+        {
+            var body = PileBodies[PileBodyNo - 1];
+            var correctOption = body.PileBodyType switch
+            {
+                "場所打ち鉄筋コンクリート杭" => PileBodyInput.InsituReinforcedConcretePileTopTypeOption,
+                "場所打ち鋼管コンクリート杭" => PileBodyInput.InsituSteelPipedConcretePileTopTypeOption,
+                "既製コンクリート杭" => PileBodyInput.PrecastConcretePileTopTypeOption,
+                "鋼管杭" => PileBodyInput.SteelPileTopTypeOption,
+                _ => PileBodyInput.InsituReinforcedConcretePileTopTypeOption
+            };
+
+            if (body.PileTopTypeOption != correctOption)
+            {
+                body.PileTopTypeOption = correctOption;
+                // PileTopType が新しいオプションに含まれない場合のみデフォルトに戻す
+                if (!correctOption.Contains(body.PileTopType))
+                    body.PileTopType = correctOption[0];
+            }
+
+            // 施工法オプションも同期
+            var correctConstruction = body.PileBodyType switch
+            {
+                "場所打ち鉄筋コンクリート杭" or "場所打ち鋼管コンクリート杭" => PileBodyInput.InsituPileConstructionTypeOption,
+                "既製コンクリート杭" => PileBodyInput.PrecastPileConstructionTypeOption,
+                "鋼管杭" => PileBodyInput.SteelPileConstructionTypeOption,
+                _ => PileBodyInput.InsituPileConstructionTypeOption
+            };
+
+            if (body.PileConstructionTypeOption != correctConstruction)
+            {
+                body.PileConstructionTypeOption = correctConstruction;
+                if (!correctConstruction.Contains(body.PileConstructionType))
+                    body.PileConstructionType = correctConstruction[0];
             }
         }
 

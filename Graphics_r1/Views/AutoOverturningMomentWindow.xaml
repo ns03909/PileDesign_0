@@ -49,12 +49,12 @@
 
         <StackPanel Grid.Row="0" Grid.Column="0">
             <StackPanel Orientation="Horizontal">
-                <Label Content="OTM計算用建物重量 (kN)" Width="150"/>
+                <Label Content="OTM計算用建物重量 (kN)" Width="150" ToolTip="転倒モーメント計算に用いる建物総重量"/>
                 <TextBox Text="{Binding BuildingWeight, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100" HorizontalContentAlignment="Right"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal">
-                <Label Content="OTM計算用有効高さ (m)" Width="150"/>
+                <Label Content="OTM計算用有効高さ (m)" Width="150" ToolTip="地震力の作用高さ（建物の重心高さ等）"/>
                 <TextBox Text="{Binding EffectiveHeight, StringFormat=N1, UpdateSourceTrigger=LostFocus}" Width="100" HorizontalContentAlignment="Right"/>
             </StackPanel>
         </StackPanel>
@@ -63,7 +63,7 @@
         <GroupBox Header="レベル1" Grid.Row="1" Grid.Column="0">
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Label Content="OTM計算用層せん断力係数" Width="150"/>
+                    <Label Content="OTM計算用層せん断力係数" Width="150" ToolTip="層せん断力係数 Ci（例: レベル1=0.2, レベル2=1.0）"/>
                     <TextBox Text="{Binding ShearCoefficient1, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100"  HorizontalContentAlignment="Right" />
                 </StackPanel>
 
@@ -79,7 +79,7 @@
         <GroupBox Header="レベル2" Grid.Row="1" Grid.Column="1">
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Label Content="OTM計算用層せん断力係数" Width="150"/>
+                    <Label Content="OTM計算用層せん断力係数" Width="150" ToolTip="層せん断力係数 Ci（例: レベル1=0.2, レベル2=1.0）"/>
                     <TextBox Text="{Binding ShearCoefficient2, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100" HorizontalContentAlignment="Right" />
                 </StackPanel>
 
@@ -108,12 +108,13 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">
-            <CheckBox Content="地震時荷重へのVLの加算" IsChecked="{Binding IsApplicableVL, UpdateSourceTrigger=PropertyChanged}"/>
+            <CheckBox Content="地震時荷重へのVLの加算" IsChecked="{Binding IsApplicableVL, UpdateSourceTrigger=PropertyChanged}"
+                      ToolTip="地震時軸力に長期軸力VLを加算するかどうか"/>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="4" Grid.Column="1">
-            <Button Content="Ok" Width="60" Click="OkButton_Click" />
-            <Button Content="Cancel" Width="60" Click="CancelButton_Click" />
+            <Button Content="OK" Width="60" Click="OkButton_Click" />
+            <Button Content="キャンセル (Esc)" Width="100" Click="CancelButton_Click" />
         </StackPanel>
 
     </Grid>

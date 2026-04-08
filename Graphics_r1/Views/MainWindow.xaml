@@ -1775,22 +1775,30 @@
                     <ribbon:RibbonButton Label="画像コピー(x1.0)"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（等倍）"
                              Command="{Binding ImageCopyCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/CopyPicture1.png"
+                             SmallImageSource="pack://application:,,,/Icons/CopyPicture1.png"
                              CommandParameter="1.0"/>
                     <ribbon:RibbonButton Label="画像コピー(x2.0)"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（2倍解像度）"
                              Command="{Binding ImageCopyCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/CopyPicture2.png"
+                             SmallImageSource="pack://application:,,,/Icons/CopyPicture2.png"
                              CommandParameter="2.0"/>
                     <ribbon:RibbonButton Label="画像保存(x1.0)"
                              ToolTip="現在の画面を画像ファイルとして保存（等倍）"
                              Command="{Binding ImageSaveCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/SavePicture1.png"
+                             SmallImageSource="pack://application:,,,/Icons/SavePicture1.png"
                              CommandParameter="1.0"/>
                     <ribbon:RibbonButton Label="画像保存(x2.0)"
                              ToolTip="現在の画面を画像ファイルとして保存（2倍解像度）"
                              Command="{Binding ImageSaveCommand}"
+                             LargeImageSource="pack://application:,,,/Icons/SavePicture2.png"
+                             SmallImageSource="pack://application:,,,/Icons/SavePicture2.png"
                              CommandParameter="2.0"/>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="3Dモデル">
+                <ribbon:RibbonGroup Header="エクスポート">
                     <ribbon:RibbonButton Label="3dm出力"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
                         Command="{Binding Export3dmFileCommand}"
@@ -1937,6 +1945,7 @@
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
@@ -1962,9 +1971,13 @@
                                                 Width="32" Height="32" FontSize="9" Padding="0"/>
                                     </StackPanel>
 
+                                    <!-- 注記 -->
+                                    <TextBlock Grid.Row="1" Margin="5,0,5,4" TextWrapping="Wrap" Foreground="Gray" FontSize="11"
+                                               Text="※杭と梁要素（基礎梁）との連結部には一般節点は使いません。杭配置のΔZcオフセットされた接合節点に梁要素（基礎梁）をつなげてください。"/>
+
                                     <!-- DataGrid -->
                                     <common:EnhancedDataGrid x:Name="DataGridInputNodes"
-                                              Grid.Row="1"
+                                              Grid.Row="2"
                                               ItemsSource="{Binding CurrentInputModel.InputNodes, UpdateSourceTrigger=LostFocus}"
                                               SelectionChanged="DataGridInputNodes_SelectionChanged"
                                               AutoGenerateColumns="False"
@@ -2172,11 +2185,12 @@
 
                                     <!-- ツールバー -->
                                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2">
-                                        <Button Content="断面ウィザード"
-                                                Command="{Binding OpenSectionWizardCommand}"
-                                                ToolTip="断面寸法から断面性能を自動計算します"
-                                                Margin="2"
-                                                Padding="5,2"/>
+                                        <Button Command="{Binding OpenSectionWizardCommand}"
+                                                ToolTip="断面ウィザード：断面寸法から断面性能を自動計算します"
+                                                Margin="2">
+                                            <svgc:SvgViewbox Source="/Icons/SectionWizard.svg"
+                                                             Style="{StaticResource SvgIconStyle24}"/>
+                                        </Button>
                                         <Button Command="{Binding ClearAllTorsionalStiffnessCommand}"
                                                 ToolTip="全断面ねじり剛性無視：すべての断面のIxx係数を0.0に設定し、ねじり剛性を無視します"
                                                 Margin="2"
@@ -2480,7 +2494,6 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -2488,14 +2501,10 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Margin="2">
-                                            <Button ToolTip="要素の節点分割 (Alt + 7)" Command="{Binding SplitElementsByNodesCommand}">
+                                            <Button ToolTip="選択要素を重なる一般節点で分割します (Alt + 7)" Command="{Binding SplitElementsByNodesCommand}">
                                                 <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
                                             </Button>
-                                            <TextBlock Text="要素の節点分割" VerticalAlignment="Center" Margin="5,0"/>
-                                        </StackPanel>
-
-                                        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Margin="2">
-                                            <TextBlock Text="分割距離(m)" VerticalAlignment="Center" Margin="2"/>
+                                            <TextBlock Text="分割距離(m)" VerticalAlignment="Center" Margin="5,0,2,0"/>
                                             <TextBox Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=LostFocus}"
                                                      Width="60"
                                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
@@ -2504,20 +2513,19 @@
                                                      VerticalAlignment="Center">
                                                 <TextBox.ToolTip>
                                                     <TextBlock>
-                                                        <Run Text="選択要素を、重なる節点で分割します。"/>
+                                                        <Run Text="選択要素を、重なる一般節点で分割します。"/>
                                                         <LineBreak/>
-                                                        <Run Text="点と直線の重なりの判定は、その距離が分割節点最大距離以下か否かで行います。"/>
+                                                        <Run Text="点と直線の重なりの判定は、その距離が分割距離以下か否かで行います。"/>
                                                     </TextBlock>
                                                 </TextBox.ToolTip>
                                             </TextBox>
                                         </StackPanel>
 
-                                        <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" Margin="2">
-                                            <Button ToolTip="選択要素の等分割" Command="{Binding EqualDivideElementsCommand}">
+                                        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Margin="2">
+                                            <Button ToolTip="選択要素を等分割し、分割点に一般節点を生成します" Command="{Binding EqualDivideElementsCommand}">
                                                 <svgc:SvgViewbox Source="/Icons/SplitElementEqually.svg" Style="{StaticResource SvgIconStyle24}"/>
                                             </Button>
-                                            <TextBlock Text="等分割" VerticalAlignment="Center" Margin="2,0"/>
-                                            <TextBlock Text="分割数" VerticalAlignment="Center" Margin="2,0,2,0"/>
+                                            <TextBlock Text="分割数" VerticalAlignment="Center" Margin="5,0,2,0"/>
                                             <TextBox Text="{Binding EqualDivisionCount, UpdateSourceTrigger=LostFocus}"
                                                      Width="30"
                                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
@@ -2533,7 +2541,7 @@
 
                                                 <Button Grid.Row="1" Grid.Column="1" Margin="2"
                                                     Command="{Binding SplitElementsAtIntersectionsCommand}"
-                                                    ToolTip="交差点で要素分割:選択要素同士の交差点に節点を生成し、要素を分割します">
+                                                    ToolTip="交差点で要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します">
                                                     <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <!-- 自動梁要素生成ボタンは編集ビューツールバーに移動 (Ctrl+Shift+B) -->

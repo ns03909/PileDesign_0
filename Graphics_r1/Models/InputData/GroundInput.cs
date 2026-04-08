@@ -167,6 +167,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _groundMassesData, value);
         }
 
+        // 任意地盤変位プロファイル
+        private CustomDisplacementProfile _customDisplacementProfile = new();
+        public CustomDisplacementProfile CustomDisplacementProfile
+        {
+            get => _customDisplacementProfile;
+            set => SetProperty(ref _customDisplacementProfile, value);
+        }
+
         // 内部摩擦角とN値の関係　p30
         public List<string> SelectedInternalFrictionAngleCalcumationMethodOption { get; } =
         [
@@ -251,6 +259,7 @@ namespace PileDesign.Models.InputData
             var copy = (GroundInput)this.MemberwiseClone();
             copy.GroundLayers = new ObservableCollection<GroundLayerInput>(this.GroundLayers.Select(layer => layer.DeepCopy()));
             copy.GroundMassesData = new ObservableCollection<GroundMassDataInput>(this.GroundMassesData.Select(mass => mass.DeepCopy()));
+            copy.CustomDisplacementProfile = this.CustomDisplacementProfile?.DeepCopy() ?? new CustomDisplacementProfile();
             return copy;
         }
 

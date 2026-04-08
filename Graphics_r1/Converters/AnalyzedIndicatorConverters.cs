@@ -105,4 +105,30 @@ namespace PileDesign.Converters
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
+
+    /// <summary>
+    /// 液状化条件が解析済みかどうかを Visibility に変換する。
+    /// values[0]: string liquefactionLabel (e.g. "液状化考慮", "液状化なし")
+    /// values[1]: AnaModel currentModel
+    /// </summary>
+    public class LiquefactionAnalyzedConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length >= 2 &&
+                values[0] is string liqLabel &&
+                values[1] is AnaModel model &&
+                model.AnalysisStepResults != null)
+            {
+                bool targetIsLiq = liqLabel.Contains("考慮") || liqLabel == "True" || liqLabel == "true";
+                bool isAnalyzed = model.AnalysisStepResults
+                    .Any(r => r.IsLiquefaction == targetIsLiq);
+                return isAnalyzed ? Visibility.Visible : Visibility.Collapsed;
+            }
+            return Visibility.Collapsed;
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
 }

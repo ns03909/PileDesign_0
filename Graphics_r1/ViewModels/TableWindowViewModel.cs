@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.Results;
+﻿using PileDesign.Models.InputData;
+using PileDesign.Models.Results;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -29,6 +30,12 @@ namespace PileDesign.ViewModels
                     ExportCsvCommandRaiseCanExecute();
             }
         }
+
+        /// <summary>色分け用: 地震荷重ケース一覧</summary>
+        public ObservableCollection<LoadCase>? AllSeismicLoadCases { get; set; }
+
+        /// <summary>解析済みインジケータ用: AnaModel</summary>
+        public FEM.AnaModel? AnaModel { get; set; }
 
         // フィルタ選択肢
         public ObservableCollection<string> LoadCaseFilterOptions { get; } = [];

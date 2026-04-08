@@ -147,6 +147,7 @@ namespace PileDesign.Views
                 vm.RequestShowWarning -= OnRequestShowWarning;
                 vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
                 vm.RequestClose -= OnRequestClose;
+                vm.UnsubscribeEvents(); // LoadCase/LoadCombinationのPropertyChanged購読を解除
             }
             this.Loaded -= HorizontalCalculationWindow_Loaded;
             this.Unloaded -= HorizontalCalculationWindow_Unloaded;

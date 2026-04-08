@@ -31,6 +31,8 @@ namespace PileDesign.Views
             if (HelixViewport == null) return;
 
             HelixViewport.Children.Clear();
+            _selectedClassic.Clear();
+            _origMatClassic.Clear();
             UpdateHelixEmbedment();
             UpdatePile3D();
             UpdateBeamElements3D();

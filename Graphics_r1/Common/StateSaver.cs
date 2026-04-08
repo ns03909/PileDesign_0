@@ -26,15 +26,26 @@ namespace PileDesign.Common
             File.WriteAllText(filePath, jsonString);
         }
 
-        public static T LoadState<T>(string filePath) where T : class
+        public static T? LoadState<T>(string filePath) where T : class
         {
             if (string.IsNullOrEmpty(filePath))
-            {
                 throw new ArgumentNullException(nameof(filePath));
-            }
 
-            string jsonString = File.ReadAllText(filePath);
-            return JsonSerializer.Deserialize<T>(jsonString);
+            try
+            {
+                string jsonString = File.ReadAllText(filePath);
+                JsonSerializerOptions options = new()
+                {
+                    ReferenceHandler = ReferenceHandler.Preserve,
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+                };
+                return JsonSerializer.Deserialize<T>(jsonString, options);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[StateSaver] LoadState失敗 ({filePath}): {ex.Message}");
+                return null;
+            }
         }
     }
 }
