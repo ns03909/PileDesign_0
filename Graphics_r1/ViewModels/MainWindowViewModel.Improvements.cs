@@ -95,14 +95,15 @@ namespace PileDesign.ViewModels
                         var notifyMethod = cmdObj.GetType().GetMethod("NotifyCanExecuteChanged", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                         notifyMethod?.Invoke(cmdObj, null);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-
+                        System.Diagnostics.Debug.WriteLine($"[CanExecute] コマンド更新失敗: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[CanExecute] 全体エラー: {ex.Message}");
             }
         }
 
@@ -140,14 +141,9 @@ namespace PileDesign.ViewModels
                 _undoManager.SaveState(snapshot);
                 _lastUndoSnapshotHash = hash;
             }
-            catch (Newtonsoft.Json.JsonException ex)
-            {
-            }
-            catch (System.Security.Cryptography.CryptographicException ex)
-            {
-            }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[Undo] スナップショット保存失敗: {ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -174,7 +170,7 @@ namespace PileDesign.ViewModels
             {
                 _longOpCts?.Cancel();
             }
-            catch { }
+            catch (ObjectDisposedException) { }
         }
 
 

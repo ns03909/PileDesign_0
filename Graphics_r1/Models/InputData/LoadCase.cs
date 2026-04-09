@@ -27,6 +27,22 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        private bool _isAnalyzed = true;
+        /// <summary>水平解析が実施済みかどうか（DocxOutputWindow表示時にセット）</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsAnalyzed
+        {
+            get => _isAnalyzed;
+            set
+            {
+                if (_isAnalyzed != value)
+                {
+                    _isAnalyzed = value;
+                    OnPropertyChanged(nameof(IsAnalyzed));
+                }
+            }
+        }
+
         private bool _isAnalysisTarget;
         /// <summary>解析対象フラグ（解析ループで使用。IsApplicable とは独立）</summary>
         public bool IsAnalysisTarget

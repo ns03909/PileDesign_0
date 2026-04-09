@@ -12,10 +12,10 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.0-beta</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0-beta</InformationalVersion>
+    <Version>1.0.1-beta</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <InformationalVersion>1.0.1-beta</InformationalVersion>
   </PropertyGroup>
 
   <!-- Release時のPDB除外（publish時のサイズ削減） -->
@@ -409,6 +409,14 @@
     <None Remove="Icons\slice.svg" />
     <None Remove="Icons\SoilLayerVisible.png" />
     <None Remove="Icons\SoilLayerVisible.svg" />
+    <None Remove="Icons\SortIJ.png" />
+    <None Remove="Icons\SortIJ.svg" />
+    <None Remove="Icons\SortNo.png" />
+    <None Remove="Icons\SortNo.svg" />
+    <None Remove="Icons\SortXY.png" />
+    <None Remove="Icons\SortXY.svg" />
+    <None Remove="Icons\SortYX.png" />
+    <None Remove="Icons\SortYX.svg" />
     <None Remove="Icons\SplitElementByNodes.png" />
     <None Remove="Icons\SplitElementByNodes.svg" />
     <None Remove="Icons\SplitElementEqually.png" />
@@ -1604,6 +1612,30 @@
     <Resource Include="Icons\SoilLayerVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\SortIJ.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortIJ.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortNo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortNo.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortXY.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortXY.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortYX.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SortYX.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\SplitElementByNodes.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1779,7 +1811,7 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
          Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>

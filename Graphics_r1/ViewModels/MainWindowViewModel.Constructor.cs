@@ -2908,6 +2908,9 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeHorizontal_Bending = true;
         [ObservableProperty] private bool includeHorizontal_Shear = true;
         [ObservableProperty] private bool includeHorizontal_NMinT = true;
+        [ObservableProperty] private bool includeHorizontal_QNInT = true;
+        [ObservableProperty] private bool includeHorizontal_MPhi = true;
+        [ObservableProperty] private bool includeHorizontal_MTheta = true;
 
         [ObservableProperty] private bool includePileLocationMap = false;
         [ObservableProperty] private bool includePileAxialLoadMap = false;
@@ -2918,6 +2921,12 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeLoadSettlementCurve = false;
 
         [ObservableProperty] private bool includeGroupPileSettlement = false;
+
+        // 液状化有無の出力オプション
+        [ObservableProperty] private bool includeOutputLiquefactionYes = true;
+        [ObservableProperty] private bool includeOutputLiquefactionNo = true;
+        [ObservableProperty] private bool isLiquefactionYesAnalyzed = false;
+        [ObservableProperty] private bool isLiquefactionNoAnalyzed = false;
 
         // コンストラクタ //
         public MainWindowViewModel()

@@ -13,6 +13,6 @@ namespace PileDesign.Converters
             int min = int.Parse(parameter.ToString());
             return count >= min ? Visibility.Visible : Visibility.Collapsed;
         }
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
     }
 }

@@ -501,6 +501,10 @@ namespace PileDesign.ViewModels
                 SoilPileLampStates.Add(new PileDesign.Models.LampState(i, false));
             }
 
+            // 既存ランプのイベント解除
+            foreach (var lamp in SoilPileLampStates)
+                lamp.PropertyChanged -= OnLampPropertyChanged;
+
             // ランプのPropertyChanged購読（AllLampsLit通知用）
             foreach (var lamp in SoilPileLampStates)
             {
@@ -508,6 +512,8 @@ namespace PileDesign.ViewModels
             }
 
             // 根入れランプ（Embedment）が存在する場合は 1 つ以上作成する（ここでは単一扱い）
+            foreach (var lamp in EmbedmentLampStates)
+                lamp.PropertyChanged -= OnLampPropertyChanged;
             EmbedmentLampStates.Clear();
             if (SoilEmbedment != null && InputModel?.EmbedmentInput != null && InputModel.EmbedmentInput.EmbedmentLayersCount > 0)
             {

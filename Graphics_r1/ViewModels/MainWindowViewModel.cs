@@ -2249,7 +2249,7 @@ namespace PileDesign.ViewModels
         private void OnAdjustRectLoadPlan()
         {
             // Undoポイントを追加
-            TrySaveUndoSnapshotSafely();
+            TrySaveUndoSnapshotSafelyOptimized();
 
             // BoundingBoxCalculator を使用して境界を計算
             var boundingBox = BoundingBoxCalculator.Calculate(
@@ -2274,9 +2274,8 @@ namespace PileDesign.ViewModels
 
             IsGroupPileSettlementAnalysisDone = false;
 
-            // 変更後（以下の箇所で適用）
+            // 変更後（UpdateWindowImmediate 内で UpdateTreeView も実行される）
             UpdateWindowImmediate();
-            UpdateTreeView();
         }
 
 
@@ -2907,6 +2906,9 @@ namespace PileDesign.ViewModels
         {
             try
             {
+                // 水平解析済みの荷重ケース・荷重組み合わせ・液状化条件を判定
+                UpdateDocxOutputAnalyzedFlags();
+
                 var dockxOutputOptionWindow = new DocxOutputWindow(this);
                 dockxOutputOptionWindow.Show();
             }
@@ -2914,6 +2916,57 @@ namespace PileDesign.ViewModels
             {
                 MessageBox.Show($"計算書出力ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// AnalysisStepResults を参照し、各荷重ケース・荷重組み合わせ・液状化条件の解析済みフラグを設定
+        /// </summary>
+        private void UpdateDocxOutputAnalyzedFlags()
+        {
+            var results = CurrentModel?.AnalysisStepResults;
+            if (results == null || results.Count == 0)
+            {
+                // 解析結果なし → すべて未解析
+                foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1) { lc.IsAnalyzed = false; lc.IsApplicable = false; }
+                foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2) { lc.IsAnalyzed = false; lc.IsApplicable = false; }
+                foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations) { comb.IsAnalyzed = false; comb.IsApplicable = false; }
+                IsLiquefactionYesAnalyzed = false;
+                IsLiquefactionNoAnalyzed = false;
+                IncludeOutputLiquefactionYes = false;
+                IncludeOutputLiquefactionNo = false;
+                return;
+            }
+
+            // 解析済み荷重ケース名のセット
+            var analyzedLoadCaseNames = new HashSet<string>(
+                results.Where(r => r.LoadCase != null).Select(r => r.LoadCase.LoadName));
+
+            foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1)
+            {
+                lc.IsAnalyzed = analyzedLoadCaseNames.Contains(lc.LoadName);
+                if (!lc.IsAnalyzed) lc.IsApplicable = false;
+            }
+            foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2)
+            {
+                lc.IsAnalyzed = analyzedLoadCaseNames.Contains(lc.LoadName);
+                if (!lc.IsAnalyzed) lc.IsApplicable = false;
+            }
+
+            // 解析済み荷重組み合わせ名のセット
+            var analyzedCombNames = new HashSet<string>(
+                results.Where(r => r.LoadCombination != null).Select(r => r.LoadCombination.Name));
+
+            foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations)
+            {
+                comb.IsAnalyzed = analyzedCombNames.Contains(comb.Name);
+                if (!comb.IsAnalyzed) comb.IsApplicable = false;
+            }
+
+            // 液状化条件
+            IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);
+            IsLiquefactionNoAnalyzed = results.Any(r => !r.IsLiquefaction);
+            IncludeOutputLiquefactionYes = IsLiquefactionYesAnalyzed;
+            IncludeOutputLiquefactionNo = IsLiquefactionNoAnalyzed;
         }
 
         // オプション表示メソッド
@@ -3195,7 +3248,7 @@ namespace PileDesign.ViewModels
                         "AI連携設定", MessageBoxButton.OK, MessageBoxImage.Information);
 
                     // クリップボードにコピー
-                    try { Clipboard.SetText(jsonSnippet); } catch { }
+                    try { Clipboard.SetText(jsonSnippet); } catch (System.Runtime.InteropServices.ExternalException) { }
                     return;
                 }
 
@@ -3752,7 +3805,7 @@ namespace PileDesign.ViewModels
             if (appMain != null)
             {
                 try { window.Owner = appMain; }
-                catch { }
+                catch (InvalidOperationException) { }
             }
 
             window.ShowDialog();
@@ -4190,7 +4243,7 @@ namespace PileDesign.ViewModels
             if (appMain != null)
             {
                 try { window.Owner = appMain; }
-                catch { }
+                catch (InvalidOperationException) { }
             }
 
             window.ShowDialog();
@@ -4357,30 +4410,30 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    int width = (int)(Canvas3DLayout.ActualWidth * scale);
-                    int height = (int)(Canvas3DLayout.ActualHeight * scale);
+                    // システムDPIを取得
+                    var dpiInfo = VisualTreeHelper.GetDpi(Canvas3DLayout);
+                    double dpiX = dpiInfo.PixelsPerInchX;
+                    double dpiY = dpiInfo.PixelsPerInchY;
 
-                    // Canvas を RenderTargetBitmap でキャプチャ
+                    int width = (int)(Canvas3DLayout.ActualWidth * dpiX / 96.0 * scale);
+                    int height = (int)(Canvas3DLayout.ActualHeight * dpiY / 96.0 * scale);
+
+                    // Canvas を RenderTargetBitmap でキャプチャ（システムDPI考慮）
                     var rtb = new RenderTargetBitmap(
                         width,
                         height,
-                        96 * scale, 96 * scale,
+                        dpiX * scale, dpiY * scale,
                         PixelFormats.Pbgra32);
 
-                    // DrawingVisualを使用して背景とCanvasを合成
+                    // 背景を白で描画してからCanvasを直接レンダリング
                     var dv = new DrawingVisual();
                     using (var dc = dv.RenderOpen())
                     {
-                        // 背景を白で塗りつぶし（Canvasの背景がTransparentなため）
                         dc.DrawRectangle(Brushes.White, null,
-                            new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
-
-                        // VisualBrushでCanvasを描画
-                        var vb = new VisualBrush(Canvas3DLayout);
-                        dc.DrawRectangle(vb, null,
                             new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
                     }
                     rtb.Render(dv);
+                    rtb.Render(Canvas3DLayout);
 
                     // エンコーダーを選択
                     BitmapEncoder encoder = System.IO.Path.GetExtension(dialog.FileName).ToLower() switch
@@ -4420,30 +4473,30 @@ namespace PileDesign.ViewModels
                 {
                     scale = parsedScale;
                 }
-                int width = (int)(Canvas3DLayout.ActualWidth * scale);
-                int height = (int)(Canvas3DLayout.ActualHeight * scale);
+                // システムDPIを取得
+                var dpiInfo = VisualTreeHelper.GetDpi(Canvas3DLayout);
+                double dpiX = dpiInfo.PixelsPerInchX;
+                double dpiY = dpiInfo.PixelsPerInchY;
 
-                // Canvas を RenderTargetBitmap でキャプチャ
+                int width = (int)(Canvas3DLayout.ActualWidth * dpiX / 96.0 * scale);
+                int height = (int)(Canvas3DLayout.ActualHeight * dpiY / 96.0 * scale);
+
+                // Canvas を RenderTargetBitmap でキャプチャ（システムDPI考慮）
                 var rtb = new RenderTargetBitmap(
                     width,
                     height,
-                    96 * scale, 96 * scale,
+                    dpiX * scale, dpiY * scale,
                     PixelFormats.Pbgra32);
 
-                // DrawingVisualを使用して背景とCanvasを合成
+                // 背景を白で描画してからCanvasを直接レンダリング
                 var dv = new DrawingVisual();
                 using (var dc = dv.RenderOpen())
                 {
-                    // 背景を白で塗りつぶし（Canvasの背景がTransparentなため）
                     dc.DrawRectangle(Brushes.White, null,
-                        new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
-
-                    // VisualBrushでCanvasを描画
-                    var vb = new VisualBrush(Canvas3DLayout);
-                    dc.DrawRectangle(vb, null,
                         new Rect(0, 0, Canvas3DLayout.ActualWidth, Canvas3DLayout.ActualHeight));
                 }
                 rtb.Render(dv);
+                rtb.Render(Canvas3DLayout);
 
                 // クリップボードにコピー
                 System.Windows.Clipboard.SetImage(rtb);
@@ -4763,7 +4816,8 @@ namespace PileDesign.ViewModels
             var result = MessageBox.Show(
                 $"自動保存されたファイルが見つかりました。\n\n" +
                 $"保存日時: {fileInfo.CreationTime:yyyy/MM/dd HH:mm:ss}\n" +
-                $"ファイル: {System.IO.Path.GetFileName(latestAutoSave)}\n\n" +
+                $"ファイル: {System.IO.Path.GetFileName(latestAutoSave)}\n" +
+                $"場所: {System.IO.Path.GetDirectoryName(latestAutoSave)}\n\n" +
                 $"このファイルを復元しますか？",
                 "自動保存ファイルの復元",
                 MessageBoxButton.YesNo,
@@ -4831,6 +4885,14 @@ namespace PileDesign.ViewModels
                     MessageBox.Show($"自動保存ファイルの復元に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+
+            // はい・いいえどちらでもリネームして再表示を防止（データは残すので手動復元可能）
+            try
+            {
+                var dismissed = latestAutoSave.Replace("_autosave_", "_autosave_dismissed_");
+                System.IO.File.Move(latestAutoSave, dismissed);
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[AutoSave] リネーム失敗: {ex.Message}"); }
         }
 
         // ==================== InputNode 管理機能 ====================

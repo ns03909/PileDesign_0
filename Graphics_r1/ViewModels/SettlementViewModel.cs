@@ -70,7 +70,7 @@ namespace PileDesign.ViewModels
                 {
                     double valueInMm = value * 1000.0;
                     PileBody.SettlePileToeDia = valueInMm;
-                    SoilPile.Dp = valueInMm;
+                    if (SoilPile != null) SoilPile.Dp = valueInMm;
                     OnPropertyChanged(nameof(SettlePileToeDiaM));
                     DrawShapes();
                     ExecuteAnalysis();

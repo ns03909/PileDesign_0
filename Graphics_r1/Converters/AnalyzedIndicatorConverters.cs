@@ -21,6 +21,9 @@ namespace PileDesign.Converters
                 values[1] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
+                if (loadCaseName is "ALL" or "All")
+                    return Visibility.Collapsed;
+
                 bool isAnalyzed = model.AnalysisStepResults
                     .Any(r => r.LoadCase?.LoadName == loadCaseName);
                 return isAnalyzed ? Visibility.Visible : Visibility.Collapsed;
@@ -29,13 +32,13 @@ namespace PileDesign.Converters
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => null;
     }
 
     /// <summary>
     /// 荷重組み合わせ名が解析済みかどうかを Visibility に変換する。
-    /// values[0]: string loadCombinationName (ComboBox item, GetName() 形式)
-    /// values[1]: string selectedLoadCaseName
+    /// values[0]: string loadCombinationName (GetName() or Name 形式)
+    /// values[1]: string selectedLoadCaseName (省略時 or "All"/"ALL" は全荷重ケース対象)
     /// values[2]: AnaModel currentModel
     /// </summary>
     public class LoadCombinationAnalyzedConverter : IMultiValueConverter
@@ -44,20 +47,28 @@ namespace PileDesign.Converters
         {
             if (values.Length >= 3 &&
                 values[0] is string loadCombinationName &&
-                values[1] is string selectedLoadCaseName &&
                 values[2] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
+                // "ALL" / "All" は全荷重組み合わせ対象
+                if (loadCombinationName is "ALL" or "All")
+                    return Visibility.Collapsed;
+
+                string? selectedLoadCase = values[1] as string;
+                bool filterByLoadCase = !string.IsNullOrEmpty(selectedLoadCase) &&
+                                        selectedLoadCase != "ALL" && selectedLoadCase != "All";
+
                 bool isAnalyzed = model.AnalysisStepResults
-                    .Any(r => r.LoadCase?.LoadName == selectedLoadCaseName &&
-                              r.LoadCombination?.GetName() == loadCombinationName);
+                    .Any(r => (!filterByLoadCase || r.LoadCase?.LoadName == selectedLoadCase) &&
+                              (r.LoadCombination?.GetName() == loadCombinationName ||
+                               r.LoadCombination?.Name == loadCombinationName));
                 return isAnalyzed ? Visibility.Visible : Visibility.Collapsed;
             }
             return Visibility.Collapsed;
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => null;
     }
 
     /// <summary>
@@ -79,7 +90,7 @@ namespace PileDesign.Converters
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => null;
     }
 
     /// <summary>
@@ -103,7 +114,7 @@ namespace PileDesign.Converters
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => null;
     }
 
     /// <summary>
@@ -120,7 +131,12 @@ namespace PileDesign.Converters
                 values[1] is AnaModel model &&
                 model.AnalysisStepResults != null)
             {
-                bool targetIsLiq = liqLabel.Contains("考慮") || liqLabel == "True" || liqLabel == "true";
+                // "ALL" は常にインジケータ非表示
+                if (liqLabel is "ALL" or "All")
+                    return Visibility.Collapsed;
+
+                bool targetIsLiq = liqLabel.Contains("考慮") || liqLabel == "有" ||
+                                   liqLabel == "True" || liqLabel == "true";
                 bool isAnalyzed = model.AnalysisStepResults
                     .Any(r => r.IsLiquefaction == targetIsLiq);
                 return isAnalyzed ? Visibility.Visible : Visibility.Collapsed;
@@ -129,6 +145,6 @@ namespace PileDesign.Converters
         }
 
         public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-            => throw new NotImplementedException();
+            => null;
     }
 }

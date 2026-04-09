@@ -589,7 +589,7 @@ namespace PileDesign.Views
                     vm.RefreshPlots();
                 }
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
 
         // 引張定着筋チェック ON
@@ -602,7 +602,7 @@ namespace PileDesign.Views
                     vm.RefreshPlots();
                 }
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
 
         // 引張定着筋チェック OFF
@@ -615,7 +615,7 @@ namespace PileDesign.Views
                     vm.RefreshPlots();
                 }
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
 
         // FT 関連のイベントハンドラ（ChangWindow.xaml が参照しているスタブ）
@@ -625,7 +625,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
 
         private void CheckBoxHasFTTensionAnchorsChecked(object? sender, RoutedEventArgs e)
@@ -634,7 +634,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
 
         private void CheckBoxHasFTTensionAnchorsUnchecked(object? sender, RoutedEventArgs e)
@@ -643,7 +643,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
 
         private void TextBoxFTTensionNumChanged(object? sender, TextChangedEventArgs e)
@@ -652,7 +652,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
         }
         // --- 追加終了 ---
 

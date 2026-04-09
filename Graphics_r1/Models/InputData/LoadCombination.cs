@@ -77,7 +77,23 @@ namespace PileDesign.Models.InputData
 
 
 
-        public string Name => "αL:" + Alpha1.ToString("F2") + "/" + "βU:" + Beta1.ToString("F2") + "/" + "βL:" + Beta2.ToString("F2");
+        private bool _isAnalyzed = true;
+        /// <summary>水平解析が実施済みかどうか（DocxOutputWindow表示時にセット）</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsAnalyzed
+        {
+            get => _isAnalyzed;
+            set
+            {
+                if (_isAnalyzed != value)
+                {
+                    _isAnalyzed = value;
+                    OnPropertyChanged(nameof(IsAnalyzed));
+                }
+            }
+        }
+
+        public string Name => "α\u2097:" + Alpha1.ToString("F2") + "/β\u1d64:" + Beta1.ToString("F2") + "/β\u2097:" + Beta2.ToString("F2");
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName) =>

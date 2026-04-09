@@ -569,7 +569,7 @@
     <div class="main-content" id="mainText">
 
         <section id="section1">
-            <p><strong>基礎杭検討プログラム (基礎地盤研究会)</strong> <span id="app-version" style="color:red;">ver 1.0.0-beta</span></p>
+            <p><strong>基礎杭検討プログラム (基礎地盤研究会)</strong> <span id="app-version" style="color:red;">ver 1.0.1-beta</span></p>
         </section>
 
         <section id="section0">
@@ -868,10 +868,46 @@
         </section>
 
         <section id="quickstart">
-            <h2>クイックスタートガイド</h2>
+            <h2 id="quickstart">クイックスタートガイド</h2>
             <p>
-                本プログラムを初めて使用する方向けに、基本的な操作の流れを説明します。
+                本プログラムを初めて使用する方向けに、基本的な操作の流れを説明します。<br>
+                下図の順序で入力・解析を進めてください。
             </p>
+
+            <!-- フロー図 -->
+            <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px; margin:16px 0; font-size:0.85em;">
+                <div style="background:#62B0E2; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 1</strong><br>新規/サンプル
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#62B0E2; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 2</strong><br>荷重条件
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#62B0E2; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 3</strong><br>地盤条件
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#62B0E2; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 4</strong><br>杭体
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#62B0E2; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 5</strong><br>杭配置
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#62B0E2; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 6</strong><br>杭軸力
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#238966; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 7</strong><br>要素分割
+                </div>
+                <span style="font-size:1.2em;">&#x25B6;</span>
+                <div style="background:#E95541; color:#fff; padding:6px 12px; border-radius:6px; text-align:center;">
+                    <strong>Step 8</strong><br>水平解析
+                </div>
+            </div>
 
             <h3>Step 1: 新規プロジェクトの開始</h3>
             <ol>
@@ -881,8 +917,11 @@
             </ol>
 
             <h3>Step 2: 荷重条件の設定</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 地震時に建物から杭基礎に伝わる水平力（慣性力）の大きさと作用位置を定義します。この値が解析の入力荷重となります。
+            </p>
             <ol>
-                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「荷重」ボタンで「荷重」ウィンドウを開きます。</li>
+                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「LOAD」ボタンで「荷重」ウィンドウを開きます。</li>
                 <li>「荷重ケース」タブを押します。</li>
                 <li>レベル1地震荷重共通入力で、慣性力中心X(m)、Y(m)、Z(m)と上部構造慣性力、基礎部慣性力をそれぞれ入力、適用ボタンを押していきます。</li>
                 <li>レベル2地震荷重共通入力で、慣性力中心X(m)、Y(m)、Z(m)と上部構造慣性力、基礎部慣性力をそれぞれ入力、適用ボタンを押していきます。</li>
@@ -890,16 +929,22 @@
             </ol>
 
             <h3>Step 3: 地盤条件の設定</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 杭を支える地盤の硬さ（N値など）を入力します。地盤の種類により杭に作用する水平地盤反力係数や液状化の影響が決まります。
+            </p>
             <ol>
-                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「地盤」ボタンで「地盤」ウィンドウを開きます。</li>
+                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「SOIL」ボタンで「地盤」ウィンドウを開きます。</li>
                 <li>ボーリングデータに基づいて土層情報やN値を入力します。</li>
                 <li>液状化危険度の検討、地盤変位が自動計算されます。</li>
                 <li>「保存して閉じる」を押します。</li>
             </ol>
 
             <h3>Step 4: 杭体の設定</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 杭の直径、長さ、材質、配筋を定義します。これらの情報から杭の曲げ剛性（EI）や耐力（MN曲線）が自動計算され、解析と断面照査に使われます。
+            </p>
             <ol>
-                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「杭体」ボタンで「杭体」入力ウィンドウを開きます。</li>
+                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「PILE」ボタンで「杭体」入力ウィンドウを開きます。</li>
                 <li>杭の種類（場所打ち杭、既製コンクリート杭）を選択します。</li>
                 <li>複数の杭体区間がある場合は、「区間追加」ボタンで複数の区間を設定します。</li>
                 <li>各杭体区間で、「杭断面編集」ボタンを押し、「杭断面」ウィンドウを開き、断面情報を入力します。</li>
@@ -908,6 +953,9 @@
             </ol>
 
             <h3>Step 5: 杭配置の入力</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 建物平面上のどの位置に杭を配置するかを定義します。杭の本数・配置により群杭効果や荷重分担が変わります。
+            </p>
             <ol>
                 <li>メイン画面左ペインの「杭」→「配置」タブを開きます。</li>
                 <li>「杭配置追加」ボタンで杭を追加し、X, Y座標を入力します。</li>
@@ -915,6 +963,9 @@
             </ol>
 
             <h3>Step 6: 杭軸力の入力</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 各杭が負担する鉛直荷重（軸力）を入力します。軸力は杭の曲げ耐力や地盤反力に影響するため、正確な入力が重要です。
+            </p>
             <ol>
                 <li>メイン画面左ペインの「杭」→「軸力」タブで各杭の鉛直荷重を入力します。</li>
                 <li>常時荷重（VL0）と追加荷重（VLadd）を分けて入力できます。</li>
@@ -923,9 +974,12 @@
             </ol>
 
             <h3>Step 7: 要素分割</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 有限要素法（FEM）による解析を行うため、杭を細かい要素に分割する必要があります。分割が細かいほど精度が上がりますが、計算時間も増えます。
+            </p>
             <ol>
                 <li>地盤と杭体を適切に入力をした後、その組み合わせごとに要素分割を行う必要があります。</li>
-                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「要素分割（未）」ボタンを押し「要素分割」ウィンドウを開きます。</li>
+                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「SPLIT」ボタンを押し「要素分割」ウィンドウを開きます。</li>
                 <li>デフォルトでは土層、杭体区間が切り替わる高さで自動的に区切られた分割状態となっています。</li>
                 <li>自動要素分割ボタンによる1m分割などで要素分割を行います。</li>
                 <li>全ての組合せに対して確認（少なくとも画面表示）を行います。</li>
@@ -933,8 +987,11 @@
             </ol>
 
             <h3>Step 8: 水平解析の実行</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 地震時の水平力に対して杭がどのように変形し、どのような応力が生じるかを数値解析で求めます。これが杭基礎設計の最も重要な検討です。
+            </p>
             <ol>
-                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「水平解析（未）」ボタンを押し「水平解析」ウィンドウを開きます。</li>
+                <li>リボンメニュー「解析条件/解析(S)」タブまたは右ペインの「水平解析」ボタンを押し「水平解析」ウィンドウを開きます。</li>
                 <li>（時間がかかる場合があるので）最低限の荷重ケースのみを選択して水平解析を行います。</li>
                 <li>解析が完了すると、画面上で解析結果を確認できるほか、出力メニューでグラフ、表形式で確認できます。</li>
                 <li>各杭の応力状態（曲げモーメント、せん断力、変位等）を確認できます。</li>
@@ -946,13 +1003,13 @@
                     <dt>サンプルファイルの活用</dt>
                     <dd>Examplesフォルダには様々な条件のサンプルファイルがあります。<br>まずサンプルを開いて動作を確認してみてください。</dd>
                     <dt>Excelとの連携</dt>
-                    <dd>データグリッドではExcelからのコピー＆ペースト（Ctrl+V）が使えます。<br>効率よく入出力ができます。</dd>
+                    <dd>データグリッドではExcelからのコピー&amp;ペースト（Ctrl+V）が使えます。<br>効率よく入出力ができます。</dd>
                     <dt>グラフデータの活用</dt>
                     <dd>右クリックメニューからデータのコピーが可能です。</dd>
                     <dt>3Dビューの活用</dt>
                     <dd>右ドラッグでビュー回転、中ボタンドラッグで平行移動ができます。<br>ビューキューブをクリックすると定義されたビュー（平面図、立面図等）に素早く切り替えられます。</dd>
                     <dt>要素分割のコツ</dt>
-                    <dd>詳細な結果を得る必要がなければ、1m程度の自動要素分割をがよいでしょう。</dd>
+                    <dd>詳細な結果を得る必要がなければ、1m程度の自動要素分割がよいでしょう。</dd>
                     <dt>水平解析のコツ</dt>
                     <dd>杭体非線形の水平解析には時間がかかります。<br>初期段階では、一方向の荷重で検討を進めるとよいでしょう。</dd>
                 </dl>
@@ -1158,6 +1215,65 @@
                     </tr>
                 </tbody>
             </table>
+            <p>
+                地震荷重ケースが選択されている場合、オレンジ色の矢印で地震慣性力方向を示します。
+            </p>
+
+            <h3 style="font-weight: bold;">自動保存と復元</h3>
+
+            <h4>自動保存機能</h4>
+            <p>
+                本プログラムには、作業中のデータを定期的に自動保存する機能があります。
+                予期しないクラッシュや停電などでデータが失われることを防ぎます。
+            </p>
+            <ul>
+                <li>自動保存は、ファイルを開いた状態または保存済みの状態で、一定間隔（既定: 5分）で実行されます。</li>
+                <li>自動保存ファイルは以下のフォルダに保存されます：
+                    <pre style="background:#f5f5f5; padding:8px; border-radius:4px; font-size:0.9em;">%LocalAppData%\PileDesign\AutoSave\</pre>
+                    （通常: <code>C:\Users\（ユーザー名）\AppData\Local\PileDesign\AutoSave\</code>）
+                </li>
+                <li>ファイル名は <code>（プロジェクト名）_autosave_（日時）.json</code> の形式です。</li>
+            </ul>
+
+            <h4>起動時の復元ダイアログ</h4>
+            <p>
+                アプリケーション起動時に、24時間以内に作成された自動保存ファイルが検出されると、
+                以下の復元確認ダイアログが表示されます。
+            </p>
+            <table class="table-doc">
+                <thead>
+                    <tr>
+                        <th style="text-align: center">選択</th>
+                        <th style="text-align: center">動作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>はい</strong></td>
+                        <td>自動保存ファイルからデータを復元します。復元後、通常通り「名前を付けて保存」で正式に保存してください。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>いいえ</strong></td>
+                        <td>復元せず、空のプロジェクトで開始します。</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>
+                どちらを選択した場合でも、該当の自動保存ファイルは確認済みとしてリネームされ、
+                次回起動時には同じダイアログは表示されません。
+            </p>
+
+            <h4>手動での復元</h4>
+            <p>
+                ダイアログで「いいえ」を選択した後でも、自動保存フォルダ内のファイルは削除されずに残っています。
+                手動で復元したい場合は、以下の手順で行えます：
+            </p>
+            <ol>
+                <li>上記の自動保存フォルダをエクスプローラーで開きます。</li>
+                <li>ファイル名に <code>_dismissed_</code> が含まれるファイルが、確認済みの自動保存ファイルです。</li>
+                <li>ファイル名から <code>_dismissed</code> を削除してリネームすると、次回起動時に復元ダイアログが再度表示されます。</li>
+                <li>または、「ファイルを開く」から直接自動保存ファイル（.json）を開くこともできます。</li>
+            </ol>
 
             <h3 style="font-weight: bold;">データグリッド(表)操作</h3>
             <p>
@@ -2133,7 +2249,7 @@
 
             <h5>「孔口レベル・地下水位」タブ</h5>
             <p>地盤の基準となる標高と深度を設定します。上段が標高（Z）入力、下段がGL深さ表示です。標高と深度は連動しています。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2170,7 +2286,7 @@
 
             <h5>「液状化」タブ</h5>
             <p>液状化判定に用いる設計用地表面加速度を設定します。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2191,7 +2307,7 @@
 
             <h5>「地盤変位」タブ</h5>
             <p>地盤の地震時水平変位の算定に関するパラメータを設定します。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2227,7 +2343,7 @@
                 地盤の土層構成を定義します。「土層追加」ボタンで行を追加し、各行の右端の「×」ボタンで削除できます。<br>
                 土層データは上位層から順に入力します。
             </p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>列名</th>
@@ -2323,7 +2439,7 @@
             </p>
 
             <h6>入力項目</h6>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>列名</th>
@@ -2359,7 +2475,7 @@
             </table>
 
             <h6>自動計算項目</h6>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>列名</th>
@@ -2411,7 +2527,7 @@
             </table>
 
             <h6>液状化判定結果（自動計算）</h6>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>列名</th>
@@ -2465,7 +2581,7 @@
 
             <h6>レベル1・レベル2地震動の計算結果（自動計算）</h6>
             <p>以下の項目がレベル1地震動（緑色ヘッダー）とレベル2地震動（青色ヘッダー）のそれぞれについて表示されます。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>列名</th>
@@ -2534,7 +2650,7 @@
 
             <h5>グラフ表示（右側パネル）</h5>
             <p>右側パネルのタブで各種グラフを確認できます。グラフ上でマウスカーソルを動かすと、座標値が表示されます。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>タブ名</th>
@@ -2598,7 +2714,7 @@
 
             <h5>杭体タイプ</h5>
             <p>以下の杭体タイプから選択します。選択した杭体タイプにより、入力可能な項目や杭断面の構成が異なります。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>杭体タイプ</th>
@@ -2635,7 +2751,7 @@
             <p>杭頭編集ウィンドウでは以下の項目を設定できます。</p>
 
             <p><b>パイルキャップ</b></p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2679,7 +2795,7 @@
                 杭体の中間区間を定義します。「区間追加」ボタンで区間を追加できます。<br>
                 各区間について以下の項目を設定します。
             </p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>列名</th>
@@ -2714,7 +2830,7 @@
             <p>各区間の断面詳細を設定します。入力項目は杭体タイプにより異なります。</p>
 
             <p><b>場所打ち鉄筋コンクリート杭</b></p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2779,7 +2895,7 @@
 
             <h5>杭先端</h5>
             <p>杭先端の施工条件を設定します。</p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2802,7 +2918,7 @@
             </table>
 
             <p><b>場所打ちコンクリート杭の場合の追加項目</b></p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -2822,7 +2938,7 @@
             </table>
 
             <p><b>既製コンクリート杭の場合の追加項目</b></p>
-            <table>
+            <table class="table-doc">
                 <thead>
                     <tr>
                         <th>項目</th>
@@ -4696,7 +4812,7 @@
 
             <p>
                 ペナルティ法は直接消去法と異なり、マトリクスの構造を変更せずに大きなばね定数を剛性マトリクスに加算するだけで
-                拘束を実現できるため、実装が簡単です。ただし、$K_{big}$の値が大きすぎると行列の条件数が悪化し、
+                拘束を実現できますが、値が大きすぎると行列の条件数が悪化し、
                 数値的な不安定性を生じる場合があります。
             </p>
 
@@ -5712,19 +5828,19 @@
                 本プログラムでは、基礎指針'19に準拠した限界状態設計法による検討を行います。
             </p>
 
-            <h3>使用限界状態 (SLS: Serviceability Limit State)</h3>
+            <h3 id="section-sls">使用限界状態 (SLS: Serviceability Limit State)</h3>
             <p>
                 通常使用時に要求される機能を満足するための限界状態です。
                 鉛直荷重に対しては$\phi_R = 1/3$、水平荷重に対しては弾性範囲内であることを確認します。
             </p>
 
-            <h3>損傷限界状態 (DLS: Damage Limit State)</h3>
+            <h3 id="section-dls">損傷限界状態 (DLS: Damage Limit State)</h3>
             <p>
                 レベル1地震動に対して、補修なしで使用継続可能な限界状態です。
                 鉛直荷重に対しては$\phi_R = 1/1.5$を適用します。
             </p>
 
-            <h3>安全限界状態 (ULS: Ultimate Limit State)</h3>
+            <h3 id="section-uls">安全限界状態 (ULS: Ultimate Limit State)</h3>
             <p>
                 レベル2地震動に対して、人命の安全確保および建物の崩壊防止が可能な限界状態です。
                 鉛直荷重に対しては$\phi_R = 1/1$（極限支持力）を適用します。
@@ -6039,6 +6155,83 @@
             </p>
         </section>
 
+        <section id="glossary">
+            <h1>用語集</h1>
+            <p>本プログラムで使用される主な専門用語を解説します。</p>
+
+            <h2>杭に関する用語</h2>
+            <dl>
+                <dt><strong>杭頭（くいとう）</strong></dt>
+                <dd>杭の最上部。建物の基礎（フーチング）と接合する部分です。接合方法により「杭頭固定」「半固定」に分かれます。</dd>
+
+                <dt><strong>杭体（くいたい）</strong></dt>
+                <dd>杭の本体部分。地中に挿入される柱状の構造部材で、直径・長さ・材質（鉄筋コンクリート、鋼管等）により特性が異なります。</dd>
+
+                <dt><strong>杭先端（くいせんたん）</strong></dt>
+                <dd>杭の最下端。支持層に到達する部分で、鉛直支持力に大きく寄与します。拡底杭の場合、ここが広がっています。</dd>
+
+                <dt><strong>根入部（ねいれぶ）</strong></dt>
+                <dd>フーチング（基礎底面）が地盤に埋まっている部分。土圧による水平抵抗が生じます。</dd>
+
+                <dt><strong>杭軸力（くいじくりょく）</strong></dt>
+                <dd>杭に作用する鉛直方向の力（圧縮力・引張力）。建物の自重や地震時の転倒モーメントから求めます。</dd>
+
+                <dt><strong>群杭効果（ぐんくいこうか）</strong></dt>
+                <dd>複数の杭が近接して配置されたとき、杭同士の影響により1本あたりの水平地盤反力が低下する現象です。群杭係数で補正します。</dd>
+            </dl>
+
+            <h2>地盤に関する用語</h2>
+            <dl>
+                <dt><strong>N値</strong></dt>
+                <dd>標準貫入試験で得られる地盤の硬さの指標。値が大きいほど硬い地盤です。水平地盤反力係数 kh の算定に使います。</dd>
+
+                <dt><strong>水平地盤反力係数 kh（すいへいじばんはんりょくけいすう）</strong></dt>
+                <dd>地盤が杭の水平変位に対して発揮する抵抗力の係数。杭の変位に比例する「ばね」として地盤をモデル化します。</dd>
+
+                <dt><strong>液状化（えきじょうか）</strong></dt>
+                <dd>地震時に飽和砂質地盤が液体のように振る舞う現象。液状化が生じると地盤反力が著しく低下し、地盤変位が発生します。</dd>
+
+                <dt><strong>地盤変位（じばんへんい）</strong></dt>
+                <dd>液状化等により地盤が水平方向に変位する現象。杭にとって強制変位として作用し、追加の曲げモーメントが発生します。</dd>
+            </dl>
+
+            <h2>解析に関する用語</h2>
+            <dl>
+                <dt><strong>要素分割（ようそぶんかつ）</strong></dt>
+                <dd>有限要素法（FEM）で解析するために、杭を短い「要素」に分割する操作です。各要素の節点にばねや荷重を設定して解析します。</dd>
+
+                <dt><strong>有限要素法 FEM（ゆうげんようそほう）</strong></dt>
+                <dd>構造物を多数の要素に分割し、各要素の力の釣り合いから全体の変形・応力を数値的に求める解析手法です。</dd>
+
+                <dt><strong>EI（曲げ剛性）</strong></dt>
+                <dd>部材の曲がりにくさを表す値。弾性係数 E と断面二次モーメント I の積です。値が大きいほど曲がりにくい部材です。</dd>
+
+                <dt><strong>MN曲線（エムエヌきょくせん）</strong></dt>
+                <dd>軸力 N と曲げモーメント M の関係を示す耐力曲線。この曲線の内側であれば安全、外側なら耐力を超えています。使用限界・損傷限界・安全限界の3段階で評価します。</dd>
+
+                <dt><strong>M-φ曲線（エムファイきょくせん）</strong></dt>
+                <dd>曲げモーメント M と曲率 φ の関係。コンクリートのひび割れや鉄筋の降伏により非線形になります。杭体の非線形解析で使用します。</dd>
+
+                <dt><strong>ニュートン・ラフソン法</strong></dt>
+                <dd>非線形方程式を反復計算で解く数値解法。地盤や杭体の非線形性を考慮した解析で使用します。</dd>
+            </dl>
+
+            <h2>設計に関する用語</h2>
+            <dl>
+                <dt><strong>使用限界状態（SLS）</strong></dt>
+                <dd>日常使用において支障が生じない限界。コンクリートのひび割れ幅や変位の制限です。<a href="#section-sls">詳細</a></dd>
+
+                <dt><strong>損傷限界状態（DLS）</strong></dt>
+                <dd>構造体が修復可能な範囲内にとどまる限界。レベル1地震動に対する検定、耐震グレードSのレベル2地震動に対する検定に使用します。<a href="#section-dls">詳細</a></dd>
+
+                <dt><strong>安全限界状態（ULS）</strong></dt>
+                <dd>構造体が崩壊しない限界。耐震グレードA、レベル2地震動に対する検定に使用します。<a href="#section-uls">詳細</a></dd>
+
+                <dt><strong>レベル1地震動 / レベル2地震動</strong></dt>
+                <dd>レベル1は建物の供用期間中に数回程度発生する中程度の地震、レベル2は極めてまれに発生する最大級の地震を指します。</dd>
+            </dl>
+        </section>
+
         <section id="faq">
             <h1>よくある質問 (FAQ)</h1>
 
@@ -6104,21 +6297,48 @@
 
             <h2>トラブルシューティング</h2>
 
-            <!--<h3>Q: プログラムが起動しない場合は？</h3>
+            <h3>Q: 「杭下端が地盤の最下層より下にあります」と表示されます</h3>
             <p>
-                <strong>A:</strong> 以下を確認してください。
+                <strong>A:</strong> 杭の長さ（杭体の全区間長の合計）が地盤の深さを超えています。
+                地盤の最下層の下端標高を杭先端より深く設定するか、杭の長さを短くしてください。
             </p>
-            <ul>
-                <li>.NET Framework 4.8以降がインストールされているか</li>
-                <li>必要なDLLファイルが同一フォルダ内にあるか</li>
-                <li>ウイルス対策ソフトにブロックされていないか</li>
-            </ul>-->
 
-            <!--<h3>Q: ファイルを開けない場合は？</h3>
+            <h3>Q: 要素分割ウィンドウで「保存して閉じる」が押せません</h3>
+            <p>
+                <strong>A:</strong> すべての杭体-地盤の組み合わせについて要素分割状態を確認（表示）する必要があります。
+                左側のランプが全て緑色になっていることを確認してください。
+            </p>
+
+            <h3>Q: 水平解析で「荷重がゼロ」と警告されます</h3>
+            <p>
+                <strong>A:</strong> 荷重ケースウィンドウで上部構造慣性力または基礎部慣性力を入力してください。
+                荷重がゼロのケースは解析をスキップします。
+            </p>
+
+            <h3>Q: 解析が収束しない場合の対処法は？</h3>
+            <p>
+                <strong>A:</strong> 以下を段階的に試してください。
+            </p>
+            <ol>
+                <li><strong>解析ステップ数を増やす</strong>：レベル2で16～32程度に設定します。荷重を小さく分けて段階的に載荷することで安定します。</li>
+                <li><strong>安定化手法を変更する</strong>：「ラインサーチ」を選択すると、発散やリミットサイクルを防ぐ効果があります。</li>
+                <li><strong>「反復なし」を有効にする</strong>：各ステップ1回のみ解析する最も安定な方法です。ステップ数を32～64に増やしてください。</li>
+                <li><strong>入力値を確認する</strong>：荷重が杭の支持力を大幅に超えていないか、地盤のN値が極端でないか確認してください。</li>
+            </ol>
+
+            <h3>Q: 入力を変更したら解析結果が消えてしまいました</h3>
+            <p>
+                <strong>A:</strong> 杭配置、地盤条件、杭体仕様など構造モデルに影響する変更を行うと、
+                既存の要素分割と解析結果はリセットされます。これは古い条件の結果が新しい条件と整合しないためです。
+                変更前に Ctrl+Z（元に戻す）で復帰できます。
+            </p>
+
+            <h3>Q: ファイルを開くとエラーが発生します</h3>
             <p>
                 <strong>A:</strong> ファイルが破損している可能性があります。
-                バックアップファイル（.bakまたは.json~）がある場合はそちらをお試しください。
-            </p>-->
+                自動保存ファイル（_autosave_付きのファイル）がプロジェクトフォルダ内に残っている場合は、
+                そちらを開いてみてください。
+            </p>
         </section>
 
     </div>
@@ -6184,17 +6404,44 @@
             matches[currentMatchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
+        // 用語の別名辞書（検索語を正式名称に展開）
+        const synonyms = {
+            'kh': '水平地盤反力係数',
+            'EI': '曲げ剛性',
+            'MN': 'MN曲線',
+            'NM': 'MN曲線',
+            'M-phi': 'M-φ曲線',
+            'Mφ': 'M-φ曲線',
+            'FEM': '有限要素法',
+            'NR法': 'ニュートン・ラフソン法',
+            'SLS': '使用限界状態',
+            'DLS': '損傷限界状態',
+            'ULS': '安全限界状態',
+            '地盤ばね': '水平地盤反力係数',
+            '杭径': '杭の直径',
+            'FL法': '液状化',
+            'レベル1': 'レベル1地震動',
+            'レベル2': 'レベル2地震動',
+        };
+
         document.getElementById('searchInput').addEventListener('input', function () {
-            const query = this.value.trim();
+            let query = this.value.trim();
             const results = document.getElementById('searchResults');
             results.innerHTML = '';
+
+            // 別名の展開チェック
+            let synonymNote = '';
+            if (query.length > 0 && synonyms[query]) {
+                synonymNote = `<p style="color:#555; font-size:0.9em;">「${query}」→「${synonyms[query]}」で検索</p>`;
+                query = synonyms[query];
+            }
 
             if (query.length > 1) {
                 highlightMatches(query);
                 if (matches.length > 0) {
-                    results.innerHTML = `<p>「${query}」が本文に見つかりました。</p>`;
+                    results.innerHTML = synonymNote + `<p>「${query}」が本文に見つかりました。</p>`;
                 } else {
-                    results.innerHTML = `<p>「${query}」は見つかりませんでした。</p>`;
+                    results.innerHTML = synonymNote + `<p>「${query}」は見つかりませんでした。</p>`;
                 }
             } else {
                 highlightMatches(''); // ハイライト解除

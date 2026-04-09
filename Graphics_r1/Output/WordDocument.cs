@@ -183,7 +183,7 @@ namespace PileDesign.Output
         // FrontMatter: タイトル・モデル図・目次・基本説明章
         private static void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model, byte[]? modelImageBytes = null)
         {
-            AddText(body, "杭検討プログラム ver プレプロト", "center");
+            AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddTitle(body, "基礎ぐいの検討書");
 
             // モデル図（アイソメトリック）
@@ -226,7 +226,7 @@ namespace PileDesign.Output
         // 入力情報・表類
         private void AddInputDataSection(MainDocumentPart mainPart, Body body, InputModel inputModel)
         {
-            AddText(body, "杭検討プログラム ver プレプロト", "center");
+            AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
 
             AddHeader1(body, "基本設定", 1);
@@ -278,35 +278,41 @@ namespace PileDesign.Output
 
             if (mainWindowViewModel.IncludeVertical) // 鉛直解析
             {
-                AddHeader1(body, "杭の支持力", 1);
-                AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles);
-                AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles);
-                AddLineBreak(body);
-
-                // 杭の支持力検討
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                if (mainWindowViewModel.IsVerticalAnalysisDone)
                 {
-                    AddSectionVerticalResistance(body);
+                    AddHeader1(body, "杭の支持力", 1);
+                    AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles);
+                    AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles);
                     AddLineBreak(body);
+
+                    // 杭の支持力検討
+                    if (mainWindowViewModel.CalculationReportLevel >= 2)
+                    {
+                        AddSectionVerticalResistance(body);
+                        AddLineBreak(body);
+                    }
+
+                    // 杭の沈下検討
+                    if (mainWindowViewModel.CalculationReportLevel >= 2)
+                    {
+                        AddSectionSettlement(body);
+                        AddLineBreak(body);
+                    }
+                    var soilPiles = inputModel.ElementDivision.SoilPiles;
+                    if (soilPiles is { Count: > 0 })
+                    {
+                        var soilPile = soilPiles[0];
+                        const double pileElevationH = 100;
+
+                        AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
+                        AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
+
+                        AddSettlementGraph(mainPart, body);
+                    }
                 }
-
-                // 杭の沈下検討
-                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                else
                 {
-                    AddSectionSettlement(body);
-                    AddLineBreak(body);
-                }
-                var soilPiles = inputModel.ElementDivision.SoilPiles;
-                if (soilPiles is { Count: > 0 })
-                {
-                    var soilPile = soilPiles[0];
-                    const double pileElevationW = 150;
-                    const double pileElevationH = 100;
-
-                    AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "vertical");
-                    AddAutoFigureCaption(body, "沈下解析杭モデル", "図");
-
-                    AddSettlementGraph(mainPart, body);
+                    AddText(body, "（鉛直解析が未実施のため、支持力検討は省略されています）", "left");
                 }
             }
 
@@ -351,6 +357,16 @@ namespace PileDesign.Output
                     {
                         AddPileForceSummaryTable(mainPart, body);
                         AddNMinT(mainPart, body);
+                        if (mainWindowViewModel.IncludeHorizontal_QNInT)
+                            AddQNInT(mainPart, body);
+                        if (mainWindowViewModel.IncludeHorizontal_MPhi)
+                            AddMPhiCurves(mainPart, body);
+                        if (mainWindowViewModel.IncludeHorizontal_MTheta)
+                            AddMThetaCurves(mainPart, body);
+                    }
+                    else
+                    {
+                        AddText(body, "（水平解析が未実施のため、解析結果は省略されています）", "left");
                     }
                 }
 
@@ -362,12 +378,14 @@ namespace PileDesign.Output
                 }
 
             }
-            if (mainWindowViewModel.IncludeHorizontal_Bending) // 曲げモーメント
-            { }
-            if (mainWindowViewModel.IncludeHorizontal_Shear) // せん断力
-            { }
-            if (mainWindowViewModel.IncludeHorizontal_NMinT) // NMinT
-            { }
+            // 全杭の応力ダイアグラム出力（曲げモーメント・せん断力）
+            if ((mainWindowViewModel.IncludeHorizontal_Bending || mainWindowViewModel.IncludeHorizontal_Shear)
+                && mainWindowViewModel?.IsHorizontalAnalysisDone == true && anaModel != null)
+            {
+                AddAllPileStressDiagrams(mainPart, body,
+                    mainWindowViewModel.IncludeHorizontal_Bending,
+                    mainWindowViewModel.IncludeHorizontal_Shear);
+            }
             if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
             {
                 double layoutW = 150; double layoutH = 200;
@@ -399,9 +417,31 @@ namespace PileDesign.Output
                 AddAutoFigureCaption(body, "杭頭せん断力マップ", "図");
             }
             if (mainWindowViewModel.IncludeSettlement) // 沈下
-            { }
+            {
+                if (mainWindowViewModel.IsVerticalAnalysisDone)
+                {
+                    AddPageBreak(body);
+                    AddHeader1(body, "単杭の沈下", 2);
+                    AddSettlementGraph(mainPart, body);
+                }
+                else
+                {
+                    AddText(body, "（鉛直解析が未実施のため、沈下結果は省略されています）", "left");
+                }
+            }
             if (mainWindowViewModel.IncludeLoadSettlementCurve) // 沈下曲線
-            { }
+            {
+                if (mainWindowViewModel.IsVerticalAnalysisDone)
+                {
+                    AddPageBreak(body);
+                    AddHeader1(body, "荷重-沈下曲線", 2);
+                    AddSettlementGraph(mainPart, body);
+                }
+                else
+                {
+                    AddText(body, "（鉛直解析が未実施のため、荷重-沈下曲線は省略されています）", "left");
+                }
+            }
 
             if (mainWindowViewModel.IncludeGroupPileSettlement) // 群杭沈下
             {
@@ -1270,9 +1310,9 @@ namespace PileDesign.Output
                         lineListsY.Add(ToList(nmFSvc.M));
                         lineListsLegend.Add("低減後使用限界");
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // 片側が null でも落ちないように防御
+                        System.Diagnostics.Debug.WriteLine($"[WordDoc] NM曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
                     }
 
                     // 散布点
@@ -1317,7 +1357,12 @@ namespace PileDesign.Output
 
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
-                                    foreach (var isLiquefaction in new[] { true, false })
+                                    // 液状化パターン（ユーザー選択に基づく）
+                                    var liqPatternsNM = new List<bool>();
+                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatternsNM.Add(true);
+                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatternsNM.Add(false);
+
+                                    foreach (var isLiquefaction in liqPatternsNM)
                                     {
                                         // 対象の soilPile をアイテムの代替番号から取得
                                         var soilPiles = inputModel.ElementDivision?.SoilPiles;
@@ -1460,12 +1505,12 @@ namespace PileDesign.Output
                         }
 
                         List<string> titles = ["", "", ""];
-                        List<string> xLabels = ["せん断力(kN)", "曲げモーメント(kNm)", "変位(m)"];
+                        List<string> xLabels = ["変位(m)", "せん断力(kN)", "曲げモーメント(kNm)"];
                         List<string> yLabels = ["Z(m)", "Z(m)", "Z(m)"];
 
                         AddPileElevResultToBody(
                             mainPart, body,
-                            [shears, moments, disps, soilDisps], [zs, zs, zs],
+                            [disps, shears, moments, soilDisps], [zs, zs, zs],
                             titles, xLabels, yLabels,
                             150, 100);
 
@@ -1473,6 +1518,690 @@ namespace PileDesign.Output
                             body,
                             $"杭の応力・変位　杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重組合せ:{comb.Name} | 液状化: {isLiq}",
                             "図");
+                    }
+                }
+            }
+        }
+
+        // 軸力-せん断力関係（QNインタラクション）
+        private void AddQNInT(MainDocumentPart mainPart, Body body)
+        {
+            if (inputModel?.PileBodies == null || inputModel.PileBodies.Count == 0)
+                return;
+
+            foreach (var pileBody in inputModel.PileBodies)
+            {
+                if (pileBody?.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
+                    continue;
+
+                for (int j = 0; j < pileBody.PileBodySegments.Count; j++)
+                {
+                    var segment = pileBody.PileBodySegments[j];
+                    if (segment?.PileSection == null) continue;
+                    int pileBodySegmentNo = segment.No;
+                    var pileSection = segment.PileSection;
+
+                    // ライン（耐力曲線）- NQプロパティは既に kN 単位
+                    List<List<double>> lineListsX = [];
+                    List<List<double>> lineListsY = [];
+                    List<string> lineListsLegend = [];
+
+                    static List<double> ToList(IEnumerable<double>? src) => src?.ToList() ?? [];
+
+                    try
+                    {
+                        var nqUUlt = pileSection.UnfactoredUltimateNQ;
+                        lineListsX.Add(ToList(nqUUlt.N));
+                        lineListsY.Add(ToList(nqUUlt.Q));
+                        lineListsLegend.Add("低減前安全限界");
+
+                        var nqFUlt = pileSection.FactoredUltimateNQ;
+                        lineListsX.Add(ToList(nqFUlt.N));
+                        lineListsY.Add(ToList(nqFUlt.Q));
+                        lineListsLegend.Add("低減後安全限界");
+
+                        var nqUDmg = pileSection.UnfactoredDamageNQ;
+                        lineListsX.Add(ToList(nqUDmg.N));
+                        lineListsY.Add(ToList(nqUDmg.Q));
+                        lineListsLegend.Add("低減前損傷限界");
+
+                        var nqFDmg = pileSection.FactoredDamageNQ;
+                        lineListsX.Add(ToList(nqFDmg.N));
+                        lineListsY.Add(ToList(nqFDmg.Q));
+                        lineListsLegend.Add("低減後損傷限界");
+
+                        var nqUSvc = pileSection.UnfactoredServiceNQ;
+                        lineListsX.Add(ToList(nqUSvc.N));
+                        lineListsY.Add(ToList(nqUSvc.Q));
+                        lineListsLegend.Add("低減前使用限界");
+
+                        var nqFSvc = pileSection.FactoredServiceNQ;
+                        lineListsX.Add(ToList(nqFSvc.N));
+                        lineListsY.Add(ToList(nqFSvc.Q));
+                        lineListsLegend.Add("低減後使用限界");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[WordDoc] NQ曲線取得失敗 (杭体:{pileBody.PileBodyRef}, 区間:{segment.No}): {ex.Message}");
+                    }
+
+                    // 散布点
+                    List<double> axialForceResultsVL = [];
+                    List<double> shearResultsVL = [];
+
+                    List<double> axialForceResultsLevel1 = [];
+                    List<double> shearResultsLevel1 = [];
+
+                    List<double> axialForceResultsLevel2 = [];
+                    List<double> shearResultsLevel2 = [];
+
+                    // 解析済みの場合のみ散布点を作成
+                    if (mainWindowViewModel?.IsHorizontalAnalysisDone == true &&
+                        inputModel.PileLayoutItems != null &&
+                        inputModel.LoadCasesInput != null)
+                    {
+                        var allSeismicLoadCases = inputModel.LoadCasesInput.AllSeismicLoadCases ?? [];
+                        var allLoadCombinations = inputModel.LoadCasesInput.AllLoadCombinations ?? [];
+
+                        foreach (var pli in inputModel.PileLayoutItems)
+                        {
+                            if (pli == null) continue;
+
+                            // 常時（VL）は同一杭体のみ採用。せん断力は 0 扱い
+                            try
+                            {
+                                int pbIdx = pli.PileBodyNo - 1;
+                                if (pbIdx >= 0 && pbIdx < inputModel.PileBodies.Count &&
+                                    inputModel.PileBodies[pbIdx] == pileBody)
+                                {
+                                    axialForceResultsVL.Add(pli.AxialForceVL0 + pli.AxialForceVLAdditional);
+                                    shearResultsVL.Add(0.0);
+                                }
+                            }
+                            catch { /* ignore */ }
+
+                            foreach (var loadCase in allSeismicLoadCases)
+                            {
+                                if (loadCase == null || !loadCase.IsApplicable) continue;
+                                double axialForce = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+
+                                foreach (var loadCombination in allLoadCombinations)
+                                {
+                                    var liqPatterns = new List<bool>();
+                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+
+                                    foreach (var isLiquefaction in liqPatterns)
+                                    {
+                                        var soilPiles = inputModel.ElementDivision?.SoilPiles;
+                                        int soilIndex = pli.SoilPileAltNo - 1;
+                                        if (soilPiles == null || soilIndex < 0 || soilIndex >= soilPiles.Count)
+                                            continue;
+
+                                        var soilPileForItem = soilPiles[soilIndex];
+                                        if (soilPileForItem?.PileBodySegments == null ||
+                                            pli.Beams == null || pli.Beams.Count == 0)
+                                            continue;
+
+                                        // この区間Noに一致するビーム群の中から、当該ケースの最大せん断力を抽出
+                                        double maxShearInPile = double.MinValue;
+                                        for (int iSeg = 0; iSeg < soilPileForItem.PileBodySegments.Count; iSeg++)
+                                        {
+                                            var segI = soilPileForItem.PileBodySegments[iSeg];
+                                            if (segI == null || segI.No != pileBodySegmentNo) continue;
+
+                                            if (iSeg < 0 || iSeg >= pli.Beams.Count) continue;
+                                            var beam = pli.Beams[iSeg];
+                                            if (beam == null) continue;
+
+                                            var cum = beam.GetBeamResult(anaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce;
+                                            if (cum != null)
+                                                maxShearInPile = Math.Max(maxShearInPile, cum.FabsMax);
+                                        }
+
+                                        if (maxShearInPile == double.MinValue) maxShearInPile = 0.0;
+
+                                        if (loadCase.Level == 1)
+                                        {
+                                            axialForceResultsLevel1.Add(axialForce);
+                                            shearResultsLevel1.Add(maxShearInPile);
+                                        }
+                                        else if (loadCase.Level == 2)
+                                        {
+                                            axialForceResultsLevel2.Add(axialForce);
+                                            shearResultsLevel2.Add(maxShearInPile);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // グラフ出力（ライン＋散布）
+                    List<List<double>> xsLists = [axialForceResultsLevel2, axialForceResultsLevel1, axialForceResultsVL];
+                    List<List<double>> ysLists = [shearResultsLevel2, shearResultsLevel1, shearResultsVL];
+                    List<string> legends = ["レベル2", "レベル1", "常時"];
+
+                    AddNMinTScottPlotGraphToBody(
+                        mainPart,
+                        body,
+                        lineListsX, lineListsY, lineListsLegend,
+                        xsLists, ysLists, legends,
+                        "", "軸力(kN)", "せん断力(kN)",
+                        150, 150);
+
+                    AddAutoFigureCaption(body,
+                        $"軸力-せん断力関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
+                        "図");
+                }
+            }
+        }
+
+        // M-φ関係（曲げモーメント-曲率関係）— GraphWindow の DrawMPhiCurves と整合
+        private void AddMPhiCurves(MainDocumentPart mainPart, Body body)
+        {
+            if (inputModel?.PileBodies == null || inputModel.PileBodies.Count == 0)
+                return;
+            if (anaModel == null) return;
+
+            var allSeismicLoadCases = inputModel.LoadCasesInput?.AllSeismicLoadCases ?? [];
+            var allLoadCombinations = inputModel.LoadCasesInput?.AllLoadCombinations ?? [];
+
+            foreach (var pileBody in inputModel.PileBodies)
+            {
+                if (pileBody?.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
+                    continue;
+
+                for (int j = 0; j < pileBody.PileBodySegments.Count; j++)
+                {
+                    var segment = pileBody.PileBodySegments[j];
+                    if (segment?.PileSection == null) continue;
+                    int pileBodySegmentNo = segment.No;
+
+                    // ライン: 杭×荷重ケース×組合せ×液状化ごとの M-φ 曲線
+                    List<List<double>> lineListsX = [];
+                    List<List<double>> lineListsY = [];
+                    List<string> lineListsLegend = [];
+
+                    // 散布点: 最終ステップの (φ, M)
+                    List<double> phiResultsLevel1 = [];
+                    List<double> momentResultsLevel1 = [];
+                    List<double> phiResultsLevel2 = [];
+                    List<double> momentResultsLevel2 = [];
+
+                    if (inputModel.PileLayoutItems == null) continue;
+
+                    foreach (var pli in inputModel.PileLayoutItems)
+                    {
+                        if (pli == null) continue;
+                        int pbIdx = pli.PileBodyNo - 1;
+                        if (pbIdx < 0 || pbIdx >= inputModel.PileBodies.Count ||
+                            inputModel.PileBodies[pbIdx] != pileBody)
+                            continue;
+
+                        // SoilPile 取得
+                        var soilPiles = inputModel.ElementDivision?.SoilPiles;
+                        int soilIndex = pli.SoilPileAltNo - 1;
+                        if (soilPiles == null || soilIndex < 0 || soilIndex >= soilPiles.Count) continue;
+                        var soilPile = soilPiles[soilIndex];
+                        if (soilPile?.PileBodySegments == null || pli.Beams == null || pli.Beams.Count == 0) continue;
+
+                        // この区間に一致する beam 群を収集
+                        var matchedBeams = new List<Beam>();
+                        for (int iSeg = 0; iSeg < soilPile.PileBodySegments.Count; iSeg++)
+                        {
+                            var segI = soilPile.PileBodySegments[iSeg];
+                            if (segI == null || segI.No != pileBodySegmentNo) continue;
+                            if (iSeg >= pli.Beams.Count) continue;
+                            matchedBeams.Add(pli.Beams[iSeg]);
+                        }
+
+                        foreach (var targetBeam in matchedBeams)
+                        {
+                            foreach (var loadCase in allSeismicLoadCases)
+                            {
+                                if (loadCase == null || !loadCase.IsApplicable) continue;
+
+                                foreach (var loadCombination in allLoadCombinations)
+                                {
+                                    var liqPatterns = new List<bool>();
+                                    if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                                    if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+
+                                    foreach (var isLiquefaction in liqPatterns)
+                                    {
+                                        // 軸力推定（GraphWindow と同一ロジック）
+                                        double axialN = 0.0;
+                                        try
+                                        {
+                                            double nSeis = pli.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                            if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
+                                        }
+                                        catch { /* ignore */ }
+                                        if (axialN == 0.0 && double.IsFinite(pli.AxialForce))
+                                            axialN = pli.AxialForce;
+
+                                        // M-φ曲線取得（GraphWindow と同一優先順位）
+                                        List<double> phis = null;
+                                        List<double> moments = null;
+
+                                        int lastStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                        BeamResult beamResultForCurve = null;
+                                        if (lastStep >= 0)
+                                        {
+                                            beamResultForCurve = targetBeam.GetBeamResult(anaModel, loadCase, loadCombination, isLiquefaction, lastStep);
+
+                                            // 方法0: BeamResult に保存された M-φ 曲線（最優先）
+                                            if (beamResultForCurve?.MPhiCurve_Phis != null && beamResultForCurve.MPhiCurve_Phis.Count >= 2)
+                                            {
+                                                phis = beamResultForCurve.MPhiCurve_Phis;
+                                                moments = beamResultForCurve.MPhiCurve_Moments;
+                                            }
+                                        }
+
+                                        // 方法1: 解析時に解決済みのキャッシュ曲線
+                                        if ((phis == null || phis.Count < 2) && targetBeam.ResolvedCombinedCurve?.Points != null)
+                                        {
+                                            var cachedCurve = targetBeam.ResolvedCombinedCurve;
+                                            if (cachedCurve.Points.Count >= 2)
+                                            {
+                                                phis = [.. cachedCurve.Points.Select(p => p.Phi)];
+                                                moments = [.. cachedCurve.Points.Select(p => p.Moment)];
+                                            }
+                                        }
+
+                                        // 方法2: フォールバック - PileSection から新規取得
+                                        if ((phis == null || phis.Count < 2) && targetBeam.SegmentIndex is int fallbackSeg
+                                            && fallbackSeg >= 0 && fallbackSeg < soilPile.PileBodySegments.Count)
+                                        {
+                                            var pileSection = soilPile.PileBodySegments[fallbackSeg].PileSection;
+                                            if (pileSection != null)
+                                            {
+                                                try
+                                                {
+                                                    var mPhi = pileSection.GetMPhiRelationship(axialN);
+                                                    if (mPhi.Phis != null && mPhi.Moments != null && mPhi.Phis.Count >= 2)
+                                                    {
+                                                        phis = mPhi.Phis;
+                                                        moments = mPhi.Moments;
+                                                    }
+                                                }
+                                                catch { /* ignore */ }
+                                            }
+                                        }
+
+                                        if (phis == null || moments == null || phis.Count < 2) continue;
+
+                                        // 曲線追加
+                                        lineListsX.Add(phis);
+                                        lineListsY.Add(moments);
+                                        lineListsLegend.Add($"杭{pli.No} {loadCase.LoadName} N={axialN:F0}kN");
+
+                                        // 最終ステップの (φ, M) 散布点
+                                        if (lastStep >= 0 && beamResultForCurve != null)
+                                        {
+                                            double phiFinal = beamResultForCurve.Curvature;
+
+                                            // フォールバック: Curvature が 0 以下の場合、回転角差から計算
+                                            if (phiFinal <= 0.0 && beamResultForCurve.CumulativeDisp != null)
+                                            {
+                                                double length = targetBeam.Length;
+                                                if (length > 0)
+                                                {
+                                                    double dRy = beamResultForCurve.CumulativeDisp.Ryj - beamResultForCurve.CumulativeDisp.Ryi;
+                                                    double dRz = beamResultForCurve.CumulativeDisp.Rzj - beamResultForCurve.CumulativeDisp.Rzi;
+                                                    phiFinal = Math.Sqrt(dRy * dRy + dRz * dRz) / length;
+                                                }
+                                            }
+
+                                            double mFinal = beamResultForCurve.Moment;
+                                            if (!double.IsFinite(phiFinal) || !double.IsFinite(mFinal)) continue;
+
+                                            if (loadCase.Level == 1)
+                                            {
+                                                phiResultsLevel1.Add(phiFinal);
+                                                momentResultsLevel1.Add(mFinal);
+                                            }
+                                            else if (loadCase.Level == 2)
+                                            {
+                                                phiResultsLevel2.Add(phiFinal);
+                                                momentResultsLevel2.Add(mFinal);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (lineListsX.Count == 0) continue;
+
+                    List<List<double>> xsScatter = [phiResultsLevel2, phiResultsLevel1];
+                    List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
+                    List<string> scatterLegends = ["レベル2", "レベル1"];
+
+                    AddNMinTScottPlotGraphToBody(
+                        mainPart, body,
+                        lineListsX, lineListsY, lineListsLegend,
+                        xsScatter, ysScatter, scatterLegends,
+                        "", "曲率φ(rad/m)", "曲げモーメント(kNm)",
+                        150, 150, showLegend: false);
+
+                    AddAutoFigureCaption(body,
+                        $"M-φ関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
+                        "図");
+                }
+            }
+        }
+
+        // M-θ関係（曲げモーメント-回転角関係）— GraphWindow の DrawMThetaCurvesWithMarker と整合
+        // 杭体ごとに1つのグラフにまとめる
+        private void AddMThetaCurves(MainDocumentPart mainPart, Body body)
+        {
+            if (anaModel?.RotationalSprings == null || anaModel.RotationalSprings.Count == 0)
+                return;
+            if (inputModel?.PileBodies == null || inputModel.PileBodies.Count == 0)
+                return;
+
+            var allSeismicLoadCases = inputModel.LoadCasesInput?.AllSeismicLoadCases ?? [];
+            var allLoadCombinations = inputModel.LoadCasesInput?.AllLoadCombinations ?? [];
+
+            // 回転ばね → 杭レイアウトのマッピングを構築
+            var rsToLayout = new Dictionary<RotationalSpring, PileLayoutDataItem>();
+            foreach (var rs in anaModel.RotationalSprings)
+            {
+                PileLayoutDataItem pileLayout = null;
+                if (rs.Name != null && rs.Name.Contains('-'))
+                {
+                    var parts = rs.Name.Split('-');
+                    if (parts.Length >= 2 && int.TryParse(parts[^1], out int pileNo))
+                        pileLayout = inputModel.PileLayoutItems?.FirstOrDefault(pl => pl.No == pileNo);
+                }
+                if (pileLayout == null && rs.NodeJ != null)
+                    pileLayout = inputModel.PileLayoutItems?.FirstOrDefault(pl => pl.PileNodes.Count > 0 && ReferenceEquals(pl.PileNodes[0], rs.NodeJ));
+                if (pileLayout == null && rs.PileBodyNo is int pb && pb > 0 && pb <= inputModel.PileBodies.Count)
+                    pileLayout = inputModel.PileLayoutItems?.FirstOrDefault(pl => pl.PileBodyNo == pb);
+                if (pileLayout != null)
+                    rsToLayout[rs] = pileLayout;
+            }
+
+            foreach (var pileBody in inputModel.PileBodies)
+            {
+                // この杭体に属する回転ばねを収集
+                var springsForBody = new List<(RotationalSpring rs, PileLayoutDataItem pli)>();
+                foreach (var (rs, pli) in rsToLayout)
+                {
+                    int pbIdx = pli.PileBodyNo - 1;
+                    if (pbIdx >= 0 && pbIdx < inputModel.PileBodies.Count && inputModel.PileBodies[pbIdx] == pileBody)
+                        springsForBody.Add((rs, pli));
+                }
+                if (springsForBody.Count == 0) continue;
+
+                List<List<double>> lineListsX = [];
+                List<List<double>> lineListsY = [];
+                List<string> lineListsLegend = [];
+
+                List<double> thetaResultsLevel1 = [];
+                List<double> momentResultsLevel1 = [];
+                List<double> thetaResultsLevel2 = [];
+                List<double> momentResultsLevel2 = [];
+
+                foreach (var (rs, pileLayout) in springsForBody)
+                {
+                    foreach (var loadCase in allSeismicLoadCases)
+                    {
+                        if (loadCase == null || !loadCase.IsApplicable) continue;
+
+                        foreach (var loadCombination in allLoadCombinations)
+                        {
+                            var liqPatterns = new List<bool>();
+                            if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                            if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+
+                            foreach (var isLiquefaction in liqPatterns)
+                            {
+                                double axialN = 0.0;
+                                try
+                                {
+                                    double nSeis = pileLayout.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                    if (double.IsFinite(nSeis) && nSeis != 0.0) axialN = nSeis;
+                                }
+                                catch { /* ignore */ }
+                                if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
+                                    axialN = pileLayout.AxialForce;
+
+                                // 曲線取得（CurveXY → Curve → 線形Kθ）
+                                double[] thetas;
+                                double[] moments;
+                                string modeTag;
+                                if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
+                                {
+                                    (thetas, moments) = rs.CurveXY.ToArrays();
+                                    modeTag = "XY";
+                                }
+                                else if (rs.Mode == RotationalSpringMode.SingleDof && rs.Curve != null)
+                                {
+                                    (thetas, moments) = rs.Curve.ToArrays();
+                                    modeTag = rs.Dof.ToString();
+                                }
+                                else
+                                {
+                                    double? k = rs.Mode == RotationalSpringMode.CombinedXY ? rs.KthetaXY : rs.Ktheta;
+                                    if (!k.HasValue || k.Value <= 0.0) continue;
+                                    const double thetaMax = 0.02;
+                                    int nDiv = 50;
+                                    thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];
+                                    moments = [.. thetas.Select(t => k.Value * t)];
+                                    modeTag = rs.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
+                                }
+                                if (thetas.Length == 0 || moments.Length == 0) continue;
+
+                                lineListsX.Add(thetas.ToList());
+                                lineListsY.Add(moments.ToList());
+                                lineListsLegend.Add($"杭{pileLayout.No} {loadCase.LoadName} N={axialN:F0}kN");
+
+                                // 最終ステップの (θ, M) 散布点
+                                int lastStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                                if (lastStep >= 0)
+                                {
+                                    var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
+                                        r.LoadCase?.No == loadCase.No &&
+                                        r.LoadCombination?.No == loadCombination.No &&
+                                        r.IsLiquefaction == isLiquefaction &&
+                                        r.Step == lastStep);
+
+                                    if (rsResult?.CumulativeDisp != null && rsResult.CumulativeForce != null)
+                                    {
+                                        double dRx = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
+                                        double dRy = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
+                                        double dRz = rsResult.CumulativeDisp.Rzj - rsResult.CumulativeDisp.Rzi;
+
+                                        double thetaFinal = rs.Mode == RotationalSpringMode.CombinedXY
+                                            ? Math.Sqrt(dRx * dRx + dRy * dRy)
+                                            : (rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
+                                                : rs.Dof == RotationalDof.Ry ? Math.Abs(dRy)
+                                                : Math.Abs(dRz));
+
+                                        double mFinal = rs.Mode == RotationalSpringMode.CombinedXY
+                                            ? Math.Sqrt(rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi +
+                                                         rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi)
+                                            : (rs.Dof == RotationalDof.Rx ? Math.Abs(rsResult.CumulativeForce.Mxi)
+                                                : rs.Dof == RotationalDof.Ry ? Math.Abs(rsResult.CumulativeForce.Myi)
+                                                : Math.Abs(rsResult.CumulativeForce.Mzi));
+
+                                        if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
+                                        {
+                                            if (loadCase.Level == 1)
+                                            {
+                                                thetaResultsLevel1.Add(thetaFinal);
+                                                momentResultsLevel1.Add(mFinal);
+                                            }
+                                            else if (loadCase.Level == 2)
+                                            {
+                                                thetaResultsLevel2.Add(thetaFinal);
+                                                momentResultsLevel2.Add(mFinal);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (lineListsX.Count == 0) continue;
+
+                List<List<double>> xsScatter = [thetaResultsLevel2, thetaResultsLevel1];
+                List<List<double>> ysScatter = [momentResultsLevel2, momentResultsLevel1];
+                List<string> scatterLegends = ["レベル2", "レベル1"];
+
+                AddNMinTScottPlotGraphToBody(
+                    mainPart, body,
+                    lineListsX, lineListsY, lineListsLegend,
+                    xsScatter, ysScatter, scatterLegends,
+                    "", "回転角θ(rad)", "曲げモーメント(kNm)",
+                    150, 150);
+
+                AddAutoFigureCaption(body,
+                    $"M-θ関係　杭体符号:{pileBody.PileBodyRef}",
+                    "図");
+            }
+        }
+
+        /// <summary>
+        /// 全杭×全解析荷重ケースの曲げモーメント・せん断力・変位ダイアグラムを出力
+        /// </summary>
+        private void AddAllPileStressDiagrams(MainDocumentPart mainPart, Body body,
+            bool includeBending, bool includeShear)
+        {
+            if (anaModel == null) return;
+
+            var loadCases = inputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases;
+            var loadCombinations = inputModel.LoadCasesInput.AllLoadCombinations;
+            if (loadCases == null || loadCases.Count == 0) return;
+            if (loadCombinations == null || loadCombinations.Count == 0) return;
+
+            AddPageBreak(body);
+            AddHeader1(body, "杭の応力・変位ダイアグラム", 2);
+
+            foreach (var pli in inputModel.PileLayoutItems)
+            {
+                if (pli.PileNodes == null || pli.SoilNodes == null || pli.Beams == null) continue;
+                if (pli.Beams.Count == 0) continue;
+
+                foreach (var lc in loadCases)
+                {
+                    foreach (var comb in loadCombinations)
+                    {
+                        // 液状化パターン（ユーザー選択に基づく）
+                        var liqPatterns = new List<bool>();
+                        if (mainWindowViewModel.IncludeOutputLiquefactionNo)
+                            liqPatterns.Add(false);
+                        if (mainWindowViewModel.IncludeOutputLiquefactionYes)
+                            liqPatterns.Add(true);
+                        if (liqPatterns.Count == 0) continue;
+
+                        foreach (bool isLiq in liqPatterns)
+                        {
+                            List<double> moments = [];
+                            List<double> shears = [];
+                            List<double> disps = [];
+                            List<double> zs = [];
+                            List<double> soilDisps = [];
+
+                            bool hasData = false;
+
+                            // Z軸（節点列）と地盤変位
+                            for (int i = 0; i < pli.PileNodes.Count; i++)
+                            {
+                                double z = -pli.Z + pli.PileNodes[i].Coord.Z;
+                                zs.Add(z);
+                                if (i != 0 && i != pli.PileNodes.Count - 1)
+                                    zs.Add(z);
+
+                                double soilUh = 0.0;
+                                try
+                                {
+                                    soilUh = pli.SoilNodes[i]
+                                        .GetNodeResult(anaModel, lc, comb, isLiq)
+                                        ?.CumulativeDisp?.Uh ?? 0.0;
+                                }
+                                catch { soilUh = 0.0; }
+                                soilDisps.Add(soilUh);
+                                if (i != 0 && i != pli.PileNodes.Count - 1)
+                                    soilDisps.Add(soilUh);
+                            }
+
+                            // 要素力・変位
+                            for (int i = 0; i < pli.Beams.Count; i++)
+                            {
+                                var res = pli.Beams[i].GetBeamResult(anaModel, lc, comb, isLiq)?.CumulativeForce;
+                                if (res != null) hasData = true;
+
+                                moments.Add(res?.Mi ?? 0.0);
+                                moments.Add(res?.Mj ?? 0.0);
+
+                                shears.Add(res?.Fi ?? 0.0);
+                                shears.Add(res?.Fj ?? 0.0);
+
+                                double uhI = 0.0, uhJ = 0.0;
+                                try
+                                {
+                                    uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                    uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                }
+                                catch { /* NodeResult取得失敗 */ }
+                                disps.Add(uhI);
+                                disps.Add(uhJ);
+                            }
+
+                            if (!hasData) continue;
+
+                            // ダイアグラム出力（変位・せん断力・曲げモーメントの3列グラフ — GraphWindow と同順）
+                            List<List<double>> xsLists = [];
+                            List<string> titles = [];
+                            List<string> xLabels = [];
+                            List<string> yLabels = [];
+
+                            // 変位は常に含める（先頭）
+                            xsLists.Add(disps);
+                            titles.Add("");
+                            xLabels.Add("変位(m)");
+                            yLabels.Add("Z(m)");
+
+                            if (includeShear)
+                            {
+                                xsLists.Add(shears);
+                                titles.Add("");
+                                xLabels.Add("せん断力(kN)");
+                                yLabels.Add("Z(m)");
+                            }
+                            if (includeBending)
+                            {
+                                xsLists.Add(moments);
+                                titles.Add("");
+                                xLabels.Add("曲げモーメント(kNm)");
+                                yLabels.Add("Z(m)");
+                            }
+                            // 地盤変位（変位パネルに重ねる用）
+                            xsLists.Add(soilDisps);
+                            yLabels.Add("Z(m)");
+
+                            List<List<double>> ysLists = [];
+                            for (int i = 0; i < xsLists.Count; i++)
+                                ysLists.Add(zs);
+
+                            AddPileElevResultToBody(
+                                mainPart, body,
+                                xsLists, ysLists,
+                                titles, xLabels, yLabels,
+                                150, 100);
+
+                            string liqText = isLiq ? "液状化" : "非液状化";
+                            AddAutoFigureCaption(body,
+                                $"杭No.{pli.No} | {lc.LoadName} | {comb.Name} | {liqText}",
+                                "図");
+                        }
                     }
                 }
             }
@@ -1630,8 +2359,6 @@ namespace PileDesign.Output
                 AddInlineMathParagraph(body, ["杭頭の接続は剛体連結とする。"]);
                 AddInlineMathParagraph(body, ["剛体連結では、すべての杭頭節点を代表点（荷重作用点）に対して" +
                     "全6自由度（$U_x, U_y, U_z, R_x, R_y, R_z$）で剛体拘束する。"]);
-                AddInlineMathParagraph(body, ["フーチング等の基礎構造が十分な剛性を有し、" +
-                    "基礎底面が一体として変形すると見なせる場合に適用する。"]);
 
                 // 拘束自由度の表
                 AddConnectionModeTable(body, isRigidBody: true);
@@ -2310,7 +3037,12 @@ namespace PileDesign.Output
 
                             foreach (LoadCombination loadCombination in inputModel.LoadCasesInput.AllLoadCombinations)
                             {
-                                foreach (var isLiquefaction in new[] { true, false })
+                                // 液状化パターン（ユーザー選択に基づく）
+                                var liqPatterns2 = new List<bool>();
+                                if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns2.Add(true);
+                                if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns2.Add(false);
+
+                                foreach (var isLiquefaction in liqPatterns2)
                                 {
                                     // PileBodySegmentループ（安全に null チェック）
                                     var soilPiles = inputModel.ElementDivision?.SoilPiles;
@@ -2371,9 +3103,11 @@ namespace PileDesign.Output
                 }
             }
 
-            // レベルごとに解析結果が存在するか判定
-            bool hasLevel1Results = inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsApplicable) ?? false;
-            bool hasLevel2Results = inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsApplicable) ?? false;
+            // レベルごとに解析結果が存在するか判定（実際にデータが収集されたかで判定）
+            bool hasLevel1Results = (inputModel.LoadCasesInput?.LoadCasesLevel1?.Any(x => x.IsApplicable) ?? false)
+                && (Qmaxs.Any(q => q[0] > double.MinValue) || Mmaxs.Any(m => m[0] > double.MinValue));
+            bool hasLevel2Results = (inputModel.LoadCasesInput?.LoadCasesLevel2?.Any(x => x.IsApplicable) ?? false)
+                && (Qmaxs.Any(q => q[1] > double.MinValue) || Mmaxs.Any(m => m[1] > double.MinValue));
 
             BuildAnalysisResultSummaryTable(
             body,
@@ -3137,12 +3871,12 @@ namespace PileDesign.Output
                 double[] ysArray = [.. ysLists[i]];
                 var scatter = plots[i].Add.ScatterLine(xsArray, ysArray);
 
-                // 変位図に地盤変位を重ねるのは xsLists[3] があるときのみ
-                if (i == 2 && xsLists.Count >= 4)
+                // 変位図（先頭パネル）に地盤変位を重ねるのは xsLists にcount+1個の要素があるときのみ
+                if (i == 0 && xsLists.Count > count)
                 {
                     scatter.LegendText = "杭変位";
 
-                    double[] xsArrayS = [.. xsLists[3]];
+                    double[] xsArrayS = [.. xsLists[count]];
                     if (xsArrayS.Length == ysArray.Length)
                     {
                         var soilScatter = plots[i].Add.ScatterLine(xsArrayS, ysArray);
@@ -3220,201 +3954,13 @@ namespace PileDesign.Output
                 System.Diagnostics.Debug.WriteLine($"AddScottPlotGraphToBody: エラー: {ex.Message}");
             }
         }
-        //{
-        //    // 1. ScottPlotでグラフ作成
-        //    WpfPlot wpf = new();
-        //    double[] xsArray = [.. xsList];
-        //    double[] ysArray = [.. ysList];
-        //    wpf.Plot.Add.ScatterLine(xsArray, ysArray);
 
-        //    //string title = "ScottPlotサンプルグラフ";
-        //    wpf.Plot.Axes.Title.Label.Text = title;
-        //    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title);
-
-        //    //string xLabel = "X軸";
-        //    wpf.Plot.Axes.Bottom.Label.Text = xLabel;
-        //    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel);
-
-        //    //string yLabel = "Y軸";
-        //    wpf.Plot.Axes.Left.Label.Text = yLabel;
-        //    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel);
-
-        //    // 2. 一時画像ファイルとして保存
-        //    string tempFile = Path.GetTempFileName() + ".png";
-        //    //int widthPx = (int)(widthMm / 25.4 * 96 * 2);
-        //    //int heightPx = (int)(heightMm / 25.4 * 96 * 2);
-        //    int widthPx = MmToPx(widthMm, Dpi, 2.0);
-        //    int heightPx = MmToPx(heightMm, Dpi, 2.0);
-        //    wpf.Plot.SavePng(tempFile, widthPx, heightPx);
-
-        //    // 3. Word文書のbodyに画像挿入
-        //    WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
-
-        //    // 4. 一時ファイル削除
-        //    if (File.Exists(tempFile)) File.Delete(tempFile);
-        //}
-
-        // 複数データスコットプロット挿入メソッド
-        //public static void AddNMinTScottPlotGraphToBody(
-        //    MainDocumentPart mainPart, Body body,
-        //    List<List<double>> xsLineLists, List<List<double>> ysLineLists, List<string> lineLegends,
-        //    List<List<double>> xsScatterLists, List<List<double>> ysScatterLists, List<string> scatterLegends,
-        //    string title, string xLabel, string yLabel,
-        //    double widthMm = 150, double heightMm = 150)
-        ////{
-        ////    List<ScottPlot.Color> colors = [
-        ////        ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue),
-        ////        ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue),
-        ////        ScottPlot.Color.FromSKColor(NikkenSKColor.Yellow),
-        ////        ];
-
-        ////    // 1. ScottPlotでグラフ作成
-        ////    WpfPlot wpf = new();
-        ////    if (xsLineLists.Count != ysLineLists.Count || xsLineLists.Count != lineLegends.Count ||
-        ////        xsScatterLists.Count != ysScatterLists.Count || xsScatterLists.Count != scatterLegends.Count
-        ////        )
-        ////    {
-        ////        return;
-        ////    }
-
-        ////    for (int i = 0; i < xsLineLists.Count; i++)
-        ////    {
-        ////        if (xsLineLists.Count == 0) continue;
-        ////        var xsList = xsLineLists[i];
-        ////        var ysList = ysLineLists[i];
-        ////        var legend = lineLegends[i];
-
-        ////        double[] xsArray = [.. xsList];
-        ////        double[] ysArray = [.. ysList];
-        ////        var scatterLineTemp = wpf.Plot.Add.ScatterLine(xsArray, ysArray);
-        ////        scatterLineTemp.LegendText = legend;
-
-        ////        scatterLineTemp.LinePattern = i % 2 == 0 ? LinePattern.Dashed : LinePattern.Solid;
-        ////        scatterLineTemp.LineWidth = i % 2 == 0 ? 1 : 2;
-        ////        scatterLineTemp.MarkerSize = 0;
-        ////        scatterLineTemp.LineColor = i < 2 ? colors[0] : i < 4 ? colors[1] : colors[2];
-        ////    }
-
-        ////    for (int i = 0; i < xsScatterLists.Count; i++)
-        ////    {
-        ////        var xsList = xsScatterLists[i];
-        ////        var ysList = ysScatterLists[i];
-        ////        var legend = scatterLegends[i];
-
-        ////        double[] xsArray = [.. xsList];
-        ////        double[] ysArray = [.. ysList];
-        ////        var scatterTemp = wpf.Plot.Add.Scatter(xsArray, ysArray);
-        ////        scatterTemp.LineWidth = 0;
-        ////        scatterTemp.MarkerSize = 10;
-        ////        scatterTemp.MarkerColor = colors[i];
-        ////    }
-
-        ////    //string title = "ScottPlotサンプルグラフ";
-        ////    wpf.Plot.Axes.Title.Label.Text = title;
-        ////    wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title);
-
-        ////    //string xLabel = "X軸";
-        ////    wpf.Plot.Axes.Bottom.Label.Text = xLabel;
-        ////    wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel);
-
-        ////    //string yLabel = "Y軸";
-        ////    wpf.Plot.Axes.Left.Label.Text = yLabel;
-        ////    wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel);
-
-        ////    // Legend
-        ////    wpf.Plot.Legend.FontName = ScottPlot.Fonts.Detect(yLabel);
-        ////    wpf.Plot.ShowLegend(Alignment.UpperRight); // 右上に凡例
-
-        ////    wpf.Plot.Axes.AutoScale();
-        ////    wpf.Plot.Axes.AutoScaleExpandX();
-        ////    wpf.Plot.Axes.AutoScaleExpandY();
-        ////    wpf.Plot.Axes.Left.Min = 0.0;
-
-        ////    // 2. 一時画像ファイルとして保存
-        ////    string tempFile = Path.GetTempFileName() + ".png";
-        ////    //int widthPx = (int)(widthMm / 25.4 * 96 * 2);
-        ////    //int heightPx = (int)(heightMm / 25.4 * 96 * 2);
-        ////    int widthPx = MmToPx(widthMm, Dpi, 2.0);
-        ////    int heightPx = MmToPx(heightMm, Dpi, 2.0);
-        ////    wpf.Plot.SavePng(tempFile, widthPx, heightPx);
-
-        ////    // 3. Word文書のbodyに画像挿入
-        ////    WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
-
-        ////    // 4. 一時ファイル削除
-        ////    if (File.Exists(tempFile)) File.Delete(tempFile);
-        ////}
-        //{
-        //    try
-        //    {
-        //        var pngBytes = DiagramRenderer.RenderScottPlotToPngBytes(wpf =>
-        //        {
-        //            // lines
-        //            for (int i = 0; i < xsLineLists.Count; i++)
-        //            {
-        //                var xs = xsLineLists[i]?.ToArray() ?? Array.Empty<double>();
-        //                var ys = ysLineLists[i]?.ToArray() ?? Array.Empty<double>();
-        //                if (xs.Length > 0 && ys.Length > 0)
-        //                {
-        //                    var pl = wpf.Plot.Add.ScatterLine(xs, ys);
-        //                    pl.LegendText = i < lineLegends.Count ? lineLegends[i] : null;
-        //                    pl.LinePattern = i % 2 == 0 ? LinePattern.Dashed : LinePattern.Solid;
-        //                    pl.LineWidth = i % 2 == 0 ? 1 : 2;
-        //                    pl.MarkerSize = 0;
-        //                }
-        //            }
-
-        //            // scatters
-        //            for (int i = 0; i < xsScatterLists.Count; i++)
-        //            {
-        //                var xs = xsScatterLists[i]?.ToArray() ?? Array.Empty<double>();
-        //                var ys = ysScatterLists[i]?.ToArray() ?? Array.Empty<double>();
-        //                if (xs.Length > 0 && ys.Length > 0)
-        //                {
-        //                    var sc = wpf.Plot.Add.Scatter(xs, ys);
-        //                    sc.MarkerSize = 6;
-        //                    sc.LineWidth = 0;
-        //                    sc.LegendText = i < scatterLegends.Count ? scatterLegends[i] : null;
-        //                }
-        //            }
-
-        //            //string title = "ScottPlotサンプルグラフ";
-        //            wpf.Plot.Axes.Title.Label.Text = title;
-        //            wpf.Plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(title);
-
-        //            //string xLabel = "X軸";
-        //            wpf.Plot.Axes.Bottom.Label.Text = xLabel;
-        //            wpf.Plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabel);
-
-        //            //string yLabel = "Y軸";
-        //            wpf.Plot.Axes.Left.Label.Text = yLabel;
-        //            wpf.Plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabel);
-
-        //            // Legend
-        //            wpf.Plot.Legend.FontName = ScottPlot.Fonts.Detect(yLabel);
-        //            wpf.Plot.ShowLegend(Alignment.UpperRight); // 右上に凡例
-
-        //            wpf.Plot.Axes.Title.Label.Text = title ?? string.Empty;
-        //            wpf.Plot.Axes.Bottom.Label.Text = xLabel ?? string.Empty;
-        //            wpf.Plot.Axes.Left.Label.Text = yLabel ?? string.Empty;
-        //            wpf.Plot.ShowLegend();
-        //            wpf.Plot.Axes.AutoScale();
-        //        }, widthMm, heightMm, dpi: Layout.BaseDpi, scale: Layout.HiResScale);
-
-        //        if (pngBytes != null && pngBytes.Length > 0)
-        //            WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes, widthMm, heightMm);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        System.Diagnostics.Debug.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
-        //    }
-        //}
         public static void AddNMinTScottPlotGraphToBody(
     MainDocumentPart mainPart, Body body,
     List<List<double>> xsLineLists, List<List<double>> ysLineLists, List<string> lineLegends,
     List<List<double>> xsScatterLists, List<List<double>> ysScatterLists, List<string> scatterLegends,
     string title, string xLabel, string yLabel,
-    double widthMm = 150, double heightMm = 150)
+    double widthMm = 150, double heightMm = 150, bool showLegend = true)
         {
             try
             {
@@ -3437,6 +3983,16 @@ namespace PileDesign.Output
                 multiplot.AddPlots(1);
                 var plot = multiplot.Subplots.GetPlot(0);
 
+                // 限界状態カーブの色: 安全限界=Red(レベル2), 損傷限界=Green(レベル1), 使用限界=DeepBlue(常時)
+                ScottPlot.Color[] lineColors = [
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.Red),      // 安全限界(低減前)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.Red),      // 安全限界(低減後)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.Green),    // 損傷限界(低減前)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.Green),    // 損傷限界(低減後)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue), // 使用限界(低減前)
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue), // 使用限界(低減後)
+                ];
+
                 // 線データの追加
                 for (int i = 0; i < xsLineLists.Count; i++)
                 {
@@ -3449,8 +4005,17 @@ namespace PileDesign.Output
                         pl.LinePattern = i % 2 == 0 ? LinePattern.Dashed : LinePattern.Solid;
                         pl.LineWidth = i % 2 == 0 ? 1 : 2;
                         pl.MarkerSize = 0;
+                        if (i < lineColors.Length)
+                            pl.LineColor = lineColors[i];
                     }
                 }
+
+                // 散布点の色: レベル2=Red, レベル1=Green, 常時=DeepBlue
+                ScottPlot.Color[] scatterColors = [
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.Red),
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.Green),
+                    ScottPlot.Color.FromSKColor(NikkenSKColor.DeepBlue),
+                ];
 
                 // 散布データの追加
                 for (int i = 0; i < xsScatterLists.Count; i++)
@@ -3463,6 +4028,8 @@ namespace PileDesign.Output
                         sc.MarkerSize = 6;
                         sc.LineWidth = 0;
                         sc.LegendText = i < scatterLegends.Count ? scatterLegends[i] : null;
+                        if (i < scatterColors.Length)
+                            sc.MarkerColor = scatterColors[i];
                     }
                 }
 
@@ -3481,7 +4048,7 @@ namespace PileDesign.Output
                 }
                 catch { /* 安全に無視 */ }
 
-                plot.ShowLegend();
+                if (showLegend) plot.ShowLegend();
                 plot.Axes.AutoScale();
 
                 // 一時ファイルへ保存して Word に貼り込み（既存コードと合わせる）
@@ -5909,10 +6476,10 @@ diameterSelector,
                 no += 1;
                 TableRow dataRow = new();
                 dataRow.Append(CreateTableCell([no.ToString()], fontSize, "right"));
-                dataRow.Append(CreateTableCell([loadCase.LoadName], fontSize, "right"));
+                dataRow.Append(CreateTableCell([loadCase.LoadName], fontSize, "left"));
                 dataRow.Append(CreateTableCell([loadCase.LoadAngle.ToString()], fontSize, "right"));
-                dataRow.Append(CreateTableCell([loadCase.IsSoilNonLinear.ToString()], fontSize, "right"));
-                dataRow.Append(CreateTableCell([loadCase.IsPileNonLinear.ToString()], fontSize, "right"));
+                dataRow.Append(CreateTableCell([BoolMark(loadCase.IsSoilNonLinear)], fontSize, "center"));
+                dataRow.Append(CreateTableCell([BoolMark(loadCase.IsPileNonLinear)], fontSize, "center"));
 
                 // 位置X/Y/Z（[m]）
                 dataRow.Append(CreateTableCell([$"{loadCase.ForceActionPointX:N3}"], fontSize, "right"));
@@ -6032,9 +6599,9 @@ diameterSelector,
                 dataRow.Append(CreateTableCell([$"{groundLayer.GranularityClass}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.Density:N1}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.AgeCategory}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{groundLayer.IsPositiveCircumResistance}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{groundLayer.IsNegativeCircumResistance}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{groundLayer.IsEngineeringBedrock}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([BoolMark(groundLayer.IsPositiveCircumResistance)], fontSize, "center"));
+                dataRow.Append(CreateTableCell([BoolMark(groundLayer.IsNegativeCircumResistance)], fontSize, "center"));
+                dataRow.Append(CreateTableCell([BoolMark(groundLayer.IsEngineeringBedrock)], fontSize, "center"));
 
                 table.Append(dataRow);
             }
@@ -6102,8 +6669,8 @@ diameterSelector,
 
                 table0.Append(new TableRow(
                     CreateTableCell(["地表面加速度"], fontSize, "center"),
-                    CreateTableCell([i == 0 ?$"{groundInput.GroundAcceleration1}[m/s]" :
-                                             $"{groundInput.GroundAcceleration2}[m/s]"], fontSize, "right")
+                    CreateTableCell([i == 0 ?$"{groundInput.GroundAcceleration1:F1}[m/s]" :
+                                             $"{groundInput.GroundAcceleration2:F1}[m/s]"], fontSize, "right")
                 ));
 
                 body.Append(table0);
@@ -6156,7 +6723,7 @@ diameterSelector,
                     //dataRow.Append(CreateTableCell($"{groundMass.AgeCategory}", "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.NValue:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.Fc:N0}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([$"{groundMass.IsLiquefactionLayer}"], fontSize, "right"));
+                    dataRow.Append(CreateTableCell([BoolMark(groundMass.IsLiquefactionLayer)], fontSize, "center"));
                     dataRow.Append(CreateTableCell([$"{groundMass.SigmaZ:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.SigmaZPrime:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.RD:N3}"], fontSize, "right"));
@@ -6248,7 +6815,7 @@ diameterSelector,
                     //dataRow.Append(CreateTableCell($"{groundMass.LayerNo}", "right"));
                     //dataRow.Append(CreateTableCell($"{groundMass.AgeCategory}", "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.NValue:N1}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([$"{groundMass.IsEngineeringBedrock}"], fontSize, "right"));
+                    dataRow.Append(CreateTableCell([BoolMark(groundMass.IsEngineeringBedrock)], fontSize, "center"));
                     dataRow.Append(CreateTableCell([$"{groundMass.VS0:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.VSE[i]:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.K[i]:N0}"], fontSize, "right"));
@@ -6630,6 +7197,8 @@ diameterSelector,
             body.Append(table);
         }
 
+        private static string BoolMark(bool value) => value ? "○" : "×";
+
         private static string FrontMark(ObservableCollection<bool> src, int idx)
             => (src != null && idx >= 0 && idx < src.Count) ? (src[idx] ? "前" : "後") : string.Empty;
 
@@ -6714,7 +7283,7 @@ diameterSelector,
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.GroundNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileConstructionType}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileBodySegments[0].PileSection.PileDiameter:N0}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileBodySegments[0].PileSection?.PileDiameter ?? 0:N0}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileToeDia:N0}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBottomAltitude:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.R_SLS:N1}"], fontSize, "right"));
@@ -8384,6 +8953,64 @@ diameterSelector,
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\gamma_{cyi}"), ": i層の繰返しせん断ひずみ(%)"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\H_{i}"), ": i層の層厚(m)"]);
+
+            // 液状化判定結果テーブル
+            AddLiquefactionResultTable(body);
+        }
+
+        /// <summary>各地盤の土質点ごとのFL値を一覧表で出力</summary>
+        private void AddLiquefactionResultTable(Body body)
+        {
+            if (inputModel?.GroundsInput == null) return;
+
+            for (int gIdx = 0; gIdx < inputModel.GroundsInput.Count; gIdx++)
+            {
+                var ground = inputModel.GroundsInput[gIdx];
+                if (ground?.GroundMassesData == null || ground.GroundMassesData.Count == 0) continue;
+
+                // FL値を持つ土質点が存在するか確認
+                bool hasFL = ground.GroundMassesData.Any(m => m.FL != null && m.FL.Count > 0 && m.FL.Any(f => f.HasValue));
+                if (!hasFL) continue;
+
+                AddText(body, $"地盤No.{gIdx + 1} 液状化判定結果");
+
+                double fontSize = 8;
+                int flCount = ground.GroundMassesData.Max(m => m.FL?.Count ?? 0);
+                int colCount = 4 + flCount; // 深度, N値, Fc, 土質 + FL×n
+                Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(colCount));
+
+                // ヘッダ行
+                var headerCells = new List<TableCell>
+                {
+                    CreateTableCell(["深度", "(m)"], fontSize, "center"),
+                    CreateTableCell(["N値"], fontSize, "center"),
+                    CreateTableCell(["Fc", "(%)"], fontSize, "center"),
+                    CreateTableCell(["土質"], fontSize, "center"),
+                };
+                for (int f = 0; f < flCount; f++)
+                    headerCells.Add(CreateTableCell([$"FL{f + 1}"], fontSize, "center"));
+
+                table.Append(CreateHeaderRow([.. headerCells]));
+
+                // データ行
+                foreach (var mass in ground.GroundMassesData)
+                {
+                    TableRow row = new();
+                    row.Append(CreateTableCell([$"{mass.AltitudeDepth:N2}"], fontSize, "right"));
+                    row.Append(CreateTableCell([$"{mass.NValue:N1}"], fontSize, "right"));
+                    row.Append(CreateTableCell([$"{mass.Fc:N0}"], fontSize, "right"));
+                    row.Append(CreateTableCell([$"{mass.Name}"], fontSize, "center"));
+                    for (int f = 0; f < flCount; f++)
+                    {
+                        double? fl = (mass.FL != null && f < mass.FL.Count) ? mass.FL[f] : null;
+                        string flText = fl.HasValue ? $"{fl.Value:N2}" : "-";
+                        row.Append(CreateTableCell([flText], fontSize, "right"));
+                    }
+                    table.Append(row);
+                }
+                body.Append(table);
+                AddLineBreak(body);
+            }
         }
 
         readonly string a001 = "基礎部材の強度と変形性能";

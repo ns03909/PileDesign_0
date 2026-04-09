@@ -195,7 +195,9 @@ namespace PileDesign.Services
         {
             try
             {
-                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json");
+                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json")
+                    .Where(f => !f.Contains("_dismissed_"))
+                    .ToArray();
                 if (autoSaveFiles.Length == 0)
                     return null;
 

@@ -57,8 +57,10 @@ namespace PileDesign.Output
                 )
             );
 
-            // Append drawing as a Paragraph
-            var para = new Paragraph(new Run(drawing));
+            // Append drawing as a centered Paragraph
+            var para = new Paragraph(
+                new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
+                new Run(drawing));
             body.Append(para);
         }
     }

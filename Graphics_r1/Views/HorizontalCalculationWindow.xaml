@@ -20,9 +20,8 @@
     <Window.InputBindings>
         <!--<KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />-->
-        <!-- 追加: Ctrl+Enter で OkCommand を実行 -->
         <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
-        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+        <KeyBinding Key="F9" Command="{Binding ExecuteAnalysisCommand}" />
     </Window.InputBindings>
     
     <Window.Resources>
@@ -272,8 +271,10 @@
             </Grid>
 
 
-            <TextBlock Text="解析ケース数:" Margin="0,10,0,0"/>
-            <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16"/>
+            <DockPanel Margin="0,10,0,0">
+                <TextBlock Text="全解析ケース数："/>
+                <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Right"/>
+            </DockPanel>
             <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Margin="0,10,0,0"/>
 
 
@@ -350,7 +351,7 @@
             </StackPanel>
             
             <!-- ...existing code... -->
-            <Button Content="水平解析実行" Command="{Binding ExecuteAnalysisCommand}">
+            <Button Content="水平解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}">
                 <Button.Style>
                     <Style TargetType="Button">
                         <Style.Triggers>
@@ -364,7 +365,7 @@
 
             <!--<Button Content="一時停止" Command="{Binding PauseAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
             <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
-            <Button Content="水平解析キャンセル" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
+            <Button Content="水平解析キャンセル (Esc)" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
 
         </StackPanel>
 

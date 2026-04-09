@@ -38,6 +38,17 @@ namespace PileDesign.Views
                 }
                 e.Handled = true;
             }
+            else if (e.Key == Key.Escape)
+            {
+                if (DataContext is HorizontalCalculationViewModel vm)
+                {
+                    if (vm.IsAnalysisRunning && vm.CancelAnalysisCommand.CanExecute(null))
+                        vm.CancelAnalysisCommand.Execute(null);
+                    else if (vm.CancelCommand?.CanExecute(null) == true)
+                        vm.CancelCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
         }
 
         /// <summary>

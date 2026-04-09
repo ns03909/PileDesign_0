@@ -1333,7 +1333,7 @@
                 <ribbon:RibbonGroup Header="解析実行">
                     <ribbon:RibbonButton x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
-                         IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                         IsEnabled="{Binding IsElementSplit}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
                                 <Setter Property="Label" Value="水平解析"/>
@@ -1354,7 +1354,7 @@
                     <ribbon:RibbonButton x:Name="RibbonButtonSettlement"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
-                         IsEnabled="{Binding IsElementSplit, Converter={StaticResource BooleanToVisibilityConverter}}">
+                         IsEnabled="{Binding IsElementSplit}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
                                 <Setter Property="Label" Value="単杭沈下解析"/>
@@ -1963,12 +1963,16 @@
                                                 <svgc:SvgViewbox Source="/Icons/MergeNodes.svg"
                                                 Style="{StaticResource SvgIconStyle24}"/>
                                         </Button>
-                                        <Button Content="X↓Y→" ToolTip="X優先整列（X昇順→Y昇順）"
+                                        <Button ToolTip="X優先整列（X昇順→Y昇順）"
                                                 Command="{Binding SortInputNodesXFirstCommand}"
-                                                Width="32" Height="32" FontSize="9" Padding="0"/>
-                                        <Button Content="Y↓X→" ToolTip="Y優先整列（Y昇順→X昇順）"
+                                                Width="32" Height="32" Padding="0">
+                                            <svgc:SvgViewbox Source="/Icons/SortXY.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                        </Button>
+                                        <Button ToolTip="Y優先整列（Y昇順→X昇順）"
                                                 Command="{Binding SortInputNodesYFirstCommand}"
-                                                Width="32" Height="32" FontSize="9" Padding="0"/>
+                                                Width="32" Height="32" Padding="0">
+                                            <svgc:SvgViewbox Source="/Icons/SortYX.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                        </Button>
                                     </StackPanel>
 
                                     <!-- 注記 -->
@@ -2367,12 +2371,16 @@
                                             <TextBlock Margin="4,2" Foreground="#888" FontSize="11" TextWrapping="Wrap"
                                                        Text="※梁要素を追加するには、&#x0a;Canvas上で梁要素追加モード(Alt+1)にし、&#x0a;杭接合節点、一般節点をクリックしてください。"/>
                                             <StackPanel Orientation="Horizontal" Margin="4,2">
-                                                <Button Content="No↓" ToolTip="要素番号昇順で整列"
+                                                <Button ToolTip="要素番号昇順で整列"
                                                         Command="{Binding SortBeamsByNoCommand}"
-                                                        Width="32" Height="32" FontSize="9" Padding="0"/>
-                                                <Button Content="I→J↓" ToolTip="I端節点昇順→J端節点昇順で整列"
+                                                        Width="32" Height="32" Padding="0">
+                                                    <svgc:SvgViewbox Source="/Icons/SortNo.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                                <Button ToolTip="I端節点昇順→J端節点昇順で整列"
                                                         Command="{Binding SortBeamsByNodeCommand}"
-                                                        Width="32" Height="32" FontSize="9" Padding="0"/>
+                                                        Width="32" Height="32" Padding="0">
+                                                    <svgc:SvgViewbox Source="/Icons/SortIJ.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
                                             </StackPanel>
                                         </StackPanel>
 
@@ -2599,12 +2607,16 @@
                                                                 </StackPanel>
                                                             </Button.ToolTip>
                                                         </Button>
-                                                        <Button Content="X↓Y→" ToolTip="X優先整列（X昇順→Y昇順）"
+                                                        <Button ToolTip="X優先整列（X昇順→Y昇順）"
                                                                 Command="{Binding SortPileLayoutXFirstCommand}"
-                                                                Width="32" Height="32" FontSize="9" Padding="0" VerticalAlignment="Top"/>
-                                                        <Button Content="Y↓X→" ToolTip="Y優先整列（Y昇順→X昇順）"
+                                                                Width="32" Height="32" Padding="0" VerticalAlignment="Top">
+                                                            <svgc:SvgViewbox Source="/Icons/SortXY.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
+                                                        <Button ToolTip="Y優先整列（Y昇順→X昇順）"
                                                                 Command="{Binding SortPileLayoutYFirstCommand}"
-                                                                Width="32" Height="32" FontSize="9" Padding="0" VerticalAlignment="Top"/>
+                                                                Width="32" Height="32" Padding="0" VerticalAlignment="Top">
+                                                            <svgc:SvgViewbox Source="/Icons/SortYX.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                        </Button>
                                                     </StackPanel>
                                                 </Grid>
 
@@ -2667,7 +2679,7 @@
                                                         StaysOpen="False"
                                                        AllowsTransparency="True"
                                                        PopupAnimation="Fade">
-                                                    <views:QuickHintBubble HintText="⑩結果確認" />
+                                                    <views:QuickHintBubble HintText="⑬結果確認" />
                                                 </Popup>
 
                                             </StackPanel>
@@ -4939,7 +4951,7 @@
                                             </Grid>
                                         </TabItem>
 
-                                        <TabItem Header="グリッド" ToolTip = "沈下量コンター図の精度を決めるグリッド">
+                                        <TabItem Header="グリッド" ToolTip = "各交差点において沈下計算を行うグリッドを定義します。">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -5122,6 +5134,7 @@
                                                 Background="Transparent"
                                                 Opacity="1"
                                                 Focusable="True"
+                                                FocusVisualStyle="{x:Null}"
                                                 Cursor="{Binding CanvasCursor}"
                                                 PreviewKeyDown="Canvas3DLayout_PreviewKeyDown"
                                                

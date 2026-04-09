@@ -29,6 +29,7 @@
         </ContextMenu>
         <conv:LoadCaseNameToColorConverter x:Key="LoadCaseNameToColorConverter"/>
         <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
+        <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
     </Window.Resources>
     
@@ -36,10 +37,33 @@
         <StackPanel Width="220" Margin="6" DockPanel.Dock="Left">
             <TextBlock Text="テーブル一覧" FontWeight="Bold" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding FilteredTables}"
-                     DisplayMemberPath="DisplayName"
                      SelectedItem="{Binding SelectedTable}"
                      SelectionChanged="ListBox_SelectionChanged"
-                     Height="280"/>
+                     Height="280">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="5" Height="5" Margin="0,0,3,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
+                                        <Binding Path="LoadCaseName"/>
+                                        <Binding Path="DataContext.AllSeismicLoadCases"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
+                                <Ellipse.Visibility>
+                                    <MultiBinding Converter="{StaticResource LoadCaseAnalyzedConverter}">
+                                        <Binding Path="LoadCaseName"/>
+                                        <Binding Path="DataContext.AnaModel"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </Ellipse.Visibility>
+                            </Ellipse>
+                            <TextBlock Text="{Binding DisplayName}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
 
             <Separator Margin="0,8,0,8"/>
 
@@ -50,7 +74,14 @@
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                            <Ellipse Width="5" Height="5" Margin="0,0,3,0" VerticalAlignment="Center">
+                                <Ellipse.Fill>
+                                    <MultiBinding Converter="{StaticResource LoadCaseNameToColorConverter}">
+                                        <Binding/>
+                                        <Binding Path="DataContext.AllSeismicLoadCases"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </Ellipse.Fill>
                                 <Ellipse.Visibility>
                                     <MultiBinding Converter="{StaticResource LoadCaseAnalyzedConverter}">
                                         <Binding/>
@@ -76,7 +107,26 @@
             <TextBlock Text="荷重組合せフィルタ" Margin="0,0,0,2"/>
             <ComboBox ItemsSource="{Binding LoadCombinationFilterOptions}"
                       SelectedItem="{Binding SelectedLoadCombinationFilter}"
-                      Margin="0,0,0,6"/>
+                      Margin="0,0,0,6">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="5" Height="5" Fill="#2E7D32" Margin="0,0,3,0" VerticalAlignment="Center">
+                                <Ellipse.Visibility>
+                                    <MultiBinding Converter="{StaticResource LoadCombinationAnalyzedConverter}">
+                                        <Binding/>
+                                        <Binding Path="DataContext.SelectedLoadCaseFilter"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        <Binding Path="DataContext.AnaModel"
+                                                 RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                    </MultiBinding>
+                                </Ellipse.Visibility>
+                            </Ellipse>
+                            <TextBlock Text="{Binding}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
 
             <TextBlock Text="液状化フィルタ" Margin="0,0,0,2"/>
             <ComboBox ItemsSource="{Binding LiquefactionFilterOptions}"
