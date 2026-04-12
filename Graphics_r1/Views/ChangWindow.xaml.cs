@@ -135,7 +135,7 @@ namespace PileDesign.Views
 
         private void HelpButton_Click(object sender, RoutedEventArgs e)
         {
-            var help = new HelpWindow { Owner = this };
+            var help = new HelpWindow("chang-uniform-ground") { Owner = this };
             help.ShowDialog();
         }
 

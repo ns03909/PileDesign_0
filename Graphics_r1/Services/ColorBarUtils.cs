@@ -46,26 +46,44 @@ namespace PileDesign.Services
             }
 
             steps = Math.Max(1, steps);
-            var geoms = new List<ColorBaredGeometry>(steps);
-            double span = (max - min) / steps;
-            double maxAbs = Math.Max(Math.Abs(min), Math.Abs(max));
+
+            // 区切りの良いステップ幅を計算
+            double rawSpan = (max - min) / steps;
+            double niceSpan = NiceStep(rawSpan);
+
+            // 区切りの良いmin/maxに拡張
+            double niceMin = Math.Floor(min / niceSpan) * niceSpan;
+            double niceMax = Math.Ceiling(max / niceSpan) * niceSpan;
+            // 実際のステップ数を再計算
+            int niceSteps = Math.Max(1, (int)Math.Round((niceMax - niceMin) / niceSpan));
+            // ステップ数が多すぎる場合は制限
+            if (niceSteps > steps * 2) { niceSteps = steps; niceSpan = (niceMax - niceMin) / niceSteps; }
+
+            var geoms = new List<ColorBaredGeometry>(niceSteps);
+            double maxAbs = Math.Max(Math.Abs(niceMin), Math.Abs(niceMax));
+
+            // 正負両方の値が存在するかチェック（Divergingモード自動判定用）
+            bool hasBothSigns = niceMin < -1e-12 && niceMax > 1e-12;
+
+            // Divergingモードで正負両方ない場合はRainbowにフォールバック
+            if (mode == ColorBarMode.Diverging && !hasBothSigns)
+                mode = ColorBarMode.Rainbow;
 
             Color gray = Color.FromRgb(128, 128, 128);
             Color blue = Color.FromRgb(0, 0, 255);
             Color red = Color.FromRgb(255, 0, 0);
 
-            for (int i = 0; i < steps; i++)
+            for (int i = 0; i < niceSteps; i++)
             {
-                double b = min + i * span;
-                double t = (i == steps - 1) ? max : (min + (i + 1) * span);
+                double b = niceMin + i * niceSpan;
+                double t = (i == niceSteps - 1) ? niceMax : (niceMin + (i + 1) * niceSpan);
                 double mid = (b + t) * 0.5;
 
                 Color col;
 
                 if (mode == ColorBarMode.Rainbow)
                 {
-                    // 0..1 に正規化して ColorBar.GetColor を利用（既存のレインボー実装を再利用）
-                    double ratio = (mid - min) / (max - min);
+                    double ratio = (niceMax - niceMin) > 1e-15 ? (mid - niceMin) / (niceMax - niceMin) : 0.5;
                     ratio = Math.Max(0.0, Math.Min(1.0, ratio));
                     col = ColorBar.GetColor(ratio);
                 }
@@ -105,6 +123,25 @@ namespace PileDesign.Services
             }
 
             return geoms;
+        }
+
+        /// <summary>
+        /// 区切りの良いステップ幅を返す（1, 2, 2.5, 5 × 10^n の系列）
+        /// </summary>
+        private static double NiceStep(double rawStep)
+        {
+            if (rawStep <= 0) return 1;
+            double exponent = Math.Floor(Math.Log10(rawStep));
+            double fraction = rawStep / Math.Pow(10, exponent);
+
+            double niceFraction;
+            if (fraction <= 1.0) niceFraction = 1.0;
+            else if (fraction <= 2.0) niceFraction = 2.0;
+            else if (fraction <= 2.5) niceFraction = 2.5;
+            else if (fraction <= 5.0) niceFraction = 5.0;
+            else niceFraction = 10.0;
+
+            return niceFraction * Math.Pow(10, exponent);
         }
 
         public static List<ColorBaredGeometry> GetMonoColorBarGeometries(Color color, IEnumerable<double> values)

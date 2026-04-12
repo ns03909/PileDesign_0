@@ -175,6 +175,18 @@
 
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserResizeRows="False">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SumH}" Value="0">
+                                <Setter Property="Background" Value="#F0F0F0"/>
+                                <Setter Property="Foreground" Value="Silver"/>
+                                <Setter Property="FontStyle" Value="Italic"/>
+                                <Setter Property="ToolTip" Value="荷重がゼロのため解析時にスキップされます"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
                 <common:EnhancedDataGrid.Columns>
                     <DataGridTextColumn Header="ケース" Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.CellStyle>
@@ -211,6 +223,18 @@
 
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserResizeRows="False">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SumH}" Value="0">
+                                <Setter Property="Background" Value="#F0F0F0"/>
+                                <Setter Property="Foreground" Value="Silver"/>
+                                <Setter Property="FontStyle" Value="Italic"/>
+                                <Setter Property="ToolTip" Value="荷重がゼロのため解析時にスキップされます"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
                 <common:EnhancedDataGrid.Columns>
                     <DataGridTextColumn Header="ケース" Binding="{Binding LoadName}" Width="*" IsReadOnly="True">
                         <DataGridTextColumn.CellStyle>

@@ -290,7 +290,11 @@ namespace PileDesign.Views
             if (DataContext is not MainWindowViewModel viewModel) return;
 
             // 接続用節点を描画（杭頭+ΔZc位置） - 「節点」トグルで表示制御
-            if (viewModel.IsNodeVisible && viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
+            // VL/VL0/VLadd（Level=0）では代表節点・剛体連結線を非表示
+            var selectedLC0 = LoadCases.GetLoadCase(
+                viewModel.CurrentInputModel?.LoadCasesInput?.AllLoadCases, viewModel.SelectedLoadCaseName);
+            bool isHorizontalLoadCase = selectedLC0 != null && (selectedLC0.Level == 1 || selectedLC0.Level == 2);
+            if (isHorizontalLoadCase && viewModel.IsNodeVisible && viewModel.IsConnectingNodeVisible && viewModel.CurrentInputModel?.PileLayoutItems != null)
             {
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {

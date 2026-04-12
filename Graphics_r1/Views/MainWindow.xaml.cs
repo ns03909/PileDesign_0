@@ -518,6 +518,20 @@ namespace PileDesign.Views
                 if (DataContext is MainWindowViewModel vm)
                 {
                     vm.ResetAnalysisResultsSilently();
+                    vm.RequestUpdateWindow();
+                }
+            });
+        }
+
+        private void DataGridFoundationBeams_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.EditAction != DataGridEditAction.Commit) return;
+
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (DataContext is MainWindowViewModel vm)
+                {
+                    vm.RequestUpdateWindow();
                 }
             });
         }
@@ -2015,31 +2029,91 @@ namespace PileDesign.Views
             // 右クリックメニューは「ドラッグしていない場合のみ」表示
             if (IsRightButtonClicked && !_rightDragged)
             {
-                // 何が選択されているかに応じて適切なコンテキストメニューを表示
-                string menuKey = "NodeContextMenu"; // デフォルトは杭のメニュー
+                // 選択状態を判定
+                bool hasSelectedNodes = false;
+                bool hasSelectedBeams = false;
 
-                // 一般梁要素が選択されているかチェック
                 if (DataContext is MainWindowViewModel vm)
                 {
-                    bool hasSelectedBeams = vm.CurrentInputModel?.FoundationBeamInput?.Beams?
-                        .Any(b => b.IsSelected) ?? false;
+                    hasSelectedNodes = vm.CurrentInputModel?.PileLayoutItems?
+                        .Any(p => p.IsSelected) ?? false;
+                    if (!hasSelectedNodes)
+                        hasSelectedNodes = vm.CurrentInputModel?.InputNodes?
+                            .Any(n => n.IsSelected) ?? false;
 
-                    if (hasSelectedBeams)
-                    {
-                        menuKey = "BeamElementContextMenu";
-                    }
+                    hasSelectedBeams = vm.CurrentInputModel?.FoundationBeamInput?.Beams?
+                        .Any(b => b.IsSelected) ?? false;
                 }
 
-                if (FindResource(menuKey) is ContextMenu contextMenu)
+                ContextMenu contextMenu;
+
+                if (hasSelectedNodes && hasSelectedBeams)
+                {
+                    // 両方選択されている場合: 統合メニューを動的に構築
+                    contextMenu = new ContextMenu();
+
+                    // 杭節点メニュー項目
+                    if (FindResource("NodeContextMenu") is ContextMenu nodeMenu)
+                    {
+                        foreach (var item in nodeMenu.Items)
+                        {
+                            if (item is MenuItem mi)
+                            {
+                                var newItem = new MenuItem
+                                {
+                                    Header = mi.Header,
+                                    Command = mi.Command,
+                                    CommandParameter = mi.CommandParameter
+                                };
+                                contextMenu.Items.Add(newItem);
+                            }
+                            else if (item is Separator)
+                            {
+                                contextMenu.Items.Add(new Separator());
+                            }
+                        }
+                    }
+
+                    contextMenu.Items.Add(new Separator());
+
+                    // 梁要素メニュー項目（画像コピー/保存は杭側に含まれるので省略）
+                    if (FindResource("BeamElementContextMenu") is ContextMenu beamMenu)
+                    {
+                        foreach (var item in beamMenu.Items)
+                        {
+                            if (item is MenuItem mi && mi.Command != null)
+                            {
+                                // 画像コピー/保存は重複するのでスキップ
+                                var header = mi.Header?.ToString() ?? "";
+                                if (header.Contains("画像")) continue;
+
+                                var newItem = new MenuItem
+                                {
+                                    Header = mi.Header,
+                                    Command = mi.Command,
+                                    CommandParameter = mi.CommandParameter
+                                };
+                                contextMenu.Items.Add(newItem);
+                            }
+                        }
+                    }
+                }
+                else if (hasSelectedBeams)
+                {
+                    contextMenu = FindResource("BeamElementContextMenu") as ContextMenu;
+                }
+                else
+                {
+                    contextMenu = FindResource("NodeContextMenu") as ContextMenu;
+                }
+
+                if (contextMenu != null)
                 {
                     contextMenu.PlacementTarget = sender as UIElement;
                     contextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
                     contextMenu.IsOpen = true;
                 }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("ContextMenu is null");
-                }
+
                 startPoint = e.GetPosition(Canvas3DLayout);
             }
             else
@@ -2254,17 +2328,15 @@ namespace PileDesign.Views
 
             else if (e.Key == Key.F7 && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                // Ctrl + F7が押されたときの処理
-                // 解析後処理モード
+                // Ctrl + F7: 解析後処理モード
                 var viewModel = DataContext as MainWindowViewModel;
                 viewModel.IsPostAnalysisMode = true;
                 e.Handled = true;
             }
 
-            else if (e.Key == Key.F7)
+            else if (e.Key == Key.F7 && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
             {
-                // F7が押されたときの処理
-                // 解析前処理モード
+                // Ctrl + Shift + F7: 解析前処理モード
                 var viewModel = DataContext as MainWindowViewModel;
                 viewModel.IsPostAnalysisMode = false;
                 e.Handled = true;
@@ -3329,6 +3401,20 @@ namespace PileDesign.Views
                 e.Handled = true;
             }
 
+            // 群杭沈下解析
+            else if (e.Key == Key.F7)
+            {
+                ButtonGroupPileSettlement_Click(null, null);
+                e.Handled = true;
+            }
+
+            // 基礎梁考慮沈下解析
+            else if (e.Key == Key.F8)
+            {
+                viewModel?.OpenVerticalBeamCalculationCommand.Execute(null);
+                e.Handled = true;
+            }
+
             // クイックヒント
             else if (e.Key == Key.F1 && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
@@ -3611,6 +3697,9 @@ namespace PileDesign.Views
 
                 // 型合わせ（double/nullable等はPropertyChangeAction<object>で十分）
                 UndoService.Instance.Push(new PropertyChangeAction<object?>(item, path, oldVal, newVal, $"Edit {path}"));
+
+                if (DataContext is MainWindowViewModel vm)
+                    vm.RequestUpdateWindow();
             }, System.Windows.Threading.DispatcherPriority.Background);
         }
 

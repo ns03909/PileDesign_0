@@ -374,9 +374,9 @@ namespace PileDesign.ViewModels
                 // 液状化オプション: あり=1, なし=1, 両方=2
                 int liquefactionFactor = LiquefactionOption == LiquefactionOptionType.Both ? 2 : 1;
 
-                // 解析対象の荷重ケース1, 2の数
-                int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsAnalysisTarget) ?? 0;
-                int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsAnalysisTarget) ?? 0;
+                // 解析対象の荷重ケース1, 2の数（荷重ゼロのケースを除外）
+                int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
+                int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?.Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
 
                 // 適用されている荷重組み合わせの数
                 int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?.Count(x => x.IsApplicable) ?? 0;

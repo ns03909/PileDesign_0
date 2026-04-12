@@ -274,7 +274,7 @@ namespace PileDesign.Views
             List<ColorBaredGeometry> colorBaredGeometries)
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-            UpdateValueTextsCore(points, values, colorBaredGeometries, p => viewModel.CanvasThreeDView.Transformation(p));
+            UpdateValueTextsCore(points, values, colorBaredGeometries, p => viewModel.CanvasThreeDView.Transformation(p), viewModel.DecimalPlaces);
         }
 
         // 番号取得メソッド
@@ -435,7 +435,8 @@ namespace PileDesign.Views
                 mono[0].DrawPathes(Canvas3DLayout);
             }
 
-            UpdateValueTexts(points, values, colorBaredGeometries);
+            if (viewModel.IsResultValueVisible)
+                UpdateValueTexts(points, values, colorBaredGeometries);
 
             foreach (var g in colorBaredGeometries) g.DrawPathes(Canvas3DLayout);
 

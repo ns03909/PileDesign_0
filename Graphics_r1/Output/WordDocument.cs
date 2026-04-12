@@ -449,6 +449,20 @@ namespace PileDesign.Output
                 AddPileSettlementTable(body);
             }
 
+            if (mainWindowViewModel.IncludeVerticalBeamResults) // 基礎梁考慮鉛直解析結果
+            {
+                if (mainWindowViewModel.IsVerticalBeamAnalysisDone && mainWindowViewModel.VerticalBeamCaseResults != null)
+                {
+                    AddPageBreak(body);
+                    AddHeader1(body, "基礎梁考慮鉛直解析結果", 2);
+                    AddVerticalBeamResultTables(body);
+                }
+                else
+                {
+                    AddText(body, "（基礎梁考慮鉛直解析が未実施のため、結果は省略されています）", "left");
+                }
+            }
+
             // FT-Pile構法
             if (HasFTPile())
             {
@@ -4935,6 +4949,94 @@ diameterSelector,
             }
 
             body.Append(table);
+        }
+
+        /// <summary>
+        /// 基礎梁考慮鉛直解析結果のテーブルを出力
+        /// </summary>
+        private void AddVerticalBeamResultTables(Body body)
+        {
+            var caseResults = mainWindowViewModel.VerticalBeamCaseResults;
+            if (caseResults == null || caseResults.Count == 0) return;
+
+            double fontSize = 8;
+
+            foreach (var caseResult in caseResults)
+            {
+                // 杭反力・沈下量テーブル
+                if (caseResult.PileResults != null && caseResult.PileResults.Count > 0)
+                {
+                    AddLineBreak(body);
+                    AddAutoFigureCaption(body, $"基礎梁考慮鉛直解析 杭反力・沈下量（{caseResult.LoadCaseName}）", "表");
+
+                    Table pileTable = CreateTableWithBorders();
+                    TableRow pileHeader = CreateHeaderRow(
+                        CreateTableCell(["杭No"], fontSize, "center"),
+                        CreateTableCell(["X", "[m]"], fontSize, "center"),
+                        CreateTableCell(["Y", "[m]"], fontSize, "center"),
+                        CreateTableCell(["入力荷重", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["反力", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["沈下量", "[mm]"], fontSize, "center")
+                    );
+                    pileTable.Append(pileHeader);
+
+                    foreach (var pr in caseResult.PileResults)
+                    {
+                        TableRow row = new();
+                        row.Append(CreateTableCell([$"{pr.PileNo}"], fontSize, "center"));
+                        row.Append(CreateTableCell([$"{pr.X:N3}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{pr.Y:N3}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{pr.InputLoad_kN:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{pr.Reaction_kN:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{pr.Settlement_mm:N3}"], fontSize, "right"));
+                        pileTable.Append(row);
+                    }
+                    body.Append(pileTable);
+                }
+
+                // 梁応力テーブル
+                if (caseResult.BeamResults != null && caseResult.BeamResults.Count > 0)
+                {
+                    AddLineBreak(body);
+                    AddAutoFigureCaption(body, $"基礎梁考慮鉛直解析 梁応力（{caseResult.LoadCaseName}）", "表");
+
+                    Table beamTable = CreateTableWithBorders();
+                    TableRow beamHeader = CreateHeaderRow(
+                        CreateTableCell(["梁名"], fontSize, "center"),
+                        CreateTableCell(["Ni", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["Qzi", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["Myi", "[kNm]"], fontSize, "center"),
+                        CreateTableCell(["Nj", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["Qzj", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["Myj", "[kNm]"], fontSize, "center")
+                    );
+                    beamTable.Append(beamHeader);
+
+                    foreach (var br in caseResult.BeamResults)
+                    {
+                        TableRow row = new();
+                        row.Append(CreateTableCell([$"{br.BeamName}"], fontSize, "center"));
+                        row.Append(CreateTableCell([$"{br.Ni:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{br.Qzi:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{br.Myi:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{br.Nj:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{br.Qzj:N1}"], fontSize, "right"));
+                        row.Append(CreateTableCell([$"{br.Myj:N1}"], fontSize, "right"));
+                        beamTable.Append(row);
+                    }
+                    body.Append(beamTable);
+                }
+
+                // 収束情報
+                if (caseResult.StepResults != null && caseResult.StepResults.Count > 0)
+                {
+                    var lastStep = caseResult.StepResults[^1];
+                    AddText(body,
+                        $"収束状態: {(caseResult.IsConverged ? "収束" : "未収束")}　" +
+                        $"ステップ数: {lastStep.Step}　反復回数: {lastStep.Iterations}　残差: {lastStep.Residual:E2}",
+                        "left");
+                }
+            }
         }
 
         // 杭伏図ダイヤグラム挿入メソッド

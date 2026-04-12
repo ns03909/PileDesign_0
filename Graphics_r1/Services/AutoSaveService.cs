@@ -2,6 +2,7 @@ using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Threading;
@@ -23,6 +24,7 @@ namespace PileDesign.Services
         private string? _currentFilePath;
         private InputModel? _currentInputModel;
         private AnaModel? _currentModel;
+        private IList<FEM.VerticalBeamCaseResult>? _verticalBeamCaseResults;
 
         /// <summary>
         /// 自動保存フォルダのパス（AppData/Local/PileDesign/AutoSave/）
@@ -79,11 +81,13 @@ namespace PileDesign.Services
         /// <param name="currentFilePath">現在のファイルパス</param>
         /// <param name="inputModel">InputModel</param>
         /// <param name="anaModel">AnaModel</param>
-        public void Start(string? currentFilePath, InputModel inputModel, AnaModel? anaModel)
+        public void Start(string? currentFilePath, InputModel inputModel, AnaModel? anaModel,
+            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null)
         {
             _currentFilePath = currentFilePath;
             _currentInputModel = inputModel;
             _currentModel = anaModel;
+            _verticalBeamCaseResults = verticalBeamCaseResults;
 
             // 既存の古いファイルをクリーンアップ
             CleanupOldAutoSaveFiles();
@@ -106,6 +110,7 @@ namespace PileDesign.Services
             _currentFilePath = null;
             _currentInputModel = null;
             _currentModel = null;
+            _verticalBeamCaseResults = null;
         }
 
         /// <summary>
@@ -136,7 +141,7 @@ namespace PileDesign.Services
                 var autoSaveFilePath = Path.Combine(AutoSaveFolder, autoSaveFileName);
 
                 // 保存実行
-                _fileOperationService.SaveProjectData(autoSaveFilePath, _currentInputModel, _currentModel);
+                _fileOperationService.SaveProjectData(autoSaveFilePath, _currentInputModel, _currentModel, _verticalBeamCaseResults);
 
                 LastAutoSaveTime = DateTime.Now;
 

@@ -1,0 +1,105 @@
+{
+  "displayName": "基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力",
+  "groundExampleName": "Example7",
+  "loadCaseLevel1": {
+    "forceActionPointX": 20.85,
+    "forceActionPointY": 27.0,
+    "forceActionPointZ": -8.0,
+    "upperMassForce": 40000,
+    "foundationMassForce": 2636
+  },
+  "loadCaseLevel2": {
+    "forceActionPointX": 20.85,
+    "forceActionPointY": 27.0,
+    "forceActionPointZ": -8.0,
+    "upperMassForce": 80000,
+    "foundationMassForce": 5272
+  },
+  "pileBodies": [
+    {
+      "pileBodyRef": "(PB1)",
+      "pileBodyType": "場所打ち鉄筋コンクリート杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "場所打ちコンクリート杭",
+      "pileToeDia": 2700.0,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 2700.0,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        {
+          "no": 1,
+          "segmentLength": 17.5,
+          "segmentDepth": 17.5,
+          "pileSectionType": "鉄筋コンクリート部",
+          "concreteOutDia": 1600.0,
+          "concreteThickness": 800,
+          "mainBarDr": 1300,
+          "pipeTs": 0.0,
+          "pipeDia": 0.0,
+          "mainBarNum": 20,
+          "mainBarSize": "D25",
+          "concreteFc": 27.0,
+          "concreteGsi": 1.0,
+          "concreteGamma": 23.0
+        }
+      ]
+    }
+  ],
+  "pileLayoutItems": [
+    { "pileNo": 1,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 0.0,   "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 2,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 6.0,   "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 3,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 12.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 4,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 18.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 5,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 24.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 6,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 30.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 7,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 36.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 8,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 42.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 9,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 48.0,  "z": -10.0, "axialForceVL0": 7161 },
+    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.0,  "y": 53.25, "z": -10.0, "axialForceVL0": 7161 },
+
+    { "pileNo": 11, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.1,  "y": 0.0,   "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 12, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.9,  "y": 6.0,   "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 13, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.9,  "y": 12.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 14, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.9,  "y": 18.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 15, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.9,  "y": 24.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 16, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.9,  "y": 30.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 17, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.9,  "y": 36.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 18, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.1,  "y": 42.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 19, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.1,  "y": 48.0,  "z": -10.0, "axialForceVL0": 8914 },
+    { "pileNo": 20, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.1,  "y": 53.25, "z": -10.0, "axialForceVL0": 8914 },
+
+    { "pileNo": 21, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 0.0,   "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 22, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 6.0,   "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 23, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 12.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 24, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 18.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 25, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 24.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 26, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 30.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 27, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 36.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 28, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 42.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 29, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 48.0,  "z": -10.0, "axialForceVL0": 5243 },
+    { "pileNo": 30, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 28.85, "y": 53.25, "z": -10.0, "axialForceVL0": 5243 }
+  ],
+  "gridXItems": [
+    { "name": "A1", "coord": 0.0,  "spacing": 0.0 },
+    { "name": "A2", "coord": 6.5,  "spacing": 6.5 },
+    { "name": "A3", "coord": 12.0, "spacing": 5.5 },
+    { "name": "A4", "coord": 19.1, "spacing": 7.1 },
+    { "name": "A5", "coord": 29.6, "spacing": 10.5 }
+  ],
+  "gridYItems": [
+    { "name": "AA", "coord": 0.0,  "spacing": 0.0 },
+    { "name": "AB", "coord": 6.0,  "spacing": 6.0 },
+    { "name": "AC", "coord": 12.0, "spacing": 6.0 },
+    { "name": "AD", "coord": 18.0, "spacing": 6.0 },
+    { "name": "AE", "coord": 24.0, "spacing": 6.0 },
+    { "name": "AF", "coord": 30.0, "spacing": 6.0 },
+    { "name": "AG", "coord": 36.0, "spacing": 6.0 },
+    { "name": "AH", "coord": 42.0, "spacing": 6.0 },
+    { "name": "AI", "coord": 48.0, "spacing": 6.0 },
+    { "name": "AJ", "coord": 54.0, "spacing": 6.0 }
+  ]
+}

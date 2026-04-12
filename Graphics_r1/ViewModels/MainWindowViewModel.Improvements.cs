@@ -38,7 +38,8 @@ namespace PileDesign.ViewModels
         private static readonly JsonSerializerOptions _undoHashJsonOptions = new()
         {
             WriteIndented = false,
-            ReferenceHandler = null
+            ReferenceHandler = null,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
         };
 
         /// <summary>

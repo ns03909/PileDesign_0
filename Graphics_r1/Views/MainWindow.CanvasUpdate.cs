@@ -678,7 +678,7 @@ namespace PileDesign.Views
                                 new EllipseGeometry(coordBtm, r, r));
                         }
 
-                        // 剛体連結線（代表節点→土圧合力節点）
+                        // 剛体連結線（代表節点→土圧合力節点）— VL/VL0/VLadd（Level=0）では非表示
                         if (viewModel.IsConnectingNodeVisible)
                         {
                             double cx = (x1 + x2) * 0.5;
@@ -687,7 +687,7 @@ namespace PileDesign.Views
                             // 代表節点の位置を取得
                             var selectedLC = LoadCases.GetLoadCase(
                                 viewModel.CurrentInputModel.LoadCasesInput.AllLoadCases, viewModel.SelectedLoadCaseName);
-                            if (selectedLC != null)
+                            if (selectedLC != null && (selectedLC.Level == 1 || selectedLC.Level == 2))
                             {
                                 Point apCoord = viewModel.CanvasThreeDView.Transformation(
                                     new Point3D(selectedLC.ForceActionPointX, selectedLC.ForceActionPointY, selectedLC.ForceActionPointAltitude));

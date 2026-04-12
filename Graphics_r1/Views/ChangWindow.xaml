@@ -96,165 +96,104 @@
 
     </Window.Resources>
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- 上部: タイトル＋入力エリア（左右2カラム） -->
+        <Border Grid.Row="0" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="8,4,8,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <TextBlock Text="杭頭水平力を受ける一様地盤中の長い杭の状態計算"
-                       FontSize="16"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Left"
-                       VerticalAlignment="Center"
-                       Margin="10"/>
-            <Button x:Name="HelpButton"
-                ToolTip="ヘルプ"
-                Click="HelpButton_Click"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Grid.Column="1">
-                <svgc:SvgViewbox Source="/Icons/Help.svg" Style="{StaticResource SvgIconStyle16}"/>
-            </Button>
-        </Grid>
+                <!-- タイトル行 -->
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="3"
+                           Text="杭頭水平力を受ける一様地盤中の長い杭の状態計算"
+                           FontSize="14" FontWeight="Bold" Margin="0,0,0,4"/>
 
+                <!-- 左カラム: 説明＋全体水平力 -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4"
+                               Text="Changの式による一様地盤中の長い杭の計算。杭の非線形性は非考慮。地盤は1mm以上で非線形性Hを考慮（塑性地盤反力pyは非考慮）。"/>
 
-        <StackPanel Grid.Row="1"  Orientation="Horizontal" HorizontalAlignment="Left">
-            <GroupBox Header="説明">
-                <StackPanel>
-                    <BulletDecorator Margin="0,0,0,6">
-                        <BulletDecorator.Bullet>
-                            <!-- 丸いバレット。色/サイズは好みで調整 -->
-                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
-                        </BulletDecorator.Bullet>
-
-                        <TextBlock Text="Changの式による一様地盤中の長い杭の計算を行います。"
-                         FontWeight="Normal"
-                         VerticalAlignment="Center"
-                         TextWrapping="Wrap"
-                         Margin="8,0,0,0"/>
-                    </BulletDecorator>
-
-                    <BulletDecorator Margin="0,0,0,6">
-                        <BulletDecorator.Bullet>
-                            <!-- 丸いバレット。色/サイズは好みで調整 -->
-                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
-                        </BulletDecorator.Bullet>
-
-                        <TextBlock Text="杭の非線形性は考慮しません。"
-                         FontWeight="Normal"
-                         VerticalAlignment="Center"
-                         TextWrapping="Wrap"
-                         Margin="8,0,0,0"/>
-                    </BulletDecorator>
-
-                    <BulletDecorator Margin="0,0,0,6">
-                        <BulletDecorator.Bullet>
-                            <!-- 丸いバレット。色/サイズは好みで調整 -->
-                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
-                        </BulletDecorator.Bullet>
-
-                        <TextBlock Text="地盤は1mm以上の変形では非線形性Hを考慮します。ただし、塑性地盤反力pyは考慮しません。"
-                         FontWeight="Normal"
-                         VerticalAlignment="Center"
-                         TextWrapping="Wrap"
-                         Margin="8,0,0,0"/>
-                    </BulletDecorator>
-
-                    <BulletDecorator Margin="0,0,0,6">
-                        <BulletDecorator.Bullet>
-                            <!-- 丸いバレット。色/サイズは好みで調整 -->
-                            <Ellipse Width="5" Height="5" Fill="#62B0E2" VerticalAlignment="Center"/>
-                        </BulletDecorator.Bullet>
-
-                        <TextBlock Text="「杭地盤セット定義」でkh0、EIを定義し、これを「区地盤セット配置」で配置します。"
-                         FontWeight="Normal"
-                         VerticalAlignment="Center"
-                         TextWrapping="Wrap"
-                         Margin="8,0,0,0"/>
-                    </BulletDecorator>
-
+                    <GroupBox Header="全体水平力による解析" Padding="4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="全体水平力(kN)" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBox Grid.Column="1" HorizontalContentAlignment="Right"
+                                     Text="{Binding TotalHorizontalLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Column="2" Content="解析実行" Command="{Binding AnalysisCommand}" Margin="8,0,0,0"/>
+                        </Grid>
+                    </GroupBox>
                 </StackPanel>
-            </GroupBox>
-            <GroupBox Header="全体水平力による解析" VerticalAlignment="Top">
-                <StackPanel VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="全体水平力(kN)"/>
-                        <TextBox Width="45" HorizontalContentAlignment="Right"
-                        Text="{Binding TotalHorizontalLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}" />
-                    </StackPanel>
-                    <Button Content="解析実行" Command="{Binding AnalysisCommand}" HorizontalAlignment="Right"/>
+
+                <!-- 区切り -->
+                <GridSplitter Grid.Row="1" Grid.Column="1" Width="1" Background="#DDD" HorizontalAlignment="Center" VerticalAlignment="Stretch" IsEnabled="False"/>
+
+                <!-- 右カラム: 全体モデル読み込み＋ファイル操作 -->
+                <StackPanel Grid.Row="1" Grid.Column="2" Margin="8,0,0,0">
+                    <GroupBox Header="全体モデルからの読み込み" Padding="4">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="荷重条件" VerticalAlignment="Center" Margin="0,2,8,2"/>
+                            <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,2"
+                                      DisplayMemberPath="LoadName"
+                                      SelectedItem="{Binding SelectedLoadCase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding AllSeismicLoadCases}"
+                                      ToolTip="地震荷重ケースを選択してください"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="上部・基礎組合せ" VerticalAlignment="Center" Margin="0,2,8,2"/>
+                            <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,2"
+                                      DisplayMemberPath="Name"
+                                      SelectedItem="{Binding SelectedLoadCombination, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding AllLoadCombinations}"
+                                      ToolTip="荷重組合せを選択してください"/>
+
+                            <CheckBox Grid.Row="2" Grid.Column="1" Content="液状化あり" IsChecked="{Binding IsLiquefaction, Mode=TwoWay}" Margin="0,2"/>
+
+                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
+                                <Button Content="読み込み" Command="{Binding ApplyInputModelCommand}"/>
+                                <Button Click="SaveChangData_Click" ToolTip="Chang 入力をファイルに保存します (JSON)" Margin="8,0,0,0">
+                                    <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle16}"/>
+                                </Button>
+                                <Button Click="LoadChangData_Click" ToolTip="Chang 入力をファイルから読み込みます (JSON)" Margin="4,0,0,0">
+                                    <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle16}"/>
+                                </Button>
+                                <Button x:Name="HelpButton" ToolTip="ヘルプ" Click="HelpButton_Click" Margin="4,0,0,0">
+                                    <svgc:SvgViewbox Source="/Icons/Help.svg" Style="{StaticResource SvgIconStyle16}"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </GroupBox>
                 </StackPanel>
-            </GroupBox>
+            </Grid>
+        </Border>
 
-            <GroupBox Header="全体モデルからの読み込み">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <!-- 左カラム：ラベル -->
-                    
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="荷重条件" />
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="上部・基礎組合せ" />
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="液状化" />
-                    
-                    <!-- 右カラム：コントロール群 -->
-                        <!-- ComboBox の ItemsSource を ViewModel のプロパティに変更 -->
-                    <ComboBox Grid.Row="0" Grid.Column="1" MinWidth="220"
-                              DisplayMemberPath="LoadName"
-                              SelectedItem="{Binding SelectedLoadCase, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                              ItemsSource="{Binding AllSeismicLoadCases}"
-                              ToolTip="地震荷重ケースを選択してください"/>
-                        <!-- LoadCombination -->
-                    <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="220"
-                              DisplayMemberPath="Name"
-                              SelectedItem="{Binding SelectedLoadCombination, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                              ItemsSource="{Binding AllLoadCombinations}"
-                              ToolTip="荷重組合せを選択してください"/>
-                        <!-- Liquefaction -->
-                    <CheckBox Grid.Row="2" Grid.Column="1" Content="液状化あり" IsChecked="{Binding IsLiquefaction, Mode=TwoWay}" />
-
-                    <!-- 右上：既存ボタンを残す -->
-                    <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="読み込み" Command="{Binding ApplyInputModelCommand}" />
-                    </StackPanel>
-                </Grid>
-            </GroupBox>
-
-        </StackPanel>
-
-        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-
-            <!-- 追加: 保存 / 読み込み -->
-            <Button Click="SaveChangData_Click"
-                    ToolTip="Chang 入力をファイルに保存します (JSON)" HorizontalAlignment="Right">
-                <svgc:SvgViewbox Source="/Icons/SaveFile.svg" Style="{StaticResource SvgIconStyle16}"/>
-            </Button>
-            <Button Click="LoadChangData_Click"
-                    ToolTip="Chang 入力をファイルから読み込みます (JSON)" HorizontalAlignment="Right">
-                <svgc:SvgViewbox Source="/Icons/OpenFile.svg" Style="{StaticResource SvgIconStyle16}"/>
-            </Button>
-        </StackPanel>
-
-        <!-- AvalonDock レイアウト（行 1） -->
-        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="2">
+        <!-- AvalonDock レイアウト -->
+        <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
             <avalonDock:LayoutRoot>
                 <!-- 横方向: 左 75% に上/下（定義/配置）、右 25% にグラフ -->
                 <avalonDock:LayoutPanel Orientation="Horizontal">

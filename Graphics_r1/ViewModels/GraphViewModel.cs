@@ -25,6 +25,14 @@ namespace PileDesign.ViewModels
         public bool IsHorizontalAnalysisDone { get; set; }
         public bool IsVerticalAnalysisDone { get; set; }
         public bool IsGroupPileSettlementAnalysisDone { get; set; }
+        public bool IsVerticalBeamAnalysisDone { get; set; }
+
+        private string _graphErrorMessage;
+        public string GraphErrorMessage
+        {
+            get => _graphErrorMessage;
+            set => SetProperty(ref _graphErrorMessage, value);
+        }
 
         // RequestCloseイベントの実装
         public event EventHandler RequestClose;
@@ -686,6 +694,7 @@ namespace PileDesign.ViewModels
             IsHorizontalAnalysisDone = _mainWindowViewModel.IsHorizontalAnalysisDone;
             IsVerticalAnalysisDone = _mainWindowViewModel.IsVerticalAnalysisDone;
             IsGroupPileSettlementAnalysisDone = _mainWindowViewModel.IsGroupPileSettlementAnalysisDone;
+            IsVerticalBeamAnalysisDone = _mainWindowViewModel.IsVerticalBeamAnalysisDone;
 
             LoadCaseOptions = ["All"];
             foreach (LoadCase loadCase in InputModel.LoadCasesInput.AllLoadCases)
@@ -779,15 +788,24 @@ namespace PileDesign.ViewModels
             }
             if (IsVerticalAnalysisDone)
             {
-                GraphOptions.Add("単杭沈下");
+                GraphOptions.Add("荷重沈下曲線");
+                GraphOptions.Add("沈下 単杭");
             }
             if (IsGroupPileSettlementAnalysisDone)
             {
-                GraphOptions.Add("群杭沈下");
+                GraphOptions.Add("沈下 群杭");
             }
             if (IsVerticalAnalysisDone && IsGroupPileSettlementAnalysisDone)
             {
-                GraphOptions.Add("単杭+群杭沈下");
+                GraphOptions.Add("沈下 単杭+群杭");
+            }
+            if (IsVerticalBeamAnalysisDone)
+            {
+                GraphOptions.Add("沈下 基礎梁考慮単杭");
+            }
+            if (IsVerticalBeamAnalysisDone && IsGroupPileSettlementAnalysisDone)
+            {
+                GraphOptions.Add("沈下 基礎梁考慮単杭+群杭");
             }
 
             if (GraphOptions.Count > 0 && string.IsNullOrEmpty(SelectedGraphOption))
@@ -931,6 +949,8 @@ namespace PileDesign.ViewModels
             WpfPlot1.Plot.Clear();
             WpfPlot2.Plot.Clear();
             WpfPlot3.Plot.Clear();
+
+            GraphErrorMessage = null;
 
             // 限界状態オプションをデフォルトで非表示
             IsLimitStateOptionVisible = false;
@@ -1714,16 +1734,30 @@ namespace PileDesign.ViewModels
                 IsLimitStateOptionVisible = true;
 
                 try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm"); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}"); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"変位グラフ描画エラー: {ex.Message}"; }
                 try { DrawPileForce(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "F", "kN"); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Force] {ex.GetType().Name}: {ex.Message}"); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Force] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"せん断力グラフ描画エラー: {ex.Message}"; }
                 try { DrawPileForce(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "M", "kNm"); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Moment] {ex.GetType().Name}: {ex.Message}"); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Moment] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"曲げモーメントグラフ描画エラー: {ex.Message}"; }
 
             }
-            else if (SelectedGraphOption == "単杭沈下" ||
-                SelectedGraphOption == "群杭沈下" ||
-                SelectedGraphOption == "単杭+群杭沈下")
+            else if (SelectedGraphOption == "荷重沈下曲線")
+            {
+                IsLoadCaseOptionVisible = false;
+                IsLoadCombinationOptionVisible = false;
+                IsPileOptionVisible = true;
+                IsPileBodyOptionVisible = false;
+                IsPileSegmentOptionVisible = false;
+                IsLiquefactionOptionVisible = false;
+                IsGridOptionVisible = false;
+
+                DrawLoadSettlementCurve();
+            }
+            else if (SelectedGraphOption == "沈下 単杭" ||
+                SelectedGraphOption == "沈下 群杭" ||
+                SelectedGraphOption == "沈下 単杭+群杭" ||
+                SelectedGraphOption == "沈下 基礎梁考慮単杭" ||
+                SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
             {
                 if (GridOptions.Count == 0)
                 {
@@ -2691,16 +2725,16 @@ namespace PileDesign.ViewModels
                     yOnGrid = pile.Y;
                     xs.Add(pile.X); // X座標追加
                 }
-                if (SelectedGraphOption == "単杭沈下" ||
-                    SelectedGraphOption == "単杭+群杭沈下")
+                if (SelectedGraphOption == "沈下 単杭" ||
+                    SelectedGraphOption == "沈下 単杭+群杭")
                 {
                     if (SelectedLoadCaseOption == "VL")
                     {
-                        if (SelectedGraphOption == "単杭沈下")
+                        if (SelectedGraphOption == "沈下 単杭")
                         {
                             ys.Add(pile.SinglePileSettlementVL);
                         }
-                        else // if (SelectedGraphOption == "単杭+群杭沈下")
+                        else // if (SelectedGraphOption == "沈下 単杭+群杭")
                         {
                             ys.Add(pile.SinglePileSettlementVL + pile.GroupPileSettlement);
                         }
@@ -2712,12 +2746,12 @@ namespace PileDesign.ViewModels
                         {
                             if (InputModel.LoadCasesInput.LoadCasesLevel1[i].LoadName == SelectedLoadCaseOption)
                             {
-                                if (SelectedGraphOption == "単杭沈下")
+                                if (SelectedGraphOption == "沈下 単杭")
                                 {
                                     ys.Add(pile.SinglePileSettlementLevel1s[i]);
                                     break;
                                 }
-                                else // if (SelectedGraphOption == "単杭+群杭沈下")
+                                else // if (SelectedGraphOption == "沈下 単杭+群杭")
                                 {
                                     ys.Add(pile.SinglePileSettlementLevel1s[i] + pile.GroupPileSettlement);
                                     break;
@@ -2728,12 +2762,12 @@ namespace PileDesign.ViewModels
                         {
                             if (InputModel.LoadCasesInput.LoadCasesLevel2[i].LoadName == SelectedLoadCaseOption)
                             {
-                                if (SelectedGraphOption == "単杭沈下")
+                                if (SelectedGraphOption == "沈下 単杭")
                                 {
                                     ys.Add(pile.SinglePileSettlementLevel2s[i]);
                                     break;
                                 }
-                                else // if (SelectedGraphOption == "単杭+群杭沈下")
+                                else // if (SelectedGraphOption == "沈下 単杭+群杭")
                                 {
                                     ys.Add(pile.SinglePileSettlementLevel2s[i] + pile.GroupPileSettlement);
                                     break;
@@ -2743,9 +2777,17 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                else if (SelectedGraphOption == "群杭沈下")
+                else if (SelectedGraphOption == "沈下 群杭")
                 {
                     ys.Add(pile.GroupPileSettlement);
+                }
+                else if (SelectedGraphOption == "沈下 基礎梁考慮単杭" ||
+                         SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
+                {
+                    double vbSettle = GetVBSettlement(pile.No, SelectedLoadCaseOption);
+                    if (SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
+                        vbSettle += pile.GroupPileSettlement;
+                    ys.Add(vbSettle);
                 }
             }
 
@@ -2767,7 +2809,8 @@ namespace PileDesign.ViewModels
                 scatterAngle.LineWidth = 0;
             }
 
-            if (SelectedGraphOption == "群杭沈下" || SelectedGraphOption == "単杭+群杭沈下")
+            if (SelectedGraphOption == "沈下 群杭" || SelectedGraphOption == "沈下 単杭+群杭" ||
+                SelectedGraphOption == "沈下 基礎梁考慮単杭+群杭")
             {
                 List<double> xsGround = [];
                 List<double> ysGround = [];
@@ -3227,6 +3270,37 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 基礎梁考慮鉛直解析結果から指定杭の沈下量を取得する
+        /// </summary>
+        private double GetVBSettlement(int pileNo, string loadCaseName)
+        {
+            var vbResults = _mainWindowViewModel.VerticalBeamCaseResults;
+            if (vbResults == null || vbResults.Count == 0) return 0;
+
+            // 荷重ケース名でマッチするケースを探す（VLの場合は最初のケース）
+            FEM.VerticalBeamCaseResult caseResult = null;
+            foreach (var cr in vbResults)
+            {
+                if (cr.LoadCaseName == loadCaseName ||
+                    (loadCaseName == "VL" && cr.LoadCaseName.Contains("VL")))
+                {
+                    caseResult = cr;
+                    break;
+                }
+            }
+            // マッチしなければ最初のケースを使用
+            caseResult ??= vbResults[0];
+
+            if (caseResult.PileResults == null) return 0;
+            foreach (var pr in caseResult.PileResults)
+            {
+                if (pr.PileNo == pileNo)
+                    return pr.Settlement_mm;
+            }
+            return 0;
+        }
+
+        /// <summary>
         /// NM/NQ曲線から指定軸力Nに対応する値（M or Q）を線形補間で取得
         /// </summary>
         private static double InterpolateLimitValue(List<double> nValues, List<double> mOrQValues, double targetN)
@@ -3298,6 +3372,73 @@ namespace PileDesign.ViewModels
                 "低減後安全限界状態" => (pileSection.FactoredUltimateNQ.N, pileSection.FactoredUltimateNQ.Q),
                 _ => (null, null)
             };
+        }
+
+        /// <summary>
+        /// 荷重-杭頭沈下曲線・荷重-杭先端沈下曲線を描画
+        /// SoilPile.LoadDisplacementsから杭頭荷重(PileTopLoad) vs 沈下量(DD0s/DDns)をプロット
+        /// </summary>
+        private void DrawLoadSettlementCurve()
+        {
+            var soilPiles = InputModel.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0) return;
+
+            // 選択杭の SoilPileAltNo を取得
+            var selectedPiles = GetSelectedPileLayouts();
+            var soilPileIndices = new HashSet<int>();
+            foreach (var pile in selectedPiles)
+            {
+                int idx = pile.SoilPileAltNo - 1;
+                if (idx >= 0 && idx < soilPiles.Count)
+                    soilPileIndices.Add(idx);
+            }
+            if (soilPileIndices.Count == 0)
+            {
+                // All の場合は全SoilPile
+                for (int i = 0; i < soilPiles.Count; i++)
+                    soilPileIndices.Add(i);
+            }
+
+            var colors = new[] {
+                new ScottPlot.Color(0, 114, 189),    // 青
+                new ScottPlot.Color(217, 83, 25),     // オレンジ
+                new ScottPlot.Color(119, 172, 48),    // 緑
+                new ScottPlot.Color(126, 47, 142),    // 紫
+                new ScottPlot.Color(162, 20, 47),     // 赤
+                new ScottPlot.Color(77, 190, 238),    // 水色
+            };
+
+            int colorIdx = 0;
+            foreach (int spIdx in soilPileIndices)
+            {
+                var sp = soilPiles[spIdx];
+                if (sp.LoadDisplacements == null || sp.LoadDisplacements.Count == 0) continue;
+
+                var sorted = sp.LoadDisplacements.OrderBy(ld => ld.PileTopLoad).ToList();
+                double[] loads = sorted.Select(ld => ld.PileTopLoad).ToArray();
+                double[] headSettlements = sorted.Select(ld => ld.DD0s).ToArray();
+                double[] toeSettlements = sorted.Select(ld => ld.DDns).ToArray();
+
+                var color = colors[colorIdx % colors.Length];
+                string label = $"杭セット{spIdx + 1}";
+
+                // 杭頭沈下曲線（実線）
+                var scatterHead = WpfPlot.Plot.Add.Scatter(headSettlements, loads);
+                scatterHead.Color = color;
+                scatterHead.LegendText = $"{label} 杭頭";
+                scatterHead.MarkerSize = 5;
+
+                // 杭先端沈下曲線（破線）
+                var scatterToe = WpfPlot.Plot.Add.Scatter(toeSettlements, loads);
+                scatterToe.Color = color;
+                scatterToe.LegendText = $"{label} 杭先端";
+                scatterToe.MarkerSize = 3;
+                scatterToe.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+
+                colorIdx++;
+            }
+
+            ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "荷重沈下曲線", "沈下量 (mm)", "荷重 (kN)");
         }
     }
 }

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace PileDesign.ViewModels
 {
@@ -22,10 +23,33 @@ namespace PileDesign.ViewModels
     ///   Phase 1: VL（常時+追加）をゼロから増分解析 → 収束状態を保存
     ///   Phase 2: 1-1～1-4, 2-1～2-4 を VL 収束状態から差分増分解析
     /// </summary>
-    public partial class VerticalBeamCalculationViewModel : ObservableObject
+    public partial class VerticalBeamCalculationViewModel : ObservableObject, Common.ICloseable
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+
+        // ── 保存/破棄 ──
+
+        public event EventHandler RequestClose;
+
+        /// <summary>解析結果を保存したかどうか（閉じた後にMainWindowViewModelが確認する）</summary>
+        public bool IsSaved { get; private set; }
+
+        public ICommand OkCommand { get; }
+        public ICommand CancelCommand { get; }
+
+        private void SaveAndClose()
+        {
+            IsSaved = true;
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void DiscardAndClose()
+        {
+            CaseResults.Clear();
+            IsSaved = false;
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
 
         // ── 解析パラメータ ──
 
@@ -93,7 +117,13 @@ namespace PileDesign.ViewModels
         public bool IsAnalysisExecuted
         {
             get => _isAnalysisExecuted;
-            set => SetProperty(ref _isAnalysisExecuted, value);
+            set
+            {
+                if (SetProperty(ref _isAnalysisExecuted, value))
+                {
+                    (OkCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                }
+            }
         }
 
         private double _currentProgress;
@@ -142,6 +172,8 @@ namespace PileDesign.ViewModels
         public VerticalBeamCalculationViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
+            OkCommand = new PileDesign.ViewModels.RelayCommand(_ => SaveAndClose(), _ => IsAnalysisExecuted);
+            CancelCommand = new PileDesign.ViewModels.RelayCommand(_ => DiscardAndClose());
         }
 
         // ── ログ ──

@@ -9,6 +9,9 @@
         WindowStartupLocation="CenterOwner"
         DataContextChanged="OnDataContextChanged"
         common:EscapeKeyBehavior.Enable="True">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -25,6 +28,11 @@
             <Button Content="クリア" Command="{Binding ClearLogCommand}" Padding="10,2"/>
             <Separator/>
             <CheckBox Content="自動スクロール" IsChecked="{Binding AutoScroll}" VerticalAlignment="Center" Margin="5,0"/>
+            <Separator Visibility="{Binding IsCategorySelectorVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <ComboBox ItemsSource="{Binding LogCategories}"
+                      SelectedItem="{Binding SelectedLogCategory}"
+                      Visibility="{Binding IsCategorySelectorVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                      MinWidth="150" VerticalAlignment="Center"/>
         </ToolBar>
 
         <!-- Log Content -->

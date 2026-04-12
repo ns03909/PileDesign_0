@@ -57,29 +57,29 @@
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="荷重分割数:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding LoadStepsCount, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
                                  PreviewTextInput="NumericOnly_PreviewTextInput"/>
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="最大反復回数:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MaxIterations, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
                                  PreviewTextInput="NumericOnly_PreviewTextInput"/>
 
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="収束判定値:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ConvergenceTolerance, UpdateSourceTrigger=PropertyChanged, StringFormat=E1}"
-                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
                                  PreviewTextInput="NumericOnly_PreviewTextInput"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="緩和係数 ω:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding RelaxationFactor, UpdateSourceTrigger=PropertyChanged, StringFormat=F2}"
-                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
                                  PreviewTextInput="NumericOnly_PreviewTextInput"/>
                     </Grid>
                 </GroupBox>
 
                 <!-- 実行ボタン -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">
-                    <Button Content="解析実行" Command="{Binding ExecuteAnalysisCommand}"
+                    <Button Content="解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}"
                             Width="120" Height="32" Margin="0,0,8,0"
                             FontWeight="Bold" Background="#FF4472C4" Foreground="White">
                         <Button.Style>
@@ -239,8 +239,11 @@
         <!-- ═══ 下部ボタン ═══ -->
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                     Orientation="Horizontal" HorizontalAlignment="Right" Margin="8">
-            <Button Content="閉じる" Click="CloseButton_Click"
-                    Width="100" Height="28" Margin="0,4,8,4"/>
+            <Button Content="保存して閉じる (Ctrl+Enter)" Command="{Binding OkCommand}"
+                    Width="180" Height="28" Margin="0,4,8,4"
+                    Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BoolToVisConverter}}"/>
+            <Button Content="破棄して閉じる (Esc)" Command="{Binding CancelCommand}"
+                    Width="150" Height="28" Margin="0,4,8,4"/>
         </StackPanel>
     </Grid>
 </Window>

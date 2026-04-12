@@ -76,11 +76,13 @@ namespace PileDesign.Views
                 }
             }
 
-            if (viewModel.AnalysisResultContent != "沈下")
+            string effectiveContent = viewModel.EffectiveSettlementContent;
+
+            if (effectiveContent != "沈下")
             {
                 ColorBarCanvas.Children.Clear();
             }
-            if (viewModel.AnalysisResultContent == "沈下")
+            if (effectiveContent == "沈下")
             {
                 string title = $"{viewModel.AnalysisResultContent}|{viewModel.AnalysisResultSettlementType}|{viewModel.SelectedLoadCaseName}";
                 unit = "mm";
@@ -556,7 +558,6 @@ namespace PileDesign.Views
                 if (anaModel == null || anaModel.Beams == null)
                     return;
 
-                string format = "{0:N" + viewModel.DecimalPlaces + "}";
                 Vector<double> effectiveVector;
                 double multiplier;
                 bool isThetaLocal;
@@ -606,8 +607,11 @@ namespace PileDesign.Views
                         return;
                 }
 
-                // 単位設定
+                // 単位設定・フォーマット
                 unit = isThetaLocal ? "rad" : "mm";
+                string format = isThetaLocal
+                    ? "{0:F5}"
+                    : "{0:N" + viewModel.DecimalPlaces + "}";
 
                 // 選択ケース/組合せ（既存）
                 var selectedLoadCase = LoadCases.GetLoadCase(
@@ -834,8 +838,13 @@ namespace PileDesign.Views
                     // θ 系：全節点に対して楕円を描く（ProjectionUtils を利用）
                     double flattening = viewModel.CanvasThreeDView.Flattening;
 
-                    // カラーバー用 allValues は既に「rot * multiplier * ratio * modelExtent」で作成済み（上で）
-                    // colorBaredGeometries を使って楕円を色分けする
+                    // 最大回転角で正規化し、ModelExtentに対する相対サイズで楕円を描く
+                    double maxRotValue = allValues.Count > 0 ? allValues.Max() : 0;
+                    if (maxRotValue <= 1e-15) return; // 回転角がすべてゼロなら何も描かない
+
+                    // 最大楕円径をModelExtentの一定割合とする（変位スケールスライダーで調整可能）
+                    double maxEllipseDiameter = viewModel.ModelExtent * viewModel.CanvasThreeDView.Scale * 0.15 * viewModel.DisplacementDiagramRatio;
+
                     foreach (var node in nodeSet)
                     {
                         if (node == null) continue;
@@ -868,8 +877,9 @@ namespace PileDesign.Views
                         if (rot <= 1e-15) continue;
 
                         double displayedMagnitude = rot * multiplier;
-                        double targetPixelDiameter = Math.Abs(displayedMagnitude) * viewModel.CanvasThreeDView.Scale * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
-                        if (targetPixelDiameter <= 0) continue;
+                        // 最大回転角で正規化し、最大楕円径に対する割合でサイズ決定
+                        double targetPixelDiameter = (displayedMagnitude / maxRotValue) * maxEllipseDiameter;
+                        if (targetPixelDiameter <= 0.5) continue;
 
                         var proj = ProjectionUtils.ProjectCircleAsEllipseExact(node.Coord, axis, 1.0, viewModel.CanvasThreeDView.Transformation);
                         if (proj == null) continue;
@@ -896,8 +906,8 @@ namespace PileDesign.Views
                             geometryToAdd = ellipse;
                         }
 
-                        // midValue はカラーバーに合わせたスケール（同じスケールで allValues を作っているのでそれを使う）
-                        double midValue = Math.Abs(displayedMagnitude) * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
+                        // midValue はカラーバーに合わせたスケール（allValues と同じ単位: rot * multiplier）
+                        double midValue = Math.Abs(displayedMagnitude);
 
                         //var picked = PickColorGeometry(midValue, colorBaredGeometries) ?? PickColorGeometryInclusiveTop(midValue, colorBaredGeometries);
                         var picked = ColorBarUtils.PickColorGeometry(midValue, colorBaredGeometries)
@@ -907,7 +917,7 @@ namespace PileDesign.Views
 
                         if (viewModel.IsResultValueVisible)
                         {
-                            AddText3D(Brushes.Black, GetNumberString(rot * multiplier, viewModel.DecimalPlaces), center2DUnit.X, center2DUnit.Y - finalMajor, "C", "B", 0.0);
+                            AddText3D(Brushes.Black, string.Format(format, rot * multiplier), center2DUnit.X, center2DUnit.Y - finalMajor, "C", "B", 0.0);
                         }
                     }
                 }
@@ -929,7 +939,7 @@ namespace PileDesign.Views
                             unit,
                             allValues.Min(),
                             allValues.Max(),
-                            "{0:N" + viewModel.DecimalPlaces + "}",
+                            format,
                             viewModel.LabelSize
                         );
                     }
@@ -961,14 +971,32 @@ namespace PileDesign.Views
                 if (anaModel?.Beams == null) return;
                 DrawConnectionPointForceMap(viewModel, anaModel);
             }
+            else if (effectiveContent == "基礎梁考慮沈下梁応力")
+            {
+                DrawVerticalBeamResults(viewModel);
+            }
+            else if (effectiveContent is "基礎梁考慮沈下" or "基礎梁考慮+群杭沈下" or "基礎梁考慮反力")
+            {
+                PrepareVBSettlementPending(viewModel);
+            }
+            else if (effectiveContent is "単杭沈下部材角" or "群杭沈下部材角" or "単杭+群杭沈下部材角"
+                     or "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角")
+            {
+                DrawBeamMemberAngle(viewModel);
+            }
 
             // 全モード共通: 変形後形状の描画
-            // （節点変位U系では既に描画済みなので重複を避ける）
             bool alreadyDrawnDeformed = viewModel.AnalysisResultContent == "節点変位"
                 && !viewModel.AnalysisResultNodeDisplacementType.StartsWith("θ");
             if (viewModel.IsDeformedElementVisible && !alreadyDrawnDeformed)
             {
-                UpdateDeformedElementsStandalone(viewModel, hasInvisiblePile, visibleBeams, invisibleFBNames);
+                bool isVBContent = effectiveContent is "基礎梁考慮沈下梁応力"
+                    or "基礎梁考慮沈下" or "基礎梁考慮+群杭沈下"
+                    or "基礎梁考慮反力" or "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角";
+                if (isVBContent)
+                    DrawVBDeformedElements(viewModel);
+                else
+                    UpdateDeformedElementsStandalone(viewModel, hasInvisiblePile, visibleBeams, invisibleFBNames);
             }
         }
 
@@ -2249,20 +2277,37 @@ namespace PileDesign.Views
             {
                 if (!pile.IsVisible) continue;
 
+                Beam targetBeam = null;
+                Node targetNode = null;
+
+                // まずRigidLinkビームを探す
                 var rigidLink = rigidLinkBeams.FirstOrDefault(b =>
                     b.Name == $"RigidLink-{pile.No}" && b.NodeI != null);
-                if (rigidLink == null) continue;
+                if (rigidLink != null)
+                {
+                    targetBeam = rigidLink;
+                    targetNode = rigidLink.NodeI; // ConnectionNode
+                }
+                else
+                {
+                    // RigidLinkがない場合（ΔZc≈0）: 杭頭ビームのI端を使用
+                    var pileTopBeam = pile.Beams?.FirstOrDefault(b => b.IsPileTop);
+                    if (pileTopBeam != null)
+                    {
+                        targetBeam = pileTopBeam;
+                        targetNode = pileTopBeam.NodeI;
+                    }
+                }
 
-                var beamResult = rigidLink.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+                if (targetBeam == null || targetNode == null) continue;
+
+                var beamResult = targetBeam.GetBeamResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
                 var bf = beamResult?.CumulativeForce;
-                if (bf == null) continue; // 結果がない場合はスキップ
-
-                var node = rigidLink.NodeI; // ConnectionNode
-                if (node == null) continue;
+                if (bf == null) continue;
 
                 // 要素座標系 → 全体座標系に変換
                 var f_local = bf.GetVector();
-                var T = rigidLink.GetCachedCoordTransform();
+                var T = targetBeam.GetCachedCoordTransform();
                 var f_global = T.Transpose() * f_local;
 
                 double vx, vy;
@@ -2280,7 +2325,7 @@ namespace PileDesign.Views
                 double mag = Math.Sqrt(vx * vx + vy * vy);
                 if (!double.IsFinite(mag)) continue;
 
-                entries.Add((node.Coord, vx, vy, mag));
+                entries.Add((targetNode.Coord, vx, vy, mag));
             }
 
             if (entries.Count == 0) { ColorBarCanvas.Children.Clear(); return; }
@@ -2416,10 +2461,20 @@ namespace PileDesign.Views
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
 
-            // 梁応力または節点変位表示が有効かチェック
-            if (viewModel.AnalysisResultContent != "梁応力" && viewModel.AnalysisResultContent != "節点変位")
+            // 梁応力、節点変位、部材角表示が有効かチェック
+            string effContent = viewModel.EffectiveSettlementContent;
+            bool isMemberAngle = effContent is "単杭沈下部材角" or "群杭沈下部材角" or "単杭+群杭沈下部材角"
+                or "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角";
+            if (viewModel.AnalysisResultContent != "梁応力" && viewModel.AnalysisResultContent != "節点変位" && !isMemberAngle)
             {
                 HideBeamResultTooltip();
+                return;
+            }
+
+            // 部材角モードでは基礎梁の直接ヒットテストを使用
+            if (isMemberAngle)
+            {
+                UpdateMemberAngleTooltip(viewModel, mousePos);
                 return;
             }
 
@@ -2800,6 +2855,673 @@ namespace PileDesign.Views
             if (_samplePositionMarker != null)
             {
                 _samplePositionMarker.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// 部材角モード時のツールチップ表示（基礎梁にマウスを近づけると部材角をポップアップ）
+        /// </summary>
+        private void UpdateMemberAngleTooltip(MainWindowViewModel viewModel, Point mousePos)
+        {
+            var inputModel = viewModel.CurrentInputModel;
+            var fbBeams = inputModel?.FoundationBeamInput?.Beams;
+            if (fbBeams == null || fbBeams.Count == 0) { HideBeamResultTooltip(); return; }
+
+            string content = viewModel.EffectiveSettlementContent;
+
+            // 沈下マップ構築（DrawBeamMemberAngleと同じロジック、全て m 単位）
+            var settlementMap = new Dictionary<int, double>();
+            if (content is "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角")
+            {
+                var vbResults = viewModel.VerticalBeamCaseResults;
+                if (vbResults != null && vbResults.Count > 0 && vbResults[0].PileResults != null)
+                    foreach (var pr in vbResults[0].PileResults)
+                        settlementMap[pr.PileNo] = pr.Settlement_mm / 1000.0;
+                if (content == "基礎梁考慮+群杭沈下部材角")
+                    foreach (var pile in inputModel.PileLayoutItems)
+                        if (settlementMap.ContainsKey(pile.No))
+                            settlementMap[pile.No] += pile.GroupPileSettlement / 1000.0;
+            }
+            else if (content == "群杭沈下部材角")
+            {
+                foreach (var pile in inputModel.PileLayoutItems)
+                    settlementMap[pile.No] = pile.GroupPileSettlement / 1000.0;
+            }
+            else if (content == "単杭+群杭沈下部材角")
+            {
+                foreach (var pile in inputModel.PileLayoutItems)
+                    settlementMap[pile.No] = pile.SinglePileSettlementVL + pile.GroupPileSettlement / 1000.0;
+            }
+            else
+            {
+                foreach (var pile in inputModel.PileLayoutItems)
+                    settlementMap[pile.No] = pile.SinglePileSettlementVL;
+            }
+
+            // 最も近い基礎梁を探す
+            FoundationBeamElement closestFb = null;
+            double closestDist = double.MaxValue;
+            const double hitThreshold = 20.0;
+            Point closestMid = new();
+
+            foreach (var fb in fbBeams)
+            {
+                if (!fb.IsVisible) continue;
+                var cI = inputModel.GetNodeCoordinates(fb.NodeI_Type, fb.NodeI_Id);
+                var cJ = inputModel.GetNodeCoordinates(fb.NodeJ_Type, fb.NodeJ_Id);
+                if (cI == null || cJ == null) continue;
+
+                Point pI = viewModel.CanvasThreeDView.Transformation(new Point3D(cI.Value.X, cI.Value.Y, cI.Value.Z));
+                Point pJ = viewModel.CanvasThreeDView.Transformation(new Point3D(cJ.Value.X, cJ.Value.Y, cJ.Value.Z));
+                var (dist, t) = PointToLineSegmentDistance(mousePos, pI, pJ);
+
+                if (dist < closestDist && dist < hitThreshold)
+                {
+                    closestDist = dist;
+                    closestFb = fb;
+                    closestMid = new Point(pI.X * (1 - t) + pJ.X * t, pI.Y * (1 - t) + pJ.Y * t);
+                }
+            }
+
+            if (closestFb == null) { HideBeamResultTooltip(); return; }
+
+            // 部材角計算
+            var coordsI = inputModel.GetNodeCoordinates(closestFb.NodeI_Type, closestFb.NodeI_Id);
+            var coordsJ = inputModel.GetNodeCoordinates(closestFb.NodeJ_Type, closestFb.NodeJ_Id);
+            int pileNoI = GetPileNoAtCoord(inputModel, coordsI.Value.X, coordsI.Value.Y);
+            int pileNoJ = GetPileNoAtCoord(inputModel, coordsJ.Value.X, coordsJ.Value.Y);
+
+            if (!settlementMap.TryGetValue(pileNoI, out double uzI) || !settlementMap.TryGetValue(pileNoJ, out double uzJ))
+            { HideBeamResultTooltip(); return; }
+
+            double dx = coordsJ.Value.X - coordsI.Value.X;
+            double dy = coordsJ.Value.Y - coordsI.Value.Y;
+            double dz = coordsJ.Value.Z - coordsI.Value.Z;
+            double beamLength = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+            if (beamLength < 1e-6) { HideBeamResultTooltip(); return; }
+
+            double angle = (uzI - uzJ) / beamLength;
+
+            string tooltip = $"梁No.{closestFb.No}\n" +
+                             $"部材角: {angle:F6} rad\n" +
+                             $"  = 1/{(Math.Abs(angle) > 1e-10 ? $"{1.0 / Math.Abs(angle):F0}" : "∞")}\n" +
+                             $"沈下I: {uzI * 1000:F2} mm (杭{pileNoI})\n" +
+                             $"沈下J: {uzJ * 1000:F2} mm (杭{pileNoJ})\n" +
+                             $"梁長: {beamLength:F3} m";
+
+            ShowBeamResultTooltip(mousePos, tooltip, closestMid);
+        }
+
+        // ========================================
+        // 基礎梁部材角の描画
+        // ========================================
+
+        /// <summary>
+        /// 基礎梁の部材角 = (Uz_i - Uz_j) / L を描画
+        /// AnalysisResultContent に応じて沈下データソースを切替
+        /// </summary>
+        private void DrawBeamMemberAngle(MainWindowViewModel viewModel)
+        {
+            if (Canvas3DLayout == null || ColorBarCanvas == null) return;
+
+            var inputModel = viewModel.CurrentInputModel;
+            var fbBeams = inputModel?.FoundationBeamInput?.Beams;
+            if (fbBeams == null || fbBeams.Count == 0) return;
+
+            string content = viewModel.EffectiveSettlementContent;
+
+            // 杭位置 → 沈下量マップを構築（単位: m）
+            var settlementMap = new Dictionary<int, double>(); // PileNo → settlement(m)
+
+            // 沈下量マップ構築（全て m 単位に統一）
+            // SinglePileSettlementVL: m, GroupPileSettlement: mm, VB Settlement_mm: mm
+            if (content is "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角")
+            {
+                var vbResults = viewModel.VerticalBeamCaseResults;
+                if (vbResults != null && vbResults.Count > 0 && vbResults[0].PileResults != null)
+                {
+                    foreach (var pr in vbResults[0].PileResults)
+                        settlementMap[pr.PileNo] = pr.Settlement_mm / 1000.0; // mm→m
+                }
+                if (content == "基礎梁考慮+群杭沈下部材角")
+                {
+                    foreach (var pile in inputModel.PileLayoutItems)
+                        if (settlementMap.ContainsKey(pile.No))
+                            settlementMap[pile.No] += pile.GroupPileSettlement / 1000.0; // mm→m
+                }
+            }
+            else if (content == "群杭沈下部材角")
+            {
+                foreach (var pile in inputModel.PileLayoutItems)
+                    settlementMap[pile.No] = pile.GroupPileSettlement / 1000.0; // mm→m
+            }
+            else if (content == "単杭+群杭沈下部材角")
+            {
+                foreach (var pile in inputModel.PileLayoutItems)
+                    settlementMap[pile.No] = pile.SinglePileSettlementVL + pile.GroupPileSettlement / 1000.0; // m + mm→m
+            }
+            else // 単杭沈下部材角
+            {
+                foreach (var pile in inputModel.PileLayoutItems)
+                    settlementMap[pile.No] = pile.SinglePileSettlementVL; // m
+            }
+
+            if (settlementMap.Count == 0) return;
+
+            string format = "{0:F6}";
+            var allValues = new ObservableCollection<double>();
+            var drawEntries = new List<(Point3D midPt, Point3D ptI, Point3D ptJ, double angle)>();
+
+            foreach (var fbBeam in fbBeams)
+            {
+                if (!fbBeam.IsVisible) continue;
+
+                var coordsI = inputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                if (coordsI == null || coordsJ == null) continue;
+
+                int pileNoI = GetPileNoAtCoord(inputModel, coordsI.Value.X, coordsI.Value.Y);
+                int pileNoJ = GetPileNoAtCoord(inputModel, coordsJ.Value.X, coordsJ.Value.Y);
+                if (!settlementMap.TryGetValue(pileNoI, out double uzI)) continue;
+                if (!settlementMap.TryGetValue(pileNoJ, out double uzJ)) continue;
+
+                double dx = coordsJ.Value.X - coordsI.Value.X;
+                double dy = coordsJ.Value.Y - coordsI.Value.Y;
+                double dz = coordsJ.Value.Z - coordsI.Value.Z;
+                double beamLength = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+                if (beamLength < 1e-6) continue;
+
+                double angle = (uzI - uzJ) / beamLength;
+
+                Point3D ptI = new(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                Point3D ptJ = new(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                Point3D midPt = new((ptI.X + ptJ.X) / 2, (ptI.Y + ptJ.Y) / 2, (ptI.Z + ptJ.Z) / 2);
+
+                allValues.Add(angle);
+                drawEntries.Add((midPt, ptI, ptJ, angle));
+            }
+
+            if (allValues.Count == 0) return;
+
+            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+
+            // 梁要素を色付きで描画（Pathを使用してキャンバス再描画時に自動クリアされるようにする）
+            foreach (var (midPt, ptI, ptJ, angle) in drawEntries)
+            {
+                Point p2dI = viewModel.CanvasThreeDView.Transformation(ptI);
+                Point p2dJ = viewModel.CanvasThreeDView.Transformation(ptJ);
+
+                var geo = ColorBarUtils.PickColorGeometryInclusiveTop(angle, colorBaredGeometries);
+                var brush = geo != null ? new SolidColorBrush(geo.Color) : Brushes.Gray;
+                if (brush is SolidColorBrush scb && scb.CanFreeze) scb.Freeze();
+
+                var pathGeo = new PathGeometry();
+                pathGeo.AddGeometry(new LineGeometry(p2dI, p2dJ));
+                Canvas3DLayout.Children.Add(new System.Windows.Shapes.Path
+                {
+                    Stroke = brush,
+                    StrokeThickness = 4.0,
+                    Data = pathGeo
+                });
+
+                // 値テキスト（小数表示 + "rad"）
+                if (viewModel.IsResultValueVisible)
+                {
+                    Point p2dMid = viewModel.CanvasThreeDView.Transformation(midPt);
+                    string text = angle.ToString($"F{viewModel.DecimalPlaces}") + " rad";
+                    AddText3D(Brushes.Black, text, p2dMid.X, p2dMid.Y, "C", "C", 0.0);
+                }
+            }
+
+            // カラーバー
+            string title = content;
+            ColorBar.DrawStepColorBar(ColorBarCanvas, colorBaredGeometries,
+                title, "rad", allValues.Min(), allValues.Max(), format, viewModel.LabelSize);
+        }
+
+        // ========================================
+        // 基礎梁鉛直解析結果の描画
+        // ========================================
+
+        /// <summary>
+        /// 基礎梁考慮沈下解析の変形後形状を描画（鉛直変位Uzのみ）
+        /// </summary>
+        private void DrawVBDeformedElements(MainWindowViewModel viewModel)
+        {
+            if (Canvas3DLayout == null) return;
+
+            var caseResults = viewModel.VerticalBeamCaseResults;
+            if (caseResults == null || caseResults.Count == 0) return;
+            var caseResult = caseResults[0];
+            var nodeResults = caseResult.NodeResults;
+            if (nodeResults == null || nodeResults.Count == 0) return;
+
+            // 節点名→鉛直変位マップを構築
+            var nodeDispMap = new Dictionary<string, double>();
+            double maxDisp = 0;
+            foreach (var nr in nodeResults)
+            {
+                nodeDispMap[nr.NodeName] = nr.Uz_mm / 1000.0; // mm → m
+                double absUz = Math.Abs(nr.Uz_mm / 1000.0);
+                if (absUz > maxDisp) maxDisp = absUz;
+            }
+
+            double dispScale = maxDisp > 1e-15
+                ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxDisp
+                : 0;
+            if (dispScale == 0) return;
+
+            var pathGeo = new PathGeometry();
+            var inputModel = viewModel.CurrentInputModel;
+
+            // 基礎梁要素の変形後形状
+            if (inputModel.FoundationBeamInput?.Beams != null)
+            {
+                foreach (var fbBeam in inputModel.FoundationBeamInput.Beams)
+                {
+                    if (!fbBeam.IsVisible) continue;
+
+                    var coordsI = inputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                    var coordsJ = inputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                    if (coordsI == null || coordsJ == null) continue;
+
+                    string nameI = ResolveVBFemNodeName(inputModel, fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                    string nameJ = ResolveVBFemNodeName(inputModel, fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+
+                    double uzI = nameI != null ? nodeDispMap.GetValueOrDefault(nameI, 0) : 0;
+                    double uzJ = nameJ != null ? nodeDispMap.GetValueOrDefault(nameJ, 0) : 0;
+
+                    Point3D defI = new(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z + uzI * dispScale);
+                    Point3D defJ = new(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z + uzJ * dispScale);
+
+                    Point ptI = viewModel.CanvasThreeDView.Transformation(defI);
+                    Point ptJ = viewModel.CanvasThreeDView.Transformation(defJ);
+                    pathGeo.AddGeometry(new LineGeometry(ptI, ptJ));
+                }
+            }
+
+            // 杭体の変形後形状（杭頭から杭先端への鉛直線）
+            var soilPiles = inputModel.ElementDivision?.SoilPiles;
+            foreach (var pile in inputModel.PileLayoutItems)
+            {
+                if (!pile.IsVisible) continue;
+                string connName = $"FoundationNode-P{pile.No}";
+                double uzTop = nodeDispMap.GetValueOrDefault(connName, 0);
+                double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
+
+                int spIdx = pile.SoilPileAltNo - 1;
+                double bottomZ = pile.Z;
+                if (soilPiles != null && spIdx >= 0 && spIdx < soilPiles.Count)
+                    bottomZ = soilPiles[spIdx].PileBottomAltitude;
+
+                Point3D defTop = new(pile.X, pile.Y, connectingZ + uzTop * dispScale);
+                Point3D defBottom = new(pile.X, pile.Y, bottomZ + uzTop * dispScale);
+
+                Point ptTop = viewModel.CanvasThreeDView.Transformation(defTop);
+                Point ptBottom = viewModel.CanvasThreeDView.Transformation(defBottom);
+                pathGeo.AddGeometry(new LineGeometry(ptTop, ptBottom));
+            }
+
+            if (pathGeo.Figures.Count > 0)
+            {
+                Canvas3DLayout.Children.Add(new System.Windows.Shapes.Path
+                {
+                    Stroke = Brushes.Red,
+                    StrokeThickness = 1.5,
+                    Data = pathGeo
+                });
+            }
+        }
+
+        /// <summary>
+        /// 指定座標に最も近い杭のNoを返す
+        /// </summary>
+        private static int GetPileNoAtCoord(InputModel inputModel, double x, double y)
+        {
+            int bestNo = 0;
+            double bestDist = double.MaxValue;
+            foreach (var pile in inputModel.PileLayoutItems)
+            {
+                double dx = pile.X - x;
+                double dy = pile.Y - y;
+                double dist = dx * dx + dy * dy;
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    bestNo = pile.No;
+                }
+            }
+            return bestNo;
+        }
+
+        /// <summary>
+        /// VB解析のFEM節点名を解決する（VerticalBeamModelling.GetFemNodeNameと同じ命名規則）
+        /// </summary>
+        private static string ResolveVBFemNodeName(InputModel inputModel, NodeReferenceType type, Guid id)
+        {
+            switch (type)
+            {
+                case NodeReferenceType.FoundationNode:
+                    var fnode = inputModel.FoundationBeamInput?.Nodes?.FirstOrDefault(n => n.Id == id);
+                    return fnode != null ? $"FoundationNode-{fnode.No}" : null;
+                case NodeReferenceType.PileLayout:
+                    var pile = inputModel.PileLayoutItems?.FirstOrDefault(p => p.UniqueId == id);
+                    return pile != null ? $"FoundationNode-P{pile.No}" : null;
+                case NodeReferenceType.GeneralNode:
+                    var gnode = inputModel.InputNodes?.FirstOrDefault(n => n.UniqueId == id);
+                    return gnode != null ? $"InputNode-{gnode.No}" : null;
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// 基礎梁考慮沈下梁応力 / 基礎梁考慮沈下 / 基礎梁考慮反力 を描画
+        /// </summary>
+        private void DrawVerticalBeamResults(MainWindowViewModel viewModel)
+        {
+            if (Canvas3DLayout == null || ColorBarCanvas == null) return;
+
+            var caseResults = viewModel.VerticalBeamCaseResults;
+            if (caseResults == null || caseResults.Count == 0) return;
+
+            var caseResult = caseResults[0];
+            string format = "{0:N" + viewModel.DecimalPlaces + "}";
+            DrawVBBeamForce(viewModel, caseResult, format);
+        }
+
+        /// <summary>
+        /// 基礎梁考慮沈下/反力のデータを _pendingSettlement に準備し、
+        /// 沈下/単杭と同じ DrawBubbleAndArrow で描画する
+        /// </summary>
+        private void PrepareVBSettlementPending(MainWindowViewModel viewModel)
+        {
+            var caseResults = viewModel.VerticalBeamCaseResults;
+            if (caseResults == null || caseResults.Count == 0) return;
+
+            var caseResult = caseResults[0];
+            string content = viewModel.EffectiveSettlementContent;
+
+            ObservableCollection<Point3D> points = [];
+            ObservableCollection<double> values = [];
+            string title;
+            string unit;
+
+            if (content is "基礎梁考慮沈下" or "基礎梁考慮+群杭沈下")
+            {
+                title = content == "基礎梁考慮+群杭沈下" ? "基礎梁考慮+群杭沈下" : "基礎梁考慮沈下";
+                unit = "mm";
+
+                // 杭位置の沈下量（LoadingPlaneAltitudeで統一、単杭沈下と同じ高さ）
+                double loadingPlaneAlt = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+                var pileResults = caseResult.PileResults;
+                if (pileResults != null)
+                {
+                    foreach (var pr in pileResults)
+                    {
+                        var pile = viewModel.CurrentInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
+                        if (pile == null || !pile.IsVisible) continue;
+                        points.Add(new Point3D(pr.X, pr.Y, loadingPlaneAlt));
+                        values.Add(Math.Abs(pr.Settlement_mm));
+                    }
+                }
+
+                // 基礎梁考慮+群杭: VB沈下量に群杭沈下量を加算して表示
+                if (content == "基礎梁考慮+群杭沈下")
+                {
+                    // VBのPileResult沈下量に群杭沈下量を加算した値で杭位置のバブルを追加
+                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    {
+                        if (!pile.IsVisible) continue;
+                        var pr = caseResult.PileResults?.FirstOrDefault(p => p.PileNo == pile.No);
+                        double vbSettlement = pr?.Settlement_mm ?? 0;
+                        double combined = Math.Abs(vbSettlement + pile.GroupPileSettlement); // 両方mm
+                        double connectingZ = pile.Z + pile.FoundationBeamDeltaZc;
+                        points.Add(new Point3D(pile.X, pile.Y, connectingZ));
+                        values.Add(combined);
+                    }
+                }
+            }
+            else // 基礎梁考慮反力
+            {
+                title = "基礎梁考慮反力";
+                unit = "kN";
+
+                var pileResults = caseResult.PileResults;
+                if (pileResults != null)
+                {
+                    foreach (var pr in pileResults)
+                    {
+                        var pile = viewModel.CurrentInputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
+                        if (pile == null || !pile.IsVisible) continue;
+
+                        points.Add(new Point3D(pr.X, pr.Y, pile.Z + pile.FoundationBeamDeltaZc));
+                        values.Add(Math.Abs(pr.Reaction_kN));
+                    }
+                }
+
+                // 杭の各節点の反力分布を追加
+                AddPerPileNodeData(viewModel, caseResult, points, values, isDisplacement: false);
+            }
+
+            if (points.Count > 0)
+            {
+                _pendingSettlementPoints = points;
+                _pendingSettlementValues = values;
+                _pendingSettlementTitle = title;
+                _pendingSettlementUnit = unit;
+            }
+        }
+
+        /// <summary>
+        /// 杭の各節点の変位分布または反力（軸力）分布データを追加する
+        /// VB解析で得た杭頭反力に対応する単杭解析の全節点データを線形補間で取得
+        /// </summary>
+        private static void AddPerPileNodeData(
+            MainWindowViewModel viewModel,
+            FEM.VerticalBeamCaseResult caseResult,
+            ObservableCollection<Point3D> points,
+            ObservableCollection<double> values,
+            bool isDisplacement)
+        {
+            var pileResults = caseResult.PileResults;
+            if (pileResults == null) { System.Diagnostics.Debug.WriteLine("[VB-PerNode] pileResults is null"); return; }
+
+            var inputModel = viewModel.CurrentInputModel;
+            var soilPiles = inputModel?.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0) { System.Diagnostics.Debug.WriteLine("[VB-PerNode] soilPiles null or empty"); return; }
+
+            System.Diagnostics.Debug.WriteLine($"[VB-PerNode] soilPiles.Count={soilPiles.Count}, pileResults.Count={pileResults.Count}");
+
+            foreach (var pr in pileResults)
+            {
+                var pile = inputModel.PileLayoutItems.FirstOrDefault(p => p.No == pr.PileNo);
+                if (pile == null || !pile.IsVisible) { System.Diagnostics.Debug.WriteLine($"[VB-PerNode] pile not found or invisible: PileNo={pr.PileNo}"); continue; }
+
+                // SoilPileの取得
+                int soilPileIdx = pile.SoilPileAltNo - 1;
+                if (soilPileIdx < 0 || soilPileIdx >= soilPiles.Count) { System.Diagnostics.Debug.WriteLine($"[VB-PerNode] soilPileIdx out of range: {soilPileIdx}"); continue; }
+                var soilPile = soilPiles[soilPileIdx];
+
+                System.Diagnostics.Debug.WriteLine($"[VB-PerNode] pile={pile.No}, soilPileIdx={soilPileIdx}, " +
+                    $"NodeDisplacements={soilPile.NodeDisplacements?.Count}, " +
+                    $"LoadDisplacements={soilPile.LoadDisplacements?.Count}, " +
+                    $"CircumVerticals={soilPile.PileCircumVerticals?.Count}");
+
+                // VB解析の杭頭反力に対応する全節点変位ベクトルを取得
+                double pileTopForce = pr.Reaction_kN;
+                var dispVector = soilPile.GetFullDisplacementForLoad(pileTopForce);
+                if (dispVector == null) { System.Diagnostics.Debug.WriteLine($"[VB-PerNode] dispVector is null for force={pileTopForce}"); continue; }
+
+                var circumVerticals = soilPile.PileCircumVerticals;
+                if (circumVerticals == null || circumVerticals.Count == 0) continue;
+
+                int pileNodesCount = circumVerticals.Count + 1;
+
+                // 杭頭ノード（index=0）はVB解析結果と重複するため、index=1から開始
+                for (int i = 1; i < pileNodesCount; i++)
+                {
+                    double nodeZ = circumVerticals[i - 1].Bottom;
+                    double nodeValue;
+
+                    if (isDisplacement)
+                    {
+                        // 杭節点変位（偶数インデックス）をmm単位に変換
+                        nodeValue = Math.Abs(dispVector[2 * i]) * 1000.0;
+                    }
+                    else
+                    {
+                        // 杭区間の軸力 = EA/L * (上端変位 - 下端変位) [kN]
+                        // segment i-1 の下端が node i
+                        double eaOverL = circumVerticals[i - 1].PileBodySegment.PileSection.EA
+                                       / circumVerticals[i - 1].L;
+                        double axialForce = eaOverL * (dispVector[2 * (i - 1)] - dispVector[2 * i]);
+                        nodeValue = Math.Abs(axialForce);
+                    }
+
+                    points.Add(new Point3D(pile.X, pile.Y, nodeZ));
+                    values.Add(nodeValue);
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// 基礎梁考慮沈下梁応力: 各梁要素にダイアグラムで応力を表示
+        /// AnalysisResultBeamForceType に応じて Fx/Fy/Fz/Mx/My/Mz/Fh/Mh を切替
+        /// </summary>
+        private void DrawVBBeamForce(MainWindowViewModel viewModel, FEM.VerticalBeamCaseResult caseResult, string format)
+        {
+            var beamResults = caseResult.BeamResults;
+            if (beamResults == null || beamResults.Count == 0) return;
+
+            string forceType = viewModel.AnalysisResultBeamForceType;
+
+            // 応力種別ごとの方向ベクトル・単位（水平解析の梁応力と同じ）
+            Vector<double> forceDirection;
+            string unit;
+            bool isDerived = false;
+            switch (forceType)
+            {
+                case "Fx": forceDirection = Vector<double>.Build.DenseOfArray([0, 0, 1]); unit = "kN"; break;
+                case "Fy": forceDirection = Vector<double>.Build.DenseOfArray([0, 1, 0]); unit = "kN"; break;
+                case "Fz": forceDirection = Vector<double>.Build.DenseOfArray([0, 0, 1]); unit = "kN"; break;
+                case "Mx": forceDirection = Vector<double>.Build.DenseOfArray([0, 0, 1]); unit = "kNm"; break;
+                case "My": forceDirection = Vector<double>.Build.DenseOfArray([0, 0, -1]); unit = "kNm"; break;
+                case "Mz": forceDirection = Vector<double>.Build.DenseOfArray([0, 1, 0]); unit = "kNm"; break;
+                case "Fh": forceDirection = Vector<double>.Build.DenseOfArray([0, 1, 0]); unit = "kN"; isDerived = true; break;
+                case "Mh": forceDirection = Vector<double>.Build.DenseOfArray([0, 1, 0]); unit = "kNm"; isDerived = true; break;
+                default: forceDirection = Vector<double>.Build.DenseOfArray([0, 0, -1]); unit = "kNm"; break;
+            }
+
+            // VerticalBeamBeamResult から指定成分を取得するローカル関数
+            static (double fi, double fj) GetForceComponent(FEM.VerticalBeamBeamResult br, string type)
+            {
+                return type switch
+                {
+                    "Fx" => (br.Ni, br.Nj),
+                    "Fy" => (br.Qyi, br.Qyj),
+                    "Fz" => (br.Qzi, br.Qzj),
+                    "Mx" => (br.Mxi, br.Mxj),
+                    "My" => (br.Myi, br.Myj),
+                    "Mz" => (br.Mzi, br.Mzj),
+                    "Fh" => (Math.Sqrt(br.Qyi * br.Qyi + br.Qzi * br.Qzi),
+                             -Math.Sqrt(br.Qyj * br.Qyj + br.Qzj * br.Qzj)),
+                    "Mh" => (Math.Sqrt(br.Myi * br.Myi + br.Mzi * br.Mzi),
+                             -Math.Sqrt(br.Myj * br.Myj + br.Mzj * br.Mzj)),
+                    _ => (br.Myi, br.Myj),
+                };
+            }
+
+            // 1) 全梁要素の応力値を収集（符号付き、カラーバー用）
+            var allValues = new ObservableCollection<double>();
+            double maxAbsValue = 0;
+            var drawEntries = new List<(FEM.VerticalBeamBeamResult br, Point3D nodeI3D, Point3D nodeJ3D, Vector3D beamDir)>();
+
+            foreach (var br in beamResults)
+            {
+                if (!br.BeamName.StartsWith("FoundationBeam-")) continue;
+
+                var beamNoStr = br.BeamName.Replace("FoundationBeam-", "");
+                if (!int.TryParse(beamNoStr, out int beamNo)) continue;
+
+                var fbBeam = viewModel.CurrentInputModel.FoundationBeamInput?.Beams?
+                    .FirstOrDefault(b => b.No == beamNo);
+                if (fbBeam == null || !fbBeam.IsVisible) continue;
+
+                var coordsI = viewModel.CurrentInputModel.GetNodeCoordinates(fbBeam.NodeI_Type, fbBeam.NodeI_Id);
+                var coordsJ = viewModel.CurrentInputModel.GetNodeCoordinates(fbBeam.NodeJ_Type, fbBeam.NodeJ_Id);
+                if (coordsI == null || coordsJ == null) continue;
+
+                Point3D nodeI3D = new(coordsI.Value.X, coordsI.Value.Y, coordsI.Value.Z);
+                Point3D nodeJ3D = new(coordsJ.Value.X, coordsJ.Value.Y, coordsJ.Value.Z);
+                var beamDir = new Vector3D(nodeJ3D.X - nodeI3D.X, nodeJ3D.Y - nodeI3D.Y, nodeJ3D.Z - nodeI3D.Z);
+
+                var (fi, fj) = GetForceComponent(br, forceType);
+                if (!double.IsFinite(fi) || !double.IsFinite(fj)) continue;
+
+                allValues.Add(fi);
+                allValues.Add(-fj);
+                maxAbsValue = Math.Max(maxAbsValue, Math.Max(Math.Abs(fi), Math.Abs(fj)));
+
+                drawEntries.Add((br, nodeI3D, nodeJ3D, beamDir));
+            }
+
+            if (allValues.Count == 0 || maxAbsValue < 1e-10) return;
+
+            var colorBaredGeometries = ColorBarUtils.GetColorBarGeometries(allValues);
+            double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+
+            // 2) 描画ループ（水平解析の梁応力と同じロジック）
+            foreach (var (br, nodeI3D, nodeJ3D, beamDir) in drawEntries)
+            {
+                var (originalForceI, originalForceJ) = GetForceComponent(br, forceType);
+
+                // 梁方向から座標変換行列を計算
+                Matrix<double> t = Utils.GetNodeTransformMatrix(beamDir);
+                var transformedForceDirection = t.Transpose() * forceDirection;
+
+                // スケーリング
+                double forceI = originalForceI / maxAbsValue * forceScale;
+                double forceJ = originalForceJ / maxAbsValue * forceScale;
+
+                // ダイアグラム端点を計算
+                Point3D nodeIForce3D = new(
+                    nodeI3D.X + forceI * transformedForceDirection[0],
+                    nodeI3D.Y + forceI * transformedForceDirection[1],
+                    nodeI3D.Z + forceI * transformedForceDirection[2]);
+                Point3D nodeJForce3D = new(
+                    nodeJ3D.X + -forceJ * transformedForceDirection[0],
+                    nodeJ3D.Y + -forceJ * transformedForceDirection[1],
+                    nodeJ3D.Z + -forceJ * transformedForceDirection[2]);
+
+                // 2D投影
+                Point nodeI2D = viewModel.CanvasThreeDView.Transformation(nodeI3D);
+                Point nodeIForce2D = viewModel.CanvasThreeDView.Transformation(nodeIForce3D);
+                Point nodeJForce2D = viewModel.CanvasThreeDView.Transformation(nodeJForce3D);
+                Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
+
+                // 塗りつぶし付きダイアグラム描画
+                var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
+                List<double> values = [originalForceI, originalForceI, -originalForceJ, -originalForceJ];
+                AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
+
+                // 値ラベル
+                if (viewModel.IsResultValueVisible)
+                {
+                    DrawResultValueTexts(viewModel.IsResultValueVisible, Brushes.Black,
+                        originalForceI, -originalForceJ, nodeIForce2D, nodeJForce2D, nodeJ2D, nodeI2D, format, format, true);
+                }
+            }
+
+            // 3) Path描画 + カラーバー
+            foreach (var geo in colorBaredGeometries)
+                geo.DrawPathes(Canvas3DLayout);
+
+            if (allValues.Count > 0)
+            {
+                ColorBar.DrawStepColorBar(ColorBarCanvas, colorBaredGeometries,
+                    forceType, unit, allValues.Min(), allValues.Max(), format, viewModel.LabelSize);
             }
         }
     }

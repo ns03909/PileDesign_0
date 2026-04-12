@@ -304,6 +304,38 @@ namespace PileDesign.ViewModels
 
 
 
+        // 基礎指針'19 計算例5 PHC杭
+        [RelayCommand]
+        private async Task Example5Pile()
+        {
+            if (!TryStartExample(nameof(Example5Pile))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExample5", "基礎指針'19 計算例5");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(Example5Pile));
+            }
+        }
+
+        // 計算例7 場所打ちRC拡底杭
+        [RelayCommand]
+        private async Task Example7()
+        {
+            if (!TryStartExample(nameof(Example7))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExample7", "計算例7");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(Example7));
+            }
+        }
+
         // 基礎指針'19 計算例9
         [RelayCommand]
         private async Task Example9()
@@ -318,6 +350,22 @@ namespace PileDesign.ViewModels
                 // 砂時計を戻す
                 Mouse.OverrideCursor = null;
                 EndExample(nameof(Example9));
+            }
+        }
+
+        // 基礎指針'19 計算例10
+        [RelayCommand]
+        private async Task Example10()
+        {
+            if (!TryStartExample(nameof(Example10))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExample10", "基礎指針'19 計算例10");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(Example10));
             }
         }
 

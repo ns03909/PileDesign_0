@@ -12,6 +12,7 @@ namespace PileDesign.Views
             InitializeComponent();
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
+            PreviewKeyDown += Window_PreviewKeyDown;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
@@ -19,6 +20,7 @@ namespace PileDesign.Views
             if (DataContext is ViewModels.VerticalBeamCalculationViewModel vm)
             {
                 vm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
+                vm.RequestClose += (_, __) => Close();
             }
         }
 
@@ -27,6 +29,35 @@ namespace PileDesign.Views
             if (DataContext is ViewModels.VerticalBeamCalculationViewModel vm)
             {
                 vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
+            }
+        }
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                if (DataContext is ViewModels.VerticalBeamCalculationViewModel vm && vm.OkCommand?.CanExecute(null) == true)
+                {
+                    vm.OkCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F9)
+            {
+                if (DataContext is ViewModels.VerticalBeamCalculationViewModel vm2 && vm2.ExecuteAnalysisCommand?.CanExecute(null) == true)
+                {
+                    vm2.ExecuteAnalysisCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                if (DataContext is ViewModels.VerticalBeamCalculationViewModel vm)
+                {
+                    if (vm.CancelCommand?.CanExecute(null) == true)
+                        vm.CancelCommand.Execute(null);
+                }
+                e.Handled = true;
             }
         }
 
@@ -44,11 +75,6 @@ namespace PileDesign.Views
         private void NumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             e.Handled = !Regex.IsMatch(e.Text, @"^[0-9eE.\-+]$");
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            Close();
         }
     }
 }

@@ -25,7 +25,8 @@ namespace PileDesign.Services
         /// <summary>
         /// ProjectData を JSON ファイルに保存
         /// </summary>
-        public void SaveProjectData(string filePath, InputModel inputModel, AnaModel anaModel)
+        public void SaveProjectData(string filePath, InputModel inputModel, AnaModel anaModel,
+            IList<FEM.VerticalBeamCaseResult> verticalBeamCaseResults = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -33,7 +34,10 @@ namespace PileDesign.Services
             var projectData = new ProjectData
             {
                 InputModel = inputModel,
-                AnaModel = anaModel
+                AnaModel = anaModel,
+                VerticalBeamCaseResults = verticalBeamCaseResults != null
+                    ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
+                    : null
             };
 
             string json = JsonSerializer.Serialize(projectData, _jsonOptions);

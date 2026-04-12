@@ -448,8 +448,8 @@ namespace PileDesign.ViewModels
         private void BuildBeamProperties(FoundationBeamElement beam)
         {
             SelectedItemProperties.Add(new("要素No",    $"{beam.No}"));
-            SelectedItemProperties.Add(new("I端節点No", $"{beam.NodeI_No}"));
-            SelectedItemProperties.Add(new("J端節点No", $"{beam.NodeJ_No}"));
+            SelectedItemProperties.Add(new("I端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeI_Type, beam.NodeI_Id)));
+            SelectedItemProperties.Add(new("J端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeJ_Type, beam.NodeJ_Id)));
             SelectedItemProperties.Add(new("材料No",    $"{beam.MaterialNo}"));
             SelectedItemProperties.Add(new("断面No",    $"{beam.SectionNo}"));
             SelectedItemProperties.Add(new("幅",        $"{beam.Width:F3} m"));
@@ -1105,7 +1105,81 @@ namespace PileDesign.ViewModels
                         IsResultValueVisible = true;
                     }
 
+                    // 沈下系コンテンツ選択時も値表示をON
+                    if (value == "沈下量" || value == "沈下部材角" || value == "沈下反力" || value == "沈下応力")
+                    {
+                        IsResultValueVisible = true;
+                    }
+
+                    // 沈下系コンテンツのサブオプションを動的に更新
+                    UpdateSettlementSubOptions(value);
+
                     UpdateCanvas3DAction?.Invoke();
+                }
+            }
+        }
+
+        /// <summary>
+        /// AnalysisResultContent + AnalysisResultSettlementType から
+        /// 描画ロジック用の実効コンテンツ名を返す
+        /// </summary>
+        public string EffectiveSettlementContent
+        {
+            get
+            {
+                string sub = AnalysisResultSettlementType;
+                return AnalysisResultContent switch
+                {
+                    "沈下量" when sub == "基礎梁考慮" => "基礎梁考慮沈下",
+                    "沈下量" when sub == "基礎梁考慮+群杭" => "基礎梁考慮+群杭沈下",
+                    "沈下量" => "沈下",
+                    "沈下部材角" => sub switch
+                    {
+                        "基礎梁考慮" => "基礎梁考慮沈下部材角",
+                        "基礎梁考慮+群杭" => "基礎梁考慮+群杭沈下部材角",
+                        "単杭+群杭" => "単杭+群杭沈下部材角",
+                        "群杭" => "群杭沈下部材角",
+                        _ => "単杭沈下部材角",
+                    },
+                    "沈下反力" => "基礎梁考慮反力",
+                    "沈下応力" => "基礎梁考慮沈下梁応力",
+                    _ => AnalysisResultContent,
+                };
+            }
+        }
+
+        /// <summary>
+        /// 沈下系コンテンツ選択時にサブオプション一覧を動的に更新
+        /// </summary>
+        private void UpdateSettlementSubOptions(string content)
+        {
+            switch (content)
+            {
+                case "沈下量":
+                    // 既存のSettlementOptionをそのまま使用（単杭/群杭/単杭+群杭 + 基礎梁考慮は別途管理済み）
+                    break;
+                case "沈下部材角":
+                {
+                    var opts = new ObservableCollection<string>();
+                    if (IsVerticalAnalysisDone) opts.Add("単杭");
+                    if (IsGroupPileSettlementAnalysisDone) opts.Add("群杭");
+                    if (IsVerticalAnalysisDone && IsGroupPileSettlementAnalysisDone) opts.Add("単杭+群杭");
+                    if (IsVerticalBeamAnalysisDone) opts.Add("基礎梁考慮");
+                    if (IsVerticalBeamAnalysisDone && IsGroupPileSettlementAnalysisDone) opts.Add("基礎梁考慮+群杭");
+                    AnalysisResultSettlementOption = opts;
+                    if (opts.Count > 0 && !opts.Contains(AnalysisResultSettlementType))
+                        AnalysisResultSettlementType = opts[0];
+                    break;
+                }
+                case "沈下反力":
+                case "沈下応力":
+                {
+                    var opts = new ObservableCollection<string>();
+                    if (IsVerticalBeamAnalysisDone) opts.Add("基礎梁考慮");
+                    AnalysisResultSettlementOption = opts;
+                    if (opts.Count > 0 && !opts.Contains(AnalysisResultSettlementType))
+                        AnalysisResultSettlementType = opts[0];
+                    break;
                 }
             }
         }
@@ -1784,9 +1858,9 @@ namespace PileDesign.ViewModels
             get => _isAnalysisResultVisible;
             set
             {
-                if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone)
+                if (value && !IsVerticalAnalysisDone && !IsHorizontalAnalysisDone && !IsGroupPileSettlementAnalysisDone && !IsVerticalBeamAnalysisDone)
                 {
-                    MessageBox.Show("水平解析、単杭解析、群杭解析実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show("水平解析、単杭解析、群杭解析、基礎梁鉛直解析のいずれかを実行後でないと解析結果表示はできません。", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
                     SetProperty(ref _isAnalysisResultVisible, false); // 明示的に戻す
                     return;
                 }
@@ -2442,7 +2516,7 @@ namespace PileDesign.ViewModels
 
                 OnPropertyChanged(nameof(HasAnyAnalysisResult));
 
-                const string settlementLabel = "沈下";
+                const string settlementLabel = "沈下量";
                 const string singlePileLabel = "単杭";
 
                 if (value)
@@ -2462,7 +2536,34 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(AnalysisStatusText));
 
                 Both(); // 単杭+群杭 の表示制御
+                UpdateSettlementCategories();
             }
+        }
+
+        /// <summary>
+        /// 沈下系カテゴリ（沈下部材角/沈下反力/沈下応力）の表示を更新
+        /// </summary>
+        private void UpdateSettlementCategories()
+        {
+            bool hasBeams = CurrentInputModel?.FoundationBeamInput?.Beams?.Count > 0;
+            bool hasAnySettlement = IsVerticalAnalysisDone || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
+
+            void Toggle(string label, bool condition)
+            {
+                if (condition)
+                {
+                    if (!AnalysisResultContentOption.Contains(label))
+                        AnalysisResultContentOption.Add(label);
+                }
+                else
+                {
+                    AnalysisResultContentOption.Remove(label);
+                }
+            }
+
+            Toggle("沈下部材角", hasBeams && hasAnySettlement);
+            Toggle("沈下反力", hasBeams && IsVerticalBeamAnalysisDone);
+            Toggle("沈下応力", hasBeams && IsVerticalBeamAnalysisDone);
         }
 
         private void Both()
@@ -2471,16 +2572,24 @@ namespace PileDesign.ViewModels
             const string bothLabel = "単杭+群杭";
             if (IsVerticalAnalysisDone && IsGroupPileSettlementAnalysisDone)
             {
-                // 両方trueなら追加
                 if (!AnalysisResultSettlementOption.Contains(bothLabel))
-                {
                     AnalysisResultSettlementOption.Add(bothLabel);
-                }
             }
             else
             {
-                // それ以外は削除
                 AnalysisResultSettlementOption.Remove(bothLabel);
+            }
+
+            // "基礎梁考慮+群杭"の表示制御
+            const string vbGroupLabel = "基礎梁考慮+群杭";
+            if (IsVerticalBeamAnalysisDone && IsGroupPileSettlementAnalysisDone)
+            {
+                if (!AnalysisResultSettlementOption.Contains(vbGroupLabel))
+                    AnalysisResultSettlementOption.Add(vbGroupLabel);
+            }
+            else
+            {
+                AnalysisResultSettlementOption.Remove(vbGroupLabel);
             }
         }
 
@@ -2495,37 +2604,29 @@ namespace PileDesign.ViewModels
                 {
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
 
-                    // "梁応力"の表示制御
-                    const string settlementLabel = "沈下";
+                    const string settlementLabel = "沈下量";
                     if (value)
                     {
-                        // true: "梁応力"がなければ追加
                         if (!AnalysisResultContentOption.Contains(settlementLabel))
-                        {
                             AnalysisResultContentOption.Add(settlementLabel);
-                        }
                     }
                     else
                     {
-                        // false: "梁応力"があれば削除
                         AnalysisResultContentOption.Remove(settlementLabel);
                     }
 
                     const string groupPileLabel = "群杭";
                     if (value)
                     {
-                        // true: "群杭"がなければ追加
                         if (!AnalysisResultSettlementOption.Contains(groupPileLabel))
-                        {
                             AnalysisResultSettlementOption.Add(groupPileLabel);
-                        }
                     }
                     else
                     {
-                        // false: "群杭"があれば削除
                         AnalysisResultSettlementOption.Remove(groupPileLabel);
                     }
                     Both();
+                    UpdateSettlementCategories();
                 }
             }
         }
@@ -2541,8 +2642,31 @@ namespace PileDesign.ViewModels
                 {
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
                     OnPropertyChanged(nameof(AnalysisStatusText));
+                    RaiseResultCommandsCanExecute();
+
+                    // 基礎梁考慮 サブオプションの追加/削除
+                    const string vbSubLabel = "基礎梁考慮";
+                    if (value)
+                    {
+                        if (!AnalysisResultSettlementOption.Contains(vbSubLabel))
+                            AnalysisResultSettlementOption.Add(vbSubLabel);
+                    }
+                    else
+                    {
+                        AnalysisResultSettlementOption.Remove(vbSubLabel);
+                        VerticalBeamCaseResults = null;
+                    }
+                    UpdateSettlementCategories();
                 }
             }
+        }
+
+        // 基礎梁鉛直解析結果
+        private ObservableCollection<FEM.VerticalBeamCaseResult> _verticalBeamCaseResults;
+        public ObservableCollection<FEM.VerticalBeamCaseResult> VerticalBeamCaseResults
+        {
+            get => _verticalBeamCaseResults;
+            set => SetProperty(ref _verticalBeamCaseResults, value);
         }
 
         // 水平解析済か否か
@@ -2921,6 +3045,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeLoadSettlementCurve = false;
 
         [ObservableProperty] private bool includeGroupPileSettlement = false;
+        [ObservableProperty] private bool includeVerticalBeamResults = false;
 
         // 液状化有無の出力オプション
         [ObservableProperty] private bool includeOutputLiquefactionYes = true;
@@ -2998,7 +3123,8 @@ namespace PileDesign.ViewModels
             // コンストラクタ内の適当な位置
             OpenTableWindowCommand = new ToolkitRelayCommand(
                 OpenTableWindow,
-                () => LatestResultTables != null && LatestResultTables.Count > 0);
+                () => (LatestResultTables != null && LatestResultTables.Count > 0) ||
+                      (VerticalBeamCaseResults != null && VerticalBeamCaseResults.Count > 0));
 
         }
 

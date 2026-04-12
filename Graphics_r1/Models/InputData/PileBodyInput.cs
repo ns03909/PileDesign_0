@@ -834,8 +834,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"杭体データのDeepCopy中にエラーが発生しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                System.Diagnostics.Debug.WriteLine($"[PileBodyInput.DeepCopy] {ex.GetType().Name}: {ex.Message}");
                 return null;
             }
         }

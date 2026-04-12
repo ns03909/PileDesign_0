@@ -9,9 +9,14 @@ namespace PileDesign.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            // parameterに表示したい値（例: "杭応力"）を指定
+            // parameterに表示したい値を指定（複数値は"|"区切り、例: "梁応力|基礎梁考慮沈下梁応力"）
             if (value is string str && parameter is string target)
-                return str == target ? Visibility.Visible : Visibility.Collapsed;
+            {
+                foreach (var t in target.Split('|'))
+                {
+                    if (str == t) return Visibility.Visible;
+                }
+            }
             return Visibility.Collapsed;
         }
 

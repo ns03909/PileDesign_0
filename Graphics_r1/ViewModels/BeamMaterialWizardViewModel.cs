@@ -47,7 +47,8 @@ namespace PileDesign.ViewModels
             get => _poissonRatio;
             set
             {
-                if (SetProperty(ref _poissonRatio, value))
+                var clamped = Math.Max(0.0, Math.Min(0.5, value));
+                if (SetProperty(ref _poissonRatio, clamped))
                 {
                     CalculateProperties();
                 }

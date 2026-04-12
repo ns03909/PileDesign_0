@@ -296,10 +296,14 @@ namespace PileDesign.Views
                 if (viewModel.IsDeformedElementVisible && !viewModel.IsAnalysisResultVisible)
                     UpdateDeformedElementsStandalone();
 
-                // 追加: 「沈下」のバブル/矢印は最後に描いて最前面に
+                // 追加: 沈下系のバブル/矢印は最後に描いて最前面に
+                string effContent = viewModel.EffectiveSettlementContent;
                 if (_pendingSettlementPoints != null &&
                     _pendingSettlementValues != null &&
-                    viewModel.AnalysisResultContent == "沈下")
+                    (effContent == "沈下" ||
+                     effContent == "基礎梁考慮沈下" ||
+                     effContent == "基礎梁考慮+群杭沈下" ||
+                     effContent == "基礎梁考慮反力"))
                 {
                     DrawBubbleAndArrow(
                         _pendingSettlementPoints,

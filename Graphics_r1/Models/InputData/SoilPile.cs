@@ -1,7 +1,10 @@
-﻿using PileDesign.FEM;
+﻿using MathNet.Numerics.LinearAlgebra;
+using PileDesign.FEM;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace PileDesign.Models.InputData
 {
@@ -337,6 +340,58 @@ namespace PileDesign.Models.InputData
         // 解析結果（荷重-沈下曲線）
         public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacements { get; set; } = [];
         public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacementsLimit { get; set; } = [];
+
+        // 全節点変位・反力（各荷重ステップ）— DeepCopy/JSON保存から除外
+        [JsonIgnore]
+        public List<Vector<double>> NodeDisplacements { get; set; }
+
+        [JsonIgnore]
+        public List<Vector<double>> NodeReactions { get; set; }
+
+        /// <summary>
+        /// 指定した杭頭荷重に対する全節点変位ベクトルを線形補間で返す（単位: m）
+        /// </summary>
+        public Vector<double> GetFullDisplacementForLoad(double pileTopForce)
+        {
+            return InterpolateNodeVector(NodeDisplacements, pileTopForce);
+        }
+
+        /// <summary>
+        /// 指定した杭頭荷重に対する全節点反力ベクトルを線形補間で返す（単位: kN）
+        /// </summary>
+        public Vector<double> GetFullReactionForLoad(double pileTopForce)
+        {
+            return InterpolateNodeVector(NodeReactions, pileTopForce);
+        }
+
+        private Vector<double> InterpolateNodeVector(List<Vector<double>> vectors, double pileTopForce)
+        {
+            if (vectors == null || LoadDisplacements == null ||
+                vectors.Count != LoadDisplacements.Count || vectors.Count < 2)
+                return null;
+
+            var sorted = LoadDisplacements
+                .Select((ld, i) => (ld, i))
+                .OrderBy(x => x.ld.PileTopLoad)
+                .ToList();
+
+            if (pileTopForce <= sorted[0].ld.PileTopLoad)
+                return vectors[sorted[0].i].Clone();
+            if (pileTopForce >= sorted[^1].ld.PileTopLoad)
+                return vectors[sorted[^1].i].Clone();
+
+            for (int k = 0; k < sorted.Count - 1; k++)
+            {
+                var lower = sorted[k];
+                var upper = sorted[k + 1];
+                if (pileTopForce >= lower.ld.PileTopLoad && pileTopForce <= upper.ld.PileTopLoad)
+                {
+                    double ratio = (pileTopForce - lower.ld.PileTopLoad) / (upper.ld.PileTopLoad - lower.ld.PileTopLoad);
+                    return vectors[lower.i] * (1 - ratio) + vectors[upper.i] * ratio;
+                }
+            }
+            return null;
+        }
 
 
         const double epsilon = 1e-5; // 許容誤差（必要に応じて調整）

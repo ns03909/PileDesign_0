@@ -756,7 +756,9 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <!--<TextBlock  Grid.Row="0" Grid.Column="0" Text="杭頭沈下曲線" FontWeight="Bold"/>-->
+                        <CheckBox Grid.Row="0" Grid.Column="1" Content="凡例表示"
+                                 IsChecked="{Binding IsSettlementLegendVisible}"
+                                 HorizontalAlignment="Right" Margin="0,2,10,2"/>
                         <ScottPlot:WpfPlot  Grid.Row="1" Grid.Column="0" x:Name="wpfPlotSettlement"/>
                         <TextBlock Text="{Binding CrosshairPositionText_PileTopSettlement}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
 

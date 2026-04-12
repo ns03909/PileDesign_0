@@ -757,9 +757,9 @@ namespace PileDesign.FEM
                 VectorRz0 = VectorRz.Clone();
                 VectorX.Clear();
 
-                Fs.Add(VectorF); // 荷重
-                Rs.Add(VectorRz); // 反力
-                Ds.Add(VectorX0); // 変位
+                Fs.Add(VectorF.Clone()); // 荷重
+                Rs.Add(VectorRz.Clone()); // 反力
+                Ds.Add(VectorX0.Clone()); // 変位
                 RzToes.Add(rzToe); // 杭先端反力
             }
             else
@@ -841,9 +841,9 @@ namespace PileDesign.FEM
 
                 if (state == "positive")
                 {
-                    Fs.Add(VectorF); // 荷重
-                    Rs.Add(VectorRz); // 反力
-                    Ds.Add(VectorX); // 変位
+                    Fs.Add(VectorF.Clone()); // 荷重
+                    Rs.Add(VectorRz.Clone()); // 反力
+                    Ds.Add(VectorX.Clone()); // 変位
                     RzToes.Add(rzToe); // 杭先端反力
 
                     if (limitFlags.IsAnyJustLimit)
@@ -851,9 +851,9 @@ namespace PileDesign.FEM
                 }
                 else // negative
                 {
-                    Fs.Insert(0, VectorF); // 荷重
-                    Rs.Insert(0, VectorRz); // 反力
-                    Ds.Insert(0, VectorX); // 変位
+                    Fs.Insert(0, VectorF.Clone()); // 荷重
+                    Rs.Insert(0, VectorRz.Clone()); // 反力
+                    Ds.Insert(0, VectorX.Clone()); // 変位
                     RzToes.Insert(0, rzToe); // 杭先端反力
 
                     if (limitFlags.IsAnyJustLimit)

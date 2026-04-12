@@ -208,9 +208,27 @@ namespace PileDesign.Services
             double maxLabelRight = 0;
             var labelRights = new List<double>(numberOfTicks);
 
+            // 重複するフォーマット済みラベルを除去（全値同一時に同じ値が並ぶのを防ぐ）
+            // max/minラベルは別途描画されるため、tick側で重複する場合もスキップ
+            string prevLabelText = null;
             for (int i = 0; i < numberOfTicks; i++)
             {
                 double value = revBoundaries[i];
+
+                // フォーマット文字列が composite 形式かどうかを判定して表示文字列を作る
+                string labelText;
+                if (format.Contains("{"))
+                    labelText = string.Format(format, value);
+                else
+                    labelText = value.ToString(format);
+
+                // 直前と同じラベルテキストの場合はスキップ
+                if (i > 0 && labelText == prevLabelText)
+                {
+                    labelRights.Add(0);
+                    continue;
+                }
+                prevLabelText = labelText;
 
                 var tick = new Line
                 {
@@ -221,13 +239,6 @@ namespace PileDesign.Services
                     Stroke = Brushes.Black,
                     StrokeThickness = 0.5 * scale
                 };
-
-                // フォーマット文字列が composite 形式かどうかを判定して表示文字列を作る
-                string labelText;
-                if (format.Contains("{"))
-                    labelText = string.Format(format, value);
-                else
-                    labelText = value.ToString(format);
 
                 var label = new TextBlock
                 {

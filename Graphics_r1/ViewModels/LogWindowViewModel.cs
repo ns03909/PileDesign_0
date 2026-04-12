@@ -3,7 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 
@@ -11,7 +13,7 @@ namespace PileDesign.ViewModels
 {
     public partial class LogWindowViewModel : ObservableObject
     {
-        private readonly List<string> _logLines = new();
+        private readonly Dictionary<string, List<string>> _logSources = new();
 
         [ObservableProperty]
         private string _logText = string.Empty;
@@ -22,53 +24,71 @@ namespace PileDesign.ViewModels
         [ObservableProperty]
         private string _statusText = "Ready";
 
+        /// <summary>ログ種別の選択肢</summary>
+        public ObservableCollection<string> LogCategories { get; } = [];
+
+        private string _selectedLogCategory;
+        public string SelectedLogCategory
+        {
+            get => _selectedLogCategory;
+            set
+            {
+                if (SetProperty(ref _selectedLogCategory, value))
+                    UpdateLogText();
+            }
+        }
+
+        /// <summary>カテゴリが複数ある場合のみセレクタを表示</summary>
+        public bool IsCategorySelectorVisible => LogCategories.Count > 1;
+
         public event EventHandler? ScrollToEndRequested;
 
         public LogWindowViewModel()
         {
         }
 
+        /// <summary>単一ログソース（後方互換）</summary>
         public LogWindowViewModel(IEnumerable<string> initialLogs)
         {
             if (initialLogs != null)
             {
-                _logLines.AddRange(initialLogs);
+                var lines = initialLogs.ToList();
+                _logSources["解析ログ"] = lines;
+                LogCategories.Add("解析ログ");
+                _selectedLogCategory = "解析ログ";
                 UpdateLogText();
             }
         }
 
-        public void AddLog(string message)
+        /// <summary>複数ログソース</summary>
+        public LogWindowViewModel(Dictionary<string, IEnumerable<string>> sources)
         {
-            _logLines.Add($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
-            UpdateLogText();
-
-            if (AutoScroll)
+            foreach (var kvp in sources)
             {
-                ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
+                _logSources[kvp.Key] = kvp.Value.ToList();
+                LogCategories.Add(kvp.Key);
             }
+            OnPropertyChanged(nameof(IsCategorySelectorVisible));
 
-            StatusText = $"{_logLines.Count} log entries";
-        }
-
-        public void AddLogs(IEnumerable<string> messages)
-        {
-            foreach (var message in messages)
+            if (LogCategories.Count > 0)
             {
-                _logLines.Add(message);
+                _selectedLogCategory = LogCategories[0];
+                UpdateLogText();
             }
-            UpdateLogText();
-
-            if (AutoScroll)
-            {
-                ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
-            }
-
-            StatusText = $"{_logLines.Count} log entries";
         }
 
         private void UpdateLogText()
         {
-            LogText = string.Join(Environment.NewLine, _logLines);
+            if (_selectedLogCategory != null && _logSources.TryGetValue(_selectedLogCategory, out var lines))
+            {
+                LogText = string.Join(Environment.NewLine, lines);
+                StatusText = $"{lines.Count} log entries";
+            }
+            else
+            {
+                LogText = string.Empty;
+                StatusText = "Ready";
+            }
         }
 
         [RelayCommand]
@@ -85,16 +105,18 @@ namespace PileDesign.ViewModels
         private void ClearLog()
         {
             var result = MessageBox.Show(
-                "Are you sure you want to clear all log entries?",
-                "Clear Log",
+                "ログをクリアしますか？",
+                "確認",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
-                _logLines.Clear();
+                if (_selectedLogCategory != null && _logSources.ContainsKey(_selectedLogCategory))
+                {
+                    _logSources[_selectedLogCategory].Clear();
+                }
                 UpdateLogText();
-                StatusText = "Log cleared";
             }
         }
 

@@ -26,7 +26,13 @@ namespace PileDesign.Models.InputData
         public double YoungModulus
         {
             get => _youngModulus;
-            set => SetProperty(ref _youngModulus, value);
+            set
+            {
+                if (SetProperty(ref _youngModulus, value))
+                {
+                    RecalculateShearModulus();
+                }
+            }
         }
 
         private double _shearModulus = 1.1079e7;  // デフォルト 1.1079×10^7 kN/m² (E/2.4, ポアソン比0.2)
@@ -40,7 +46,23 @@ namespace PileDesign.Models.InputData
         public double PoissonRatio
         {
             get => _poissonRatio;
-            set => SetProperty(ref _poissonRatio, value);
+            set
+            {
+                // ポアソン比の有効範囲: 0.0 ～ 0.5
+                var clamped = Math.Max(0.0, Math.Min(0.5, value));
+                if (SetProperty(ref _poissonRatio, clamped))
+                {
+                    RecalculateShearModulus();
+                }
+            }
+        }
+
+        /// <summary>
+        /// ヤング係数とポアソン比からせん断弾性係数を再計算: G = E / (2(1+ν))
+        /// </summary>
+        private void RecalculateShearModulus()
+        {
+            ShearModulus = YoungModulus / (2.0 * (1.0 + PoissonRatio));
         }
     }
 

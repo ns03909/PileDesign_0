@@ -360,6 +360,23 @@ common:EscapeKeyBehavior.Enable="True">
                     </CheckBox.Style>
                 </CheckBox>
 
+                <CheckBox
+                      Content="基礎梁考慮鉛直解析結果"
+                      IsChecked="{Binding IncludeVerticalBeamResults, Mode=TwoWay}">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="True"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsVerticalBeamAnalysisDone}" Value="False">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="IsChecked" Value="False"/>
+                                    <Setter Property="ToolTip" Value="基礎梁考慮鉛直解析が未完了のため選択できません"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+
             </StackPanel>
 
 

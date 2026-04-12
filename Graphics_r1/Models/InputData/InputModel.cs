@@ -1557,8 +1557,16 @@ namespace PileDesign.Models.InputData
 
         public InputModel DeepCopy()
         {
+            // 解析結果（SoilPiles）を一時退避してシリアライズ対象から除外（OOM対策）
+            ObservableCollection<SoilPile> savedSoilPiles = null;
             try
             {
+                if (ElementDivision?.SoilPiles != null && ElementDivision.SoilPiles.Count > 0)
+                {
+                    savedSoilPiles = ElementDivision.SoilPiles;
+                    ElementDivision.SoilPiles = [];
+                }
+
                 string json = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
                 var clone = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
                             ?? throw new InvalidOperationException("DeepCopy 失敗");
@@ -1566,9 +1574,16 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                Application.Current?.Dispatcher.Invoke(() =>
-                    MessageBox.Show($"DeepCopyに失敗しました。\n{ex.Message}", "DeepCopyエラー", MessageBoxButton.OK, MessageBoxImage.Error));
+                System.Diagnostics.Debug.WriteLine($"[DeepCopy] {ex.GetType().Name}: {ex.Message}");
                 return null;
+            }
+            finally
+            {
+                // 退避したSoilPilesを復元
+                if (savedSoilPiles != null && ElementDivision != null)
+                {
+                    ElementDivision.SoilPiles = savedSoilPiles;
+                }
             }
         }
 

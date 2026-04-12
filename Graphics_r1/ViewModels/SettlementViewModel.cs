@@ -160,9 +160,21 @@ namespace PileDesign.ViewModels
                     // 各SoilPileに対してVerticalLoadTransferMethodを作成・解析
                     var vtm = new VerticalLoadTransferMethod(InputModel, soilPile, SelectedAnalysisMode);
 
-                    // SoilPileに計算結果を保存
+                    // SoilPileに計算結果を保存（ViewModel内コピー）
                     soilPile.LoadDisplacements = vtm.LoadDisplacements;
                     soilPile.LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
+                    soilPile.NodeDisplacements = vtm.Ds;
+                    soilPile.NodeReactions = vtm.Rs;
+
+                    // 元のElementDivision.SoilPilesにも結果を反映
+                    var originalSoilPiles = InputModel.ElementDivision?.SoilPiles;
+                    if (originalSoilPiles != null && i < originalSoilPiles.Count)
+                    {
+                        originalSoilPiles[i].LoadDisplacements = vtm.LoadDisplacements;
+                        originalSoilPiles[i].LoadDisplacementsLimit = vtm.LoadDisplacementsLimit;
+                        originalSoilPiles[i].NodeDisplacements = vtm.Ds;
+                        originalSoilPiles[i].NodeReactions = vtm.Rs;
+                    }
 
                     // 該当するPileLayoutItemの沈下量を計算
                     int soilPileNo = i + 1;
@@ -340,6 +352,37 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_PileTopSettlement, value);
         }
 
+        private bool _isSettlementLegendVisible = true;
+        public bool IsSettlementLegendVisible
+        {
+            get => _isSettlementLegendVisible;
+            set
+            {
+                if (SetProperty(ref _isSettlementLegendVisible, value))
+                {
+                    ApplyLegendVisibility();
+                }
+            }
+        }
+
+        private void ApplyLegendVisibility()
+        {
+            var win = SettlementWindowInstance;
+            if (win == null) return;
+            var wpf = win.wpfPlotSettlement;
+            var wpfToe = win.wpfPlotSettlementToe;
+            if (wpf != null)
+            {
+                wpf.Plot.Legend.IsVisible = _isSettlementLegendVisible;
+                wpf.Refresh();
+            }
+            if (wpfToe != null)
+            {
+                wpfToe.Plot.Legend.IsVisible = _isSettlementLegendVisible;
+                wpfToe.Refresh();
+            }
+        }
+
         // コンストラクタ
         public SettlementViewModel(MainWindowViewModel mainWindowViewModel)
         {
@@ -468,6 +511,19 @@ namespace PileDesign.ViewModels
 
                 SoilPile.LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
                 SoilPile.LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
+                SoilPile.NodeDisplacements = VerticalLoadTransferMethod.Ds;
+                SoilPile.NodeReactions = VerticalLoadTransferMethod.Rs;
+
+                // 元のElementDivision.SoilPilesにも結果を反映
+                int spIdx = SoilPileNo - 1;
+                var originalSoilPiles = InputModel.ElementDivision?.SoilPiles;
+                if (originalSoilPiles != null && spIdx >= 0 && spIdx < originalSoilPiles.Count)
+                {
+                    originalSoilPiles[spIdx].LoadDisplacements = VerticalLoadTransferMethod.LoadDisplacements;
+                    originalSoilPiles[spIdx].LoadDisplacementsLimit = VerticalLoadTransferMethod.LoadDisplacementsLimit;
+                    originalSoilPiles[spIdx].NodeDisplacements = VerticalLoadTransferMethod.Ds;
+                    originalSoilPiles[spIdx].NodeReactions = VerticalLoadTransferMethod.Rs;
+                }
             }
             finally
             {
@@ -634,6 +690,9 @@ namespace PileDesign.ViewModels
 
             ConfigurePlot(wpf, "荷重-杭頭沈下曲線", "杭頭沈下量(mm)", "荷重 (kN)");
             ConfigurePlot(wpfToe, "荷重-杭先端沈下曲線", "杭先端沈下量(mm)", "荷重 (kN)");
+
+            wpf.Plot.Legend.IsVisible = _isSettlementLegendVisible;
+            wpfToe.Plot.Legend.IsVisible = _isSettlementLegendVisible;
 
             // クロスヘアの初期化
             MyCrosshair_PileTopSettlement = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));

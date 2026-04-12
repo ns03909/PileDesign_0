@@ -1,5 +1,6 @@
 ﻿using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -15,6 +16,9 @@ namespace PileDesign.Models
 
         public InputModel InputModel { get; set; }
         public AnaModel AnaModel { get; set; }
+
+        /// <summary>基礎梁鉛直解析結果</summary>
+        public List<VerticalBeamCaseResult> VerticalBeamCaseResults { get; set; }
 
         // 保存メソッド
         public static void SaveProject(string filePath, InputModel inputModel, AnaModel anaModel)

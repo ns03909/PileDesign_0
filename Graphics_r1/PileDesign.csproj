@@ -12,10 +12,11 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.1-beta</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
-    <InformationalVersion>1.0.1-beta</InformationalVersion>
+    <Version>1.0.2-beta</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
+    <InformationalVersion>1.0.2-beta</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <!-- Release時のPDB除外（publish時のサイズ削減） -->
@@ -1816,9 +1817,6 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="NikkenLogo\170703_Nikken_Brandmark_Tagline.jpg" />
-    <Content Include="NikkenLogo\170703_Nikken_Brandmark_Tagline.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />

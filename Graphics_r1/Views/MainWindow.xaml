@@ -822,58 +822,77 @@
 
                     <!-- 計算例: 右側補助ペイン -->
                     <ribbon:RibbonApplicationMenu.AuxiliaryPaneContent >
-                        <Border BorderBrush="Gray" BorderThickness="0" Background="White" MinWidth="320" MaxHeight="900" Padding="6" ClipToBounds="True">
-                            <ScrollViewer Height="900"
-                                  VerticalScrollBarVisibility="Auto"
+                        <Border BorderBrush="Gray" BorderThickness="0" Background="White" MinWidth="320" Padding="6" ClipToBounds="True">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   CanContentScroll="False"
                                   PanningMode="VerticalOnly"
                                   Focusable="False">
                                 <!-- StackPanel は必ず ScrollViewer の単一子として入れる -->
                                 <StackPanel Margin="0" VerticalAlignment="Top">
-                                    <TextBlock Text="計算例" FontWeight="Bold" Margin="0,0,0,0"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例5 直接基礎の即時沈下量"
+
+                                    <!-- 基礎指針'19 -->
+                                    <TextBlock Text="建築基礎構造設計指針 2019" FontWeight="Bold" Foreground="#3271AD" Margin="0,4,0,2"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="計算例5　直接基礎の即時沈下量"
                                               KeyTip="E1"
-                                              Command="{Binding Example5Command}"
-                                              ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
+                                              Command="{Binding Example5PileCommand}"
+                                              ToolTip="基礎指針'19 計算例5 直接基礎の即時沈下量（PHC杭φ600 L=14m 12本付き）"
                                               ImageSource="pack://application:,,,/Icons/cover.png"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="基礎指針'19 計算例9 地下室下の杭"
+                                    <ribbon:RibbonApplicationMenuItem Header="計算例7　杭の限界鉛直支持力および限界引抜き抵抗力"
+                                              KeyTip="E1b"
+                                              Command="{Binding Example7Command}"
+                                              ToolTip="基礎指針'19 計算例7 杭の限界鉛直支持力および限界引抜き抵抗力"
+                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="計算例9　地下室下の杭"
                                               KeyTip="E2"
                                               Command="{Binding Example9Command}"
                                               ToolTip="基礎指針'19 計算例9 地下室の影響を考慮した杭の地震時水平抵抗"
                                               ImageSource="pack://application:,,,/Icons/cover.png"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="計算例10　場所打ちRC杭"
+                                              KeyTip="E2b"
+                                              Command="{Binding Example10Command}"
+                                              ToolTip="基礎指針'19 計算例10 場所打ち鉄筋コンクリート杭φ1500 L=37.5m"
+                                              ImageSource="pack://application:,,,/Icons/cover.png"/>
 
-                                    <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 7. 直接基礎の設計例"
+                                    <Separator Margin="0,4"/>
+
+                                    <!-- 関東支部 -->
+                                    <TextBlock Text="基礎構造の設計（関東支部）" FontWeight="Bold" Foreground="#3271AD" Margin="0,2,0,2"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="7. 直接基礎の設計例"
                                               KeyTip="E3"
                                               Command="{Binding ExampleK7Command}"
                                               ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例7を実行"
                                               ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="基礎構造の設計 8. 杭基礎の設計例"
+                                    <ribbon:RibbonApplicationMenuItem Header="8. 杭基礎の設計例"
                                               KeyTip="E4"
                                               Command="{Binding ExampleK8Command}"
                                               ToolTip="日本建築学会　関東支部　基礎構造の設計　学びやすい構造設計 計算例8を実行"
                                               ImageSource="pack://application:,,,/Icons/332-8002.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.1　SC杭, PRC杭"
+
+                                    <Separator Margin="0,4"/>
+
+                                    <!-- 設計例集 -->
+                                    <TextBlock Text="建築基礎構造設計例集" FontWeight="Bold" Foreground="#3271AD" Margin="0,2,0,2"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="3.1　SC杭, PRC杭"
                                               KeyTip="E5"
                                               Command="{Binding Example3_1Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.1　非液状化地盤に建つ建物のPHC杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.2　PHC杭"
+                                    <ribbon:RibbonApplicationMenuItem Header="3.2　PHC杭"
                                               KeyTip="E6"
                                               Command="{Binding Example3_2Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.2　砂地盤に建つ建物のPHC節杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.3　場所打ち杭"
+                                    <ribbon:RibbonApplicationMenuItem Header="3.3　場所打ち杭"
                                               KeyTip="E7"
                                               Command="{Binding Example3_3Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.3　粘性土地盤に建つ免振建物の場所打ち鉄筋コンクリート杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-                                    <ribbon:RibbonApplicationMenuItem Header="設計例集3.4　SC杭"
+                                    <ribbon:RibbonApplicationMenuItem Header="3.4　SC杭"
                                               KeyTip="E8"
                                               Command="{Binding Example3_4Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
-
 
                                     <!-- 追加計算例が増える場合はここに同様に列挙 -->
                                 </StackPanel>
@@ -1354,6 +1373,7 @@
                     <ribbon:RibbonButton x:Name="RibbonButtonSettlement"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
+                         ToolTip="各杭の荷重-沈下関係を計算します。要素分割が前提です。"
                          IsEnabled="{Binding IsElementSplit}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
@@ -1373,7 +1393,8 @@
                     </ribbon:RibbonButton>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
-                     Click="ButtonGroupPileSettlement_Click">
+                     Click="ButtonGroupPileSettlement_Click"
+                     ToolTip="スタインブレナー近似式による即時沈下量を計算します。群杭荷重タブで荷重面・土層を設定してください。">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
                                 <Setter Property="Label" Value="群杭沈下解析"/>
@@ -1392,7 +1413,8 @@
                     </ribbon:RibbonButton>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonVerticalBeamCalculation"
-                         Command="{Binding OpenVerticalBeamCalculationCommand}">
+                         Command="{Binding OpenVerticalBeamCalculationCommand}"
+                         ToolTip="基礎梁の剛性を考慮した沈下解析です。単杭沈下解析と基礎梁要素の定義が前提です。">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
                                 <Setter Property="Label" Value="基礎梁考慮沈下解析"/>
@@ -1448,7 +1470,28 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
-                                            <Condition Binding="{Binding AnalysisResultContent}" Value="沈下"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="沈下量"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="沈下部材角"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="沈下反力"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="沈下応力"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
@@ -1462,7 +1505,7 @@
                         </i:Interaction.Triggers>
                     </ComboBox>
 
-                    <!-- 梁応力 -->
+                    <!-- 梁応力 / 沈下応力 -->
                     <ComboBox Width="100"
                           ItemsSource="{Binding AnalysisResultBeamForceOption}"
                           SelectedItem="{Binding AnalysisResultBeamForceType}"
@@ -1475,6 +1518,13 @@
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
                                             <Condition Binding="{Binding AnalysisResultContent}" Value="梁応力"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="沈下応力"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
@@ -1752,6 +1802,24 @@
                              SmallImageSource="pack://application:,,,/Icons/Check.png"/>
                 </ribbon:RibbonGroup>
 
+                <!-- テキスト（表示タブと同じ） -->
+                <ribbon:RibbonGroup Header="テキスト" SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
+                    <ribbon:RibbonButton
+                     LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
+                     SmallImageSource="pack://application:,,,/Icons/LabelSize.png"
+                     ToolTip="テキストサイズを変更します。"
+                     IsHitTestVisible="False" Focusable="False"/>
+                    <ComboBox Width="50"
+                      ItemsSource="{Binding LabelSizeOption}"
+                      SelectedItem="{Binding LabelSize}"
+                      ribbon:RibbonControlService.Label="サイズ">
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="SelectionChanged">
+                                <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ComboBox>
+                </ribbon:RibbonGroup>
 
             </ribbon:RibbonTab>
 
@@ -1831,34 +1899,40 @@
                                          ToolTip="データタブ（一般節点～群杭荷重）の表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleLeftTabs_Click"
+                                         LargeImageSource="pack://application:,,,/Icons/DataTabVisible.png"
                                          SmallImageSource="pack://application:,,,/Icons/DataTabVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="InputDataPanelToggle"
                                          Label="入力データ"
                                          ToolTip="入力データパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleInputDataPanel_Click"
+                                         LargeImageSource="pack://application:,,,/Icons/InputDataVisible.png"
                                          SmallImageSource="pack://application:,,,/Icons/InputDataVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="PropertiesPanelToggle"
                                          Label="プロパティ"
                                          ToolTip="プロパティパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="TogglePropertiesPanel_Click"
+                                         LargeImageSource="pack://application:,,,/Icons/PropertyVisible.png"
                                          SmallImageSource="pack://application:,,,/Icons/PropertyVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="MinimapPanelToggle"
                                          Label="ミニマップ"
                                          ToolTip="ミニマップパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleMinimapPanel_Click"
+                                         LargeImageSource="pack://application:,,,/Icons/MiniMapVisible.png"
                                          SmallImageSource="pack://application:,,,/Icons/MiniMapVisible.png"/>
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="3Dビュー">
                     <ribbon:RibbonToggleButton Label="ビューキューブ"
                                                 ToolTip="ビューキューブの表示/非表示"
                                                 IsChecked="{Binding IsViewCubeVisible}"
+                                                LargeImageSource="pack://application:,,,/Icons/ViewCubeVisible.png"
                                                 SmallImageSource="pack://application:,,,/Icons/ViewCubeVisible.png"/>
                     <ribbon:RibbonToggleButton Label="ツール"
                                                 ToolTip="右ツール群の表示/非表示"
                                                 IsChecked="{Binding IsRightToolbarVisible}"
+                                                LargeImageSource="pack://application:,,,/Icons/ToolVisible.png"
                                                 SmallImageSource="pack://application:,,,/Icons/ToolVisible.png"/>
                 </ribbon:RibbonGroup>
 
@@ -2145,8 +2219,9 @@
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
-                                                <DataGridTextColumn Binding="{Binding ShearModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                <DataGridTextColumn Binding="{Binding ShearModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, Mode=OneWay}"
+                                                                IsReadOnly="True"
+                                                                ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="せん断" TextAlignment="Center"/>
@@ -2364,23 +2439,56 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
                                         <StackPanel Grid.Row="0">
                                             <TextBlock Margin="4,2" Foreground="#888" FontSize="11" TextWrapping="Wrap"
                                                        Text="※梁要素を追加するには、&#x0a;Canvas上で梁要素追加モード(Alt+1)にし、&#x0a;杭接合節点、一般節点をクリックしてください。"/>
-                                            <StackPanel Orientation="Horizontal" Margin="4,2">
+                                            <StackPanel Orientation="Horizontal" Margin="4,2" >
                                                 <Button ToolTip="要素番号昇順で整列"
-                                                        Command="{Binding SortBeamsByNoCommand}"
-                                                        Width="32" Height="32" Padding="0">
+                                                        Command="{Binding SortBeamsByNoCommand}">
                                                     <svgc:SvgViewbox Source="/Icons/SortNo.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
                                                 <Button ToolTip="I端節点昇順→J端節点昇順で整列"
-                                                        Command="{Binding SortBeamsByNodeCommand}"
-                                                        Width="32" Height="32" Padding="0">
+                                                        Command="{Binding SortBeamsByNodeCommand}">
                                                     <svgc:SvgViewbox Source="/Icons/SortIJ.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
+                                                <Button ToolTip="重複要素の削除"
+                                                        Command="{Binding DeleteDupulicateElementsCommand}">
+                                                    <svgc:SvgViewbox Source="/Icons/MergeElems.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                                <Button ToolTip="交差点で要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します"
+                                                        Command="{Binding SplitElementsAtIntersectionsCommand}">
+                                                    <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="4,2">
+                                                <Button ToolTip="選択要素を重なる一般節点で分割します (Alt + 7)"
+                                                        Command="{Binding SplitElementsByNodesCommand}">
+                                                    <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                                <TextBlock Text="距離(m)" VerticalAlignment="Center" Margin="4,0,2,0"/>
+                                                <TextBox Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=LostFocus}"
+                                                         Width="50" HorizontalContentAlignment="Right" VerticalAlignment="Center"
+                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         KeyDown="TextBox_KeyDown">
+                                                    <TextBox.ToolTip>
+                                                        <TextBlock>
+                                                            <Run Text="選択要素を、重なる一般節点で分割します。"/>
+                                                            <LineBreak/>
+                                                            <Run Text="点と直線の重なりの判定は、その距離が分割距離以下か否かで行います。"/>
+                                                        </TextBlock>
+                                                    </TextBox.ToolTip>
+                                                </TextBox>
+                                                <Button ToolTip="選択要素を等分割し、分割点に一般節点を生成します"
+                                                        Command="{Binding EqualDivideElementsCommand}" Margin="8,0,0,0">
+                                                    <svgc:SvgViewbox Source="/Icons/SplitElementEqually.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
+                                                <TextBlock Text="分割数" VerticalAlignment="Center" Margin="4,0,2,0"/>
+                                                <TextBox Text="{Binding EqualDivisionCount, UpdateSourceTrigger=LostFocus}"
+                                                         Width="30" HorizontalContentAlignment="Right" VerticalAlignment="Center"
+                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         KeyDown="TextBox_KeyDown"/>
                                             </StackPanel>
                                         </StackPanel>
 
@@ -2392,6 +2500,7 @@
                                                 CanUserAddRows="False"
                                                 LoadingRow="DataGrid_LoadingRow_Numbering"
                                                 BeginningEdit="DataGridFoundationBeams_BeginningEdit"
+                                                CellEditEnding="DataGridFoundationBeams_CellEditEnding"
                                                 EnableRowVirtualization="True"
                                                 EnableColumnVirtualization="True"
                                                 VirtualizingPanel.IsVirtualizing="True"
@@ -2497,63 +2606,7 @@
                                         </common:EnhancedDataGrid>
                                     </GroupBox>
 
-                                    <!-- 操作ボタン -->
-                                    <Grid Grid.Row="2">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Margin="2">
-                                            <Button ToolTip="選択要素を重なる一般節点で分割します (Alt + 7)" Command="{Binding SplitElementsByNodesCommand}">
-                                                <svgc:SvgViewbox Source="/Icons/SplitElementByNodes.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                            </Button>
-                                            <TextBlock Text="分割距離(m)" VerticalAlignment="Center" Margin="5,0,2,0"/>
-                                            <TextBox Text="{Binding EditDistanceThreshold, UpdateSourceTrigger=LostFocus}"
-                                                     Width="60"
-                                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                     KeyDown="TextBox_KeyDown"
-                                                     HorizontalContentAlignment="Right"
-                                                     VerticalAlignment="Center">
-                                                <TextBox.ToolTip>
-                                                    <TextBlock>
-                                                        <Run Text="選択要素を、重なる一般節点で分割します。"/>
-                                                        <LineBreak/>
-                                                        <Run Text="点と直線の重なりの判定は、その距離が分割距離以下か否かで行います。"/>
-                                                    </TextBlock>
-                                                </TextBox.ToolTip>
-                                            </TextBox>
-                                        </StackPanel>
-
-                                        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Margin="2">
-                                            <Button ToolTip="選択要素を等分割し、分割点に一般節点を生成します" Command="{Binding EqualDivideElementsCommand}">
-                                                <svgc:SvgViewbox Source="/Icons/SplitElementEqually.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                            </Button>
-                                            <TextBlock Text="分割数" VerticalAlignment="Center" Margin="5,0,2,0"/>
-                                            <TextBox Text="{Binding EqualDivisionCount, UpdateSourceTrigger=LostFocus}"
-                                                     Width="30"
-                                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                     KeyDown="TextBox_KeyDown"
-                                                     HorizontalContentAlignment="Right"
-                                                     VerticalAlignment="Center"/>
-                                        </StackPanel>
-
-                                            <Button Grid.Row="0" Grid.Column="1" Margin="2"
-                                                ToolTip="重複要素の削除" Command="{Binding DeleteDupulicateElementsCommand}">
-                                                    <svgc:SvgViewbox Source="/Icons/MergeElems.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                                </Button>
-
-                                                <Button Grid.Row="1" Grid.Column="1" Margin="2"
-                                                    Command="{Binding SplitElementsAtIntersectionsCommand}"
-                                                    ToolTip="交差点で要素分割:選択要素同士の交差点に一般節点を生成し、要素を分割します">
-                                                    <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                                </Button>
-                                                <!-- 自動梁要素生成ボタンは編集ビューツールバーに移動 (Ctrl+Shift+B) -->
-                                    </Grid>
+                                    <!-- 自動梁要素生成ボタンは編集ビューツールバーに移動 (Ctrl+Shift+B) -->
                                 </Grid>
                             </TabItem>
                         </TabControl>
@@ -2581,12 +2634,10 @@
                                                             ToolTip="杭配置追加"
                                                             Foreground="white"
                                                             Background="#62B0E2"
-                                                            Width="32" Height="32" Padding="3"
                                                             Command="{Binding AddPileCommand}" VerticalAlignment="Top">
                                                             <svgc:SvgViewbox Source="/Icons/AddPileLoc.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
-                                                        <Button Width="32" Height="32" Padding="3"
-                                                                Command="{Binding MoveForceActionPointToAverageCenterCommand}"
+                                                        <Button Command="{Binding MoveForceActionPointToAverageCenterCommand}"
                                                                 VerticalAlignment="Top">
                                                             <svgc:SvgViewbox Source="/Icons/MoveActionPointToCentroid.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             <Button.ToolTip>
@@ -2596,8 +2647,7 @@
                                                                 </StackPanel>
                                                             </Button.ToolTip>
                                                         </Button>
-                                                        <Button Width="32" Height="32" Padding="3"
-                                                                Command="{Binding GroupPileFactorCommand}"
+                                                        <Button Command="{Binding GroupPileFactorCommand}"
                                                                 VerticalAlignment="Top">
                                                             <svgc:SvgViewbox Source="/Icons/GroupPileGraph.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             <Button.ToolTip>
@@ -2609,12 +2659,12 @@
                                                         </Button>
                                                         <Button ToolTip="X優先整列（X昇順→Y昇順）"
                                                                 Command="{Binding SortPileLayoutXFirstCommand}"
-                                                                Width="32" Height="32" Padding="0" VerticalAlignment="Top">
+                                                                VerticalAlignment="Top">
                                                             <svgc:SvgViewbox Source="/Icons/SortXY.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
                                                         <Button ToolTip="Y優先整列（Y昇順→X昇順）"
                                                                 Command="{Binding SortPileLayoutYFirstCommand}"
-                                                                Width="32" Height="32" Padding="0" VerticalAlignment="Top">
+                                                                VerticalAlignment="Top">
                                                             <svgc:SvgViewbox Source="/Icons/SortYX.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
                                                     </StackPanel>
@@ -3846,51 +3896,39 @@
                                             </GroupBox>
 
                                             <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="地盤番号" Grid.Column="0"/>
-                                                <ComboBox x:Name="ComboBoxEmbedmentGroundNo" 
-                                                              SelectedItem="{Binding CurrentInputModel.EmbedmentInput.GroundNo, UpdateSourceTrigger=LostFocus}"  Grid.Column="1"
-                                                          PreviewMouseDown="ComboBoxEmbedmentGroundNo_PreviewMouseDown" ItemsSource="{Binding CurrentInputModel.GroundsInputCountList}">
-                                                </ComboBox>
-                                            </Grid>
 
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="0.5*"/>
-                                                    <ColumnDefinition Width="0.5*"/>
-                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="地盤番号" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"/>
+                                                <ComboBox x:Name="ComboBoxEmbedmentGroundNo" Grid.Row="0" Grid.Column="1" Margin="4,2"
+                                                          SelectedItem="{Binding CurrentInputModel.EmbedmentInput.GroundNo, UpdateSourceTrigger=LostFocus}"
+                                                          PreviewMouseDown="ComboBoxEmbedmentGroundNo_PreviewMouseDown"
+                                                          ItemsSource="{Binding CurrentInputModel.GroundsInputCountList}"/>
 
-                                                <TextBlock Text="下端Z(m)"  Grid.Column="0"/>
-                                                <TextBox Text="{Binding CurrentInputModel.FundamentalInput.RefLevel}" IsReadOnly="True" Foreground="Gray" Grid.Column="1"
-                                                         HorizontalContentAlignment="Right"/>
-                                                <TextBox x:Name="TextBoxEmbedmentBottomAltitude"
+                                                <TextBlock Text="下端Z(m)" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"/>
+                                                <TextBox x:Name="TextBoxEmbedmentBottomAltitude" Grid.Row="1" Grid.Column="1" Margin="4,2"
+                                                         HorizontalContentAlignment="Right"
                                                          GotFocus="TextBox_GotFocus"
                                                          TextChanged="TextBoxAltitude_TextChanged"
-                                                         PreviewMouseDown="TextBoxBottomAltitude_PreviewMouseDown"  Grid.Column="2"
-                                                         HorizontalContentAlignment="Right"
+                                                         PreviewMouseDown="TextBoxBottomAltitude_PreviewMouseDown"
                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          KeyDown="TextBox_KeyDown">
                                                     <Binding Path="CurrentInputModel.EmbedmentInput.BottomAltitude" UpdateSourceTrigger="LostFocus"
                                                         StringFormat="{}{0:+0.00;-0.00;+0.00}" />
                                                 </TextBox>
-                                            </Grid>
 
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <TextBlock Text="区分数" Grid.Column="0"/>
-                                                <ComboBox x:Name="ComboBoxEmbedmentNums"
+                                                <TextBlock Text="区分数" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,2"/>
+                                                <ComboBox x:Name="ComboBoxEmbedmentNums" Grid.Row="2" Grid.Column="1" Margin="4,2"
                                                           SelectedItem="{Binding CurrentInputModel.EmbedmentInput.EmbedmentLayersCount, UpdateSourceTrigger=LostFocus}"
-                                                          PreviewMouseDown="ComboBoxEmbedmentNums_PreviewMouseDown" 
-                                                          SelectionChanged="ComboBoxEmbedmentNums_SelectionChanged"  Grid.Column="1"
-                                                          >
+                                                          PreviewMouseDown="ComboBoxEmbedmentNums_PreviewMouseDown"
+                                                          SelectionChanged="ComboBoxEmbedmentNums_SelectionChanged">
                                                     <ComboBox.ItemsSource>
                                                         <x:Array Type="{x:Type sys:Int32}">
                                                             <sys:Int32>0</sys:Int32>
@@ -4069,12 +4107,16 @@
                                     </Grid.RowDefinitions>
 
                                     <!-- 選択対象距離 -->
-                                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="4,2,4,2">
-                                        <TextBlock Text="選択対象距離" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                        <TextBox Width="60" HorizontalContentAlignment="Right"
-                                                 Text="{Binding GridSelectionDistance, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                 ToolTip="通り心選択ボタンで対象とするオブジェクトまでの距離 (m)"/>
-                                        <TextBlock Text="m" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Vertical" Margin="4,2,4,2">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="選択対象距離" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                            <TextBox Width="60" HorizontalContentAlignment="Right"
+                                                     Text="{Binding GridSelectionDistance, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                                                     ToolTip="通り心選択ボタンで対象とするオブジェクトまでの距離 (m)"/>
+                                            <TextBlock Text="m" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                        </StackPanel>
+                                        <TextBlock Text="※選択ボタンを押すと、その通りから「選択対象距離」以下の範囲のオブジェクトを選択します。"
+                                                   TextWrapping="Wrap" Foreground="Gray" FontSize="10" Margin="0,2,0,0"/>
                                     </StackPanel>
 
                                     <!--<Button x:Name="ButtonAddGridX" ToolTip="Y軸平行通り心追加"  Background="#62B0E2" Foreground="white"
@@ -4443,26 +4485,25 @@
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
 
-                                                        <GroupBox Header="全体矩形荷重自動生成" Grid.Row="0" Grid.Column="0" >
+                                                        <GroupBox Header="建物下面全体矩形荷重自動生成" Grid.Row="0" Grid.Column="0" >
                                                             <Grid>
                                                                 <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="*"/>
-                                                                    <RowDefinition Height="*"/>
+                                                                    <RowDefinition Height="Auto"/>
                                                                 </Grid.RowDefinitions>
 
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                     <ColumnDefinition Width="Auto"/>
                                                                 </Grid.ColumnDefinitions>
 
-                                                                <TextBlock Text="杭心～矩形荷重面(m)" Grid.Row="0" Grid.Column="0" />
-                                                                <TextBox Text="{Binding RectLoadPileDistance}" Grid.Row="0" Grid.Column="1" 
+                                                                <TextBlock Text="杭心～矩形荷重境界(m)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+                                                                <TextBox Text="{Binding RectLoadPileDistance}" Grid.Row="0" Grid.Column="1" Margin="4,0"
                                                                           PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                                          KeyDown="TextBox_KeyDown"
                                                                          HorizontalContentAlignment="Right"/>
 
-                                                                <Button Grid.Row="0" Grid.Column="3"
+                                                                <Button Grid.Row="0" Grid.Column="2"
                                                                         Padding="0"
                                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
                                                                         Tag="自動生成"
@@ -4952,62 +4993,89 @@
                                         </TabItem>
 
                                         <TabItem Header="グリッド" ToolTip = "各交差点において沈下計算を行うグリッドを定義します。">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
+                                            <StackPanel Margin="4">
+                                                <!-- 杭配置範囲（読み取り専用） -->
+                                                <GroupBox Header="杭配置範囲" Margin="0,0,0,4">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
 
-                                                <!--<StackPanel>-->
-                                                <!--<TextBlock Text="沈下量を求めるグリッド"/>-->
-                                                <TextBlock Text="杭配置Xmin(m)" Grid.Row="0" Grid.Column="0"/>
-                                                <TextBox Text="{Binding GroupPileSettlementXMin, Mode=OneWay, StringFormat=N3}"  
-                                                         Grid.Row="0" Grid.Column="1" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right"/>
-                                                <TextBlock Text="杭配置Xmax(m)" Grid.Row="0" Grid.Column="2"/>
-                                                <TextBox Text="{Binding GroupPileSettlementXMax, Mode=OneWay, StringFormat=N3}"  
-                                                         Grid.Row="0" Grid.Column="3" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right"/>
-                                                <TextBlock Text="杭配置Ymin(m)" Grid.Row="1" Grid.Column="0"/>
-                                                <TextBox Text="{Binding GroupPileSettlementYMin, Mode=OneWay, StringFormat=N3}"  
-                                                         Grid.Row="1" Grid.Column="1" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right"/>
-                                                <TextBlock Text="杭配置Ymax(m)" Grid.Row="1" Grid.Column="2"/>
-                                                <TextBox Text="{Binding GroupPileSettlementYMax, Mode=OneWay, StringFormat=N3}"  
-                                                         Grid.Row="1" Grid.Column="3" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                                                        <TextBlock Text="Xmin(m)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementXMin, Mode=OneWay, StringFormat=N3}"
+                                                                 Grid.Row="0" Grid.Column="1" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right" Margin="0,2"/>
+                                                        <TextBlock Text="Xmax(m)" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="8,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementXMax, Mode=OneWay, StringFormat=N3}"
+                                                                 Grid.Row="0" Grid.Column="3" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right" Margin="0,2"/>
 
-                                                <TextBlock Text="グリッドXspacing(m)" Grid.Row="2" Grid.Column="0"/>
-                                                <TextBox Text="{Binding GroupPileSettlementXSpacing, StringFormat=N3}" 
-                                                         Grid.Row="2" Grid.Column="1" HorizontalContentAlignment="Right"
-                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
-                                                <TextBlock Text="グリッドYspacing(m)" Grid.Row="2" Grid.Column="2"/>
-                                                <TextBox Text="{Binding GroupPileSettlementYSpacing, StringFormat=N3}" 
-                                                         Grid.Row="2" Grid.Column="3" HorizontalContentAlignment="Right"
-                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                                                        <TextBlock Text="Ymin(m)" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementYMin, Mode=OneWay, StringFormat=N3}"
+                                                                 Grid.Row="1" Grid.Column="1" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right" Margin="0,2"/>
+                                                        <TextBlock Text="Ymax(m)" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="8,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementYMax, Mode=OneWay, StringFormat=N3}"
+                                                                 Grid.Row="1" Grid.Column="3" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right" Margin="0,2"/>
+                                                    </Grid>
+                                                </GroupBox>
 
-                                                <TextBlock Text="グリッドXOffset(m)" Grid.Row="3" Grid.Column="0"/>
-                                                <TextBox Text="{Binding GroupPileSettlementXOffset, StringFormat=N3}" 
-                                                         Grid.Row="3" Grid.Column="1" HorizontalContentAlignment="Right"
-                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
-                                                <Slider Value="{Binding GroupPileSettlementXOffset}" 
-                                                        Grid.Row="3" Grid.Column="2" HorizontalContentAlignment="Right"
-                                                        Minimum="0" Maximum="20" TickFrequency="2" IsSnapToTickEnabled="True"/>
+                                                <!-- グリッド間隔 -->
+                                                <GroupBox Header="グリッド間隔" Margin="0,0,0,4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
 
-                                                <TextBlock Text="グリッドYOffset(m)" Grid.Row="4" Grid.Column="0"/>
-                                                <TextBox Text="{Binding GroupPileSettlementYOffset, StringFormat=N3}" 
-                                                         Grid.Row="4" Grid.Column="1" HorizontalContentAlignment="Right"
-                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
-                                                <Slider Value="{Binding GroupPileSettlementYOffset}" 
-                                                        Grid.Row="4" Grid.Column="2" HorizontalContentAlignment="Right"
-                                                        Minimum="0" Maximum="20" TickFrequency="2" IsSnapToTickEnabled="True"/>
-                                            </Grid>
+                                                        <TextBlock Text="X間隔(m)" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementXSpacing, StringFormat=N3}"
+                                                                 Grid.Column="1" HorizontalContentAlignment="Right" Margin="0,2"
+                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                                                        <TextBlock Text="Y間隔(m)" Grid.Column="2" VerticalAlignment="Center" Margin="8,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementYSpacing, StringFormat=N3}"
+                                                                 Grid.Column="3" HorizontalContentAlignment="Right" Margin="0,2"
+                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                                                    </Grid>
+                                                </GroupBox>
+
+                                                <!-- グリッドオフセット -->
+                                                <GroupBox Header="グリッドオフセット">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="70"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Text="Xオフセット(m)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementXOffset, StringFormat=N3}"
+                                                                 Grid.Row="0" Grid.Column="1" HorizontalContentAlignment="Right" Margin="0,2"
+                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                                                        <Slider Value="{Binding GroupPileSettlementXOffset}"
+                                                                Grid.Row="0" Grid.Column="2" Margin="4,2"
+                                                                Minimum="0" Maximum="20" TickFrequency="2" IsSnapToTickEnabled="True"/>
+
+                                                        <TextBlock Text="Yオフセット(m)" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
+                                                        <TextBox Text="{Binding GroupPileSettlementYOffset, StringFormat=N3}"
+                                                                 Grid.Row="1" Grid.Column="1" HorizontalContentAlignment="Right" Margin="0,2"
+                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"/>
+                                                        <Slider Value="{Binding GroupPileSettlementYOffset}"
+                                                                Grid.Row="1" Grid.Column="2" Margin="4,2"
+                                                                Minimum="0" Maximum="20" TickFrequency="2" IsSnapToTickEnabled="True"/>
+                                                    </Grid>
+                                                </GroupBox>
+                                            </StackPanel>
                                         </TabItem>
 
                                         <TabItem Header="沈下量">
@@ -5446,6 +5514,15 @@
                                                         Padding="0"
                                                         Style="{StaticResource GroupPileSettlementButtonStyle}"
                                                         Command="{Binding PileGroupSettlementAnalysisCommand}"/>
+
+                                                    <!-- 行1: 基礎梁考慮沈下解析 -->
+                                                    <Button Grid.Row="1" Grid.Column="4"
+                                                        Padding="0"
+                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
+                                                        Tag="基礎梁考慮沈下解析"
+                                                        Command="{Binding OpenVerticalBeamCalculationCommand}">
+                                                        <svgc:SvgViewbox Source="/Icons/SettlementWithBeamWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    </Button>
                                                 </Grid>
                                             </Border>
 
@@ -5557,7 +5634,7 @@
                                                         <ComboBox 
                                                               ItemsSource="{Binding AnalysisResultSettlementOption}"
                                                               SelectedItem="{Binding AnalysisResultSettlementType}"
-                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=沈下}">
+                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=沈下量|沈下部材角|沈下反力|沈下応力}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
@@ -5566,10 +5643,10 @@
                                                         </ComboBox>
 
                                                         <!-- 梁応力種別 -->
-                                                        <ComboBox 
+                                                        <ComboBox
                                                               ItemsSource="{Binding AnalysisResultBeamForceOption}"
                                                               SelectedItem="{Binding AnalysisResultBeamForceType}"
-                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=梁応力}">
+                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=梁応力|沈下応力}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>

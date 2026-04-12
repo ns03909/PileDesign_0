@@ -23,7 +23,9 @@ namespace PileDesign.ViewModels
 
             ExampleItems.Add(new ExampleItem("基礎指針'19 計算例1", Example1Command));
             ExampleItems.Add(new ExampleItem("基礎指針'19 計算例2", Example2Command));
+            ExampleItems.Add(new ExampleItem("基礎指針'19 計算例3", Example3Command));
             ExampleItems.Add(new ExampleItem("基礎指針'19 計算例5", Example5Command));
+            ExampleItems.Add(new ExampleItem("基礎指針'19 計算例7", Example7Command));
             ExampleItems.Add(new ExampleItem("基礎指針'19 計算例9", Example9Command));
             ExampleItems.Add(new ExampleItem("設計例集3.1", Example3_1Command));
             ExampleItems.Add(new ExampleItem("設計例集3.2", Example3_2Command));
@@ -74,6 +76,13 @@ namespace PileDesign.ViewModels
             LoadExampleFromJson("Example2", "基礎指針'19 計算例");
         }
 
+        // 基礎指針'19 計算例3
+        [RelayCommand]
+        private void Example3()
+        {
+            LoadExampleFromJson("Example3", "基礎指針'19 計算例3");
+        }
+
         // 基礎指針'19 計算例5
         [RelayCommand]
         private void Example5()
@@ -81,6 +90,13 @@ namespace PileDesign.ViewModels
             LoadExampleFromJson("Example5", "基礎指針'19 計算例");
         }
 
+
+        // 基礎指針'19 計算例7
+        [RelayCommand]
+        private void Example7()
+        {
+            LoadExampleFromJson("Example7", "基礎指針'19 計算例7");
+        }
 
         // 基礎指針'19 計算例9
         [RelayCommand]

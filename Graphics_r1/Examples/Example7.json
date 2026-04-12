@@ -1,0 +1,41 @@
+{
+  "displayName": "計算例7",
+  "groundRef": "計算例7",
+  "groundTopAltitude": 0.0,
+  "groundWaterGLDepth": -2.0,
+  "stressGLDepth": 0.0,
+  "groundAcceleration1": 2.0,
+  "groundLayers": [
+    { "no": 1, "bottomGLDepth": -12.5, "layerThickness": 12.5, "bottomAltitude": -12.5, "name": "As", "granularityClass": "砂質土", "density": 18.0, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 11.0, "cohesive": 0.0, "vs": 150.0, "es": 14000, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 2, "bottomGLDepth": -15.0, "layerThickness": 2.5, "bottomAltitude": -15.0, "name": "Dg", "granularityClass": "礫質土", "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 39.0, "cohesive": 0.0, "vs": 250.0, "es": 39000, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 3, "bottomGLDepth": -20.5, "layerThickness": 5.5, "bottomAltitude": -20.5, "name": "Dc", "granularityClass": "粘性土", "density": 16.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 10.0, "cohesive": 90.0, "vs": 150.0, "es": 10000, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 4, "bottomGLDepth": -22.5, "layerThickness": 2.0, "bottomAltitude": -22.5, "name": "Ds", "granularityClass": "砂質土", "density": 18.0, "ageCategory": "洪積層", "isEngineeringBedrock": false, "nValue": 40.0, "cohesive": 0.0, "vs": 250.0, "es": 40000, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },
+    { "no": 5, "bottomGLDepth": -27.5, "layerThickness": 5.0, "bottomAltitude": -27.5, "name": "Dg", "granularityClass": "礫質土", "density": 19.0, "ageCategory": "洪積層", "isEngineeringBedrock": true, "nValue": 97.0, "cohesive": 0.0, "vs": 400.0, "es": 97000, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true }
+  ],
+  "groundMassesData": [
+    { "glDepth": -1.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -2.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -3.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -4.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -5.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -6.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -7.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -8.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -9.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -10.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -11.0, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -12.5, "nValue": 11.0, "fc": 0.0, "density": 18.0, "vs0": 150.0 },
+    { "glDepth": -13.5, "nValue": 39.0, "fc": 0.0, "density": 19.0, "vs0": 250.0 },
+    { "glDepth": -15.0, "nValue": 39.0, "fc": 0.0, "density": 19.0, "vs0": 250.0 },
+    { "glDepth": -16.0, "nValue": 10.0, "fc": 90.0, "density": 16.0, "vs0": 150.0 },
+    { "glDepth": -17.0, "nValue": 10.0, "fc": 90.0, "density": 16.0, "vs0": 150.0 },
+    { "glDepth": -18.0, "nValue": 10.0, "fc": 90.0, "density": 16.0, "vs0": 150.0 },
+    { "glDepth": -19.0, "nValue": 10.0, "fc": 90.0, "density": 16.0, "vs0": 150.0 },
+    { "glDepth": -20.5, "nValue": 10.0, "fc": 90.0, "density": 16.0, "vs0": 150.0 },
+    { "glDepth": -21.5, "nValue": 40.0, "fc": 0.0, "density": 18.0, "vs0": 250.0 },
+    { "glDepth": -22.5, "nValue": 40.0, "fc": 0.0, "density": 18.0, "vs0": 250.0 },
+    { "glDepth": -23.5, "nValue": 97.0, "fc": 0.0, "density": 19.0, "vs0": 400.0 },
+    { "glDepth": -25.0, "nValue": 97.0, "fc": 0.0, "density": 19.0, "vs0": 400.0 },
+    { "glDepth": -27.5, "nValue": 97.0, "fc": 0.0, "density": 19.0, "vs0": 400.0 }
+  ]
+}
