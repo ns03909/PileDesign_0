@@ -75,6 +75,18 @@ namespace PileDesign.Views
 
                 // ★ Initialize() は ContentRendered で呼び出すため、ここでは呼ばない
                 // _viewModel.Initialize();
+
+                // セル選択モードでSelectedItemが追跡されない問題の対策
+                DataGridGroundMass.CurrentCellChanged += DataGridGroundMass_CurrentCellChanged;
+            }
+        }
+
+        private void DataGridGroundMass_CurrentCellChanged(object? sender, EventArgs e)
+        {
+            if (DataGridGroundMass.CurrentItem is GroundMassDataInput item
+                && DataContext is GroundLayerViewModel vm)
+            {
+                vm.LastFocusedGroundMass = item;
             }
         }
 

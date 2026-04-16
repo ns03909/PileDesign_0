@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 
 namespace PileDesign.Common
@@ -199,12 +200,192 @@ namespace PileDesign.Common
 
         public static void AddCsvExportMenu(WpfPlot wpfPlot, string defaultFileName = "data")
         {
+            // ScottPlotデフォルトの「Copy Image」はClipboard.SetImage(BitmapImage)を使い
+            // BitmapMetadata例外が発生するため、デフォルトメニューをクリアして安全な実装に差し替え
+            wpfPlot.Menu.Clear();
+            wpfPlot.Menu.Add("画像をコピー", plot => SafeCopyImageToClipboard(wpfPlot));
+            wpfPlot.Menu.Add("画像を保存...", plot => SafeSavePlotImage(wpfPlot, defaultFileName));
             wpfPlot.Menu.AddSeparator();
+            wpfPlot.Menu.Add("CSVコピー", plot => CopyCsvToClipboard(plot));
             wpfPlot.Menu.Add("CSVとして保存...", plot => ExportToCsv(plot, defaultFileName));
         }
 
         /// <summary>
-        /// プロットデータをCSVにエクスポート
+        /// ScottPlotの画像をBitmapMetadata例外を回避してクリップボードにコピーする
+        /// </summary>
+        private static void SafeCopyImageToClipboard(WpfPlot wpfPlot)
+        {
+            try
+            {
+                byte[] bytes = wpfPlot.Plot.GetImageBytes((int)wpfPlot.ActualWidth * 2, (int)wpfPlot.ActualHeight * 2, ImageFormat.Png);
+
+                // PNGストリームをクリップボードに設定
+                var pngStream = new MemoryStream(bytes);
+
+                // PngBitmapDecoderでデコード（BitmapImageはMetadata非対応なので使わない）
+                var decoder = new PngBitmapDecoder(
+                    new MemoryStream(bytes),
+                    BitmapCreateOptions.PreservePixelFormat,
+                    BitmapCacheOption.OnLoad);
+                var frame = decoder.Frames[0];
+
+                // DIB用にBMPエンコード
+                var bmpEnc = new BmpBitmapEncoder();
+                bmpEnc.Frames.Add(BitmapFrame.Create(frame));
+                var bmpStream = new MemoryStream();
+                bmpEnc.Save(bmpStream);
+                bmpStream.Position = 14; // BMPファイルヘッダをスキップ
+                var dibBytes = new byte[bmpStream.Length - 14];
+                bmpStream.Read(dibBytes, 0, dibBytes.Length);
+
+                var dataObject = new DataObject();
+                dataObject.SetData("PNG", pngStream, false);
+                dataObject.SetData(DataFormats.Dib, new MemoryStream(dibBytes), false);
+                Clipboard.SetDataObject(dataObject, true);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"画像のコピーに失敗しました:\n{ex.Message}", "エラー",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// ScottPlotの画像をファイルに保存する
+        /// </summary>
+        private static void SafeSavePlotImage(WpfPlot wpfPlot, string defaultFileName)
+        {
+            var dlg = new SaveFileDialog
+            {
+                Filter = "PNG画像 (*.png)|*.png|すべてのファイル (*.*)|*.*",
+                FileName = defaultFileName + ".png",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop)
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                try
+                {
+                    wpfPlot.Plot.Save(dlg.FileName, (int)wpfPlot.ActualWidth * 2, (int)wpfPlot.ActualHeight * 2);
+                    MessageBox.Show($"画像を保存しました:\n{dlg.FileName}", "保存完了",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"画像の保存に失敗しました:\n{ex.Message}", "エラー",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// プロットデータをCSV文字列に変換（区切り文字を指定可能）
+        /// </summary>
+        private static string BuildCsvString(Plot plot, string separator = ",")
+        {
+            var sb = new StringBuilder();
+            bool hasData = false;
+
+            // Scatterプロットからデータを取得
+            var scatters = plot.GetPlottables()
+                .OfType<Scatter>()
+                .ToList();
+
+            if (scatters.Count > 0)
+            {
+                hasData = true;
+                var headers = new List<string>();
+                for (int i = 0; i < scatters.Count; i++)
+                {
+                    string name = scatters[i].LegendText ?? $"Series{i + 1}";
+                    name = name.Replace(",", "_").Replace("\"", "'").Replace("\t", " ");
+                    headers.Add($"{name}_X");
+                    headers.Add($"{name}_Y");
+                }
+                sb.AppendLine(string.Join(separator, headers));
+
+                var dataLists = new List<(double[] xs, double[] ys)>();
+                int maxRows = 0;
+                foreach (var scatter in scatters)
+                {
+                    var xs = scatter.Data.GetScatterPoints().Select(p => p.X).ToArray();
+                    var ys = scatter.Data.GetScatterPoints().Select(p => p.Y).ToArray();
+                    dataLists.Add((xs, ys));
+                    maxRows = Math.Max(maxRows, xs.Length);
+                }
+
+                for (int row = 0; row < maxRows; row++)
+                {
+                    var values = new List<string>();
+                    foreach (var (xs, ys) in dataLists)
+                    {
+                        if (row < xs.Length)
+                        {
+                            values.Add(xs[row].ToString());
+                            values.Add(ys[row].ToString());
+                        }
+                        else
+                        {
+                            values.Add("");
+                            values.Add("");
+                        }
+                    }
+                    sb.AppendLine(string.Join(separator, values));
+                }
+            }
+
+            // Rectangleプロットからデータを取得
+            var rectangles = plot.GetPlottables()
+                .OfType<ScottPlot.Plottables.Rectangle>()
+                .ToList();
+
+            if (rectangles.Count > 0)
+            {
+                if (hasData) sb.AppendLine();
+                hasData = true;
+                sb.AppendLine(string.Join(separator, "X_Min", "X_Max", "Y_Min", "Y_Max"));
+                foreach (var rect in rectangles)
+                {
+                    var coord = rect.CoordinateRect;
+                    sb.AppendLine(string.Join(separator, coord.Left, coord.Right, coord.Bottom, coord.Top));
+                }
+            }
+
+            if (!hasData)
+                sb.AppendLine("データがありません");
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// プロットデータをクリップボードにTSV形式でコピー（Excelに直接貼り付け可能）
+        /// </summary>
+        private static void CopyCsvToClipboard(Plot plot)
+        {
+            try
+            {
+                string tsv = BuildCsvString(plot, "\t");
+                for (int retry = 0; retry < 3; retry++)
+                {
+                    try
+                    {
+                        Clipboard.SetText(tsv);
+                        return;
+                    }
+                    catch (System.Runtime.InteropServices.ExternalException)
+                    {
+                        System.Threading.Thread.Sleep(50);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"クリップボードへのコピーに失敗しました:\n{ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// プロットデータをCSVファイルにエクスポート
         /// </summary>
         private static void ExportToCsv(Plot plot, string defaultFileName)
         {
@@ -219,88 +400,8 @@ namespace PileDesign.Common
             {
                 try
                 {
-                    var sb = new StringBuilder();
-                    bool hasData = false;
-
-                    // Scatterプロットからデータを取得
-                    var scatters = plot.GetPlottables()
-                        .OfType<Scatter>()
-                        .ToList();
-
-                    if (scatters.Count > 0)
-                    {
-                        hasData = true;
-                        // ヘッダー行を作成
-                        var headers = new List<string>();
-                        for (int i = 0; i < scatters.Count; i++)
-                        {
-                            string name = scatters[i].LegendText ?? $"Series{i + 1}";
-                            // CSVで問題になる文字を置換
-                            name = name.Replace(",", "_").Replace("\"", "'");
-                            headers.Add($"{name}_X");
-                            headers.Add($"{name}_Y");
-                        }
-                        sb.AppendLine(string.Join(",", headers));
-
-                        // 各シリーズのデータ点数を取得
-                        var dataLists = new List<(double[] xs, double[] ys)>();
-                        int maxRows = 0;
-                        foreach (var scatter in scatters)
-                        {
-                            var xs = scatter.Data.GetScatterPoints().Select(p => p.X).ToArray();
-                            var ys = scatter.Data.GetScatterPoints().Select(p => p.Y).ToArray();
-                            dataLists.Add((xs, ys));
-                            maxRows = Math.Max(maxRows, xs.Length);
-                        }
-
-                        // データ行を出力
-                        for (int row = 0; row < maxRows; row++)
-                        {
-                            var values = new List<string>();
-                            foreach (var (xs, ys) in dataLists)
-                            {
-                                if (row < xs.Length)
-                                {
-                                    values.Add(xs[row].ToString());
-                                    values.Add(ys[row].ToString());
-                                }
-                                else
-                                {
-                                    values.Add("");
-                                    values.Add("");
-                                }
-                            }
-                            sb.AppendLine(string.Join(",", values));
-                        }
-                    }
-
-                    // Rectangleプロットからデータを取得
-                    var rectangles = plot.GetPlottables()
-                        .OfType<ScottPlot.Plottables.Rectangle>()
-                        .ToList();
-
-                    if (rectangles.Count > 0)
-                    {
-                        if (hasData) sb.AppendLine(); // 前のデータがあれば空行を挿入
-                        hasData = true;
-
-                        // 矩形データのヘッダー
-                        sb.AppendLine("X_Min,X_Max,Y_Min,Y_Max");
-
-                        // 各矩形のデータを出力
-                        foreach (var rect in rectangles)
-                        {
-                            var coord = rect.CoordinateRect;
-                            sb.AppendLine($"{coord.Left},{coord.Right},{coord.Bottom},{coord.Top}");
-                        }
-                    }
-
-                    if (!hasData)
-                    {
-                        sb.AppendLine("データがありません");
-                    }
-
-                    File.WriteAllText(saveFileDialog.FileName, sb.ToString(), Encoding.UTF8);
+                    string csv = BuildCsvString(plot, ",");
+                    File.WriteAllText(saveFileDialog.FileName, csv, Encoding.UTF8);
                 }
                 catch (Exception ex)
                 {

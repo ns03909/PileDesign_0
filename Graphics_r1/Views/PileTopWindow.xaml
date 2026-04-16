@@ -412,6 +412,13 @@
                                           CellStyle="{StaticResource CustomDataGridCellStyle}"
                                           common:DataGridNavigationBehavior.Enable="True">
 
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu Opened="ContextMenu_Opened">
+                                            <MenuItem Header="クリップボードにコピー" Click="CopyToClipboardFromContextMenu_Click" />
+                                            <MenuItem Header="CSVエクスポート" Click="ExportCsvFromContextMenu_Click" />
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+
                                     <DataGrid.ColumnHeaderStyle>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="HorizontalContentAlignment" Value="Center" />

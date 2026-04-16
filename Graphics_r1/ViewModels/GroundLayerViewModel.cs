@@ -203,7 +203,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Undo()
         {
-            _undoManager.Undo();
+            _undoManager.UndoSnapshot();
             if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
                 GroundsInput = new ObservableCollection<GroundInput>(state.Select(x => x.DeepCopy()));
@@ -221,7 +221,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         public void Redo()
         {
-            _undoManager.Redo();
+            _undoManager.RedoSnapshot();
             if (_undoManager.CurrentState is IEnumerable<GroundInput> state)
             {
                 GroundsInput = new ObservableCollection<GroundInput>(state.Select(x => x.DeepCopy()));
@@ -270,6 +270,10 @@ namespace PileDesign.ViewModels
             get => _selectedGroundMassOnDataGrid;
             set => SetProperty(ref _selectedGroundMassOnDataGrid, value);
         }
+
+        // セル選択で最後にフォーカスされた土質点行（SelectedItemバインディングに影響されない）
+        internal GroundMassDataInput LastFocusedGroundMass { get; set; }
+
 
         // DataGrid上の選択中のGroundLayerデータ
         private GroundLayerInput _selectedGroundLayerOnDataGrid;
@@ -416,7 +420,7 @@ namespace PileDesign.ViewModels
             if (sender is not GroundLayerInput itemToDelete) return;
             GroundInput.GroundLayers.Remove(itemToDelete);
 
-            GroundWindowInstance?.DataGridGroundLayer?.Items.Refresh();
+            SafeRefreshDataGrid(GroundWindowInstance?.DataGridGroundLayer);
 
             UpdateGroundLayerNo();
             Update();
@@ -430,7 +434,7 @@ namespace PileDesign.ViewModels
             if (sender is not GroundMassDataInput itemToDelete) return;
             GroundInput.GroundMassesData.Remove(itemToDelete);
 
-            GroundWindowInstance?.DataGridGroundMass?.Items.Refresh();
+            SafeRefreshDataGrid(GroundWindowInstance?.DataGridGroundMass);
             UpdateGroundMassDataLayer();
             Update();
         }
@@ -1395,7 +1399,8 @@ namespace PileDesign.ViewModels
             }
 
             // 選択行の直下 or 末尾へ追加
-            int selectedIndex = masses.IndexOf(SelectedGroundMassOnDataGrid);
+            var target = LastFocusedGroundMass ?? SelectedGroundMassOnDataGrid;
+            int selectedIndex = target != null ? masses.IndexOf(target) : -1;
             int insertIndex;
             GroundMassDataInput newMass;
 
@@ -1446,30 +1451,65 @@ namespace PileDesign.ViewModels
             var masses = GroundInput?.GroundMassesData;
             if (masses == null || masses.Count == 0) return;
 
-            // 対象開始位置: 選択行の「次の行」から。未選択なら2行目(=index=1)から。
-            int selectedIndex = masses.IndexOf(SelectedGroundMassOnDataGrid);
+            // DataGridから直接現在行を取得（複数の方法でフォールバック）
+            GroundMassDataInput? target = null;
+            var grid = GroundWindowInstance?.DataGridGroundMass;
+            if (grid != null)
+            {
+                // CurrentCell.Itemが最も確実（ボタンクリック後もクリアされない）
+                try
+                {
+                    if (grid.CurrentCell.Item is GroundMassDataInput cellItem)
+                        target = cellItem;
+                }
+                catch { /* CurrentCellが無効な場合 */ }
+
+                // CurrentItemで試行
+                target ??= grid.CurrentItem as GroundMassDataInput;
+            }
+            target ??= LastFocusedGroundMass ?? SelectedGroundMassOnDataGrid;
+
+            int selectedIndex = target != null ? masses.IndexOf(target) : -1;
             int startIndex = (selectedIndex >= 0) ? selectedIndex + 1 : 1;
 
             if (startIndex >= masses.Count) return;
 
-            // 1m ピッチで GLDepth を再配置（GLDepthは下向きが負）
+            // 編集中のセルを先にコミット
+            if (grid != null)
+            {
+                grid.CommitEdit(DataGridEditingUnit.Cell, true);
+                grid.CommitEdit(DataGridEditingUnit.Row, true);
+            }
+
+            // 1m ピッチで GLDepth を再配置し、Spacing と H も1mに設定
             for (int i = startIndex; i < masses.Count; i++)
             {
                 // 工学的基盤に到達したら以降は触らない
                 if (masses[i].IsEngineeringBedrock) break;
 
                 masses[i].GLDepth = masses[i - 1].GLDepth - 1.0;
+                masses[i].Spacing = 1.0;
+                masses[i].H = 1.0;
             }
 
-            // 以降の派生値（Spacing, Altitude など）を再計算・描画
+            // startIndexより前のSpacingも再計算（GLDepth起点の整合性のため）
+            for (int i = 0; i < startIndex && i < masses.Count; i++)
+            {
+                if (i == 0)
+                    masses[i].Spacing = -masses[i].GLDepth;
+                else
+                    masses[i].Spacing = -masses[i].GLDepth + masses[i - 1].GLDepth;
+            }
+
+            // 以降の派生値（Altitude など）を再計算・描画
             UpdateGroundMassDataLayer();
             Update();
 
             // エラーチェック（上行より小さいか）を実行してフラグを更新
             bool hasError = ValidateGroundMassMonotone(out string errorMessage);
 
-            // DataGrid を強制更新（バインディング/スタイルの再評価で赤表示を反映）
-            RevalidateAndRefreshGroundMassGrid();
+            // DataGrid を強制更新
+            SafeRefreshDataGrid(GroundWindowInstance?.DataGridGroundMass);
 
             // 必要に応じてメッセージ表示
             if (hasError)
@@ -1511,20 +1551,35 @@ namespace PileDesign.ViewModels
             return hasError;
         }
 
+        /// <summary>
+        /// DataGridの編集トランザクションを確定してからRefreshする安全なヘルパー
+        /// </summary>
+        private static void SafeRefreshDataGrid(DataGrid? grid)
+        {
+            if (grid == null) return;
+            grid.CommitEdit(DataGridEditingUnit.Cell, true);
+            grid.CommitEdit(DataGridEditingUnit.Row, true);
+            grid.Items.Refresh();
+        }
+
         // エラーチェック再実行＋グリッド強制更新
         private void RevalidateAndRefreshGroundMassGrid()
         {
             // 必要なら GroundInput 側の整合検証を併用（エラーフラグ更新が内包されている前提）
             _ = GroundInput?.ValidateForAnalysis(out _);
 
+            var grid = GroundWindowInstance?.DataGridGroundMass;
+            if (grid != null)
+            {
+                // 編集中のトランザクションを先に確定してからRefresh
+                grid.CommitEdit(DataGridEditingUnit.Cell, true);
+                grid.CommitEdit(DataGridEditingUnit.Row, true);
+            }
+
             var view = CollectionViewSource.GetDefaultView(GroundInput?.GroundMassesData);
             view?.Refresh();
 
-            var grid = GroundWindowInstance?.DataGridGroundMass;
             if (grid == null) return;
-
-            grid.CommitEdit(DataGridEditingUnit.Cell, true);
-            grid.CommitEdit(DataGridEditingUnit.Row, true);
             grid.Items.Refresh();
 
             foreach (var item in grid.Items)

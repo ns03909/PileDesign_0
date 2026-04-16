@@ -394,6 +394,10 @@ namespace PileDesign.Views
             // Canvas にフォーカスを設定
             Canvas3DLayout.Focus();
 
+            // HelixViewport3Dの内蔵コンテキストメニューを上書き
+            // （内蔵のCopy to ClipboardがClipboard.SetImageを使いBitmapMetadata例外を起こすため）
+            SetupHelixViewportContextMenu();
+
             // SizeChanged イベントを登録
             Canvas3DLayout.SizeChanged += ColorBarCanvas_SizeChanged;
 
@@ -774,6 +778,16 @@ namespace PileDesign.Views
             vm.IsAxialLoadingVisible = true;
 
             vm?.DataGridPileAxialForce_OnCellEditEndingCommand.Execute(e);
+
+            // 集計値・OTM・重心を更新（Commit後に値が確定してから実行）
+            Dispatcher.BeginInvoke(() => vm?.UpdateSumAndOTM(),
+                System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private void DataGridPileAxialForce_PasteCompleted(object sender, EventArgs e)
+        {
+            if (DataContext is MainWindowViewModel vm)
+                vm.UpdateSumAndOTM();
         }
 
         private void DataGridPileLayout_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -2200,6 +2214,20 @@ namespace PileDesign.Views
         }
 
         // キーを押したときの処理
+        /// <summary>
+        /// 現在のキーボードフォーカスがDataGrid内にあるかを判定します。
+        /// </summary>
+        private static bool IsFocusInDataGrid()
+        {
+            var focused = Keyboard.FocusedElement as DependencyObject;
+            while (focused != null)
+            {
+                if (focused is DataGrid) return true;
+                focused = VisualTreeHelper.GetParent(focused);
+            }
+            return false;
+        }
+
         private void HandleKeyDown(KeyEventArgs e)
         {
             if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
@@ -2234,6 +2262,9 @@ namespace PileDesign.Views
             }
             else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control)
             {
+                // DataGrid内にフォーカスがある場合は標準のCtrl+A（全選択）を優先
+                if (IsFocusInDataGrid()) return;
+
                 // Ctrl + A が押されたときの処理
                 ShowAllNodes();
                 e.Handled = true;
@@ -2326,21 +2357,6 @@ namespace PileDesign.Views
                 e.Handled = true;
             }
 
-            else if (e.Key == Key.F7 && Keyboard.Modifiers == ModifierKeys.Control)
-            {
-                // Ctrl + F7: 解析後処理モード
-                var viewModel = DataContext as MainWindowViewModel;
-                viewModel.IsPostAnalysisMode = true;
-                e.Handled = true;
-            }
-
-            else if (e.Key == Key.F7 && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
-            {
-                // Ctrl + Shift + F7: 解析前処理モード
-                var viewModel = DataContext as MainWindowViewModel;
-                viewModel.IsPostAnalysisMode = false;
-                e.Handled = true;
-            }
         }
 
         // ズームフィット
@@ -3366,6 +3382,12 @@ namespace PileDesign.Views
             else if (e.Key == Key.B && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
             {
                 viewModel?.AutoGenerateFoundationBeamsCommand.Execute(null);
+                e.Handled = true;
+            }
+            // 基本設定
+            else if (e.Key == Key.E && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                viewModel?.OpenFundamentalWindowCommand.Execute(null);
                 e.Handled = true;
             }
             // 杭体編集

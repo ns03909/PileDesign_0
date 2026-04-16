@@ -351,5 +351,14 @@ namespace PileDesign.Views
             if (!_numericRegex.IsMatch(text))
                 e.CancelCommand();
         }
+        private void CopyToClipboardFromContextMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem &&
+                menuItem.Parent is ContextMenu contextMenu &&
+                contextMenu.PlacementTarget is DataGrid dataGrid)
+            {
+                Output.DataGridCsv.CopyToClipboard(dataGrid);
+            }
+        }
     }
 }

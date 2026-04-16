@@ -287,47 +287,20 @@ namespace PileDesign.Views
             sb.Length = Math.Max(0, sb.Length - 1); // 最後のタブ削除
             sb.AppendLine();
 
-            if (!isSelectedOnly)
+            var items = isSelectedOnly
+                ? dataGrid.SelectedItems.Cast<object>()
+                : dataGrid.Items.Cast<object>();
+
+            foreach (var item in items)
             {
-                // データ行
-                foreach (var item in dataGrid.Items)
+                if (item == CollectionView.NewItemPlaceholder) continue;
+                foreach (var column in dataGrid.Columns)
                 {
-                    if (item == CollectionView.NewItemPlaceholder) continue;
-                    foreach (var column in dataGrid.Columns)
-                    {
-                        var cellContent = column.GetCellContent(item);
-                        string text = "";
-                        if (cellContent is TextBlock tb)
-                            text = tb.Text;
-                        else if (cellContent != null)
-                            text = cellContent.ToString();
-                        sb.Append(text);
-                        sb.Append('\t');
-                    }
-                    sb.Length = Math.Max(0, sb.Length - 1);
-                    sb.AppendLine();
+                    sb.Append(Output.DataGridCsv.GetCellValue(column, item));
+                    sb.Append('\t');
                 }
-            }
-            else
-            {
-                // 選択行のみ
-                foreach (var item in dataGrid.SelectedItems)
-                {
-                    if (item == CollectionView.NewItemPlaceholder) continue;
-                    foreach (var column in dataGrid.Columns)
-                    {
-                        var cellContent = column.GetCellContent(item);
-                        string text = "";
-                        if (cellContent is TextBlock tb)
-                            text = tb.Text;
-                        else if (cellContent != null)
-                            text = cellContent.ToString();
-                        sb.Append(text);
-                        sb.Append('\t');
-                    }
-                    sb.Length = Math.Max(0, sb.Length - 1);
-                    sb.AppendLine();
-                }
+                sb.Length = Math.Max(0, sb.Length - 1);
+                sb.AppendLine();
             }
 
             Clipboard.SetText(sb.ToString());
@@ -462,6 +435,14 @@ namespace PileDesign.Views
                         menuItem.CommandParameter = dataGrid;
                     }
                 }
+            }
+        }
+
+        private void CopyToClipboardFromContextMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is DataGrid dataGrid)
+            {
+                DataGridCsv.CopyToClipboard(dataGrid);
             }
         }
 

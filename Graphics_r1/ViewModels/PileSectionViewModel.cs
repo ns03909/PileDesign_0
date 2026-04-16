@@ -1041,8 +1041,25 @@ namespace PileDesign.ViewModels
             RenderTargetBitmap renderBitmap = new((int)canvas.ActualWidth, (int)canvas.ActualHeight, 96d, 96d, PixelFormats.Default);
             renderBitmap.Render(canvas);
 
-            // Clipboardに画像をコピーします
-            Clipboard.SetImage(renderBitmap);
+            // Clipboard.SetImage()はStringMetadata非対応で例外になる環境があるため
+            // BitmapSourceを一切渡さず、生バイトストリームのみでクリップボードに設定
+            var pngEnc = new PngBitmapEncoder();
+            pngEnc.Frames.Add(BitmapFrame.Create(renderBitmap));
+            var pngStream = new System.IO.MemoryStream();
+            pngEnc.Save(pngStream);
+
+            var bmpEnc = new BmpBitmapEncoder();
+            bmpEnc.Frames.Add(BitmapFrame.Create(renderBitmap));
+            var bmpStream = new System.IO.MemoryStream();
+            bmpEnc.Save(bmpStream);
+            bmpStream.Position = 14;
+            var dibBytes = new byte[bmpStream.Length - 14];
+            bmpStream.Read(dibBytes, 0, dibBytes.Length);
+
+            var dataObject = new DataObject();
+            dataObject.SetData("PNG", pngStream, false);
+            dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
+            Clipboard.SetDataObject(dataObject, true);
         }
 
         // スケール取得メソッド

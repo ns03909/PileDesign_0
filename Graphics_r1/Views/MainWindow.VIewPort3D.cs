@@ -578,6 +578,80 @@ namespace PileDesign.Views
             }
         }
 
+        /// <summary>
+        /// HelixViewport3Dの内蔵コンテキストメニューとCopyコマンドを上書きし、
+        /// BitmapMetadata例外を回避するカスタム実装に差し替える。
+        /// </summary>
+        private void SetupHelixViewportContextMenu()
+        {
+            if (HelixViewport == null) return;
+
+            // 内蔵のApplicationCommands.Copyハンドラを上書き
+            HelixViewport.CommandBindings.Add(new CommandBinding(
+                ApplicationCommands.Copy,
+                (s, e) => CopyHelixViewportToClipboard(),
+                (s, e) => { e.CanExecute = true; }));
+
+            // コンテキストメニューをカスタムで設定（内蔵メニューを上書き）
+            var menu = new ContextMenu();
+            var copyItem = new MenuItem { Header = "クリップボードにコピー" };
+            copyItem.Click += (s, e) => CopyHelixViewportToClipboard();
+            menu.Items.Add(copyItem);
+
+            var saveItem = new MenuItem { Header = "画像保存" };
+            saveItem.Click += (s, e) => SaveViewportToImage("helixViewport.png", 2);
+            menu.Items.Add(saveItem);
+
+            HelixViewport.ContextMenu = menu;
+        }
+
+        // HelixViewport コンテキストメニュー: クリップボードにコピー
+        private void CopyHelixViewportToClipboard()
+        {
+            try
+            {
+                var viewport = HelixViewport.Viewport;
+                double scaleFactor = 2;
+                int width = (int)(viewport.ActualWidth * scaleFactor);
+                int height = (int)(viewport.ActualHeight * scaleFactor);
+
+                var renderBitmap = new RenderTargetBitmap(width, height, 96 * scaleFactor, 96 * scaleFactor, PixelFormats.Pbgra32);
+
+                var drawingVisual = new DrawingVisual();
+                using (var dc = drawingVisual.RenderOpen())
+                {
+                    dc.DrawRectangle(HelixViewport.Background, null, new Rect(0, 0, width, height));
+                }
+                renderBitmap.Render(drawingVisual);
+                renderBitmap.Render(viewport);
+
+                // BitmapSourceを渡さず生バイトストリームのみでクリップボードに設定
+                var pngEnc = new PngBitmapEncoder();
+                pngEnc.Frames.Add(BitmapFrame.Create(renderBitmap));
+                var pngStream = new System.IO.MemoryStream();
+                pngEnc.Save(pngStream);
+
+                var bmpEnc = new BmpBitmapEncoder();
+                bmpEnc.Frames.Add(BitmapFrame.Create(renderBitmap));
+                var bmpStream = new System.IO.MemoryStream();
+                bmpEnc.Save(bmpStream);
+                bmpStream.Position = 14;
+                var dibBytes = new byte[bmpStream.Length - 14];
+                bmpStream.Read(dibBytes, 0, dibBytes.Length);
+
+                var dataObject = new DataObject();
+                dataObject.SetData("PNG", pngStream, false);
+                dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
+                Clipboard.SetDataObject(dataObject, true);
+
+                MessageBox.Show($"画像をクリップボードにコピーしました ({width}x{height})", "コピー", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"画像のコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         //
         private void HelixViewComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {

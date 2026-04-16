@@ -74,7 +74,7 @@ public sealed class UndoManager
 
     public void Undo()
     {
-        if (!CanUndo) return;
+        if (_undo.Count == 0) return;
         var a = _undo.Pop();
         a.Undo();
         _redo.Push(a);
@@ -82,7 +82,7 @@ public sealed class UndoManager
 
     public void Redo()
     {
-        if (!CanRedo) return;
+        if (_redo.Count == 0) return;
         var a = _redo.Pop();
         a.Redo();
         _undo.Push(a);

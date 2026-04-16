@@ -963,9 +963,6 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void AddRectLoad()
         {
-            if (!CheckAndResetPostAnalysisMode())
-                return;
-
             // Undoポイントを追加
             TrySaveUndoSnapshotSafely();
 
@@ -975,26 +972,10 @@ namespace PileDesign.ViewModels
             RequestUpdateWindow();
         }
 
-        // 解析後処理モードの場合の確認
-        private bool CheckAndResetPostAnalysisMode()
-        {
-            if (IsPostAnalysisMode)
-            {
-                var result = MessageBox.Show("解析前処理モードにしますか？", "確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (result == MessageBoxResult.No)
-                    return false; // 操作をキャンセル
-                IsPostAnalysisMode = false; // 解析前処理モードに変更
-            }
-            return true; // 操作を続行
-        }
-
         // 群杭沈下検討用検討用土層追加メソッド
         [RelayCommand]
         private void AddSettlementSoilLayer()
         {
-            if (!CheckAndResetPostAnalysisMode())
-                return;
-
             TrySaveUndoSnapshotSafely();
 
             double bottomAlt;
@@ -1311,7 +1292,6 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAddPile()
         {
-            if (!CheckAndResetPostAnalysisMode()) return;
             if (!CheckAndResetAnalysisResults()) return;
 
             // スナップショットを保存
@@ -2263,13 +2243,18 @@ namespace PileDesign.ViewModels
             double adjustedMinY = boundingBox.MinY;
             double adjustedMaxY = boundingBox.MaxY;
 
+            // 全杭のVL軸力合計を荷重として設定
+            double totalVL = 0;
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+                totalVL += pile.AxialForceVL;
+
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad()
             {
                 X1 = adjustedMinX,
                 X2 = adjustedMaxX,
                 Y1 = adjustedMinY,
                 Y2 = adjustedMaxY,
-                QA = 0.0
+                QA = totalVL
             }
             );
 
@@ -2501,7 +2486,7 @@ namespace PileDesign.ViewModels
 
         // 名前をつけて保存
         [RelayCommand]
-        public void SaveInputModelFileAs()
+        public async Task SaveInputModelFileAs()
         {
             var saveFileDialog = new SaveFileDialog
             {
@@ -2514,7 +2499,8 @@ namespace PileDesign.ViewModels
                 CurrentFilePath = saveFileDialog.FileName;
                 try
                 {
-                    _fileOperationService.SaveProjectData(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                    StatusMessage = "保存中...";
+                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
                     ShowToast("保存が完了しました。");
 
                     // MRUに追加
@@ -2527,24 +2513,33 @@ namespace PileDesign.ViewModels
                 {
                     MessageBox.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+                finally
+                {
+                    StatusMessage = "準備完了";
+                }
             }
         }
 
         [RelayCommand]
-        public void SaveInputModelFile()
+        public async Task SaveInputModelFile()
         {
             if (string.IsNullOrEmpty(CurrentFilePath))
-                SaveInputModelFileAs();
+                await SaveInputModelFileAs();
             else
             {
                 try
                 {
-                    _fileOperationService.SaveProjectData(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
+                    StatusMessage = "保存中...";
+                    await _fileOperationService.SaveProjectDataAsync(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
                     ShowToast("保存が完了しました。");
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"保存に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    StatusMessage = "準備完了";
                 }
             }
         }
@@ -2665,7 +2660,7 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        public void OpenInputModelFile()
+        public async Task OpenInputModelFile()
         {
             var openFileDialog = new OpenFileDialog
             {
@@ -2677,7 +2672,8 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
-                    var projectData = _fileOperationService.LoadProjectData(openFileDialog.FileName);
+                    StatusMessage = "読込中...";
+                    var projectData = await _fileOperationService.LoadProjectDataAsync(openFileDialog.FileName);
 
                     if (projectData != null)
                     {
@@ -2738,6 +2734,10 @@ namespace PileDesign.ViewModels
                 catch (Exception ex)
                 {
                     Services.MessageService.ShowError($"読込に失敗しました。\n{ex.Message}");
+                }
+                finally
+                {
+                    StatusMessage = "準備完了";
                 }
             }
         }
@@ -2815,6 +2815,7 @@ namespace PileDesign.ViewModels
             {
                 try
                 {
+                    StatusMessage = "計算書作成中...";
                     var doc = new Output.WordDocument(CurrentInputModel, CurrentModel, this);
                     doc.CreateWordDocument(CurrentInputModel, saveFileDialog.FileName);
                     ShowToast($"docxファイルが作成されました。Wordで開き、Ctrl+A → F9でフィールドを更新してください。");
@@ -2829,6 +2830,10 @@ namespace PileDesign.ViewModels
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Word出力に失敗しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    StatusMessage = "準備完了";
                 }
             }
         }
@@ -3296,12 +3301,21 @@ namespace PileDesign.ViewModels
 
         private bool CanOpenLogWindow() => HorizontalAnalysisLogs.Count > 0 || VerticalBeamAnalysisLogs.Count > 0;
 
+        private Views.EvaluationWindow? _evaluationWindow;
+
         [RelayCommand(CanExecute = nameof(CanOpenEvaluationWindow))]
         private void OpenEvaluationWindow()
         {
+            if (_evaluationWindow is { IsVisible: true })
+            {
+                _evaluationWindow.Activate();
+                return;
+            }
+
             var vm = new EvaluationWindowViewModel(this);
-            var w = new Views.EvaluationWindow { DataContext = vm };
-            w.Show();
+            _evaluationWindow = new Views.EvaluationWindow { DataContext = vm, Topmost = true };
+            _evaluationWindow.Closed += (_, _) => _evaluationWindow = null;
+            _evaluationWindow.Show();
         }
 
         private bool CanOpenEvaluationWindow() => IsHorizontalAnalysisDone && CurrentModel != null;
@@ -3367,14 +3381,23 @@ namespace PileDesign.ViewModels
             RaiseResultCommandsCanExecute();
         }
 
-        // ヘルプメウィンドウ表示メソッド
+        // ヘルプウィンドウ表示メソッド
+        private static HelpWindow? _helpWindow;
+
         [RelayCommand]
         public static void OpenHelpWindow()
         {
             try
             {
-                var helpWindow = new HelpWindow();
-                helpWindow.Show();
+                if (_helpWindow is { IsVisible: true })
+                {
+                    _helpWindow.Activate();
+                    return;
+                }
+
+                _helpWindow = new HelpWindow { Topmost = true };
+                _helpWindow.Closed += (_, _) => _helpWindow = null;
+                _helpWindow.Show();
             }
             catch (Exception ex)
             {
@@ -3383,13 +3406,22 @@ namespace PileDesign.ViewModels
         }
 
         // 設計例によるプログラムの検証ウィンドウ表示
+        private static VerificationWindow? _verificationWindow;
+
         [RelayCommand]
         public static void OpenVerificationWindow()
         {
             try
             {
-                var window = new VerificationWindow();
-                window.Show();
+                if (_verificationWindow is { IsVisible: true })
+                {
+                    _verificationWindow.Activate();
+                    return;
+                }
+
+                _verificationWindow = new VerificationWindow { Topmost = true };
+                _verificationWindow.Closed += (_, _) => _verificationWindow = null;
+                _verificationWindow.Show();
             }
             catch (Exception ex)
             {
@@ -3612,18 +3644,28 @@ namespace PileDesign.ViewModels
             }
         }
 
+        private static PileDesign.Views.ShortcutKeysWindow? _shortcutKeysWindow;
+
         [RelayCommand]
         public static void OpenShortcutKeysWindow()
         {
             try
             {
-                var w = new PileDesign.Views.ShortcutKeysWindow
+                // 既に開いている場合はアクティブにする
+                if (_shortcutKeysWindow is { IsVisible: true })
+                {
+                    _shortcutKeysWindow.Activate();
+                    return;
+                }
+
+                _shortcutKeysWindow = new PileDesign.Views.ShortcutKeysWindow
                 {
                     Owner = Application.Current.MainWindow,
                     WindowStartupLocation = WindowStartupLocation.CenterOwner,
                     ShowInTaskbar = false
                 };
-                w.ShowDialog();
+                _shortcutKeysWindow.Closed += (_, _) => _shortcutKeysWindow = null;
+                _shortcutKeysWindow.Show();
             }
             catch (Exception ex)
             {
@@ -4742,8 +4784,26 @@ namespace PileDesign.ViewModels
                 rtb.Render(dv);
                 rtb.Render(Canvas3DLayout);
 
-                // クリップボードにコピー
-                System.Windows.Clipboard.SetImage(rtb);
+                // Clipboard.SetImage()はStringMetadata非対応で例外になる環境があるため
+                // BitmapSourceを一切渡さず、生バイトストリームのみでクリップボードに設定
+                var pngEnc = new PngBitmapEncoder();
+                pngEnc.Frames.Add(BitmapFrame.Create(rtb));
+                var pngStream = new System.IO.MemoryStream();
+                pngEnc.Save(pngStream);
+
+                var bmpEnc = new BmpBitmapEncoder();
+                bmpEnc.Frames.Add(BitmapFrame.Create(rtb));
+                var bmpStream = new System.IO.MemoryStream();
+                bmpEnc.Save(bmpStream);
+                // DIB = BMPからファイルヘッダ(14バイト)を除いたもの
+                bmpStream.Position = 14;
+                var dibBytes = new byte[bmpStream.Length - 14];
+                bmpStream.Read(dibBytes, 0, dibBytes.Length);
+
+                var dataObject = new DataObject();
+                dataObject.SetData("PNG", pngStream, false);
+                dataObject.SetData(DataFormats.Dib, new System.IO.MemoryStream(dibBytes), false);
+                System.Windows.Clipboard.SetDataObject(dataObject, true);
 
                 StatusMessage = $"画像をクリップボードにコピーしました ({width}x{height})";
             }

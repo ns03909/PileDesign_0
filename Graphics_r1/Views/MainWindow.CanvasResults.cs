@@ -44,23 +44,31 @@ namespace PileDesign.Views
 
             // アクティブ（IsVisible）な杭のビーム・節点セットを構築
             // 非アクティブ杭のダイアグラムを非表示にするためのフィルタ
-            var visibleBeams = new HashSet<Beam>();
-            var visibleFemNodes = new HashSet<Node>();
-            var visibleSoilSprings = new HashSet<HorizontalSoilSpring>();
+            HashSet<Beam> visibleBeams = null;
+            HashSet<Node> visibleFemNodes = null;
+            HashSet<HorizontalSoilSpring> visibleSoilSprings = null;
             bool hasInvisiblePile = false;
             if (viewModel.CurrentInputModel?.PileLayoutItems != null)
             {
+                // まず非表示杭があるかだけ確認（全杭可視ならセット構築を省略）
                 foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                 {
-                    if (pile.IsVisible)
+                    if (!pile.IsVisible) { hasInvisiblePile = true; break; }
+                }
+
+                if (hasInvisiblePile)
+                {
+                    visibleBeams = new HashSet<Beam>();
+                    visibleFemNodes = new HashSet<Node>();
+                    visibleSoilSprings = new HashSet<HorizontalSoilSpring>();
+                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
                     {
-                        foreach (var beam in pile.Beams) visibleBeams.Add(beam);
-                        foreach (var node in pile.PileNodes) visibleFemNodes.Add(node);
-                        foreach (var spring in pile.HorizontalSoilSprings) visibleSoilSprings.Add(spring);
-                    }
-                    else
-                    {
-                        hasInvisiblePile = true;
+                        if (pile.IsVisible)
+                        {
+                            foreach (var beam in pile.Beams) visibleBeams.Add(beam);
+                            foreach (var node in pile.PileNodes) visibleFemNodes.Add(node);
+                            foreach (var spring in pile.HorizontalSoilSprings) visibleSoilSprings.Add(spring);
+                        }
                     }
                 }
             }
@@ -1081,8 +1089,9 @@ namespace PileDesign.Views
         {
             if (Canvas3DLayout == null) return;
 
-            var brush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 100, 100, 100)); // 半透明グレー
+            var brush = BrushSemiTransparentGray;
             var pen = new Pen(brush, 1.0);
+            pen.Freeze();
 
             var pathGeo = new PathGeometry();
 
@@ -1122,14 +1131,38 @@ namespace PileDesign.Views
             }
 
             // RigidBody（剛体連結: Master→各Slave）
+            // CapNodeがSlaveの場合、入力節点位置（接合節点）を経由して描画
+            // 接合節点はFEMモデルに含まれないため、MasterNodeの剛体変位から位置を算出
             if (anaModel.RigidBodies != null)
             {
+                // CapNode名→接合節点Z座標のマッピング（接合節点Z = pile.Z + ΔZc）
+                var capNodeToJointZ = new Dictionary<string, double>();
+                if (viewModel.CurrentInputModel?.PileLayoutItems != null)
+                {
+                    foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
+                    {
+                        capNodeToJointZ[$"CapNode-{pile.No}"] = pile.Z + pile.FoundationBeamDeltaZc;
+                    }
+                }
+
                 foreach (var rb in anaModel.RigidBodies)
                 {
                     if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
                     foreach (var slave in rb.SlaveNodes)
                     {
-                        DrawDeformedTwoNodeLink(viewModel, anaModel, rb.MasterNode, slave, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                        // CapNodeの場合: MasterNode → 接合節点位置 → CapNode の2本を描画
+                        if (slave.Name.StartsWith("CapNode-") &&
+                            capNodeToJointZ.TryGetValue(slave.Name, out double jointZ) &&
+                            Math.Abs(slave.Coord.Z - jointZ) > 0.001)
+                        {
+                            DrawDeformedRigidBodyViaJoint(viewModel, anaModel, rb.MasterNode, slave,
+                                jointZ, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                        }
+                        else
+                        {
+                            // CapNode以外（EmbedmentNode, ConnectionNodeなど）、またはΔZc≒0: 従来通り直線
+                            DrawDeformedTwoNodeLink(viewModel, anaModel, rb.MasterNode, slave, selectedLoadCase, selectedLoadCombination, dispScale, pathGeo);
+                        }
                     }
                 }
             }
@@ -1527,6 +1560,68 @@ namespace PileDesign.Views
                 return;
 
             pathGeo.AddGeometry(new LineGeometry(p1, p2));
+        }
+
+        /// <summary>
+        /// RigidBodyの放射線を接合節点位置を経由して描画する。
+        /// 接合節点はFEMモデルに含まれないため、MasterNodeの剛体変位（並進+回転）から位置を算出する。
+        /// MasterNode → 接合節点位置 → CapNode の2本の線を描画。
+        /// </summary>
+        private void DrawDeformedRigidBodyViaJoint(
+            MainWindowViewModel viewModel, AnaModel anaModel,
+            Node masterNode, Node capNode, double jointZ,
+            LoadCase selectedLoadCase, LoadCombination selectedLoadCombination,
+            double dispScale, PathGeometry pathGeo)
+        {
+            var nrMaster = masterNode.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            var nrCap = capNode.GetNodeResult(anaModel, selectedLoadCase, selectedLoadCombination, viewModel.IsLiquefaction);
+            if (nrMaster?.CumulativeDisp == null || nrCap?.CumulativeDisp == null) return;
+
+            var ndM = nrMaster.CumulativeDisp;
+            var ndC = nrCap.CumulativeDisp;
+
+            // 接合節点の原点位置（CapNodeのXY、接合節点Z = pile.Z + ΔZc）
+            double jx0 = capNode.Coord.X;
+            double jy0 = capNode.Coord.Y;
+            double jz0 = jointZ;
+
+            // MasterNodeから接合節点へのアームベクトル
+            double ax = jx0 - masterNode.Coord.X;
+            double ay = jy0 - masterNode.Coord.Y;
+            double az = jz0 - masterNode.Coord.Z;
+
+            // 剛体変位: u_joint = u_master + θ_master × arm
+            // θ × arm = (θy*az - θz*ay, θz*ax - θx*az, θx*ay - θy*ax)
+            double ujx = ndM.Ux + (ndM.Ry * az - ndM.Rz * ay);
+            double ujy = ndM.Uy + (ndM.Rz * ax - ndM.Rx * az);
+            double ujz = ndM.Uz + (ndM.Rx * ay - ndM.Ry * ax);
+
+            // 変形後座標
+            Point3D masterPos = new(
+                masterNode.Coord.X + ndM.Ux * dispScale,
+                masterNode.Coord.Y + ndM.Uy * dispScale,
+                masterNode.Coord.Z + ndM.Uz * dispScale);
+
+            Point3D jointPos = new(
+                jx0 + ujx * dispScale,
+                jy0 + ujy * dispScale,
+                jz0 + ujz * dispScale);
+
+            Point3D capPos = new(
+                capNode.Coord.X + ndC.Ux * dispScale,
+                capNode.Coord.Y + ndC.Uy * dispScale,
+                capNode.Coord.Z + ndC.Uz * dispScale);
+
+            var ptM = viewModel.CanvasThreeDView.Transformation(masterPos);
+            var ptJ = viewModel.CanvasThreeDView.Transformation(jointPos);
+            var ptC = viewModel.CanvasThreeDView.Transformation(capPos);
+
+            if (!double.IsFinite(ptM.X) || !double.IsFinite(ptJ.X) || !double.IsFinite(ptC.X)) return;
+
+            // MasterNode → 接合節点位置
+            pathGeo.AddGeometry(new LineGeometry(ptM, ptJ));
+            // 接合節点位置 → CapNode
+            pathGeo.AddGeometry(new LineGeometry(ptJ, ptC));
         }
 
         /// <summary>
@@ -2777,7 +2872,7 @@ namespace PileDesign.Views
             {
                 _beamResultTooltipText = new System.Windows.Controls.TextBlock
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(230, 50, 50, 50)),
+                    Background = BrushDarkBackground,
                     Foreground = Brushes.White,
                     Padding = new Thickness(8, 4, 8, 4),
                     FontSize = 12
@@ -2827,7 +2922,7 @@ namespace PileDesign.Views
                 {
                     Width = markerSize,
                     Height = markerSize,
-                    Fill = new SolidColorBrush(Color.FromArgb(200, 255, 100, 100)),
+                    Fill = BrushErrorFill,
                     Stroke = Brushes.DarkRed,
                     StrokeThickness = 2,
                     IsHitTestVisible = false

@@ -173,8 +173,14 @@
                 <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel1Command}" Width="80"/>
             </StackPanel>
 
-            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="Column"
+            <common:EnhancedDataGrid x:Name="DataGridLoadCasesLevel1"
+                      ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel1}" AutoGenerateColumns="False" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserResizeRows="False">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="クリップボードにコピー" Click="CopyToClipboardFromContextMenu_Click" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
@@ -221,8 +227,14 @@
                 <Button Content="すべて除外" Command="{Binding UnapplyAllLoadCasesLevel2Command}" Width="80"/>
             </StackPanel>
 
-            <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="Column"
+            <common:EnhancedDataGrid x:Name="DataGridLoadCasesLevel2"
+                      ItemsSource="{Binding InputModel.LoadCasesInput.LoadCasesLevel2}" AutoGenerateColumns="False" HeadersVisibility="Column"
                       CanUserAddRows="False" CanUserResizeRows="False">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="クリップボードにコピー" Click="CopyToClipboardFromContextMenu_Click" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Style.Triggers>
@@ -267,7 +279,6 @@
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCombinations}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False">
                 <common:EnhancedDataGrid.Columns>
-                    <!--<DataGridTextColumn Binding="{Binding Name}" Width="*" IsReadOnly="True" />-->
                     <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" Foreground="Gray"/>
                     <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
                 </common:EnhancedDataGrid.Columns>

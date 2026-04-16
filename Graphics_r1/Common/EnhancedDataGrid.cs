@@ -86,6 +86,15 @@ namespace PileDesign.Common
             }
         }
 
+        protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+        {
+            // DataGrid内のどこをクリックしても（ヘッダー・全選択ボタン含む）
+            // キーボードフォーカスを確保し、Ctrl+C等のキー操作を有効にする
+            if (!IsKeyboardFocusWithin)
+                Focus();
+            base.OnPreviewMouseDown(e);
+        }
+
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             // Ctrl+C でコピー（DataGridTemplateColumn対応）
@@ -96,6 +105,14 @@ namespace PileDesign.Common
                     e.Handled = true;
                     return;
                 }
+            }
+
+            // Ctrl+A で全セル選択
+            if (e.Key == Key.A && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                SelectAll();
+                e.Handled = true;
+                return;
             }
 
             // Ctrl+V で貼り付け
@@ -117,6 +134,15 @@ namespace PileDesign.Common
             {
                 if (SelectedCells == null || SelectedCells.Count == 0) return false;
 
+                // Items → 行インデックスの高速逆引きテーブル
+                var itemIndexMap = new Dictionary<object, int>();
+                for (int i = 0; i < Items.Count; i++)
+                {
+                    var item = Items[i];
+                    if (item != null && !itemIndexMap.ContainsKey(item))
+                        itemIndexMap[item] = i;
+                }
+
                 // 選択セルを行・列順に整理
                 var cellsByRow = new SortedDictionary<int, SortedDictionary<int, string>>();
 
@@ -124,9 +150,8 @@ namespace PileDesign.Common
                 {
                     if (cellInfo.Item == null || cellInfo.Column == null) continue;
 
-                    int rowIndex = Items.IndexOf(cellInfo.Item);
+                    if (!itemIndexMap.TryGetValue(cellInfo.Item, out int rowIndex)) continue;
                     int colDisplayIndex = cellInfo.Column.DisplayIndex;
-                    if (rowIndex < 0) continue;
 
                     string cellText = GetCellText(cellInfo.Item, cellInfo.Column);
 
@@ -143,20 +168,78 @@ namespace PileDesign.Common
 
                 if (cellsByRow.Count == 0) return false;
 
+                // 選択に含まれる列のDisplayIndexを収集（ヘッダー行用）
+                var selectedColIndices = new SortedSet<int>();
+                foreach (var row in cellsByRow.Values)
+                    foreach (var colIdx in row.Keys)
+                        selectedColIndices.Add(colIdx);
+
+                var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
+
                 // TSV形式で組み立て
                 var sb = new StringBuilder();
-                foreach (var row in cellsByRow.Values)
+
+                // ヘッダー行: 行番号列 + 各列のヘッダーテキスト
+                sb.Append("No.");
+                foreach (var colIdx in selectedColIndices)
                 {
-                    sb.AppendLine(string.Join("\t", row.Values));
+                    sb.Append('\t');
+                    if (colIdx >= 0 && colIdx < displayOrderedCols.Count)
+                        sb.Append(GetColumnHeaderText(displayOrderedCols[colIdx]));
+                }
+                sb.AppendLine();
+
+                // データ行: 行番号(1始まり) + セル値
+                foreach (var (rowIndex, rowData) in cellsByRow)
+                {
+                    sb.Append(rowIndex + 1); // 1始まりの行番号
+                    foreach (var colIdx in selectedColIndices)
+                    {
+                        sb.Append('\t');
+                        if (rowData.TryGetValue(colIdx, out var text))
+                            sb.Append(text);
+                    }
+                    sb.AppendLine();
                 }
 
-                Clipboard.SetText(sb.ToString());
+                // クリップボードアクセスはリトライ（他アプリのロック対策）
+                for (int retry = 0; retry < 3; retry++)
+                {
+                    try
+                    {
+                        Clipboard.SetText(sb.ToString());
+                        return true;
+                    }
+                    catch (System.Runtime.InteropServices.ExternalException)
+                    {
+                        System.Threading.Thread.Sleep(50);
+                    }
+                }
                 return true;
             }
             catch
             {
                 return false; // コピー失敗時はデフォルト動作にフォールバック
             }
+        }
+
+        /// <summary>
+        /// 列ヘッダーからテキストを取得します（StackPanel内のTextBlockを連結）。
+        /// </summary>
+        private static string GetColumnHeaderText(DataGridColumn column)
+        {
+            if (column.Header is string s) return s;
+            if (column.Header is StackPanel panel)
+            {
+                var parts = new List<string>();
+                foreach (var child in panel.Children)
+                {
+                    if (child is System.Windows.Controls.TextBlock tb && !string.IsNullOrEmpty(tb.Text))
+                        parts.Add(tb.Text);
+                }
+                return string.Join(" ", parts);
+            }
+            return column.Header?.ToString() ?? string.Empty;
         }
 
         private static string GetCellText(object item, DataGridColumn column)
@@ -173,12 +256,31 @@ namespace PileDesign.Common
 
                         if (!string.IsNullOrEmpty(binding.StringFormat))
                         {
-                            try { return string.Format(binding.StringFormat, value); }
+                            try
+                            {
+                                string fmt = binding.StringFormat;
+                                // WPFのStringFormat ("N3"等) をstring.Format互換 ("{0:N3}") に変換
+                                if (!fmt.Contains('{'))
+                                    fmt = $"{{0:{fmt}}}";
+                                return string.Format(fmt, value);
+                            }
                             catch { return value.ToString() ?? string.Empty; }
                         }
                         return value.ToString() ?? string.Empty;
                     }
                     break;
+
+                case DataGridComboBoxColumn combo:
+                    {
+                        var comboBinding = (combo.SelectedValueBinding as Binding)
+                                        ?? (combo.SelectedItemBinding as Binding);
+                        if (comboBinding?.Path != null)
+                        {
+                            var value = GetPropertyValue(item, comboBinding.Path.Path);
+                            return value?.ToString() ?? string.Empty;
+                        }
+                        break;
+                    }
 
                 case DataGridTemplateColumn:
                     // TemplateColumn: VisualTree内のTextBlockから表示テキストを取得
@@ -192,20 +294,39 @@ namespace PileDesign.Common
         {
             try
             {
-                // DataGridRowコンテナを取得
-                var row = (DataGridRow)ItemContainerGenerator.ContainerFromIndex(rowIndex);
-                if (row == null) return string.Empty;
+                // DataGridRowコンテナを取得（仮想化により存在しない場合がある）
+                var row = ItemContainerGenerator.ContainerFromIndex(rowIndex) as DataGridRow;
+                if (row != null)
+                {
+                    var presenter = FindVisualChild<DataGridCellsPresenter>(row);
+                    if (presenter != null)
+                    {
+                        var cell = presenter.ItemContainerGenerator.ContainerFromIndex(column.DisplayIndex) as DataGridCell;
+                        if (cell != null)
+                        {
+                            // TextBlock または Button の Content からテキストを取得
+                            var textBlock = FindVisualChild<System.Windows.Controls.TextBlock>(cell);
+                            if (textBlock != null) return textBlock.Text;
 
-                // 列のセルを探す
-                var presenter = FindVisualChild<DataGridCellsPresenter>(row);
-                if (presenter == null) return string.Empty;
+                            var button = FindVisualChild<System.Windows.Controls.Button>(cell);
+                            if (button?.Content is string btnText) return btnText;
+                        }
+                    }
+                }
 
-                var cell = (DataGridCell?)presenter.ItemContainerGenerator.ContainerFromIndex(column.DisplayIndex);
-                if (cell == null) return string.Empty;
+                // VisualTree取得失敗時: CellTemplateからバインディングパスを解析してデータから取得
+                if (column is DataGridTemplateColumn templateCol && templateCol.CellTemplate != null)
+                {
+                    var item = Items[rowIndex];
+                    // テンプレート内のボタンの静的Contentを取得するフォールバック
+                    var content = templateCol.CellTemplate.LoadContent();
+                    if (content is System.Windows.Controls.Button btn && btn.Content is string staticText)
+                        return staticText;
+                    if (content is System.Windows.Controls.TextBlock tb && tb.Text != null)
+                        return tb.Text;
+                }
 
-                // セル内のTextBlockからテキストを取得
-                var textBlock = FindVisualChild<System.Windows.Controls.TextBlock>(cell);
-                return textBlock?.Text ?? string.Empty;
+                return string.Empty;
             }
             catch
             {
@@ -233,10 +354,39 @@ namespace PileDesign.Common
             foreach (var segment in path.Split('.'))
             {
                 if (current == null) return null;
-                var prop = current.GetType().GetProperty(segment,
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (prop == null) return null;
-                current = prop.GetValue(current);
+
+                // インデクサ表記 (例: "AxialForceLevel1s[0]") を解析
+                string propName = segment;
+                int? index = null;
+                int bracketStart = segment.IndexOf('[');
+                if (bracketStart >= 0)
+                {
+                    int bracketEnd = segment.IndexOf(']', bracketStart);
+                    if (bracketEnd > bracketStart &&
+                        int.TryParse(segment.Substring(bracketStart + 1, bracketEnd - bracketStart - 1), out int idx))
+                    {
+                        index = idx;
+                        propName = bracketStart > 0 ? segment[..bracketStart] : string.Empty;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(propName))
+                {
+                    var prop = current.GetType().GetProperty(propName,
+                        BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (prop == null) return null;
+                    current = prop.GetValue(current);
+                }
+
+                if (index.HasValue && current != null)
+                {
+                    if (current is IList list && index.Value >= 0 && index.Value < list.Count)
+                        current = list[index.Value];
+                    else if (current is Array arr && index.Value >= 0 && index.Value < arr.Length)
+                        current = arr.GetValue(index.Value);
+                    else
+                        return null;
+                }
             }
             return current;
         }

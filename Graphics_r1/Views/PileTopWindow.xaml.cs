@@ -532,5 +532,33 @@ namespace PileDesign.Views
                 viewModel.PileTop.SelectedPileTopSpecification = targetFTCap.GetSpecs();
             }
         }
+        private void ContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is DataGrid dataGrid)
+            {
+                foreach (var item in contextMenu.Items)
+                {
+                    if (item is MenuItem menuItem)
+                        menuItem.CommandParameter = dataGrid;
+                }
+            }
+        }
+
+        private void CopyToClipboardFromContextMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is DataGrid dataGrid)
+            {
+                Output.DataGridCsv.CopyToClipboard(dataGrid);
+            }
+        }
+
+        private void ExportCsvFromContextMenu_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.CommandParameter is DataGrid dataGrid)
+            {
+                var data = dataGrid.ItemsSource.Cast<object>();
+                Output.DataGridCsv.Export(data, dataGrid);
+            }
+        }
     }
 }

@@ -1133,10 +1133,7 @@ namespace PileDesign.ViewModels
 
                 foreach (var cell in row)
                 {
-                    if (cell.Column.GetCellContent(cell.Item) is TextBlock textBlock)
-                    {
-                        rowValues.Add(textBlock.Text);
-                    }
+                    rowValues.Add(Output.DataGridCsv.GetCellValue(cell));
                 }
 
                 sb.AppendLine(string.Join("\t", rowValues));

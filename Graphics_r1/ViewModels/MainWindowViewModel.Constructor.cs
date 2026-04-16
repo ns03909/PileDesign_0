@@ -520,13 +520,13 @@ namespace PileDesign.ViewModels
         private static string CommonOrVarious<T>(IEnumerable<T> values)
         {
             var distinct = values.Distinct().ToList();
-            return distinct.Count == 1 ? $"{distinct[0]}" : "(様々)";
+            return distinct.Count == 1 ? $"{distinct[0]}" : "(various)";
         }
 
         private static string CommonDoubleOrVarious(IEnumerable<double> values, string format = "F3", double scale = 1.0)
         {
             var distinct = values.Select(v => Math.Round(v, 6)).Distinct().ToList();
-            return distinct.Count == 1 ? (distinct[0] * scale).ToString(format) : "(様々)";
+            return distinct.Count == 1 ? (distinct[0] * scale).ToString(format) : "(various)";
         }
 
         private void BuildMultiPileProperties(List<PileLayoutDataItem> piles)
@@ -540,7 +540,7 @@ namespace PileDesign.ViewModels
             double totalPileLen = 0; int countValidLen = 0;
             foreach (var p in piles) { var l = CalcPileLength(p); if (l.HasValue) { totalPileLen += l.Value; countValidLen++; } }
             if (countValidLen > 0)
-                SelectedItemProperties.Add(new("杭長 (合計)", $"{totalPileLen:F3} m"));
+                SelectedItemProperties.Add(new("杭長 (total)", $"{totalPileLen:F3} m"));
 
             // 杭体No（ComboBox: 同一値なら選択可、様々なら空欄）
             var commonPileBodyNo = piles.Select(p => p.PileBodyNo).Distinct().ToList();
@@ -600,7 +600,7 @@ namespace PileDesign.ViewModels
                 }));
 
             // 軸力 VL（合計：読み取り専用）— ディープブルー
-            SelectedItemProperties.Add(new("軸力 VL (合計)", $"{piles.Sum(p => p.AxialForceVL):F1} kN", nameColor: "#3271AD"));
+            SelectedItemProperties.Add(new("軸力 VL (total)", $"{piles.Sum(p => p.AxialForceVL):F1} kN", nameColor: "#3271AD"));
 
             // レベル1軸力 — 緑
             int level1Count = piles.Min(p => p.AxialForceLevel1s.Count);
@@ -655,7 +655,7 @@ namespace PileDesign.ViewModels
             double totalLen = 0; int countValid = 0;
             foreach (var b in beams) { var l = CalcBeamLength(b); if (l.HasValue) { totalLen += l.Value; countValid++; } }
             if (countValid > 0)
-                SelectedItemProperties.Add(new("部材長 (合計)", $"{totalLen:F3} m"));
+                SelectedItemProperties.Add(new("部材長 (total)", $"{totalLen:F3} m"));
         }
 
         private void BuildMultiInputNodeProperties(List<InputNode> nodes)
@@ -734,22 +734,6 @@ namespace PileDesign.ViewModels
                 _isCenterCoordEditorVisible = value;
                 OnPropertyChanged(nameof(IsCenterCoordEditorVisible));
             }
-        }
-
-        // 展開トグル用プロパティ（バブル設定）
-        private bool _isBubbleSettingExpanded = false;
-        public bool IsBubbleSettingExpanded
-        {
-            get => _isBubbleSettingExpanded;
-            set => SetProperty(ref _isBubbleSettingExpanded, value);
-        }
-
-        // 展開トグル用プロパティ（矢印設定）
-        private bool _isArrowSettingExpanded = false;
-        public bool IsArrowSettingExpanded
-        {
-            get => _isArrowSettingExpanded;
-            set => SetProperty(ref _isArrowSettingExpanded, value);
         }
 
         // プロパティ
@@ -1630,6 +1614,20 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // 杭中心線描画
+        private bool _isPileCenterLineVisible = true;
+        public bool IsPileCenterLineVisible
+        {
+            get => _isPileCenterLineVisible;
+            set
+            {
+                if (SetProperty(ref _isPileCenterLineVisible, value))
+                {
+                    RequestUpdateWindow();
+                }
+            }
+        }
+
         // 基礎梁描画
         private bool _isFoundationBeamVisible = true;
         public bool IsFoundationBeamVisible
@@ -1792,6 +1790,20 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _isSoilRefVisible, value))
                 {
                     RequestUpdateWindow(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
+                }
+            }
+        }
+
+        // 接合節点レベル(m)ラベル描画
+        private bool _isConnectingNodeZVisible = false;
+        public bool IsConnectingNodeZVisible
+        {
+            get => _isConnectingNodeZVisible;
+            set
+            {
+                if (SetProperty(ref _isConnectingNodeZVisible, value))
+                {
+                    RequestUpdateWindow();
                 }
             }
         }
@@ -2729,14 +2741,6 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 解析後処理モード
-        private bool _isPostAnalysisMode = false;
-        public bool IsPostAnalysisMode
-        {
-            get => _isPostAnalysisMode;
-            set => SetProperty(ref _isPostAnalysisMode, value);
-        }
-
         // 要素タイプオプション
         private List<string> _elementTypeOption = ["ダミー"];
         public List<string> ElementTypeOption
@@ -3135,7 +3139,8 @@ namespace PileDesign.ViewModels
                 e.PropertyName == nameof(PileLayoutDataItem.AxialForceVL0) ||
                 e.PropertyName == nameof(PileLayoutDataItem.AxialForceVLAdditional) ||
                 e.PropertyName == nameof(PileLayoutDataItem.X) ||
-                e.PropertyName == nameof(PileLayoutDataItem.Y))
+                e.PropertyName == nameof(PileLayoutDataItem.Y) ||
+                e.PropertyName == "Item[]") // ObservableCollection内要素の変更（インデクサ経由）
             {
                 UpdateSumAndOTM();
             }
@@ -3149,7 +3154,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private void UpdateSumAndOTM()
+        public void UpdateSumAndOTM()
         {
             // 集計値、OTM、重心、外接範囲を一括通知（配列ループで効率化）
             string[] propertiesToNotify = [
@@ -3206,10 +3211,7 @@ namespace PileDesign.ViewModels
 
                 foreach (var cell in row)
                 {
-                    if (cell.Column.GetCellContent(cell.Item) is TextBlock textBlock)
-                    {
-                        rowValues.Add(textBlock.Text);
-                    }
+                    rowValues.Add(Output.DataGridCsv.GetCellValue(cell));
                 }
 
                 sb.AppendLine(string.Join("\t", rowValues));

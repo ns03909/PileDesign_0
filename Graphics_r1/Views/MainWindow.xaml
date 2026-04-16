@@ -902,7 +902,7 @@
 
                     <!-- 任意: 下端フッター -->
                     <ribbon:RibbonApplicationMenu.FooterPaneContent>
-                        <TextBlock Text="Version α-0.1 2025/12/27" Foreground="Gray" Margin="8,0,8,4"/>
+                        <TextBlock Text="{Binding WindowTitle}" Foreground="Gray" Margin="8,0,8,4"/>
                     </ribbon:RibbonApplicationMenu.FooterPaneContent>
                 </ribbon:RibbonApplicationMenu>
             </ribbon:Ribbon.ApplicationMenu>
@@ -997,42 +997,60 @@
                                                LargeImageSource="pack://application:,,,/Icons/GridVisible.png"
                                                SmallImageSource="pack://application:,,,/Icons/GridVisible.png"
                                                ToolTip="定義した通り心の表示／非表示を切り替えます。"/>
+                    <ribbon:RibbonToggleButton Label="XYZ軸" IsChecked="{Binding IsXYZAxesVisible}"
+                                               LargeImageSource="pack://application:,,,/Icons/AxesVisible.png"
+                                               SmallImageSource="pack://application:,,,/Icons/AxesVisible.png"
+                                               ToolTip="XYZ座標軸の表示／非表示を切り替えます。"/>
                 </ribbon:RibbonGroup>
 
                 <!-- 形状関連 -->
                 <ribbon:RibbonGroup Header="形状関連" SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png">
+                    <!-- その他 -->
                     <ribbon:RibbonToggleButton Label="慣性力作用点" ToolTip="慣性力作用点の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsActionPointVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/LateralLoadActionPointVisible.png"/>
                     <ribbon:RibbonToggleButton Label="連結" ToolTip="連結線の表示／非表示を切り替えます。"
                                                 IsChecked="{Binding IsRigidFloorVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsRigidConnectionVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="節点" IsChecked="{Binding IsNodeVisible}" SmallImageSource="pack://application:,,,/Icons/NodeVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
-                                                IsChecked="{Binding IsPileSectionVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="梁要素" ToolTip="梁要素の表示／非表示を切り替えます。"
-                                                IsChecked="{Binding IsFoundationBeamVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/ElementVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="梁要素形状" ToolTip="梁要素の断面形状の表示／非表示を切り替えます。"
-                                                IsChecked="{Binding IsBeamElementSectionVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/BeamVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭要素軸" ToolTip="梁要素座標軸の表示／非表示を切り替えます。"
-                                                IsChecked="{Binding IsBeamLocalAxesVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
-                                                IsChecked="{Binding IsEmbedmentBoxVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
+                    <!-- 節点系 -->
+                    <ribbon:RibbonSplitButton Label="節点" IsCheckable="True" IsChecked="{Binding IsNodeVisible}"
+                                              LargeImageSource="pack://application:,,,/Icons/NodeVisible.png"
+                                              SmallImageSource="pack://application:,,,/Icons/NodeVisible.png">
+                        <ribbon:RibbonMenuItem Header="接続用節点" ToolTip="基礎梁接続用節点（杭頭+ΔZc位置）の表示/非表示"
+                                               IsCheckable="True" IsChecked="{Binding IsConnectingNodeVisible}"
+                                               ImageSource="pack://application:,,,/Icons/ConnectionNodeVisible.png"/>
+                    </ribbon:RibbonSplitButton>
                     <ribbon:RibbonToggleButton Label="要素縮小表示" ToolTip="要素の端点を縮小して節点が見やすくします。"
                                                 IsChecked="{Binding IsShrinkElementMode}"
                                                 SmallImageSource="pack://application:,,,/Icons/ShrinkElementMode.png"/>
-                    <ribbon:RibbonToggleButton Label="接続用節点" ToolTip="基礎梁接続用節点（杭頭+ΔZc位置）の表示/非表示"
-                                                IsChecked="{Binding IsConnectingNodeVisible}"
-                                                SmallImageSource="pack://application:,,,/Icons/ConnectionNodeVisible.png"/>
+                    <!-- 杭系 -->
+                    <ribbon:RibbonToggleButton Label="根入部形状" ToolTip="根入部形状の表示／非表示を切り替えます。"
+                                                IsChecked="{Binding IsEmbedmentBoxVisible}"
+                                                SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
+                    <!-- 梁系 -->
+                    <ribbon:RibbonSplitButton Label="梁中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
+                                              ToolTip="梁中心線の表示／非表示を切り替えます。"
+                                              LargeImageSource="pack://application:,,,/Icons/ElementVisible.png"
+                                              SmallImageSource="pack://application:,,,/Icons/ElementVisible.png">
+                        <ribbon:RibbonMenuItem Header="杭中心線" ToolTip="杭中心線の表示／非表示を切り替えます。"
+                                               IsCheckable="True" IsChecked="{Binding IsPileCenterLineVisible}"
+                                               ImageSource="pack://application:,,,/Icons/ElementVisible.png"/>
+                        <ribbon:RibbonMenuItem Header="要素軸" ToolTip="要素座標軸の表示／非表示を切り替えます。"
+                                               IsCheckable="True" IsChecked="{Binding IsBeamLocalAxesVisible}"
+                                               ImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
+                    </ribbon:RibbonSplitButton>
+                    <ribbon:RibbonSplitButton Label="梁形状" IsCheckable="True" IsChecked="{Binding IsBeamElementSectionVisible}"
+                                              ToolTip="梁断面形状の表示／非表示を切り替えます。"
+                                              LargeImageSource="pack://application:,,,/Icons/BeamVisible.png"
+                                              SmallImageSource="pack://application:,,,/Icons/BeamVisible.png">
+                        <ribbon:RibbonMenuItem Header="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
+                                               IsCheckable="True" IsChecked="{Binding IsPileSectionVisible}"
+                                               ImageSource="pack://application:,,,/Icons/WireFrameVisible.png"/>
+                    </ribbon:RibbonSplitButton>
                 </ribbon:RibbonGroup>
 
-                <!-- 一般ラベル -->
-                <ribbon:RibbonGroup Header="一般ラベル" SmallImageSource="pack://application:,,,/Icons/ElementNo.png">
+                <!-- 一般梁要素ラベル -->
+                <ribbon:RibbonGroup Header="一般梁要素ラベル" SmallImageSource="pack://application:,,,/Icons/ElementNo.png">
                     <ribbon:RibbonToggleButton Label="梁要素番号" ToolTip="梁要素番号ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsElementNoVisible}"
                                SmallImageSource="pack://application:,,,/Icons/ElementNo.png"/>
@@ -1051,16 +1069,19 @@
                     <ribbon:RibbonToggleButton Label="β" ToolTip="梁要素のβ角度ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamAngleBetaVisible}"
                                SmallImageSource="pack://application:,,,/Icons/BeamAngleBetaVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
-                               IsChecked="{Binding IsGeneralNodeZVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
                 </ribbon:RibbonGroup>
 
-                <!-- 杭節点ラベル -->
-                <ribbon:RibbonGroup Header="杭節点ラベル" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png">
+                <!-- 節点ラベル -->
+                <ribbon:RibbonGroup Header="節点ラベル" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png">
                     <ribbon:RibbonToggleButton Label="節点番号" IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
+                    <ribbon:RibbonToggleButton Label="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsGeneralNodeZVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/IsGeneralLevelVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭体番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭頭Z" IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="接合Z" ToolTip="接合節点（杭頭+ΔZc）のZ座標ラベルの表示／非表示を切り替えます。"
+                               IsChecked="{Binding IsConnectingNodeZVisible}"
+                               SmallImageSource="pack://application:,,,/Icons/IsConnectionLevelVisible.png"/>
                     <ribbon:RibbonToggleButton Label="杭間隔比" ToolTip="杭間隔比ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsPileDiaSpacingRatioLabelVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsPileDiaSpacingRatioVisible.png"/>
@@ -1102,7 +1123,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <Slider Width="80" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                        <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                 TickFrequency="0.1" IsSnapToTickEnabled="False"
                                 Value="{Binding ForceDiagramRatio}"/>
                         <TextBox Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
@@ -1114,26 +1135,31 @@
                 <ribbon:RibbonGroup Header="土層・土質点" SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png">
                     <ribbon:RibbonToggleButton Label="杭周土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsGroundVisible}"
+                                                   LargeImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"
                                                    SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="土層パラメータ"
-                               ToolTip="土層の密度(kN/m3)、粘着力(kN/m2)、せん断波速度Vs(m/s)、または変形係数Es(kN/m2)の表示／非表示を切り替えます。"
-                               IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
-                               SmallImageSource="pack://application:,,,/Icons/GroundLayerParametersVisible.png"/>
-                    <ComboBox
-                        ItemsSource="{Binding SoilParamDisplayOptions}"
-                        SelectedItem="{Binding SelectedSoilParamDisplay}"
-                        IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"
-                        ribbon:RibbonControlService.Label="土層項目"/>
-                    <ribbon:RibbonToggleButton Label="土質点パラメータ"
-                               ToolTip="N値、せん断波速度Vs0(m/s)、または細粒分含有率Fc(%)の表示／非表示を切り替えます。"
-                               IsChecked="{Binding IsSoilMassParamDisplayEnabled}"
-                               SmallImageSource="pack://application:,,,/Icons/GroundPointParametersVisible.png"/>
-                    <ComboBox
-                          ItemsSource="{Binding SoilMassParamDisplayOptions}"
-                          SelectedItem="{Binding SelectedSoilMassParamDisplay}"
-                          IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"
-                          ribbon:RibbonControlService.Label="土質点項目"/>
-                    <ribbon:RibbonToggleButton Label="パラメータ値表示"
+                    <!-- 土層パラメータ: トグル＋項目選択を縦配置 -->
+                    <StackPanel>
+                        <ribbon:RibbonToggleButton Label="土層"
+                                   ToolTip="土層パラメータ（密度・粘着力・Vs・Es）の表示／非表示"
+                                   IsChecked="{Binding IsSoilLayerParamDisplayEnabled}"
+                                   SmallImageSource="pack://application:,,,/Icons/GroundLayerParametersVisible.png"/>
+                        <ComboBox Width="70" Margin="0,1,0,0"
+                            ItemsSource="{Binding SoilParamDisplayOptions}"
+                            SelectedItem="{Binding SelectedSoilParamDisplay}"
+                            IsEnabled="{Binding IsSoilLayerParamDisplayEnabled}"/>
+                    </StackPanel>
+                    <!-- 土質点パラメータ: トグル＋項目選択を縦配置 -->
+                    <StackPanel>
+                        <ribbon:RibbonToggleButton Label="土質点"
+                                   ToolTip="土質点パラメータ（N値・Vs0・Fc）の表示／非表示"
+                                   IsChecked="{Binding IsSoilMassParamDisplayEnabled}"
+                                   SmallImageSource="pack://application:,,,/Icons/GroundPointParametersVisible.png"/>
+                        <ComboBox Width="70" Margin="0,1,0,0"
+                              ItemsSource="{Binding SoilMassParamDisplayOptions}"
+                              SelectedItem="{Binding SelectedSoilMassParamDisplay}"
+                              IsEnabled="{Binding IsSoilMassParamDisplayEnabled}"/>
+                    </StackPanel>
+                    <ribbon:RibbonToggleButton Label="値表示"
                         ToolTip="土層・土質点のパラメータの値の表示／非表示を切り替えます。"
                         IsChecked="{Binding IsSoilValueVisible}"
                         SmallImageSource="pack://application:,,,/Icons/GroundParameterValueVisible.png"/>
@@ -1170,7 +1196,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <Slider Width="80" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                        <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                 TickFrequency="0.1" IsSnapToTickEnabled="False"
                                 Value="{Binding DisplacementDiagramRatio}"
                                 ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
@@ -1190,62 +1216,12 @@
                     <ribbon:RibbonToggleButton Label="群杭沈下荷重面" ToolTip="群杭沈下用荷重面表示"
                                IsChecked="{Binding IsSettlementLoadVisible}"
                                SmallImageSource="pack://application:,,,/Icons/LoadingPlaneVisible.png"/>
-                    <!--<ribbon:RibbonToggleButton Label="表示:杭頭" ToolTip="杭頭位置表示"
-                               IsChecked="{Binding IsElementShownAtSettlementPlane, Converter={StaticResource BooleanNegationConverter}}"
-                               SmallImageSource="pack://application:,,,/Icons/PileTopSelected.png"/>
-                    <ribbon:RibbonToggleButton Label="表示:荷重面" ToolTip="沈下荷重面位置表示"
-                               IsChecked="{Binding IsElementShownAtSettlementPlane}"
-                               SmallImageSource="pack://application:,,,/Icons/LoadingPlaneSelected.png"/>-->
                 </ribbon:RibbonGroup>
 
-                <!-- XYZ平行軸 -->
-                <ribbon:RibbonGroup Header="XYZ平行軸" SmallImageSource="pack://application:,,,/Icons/AxesVisible.png">
-                    <ribbon:RibbonToggleButton Label="XYZ平行軸" IsChecked="{Binding IsXYZAxesVisible}" LargeImageSource="pack://application:,,,/Icons/AxesVisible.png"/>
-                    <ribbon:RibbonToggleButton
-                           Label="🔽"
-                           ToolTip="中心座標の編集パネルを開閉"
-                           IsChecked="{Binding IsCenterCoordEditorVisible}"/>
-                    <StackPanel Orientation="Horizontal"
-                            Visibility="{Binding IsCenterCoordEditorVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ribbon:RibbonTextBox Label="X0"
-                              Width="70"
-                              Text="{Binding CurrentInputModel.FundamentalInput.X0, StringFormat=N3, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                              TextChanged="TextBox_TextChanged"
-                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                              KeyDown="TextBox_KeyDown"/>
-                        <ribbon:RibbonTextBox Label="Y0"
-                              Width="70"
-                              Text="{Binding CurrentInputModel.FundamentalInput.Y0, StringFormat=N3, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                              TextChanged="TextBox_TextChanged"
-                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                              KeyDown="TextBox_KeyDown"/>
-                        <ribbon:RibbonTextBox Label="Z0"
-                              Width="70"
-                              Text="{Binding CurrentInputModel.FundamentalInput.Z0, StringFormat=N3, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                              TextChanged="TextBox_TextChanged"
-                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                              KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-                </ribbon:RibbonGroup>
+                <!-- XYZ平行軸グループは目盛・通り心に統合済み -->
 
-                <!-- アクティブ -->
-                <ribbon:RibbonGroup Header="アクティブ" SmallImageSource="pack://application:,,,/Icons/ActiveAll.png">
-                    <ribbon:RibbonButton ToolTip="すべてアクティブ (Ctrl + A)"
-                             Click="ShowAllNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/ActiveAll.png"/>
-                    <ribbon:RibbonButton ToolTip="アクティブ (F2)"
-                             Click="ShowSelectedNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/SelectedActive.png"/>
-                    <ribbon:RibbonButton ToolTip="非アクティブ (Shift + F2)"
-                             Click="ShowUnselectedNodesButton_Click"
-                             SmallImageSource="pack://application:,,,/Icons/SelectedInactive.png"/>
-                    <ribbon:RibbonButton ToolTip="アクティブ反転"
-                             Click="InvertActiveNodesButton_click"
-                             SmallImageSource="pack://application:,,,/Icons/InvertActive.png"/>
-                </ribbon:RibbonGroup>
-
-                <!-- 選択 -->
-                <ribbon:RibbonGroup Header="選択" SmallImageSource="pack://application:,,,/Icons/SelectAll.png">
+                <!-- 選択・表示 -->
+                <ribbon:RibbonGroup Header="選択・表示" SmallImageSource="pack://application:,,,/Icons/ActiveAll.png">
                     <ribbon:RibbonButton ToolTip="すべて選択 (Ctrl + Shift + A)"
                              Click="SelectAllNodesButton_Click"
                              LargeImageSource="pack://application:,,,/Icons/SelectAll.png"
@@ -1254,20 +1230,47 @@
                              Click="DeselectAllNodesButton_Click"
                              LargeImageSource="pack://application:,,,/Icons/DeselectAll.png"
                              SmallImageSource="pack://application:,,,/Icons/DeselectAll.png"/>
+                    <ribbon:RibbonSeparator/>
+                    <ribbon:RibbonButton ToolTip="すべてアクティブ (Ctrl + A)"
+                             Click="ShowAllNodesButton_Click"
+                             LargeImageSource="pack://application:,,,/Icons/ActiveAll.png"
+                             SmallImageSource="pack://application:,,,/Icons/ActiveAll.png"/>
+                    <ribbon:RibbonButton ToolTip="選択のみアクティブ (F2)"
+                             Click="ShowSelectedNodesButton_Click"
+                             LargeImageSource="pack://application:,,,/Icons/SelectedActive.png"
+                             SmallImageSource="pack://application:,,,/Icons/SelectedActive.png"/>
+                    <ribbon:RibbonButton ToolTip="選択を非アクティブ (Shift + F2)"
+                             Click="ShowUnselectedNodesButton_Click"
+                             LargeImageSource="pack://application:,,,/Icons/SelectedInactive.png"
+                             SmallImageSource="pack://application:,,,/Icons/SelectedInactive.png"/>
+                    <ribbon:RibbonButton ToolTip="アクティブ反転"
+                             Click="InvertActiveNodesButton_click"
+                             LargeImageSource="pack://application:,,,/Icons/InvertActive.png"
+                             SmallImageSource="pack://application:,,,/Icons/InvertActive.png"/>
                 </ribbon:RibbonGroup>
 
 
                 <!-- ビュー切替 -->
                 <ribbon:RibbonGroup Header="ビュー切替" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png">
-                    <ribbon:RibbonButton Label="ズームフィット" Command="{Binding ZoomFitCommand}" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"
+                    <ribbon:RibbonButton Label="ズームフィット" Command="{Binding ZoomFitCommand}"
+                                         LargeImageSource="pack://application:,,,/Icons/ZoomFit.png"
+                                         SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"
                                          ToolTip="ズームフィット (ctrl + 0)"/>
-                    <ribbon:RibbonButton Label="平面" Command="{Binding ViewXYPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/TopView.png"
+                    <ribbon:RibbonButton Label="平面" Command="{Binding ViewXYPlaneCommand}"
+                                         LargeImageSource="pack://application:,,,/Icons/TopView.png"
+                                         SmallImageSource="pack://application:,,,/Icons/TopView.png"
                                          ToolTip="平面 (Ctrl + Shift + T)"/>
-                    <ribbon:RibbonButton Label="正面" Command="{Binding ViewXZPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/FrontView.png"
+                    <ribbon:RibbonButton Label="正面" Command="{Binding ViewXZPlaneCommand}"
+                                         LargeImageSource="pack://application:,,,/Icons/FrontView.png"
+                                         SmallImageSource="pack://application:,,,/Icons/FrontView.png"
                                          ToolTip="正面 (Ctrl + Shift + F)"/>
-                    <ribbon:RibbonButton Label="右面" Command="{Binding ViewYZPlaneCommand}" SmallImageSource="pack://application:,,,/Icons/RightView.png"
+                    <ribbon:RibbonButton Label="右面" Command="{Binding ViewYZPlaneCommand}"
+                                         LargeImageSource="pack://application:,,,/Icons/RightView.png"
+                                         SmallImageSource="pack://application:,,,/Icons/RightView.png"
                                          ToolTip="右面 (Ctrl + Shift + R)"/>
-                    <ribbon:RibbonButton Label="アイソメ" Command="{Binding ViewIsometricCommand}" SmallImageSource="pack://application:,,,/Icons/IsometricView.png"
+                    <ribbon:RibbonButton Label="アイソメ" Command="{Binding ViewIsometricCommand}"
+                                         LargeImageSource="pack://application:,,,/Icons/IsometricView.png"
+                                         SmallImageSource="pack://application:,,,/Icons/IsometricView.png"
                                          ToolTip="アイソメ (Ctrl + Shift + I)"/>
                 </ribbon:RibbonGroup>
 
@@ -1297,6 +1300,7 @@
                 <ribbon:RibbonGroup Header="解析条件設定">
                     <ribbon:RibbonButton x:Name="ButtonFundamental"
                          Label="基本設定"
+                         ToolTip="基本設定 (Ctrl+E)"
                          Command="{Binding OpenFundamentalWindowCommand}"
                          LargeImageSource="pack://application:,,,/Icons/FundamentalWindow.png"
                          SmallImageSource="pack://application:,,,/Icons/FundamentalWindow.png"/>
@@ -1607,18 +1611,18 @@
 
                     <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsResultValueVisible}">
                         <TextBlock Text="位置" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="50" Minimum="0" Maximum="20"
+                        <Slider Width="70" Minimum="0" Maximum="20"
                             Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="45" HorizontalContentAlignment="Right"
+                        <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
                              Text="{Binding TextPositionAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                              KeyDown="TextBox_KeyDown"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsResultValueVisible}">
                         <TextBlock Text="小数" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="50" Minimum="0" Maximum="5"
+                        <Slider Width="70" Minimum="0" Maximum="5"
                             Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="45" HorizontalContentAlignment="Right"
+                        <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
                              Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                              KeyDown="TextBox_KeyDown"/>
@@ -1629,7 +1633,7 @@
                     <StackPanel Orientation="Vertical" Margin="0,2">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="応力" VerticalAlignment="Center" Width="28"/>
-                            <Slider Width="100" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                            <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                     TickFrequency="0.1" IsSnapToTickEnabled="False"
                                     Value="{Binding ForceDiagramRatio}"
                                     ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
@@ -1639,7 +1643,7 @@
                         <StackPanel Orientation="Horizontal"
                                 Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Text="変位" VerticalAlignment="Center" Width="28"/>
-                            <Slider Width="100" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                            <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                     TickFrequency="0.1" IsSnapToTickEnabled="False"
                                     Value="{Binding DisplacementDiagramRatio}"
                                     ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
@@ -1649,130 +1653,67 @@
                     </StackPanel>
                 </ribbon:RibbonGroup>
 
-                <!--<ribbon:RibbonGroup Header="バブル">
-                    <ribbon:RibbonToggleButton Label="バブル表示" IsChecked="{Binding IsBubbleVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/BubbleVisible.png"/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="径" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="200"
-                            Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="40" HorizontalContentAlignment="Right"
-                             Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-                </ribbon:RibbonGroup>-->
                 <ribbon:RibbonGroup Header="バブル">
-                    <StackPanel Orientation="Horizontal">
-                        <ribbon:RibbonToggleButton Label="バブル表示"
-                                   IsChecked="{Binding IsBubbleVisible}"
-                                   SmallImageSource="pack://application:,,,/Icons/BubbleVisible.png"
-                                   ToolTip="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）を&#x0a;カラーコードで描画します。平面ビューでの表示に適しています。"/>
-                        <ribbon:RibbonToggleButton Label="🔽"
-                                   ToolTip="バブル設定展開/折りたたみ"
-                                   IsChecked="{Binding IsBubbleSettingExpanded}"/>
-                    </StackPanel>
-
-                    <!-- 詳細設定（径調整） -->
-                    <StackPanel Orientation="Horizontal"
-                            Visibility="{Binding IsBubbleSettingExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="径" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="200"
-                            Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="40" HorizontalContentAlignment="Right"
-                             Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
+                    <ribbon:RibbonSplitButton Label="バブル表示" IsCheckable="True"
+                                              IsChecked="{Binding IsBubbleVisible}"
+                                              LargeImageSource="pack://application:,,,/Icons/BubbleVisible.png"
+                                              SmallImageSource="pack://application:,,,/Icons/BubbleVisible.png"
+                                              ToolTip="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）を&#x0a;カラーコードで描画します。平面ビューでの表示に適しています。">
+                        <StackPanel Orientation="Horizontal" Margin="4">
+                            <TextBlock Text="径" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <Slider Width="100" Minimum="0" Maximum="200"
+                                Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Width="35" HorizontalContentAlignment="Right"
+                                 Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                 KeyDown="TextBox_KeyDown"/>
+                        </StackPanel>
+                    </ribbon:RibbonSplitButton>
                 </ribbon:RibbonGroup>
 
 
-                <!--<ribbon:RibbonGroup Header="矢印">
-                    <ribbon:RibbonToggleButton Label="矢印表示" IsChecked="{Binding IsArrowVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/ArrowVisible.png"/>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="全長" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="200"
-                            Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <TextBox Width="40" HorizontalContentAlignment="Right"
-                             Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="頭長" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="50"
-                            Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <TextBox Width="40" HorizontalContentAlignment="Right"
-                             Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="頭径" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="20"
-                            Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <TextBox Width="40" HorizontalContentAlignment="Right"
-                             Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-
-                    <ribbon:RibbonToggleButton Label="変形後形状"
-                               IsChecked="{Binding IsDeformedElementVisible}"
-                               SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"/>
-                </ribbon:RibbonGroup>-->
-
                 <ribbon:RibbonGroup Header="矢印">
-                    <StackPanel Orientation="Horizontal">
-                        <ribbon:RibbonToggleButton Label="矢印表示"
-                                   IsChecked="{Binding IsArrowVisible}"
-                                   SmallImageSource="pack://application:,,,/Icons/ArrowVisible.png"
-                                   ToolTip="沈下解析結果の表示時に、各杭位置に沈下量に比例した矢印を&#x0a;カラーコードで描画します。立面ビューでの表示に適しています。"/>
-                        <ribbon:RibbonToggleButton Label="🔽"
-                                   ToolTip="矢印設定展開/折りたたみ"
-                                   IsChecked="{Binding IsArrowSettingExpanded}"/>
-                    </StackPanel>
-
-                    <!-- 詳細設定（全長/頭長/頭径/変形後形状表示） -->
-                    <StackPanel Visibility="{Binding IsArrowSettingExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="全長" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <Slider Width="70" Minimum="0" Maximum="200"
-                                Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBox Width="40" HorizontalContentAlignment="Right"
-                                 Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                 KeyDown="TextBox_KeyDown"/>
+                    <ribbon:RibbonSplitButton Label="矢印表示" IsCheckable="True"
+                                              IsChecked="{Binding IsArrowVisible}"
+                                              LargeImageSource="pack://application:,,,/Icons/ArrowVisible.png"
+                                              SmallImageSource="pack://application:,,,/Icons/ArrowVisible.png"
+                                              ToolTip="沈下解析結果の表示時に、各杭位置に沈下量に比例した矢印を&#x0a;カラーコードで描画します。立面ビューでの表示に適しています。">
+                        <StackPanel Margin="4">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                <TextBlock Text="全長" VerticalAlignment="Center" Margin="0,0,4,0" Width="28"/>
+                                <Slider Width="100" Minimum="0" Maximum="200"
+                                    Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right"
+                                     Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                <TextBlock Text="頭長" VerticalAlignment="Center" Margin="0,0,4,0" Width="28"/>
+                                <Slider Width="100" Minimum="0" Maximum="50"
+                                    Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right"
+                                     Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="頭径" VerticalAlignment="Center" Margin="0,0,4,0" Width="28"/>
+                                <Slider Width="100" Minimum="0" Maximum="20"
+                                    Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right"
+                                     Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
                         </StackPanel>
-
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="頭長" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <Slider Width="70" Minimum="0" Maximum="50"
-                                Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBox Width="40" HorizontalContentAlignment="Right"
-                                 Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                 KeyDown="TextBox_KeyDown"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="頭径" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <Slider Width="70" Minimum="0" Maximum="20"
-                                Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBox Width="40" HorizontalContentAlignment="Right"
-                                 Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                 KeyDown="TextBox_KeyDown"/>
-                        </StackPanel>
-                    </StackPanel>
+                    </ribbon:RibbonSplitButton>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="変形後">
                     <ribbon:RibbonToggleButton Label="変形後形状"
                                    IsChecked="{Binding IsDeformedElementVisible}"
+                                   LargeImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"
                                    SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"
                                    ToolTip="水平解析結果の変形後形状を描画します。&#x0a;杭体形状ONの場合は変形後の杭体断面も表示します。&#x0a;梁断面形状ONの場合は変形後の基礎梁断面も表示します。&#x0a;解析結果表示がOFFでも独立して動作します。"/>
                 </ribbon:RibbonGroup>
@@ -3245,6 +3186,7 @@
                                                     LoadingRow="DataGridPileLayout_LoadingRow_Numbering"
                                                     AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
                                                     CellEditEnding="DataGridPileAxialForce_CellEditEnding"
+                                                    PasteCompleted="DataGridPileAxialForce_PasteCompleted"
                                                     common:DataGridNavigationBehavior.Enable="True"
                                                     EnableRowVirtualization="True"
                                                     EnableColumnVirtualization="True"
@@ -3323,17 +3265,6 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
-                                                    <!--<DataGridTextColumn Binding="{Binding AxialForceVL, StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="Gray" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="VL" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>-->
-
                                                     <DataGridTextColumn Binding="{Binding AxialForceVL, StringFormat=N1}"
                                                             IsReadOnly="True" MinWidth="50" Width="*"
                                                             HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
@@ -3361,50 +3292,6 @@
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
-
-                                                    <!--<DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="1-1" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[1], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="1-2" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[2], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="1-3" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[3], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="1-4" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>-->
 
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}">
@@ -3509,50 +3396,6 @@
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
-
-                                                    <!--<DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="2-1" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[1], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="2-2" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[2], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="2-3" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>
-
-                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[3], StringFormat=N1}"
-                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
-                                                        <DataGridTextColumn.Header>
-                                                            <StackPanel>
-                                                                <TextBlock Text="2-4" TextAlignment="Center"/>
-                                                                <TextBlock Text="(kN)" TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </DataGridTextColumn.Header>
-                                                    </DataGridTextColumn>-->
 
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource CrimsonHeaderStyle}">
@@ -3765,10 +3608,15 @@
                                                 <svgc:SvgViewbox Source="/Icons/AutoFrontRear.svg"
                                                                      Style="{StaticResource SvgIconStyle24}"/>
                                             </Button>
-                                            <StackPanel Grid.Row="1" HorizontalAlignment="Right">
-                                                <CheckBox IsChecked="True" Content="前方杭" IsHitTestVisible="False" Focusable="False" />
-                                                <CheckBox IsChecked="False" Content="後方杭" IsHitTestVisible="False" Focusable="False" />
-                                            </StackPanel>
+                                            <Border Grid.Row="1" HorizontalAlignment="Right"
+                                                    BorderBrush="Gray" BorderThickness="1" CornerRadius="3"
+                                                    Padding="6,2" Margin="0,2"
+                                                    ToolTip="各荷重条件に対して各杭の前方杭/後方杭を設定します">
+                                                <StackPanel>
+                                                    <CheckBox Content="前方杭" IsChecked="True" IsHitTestVisible="False" FontSize="11" Foreground="#333"/>
+                                                    <CheckBox Content="後方杭" IsChecked="False" IsHitTestVisible="False" FontSize="11" Foreground="#333"/>
+                                                </StackPanel>
+                                            </Border>
 
                                             <common:EnhancedDataGrid x:Name="DataGridIsFrontPile"
                                                                     ItemsSource="{Binding CurrentInputModel.PileLayoutItems, UpdateSourceTrigger=LostFocus}"
@@ -5346,18 +5194,6 @@
                                                             Command="{Binding ViewIsometricCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/IsometricView.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
-                                                    <!--<Button Grid.Row="0" Grid.Column="1" Padding="0" ToolTip="平面 (Ctrl + Shift + T)" Command="{Binding ViewXYPlaneCommand}">
-                                                        <svgc:SvgViewbox Source="/Icons/TopView.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="0" Grid.Column="2" Padding="0" ToolTip="正面 (Ctrl + Shift + F)" Command="{Binding ViewXZPlaneCommand}">
-                                                        <svgc:SvgViewbox Source="/Icons/FrontView.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="0" Grid.Column="3" Padding="0" ToolTip="右面 (Ctrl + Shift + R)" Command="{Binding ViewYZPlaneCommand}">
-                                                        <svgc:SvgViewbox Source="/Icons/RightView.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="0" Grid.Column="4" Padding="0" ToolTip="アイソメ (Ctrl + Shift + I)" Command="{Binding ViewIsometricCommand}">
-                                                        <svgc:SvgViewbox Source="/Icons/IsometricView.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
 
                                                     <!-- 行1: アクティブ操作 -->
                                                     <Button Grid.Row="1" Grid.Column="0"
@@ -5388,18 +5224,6 @@
                                                         Click="InvertActiveNodesButton_click">
                                                         <svgc:SvgViewbox Source="/Icons/InvertActive.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
-                                                    <!--<Button Grid.Row="1" Grid.Column="0" Padding="0" ToolTip="すべてアクティブ (Ctrl + A)" Click="ShowAllNodesButton_Click">
-                                                        <svgc:SvgViewbox Source="/Icons/ActiveAll.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="1" Grid.Column="1" Padding="0" ToolTip="アクティブ (F2)" Click="ShowSelectedNodesButton_Click">
-                                                        <svgc:SvgViewbox Source="/Icons/SelectedActive.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="1" Grid.Column="2" Padding="0" ToolTip="非アクティブ (Shift + F2)" Click="ShowUnselectedNodesButton_Click">
-                                                        <svgc:SvgViewbox Source="/Icons/SelectedInactive.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="1" Grid.Column="3" Padding="0" ToolTip="アクティブ反転" Click="InvertActiveNodesButton_click">
-                                                        <svgc:SvgViewbox Source="/Icons/InvertActive.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
 
                                                     <!-- 行2: 選択操作 -->
                                                     <Button Grid.Row="2" Grid.Column="0"
@@ -5416,12 +5240,6 @@
                                                         Click="DeselectAllNodesButton_Click">
                                                         <svgc:SvgViewbox Source="/Icons/DeselectAll.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
-                                                    <!--<Button Grid.Row="2" Grid.Column="0" Padding="0" ToolTip="すべて選択 (Ctrl + Shift + A)" Click="SelectAllNodesButton_Click">
-                                                        <svgc:SvgViewbox Source="/Icons/SelectAll.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
-                                                    <!--<Button Grid.Row="2" Grid.Column="1" Padding="0" ToolTip="全選択解除 (Esc)" Click="DeselectAllNodesButton_Click">
-                                                        <svgc:SvgViewbox Source="/Icons/DeselectAll.svg" Style="{StaticResource SvgIconStyle16}"/>
-                                                    </Button>-->
                                                 </Grid>
                                             </Border>
 
@@ -5454,7 +5272,7 @@
                                                     <Button x:Name="ButtonFundamentalWindow0" Grid.Row="0" Grid.Column="0"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="基本設定"
+                                                        Tag="基本設定 (Ctrl + E)"
                                                         Command="{Binding OpenFundamentalWindowCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/FundamentalWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
@@ -5743,8 +5561,8 @@
                                                           Click="CheckBoxCommonActionPoint3D_Click"></CheckBox>
                                     </ToolBar>
 
-                                    <h:HelixViewport3D x:Name="HelixViewport" 
-                                                       ShowCoordinateSystem="True" 
+                                    <h:HelixViewport3D x:Name="HelixViewport"
+                                                       ShowCoordinateSystem="True"
                                                        Grid.Row="1"
                                                        MouseLeftButtonDown="HelixViewport_MouseLeftButtonDown" />
                                 </Grid>

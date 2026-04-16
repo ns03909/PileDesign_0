@@ -571,6 +571,7 @@
 
                                             <DataGrid.ContextMenu>
                                                 <ContextMenu Opened="ContextMenu_Opened">
+                                                    <MenuItem Header="クリップボードにコピー" Click="CopyToClipboardFromContextMenu_Click" />
                                                     <MenuItem Header="CSVエクスポート" Click="ExportCsvFromContextMenu_Click" />
                                                 </ContextMenu>
                                             </DataGrid.ContextMenu>
