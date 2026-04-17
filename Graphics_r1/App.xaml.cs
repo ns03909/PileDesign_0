@@ -68,7 +68,8 @@ namespace PileDesign
                 var errorLogDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "PileDesign", "Logs");
-                try { Directory.CreateDirectory(errorLogDir); } catch { }
+                try { Directory.CreateDirectory(errorLogDir); }
+                catch (Exception createEx) { System.Diagnostics.Debug.WriteLine($"[App] エラーログディレクトリ作成失敗: {createEx.GetType().Name}: {createEx.Message}"); }
                 File.AppendAllText(Path.Combine(errorLogDir, "startup_error.log"), $"[{DateTime.Now}] 例外: {ex}\n");
                 MessageBox.Show($"アプリ起動時に致命的なエラーが発生しました。\n{ex.Message}", "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 Environment.Exit(1);

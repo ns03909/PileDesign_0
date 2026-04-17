@@ -474,9 +474,11 @@ namespace PileDesign.Views
 
                 if (!_settlementBandPaths.TryGetValue(color, out var path))
                 {
+                    var fillBrush = new SolidColorBrush(semiTransparentColor);
+                    fillBrush.Freeze();
                     path = new Path
                     {
-                        Fill = new SolidColorBrush(semiTransparentColor),
+                        Fill = fillBrush,
                         Stroke = Brushes.Transparent,
                         StrokeThickness = 0,
                         IsHitTestVisible = false,
@@ -748,7 +750,7 @@ namespace PileDesign.Views
             {
                 _settlementTooltipText = new System.Windows.Controls.TextBlock
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(230, 50, 50, 50)),
+                    Background = BrushDarkBackground,
                     Foreground = Brushes.White,
                     Padding = new Thickness(8, 4, 8, 4),
                     FontSize = 12

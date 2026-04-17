@@ -16,6 +16,20 @@ namespace PileDesign.Views
     /// 
     public partial class MainWindow : RibbonWindow
     {
+        // ===== 静的フローズンブラシキャッシュ（描画ループ内での毎フレーム生成を回避） =====
+        private static readonly SolidColorBrush BrushMinimapStroke = Freeze(new SolidColorBrush(Color.FromArgb(160, 100, 100, 100)));
+        private static readonly SolidColorBrush BrushMinimapFill = Freeze(new SolidColorBrush(Color.FromArgb(15, 0, 0, 0)));
+        private static readonly SolidColorBrush BrushCubeFill = Freeze(new SolidColorBrush(Color.FromArgb(55, 100, 140, 200)));
+        private static readonly SolidColorBrush BrushCubeStroke = Freeze(new SolidColorBrush(Color.FromArgb(160, 80, 120, 170)));
+        private static readonly SolidColorBrush BrushCubeArrow = Freeze(new SolidColorBrush(Color.FromArgb(160, 255, 140, 0)));
+        private static readonly SolidColorBrush BrushCubeHighlightBlue = Freeze(new SolidColorBrush(Color.FromArgb(60, 98, 176, 226)));
+        private static readonly SolidColorBrush BrushCubeHighlightGreen = Freeze(new SolidColorBrush(Color.FromArgb(90, 144, 238, 144)));
+        private static readonly SolidColorBrush BrushSemiTransparentGray = Freeze(new SolidColorBrush(Color.FromArgb(160, 100, 100, 100)));
+        private static readonly SolidColorBrush BrushDarkBackground = Freeze(new SolidColorBrush(Color.FromArgb(230, 50, 50, 50)));
+        private static readonly SolidColorBrush BrushErrorFill = Freeze(new SolidColorBrush(Color.FromArgb(200, 255, 100, 100)));
+
+        private static SolidColorBrush Freeze(SolidColorBrush brush) { brush.Freeze(); return brush; }
+
         // 追加: ビュー操作中フラグ
         private bool _isViewInteracting = false;
 
@@ -176,6 +190,7 @@ namespace PileDesign.Views
                     // 軽量描画（ラベルなし）
                     UpdateNodes3D();
                     UpdateInputNodes3D(); // 一般節点も描画
+                    UpdateConnectingNodes3D(); // 接続用節点・剛体連結線
                     if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素も描画
                     UpdateSelectedNodesAndElements3D(); // 選択要素も描画
                     if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
@@ -226,6 +241,8 @@ namespace PileDesign.Views
                 if (viewModel.IsEsVisible) UpdateGroundLayerValue3D("Es", 10000, 50000); // Es描画の更新
 
                 if (viewModel.IsSettlementLoadVisible) UpdateSettlementLoad3D(); // 荷重面描画の更新
+
+                UpdateConnectingNodes3D(); // 接続用節点・剛体連結線描画の更新
 
                 if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素描画の更新
 
@@ -419,9 +436,9 @@ namespace PileDesign.Views
             {
                 Width = Math.Max(1, vpBottomRight.X - vpTopLeft.X),
                 Height = Math.Max(1, vpBottomRight.Y - vpTopLeft.Y),
-                Stroke = new SolidColorBrush(Color.FromArgb(160, 100, 100, 100)),
+                Stroke = BrushMinimapStroke,
                 StrokeThickness = 1,
-                Fill = new SolidColorBrush(Color.FromArgb(15, 0, 0, 0)),
+                Fill = BrushMinimapFill,
                 IsHitTestVisible = false
             };
             Canvas.SetLeft(vpRect, vpTopLeft.X);

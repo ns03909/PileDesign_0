@@ -212,6 +212,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[PileSection2.GetEFuncEpsilon] sigma={sigma}, EpsilonM={EpsilonM}, Ec={Ec}, Fc={Fc}: {ex.GetType().Name}: {ex.Message}");
                 return 0.0;
             }
         }
@@ -439,22 +440,16 @@ namespace PileDesign.Models.InputData
         // ひずみ度から応力を計算するメソッド
         internal override double GetStress(string type, double epsilon)
         {
-            try
+            // 算術式のみで例外は発生しない。以前の try/catch (Exception ex) は無意味だったため削除。
+            if (EpsilonCy <= EpsilonE + epsilon) // && (EpsilonE + epsilon) <= EpsilonCu) // 降伏域
             {
-                if (EpsilonCy <= EpsilonE + epsilon) // && (EpsilonE + epsilon) <= EpsilonCu) // 降伏域
-                {
-                    return Fc;
-                }
-                else if (0 < EpsilonE + epsilon && EpsilonE + epsilon < EpsilonCy)
-                {
-                    return Ec * (EpsilonE + epsilon); // 弾性範囲
-                }
-                else
-                {
-                    return 0.0;
-                }
+                return Fc;
             }
-            catch (Exception ex)
+            else if (0 < EpsilonE + epsilon && EpsilonE + epsilon < EpsilonCy)
+            {
+                return Ec * (EpsilonE + epsilon); // 弾性範囲
+            }
+            else
             {
                 return 0.0;
             }

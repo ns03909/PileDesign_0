@@ -12,10 +12,10 @@
     <ApplicationIcon>Icons\ApplicationIcon\ApplicationIcon.ico</ApplicationIcon>
 
     <!-- バージョン管理 -->
-    <Version>1.0.2-beta</Version>
-    <AssemblyVersion>1.0.2.0</AssemblyVersion>
-    <FileVersion>1.0.2.0</FileVersion>
-    <InformationalVersion>1.0.2-beta</InformationalVersion>
+    <Version>1.0.3-beta</Version>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <FileVersion>1.0.3.0</FileVersion>
+    <InformationalVersion>1.0.3-beta</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
@@ -259,6 +259,8 @@
     <None Remove="Icons\IsAxialForceVisible.svg" />
     <None Remove="Icons\IsAxialLoadVisible.png" />
     <None Remove="Icons\IsAxialLoadVisible.svg" />
+    <None Remove="Icons\IsConnectionLevelVisible.png" />
+    <None Remove="Icons\IsConnectionLevelVisible.svg" />
     <None Remove="Icons\IsElementLocalAxesVisible.png" />
     <None Remove="Icons\IsElementLocalAxesVisible.svg" />
     <None Remove="Icons\IsElementLocalAxesVisible_1.svg" />
@@ -268,6 +270,8 @@
     <None Remove="Icons\IsForcedDispVisible.svg" />
     <None Remove="Icons\IsFrontPileVisible.png" />
     <None Remove="Icons\IsFrontPileVisible.svg" />
+    <None Remove="Icons\IsGeneralLevelVisible.png" />
+    <None Remove="Icons\IsGeneralLevelVisible.svg" />
     <None Remove="Icons\IsGridVisible.svg" />
     <None Remove="Icons\IsGroupPileFactorVisible.png" />
     <None Remove="Icons\IsGroupPileFactorVisible.svg" />
@@ -1160,6 +1164,12 @@
     <Resource Include="Icons\IsAxialLoadVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\IsConnectionLevelVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsConnectionLevelVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\IsElementLocalAxesVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1185,6 +1195,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsFrontPileVisible.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsGeneralLevelVisible.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\IsGeneralLevelVisible.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\IsGridVisible.svg">
@@ -1805,7 +1821,7 @@
     <PackageReference Include="SharpVectors" Version="1.8.5" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="Svg.Skia" Version="3.7.0" />
+    <PackageReference Include="Svg.Skia" Version="4.2.0" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
@@ -1822,8 +1838,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="Cyotek.Drawing.BitmapFont" Version="2.0.4" />
-    <PackageReference Include="Dirkster.AvalonDock" Version="4.72.1" />
-    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.72.1" />
+    <PackageReference Include="Dirkster.AvalonDock" Version="4.73.0" />
+    <PackageReference Include="Dirkster.AvalonDock.Themes.VS2013" Version="4.73.0" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageReference Include="DocumentFormat.OpenXml.Framework" Version="3.5.1" />
     <PackageReference Include="HarfBuzzSharp" Version="8.3.1.3" />

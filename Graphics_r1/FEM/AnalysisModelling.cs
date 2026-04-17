@@ -1,4 +1,4 @@
-﻿using Graphics_r1.Constants;
+﻿using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Concurrent;
@@ -1034,7 +1034,7 @@ namespace PileDesign.FEM
                 if (!isInputNode && !isFoundationNode) continue;
 
                 // 既にmaster-slave関係がある場合はスキップ（安全ガード）
-                if (node.MasterNodes[0] != null || node.MasterNodes[1] != null || node.MasterNodes[5] != null)
+                if (node.HasMasterAt(Dof.Ux) || node.HasMasterAt(Dof.Uy) || node.HasMasterAt(Dof.Rz))
                     continue;
 
                 // 剛床slave設定: Ux, Uy, Rz → ActionPoint
@@ -1269,8 +1269,8 @@ namespace PileDesign.FEM
             {
                 bool[] bndArr = [node.Boundary.Ux, node.Boundary.Uy, node.Boundary.Uz,
                                  node.Boundary.Rx, node.Boundary.Ry, node.Boundary.Rz];
-                bool[] slaveArr = [node.MasterNodes[0] != null, node.MasterNodes[1] != null, node.MasterNodes[2] != null,
-                                   node.MasterNodes[3] != null, node.MasterNodes[4] != null, node.MasterNodes[5] != null];
+                bool[] slaveArr = [node.HasMasterAt(Dof.Ux), node.HasMasterAt(Dof.Uy), node.HasMasterAt(Dof.Uz),
+                                   node.HasMasterAt(Dof.Rx), node.HasMasterAt(Dof.Ry), node.HasMasterAt(Dof.Rz)];
                 for (int d = 0; d < 6; d++)
                 {
                     if (bndArr[d] || slaveArr[d]) fixedDofCount++;

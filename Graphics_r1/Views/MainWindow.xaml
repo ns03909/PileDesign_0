@@ -1014,6 +1014,8 @@
                                                 SmallImageSource="pack://application:,,,/Icons/IsRigidConnectionVisible.png"/>
                     <!-- 節点系 -->
                     <ribbon:RibbonSplitButton Label="節点" IsCheckable="True" IsChecked="{Binding IsNodeVisible}"
+                                              ribbon:RibbonControlService.ToolTipTitle="節点"
+                                              ribbon:RibbonControlService.ToolTipDescription="節点の表示／非表示を切り替えます。▼メニューから接続用節点の表示を個別に制御できます。"
                                               LargeImageSource="pack://application:,,,/Icons/NodeVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/NodeVisible.png">
                         <ribbon:RibbonMenuItem Header="接続用節点" ToolTip="基礎梁接続用節点（杭頭+ΔZc位置）の表示/非表示"
@@ -1029,7 +1031,8 @@
                                                 SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
                     <!-- 梁系 -->
                     <ribbon:RibbonSplitButton Label="梁中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
-                                              ToolTip="梁中心線の表示／非表示を切り替えます。"
+                                              ribbon:RibbonControlService.ToolTipTitle="梁中心線"
+                                              ribbon:RibbonControlService.ToolTipDescription="梁中心線の表示／非表示を切り替えます。▼メニューから杭中心線・要素軸の表示を個別に制御できます。"
                                               LargeImageSource="pack://application:,,,/Icons/ElementVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/ElementVisible.png">
                         <ribbon:RibbonMenuItem Header="杭中心線" ToolTip="杭中心線の表示／非表示を切り替えます。"
@@ -1040,7 +1043,8 @@
                                                ImageSource="pack://application:,,,/Icons/IsElementLocalAxesVisible.png"/>
                     </ribbon:RibbonSplitButton>
                     <ribbon:RibbonSplitButton Label="梁形状" IsCheckable="True" IsChecked="{Binding IsBeamElementSectionVisible}"
-                                              ToolTip="梁断面形状の表示／非表示を切り替えます。"
+                                              ribbon:RibbonControlService.ToolTipTitle="梁形状"
+                                              ribbon:RibbonControlService.ToolTipDescription="梁断面形状の表示／非表示を切り替えます。▼メニューから杭体形状の表示を個別に制御できます。"
                                               LargeImageSource="pack://application:,,,/Icons/BeamVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/BeamVisible.png">
                         <ribbon:RibbonMenuItem Header="杭体形状" ToolTip="杭体形状の表示／非表示を切り替えます。"
@@ -1073,12 +1077,15 @@
 
                 <!-- 節点ラベル -->
                 <ribbon:RibbonGroup Header="節点ラベル" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png">
-                    <ribbon:RibbonToggleButton Label="節点番号" IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
+                    <ribbon:RibbonToggleButton Label="節点番号" ToolTip="節点番号ラベルの表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsNodeNoVisible}" SmallImageSource="pack://application:,,,/Icons/NodeNo.png"/>
                     <ribbon:RibbonToggleButton Label="一般Z" ToolTip="一般節点のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsGeneralNodeZVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsGeneralLevelVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭体番号" IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
-                    <ribbon:RibbonToggleButton Label="杭頭Z" IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="杭体番号" ToolTip="杭体番号ラベルの表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsPileRefVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileRefVisible.png"/>
+                    <ribbon:RibbonToggleButton Label="杭頭Z" ToolTip="杭頭のZ座標ラベルの表示／非表示を切り替えます。"
+                                               IsChecked="{Binding IsPileTopLevelVisible}" SmallImageSource="pack://application:,,,/Icons/IsPileTopLevelVisible.png"/>
                     <ribbon:RibbonToggleButton Label="接合Z" ToolTip="接合節点（杭頭+ΔZc）のZ座標ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsConnectingNodeZVisible}"
                                SmallImageSource="pack://application:,,,/Icons/IsConnectionLevelVisible.png"/>
@@ -1658,7 +1665,8 @@
                                               IsChecked="{Binding IsBubbleVisible}"
                                               LargeImageSource="pack://application:,,,/Icons/BubbleVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/BubbleVisible.png"
-                                              ToolTip="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）を&#x0a;カラーコードで描画します。平面ビューでの表示に適しています。">
+                                              ribbon:RibbonControlService.ToolTipTitle="バブル表示"
+                                              ribbon:RibbonControlService.ToolTipDescription="沈下解析結果の表示時に、各杭位置に沈下量に比例した円（バブル）をカラーコードで描画します。平面ビューでの表示に適しています。">
                         <StackPanel Orientation="Horizontal" Margin="4">
                             <TextBlock Text="径" VerticalAlignment="Center" Margin="0,0,4,0"/>
                             <Slider Width="100" Minimum="0" Maximum="200"
@@ -1677,7 +1685,8 @@
                                               IsChecked="{Binding IsArrowVisible}"
                                               LargeImageSource="pack://application:,,,/Icons/ArrowVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/ArrowVisible.png"
-                                              ToolTip="沈下解析結果の表示時に、各杭位置に沈下量に比例した矢印を&#x0a;カラーコードで描画します。立面ビューでの表示に適しています。">
+                                              ribbon:RibbonControlService.ToolTipTitle="矢印表示"
+                                              ribbon:RibbonControlService.ToolTipDescription="沈下解析結果の表示時に、各杭位置に沈下量に比例した矢印をカラーコードで描画します。立面ビューでの表示に適しています。">
                         <StackPanel Margin="4">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                                 <TextBlock Text="全長" VerticalAlignment="Center" Margin="0,0,4,0" Width="28"/>
@@ -1720,10 +1729,12 @@
 
                 <ribbon:RibbonGroup Header="グラフ・テーブル">
                     <ribbon:RibbonButton Label="グラフ出力"
+                             ToolTip="杭変位応力グラフ・沈下曲線などの結果グラフウィンドウを開きます。"
                              Command="{Binding OpenGraphWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Graph.png"
                              SmallImageSource="pack://application:,,,/Icons/Graph.png"/>
                     <ribbon:RibbonButton Label="テーブル出力"
+                             ToolTip="解析結果をテーブル形式で表示します。"
                              Command="{Binding OpenTableWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Table.png"
                              SmallImageSource="pack://application:,,,/Icons/Table.png"/>
@@ -1731,6 +1742,7 @@
 
                 <ribbon:RibbonGroup Header="ログ">
                     <ribbon:RibbonButton Label="ログ表示"
+                             ToolTip="解析ログウィンドウを開きます。"
                              Command="{Binding OpenLogWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Log.png"
                              SmallImageSource="pack://application:,,,/Icons/Log.png"/>
@@ -1738,6 +1750,7 @@
 
                 <ribbon:RibbonGroup Header="検定">
                     <ribbon:RibbonButton Label="検定"
+                             ToolTip="解析結果の検定ウィンドウを開きます。"
                              Command="{Binding OpenEvaluationWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Check.png"
                              SmallImageSource="pack://application:,,,/Icons/Check.png"/>
@@ -1824,7 +1837,7 @@
                         LargeImageSource="pack://application:,,,/Icons/dxf.png"
                         SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
                     <ribbon:RibbonButton Label="MGT出力"
-                        ToolTip="FEM解析モデルを midas Gen MGT テキスト形式でエクスポート"
+                        ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組み合わせを含む）"
                         Command="{Binding ExportMgtFileCommand}"
                         LargeImageSource="pack://application:,,,/Icons/mgtFile.png"
                         SmallImageSource="pack://application:,,,/Icons/mgtFile.png"/>

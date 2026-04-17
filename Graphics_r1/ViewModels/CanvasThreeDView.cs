@@ -148,7 +148,7 @@ namespace PileDesign.ViewModels
         }
 
         // 視点の初期設定
-        public void SetCt(ObservableCollection<Point3D> nodes)
+        public void SetCt(IList<Point3D> nodes)
         {
             if (nodes == null || nodes.Count == 0) return;
 

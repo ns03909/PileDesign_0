@@ -133,6 +133,11 @@ namespace PileDesign.Models
 
         private double PileCapFc { get; set; }
         private double PileCapEc { get; set; }
+
+        // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
+        // CSV テーブル読込・再計算は LoadFTCaps() と Update() を明示的に呼ぶこと。
+        public FTPile() { }
+
         // FTパイルクラスコンストラクタ
         public FTPile(double pileCapFc, double pileCapEc)
         {

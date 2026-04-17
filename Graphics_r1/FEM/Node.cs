@@ -10,6 +10,26 @@ using System.Windows.Media.Media3D;
 namespace PileDesign.FEM
 {
     /// <summary>
+    /// 3D 節点の 6 自由度インデックス。int に明示キャストすると MasterNodes[] / EquationNumber[] の
+    /// 添字として使える（値は 0-5）。
+    /// </summary>
+    public enum Dof
+    {
+        /// <summary>x 方向並進</summary>
+        Ux = 0,
+        /// <summary>y 方向並進</summary>
+        Uy = 1,
+        /// <summary>z 方向並進</summary>
+        Uz = 2,
+        /// <summary>x 軸まわり回転</summary>
+        Rx = 3,
+        /// <summary>y 軸まわり回転</summary>
+        Ry = 4,
+        /// <summary>z 軸まわり回転</summary>
+        Rz = 5,
+    }
+
+    /// <summary>
     /// チェーン解決済みDOF写像の1項。
     /// u_slave = Σ(Coeff × u[Eq]) として独立DOFへの線形写像を表現。
     /// </summary>
@@ -54,11 +74,27 @@ namespace PileDesign.FEM
         // マスター
         public Node[] MasterNodes { get; set; } = new Node[6];
 
+        /// <summary>
+        /// 指定 DOF のマスター節点を取得。未拘束なら null を返す。
+        /// 型安全な <see cref="Dof"/> 経由でアクセスするためのヘルパー。
+        /// </summary>
+        public Node GetMaster(Dof dof) => MasterNodes[(int)dof];
+
+        /// <summary>
+        /// 指定 DOF のマスター節点を設定する。null 指定で拘束解除。
+        /// </summary>
+        public void SetMaster(Dof dof, Node master) => MasterNodes[(int)dof] = master;
+
+        /// <summary>
+        /// 指定 DOF がマスター節点に拘束されているか。
+        /// </summary>
+        public bool HasMasterAt(Dof dof) => MasterNodes[(int)dof] != null;
+
         /// <summary>いずれかの自由度がマスター節点に拘束されているか</summary>
         [JsonIgnore]
-        public bool HasMasterSlave => MasterNodes[0] != null || MasterNodes[1] != null ||
-            MasterNodes[2] != null || MasterNodes[3] != null ||
-            MasterNodes[4] != null || MasterNodes[5] != null;
+        public bool HasMasterSlave => HasMasterAt(Dof.Ux) || HasMasterAt(Dof.Uy) ||
+            HasMasterAt(Dof.Uz) || HasMasterAt(Dof.Rx) ||
+            HasMasterAt(Dof.Ry) || HasMasterAt(Dof.Rz);
         public Vector3S SlaveArm { get; set; } = new(0, 0, 0);
 
         // 接点ばね
@@ -310,19 +346,19 @@ namespace PileDesign.FEM
 
             int e_num = EquationNumber[0];
 
-            if (MasterNodes[0] != null)
+            if (HasMasterAt(Dof.Ux))
             {
-                int e_num_x = MasterNodes[0].EquationNumber[0];
+                int e_num_x = GetMaster(Dof.Ux).EquationNumber[(int)Dof.Ux];
                 ddisp[0] = dd[e_num_x];
                 // 修正: crossIdxのマスターノードからcrossIdxの方程式番号を取得
-                if (MasterNodes[4] != null)
+                if (HasMasterAt(Dof.Ry))
                 {
-                    int e_num_yy = MasterNodes[4].EquationNumber[4];  // Ry contribution
+                    int e_num_yy = GetMaster(Dof.Ry).EquationNumber[(int)Dof.Ry];  // Ry contribution
                     ddisp[0] += dd[e_num_yy] * SlaveArm.Z;
                 }
-                if (MasterNodes[5] != null)
+                if (HasMasterAt(Dof.Rz))
                 {
-                    int e_num_zz = MasterNodes[5].EquationNumber[5];  // Rz contribution
+                    int e_num_zz = GetMaster(Dof.Rz).EquationNumber[(int)Dof.Rz];  // Rz contribution
                     ddisp[0] += dd[e_num_zz] * -SlaveArm.Y;
                 }
             }
@@ -337,20 +373,20 @@ namespace PileDesign.FEM
 
             e_num = EquationNumber[1];
 
-            if (MasterNodes[1] != null)
+            if (HasMasterAt(Dof.Uy))
             {
-                int e_num_y = MasterNodes[1].EquationNumber[1];
+                int e_num_y = GetMaster(Dof.Uy).EquationNumber[(int)Dof.Uy];
                 ddisp[1] += dd[e_num_y];
                 // 修正: crossIdxのマスターノードからcrossIdxの方程式番号を取得
-                if (MasterNodes[5] != null)
+                if (HasMasterAt(Dof.Rz))
                 {
-                    int e_num_zz = MasterNodes[5].EquationNumber[5];  // Rz contribution
+                    int e_num_zz = GetMaster(Dof.Rz).EquationNumber[(int)Dof.Rz];  // Rz contribution
                     ddisp[1] += dd[e_num_zz] * SlaveArm.X;
                 }
 
-                if (MasterNodes[3] != null)
+                if (HasMasterAt(Dof.Rx))
                 {
-                    int e_num_xx = MasterNodes[3].EquationNumber[3];  // Rx contribution
+                    int e_num_xx = GetMaster(Dof.Rx).EquationNumber[(int)Dof.Rx];  // Rx contribution
                     ddisp[1] += dd[e_num_xx] * -SlaveArm.Z;
                 }
             }
@@ -365,19 +401,19 @@ namespace PileDesign.FEM
             }
 
             e_num = EquationNumber[2];
-            if (MasterNodes[2] != null)
+            if (HasMasterAt(Dof.Uz))
             {
-                int e_num_z = MasterNodes[2].EquationNumber[2];
+                int e_num_z = GetMaster(Dof.Uz).EquationNumber[(int)Dof.Uz];
                 ddisp[2] += dd[e_num_z];
                 // 修正: crossIdxのマスターノードからcrossIdxの方程式番号を取得
-                if (MasterNodes[3] != null)
+                if (HasMasterAt(Dof.Rx))
                 {
-                    int e_num_xx = MasterNodes[3].EquationNumber[3];  // Rx contribution
+                    int e_num_xx = GetMaster(Dof.Rx).EquationNumber[(int)Dof.Rx];  // Rx contribution
                     ddisp[2] += dd[e_num_xx] * SlaveArm.Y;
                 }
-                if (MasterNodes[4] != null)
+                if (HasMasterAt(Dof.Ry))
                 {
-                    int e_num_yy = MasterNodes[4].EquationNumber[4];  // Ry contribution
+                    int e_num_yy = GetMaster(Dof.Ry).EquationNumber[(int)Dof.Ry];  // Ry contribution
                     ddisp[2] += dd[e_num_yy] * -SlaveArm.X;
                 }
             }
@@ -391,9 +427,9 @@ namespace PileDesign.FEM
             }
 
             e_num = EquationNumber[3];
-            if (MasterNodes[3] != null)
+            if (HasMasterAt(Dof.Rx))
             {
-                int e_num_xx = MasterNodes[3].EquationNumber[3];
+                int e_num_xx = GetMaster(Dof.Rx).EquationNumber[(int)Dof.Rx];
                 ddisp[3] = dd[e_num_xx];
             }
             else if (e_num >= 0)
@@ -406,9 +442,9 @@ namespace PileDesign.FEM
             }
 
             e_num = EquationNumber[4];
-            if (MasterNodes[4] != null)
+            if (HasMasterAt(Dof.Ry))
             {
-                int e_num_yy = MasterNodes[4].EquationNumber[4];
+                int e_num_yy = GetMaster(Dof.Ry).EquationNumber[(int)Dof.Ry];
                 ddisp[4] = dd[e_num_yy];
             }
             else if (e_num >= 0)
@@ -421,9 +457,9 @@ namespace PileDesign.FEM
             }
 
             e_num = EquationNumber[5];
-            if (MasterNodes[5] != null)
+            if (HasMasterAt(Dof.Rz))
             {
-                int e_num_zz = MasterNodes[5].EquationNumber[5];
+                int e_num_zz = GetMaster(Dof.Rz).EquationNumber[(int)Dof.Rz];
                 ddisp[5] = dd[e_num_zz];
             }
             else if (e_num >= 0)
@@ -526,21 +562,21 @@ namespace PileDesign.FEM
             Matrix<double> transferMatrix = Matrix<double>.Build.DenseIdentity(6);
 
             // Rx (index 3) がスレーブ → Uy, Uz に Rx からのクロス項
-            if (MasterNodes[3] != null)
+            if (HasMasterAt(Dof.Rx))
             {
                 transferMatrix[1, 3] = -GetSlaveArm(2);  // Uy += -Rx * ΔZ
                 transferMatrix[2, 3] = GetSlaveArm(1);   // Uz += Rx * ΔY
             }
 
             // Ry (index 4) がスレーブ → Ux, Uz に Ry からのクロス項
-            if (MasterNodes[4] != null)
+            if (HasMasterAt(Dof.Ry))
             {
                 transferMatrix[0, 4] = GetSlaveArm(2);   // Ux += Ry * ΔZ
                 transferMatrix[2, 4] = -GetSlaveArm(0);  // Uz += -Ry * ΔX
             }
 
             // Rz (index 5) がスレーブ → Ux, Uy に Rz からのクロス項
-            if (MasterNodes[5] != null)
+            if (HasMasterAt(Dof.Rz))
             {
                 transferMatrix[0, 5] = -GetSlaveArm(1);  // Ux += -Rz * ΔY
                 transferMatrix[1, 5] = GetSlaveArm(0);   // Uy += Rz * ΔX

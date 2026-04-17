@@ -3,6 +3,7 @@ using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
@@ -41,7 +42,7 @@ namespace PileDesign.Views
 
             ObservableCollection<PileBodySegment> pileBodySegments;
             PileBodyInput pileBody = viewModel.CurrentInputModel.PileBodies[pileLocation.PileBodyNo - 1];
-            var zs = new ObservableCollection<double>();
+            var zs = new List<double>();
 
             if (!viewModel.IsElementSplit) // 要素未分割の場合
             {
@@ -62,7 +63,7 @@ namespace PileDesign.Views
                 }
                 var soilPile = viewModel.CurrentInputModel.ElementDivision.SoilPiles[pileLocation.SoilPileAltNo - 1];
                 pileBodySegments = soilPile.PileBodySegments;
-                zs = new ObservableCollection<double>(soilPile.ZDataItems.Select(zDataItem => zDataItem.Z));
+                zs = soilPile.ZDataItems.Select(zDataItem => zDataItem.Z).ToList();
             }
 
             double x = pileLocation.Point3D.X;
@@ -71,7 +72,8 @@ namespace PileDesign.Views
             var pointT = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, zs[0]));
             var pointB = viewModel.CanvasThreeDView.Transformation(new Point3D(x, y, zs[^1]));
 
-            AddLineGeometry(pointT, pointB, viewModel.IsElementSplit ? viewModel.CanvasGeometry.PathGeoPileDividedElems : viewModel.CanvasGeometry.PathGeoPileElems);
+            if (viewModel.IsFoundationBeamVisible && viewModel.IsPileCenterLineVisible)
+                AddLineGeometry(pointT, pointB, viewModel.IsElementSplit ? viewModel.CanvasGeometry.PathGeoPileDividedElems : viewModel.CanvasGeometry.PathGeoPileElems);
 
             if (pileBodySegments.Count == 0) return;
 
@@ -97,8 +99,8 @@ namespace PileDesign.Views
 
                 AddEllipseGeometry(point2, point3, viewModel.IsElementSplit ? viewModel.CanvasGeometry.PathGeoPileDividedNonTopNodes : viewModel.CanvasGeometry.PathGeoPileNonTopNodes);
 
-                // 
-                if (viewModel.IsPileSectionVisible)
+                // 杭体形状（親: 梁形状）
+                if (viewModel.IsBeamElementSectionVisible && viewModel.IsPileSectionVisible)
                 {
                     double pileDia2D = pileBodySegments[i].PileSection.PileDiameter / 1000.0 * viewModel.CanvasThreeDView.Scale;///
                     double pileDia = pileBodySegments[i].PileSection.PileDiameter / 1000.0;
@@ -127,38 +129,37 @@ namespace PileDesign.Views
                         }
                     }
 
-                    //要素座標系
-                    if (viewModel.IsBeamLocalAxesVisible)
+                }
+
+                //要素座標系（親: 梁中心線）
+                if (viewModel.IsFoundationBeamVisible && viewModel.IsBeamLocalAxesVisible)
+                {
+                    double length = viewModel.LabelSize / 20.0;
+                    Point3D point3D0 = new(x, y, (zs[i] + zs[i + 1]) * 0.5); // 要素中心
+                    Matrix<double> t = Utils.GetNodeTransformMatrix(new Vector3D(0, 0, -1));
+                    var globalX = Vector<double>.Build.DenseOfArray([length, 0, 0]); // X軸方向
+                    var globalY = Vector<double>.Build.DenseOfArray([0, length, 0]); // Y軸方向
+                    var globalZ = Vector<double>.Build.DenseOfArray([0, 0, length]); // Z軸方向
+                    var localX = t.Transpose() * globalX;
+                    var localY = t.Transpose() * globalY;
+                    var localZ = t.Transpose() * globalZ;
+
+                    Point3D end3DX = new(point3D0.X + localX[0], point3D0.Y + localX[1], point3D0.Z + localX[2]);
+                    Point3D end3DY = new(point3D0.X + localY[0], point3D0.Y + localY[1], point3D0.Z + localY[2]);
+                    Point3D end3DZ = new(point3D0.X + localZ[0], point3D0.Y + localZ[1], point3D0.Z + localZ[2]);
+
+                    var axisPoints = new (Point3D start, Point3D end, Brush color, string name, PathGeometry pathGeometry)[]
                     {
-                        //double length = 0.01 * viewModel.CanvasThreeDView.Scale; // 軸の長さ
-                        double length = viewModel.LabelSize / 20.0;
-                        Point3D point3D0 = new(x, y, (zs[i] + zs[i + 1]) * 0.5); // 要素中心
-                        Matrix<double> t = Utils.GetNodeTransformMatrix(new Vector3D(0, 0, -1));
-                        var globalX = Vector<double>.Build.DenseOfArray([length, 0, 0]); // X軸方向
-                        var globalY = Vector<double>.Build.DenseOfArray([0, length, 0]); // Y軸方向
-                        var globalZ = Vector<double>.Build.DenseOfArray([0, 0, length]); // Z軸方向
-                        var localX = t.Transpose() * globalX;
-                        var localY = t.Transpose() * globalY;
-                        var localZ = t.Transpose() * globalZ;
-
-                        Point3D end3DX = new(point3D0.X + localX[0], point3D0.Y + localX[1], point3D0.Z + localX[2]);
-                        Point3D end3DY = new(point3D0.X + localY[0], point3D0.Y + localY[1], point3D0.Z + localY[2]);
-                        Point3D end3DZ = new(point3D0.X + localZ[0], point3D0.Y + localZ[1], point3D0.Z + localZ[2]);
-
-
-                        var axisPoints = new (Point3D start, Point3D end, Brush color, string name, PathGeometry pathGeometry)[]
-                        {
                         (point3D0, end3DX, Brushes.Red, "AxisX", viewModel.CanvasGeometry.PathGeoAxisX),
                         (point3D0, end3DY, Brushes.Green, "AxisY", viewModel.CanvasGeometry.PathGeoAxisY),
                         (point3D0, end3DZ, Brushes.Blue, "AxisZ", viewModel.CanvasGeometry.PathGeoAxisZ),
-                        };
+                    };
 
-                        foreach (var (start3D, end3D, color, name, pathGeometry) in axisPoints)
-                        {
-                            Point start = viewModel.CanvasThreeDView.Transformation(start3D);
-                            Point end = viewModel.CanvasThreeDView.Transformation(end3D);
-                            AddAxisLine3D(start, end, color, name, pathGeometry);
-                        }
+                    foreach (var (start3D, end3D, color, name, pathGeometry) in axisPoints)
+                    {
+                        Point start = viewModel.CanvasThreeDView.Transformation(start3D);
+                        Point end = viewModel.CanvasThreeDView.Transformation(end3D);
+                        AddAxisLine3D(start, end, color, name, pathGeometry);
                     }
                 }
             }
@@ -284,12 +285,15 @@ namespace PileDesign.Views
         }
 
         // 基礎梁描画の更新
-        private void UpdateFoundationBeams3D()
+        /// <summary>
+        /// 接続用節点（杭頭+ΔZc位置）と剛体連結線を描画します。
+        /// IsFoundationBeamVisible とは独立して、IsConnectingNodeVisible で制御されます。
+        /// </summary>
+        private void UpdateConnectingNodes3D()
         {
             if (Canvas3DLayout == null) return;
             if (DataContext is not MainWindowViewModel viewModel) return;
 
-            // 接続用節点を描画（杭頭+ΔZc位置） - 「節点」トグルで表示制御
             // VL/VL0/VLadd（Level=0）では代表節点・剛体連結線を非表示
             var selectedLC0 = LoadCases.GetLoadCase(
                 viewModel.CurrentInputModel?.LoadCasesInput?.AllLoadCases, viewModel.SelectedLoadCaseName);
@@ -318,6 +322,12 @@ namespace PileDesign.Views
                     viewModel.CanvasGeometry.PathGeoRigidConnections.AddGeometry(rigidLine);
                 }
             }
+        }
+
+        private void UpdateFoundationBeams3D()
+        {
+            if (Canvas3DLayout == null) return;
+            if (DataContext is not MainWindowViewModel viewModel) return;
 
             // 基礎梁要素・節点の描画（FoundationBeamInputが必要）
             if (viewModel.CurrentInputModel?.FoundationBeamInput == null) return;

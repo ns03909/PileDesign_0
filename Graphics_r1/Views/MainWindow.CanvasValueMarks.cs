@@ -353,22 +353,22 @@ namespace PileDesign.Views
                 DrawingVisual drawingVisual = new();
                 using (DrawingContext dc = drawingVisual.RenderOpen())
                 {
+                    double pixelsPerDip = VisualTreeHelper.GetDpi(Canvas3DLayout).PixelsPerDip;
+
                     foreach (var textBlockInfo in TextBlockInfos)
                     {
-                        var typeface = new Typeface(
-                            new FontFamily("Arial"),
-                            FontStyles.Normal,
-                            FontWeights.Normal,
-                            FontStretches.Normal);
+                        string text = textBlockInfo.Text ?? textBlockInfo.TextBlock?.Text ?? "";
+                        double fontSize = textBlockInfo.FontSize > 0 ? textBlockInfo.FontSize : textBlockInfo.TextBlock?.FontSize ?? 10;
+                        Brush foreground = textBlockInfo.Foreground ?? textBlockInfo.TextBlock?.Foreground ?? Brushes.Black;
 
                         FormattedText formattedText = new(
-                            textBlockInfo.TextBlock.Text,
+                            text,
                             System.Globalization.CultureInfo.CurrentCulture,
                             FlowDirection.LeftToRight,
-                            typeface,
-                            textBlockInfo.TextBlock.FontSize,
-                            textBlockInfo.TextBlock.Foreground,
-                            VisualTreeHelper.GetDpi(Canvas3DLayout).PixelsPerDip
+                            _cachedTypeface,
+                            fontSize,
+                            foreground,
+                            pixelsPerDip
                         );
                         dc.PushTransform(new ScaleTransform(1.0, textBlockInfo.ScaleY, textBlockInfo.X, textBlockInfo.Y));
                         dc.PushTransform(new RotateTransform(textBlockInfo.TextAngle, textBlockInfo.X, textBlockInfo.Y));

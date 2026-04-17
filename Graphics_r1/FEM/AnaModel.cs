@@ -1,4 +1,5 @@
 ﻿using MathNet.Numerics.LinearAlgebra;
+using PileDesign.Constants;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.Generic;
@@ -816,8 +817,8 @@ namespace PileDesign.FEM
                 int fNonZero = 0, tNonZero = 0;
                 for (int i = 0; i < CountFree; i++)
                 {
-                    if (Math.Abs(VectorF[i]) > 1e-10) fNonZero++;
-                    if (Math.Abs(VectorT[i]) > 1e-10) tNonZero++;
+                    if (Math.Abs(VectorF[i]) > NumericalConstants.NEAR_ZERO_EPSILON) fNonZero++;
+                    if (Math.Abs(VectorT[i]) > NumericalConstants.NEAR_ZERO_EPSILON) tNonZero++;
                 }
                 log.AppendLine($"F≠0のDOF数: {fNonZero}, T≠0のDOF数: {tNonZero}, 全自由度: {CountFree}");
 
@@ -883,7 +884,7 @@ namespace PileDesign.FEM
                         {
                             if (eqList[k] == eq) contrib += f_trans[k];
                         }
-                        if (Math.Abs(contrib) > 1e-10)
+                        if (Math.Abs(contrib) > NumericalConstants.NEAR_ZERO_EPSILON)
                         {
                             log.AppendLine($"    Beam[{beam.Name}]: T→{contrib:E4}");
                             beamTotal += contrib;
@@ -914,7 +915,7 @@ namespace PileDesign.FEM
                             {
                                 if (rsEq[k] == eq) contrib += rsF[k];
                             }
-                            if (Math.Abs(contrib) > 1e-10)
+                            if (Math.Abs(contrib) > NumericalConstants.NEAR_ZERO_EPSILON)
                             {
                                 // M-θ状態も出力
                                 double dRx = (rs.NodeJ.CumulativeDisp?.Rx ?? 0) - (rs.NodeI.CumulativeDisp?.Rx ?? 0);
@@ -939,7 +940,7 @@ namespace PileDesign.FEM
                         {
                             if (hsEq[k] == eq) contrib += hsF[k];
                         }
-                        if (Math.Abs(contrib) > 1e-10) hsTotal += contrib;
+                        if (Math.Abs(contrib) > NumericalConstants.NEAR_ZERO_EPSILON) hsTotal += contrib;
                     }
 
                     log.AppendLine($"    合計: Beam={beamTotal:E4}, RotSpring={rsTotal:E4}, SoilSpring={hsTotal:E4}, Sum={beamTotal + rsTotal + hsTotal:E4} vs T={t:E4}");

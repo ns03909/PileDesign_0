@@ -10,28 +10,28 @@
             <g clip-path="url(#_clip1)">
                 <g>
                     <g transform="matrix(1,0,0,1,38.480253,0.540942)">
-                        <path d="M242,722.784L242,828.134" style="fill:none;stroke:rgb(186,186,186);stroke-width:8.33px;stroke-dasharray:12.5,4.167,0,0,0,0;"/>
+                        <path d="M242,722.784L242,828.134" style="fill:none;stroke:rgb(186,186,186);stroke-width:8.33px;"/>
                     </g>
                     <g transform="matrix(1,0,0,1,19.240126,0.540942)">
-                        <path d="M242,722.784L242,828.134" style="fill:none;stroke:rgb(186,186,186);stroke-width:8.33px;stroke-dasharray:12.5,4.167,0,0,0,0;"/>
+                        <path d="M242,722.784L242,828.134" style="fill:none;stroke:rgb(186,186,186);stroke-width:8.33px;"/>
                     </g>
                     <g transform="matrix(1,0,0,1,57.720379,0.540942)">
-                        <path d="M242,722.784L242,828.134" style="fill:none;stroke:rgb(186,186,186);stroke-width:8.33px;stroke-dasharray:12.5,4.167,0,0,0,0;"/>
+                        <path d="M242,722.784L242,828.134" style="fill:none;stroke:rgb(186,186,186);stroke-width:8.33px;"/>
                     </g>
                     <g transform="matrix(1,0,0,1,0,-890)">
                         <g transform="matrix(1,0,0,1,7.6626,-2.132302)">
-                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;"/>
                         </g>
                         <g transform="matrix(1,0,0,1,7.6626,68.766452)">
-                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;"/>
                         </g>
                         <g transform="matrix(1.258838,0,0,1.258838,-52.992797,-329.942705)">
-                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:6.62px;stroke-linecap:square;stroke-dasharray:3.31,3.31,0,0,0,0;"/>
+                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:6.62px;stroke-linecap:square;"/>
                         </g>
                         <g transform="matrix(1.258838,0,0,1.258838,-52.992797,-327.497218)">
-                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:6.62px;stroke-linecap:square;stroke-dasharray:3.31,3.31,0,0,0,0;"/>
+                            <ellipse cx="234.337" cy="1623.109" rx="14.126" ry="6.13" style="fill:none;stroke:rgb(151,151,151);stroke-width:6.62px;stroke-linecap:square;"/>
                         </g>
-                        <path d="M227.874,1620.976L227.874,1691.875L224.217,1713.288" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+                        <path d="M227.874,1620.976L227.874,1691.875L224.217,1713.288" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;"/>
                         <g transform="matrix(0.745781,0,0,0.745781,-461.229345,1014.53891)">
                             <path d="M963.037,812.42C977.638,796.405 1002.974,797.394 1018,812.42" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;stroke-linecap:square;stroke-linejoin:miter;"/>
                         </g>
@@ -42,7 +42,7 @@
                             <circle cx="922.395" cy="817.998" r="5.578" style="fill:white;stroke:rgb(128,128,128);stroke-width:11.17px;stroke-linecap:square;stroke-linejoin:miter;"/>
                         </g>
                         <g transform="matrix(-1,0,0,1,484,0)">
-                            <path d="M227.874,1620.976L227.874,1691.875L224.217,1713.288" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;stroke-dasharray:4.167,4.167,0,0,0,0;"/>
+                            <path d="M227.874,1620.976L227.874,1691.875L224.217,1713.288" style="fill:none;stroke:rgb(151,151,151);stroke-width:8.33px;stroke-linecap:square;"/>
                         </g>
                     </g>
                     <g transform="matrix(1,0,0,0.093849,0,651.356042)">

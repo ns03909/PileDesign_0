@@ -29,9 +29,11 @@ namespace PileDesign.Models.InputData
         }
 
         // 深いコピーを作成するメソッド
+        // 以前は MemberwiseClone のみで Items（ObservableCollection）が共有されるバグがあった。
+        // JSON 往復で循環参照・ネスト要素ごと独立コピーを作成する。
         public DoatsuGoryokuBane DeepCopy()
         {
-            return (DoatsuGoryokuBane)this.MemberwiseClone();
+            return PileDesign.Common.DeepCopyUtil.CloneJson(this) ?? new DoatsuGoryokuBane();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using PileDesign.Common;
 using PileDesign.ViewModels;
+using System;
 using System.Windows;
 using System.Windows.Input;
 
@@ -10,10 +11,10 @@ namespace PileDesign.Views
     /// </summary>
     public partial class GraphWindow : Window
     {
+        private EventHandler _requestCloseHandler;
+
         public GraphWindow(GraphViewModel viewModel)
         {
-            // 必要なら mainWindowViewModel をフィールドに保存
-
             InitializeComponent();
             this.DataContext = viewModel;
             Loaded += (s, e) =>
@@ -25,7 +26,9 @@ namespace PileDesign.Views
                     vm.WpfPlot2 = wpfPlot2;
                     vm.WpfPlot3 = wpfPlot3;
                     vm.UpdateGraph(); // 初期表示
-                    vm.RequestClose += (sender, args) => this.Close(); // RequestCloseイベント
+
+                    _requestCloseHandler = (sender, args) => this.Close();
+                    vm.RequestClose += _requestCloseHandler;
 
                     // CSVエクスポートメニューを追加
                     PlotHelper.AddCsvExportMenu(wpfPlot, "解析結果");
@@ -46,11 +49,19 @@ namespace PileDesign.Views
                 }
             };
 
+            Closed += (s, e) =>
+            {
+                if (DataContext is GraphViewModel vm && _requestCloseHandler != null)
+                {
+                    vm.RequestClose -= _requestCloseHandler;
+                    _requestCloseHandler = null;
+                }
+            };
+
             GraphComboBox.SelectionChanged += (s, e) =>
             {
                 if (DataContext is GraphViewModel vm)
                 {
-                    // setter内でDispatcher経由のUpdateGraphが発火するため、ここでは呼ばない
                     vm.SelectedGraphOption = GraphComboBox.SelectedItem as string;
                 }
             };

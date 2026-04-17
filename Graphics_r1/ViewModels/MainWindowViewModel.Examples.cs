@@ -119,6 +119,9 @@ namespace PileDesign.ViewModels
             // ステータスバーの杭本数を更新（バッチ代入ではCollectionChangedが発火しないため）
             OnPropertyChanged(nameof(PileCountText));
 
+            // 集計値・OTM・重心を更新（バッチ代入ではPropertyChangedが発火しないため）
+            UpdateSumAndOTM();
+
             // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();
 
@@ -209,6 +212,9 @@ namespace PileDesign.ViewModels
 
             // ステータスバーの杭本数を更新（バッチ代入ではCollectionChangedが発火しないため）
             OnPropertyChanged(nameof(PileCountText));
+
+            // 集計値・OTM・重心を更新（バッチ代入ではPropertyChangedが発火しないため）
+            UpdateSumAndOTM();
 
             // 最終描画（UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない）
             UpdateWindowImmediate();

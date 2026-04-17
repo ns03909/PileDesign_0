@@ -9,9 +9,11 @@ using Material = PileDesign.FEM.Material;
 namespace PileDesign.Output
 {
     /// <summary>
-    /// FEM解析モデルを midas Gen MGT (テキスト) 形式でエクスポートする。
+    /// FEM解析モデルを midas iGen / Gen MGT (テキスト) 形式でエクスポートする。
+    /// 非線形地盤ばね（MULTI LINEAR）、慣性力（CONLOAD）、強制変位（SPDISP）、
+    /// 荷重組み合わせ（LOADCOMB, β1/β2/α1）を含む。
     /// </summary>
-    public class MgtExporter
+    public partial class MgtExporter
     {
         private readonly AnaModel _anaModel;
 
@@ -20,7 +22,25 @@ namespace PileDesign.Output
             _anaModel = anaModel ?? throw new ArgumentNullException(nameof(anaModel));
         }
 
-        public void Export(string filePath)
+        // 地盤境界節点のオフセット量（長さゼロのElasticLink回避のため）
+        private const double SoilNodeOffsetX = 1.0;
+        private const double SoilNodeOffsetY = 1.0;
+
+        /// <summary>
+        /// MGTエクスポート時の ID マッピング・節点分類等を保持するコンテキスト。
+        /// Export メソッド内で一度構築され、各 Write* メソッドに共有される。
+        /// </summary>
+        private sealed class ExportContext
+        {
+            public Dictionary<Node, int> NodeIdMap { get; init; }
+            public Dictionary<Material, int> MaterialIdMap { get; init; }
+            public Dictionary<Section, int> SectionIdMap { get; init; }
+            public HashSet<Node> SoilBoundaryNodes { get; init; }
+            public Dictionary<HorizontalSoilSpring, int> SpringFunctionIds { get; init; }
+            public Dictionary<HorizontalSoilSpring, int> SpringYNodeIds { get; init; }
+        }
+
+        private ExportContext BuildContext()
         {
             // ID マッピング構築
             var nodeIdMap = new Dictionary<Node, int>();
@@ -41,22 +61,89 @@ namespace PileDesign.Output
                     sectionIdMap[beam.Section] = secId++;
             }
 
-            using var writer = new StreamWriter(filePath, false, System.Text.Encoding.UTF8);
+            // 保護対象節点（オフセットしない節点）: 梁端点 + RigidBody master/slave + PenaltySpring端点
+            var protectedNodes = new HashSet<Node>(ReferenceEqualityComparer.Instance);
+            foreach (var beam in _anaModel.Beams)
+            {
+                if (beam.NodeI != null) protectedNodes.Add(beam.NodeI);
+                if (beam.NodeJ != null) protectedNodes.Add(beam.NodeJ);
+            }
+            if (_anaModel.RigidBodies != null)
+            {
+                foreach (var rb in _anaModel.RigidBodies)
+                {
+                    if (rb.MasterNode != null) protectedNodes.Add(rb.MasterNode);
+                    if (rb.SlaveNodes != null)
+                        foreach (var s in rb.SlaveNodes)
+                            if (s != null) protectedNodes.Add(s);
+                }
+            }
+            if (_anaModel.PenaltySprings != null)
+            {
+                foreach (var s in _anaModel.PenaltySprings)
+                {
+                    if (s.NodeI != null) protectedNodes.Add(s.NodeI);
+                    if (s.NodeJ != null) protectedNodes.Add(s.NodeJ);
+                }
+            }
+
+            // 地盤境界節点: 水平地盤ばねのNodeJで保護対象でないもの
+            var soilBoundaryNodes = new HashSet<Node>(ReferenceEqualityComparer.Instance);
+            if (_anaModel.HorizontalSoilSprings != null)
+                foreach (var s in _anaModel.HorizontalSoilSprings)
+                    if (s.NodeJ != null && !protectedNodes.Contains(s.NodeJ)) soilBoundaryNodes.Add(s.NodeJ);
+
+            // 各水平地盤ばねに対してFUNCTION IDを割り当て（MULTI LINEAR用）
+            var springFunctionIds = new Dictionary<HorizontalSoilSpring, int>(ReferenceEqualityComparer.Instance);
+            int nextFuncId = 1;
+            if (_anaModel.HorizontalSoilSprings != null)
+            {
+                foreach (var spring in _anaModel.HorizontalSoilSprings)
+                {
+                    if (spring.NodeI == null || spring.NodeJ == null) continue;
+                    springFunctionIds[spring] = nextFuncId++;
+                }
+            }
+
+            // Y方向用の仮想地盤節点（Y方向解析が完了している場合のみ）
+            var springYNodeIds = new Dictionary<HorizontalSoilSpring, int>(ReferenceEqualityComparer.Instance);
+            if (HasYDirectionAnalysis() && _anaModel.HorizontalSoilSprings != null)
+            {
+                foreach (var spring in _anaModel.HorizontalSoilSprings)
+                {
+                    if (spring.NodeI == null || spring.NodeJ == null) continue;
+                    springYNodeIds[spring] = nodeId++;
+                }
+            }
+
+            return new ExportContext
+            {
+                NodeIdMap = nodeIdMap,
+                MaterialIdMap = materialIdMap,
+                SectionIdMap = sectionIdMap,
+                SoilBoundaryNodes = soilBoundaryNodes,
+                SpringFunctionIds = springFunctionIds,
+                SpringYNodeIds = springYNodeIds,
+            };
+        }
+
+        public void Export(string filePath)
+        {
+            var ctx = BuildContext();
+
+            using var writer = new StreamWriter(filePath, false, new System.Text.UTF8Encoding(false));
 
             WriteHeader(writer);
             WriteUnit(writer);
-            WriteNodes(writer, nodeIdMap);
-            WriteMaterials(writer, materialIdMap);
-            WriteSections(writer, sectionIdMap, materialIdMap);
-            WriteElements(writer, nodeIdMap, materialIdMap, sectionIdMap);
-            WriteElasticLinks(writer, nodeIdMap);
-            WriteConstraints(writer, nodeIdMap);
-            WriteRigidLinks(writer, nodeIdMap);
-
-            // 非線形曲線データ（コメント形式）
-            WriteNonlinearSoilCurves(writer, nodeIdMap);
-            WriteNonlinearRotationalCurves(writer, nodeIdMap);
-            WriteBeamMPhiCurves(writer, nodeIdMap);
+            WriteNodes(writer, ctx);
+            WriteMaterials(writer, ctx);
+            WriteSections(writer, ctx);
+            WriteElements(writer, ctx);
+            WriteForcesDeformationFunction(writer, ctx);
+            WriteElasticLinks(writer, ctx);
+            WriteConstraints(writer, ctx);
+            WriteRigidLinks(writer, ctx);
+            WriteLoadCases(writer, ctx);
 
             writer.WriteLine("*ENDDATA");
         }
@@ -81,254 +168,21 @@ namespace PileDesign.Output
             writer.WriteLine();
         }
 
-        private static void WriteNodes(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
+        /// <summary>Y方向荷重解析が実施されているかを判定</summary>
+        private bool HasYDirectionAnalysis()
         {
-            writer.WriteLine("*NODE    ; Nodes");
-            writer.WriteLine("; iNO, X, Y, Z");
-            foreach (var (node, id) in nodeIdMap)
+            if (_anaModel.AnalysisStepResults == null) return false;
+            foreach (var result in _anaModel.AnalysisStepResults)
             {
-                writer.WriteLine($"   {id,5}, {node.Coord.X}, {node.Coord.Y}, {node.Coord.Z}");
+                var lc = result.LoadCase;
+                if (lc == null) continue;
+                double angleRad = lc.LoadAngle * Math.PI / 180.0;
+                if (Math.Abs(Math.Sin(angleRad)) > 1e-3) return true;
             }
-            writer.WriteLine();
+            return false;
         }
 
-        private static void WriteMaterials(StreamWriter writer, Dictionary<Material, int> materialIdMap)
-        {
-            writer.WriteLine("*MATERIAL    ; Material");
-            foreach (var (material, id) in materialIdMap)
-            {
-                string name = $"Mat{id}";
-                writer.WriteLine($"   {id}, STEEL, {name}, 0, 0, , C, NO, 0.02, 1");
-                writer.WriteLine($"   , YES, {material.E:E6}, {material.P:F4}, 1.200E-005, 7.698E+001");
-            }
-            writer.WriteLine();
-        }
 
-        private static void WriteSections(StreamWriter writer, Dictionary<Section, int> sectionIdMap, Dictionary<Material, int> materialIdMap)
-        {
-            writer.WriteLine("*SECTION    ; Section");
-            foreach (var (section, id) in sectionIdMap)
-            {
-                // DBUSER + SR形式 (1行): iSEC, DBUSER, SNAME, CC, 0,0,0,0,0,0, YES, NO, SR, 2, D1..D10
-                // D1=杭径相当の代表寸法, D2～D10=0
-                string name = $"Sec{id}";
-                double reprDim = Math.Sqrt(section.AX / Math.PI) * 2; // 断面積から直径を推定
-                writer.WriteLine($"   {id,3}, DBUSER    , {name,-18}, CC, 0, 0, 0, 0, 0, 0, YES, NO, SR , 2, {reprDim:G6}, 0, 0, 0, 0, 0, 0, 0, 0, 0");
-            }
-            writer.WriteLine();
-        }
 
-        private void WriteElements(StreamWriter writer, Dictionary<Node, int> nodeIdMap,
-            Dictionary<Material, int> materialIdMap, Dictionary<Section, int> sectionIdMap)
-        {
-            writer.WriteLine("*ELEMENT    ; Elements");
-            writer.WriteLine("; iEL, TYPE, iMAT, iPRO, iN1, iN2, ANGLE, iSUB");
-            int elemId = 1;
-            foreach (var beam in _anaModel.Beams)
-            {
-                if (beam.Section == null || beam.Section.Material == null) continue;
-                if (!nodeIdMap.TryGetValue(beam.NodeI, out int nodeI)) continue;
-                if (!nodeIdMap.TryGetValue(beam.NodeJ, out int nodeJ)) continue;
-                if (!materialIdMap.TryGetValue(beam.Section.Material, out int mId)) continue;
-                if (!sectionIdMap.TryGetValue(beam.Section, out int sId)) continue;
-
-                writer.WriteLine($"   {elemId,5}, BEAM  , {mId,4}, {sId,5}, {nodeI,5}, {nodeJ,5}, {0,5}, {0,5}");
-                elemId++;
-            }
-            writer.WriteLine();
-        }
-
-        private void WriteElasticLinks(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            // HorizontalSoilSprings + PenaltySprings をエラスティックリンク要素として出力
-            var allSprings = new List<HorizontalSoilSpring>();
-            if (_anaModel.HorizontalSoilSprings != null)
-                allSprings.AddRange(_anaModel.HorizontalSoilSprings);
-            if (_anaModel.PenaltySprings != null)
-                allSprings.AddRange(_anaModel.PenaltySprings);
-
-            if (allSprings.Count == 0) return;
-
-            writer.WriteLine("*ELASTICLINK    ; Elastic Link");
-            writer.WriteLine("; iNO, iNODE1, iNODE2, LINK, ANGLE, R_SDx, R_SDy, R_SDz, R_SRx, R_SRy, R_SRz, SDx, SDy, SDz, SRx, SRy, SRz, bSHEAR, DRy, DRz, GROUP");
-            int linkId = 1;
-            foreach (var spring in allSprings)
-            {
-                if (spring.NodeI == null || spring.NodeJ == null) continue;
-                if (!nodeIdMap.TryGetValue(spring.NodeI, out int nodeI)) continue;
-                if (!nodeIdMap.TryGetValue(spring.NodeJ, out int nodeJ)) continue;
-
-                var ke = spring.KeTan;
-                if (ke == null) continue;
-
-                double kx = ke[0, 0];
-                double ky = ke[1, 1];
-                double kz = ke[2, 2];
-                double kRx = ke[3, 3];
-                double kRy = ke[4, 4];
-                double kRz = ke[5, 5];
-
-                // GEN形式: iNO, iNODE1, iNODE2, GEN, ANGLE, R_SDx..R_SRz(6), SDx..SRz(6), bSHEAR, DRy, DRz, GROUP
-                // R_SD/R_SR: YES=拘束あり, NO=拘束なし（ばね剛性が0でなければYES）
-                string rDx = kx > 0 ? "YES" : "NO";
-                string rDy = ky > 0 ? "YES" : "NO";
-                string rDz = kz > 0 ? "YES" : "NO";
-                string rRx = kRx > 0 ? "YES" : "NO";
-                string rRy = kRy > 0 ? "YES" : "NO";
-                string rRz = kRz > 0 ? "YES" : "NO";
-                writer.WriteLine($"   {linkId,5}, {nodeI,5}, {nodeJ,5}, GEN, 0, {rDx}, {rDy}, {rDz}, {rRx}, {rRy}, {rRz}, {kx:E4}, {ky:E4}, {kz:E4}, {kRx:E4}, {kRy:E4}, {kRz:E4}, NO, 0, 0, ");
-                linkId++;
-            }
-            writer.WriteLine();
-        }
-
-        private void WriteConstraints(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            writer.WriteLine("*CONSTRAINT    ; Supports");
-            writer.WriteLine("; NODE_LIST, CONST(Dx,Dy,Dz,Rx,Ry,Rz), GROUP");
-            foreach (var (node, id) in nodeIdMap)
-            {
-                char[] dofCode = new char[6];
-                bool hasConstraint = false;
-                for (int i = 0; i < 6; i++)
-                {
-                    bool isFixed = node.GetBoundary(i);
-                    bool isSlave = node.MasterNodes[i] != null;
-                    if (isFixed && !isSlave)
-                    {
-                        dofCode[i] = '1';
-                        hasConstraint = true;
-                    }
-                    else
-                    {
-                        dofCode[i] = '0';
-                    }
-                }
-
-                if (hasConstraint)
-                {
-                    writer.WriteLine($"   {id}, {new string(dofCode)}, ");
-                }
-            }
-            writer.WriteLine();
-        }
-
-        private void WriteRigidLinks(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            if (_anaModel.RigidBodies == null || _anaModel.RigidBodies.Count == 0) return;
-
-            writer.WriteLine("*RIGIDLINK    ; Rigid Link");
-            writer.WriteLine("; M-NODE, DOF, S-NODE LIST, GROUP");
-            foreach (var rb in _anaModel.RigidBodies)
-            {
-                if (rb.MasterNode == null || rb.SlaveNodes == null) continue;
-                if (!nodeIdMap.TryGetValue(rb.MasterNode, out int masterId)) continue;
-
-                string dofStr = string.Concat(rb.Dofs.Select(d => d ? "1" : "0"));
-
-                // スレーブノードをカンマ区切りリストで出力
-                var slaveIds = new List<string>();
-                foreach (var slave in rb.SlaveNodes)
-                {
-                    if (slave == null) continue;
-                    if (nodeIdMap.TryGetValue(slave, out int slaveId))
-                        slaveIds.Add(slaveId.ToString());
-                }
-                if (slaveIds.Count > 0)
-                {
-                    writer.WriteLine($" {masterId}, {dofStr}, {string.Join(" ", slaveIds)}, ");
-                }
-            }
-            writer.WriteLine();
-        }
-
-        // ─── 非線形曲線データ（コメント形式で参考出力） ──────────────────────────
-
-        private static readonly double[] SoilDisplacementSamples =
-        [
-            0, 0.0001, 0.0005, 0.001, 0.002, 0.005,
-            0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5
-        ];
-
-        private void WriteNonlinearSoilCurves(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            if (_anaModel.HorizontalSoilSprings == null || _anaModel.HorizontalSoilSprings.Count == 0) return;
-
-            var soilReactionByNode = new Dictionary<Node, HorizontalSoilReactionItem>();
-            foreach (var beam in _anaModel.Beams)
-            {
-                if (beam.HorizontalSoilReactionItem == null) continue;
-                if (beam.NodeI != null && !soilReactionByNode.ContainsKey(beam.NodeI))
-                    soilReactionByNode[beam.NodeI] = beam.HorizontalSoilReactionItem;
-                if (beam.NodeJ != null && !soilReactionByNode.ContainsKey(beam.NodeJ))
-                    soilReactionByNode[beam.NodeJ] = beam.HorizontalSoilReactionItem;
-            }
-
-            bool headerWritten = false;
-            foreach (var spring in _anaModel.HorizontalSoilSprings)
-            {
-                if (spring.NodeI == null || spring.NodeJ == null) continue;
-                if (!soilReactionByNode.TryGetValue(spring.NodeI, out var reaction)) continue;
-                if (!nodeIdMap.TryGetValue(spring.NodeI, out int nI)) continue;
-                if (!nodeIdMap.TryGetValue(spring.NodeJ, out int nJ)) continue;
-
-                if (!headerWritten)
-                {
-                    writer.WriteLine();
-                    writer.WriteLine("; ==== NONLINEAR SOIL SPRING CURVES ====");
-                    headerWritten = true;
-                }
-
-                string layerName = reaction.Name ?? reaction.SoilType ?? "Unknown";
-                double kh0 = reaction.Kh0;
-                double pyTop = reaction.PyFrontTop;
-
-                writer.WriteLine($"; Spring NodeI={nI}, NodeJ={nJ}, Layer={layerName}");
-                writer.WriteLine($"; Kh0={kh0:F1} kN/m3, PyFrontTop={pyTop:F1} kN/m2");
-                writer.WriteLine();
-            }
-        }
-
-        private void WriteNonlinearRotationalCurves(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            if (_anaModel.RotationalSprings == null || _anaModel.RotationalSprings.Count == 0) return;
-
-            writer.WriteLine();
-            writer.WriteLine("; ==== ROTATIONAL SPRING (M-theta) CURVES ====");
-            foreach (var rspring in _anaModel.RotationalSprings)
-            {
-                if (rspring.NodeI == null || rspring.NodeJ == null) continue;
-                if (!nodeIdMap.TryGetValue(rspring.NodeI, out int nI)) continue;
-                if (!nodeIdMap.TryGetValue(rspring.NodeJ, out int nJ)) continue;
-
-                writer.WriteLine($"; RotationalSpring NodeI={nI}, NodeJ={nJ}, Name={rspring.Name}");
-                writer.WriteLine($"; Ktheta={rspring.Ktheta:E3}, KthetaXY={rspring.KthetaXY:E3}");
-                writer.WriteLine();
-            }
-        }
-
-        private void WriteBeamMPhiCurves(StreamWriter writer, Dictionary<Node, int> nodeIdMap)
-        {
-            bool headerWritten = false;
-            int elemId = 0;
-            foreach (var beam in _anaModel.Beams)
-            {
-                elemId++;
-                var curve = beam.ResolvedCombinedCurve;
-                if (curve == null) continue;
-
-                if (!headerWritten)
-                {
-                    writer.WriteLine();
-                    writer.WriteLine("; ==== BEAM M-PHI CURVES ====");
-                    headerWritten = true;
-                }
-
-                writer.WriteLine($"; Element {elemId}: {beam.Name}");
-                writer.WriteLine($"; Curvature(1/m), Moment(kN*m)");
-                writer.WriteLine($"; InitialCurveTangent={beam.InitialCurveTangent:E6}");
-                writer.WriteLine();
-            }
-        }
     }
 }

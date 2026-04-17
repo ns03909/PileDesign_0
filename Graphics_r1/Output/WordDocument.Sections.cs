@@ -1,0 +1,789 @@
+using DocumentFormat.OpenXml.Wordprocessing;
+using PileDesign.Models.InputData;
+using System.Collections.Generic;
+using System.Linq;
+using Body = DocumentFormat.OpenXml.Wordprocessing.Body;
+
+namespace PileDesign.Output
+{
+    // 各種理論解説セクション（鉛直支持力・沈下・水平抵抗・部材性能・液状化・地盤変位）を提供する partial。
+    internal partial class WordDocument
+    {
+        private static void AddSectionVerticalResistance(Body body)
+        {
+            AddHeader1(body, "杭の支持力検討", 2);
+
+            AddText(body,
+                "杭の鉛直支持力は、「基礎指針'19」6.2節、引抜き抵抗力は「基礎指針'19」6.5節による。");
+
+            AddText(body, "極限鉛直支持力", "left");
+            AddEq(body, @"R_{u} = R_{p} + R_{f}");
+            //AddEquation_Ru(body);
+
+            AddText(body, "極限先端支持力", "left");
+            //AddEquation_Rp(body);
+            AddEq(body, @"R_{p} = q_{p} A");
+
+            AddText(body, "極限周面支持力", "left");
+            //AddEquation_Rf(body);
+            AddEq(body, @"R_{f} = R_{fs} + R_{fc}");
+
+            AddText(body, "砂質土部分の周面抵抗力", "left");
+            //AddEquation_Rfs(body);
+            AddEq(body, @"R_{fs} = \tau_{fs} L_{s} \psi");
+
+            AddText(body, "粘性土部分の周面抵抗力", "left");
+            //AddEquation_Rfc(body);
+            AddEq(body, @"R_{fc} = \tau_{fc} L_{c} \psi");
+
+            AddText(body, "使用限界支持力", "left");
+            //AddEquation_Rd_SLS(body);
+            AddEq(body, @"R_{d} = \phi_{R} R_{u} = \frac{1}{3} R_{u}");
+
+            AddText(body, "損傷限界支持力", "left");
+            //AddEquation_Rd_DLS(body);
+            AddEq(body, @"R_{d} = \phi_{R} R_{u} = \frac{1}{1.5} R_{u}");
+
+            AddText(body, "終局限界支持力", "left");
+            //AddEquation_Rd_ULS(body);
+            AddEq(body, @"R_{d} = \phi_{R} R_{u} = \frac{1}{1} R_{u}");
+
+
+
+            AddText(body, "最大引抜き抵抗力", "left");
+            //AddEquation_RTU(body);
+            AddEq(body, @"R_{TU} = \left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+
+            AddText(body, "残留引抜き抵抗力", "left");
+            //AddEquation_RTR(body);
+            AddEq(body, @"R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+
+            AddText(body, "降伏引抜き抵抗力", "left");
+            //AddEquation_RTY(body);
+            AddEq(body, @"R_{TY} = \frac{2}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+
+            AddText(body, "砂質土の引抜き時の最大周面抵抗力", "left");
+            //AddEquation_TauSti(body);
+            AddEq(body, @"\tau_{sti} = \frac{2}{3}\tau_{si}");
+
+            AddText(body, "粘性土の引抜き時の最大周面抵抗力", "left");
+            //AddEquation_TauCti(body);
+            AddEq(body, @"\tau_{cti} = \frac{4}{5}\tau_{ci}");
+
+            AddText(body, "使用限界引抜力", "left");
+            //AddEquation_Rdt_SLS(body);
+            AddEq(body, @"R_{d} = \phi_{R} R_{TU} = \frac{1}{3} R_{TU} = \frac{1}{3}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + \frac{1}{3}W");
+
+            AddText(body, "損傷限界引抜力", "left");
+            //AddEquation_Rdt_DLS(body);
+            AddEq(body, @"R_{d} = \phi_{R} R_{TY} = \frac{1}{3} R_{TY} = \frac{2}{9}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + \frac{1}{3}W");
+
+            AddText(body, "終局限界引抜力", "left");
+            //AddEquation_Rdt_ULS(body);
+            AddEq(body, @"R_{d} = \phi_{R} R_{TR} = R_{TR} = \frac{1}{1.2}\left(\tau_{sti} L_{si} + \tau_{cti} L_{ci}\right) + W");
+
+        }
+
+        // 沈下量の節
+        private void AddSectionSettlement(Body body)
+        {
+            AddHeader1(body, "杭の沈下検討");
+
+
+            AddInlineMathParagraph(body, ["杭の沈下は、「基礎指針'19」6.3節による。" +
+                "単杭の沈下量は、同節の荷重伝達解析モデルにより求め、" +
+                "群杭の沈下量は、等価荷重面を用いたスタインブレナーの近似解（「基礎指針'19」5.3節）を用いて求める。"]);
+
+            AddText(body, "単杭の先端抵抗-沈下量関係");
+            //AddEquation_PileSettlement(body);
+            AddEq(body, @"\frac{S_{p}/d_{p}}{0.1} = \alpha \frac{R_{p}/A_{p}}{(R_{p}/A_{p})_{u}} + (1-\alpha)\left(\frac{R_{p}/A_{p}}{(R_{p}/A_{p})_{u}}\right)^{n}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\S_{p}"), ": 杭先端沈下量[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\d_{p}"), ": 杭先端直径[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\R_{p}"), ": 杭先端荷重[kN]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\A_{p}"), ": 杭先端断面積[m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\left(\frac{R_{p}}{A_{p}}\right)_{u}"), ": 極限先端支持力[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\alpha"), ": 曲線の初期接線勾配"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"n"), ": 曲線形状を決定する次数"]);
+
+            AddText(body, "単杭の周面抵抗力度-沈下量関係");
+
+            AddTrilinearCircumResistanceTable(body);
+
+            AddText(body, "スタインブレナーの解による成層多層地盤の即時沈下量");
+            //AddEquation_SettlementDeltaSE(body);
+            AddEq(body, @"\Delta S_{E} = S_{E} - S_{E}' = q \frac{B}{E_{S}} I_{S}");
+            //AddEquation_SettlementDeltaIS(body);
+            AddEq(body, @"I_{S} = \left(1-\nu_{s}^{2}\right)F_{1}+\left(1-\nu_{s}-2\nu_{s}^{2}\right)F_{2}");
+
+            //AddEquation_SettlementF1(body);
+            AddEq(body, @"
+            F_{1} = \frac{1}{\pi}\left[
+                l\log_{e}\frac
+                {\left(1+\sqrt{l^{2}+1}\right)\sqrt{l^{2}+d^{2}}}
+                {l\left(1+\sqrt{l^{2}+d^{2}+1}\right)}
+                + \log_{e}\frac
+                {\left(1+\sqrt{l^{2}+1}\right)\sqrt{l^{2}+d^{2}}}
+                {l+\\sqrt{l^{2}+d^{2}+1}}
+            \right]");
+            //AddEquation_SettlementF2(body);
+            AddEq(body, @"F_{2} = \frac{d}{2\pi}\tan^{-1}\left(\frac{l}{d+\sqrt{l^{2}+d^{2}+1}}\right)");
+            //AddEquation_SettlementSE(body);
+            AddEq(body, @"S_{E} = \left[\frac{I_{s}(H_{1},\nu_{s1})}{E_{s1}} + \sum_{k=2}^{n} {\frac{I_{s}(H_{k},\nu_{sk}) - I_{s}(H_{k-1},\nu_{sk})}{E_{sk}}} \right] qB");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\S_{E}"), ": 隅角部の即時沈下量"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\I_{s}\left(H_{k},\nu_{sk}\right)"), ": 層厚", Tex(@"\H_{k}"), "ポアソン比", Tex(@"\nu_{sk}"), "の地盤における沈下係数"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\E_{s}"), ": 地盤の変形係数（kN/m<^2>）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\nu_{sk}"), ": ポアソン比"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"q"), ": 基礎に作用する荷重度（kN/m<^2>）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"B"), ": 基礎の短辺長さ（m）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"L"), ": 基礎の長辺長さ（m）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"l"), ": 基礎の長辺長さ／短辺長さ"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\H_{k}"), ": 地表面から", Tex(@"k"), "層下端までの距離"]);
+        }
+
+        // 水平抵抗の節
+        private void AddSectionHorizontalResistance(Body body)
+        {
+            AddHeader1(body, "杭の水平抵抗");
+
+            AddInlineMathParagraph(body, ["杭の水平抵抗は、「基礎指針'19」6.6節による。"]);
+
+            AddInlineMathParagraph(body, ["群杭フレームモデル"]);
+
+            // Word の正式な番号付きリストとして追加
+            //AddList(body, new[]
+            //{
+            //    "慣性力の作用点、各杭頭は剛体として連結する。根入部がある場合は、根入部も剛体として連結する。",
+            //    "地盤条件および杭径と群杭硬化を考慮して各杭、各深度の水平地盤反力係数を設定し、杭径と支配区間長を乗じて水平地盤ばねを求める。液状化を生じる場合は水平地盤反力係数を低減する。",
+            //    "基礎根入れ部がある場合は、土圧合力ばねを設定する。",
+            //    "上部、基礎の慣性力を設定する。",
+            //    "転倒モーメントは、各杭に軸力として与えて入力する。",
+            //    "各杭位置における杭頭軸力から杭の変形性能を設定する。",
+            //    "地震時地盤変位を設定する。",
+            //    "水平地盤反力の非線形性および杭体の非線形性を考慮して、杭頭水平力および地震時地盤変位を同時に作用させ、杭応力を評価する。"
+            //}, 2);
+
+            var connectionMode = inputModel.FoundationBeamInput?.ConnectionMode ?? FoundationBeamConnectionMode.RigidBody;
+            if (connectionMode == FoundationBeamConnectionMode.RigidBody)
+            {
+                AddInlineMathParagraph(body, ["① 慣性力の作用点、各杭頭は剛体として連結する（全6自由度拘束）。" +
+                    "根入部がある場合は、根入部も剛体として連結する。"]);
+            }
+            else
+            {
+                AddInlineMathParagraph(body, ["① 慣性力の作用点、各杭頭は水平面内で剛床として連結する" +
+                    "（$U_x, U_y, R_z$拘束、$U_z, R_x, R_y$自由）。" +
+                    "鉛直方向および水平軸まわりの回転は一般梁要素の剛性により負担する。" +
+                    "根入部がある場合は、根入部も剛体として連結する。"]);
+            }
+            AddInlineMathParagraph(body, ["② 地盤条件および杭径と群杭硬化を考慮して各杭、" +
+                "各深度の水平地盤反力係数を設定し、" +
+                "杭径と支配区間長を乗じて水平地盤ばねを求める。" +
+                "液状化を生じる場合は水平地盤反力係数を低減する。"]);
+            AddInlineMathParagraph(body, ["③ 基礎根入れ部がある場合は、土圧合力ばねを設定する。"]);
+            AddInlineMathParagraph(body, ["④ 上部、基礎の慣性力を設定する。"]);
+            AddInlineMathParagraph(body, ["⑤ 転倒モーメントは、各杭に軸力として与えて入力する。"]);
+            AddInlineMathParagraph(body, ["⑥ 各杭位置における杭頭軸力から杭の変形性能を設定する。"]);
+            AddInlineMathParagraph(body, ["⑦ 地震時地盤変位を設定する。"]);
+            AddInlineMathParagraph(body, ["⑧ 水平地盤反力の非線形性および杭体の非線形性を考慮して、杭頭水平力および" +
+                "地震時地盤変位を同時に作用させ、杭応力を評価する。"]);
+
+            AddText(body, "水平地盤反力係数", "left");
+            AddEquationP(body);
+
+            AddText(body, "0m≦$y$≦0.001m", "left");
+
+            AddEquationKh_1(body);
+
+            AddText(body, "0.001m≦$y$", "left");
+            AddEquationKh_2(body);
+
+            AddText(body, "基準水平地盤反力係数", "left");
+            AddEquation_kh0(body);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKh() =>
+            //    Tex(@"\k_{h}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKh0() =>
+            //    Tex(@"\k_{h0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathAlpha() =>
+            //    Tex(@"\alpha");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathB0() =>
+            //    Tex(@"\B_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathE0() =>
+            //    Tex(@"\E_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathGsi() =>
+            //    Tex(@"\xi");
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\k_{h}"), ": 水平地盤反力係数"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\k_{h0}"), ": 基準水平地盤反力係数"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\alpha"), ": 80m<^-1>"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\B_{0}"), ": 0.01m"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\E_{0}"), ": 基準水平地盤反力係数を評価するための地盤の変形係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\xi"), ": 基準水平地盤反力係数に群杭の影響を考慮する係数"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPySand() =>
+            //    Tex(@"\p_{y} = \kappa K_{p}\sigma_{z}'");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKappaFront() =>
+            //    Tex(@"\kappa = 3");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKappaRear() =>
+            //    Tex(@"\kappa = \min\left(0.55 - 0.007\phi, \frac{R}{B} - 1.0, 0.4\right)");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathMu1() =>
+            //    Tex(@"\mu = 1.4");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathMu2() =>
+            //    Tex(@"\mu = 0.6\left(\dfrac{R}{B}\right) - 0.4");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathLambda1() =>
+            //    Tex(@"\lambda = 9.0");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathLambda2() =>
+            //    Tex(@"\lambda = 3.0\left(\dfrac{R}{B}\right)");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRonBRange1() =>
+            //    Tex(@"\frac{R}{B} \ge 3.0");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRonBRange2() =>
+            //    Tex(@"\frac{R}{B} < 3.0");
+
+            AddText(body, "砂質土の塑性水平地盤反力係数", "left");
+
+            AddInlineMathParagraph(body, [Tex(@"\p_{y} = \kappa K_{p}\sigma_{z}'")]);
+
+            AddText(body, "受働土圧係数", "left");
+            AddEquation_Kp(body);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["単杭および前方杭の場合:", Tex(@"\kappa = 3")]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["後方杭の場合:", Tex(@"\kappa = \min\left(0.55 - 0.007\phi, \frac{R}{B} - 1.0, 0.4\right)")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, ["単杭および前方杭の場合:", Tex(@"\mu = 1.4"), ",", Tex(@"\lambda = 9.0")]);
+            AddInlineMathParagraph(body, ["後方杭で", Tex(@"\frac{R}{B} \ge 3.0"), "の場合　:",
+                Tex(@"\mu = 1.4"), ",", Tex(@"\lambda = 9.0")]);
+            AddInlineMathParagraph(body, ["後方杭で", Tex(@"\frac{R}{B} < 3.0"), "の場合　:",
+                Tex(@"\mu = 0.6\left(\dfrac{R}{B}\right) - 0.4"), ",", Tex(@"\lambda = 3.0\left(\dfrac{R}{B}\right)")]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPyClayRange1() =>
+            //    Tex(@"\frac{z}{B} \le 2.5");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPyClayRange2() =>
+            //    Tex(@"\frac{z}{B} > 2.5");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPyClay1() =>
+            //    Tex(@"\p_{y} = 2 \left[ 1 + \mu \frac{z}{B} \right] c_u");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPyClay2() =>
+            //    Tex(@"\p_{y} = \lambda c_u");
+
+            AddText(body, "粘性土の塑性水平地盤反力係数", "left");
+            //AddEquation_Py(body);
+            AddInlineMathParagraph(body, [Tex(@"\frac{z}{B} \le 2.5"), "の場合:　", Tex(@"\p_{y} = 2 \left[ 1 + \mu \frac{z}{B} \right] c_u")]);
+            AddInlineMathParagraph(body, [Tex(@"\frac{z}{B} > 2.5"), "の場合:　", Tex(@"\p_{y} = \lambda c_u")]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathYRange1() =>
+            //    Tex(@"y < \Delta_{p}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathYRange2() =>
+            //    Tex(@"y \ge \Delta_{p}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPEt1() =>
+            //    Tex(@"\P_{Et} = \frac{(P_{p}-P_{0}) \left(\Delta_{p}-y_{sp}\right) y}{2\Delta_{p}y_{sp} + (\Delta_{p}-3)y_{sp} + \left|y\right|}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPEt2() =>
+            //    Tex(@"\P_{Et} = P_{p} - P_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathP0() =>
+            //    Tex(@"\P_{0} = \tfrac{1}{2}\gamma B z^{2} K_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPp() =>
+            //    Tex(@"\P_{p} = 2czB\sqrt{K_{p}} + \tfrac{1}{2}\gamma B z^{2} K_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKp() =>
+            //    Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathP0Vary() =>
+            //    Tex(@"\P_{0} = \tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathPpVary() =>
+            //    Tex(@"\P_{p} = 2c(z_{b}-z_{a})B\sqrt{K_{p}}+\tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{p}");
+            AddText(body, "土圧合力ばね", "left");
+
+            AddInlineMathParagraph(body, [Tex(@"y < \Delta_{p}"), "の場合:　 ", Tex(@"\P_{Et} = \frac{(P_{p}-P_{0}) \left(\Delta_{p}-y_{sp}\right) y}{2\Delta_{p}y_{sp} + (\Delta_{p}-3)y_{sp} + \left|y\right|}")]);
+            AddInlineMathParagraph(body, [Tex(@"y \ge \Delta_{p}"), "の場合:　 ", Tex(@"\P_{Et} = P_{p} - P_{0}")]);
+            AddInlineMathParagraph(body, [Tex(@"\P_{0} = \tfrac{1}{2}\gamma B z^{2} K_{0}")]);
+            AddInlineMathParagraph(body, [Tex(@"\P_{p} = 2czB\sqrt{K_{p}} + \tfrac{1}{2}\gamma B z^{2} K_{0}")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\P_{0} = \tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{0}")]);
+            AddInlineMathParagraph(body, [Tex(@"\P_{p} = 2c(z_{b}-z_{a})B\sqrt{K_{p}}+\tfrac{1}{2}\gamma B \left(z_{b}^{2} - z_{a}^{2}\right) K_{p}")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)")]);
+        }
+
+        // 部材の性能
+        private static void AddSectionMemberCapacities(Body body)
+        {
+            AddHeader1(body, "基礎部材の強度と変形性能");
+
+            AddText(body, "コンクリートのヤング係数");
+            //AddEquation_ConcreteEc(body);
+            AddEq(body, @"E_{c} = 3.35\times 10^{4} \left(\frac{\gamma}{24}\right)^{2} \left(\frac{\zeta\cdot F_{c}}{60}\right)^{\frac{1}{3}}");
+
+            AddText(body, "場所打ち鉄筋コンクリート杭の使用限界曲げモーメントMs");
+            //AddEquation_InsituReinforcedPileMs(body);
+            AddEq(body, @"M_{s} = \beta_{1}\cdot \min\left(M_{s1},M_{s2},M_{s3}\right)");
+
+            AddText(body, "場所打ち鉄筋コンクリート杭の損傷限界曲げモーメントMd");
+            //AddEquation_InsituReinforcedPileMd(body);
+            AddEq(body, @"M_{d} = \beta_{1}\cdot \min\left(M_{d1},M_{d2},M_{d3}\right)");
+
+            AddText(body, "場所打ち鉄筋コンクリート杭の安全限界曲げモーメントMu");
+            //AddEquation_InsituReinforcedPileMu(body);
+            AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
+
+            AddText(body, "場所打ち鉄筋コンクリート杭の使用限界せん断力Qs");
+            //AddEquation_InsituReinforcedPileQs(body);
+            AddEq(body, @"
+                Q_{s} = \beta_{1}\cdot \frac{2}{3}\cdot
+                \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
+                {\dfrac{M}{Qd}+1.7}
+                \left(1+\frac{\sigma_{o}}{14.7}bj\right)
+                ");
+
+            AddText(body, "場所打ち鉄筋コンクリート杭の損傷限界せん断力Qd");
+            //AddEquation_InsituReinforcedPileQd(body);
+            AddEq(body, @"
+                Q_{d} = \beta_{1}\cdot
+                \frac{0.065k_{c}\left(49.0+\xi F_{c}\right)}
+                {\dfrac{M}{Qd}+1.7}
+                \left(1+\frac{\sigma_{o}}{14.7}bj\right)
+                ");
+
+            AddText(body, "場所打ち鉄筋コンクリート杭の安全限界せん断力Qu");
+            //AddEquation_InsituReinforcedPileQu(body);
+            AddEq(body, @"
+                Q_{u} = \beta_{1}\cdot \beta_{2}\cdot
+                \left{
+                \frac{0.053p_{t}^{0.23}\left(18+\xi F_{c}\right)}
+                {\dfrac{M}{Qd}+0.12}
+                +0.85+\sqrt{p_{w}\cdot\sigma_{wy}}+0.1\sigma_{o}\right}
+                bj
+                ");
+
+            AddText(body, "場所打ち鋼管コンクリート杭の使用限界曲げモーメントMs");
+            //AddEquation_InsituSteelReinforcedPileMs(body);
+            AddEq(body, @"M_{s} = \beta_{1}\cdot \min\left(M_{s1},M_{s2},M_{s3},M_{s4},M_{s5}\right)");
+
+            AddText(body, "場所打ち鋼管コンクリート杭の損傷限界曲げモーメントMd");
+            //AddEquation_InsituSteelReinforcedPileMd(body);
+            AddEq(body, @"M_{d} = \beta_{1}\cdot \min\left(M_{d1},M_{d2},M_{d3},M_{d4},M_{d5}\right)");
+
+
+            AddText(body, "場所打ち鋼管コンクリート杭の安全限界曲げモーメントMu");
+            //AddEquation_InsituSteelReinforcedPileMu(body);
+            AddEq(body, @"M_{u} = \beta_{1}\cdot \beta_{2}\cdot M_{u0}");
+
+
+            AddText(body, "場所打ち鋼管コンクリート杭の使用限界せん断力Qs");
+            //AddEquation_InsituSteelReinforcedPileQs(body);
+            AddEq(body, @"Q_{s} = \beta_{1}\frac{A_{s}}{\kappa}f_{s,ss}");
+
+            AddText(body, "場所打ち鋼管コンクリート杭の損傷限界せん断力Qd");
+            //AddEquation_InsituSteelReinforcedPileQd(body);
+            AddEq(body, @"Q_{d} = \beta_{1}\frac{A_{s}}{\kappa}f_{s,sd}");
+
+            AddText(body, "場所打ち鋼管コンクリート杭の安全限界せん断力Qu");
+            //AddEquation_InsituSteelReinforcedPileQu(body);
+            AddEq(body, @"
+                Q_{u} = \beta_{1}\beta_{2}
+                \frac{2}{3}\pi t_{s}(D - t_{s})
+                \frac{2}{3}\frac{f_{cy}}{\sqrt{3}}
+                \sqrt{1 - p^{2}}
+            ");
+
+            AddText(body, "e関数法");
+            //AddEquation_EFunction(body);
+            AddEq(body, @"
+                \frac{\sigma}{\xi\cdot F_{c}} = 6.75 \left{
+                  e^{-0.812\left(\frac{\varepsilon}{\varepsilon_{m}}\right)}
+                  - e^{-1.218\left(\frac{\varepsilon}{\varepsilon_{m}}\right)}
+                \right}
+            ");
+        }
+
+        // 荷重条件の表を追加するメソッド
+        private static void AddTrilinearCircumResistanceTable(Body body)
+        {
+            double fontSize = 8.0;
+            Table table = CreateTableWithBorders();
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathTau1() =>
+            //    GetCombinedRunToMath([
+            //        GetSubscript(GetRun("τ"), GetRun("1")),
+            //        ]);
+
+            // 1行目: 表題
+            TableRow headerRow = CreateHeaderRow(
+            CreateTableCell(["地盤種別"], fontSize, "center"),
+            CreateTableCell(["τ<_1>", "[kN/m<^2>]"], fontSize, "center"),
+            CreateTableCell(["S<_1>", "[mm]"], fontSize, "center"),
+            CreateTableCell(["τ<_2>", "[kN/m<^2>]"], fontSize, "center"),
+            CreateTableCell(["S<_2>", "[mm]"], fontSize, "center")
+            );
+            table.Append(headerRow);
+
+            // データ行を追加
+            TableRow dataRowSand = new();
+            dataRowSand.Append(CreateTableCell(["砂質土"], fontSize, "right"));
+            dataRowSand.Append(CreateTableCell(["0.8τ<_max>"], fontSize, "right"));
+            dataRowSand.Append(CreateTableCell(["5"], fontSize, "right"));
+            dataRowSand.Append(CreateTableCell(["τ<_max>"], fontSize, "right"));
+            dataRowSand.Append(CreateTableCell(["20"], fontSize, "right"));
+            table.Append(dataRowSand);
+
+            TableRow dataRowGravel = new();
+            dataRowGravel.Append(CreateTableCell(["礫質土"], fontSize, "right"));
+            dataRowGravel.Append(CreateTableCell(["0.7τ<_max>"], fontSize, "right"));
+            dataRowGravel.Append(CreateTableCell(["10"], fontSize, "right"));
+            dataRowGravel.Append(CreateTableCell(["τ<_max>"], fontSize, "right"));
+            dataRowGravel.Append(CreateTableCell(["30"], fontSize, "right"));
+            table.Append(dataRowGravel);
+
+            TableRow dataRowClay = new();
+            dataRowClay.Append(CreateTableCell(["粘性土"], fontSize, "right"));
+            dataRowClay.Append(CreateTableCell(["0.8τ<_max>"], fontSize, "right"));
+            dataRowClay.Append(CreateTableCell(["3"], fontSize, "right"));
+            dataRowClay.Append(CreateTableCell(["τ<_max>"], fontSize, "right"));
+            dataRowClay.Append(CreateTableCell(["10"], fontSize, "right"));
+            table.Append(dataRowClay);
+
+            body.Append(table);
+        }
+
+        // 地盤変位の節
+        private void AddGroundDisplacementSection(Body body)
+        {
+            AddHeader1(body, "地盤の水平変位");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathDmaxA2Eq() =>
+            //    Tex(@"\D_{max} = C_{1}\left(\alpha^{2}-1\right)f_{A}\sum {H_{i}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathDmax() =>
+            //    Tex(@"\D_{max}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathDmaxA1Eq() =>
+            //    Tex(@"\D_{max} = C_{1}\left(\alpha^{2}-1\right)f_{A}\sum {H_{i}} \left{ C_{2}\left(1 - \frac{1}{\alpha^{2}}\right) + \frac{2R_{z0}}{\alpha}\right}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathC1() =>
+            //    Tex(@"\C_{1}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathC2() =>
+            //    Tex(@"\C_{2}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathAlpha() =>
+            //    Tex(@"\alpha");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathFa() =>
+            //    Tex(@"\f_{A}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRz0() =>
+            //    Tex(@"\R_{Z0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathL() =>
+            //    Tex(@"L");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathZ() =>
+            //    Tex(@"Z");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathCAlpha() =>
+            //    Tex(@"\C_{\alpha}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathT0() =>
+            //    Tex(@"\T_{0}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathT0Eq() =>
+            //    Tex(@"\T_{0} = 4 \sum \frac{H_{i}}{V_{S0i}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathAlphaEq() =>
+            //    Tex(@"\alpha = 1 + \frac{L Z C_{\alpha} T_{0}}{\sum {H_{i}}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathFaEq() =>
+            //    Tex(@"\f_{A} = \min\left(1.6\alpha T_{0},1\right)");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRz0Eq() =>
+            //    Tex(@"\R_{Z0} = \frac{\sum {\gamma_{i}V_{S0i}H_{i}}}{\gamma_{B}V_{SB}\sum {H_{i}}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathUEq() =>
+            //    Tex(@"\u_{i+1} = u_{i} - \frac{40}{k_{i}\left(\alpha T_{0}\right)^{2}}\sum_{j=1}^{i} {m_{j}u_{j}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKi() =>
+            //    Tex(@"\k_{i}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathKiEq() =>
+            //    Tex(@"\k_{i} = \frac{\gamma_{i}}{g}\cdot\frac{V_{SEi}^{2}}{H_{i}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathVsei() =>
+            //    Tex(@"\V_{SEi}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathVseiEq() =>
+            //    Tex(@"\V_{SEi} = \left(\frac{\gamma_{i}V_{S0i}}{\gamma_{B}V_{SB}}\right)^{\beta}V_{S0i}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathBeta() =>
+            //    Tex(@"\beta");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathBetaEq() =>
+            //    Tex(@"\beta = \frac{3}{4}\left(1 - \frac{1}{2^{\alpha-1}}\right)\frac{1}{1 - R_{Z0}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathUStar() =>
+            //    Tex(@"\u_{i}^{*}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathUStarEq() =>
+            //    Tex(@"\u_{i}^{*} = \frac{u_{i} - u_{N+1}}{1 - u_{N+1}}");
+            AddInlineMathParagraph(body, ["a) 地表変位", Tex(@"\D_{max}"), "の算定"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\D_{max} = C_{1}\left(\alpha^{2}-1\right)f_{A}\sum {H_{i}} \left{ C_{2}\left(1 - \frac{1}{\alpha^{2}}\right) + \frac{2R_{z0}}{\alpha}\right}")]);
+            AddInlineMathParagraph(body, [Tex(@"\D_{max} = C_{1}\left(\alpha^{2}-1\right)f_{A}\sum {H_{i}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\C_{1}"), ": 表層の土質のG-γ関係から決まる定数（粘性土で0.0028、砂質土で0.0015）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\C_{2}"), ": 表層の土質の減衰特性から決まる定数（粘性土で0.53、砂質土で0.66）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\alpha"), ": 地盤の地震時の固有周期ののび"]);
+            AddInlineMathParagraph(body, [Tex(@"\alpha = 1 + \frac{L Z C_{\alpha} T_{0}}{\sum {H_{i}}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\f_{A}"), ": 地震荷重の加速度一定領域の影響を考慮する補正係数"]);
+            AddInlineMathParagraph(body, [Tex(@"\f_{A} = \min\left(1.6\alpha T_{0},1\right)")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\R_{Z0}"), ": 地盤の表層と工学的基盤の初期インピーダンス比"]);
+            AddInlineMathParagraph(body, [Tex(@"\R_{Z0} = \frac{\sum {\gamma_{i}V_{S0i}H_{i}}}{\gamma_{B}V_{SB}\sum {H_{i}}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"L"), ": 地震荷重レベルにより決まる定数（レベル１では0.2、レベル２で1.0）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"Z"), ": 地域係数"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\C_{\alpha}"), ": 表層の土質の動的変形特性から決まる定数（粘性土で25、砂質土で40）"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\T_{0}"), ": 地盤の初期固有周期"]);
+
+            AddInlineMathParagraph(body, ["b) 地盤の水平変位の深さ方向分布の算定"]);
+
+            //AddInlineMathParagraph(body, mathUi());
+            AddInlineMathParagraph(body, [Tex(@"\u_{i+1} = u_{i} - \frac{40}{k_{i}\left(\alpha T_{0}\right)^{2}}\sum_{j=1}^{i} {m_{j}u_{j}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\k_{i}"), ": 地表から第i番目の等価せん断ばね剛性"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\k_{i} = \frac{\gamma_{i}}{g}\cdot\frac{V_{SEi}^{2}}{H_{i}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\V_{SEi}"), ": 地震時の等価S波速度"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\V_{SEi} = \left(\frac{\gamma_{i}V_{S0i}}{\gamma_{B}V_{SB}}\right)^{\beta}V_{S0i}")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\beta = \frac{3}{4}\left(1 - \frac{1}{2^{\alpha-1}}\right)\frac{1}{1 - R_{Z0}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\u_{i}^{*}"), ": 地盤の水平変位の深さ方向分布"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\u_{i}^{*} = \frac{u_{i} - u_{N+1}}{1 - u_{N+1}}")]);
+        }
+
+        // 液状化の節
+        private void AddLiquefactionSection(Body body)
+        {
+            AddHeader1(body, "液状化の検討");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathTauDonSigmaZPrimeEq() =>
+            //    Tex(@"\frac{\tau_{d}}{\sigma_{z}'} = r_{n}\frac{\alpha_{max}}{g}\frac{\sigma_{z}}{\sigma_{z}'}r_{d}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRnEq() =>
+            //    Tex(@"\r_{n} = 0.1(M-1)");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRdEq() =>
+            //    Tex(@"\r_{d} = 1 - 0.015z");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathNaEq() =>
+            //    Tex(@"\N_{a} = N_{1} + \Delta N_{f}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathN1Eq() =>
+            //    Tex(@"\N_{1} = C_{N}N");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathCnEq() =>
+            //    Tex(@"\C_{N} = \sqrt{\frac{100}{\sigma_{z}'}}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathDcyEq() =>
+            //    Tex(@"\sum {\frac{\gamma_{cyi}H_{i}}{100}}");
+
+            AddInlineMathParagraph(body, ["① 検討地点の地盤内の各深さに発生する等価なせん断応力比"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\frac{\tau_{d}}{\sigma_{z}'} = r_{n}\frac{\alpha_{max}}{g}\frac{\sigma_{z}}{\sigma_{z}'}r_{d}")]);
+
+            AddText(body, "液状化時の土のせん断応力度比");
+
+            AddInlineMathParagraph(body, [Tex(@"\r_{n} = 0.1(M-1)")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\r_{d} = 1 - 0.015z")]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathTauD() =>
+            //    Tex(@"\tau_{d}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\tau_{d}"), ": 水平面に生じる等価な一定繰返しせん断応力振幅"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathSigmaZPrime() =>
+            //    Tex(@"\sigma_{z}'");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{z}'"), ": 検討深さにおける有効土被り圧（鉛直有効応力）"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRn() =>
+            //    Tex(@"\r_{n}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\r_{n}"), ": 等価な繰返し回数に関する補正係数"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathM() =>
+            //    Tex(@"M");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M"), ": 地震のマグニチュードで通常は7.5"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathAlphaMax() =>
+            //    Tex(@"\alpha_{max}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\alpha_{max}"), ": 地表面における設計用水平加速度（m/s^2）"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathG() =>
+            //    Tex(@"g");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"g"), ": 重力加速度（9.8m/s^2）"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathSigmaZ() =>
+            //    Tex(@"\sigma_{z}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{z}"), ": 検討深さにおける全土被り圧（鉛直全応力）"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathRd() =>
+            //    Tex(@"\r_{d}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\r_{d}"), ": 地盤が剛体でないことによる低減係数"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathZ() =>
+            //    Tex(@"z");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"z"), ": 地表面からの検討深さ[m]"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathN1() =>
+            //    Tex(@"\N_{1}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathCn() =>
+            //    Tex(@"\C_{N}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathDeltaNf() =>
+            //    Tex(@"\Delta N_{f}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathN() =>
+            //    Tex(@"N");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathFc() =>
+            //    Tex(@"F_{c}");
+            AddInlineMathParagraph(body, ["② 対応する深度の補正", Tex(@"N"), "値"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\N_{1} = C_{N}N")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\N_{a} = N_{1} + \Delta N_{f}")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\C_{N} = \sqrt{\frac{100}{\sigma_{z}'}}")]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\N_{1}"), ": 換算N値"]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\Delta N_{f}"), ": 細粒分含有率", Tex(@"F_{c}"), "に応じた補正", Tex(@"N"), "N値成分"]);
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\C_{N}"), ": 拘束圧に関する換算係数"]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathREq() =>
+            //    Tex(@"\R = \frac{\tau_{L}}{\sigma_{z}'}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathR() =>
+            //    Tex(@"R");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathFlEq() =>
+            //    Tex(@"\F_{L} = \frac{\dfrac{\tau_{L}}{\sigma_{z}'}}{\dfrac{\tau_{d}}{\sigma_{z}'}}");
+
+            AddInlineMathParagraph(body, ["③ 補正", Tex(@"\C_{N}"), "値に対応する飽和土層の液状化抵抗比", Tex(@"R")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\R = \frac{\tau_{L}}{\sigma_{z}'}")]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathFl() =>
+            //    Tex(@"\F_{L}");
+
+            AddInlineMathParagraph(body, ["④ 各深さにおける液状化発生に対する安全率", Tex(@"\F_{L}")]);
+
+            AddInlineMathParagraph(body, [Tex(@"\F_{L} = \frac{\dfrac{\tau_{L}}{\sigma_{z}'}}{\dfrac{\tau_{d}}{\sigma_{z}'}}")]);
+
+            AddInlineMathParagraph(body, ["液状化の程度と地盤変位の予測"]);
+
+            AddInlineMathParagraph(body, [Tex(@"\sum {\frac{\gamma_{cyi}H_{i}}{100}}")]);
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathGammaCyi() =>
+            //    Tex(@"\gamma_{cyi}");
+
+            //static DocumentFormat.OpenXml.Math.OfficeMath mathHi() =>
+            //    Tex(@"\H_{i}");
+
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\gamma_{cyi}"), ": i層の繰返しせん断ひずみ(%)"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\H_{i}"), ": i層の層厚[m]"]);
+
+            // 液状化判定結果テーブル
+            AddLiquefactionResultTable(body);
+        }
+
+        /// <summary>各地盤の土質点ごとのFL値を一覧表で出力</summary>
+        private void AddLiquefactionResultTable(Body body)
+        {
+            if (inputModel?.GroundsInput == null) return;
+
+            for (int gIdx = 0; gIdx < inputModel.GroundsInput.Count; gIdx++)
+            {
+                var ground = inputModel.GroundsInput[gIdx];
+                if (ground?.GroundMassesData == null || ground.GroundMassesData.Count == 0) continue;
+
+                // FL値を持つ土質点が存在するか確認
+                bool hasFL = ground.GroundMassesData.Any(m => m.FL != null && m.FL.Count > 0 && m.FL.Any(f => f.HasValue));
+                if (!hasFL) continue;
+
+                AddText(body, $"地盤No.{gIdx + 1} 液状化判定結果");
+
+                double fontSize = 8;
+                int flCount = ground.GroundMassesData.Max(m => m.FL?.Count ?? 0);
+                int colCount = 4 + flCount; // 深度, N値, Fc, 土質 + FL×n
+                Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(colCount));
+
+                // ヘッダ行
+                var headerCells = new List<TableCell>
+                {
+                    CreateTableCell(["深度", "[m]"], fontSize, "center"),
+                    CreateTableCell(["N値"], fontSize, "center"),
+                    CreateTableCell(["Fc", "(%)"], fontSize, "center"),
+                    CreateTableCell(["土質"], fontSize, "center"),
+                };
+                for (int f = 0; f < flCount; f++)
+                    headerCells.Add(CreateTableCell([$"FL{f + 1}"], fontSize, "center"));
+
+                table.Append(CreateHeaderRow([.. headerCells]));
+
+                // データ行
+                foreach (var mass in ground.GroundMassesData)
+                {
+                    TableRow row = new();
+                    row.Append(CreateTableCell([$"{mass.AltitudeDepth:N2}"], fontSize, "right"));
+                    row.Append(CreateTableCell([$"{mass.NValue:N1}"], fontSize, "right"));
+                    row.Append(CreateTableCell([$"{mass.Fc:N0}"], fontSize, "right"));
+                    row.Append(CreateTableCell([$"{mass.Name}"], fontSize, "center"));
+                    for (int f = 0; f < flCount; f++)
+                    {
+                        double? fl = (mass.FL != null && f < mass.FL.Count) ? mass.FL[f] : null;
+                        string flText = fl.HasValue ? $"{fl.Value:N2}" : "-";
+                        row.Append(CreateTableCell([flText], fontSize, "right"));
+                    }
+                    table.Append(row);
+                }
+                body.Append(table);
+                AddLineBreak(body);
+            }
+        }
+    }
+}

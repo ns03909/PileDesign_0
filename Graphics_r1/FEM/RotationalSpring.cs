@@ -301,11 +301,15 @@ namespace PileDesign.FEM
         /// </summary>
         private void AddUzIndirectCouplingToK(Matrix<double> K, bool isTan)
         {
-            // PileNode (NodeJ) の Uz が free (MasterNodes[2]==null) の場合のみ
-            if (NodeJ.MasterNodes[2] != null) return;
+            // PileNode (NodeJ) の Uz が free (master 未設定) の場合のみ
+            // NOTE: このクラスには `Dof` という名のプロパティ（RotationalDof 型）があるため、
+            // Node 側の DOF 列挙子を参照するときは完全修飾 PileDesign.FEM.Dof を使う
+            if (NodeJ.HasMasterAt(PileDesign.FEM.Dof.Uz)) return;
 
             // AP ノードを Ux/Uy/Rz いずれかの master から取得
-            Node? ap = NodeJ.MasterNodes[0] ?? NodeJ.MasterNodes[1] ?? NodeJ.MasterNodes[5];
+            Node? ap = NodeJ.GetMaster(PileDesign.FEM.Dof.Ux)
+                       ?? NodeJ.GetMaster(PileDesign.FEM.Dof.Uy)
+                       ?? NodeJ.GetMaster(PileDesign.FEM.Dof.Rz);
             if (ap == null) return;
 
             var ke = isTan ? KeTan : KeSec;

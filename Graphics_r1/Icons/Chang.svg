@@ -9,10 +9,10 @@
             </clipPath>
             <g clip-path="url(#_clip1)">
                 <g transform="matrix(0.981266,0,0,0.866495,20.309518,64.616483)">
-                    <path d="M1552,356C1552,356 1428.631,405.745 1488,433.243C1529.815,452.611 1486.814,483.358 1488,484" style="fill:none;stroke:rgb(255,0,3);stroke-width:9px;"/>
+                    <path d="M1552,356C1552,356 1428.631,405.745 1488,433.243C1529.815,452.611 1486.814,483.358 1488,484" style="fill:none;stroke:rgb(98,176,226);stroke-width:9px;"/>
                 </g>
                 <g transform="matrix(1,0,0,1,-5.517229,0)">
-                    <path d="M1493.517,356L1493.517,484" style="fill:none;stroke:rgb(255,0,3);stroke-width:8.33px;"/>
+                    <path d="M1493.517,356L1493.517,484" style="fill:none;stroke:rgb(151,150,147);stroke-width:8.33px;"/>
                 </g>
                 <path d="M1424,373.089L1552,373.089" style="fill:none;stroke:black;stroke-width:8.33px;"/>
                 <g transform="matrix(1,0,0,1,279.166652,317.101853)">
@@ -22,8 +22,8 @@
                 </g>
                 <g transform="matrix(1,0,0,1,-4.958105,-11.270702)">
                     <g transform="matrix(1,-0,-0,1,1428.958105,367.270702)">
-                        <path d="M40.306,4.589L65.306,17.089L40.306,29.589C46.556,23.339 46.556,10.839 40.306,4.589Z" style="fill:rgb(0,0,255);"/>
-                        <path d="M7.93,17.089L45.306,17.089" style="fill:none;stroke:rgb(0,0,255);stroke-width:8.33px;"/>
+                        <path d="M40.306,4.589L65.306,17.089L40.306,29.589C46.556,23.339 46.556,10.839 40.306,4.589Z" style="fill:rgb(49,112,172);"/>
+                        <path d="M7.93,17.089L45.306,17.089" style="fill:none;stroke:rgb(49,112,172);stroke-width:8.33px;"/>
                     </g>
                 </g>
             </g>

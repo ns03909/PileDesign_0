@@ -1,6 +1,6 @@
 using System;
 
-namespace Graphics_r1.Constants;
+namespace PileDesign.Constants;
 
 /// <summary>
 /// 数値計算用の許容誤差定数
@@ -12,6 +12,15 @@ public static class NumericalConstants
 
     /// <summary>曲率計算用の許容誤差</summary>
     public const double CURVATURE_TOLERANCE = 1e-12;
+
+    /// <summary>変位量の微小判定用許容誤差（ピコメートルオーダー）</summary>
+    public const double SMALL_DISPLACEMENT_EPSILON = 1e-12;
+
+    /// <summary>行列・ベクトル特異性判定用の微小許容誤差</summary>
+    public const double NEAR_ZERO_EPSILON = 1e-10;
+
+    /// <summary>座標グリッド比較用の許容誤差（ミリメートルオーダー）</summary>
+    public const double MINOR_LENGTH_EPSILON = 0.001;
 
     /// <summary>力・モーメント計算用の許容誤差</summary>
     public const double FORCE_TOLERANCE = 1e-9;
@@ -128,8 +137,8 @@ public static class AnalysisConstants
     /// <summary>デフォルトモーメント値 (kNm)</summary>
     public const double DEFAULT_MOMENT = 10.0;
 
-    /// <summary>収束判定の許容誤差</summary>
-    public const double CONVERGENCE_TOLERANCE = 1e-8;
+    // 収束判定許容誤差は NumericalConstants.CONVERGENCE_TOLERANCE を参照すること。
+    // （以前ここに重複定義があったが 2026-04-18 に削除）
 
     /// <summary>反復計算の最大回数</summary>
     public const int MAX_ITERATIONS = 1000;

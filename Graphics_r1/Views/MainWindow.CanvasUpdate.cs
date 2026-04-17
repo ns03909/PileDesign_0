@@ -358,7 +358,7 @@ namespace PileDesign.Views
 
                     if (visiblepileLocations.Count != 0)
                     {
-                        viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
+                        viewModel.CanvasThreeDView.SetCt(visiblepileLocations);
                     }
                 }
             }
@@ -568,7 +568,7 @@ namespace PileDesign.Views
 
                     if (visiblepileLocations.Count != 0)
                     {
-                        viewModel.CanvasThreeDView.SetCt(new ObservableCollection<Point3D>(visiblepileLocations));
+                        viewModel.CanvasThreeDView.SetCt(visiblepileLocations);
                     }
                 }
             }
@@ -1267,6 +1267,7 @@ namespace PileDesign.Views
             if (vm.IsPileRefVisible) sb.Append($"{pileLocation.PileBodyNo}, ");
             if (vm.IsSoilRefVisible) sb.Append($"{pileLocation.GroundNo}, ");
             if (vm.IsPileTopLevelVisible) sb.Append($"Z={pileLocation.Point3D.Z:N3}, ");
+            if (vm.IsConnectingNodeZVisible) sb.Append($"Zc={pileLocation.Point3D.Z + pileLocation.FoundationBeamDeltaZc:N3}, ");
             if (vm.IsGroupPileFactorLabelVisible) sb.Append($"ξ={pileLocation.GroupPileFactor:N3}, ");
             if (vm.IsPileDiaSpacingRatioLabelVisible) sb.Append($"R/B={pileLocation.PileSpacingFactor:N3}, ");
 
@@ -1321,7 +1322,11 @@ namespace PileDesign.Views
             return label;
         }
 
-        //テキスト追加メソッド
+        // FormattedText 測定用の静的キャッシュ
+        private static readonly Typeface _cachedTypeface = new(
+            new FontFamily("Arial"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+
+        //テキスト追加メソッド（TextBlock生成を排除し、FormattedTextで直接測定）
         private void AddText3D(Brush solidColorBrush, string text, double x, double y,
             string horizontalPos, string verticalPos, double textAngle, double scaleY = 1.0)
         {
@@ -1329,44 +1334,35 @@ namespace PileDesign.Views
             if (!double.IsFinite(x) || !double.IsFinite(y)) return;
 
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
-            TextBlock textBlock = new()
-            {
-                Text = text,
-                FontSize = viewModel.LabelSize,
-                Foreground = solidColorBrush
-            };
+            double fontSize = viewModel.LabelSize;
 
-            // テキストの幅と高さを測定するために、TextBlockを一時的にCanvasに追加
-            textBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            Size textSize = textBlock.DesiredSize;
+            // FormattedTextで直接測定（TextBlock生成・Measure()を回避）
+            var ft = new FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                _cachedTypeface,
+                fontSize,
+                solidColorBrush,
+                VisualTreeHelper.GetDpi(this).PixelsPerDip);
 
-            // TextBlockの回転とスケーリングを設定
-            TransformGroup transformGroup = new();
-            transformGroup.Children.Add(new RotateTransform(textAngle));
-            transformGroup.Children.Add(new ScaleTransform(1.0, scaleY, textSize.Width / 2, textSize.Height / 2));
-            textBlock.RenderTransform = transformGroup;
-
-            // RenderTransformOriginを設定
-            textBlock.RenderTransformOrigin = new Point(0.5, 0.5);
+            Size textSize = new(ft.Width, ft.Height);
 
             // スケーリング後のサイズで位置を調整
             Size scaledSize = new(textSize.Width, textSize.Height * scaleY);
             Point adjustedPoint = AdjustTextPosition(new Point(x, y), scaledSize, horizontalPos, verticalPos, textAngle);
 
-            Canvas.SetLeft(textBlock, adjustedPoint.X);
-            Canvas.SetTop(textBlock, adjustedPoint.Y);
-
-            // TextBlockInfoに情報を格納し、リストに追加
-            var textBlockInfo = new TextBlockInfo
+            // TextBlockInfoに情報を格納し、リストに追加（TextBlock不使用）
+            TextBlockInfos.Add(new TextBlockInfo
             {
-                TextBlock = textBlock,
+                Text = text,
+                FontSize = fontSize,
+                Foreground = solidColorBrush,
                 X = adjustedPoint.X,
                 Y = adjustedPoint.Y,
                 TextAngle = textAngle,
-                ScaleY = scaleY // 追加
-            };
-
-            TextBlockInfos.Add(textBlockInfo);
+                ScaleY = scaleY
+            });
         }
 
         private void ClearCanvasSelection()

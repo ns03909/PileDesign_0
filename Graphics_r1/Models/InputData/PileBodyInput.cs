@@ -55,6 +55,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[PileBodyInput] プリセット沈下パラメータ CSV の読込に失敗しました: {ex.GetType().Name}: {ex.Message}");
             }
 
             return (parameters, names);

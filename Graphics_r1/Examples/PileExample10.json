@@ -1,19 +1,19 @@
 {
   "displayName": "基礎指針'19 計算例10",
-  "groundExampleName": "Example3",
+  "groundExampleName": "Example10",
   "loadCaseLevel1": {
     "forceActionPointX": 16.0,
     "forceActionPointY": 16.0,
     "forceActionPointZ": -2.0,
-    "upperMassForce": 16830,
-    "foundationMassForce": 7430
+    "upperMassForce": 8415,
+    "foundationMassForce": 3715
   },
   "loadCaseLevel2": {
     "forceActionPointX": 16.0,
     "forceActionPointY": 16.0,
     "forceActionPointZ": -2.0,
-    "upperMassForce": 33660,
-    "foundationMassForce": 14860
+    "upperMassForce": 16830,
+    "foundationMassForce": 7430
   },
   "pileBodies": [
     {
@@ -50,35 +50,35 @@
     }
   ],
   "pileLayoutItems": [
-    { "pileNo": 1,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
-    { "pileNo": 2,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
-    { "pileNo": 3,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
-    { "pileNo": 4,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
+    { "pileNo": 1,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [2996.5, 3528.0, 4059.5, 3528.0], "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
+    { "pileNo": 2,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3421.7, 3528.0, 3634.3, 3528.0], "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
+    { "pileNo": 3,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3634.3, 3528.0, 3421.7, 3528.0], "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
+    { "pileNo": 4,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 0.0,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [4059.5, 3528.0, 2996.5, 3528.0], "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
 
-    { "pileNo": 5,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
-    { "pileNo": 6,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
-    { "pileNo": 7,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
-    { "pileNo": 8,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
+    { "pileNo": 5,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [2996.5, 3528.0, 4059.5, 3528.0], "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
+    { "pileNo": 6,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3421.7, 3528.0, 3634.3, 3528.0], "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
+    { "pileNo": 7,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3634.3, 3528.0, 3421.7, 3528.0], "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
+    { "pileNo": 8,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 6.4,  "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [4059.5, 3528.0, 2996.5, 3528.0], "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
 
-    { "pileNo": 9,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
-    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
-    { "pileNo": 11, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
-    { "pileNo": 12, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
+    { "pileNo": 9,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [2996.5, 3528.0, 4059.5, 3528.0], "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
+    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3421.7, 3528.0, 3634.3, 3528.0], "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
+    { "pileNo": 11, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3634.3, 3528.0, 3421.7, 3528.0], "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
+    { "pileNo": 12, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 12.8, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [4059.5, 3528.0, 2996.5, 3528.0], "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
 
-    { "pileNo": 13, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
-    { "pileNo": 14, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
-    { "pileNo": 15, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
-    { "pileNo": 16, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
+    { "pileNo": 13, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [2996.5, 3528.0, 4059.5, 3528.0], "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
+    { "pileNo": 14, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3421.7, 3528.0, 3634.3, 3528.0], "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
+    { "pileNo": 15, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3634.3, 3528.0, 3421.7, 3528.0], "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
+    { "pileNo": 16, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 19.2, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [4059.5, 3528.0, 2996.5, 3528.0], "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
 
-    { "pileNo": 17, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
-    { "pileNo": 18, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
-    { "pileNo": 19, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
-    { "pileNo": 20, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
+    { "pileNo": 17, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [2996.5, 3528.0, 4059.5, 3528.0], "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
+    { "pileNo": 18, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3421.7, 3528.0, 3634.3, 3528.0], "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
+    { "pileNo": 19, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3634.3, 3528.0, 3421.7, 3528.0], "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
+    { "pileNo": 20, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 25.6, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [4059.5, 3528.0, 2996.5, 3528.0], "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] },
 
-    { "pileNo": 21, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
-    { "pileNo": 22, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
-    { "pileNo": 23, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
-    { "pileNo": 24, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] }
+    { "pileNo": 21, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 0.0,  "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [2996.5, 3528.0, 4059.5, 3528.0], "axialForceLevel2s": [2465.0, 3528.0, 4591.0, 3528.0] },
+    { "pileNo": 22, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 12.8, "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3421.7, 3528.0, 3634.3, 3528.0], "axialForceLevel2s": [3315.4, 3528.0, 3740.6, 3528.0] },
+    { "pileNo": 23, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 19.2, "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [3634.3, 3528.0, 3421.7, 3528.0], "axialForceLevel2s": [3740.6, 3528.0, 3315.4, 3528.0] },
+    { "pileNo": 24, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 4.3, "x": 32.0, "y": 32.0, "z": -2.0, "axialForceVL0": 3528, "axialForceLevel1s": [4059.5, 3528.0, 2996.5, 3528.0], "axialForceLevel2s": [4591.0, 3528.0, 2465.0, 3528.0] }
   ],
   "inputNodes": [],
   "gridXItems": [

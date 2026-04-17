@@ -3319,7 +3319,7 @@
                     <tr><td rowspan="4">エクスポート</td><td>3dm出力</td><td>杭・根入部・基礎梁の3DモデルをRhinoceros (.3dm) 形式でエクスポート</td></tr>
                     <tr><td>DXF(3D)</td><td>3DモデルをDXF形式でエクスポート</td></tr>
                     <tr><td>DXF(伏図)</td><td>杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXF形式でエクスポート</td></tr>
-                    <tr><td>MGT出力</td><td>FEM解析モデルをmidas Gen MGTテキスト形式でエクスポート</td></tr>
+                    <tr><td>MGT出力</td><td>FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組み合わせを含む）</td></tr>
                 </tbody>
             </table>
 
@@ -6514,17 +6514,47 @@
                 出力内容はDXF（3D）と同等です。
             </p>
 
-            <h3>MGT（MIDAS GEN）エクスポート</h3>
+            <h3>MGT（midas iGen / Gen）エクスポート</h3>
             <p>
-                「ファイル」→「MGTエクスポート」で、MIDAS GEN v9.4.5形式のMGTファイルを出力します。
-                水平解析の実行後にエクスポート可能です。
+                「ファイル」→「MGTエクスポート」で、midas iGen / Gen v9.4.5 互換の MGT テキスト形式で FEM 解析モデルを出力します。
+                水平解析の実行後にエクスポート可能です（解析済みの荷重ケースのみが荷重条件として出力されます）。
             </p>
+
+            <h4>出力内容</h4>
             <ul>
-                <li>節点・要素（杭要素・梁要素）</li>
-                <li>断面・材料</li>
-                <li>境界条件（地盤ばね・杭先端ばね）</li>
-                <li>剛体リンク（杭頭接合）</li>
-                <li>荷重条件</li>
+                <li><strong>節点・要素</strong>：杭 BEAM 要素、杭頭接合節点、地盤境界節点、仮想 Y 方向地盤節点</li>
+                <li><strong>断面</strong>：<code>DBUSER</code> タイプ、<code>SR</code>（円形）形状。杭本体の面積から代表直径を推定して出力</li>
+                <li><strong>材料</strong>：<code>CONC</code> タイプ、DATA1 type=2（ユーザー定義弾性特性）でヤング率・ポアソン比を出力</li>
+                <li><strong>境界条件</strong>：<code>*CONSTRAINT</code> で地盤境界節点を完全固定（<code>111111</code>）。杭先端の <code>DZ</code> 拘束等も出力</li>
+                <li><strong>剛体連結</strong>：<code>*RIGIDLINK</code> で代表節点（ActionPoint）から各杭頭（ConnectionNode / CapNode）への連結を出力。master-slave 連鎖を root master に折り畳み</li>
+                <li><strong>弾性連結</strong>：<code>*ELASTICLINK</code>
+                    <ul>
+                        <li>水平地盤ばね：<code>MULTI LINEAR</code>（非線形）。X 方向軸リンクと Y 方向軸リンク（Y 方向解析済みの場合のみ）</li>
+                        <li>ペナルティばね（杭頭接合）：<code>RIGID</code>（同位置接続を許容）</li>
+                    </ul>
+                </li>
+                <li><strong>力-変位関数</strong>：<code>*FORCES-DEFORMATION FUNCTION</code>
+                    各地盤ばねごとに <code>Kh0</code>, <code>Py</code>, 杭径 <code>B</code>, 分担長から非線形 PY 曲線をサンプリング（正側のみ、負側は <code>SYMM=YES</code> で自動ミラー）</li>
+                <li><strong>荷重ケース</strong>：<code>*STLDCASE</code> を以下の 3 種類に分解
+                    <ul>
+                        <li><code>UF_L{level}_{no}</code>：上部構造慣性力（UpperMassForce）</li>
+                        <li><code>FF_L{level}_{no}</code>：基礎構造慣性力（FoundationMassForce）</li>
+                        <li><code>GD_L{level}_{no}[_L]</code>：地盤強制変位（末尾 <code>_L</code> は液状化）</li>
+                    </ul>
+                </li>
+                <li><strong>慣性力</strong>：<code>*CONLOAD</code> で代表節点に <code>Fx = |F| cos(LoadAngle)</code>, <code>Fy = |F| sin(LoadAngle)</code> を載荷</li>
+                <li><strong>強制変位</strong>：<code>*SPDISP</code> で地盤境界節点に <code>ZDataItem.GroundDisp</code> から水平成分を載荷（FLAG = <code>110000</code>）</li>
+                <li><strong>荷重組み合わせ</strong>：<code>*LOADCOMB</code> で解析済み組み合わせごとに <code>β1×UF + β2×FF + α1×GD</code> を定義</li>
+            </ul>
+
+            <h4>留意事項</h4>
+            <ul>
+                <li>地盤境界節点は ElasticLink のゼロ長を避けるため X 方向に +1 m オフセットされます（強制変位値は midas 側で元位置と同等に解釈されます）</li>
+                <li>Y 方向解析が終了している場合のみ、Y 方向用の仮想地盤節点（杭節点位置 + Y 方向 +1 m）と Y 方向 MULTI LINEAR リンクが追加されます</li>
+                <li>荷重ケース名・組み合わせ名にはアンダースコア <code>_</code> を使用（ハイフンは減算と誤認されるため）</li>
+                <li>断面特性は <code>DBUSER SR</code> 円形近似のため、実際の慣性モーメントと異なる可能性があります。精密照合が必要な場合は midas 側で <code>VALUE</code> タイプに置換してください</li>
+                <li>材料密度 <code>DEN = 0</code> として出力するため自重は考慮されません。慣性力は <code>*CONLOAD</code> で明示的に与えられます</li>
+                <li>MULTI LINEAR 曲線のサンプル変位は <code>0, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0</code> m の 11 点</li>
             </ul>
 
             <h2>ウィンドウ(W) メニュー</h2>

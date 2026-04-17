@@ -1,4 +1,4 @@
-﻿using Graphics_r1.Constants;
+﻿using PileDesign.Constants;
 using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
@@ -368,6 +368,10 @@ namespace PileDesign.Models
 
         private double PileCapFc { get; set; }
         private double PileCapEc { get; set; }
+
+        // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
+        // CSV テーブル読込は Load*() を明示的に呼んでもらう。
+        public CaptainPile() { }
 
         // CaptainPileクラス コンストラクタ
         internal CaptainPile(double pileCapFc, double pileCapEc)

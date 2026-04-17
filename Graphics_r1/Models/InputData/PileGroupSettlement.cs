@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PileDesign.Constants;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -386,7 +387,7 @@ namespace PileDesign.Models.InputData
             double sE = 0; ;
 
             double b = Math.Min(dx, dy);
-            if (b < 1e-10)
+            if (b < NumericalConstants.NEAR_ZERO_EPSILON)
             {
                 return 0;
             }
@@ -480,7 +481,8 @@ namespace PileDesign.Models.InputData
                 x2 = rectLoad.X2;//'x2:矩形載荷面
                 y1 = rectLoad.Y1;//'y1:矩形載荷面
                 y2 = rectLoad.Y2;//'y2:矩形載荷面
-                if (Math.Abs(x1 - x2) < 1e-10 || Math.Abs(y1 - y2) < 1e-10)
+                if (Math.Abs(x1 - x2) < NumericalConstants.NEAR_ZERO_EPSILON ||
+                    Math.Abs(y1 - y2) < NumericalConstants.NEAR_ZERO_EPSILON)
                 {
                     ds = 0;
                 }

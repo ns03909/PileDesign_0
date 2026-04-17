@@ -1,4 +1,4 @@
-﻿using Graphics_r1.Constants;
+﻿using PileDesign.Constants;
 using Newtonsoft.Json;
 using PileDesign.ViewModels;
 using System;
@@ -1005,6 +1005,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[InputModel.GetReactionForUnitMoment] angle={angle}: {ex.GetType().Name}: {ex.Message}");
                 return new List<double>();
             }
         }
@@ -1567,15 +1568,7 @@ namespace PileDesign.Models.InputData
                     ElementDivision.SoilPiles = [];
                 }
 
-                string json = System.Text.Json.JsonSerializer.Serialize(this, _jsonOptions);
-                var clone = System.Text.Json.JsonSerializer.Deserialize<InputModel>(json, _jsonOptions)
-                            ?? throw new InvalidOperationException("DeepCopy 失敗");
-                return clone;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[DeepCopy] {ex.GetType().Name}: {ex.Message}");
-                return null;
+                return PileDesign.Common.DeepCopyUtil.CloneJson(this);
             }
             finally
             {

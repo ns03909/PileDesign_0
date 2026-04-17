@@ -527,68 +527,6 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void ShowToast(string message, int type = 0) => ShowToastAction?.Invoke(message, type);
 
-        // ズームフィット
-        [RelayCommand]
-        private void ZoomFit()
-        {
-            ZoomFitAction?.Invoke();
-        }
-
-        // XY平面
-        [RelayCommand]
-        private void ViewXYPlane()
-        {
-            // θ=-90, φ=90、透視投影を無効化
-            CanvasThreeDView.IsPerspective = false;
-            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 90);
-            else
-            {
-                CanvasThreeDView.Tht = -90;
-                CanvasThreeDView.Phi = 90;
-                UpdateCanvas3DAction?.Invoke();
-            }
-        }
-
-        // YZ平面
-        [RelayCommand]
-        private void ViewYZPlane()
-        {
-            // 透視投影を無効化
-            CanvasThreeDView.IsPerspective = false;
-            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(0, 0);
-            else
-            {
-                CanvasThreeDView.Tht = 0;
-                CanvasThreeDView.Phi = 0;
-                UpdateCanvas3DAction?.Invoke();
-            }
-        }
-
-        [RelayCommand]
-        private void ViewXZPlane()
-        {
-            // 透視投影を無効化
-            CanvasThreeDView.IsPerspective = false;
-            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-90, 0);
-            else
-            {
-                CanvasThreeDView.Tht = -90;
-                CanvasThreeDView.Phi = 0;
-                UpdateCanvas3DAction?.Invoke();
-            }
-        }
-
-        [RelayCommand]
-        private void ViewIsometric()
-        {
-            if (AnimateViewAnglesAction != null) AnimateViewAnglesAction(-45, 45);
-            else
-            {
-                CanvasThreeDView.Tht = -45;
-                CanvasThreeDView.Phi = 45;
-                UpdateCanvas3DAction?.Invoke();
-            }
-        }
 
         private void HandleDataGridSettlementSoilLayersCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
@@ -2592,7 +2530,53 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 修正: null チェックと空コレクション初期化の共通化
+        /// <summary>
+        /// ファイル読込後の共通プロトコル。CurrentInputModel と CurrentModel を事前に設定してから呼ぶ。
+        /// ProjectData 経由/InputModel 単体の両パスで同一のセットアップを実行することで
+        /// 呼び忘れによる不具合（ComboBox が空白になる・Undo 履歴が残る等）を防ぐ。
+        /// </summary>
+        /// <param name="projectData">ProjectData 由来ロードの場合は非 null。InputModel 単体ロードの場合は null。</param>
+        /// <param name="filePath">UI 表示用ファイルパス。Untitled/未確定の場合は null 可。</param>
+        /// <param name="successMessage">読込成功時にトースト表示するメッセージ。</param>
+        private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)
+        {
+            // ObservableCollection 変換（idempotent なので既に ObservableCollection なら維持）
+            _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
+
+            // 旧データとの互換性マイグレーション
+            CurrentInputModel.InputNodes ??= [];
+            CurrentInputModel.GridXItems ??= [];
+            CurrentInputModel.GridYItems ??= [];
+            CurrentInputModel.MigrateElementsToFoundationBeams();
+            CurrentInputModel.EnsureFoundationBeamDefaults();
+            CurrentInputModel.EnsureAnalysisTargetDefaults();
+
+            OnPropertyChanged(nameof(CurrentInputModel));
+
+            // ViewModel アタッチ・ファイルパス確定
+            CurrentInputModel.AttachViewModel(this);
+            CurrentFilePath = filePath;
+
+            // ComboBox 用カウントリスト再構築・M-φ キャッシュクリア
+            CurrentInputModel.UpdateCountLists();
+            PileSection.ClearMphiCache();
+
+            // 杭配置番号の同期（PileNo が未設定の旧ファイルに備える）
+            UpdatePileLayoutNo();
+
+            // 解析結果の復元（projectData=null の場合はフラグのみリセット）
+            RestoreAnalysisState(projectData);
+
+            // Undo 履歴をクリアして読込状態を初期状態として保存
+            _undoManager.Clear();
+            SaveUndoState();
+
+            // 最終描画＆通知
+            UpdateWindowImmediate();
+            ShowToast(successMessage);
+        }
+
+        // InputModel 単体ロード（ProjectData ラッパーでない旧形式ファイル用フォールバック）
         public bool TryLoadInputModelFileUsingInputModelLoader(string filePath)
         {
             try
@@ -2605,41 +2589,9 @@ namespace PileDesign.ViewModels
                 }
 
                 CurrentInputModel = loaded;
-                CurrentInputModel.AttachViewModel(this);
-                CurrentFilePath = filePath;
-                CurrentInputModel.GridXItems ??= [];
-                CurrentInputModel.GridYItems ??= [];
-
-                // 旧データとの互換性
-                CurrentInputModel.InputNodes ??= [];
-                CurrentInputModel.MigrateElementsToFoundationBeams();
-                CurrentInputModel.EnsureFoundationBeamDefaults();
-                CurrentInputModel.EnsureAnalysisTargetDefaults();
-
-                // ComboBox用のカウントリストを再構築
-                CurrentInputModel.UpdateCountLists();
-
-                // 要素分割・解析状態をリセット（InputModel単体には解析結果なし）
-                IsElementSplit = false;
-                IsHorizontalAnalysisDone = false;
-                IsVerticalAnalysisDone = false;
-                IsGroupPileSettlementAnalysisDone = false;
-                IsVerticalBeamAnalysisDone = false;
-                VerticalBeamCaseResults = null;
-
-                // M-φキャッシュをクリア（新プロジェクト読込時）
-                PileSection.ClearMphiCache();
-
-                // 杭配置番号の同期（PileNoが未設定の場合に備える）
-                UpdatePileLayoutNo();
-
-                // Undo履歴をクリアして読込状態を初期状態として保存
-                _undoManager.Clear();
-                SaveUndoState();
-
-                // UpdateWindow() 内で UpdateTreeView() も実行されるため別途呼ばない
-                UpdateWindowImmediate();
-                ShowToast("読込が完了しました。");
+                // InputModel 単体ロードには解析結果が含まれないため projectData=null で渡す。
+                // CurrentModel と解析フラグは RestoreAnalysisState 内でリセットされる。
+                ApplyPostLoadProtocol(projectData: null, filePath: filePath, successMessage: "読込が完了しました。");
                 return true;
             }
             catch (Exception ex)
@@ -2679,22 +2631,7 @@ namespace PileDesign.ViewModels
                     {
                         CurrentInputModel = projectData.InputModel;
                         CurrentModel = projectData.AnaModel;
-
-                        // コレクションを ObservableCollection に変換
-                        _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
-
-                        // 旧データとの互換性: InputNodesがnullの場合は空のコレクションを作成
-                        CurrentInputModel.InputNodes ??= [];
-
-                        // 旧データとの互換性: Element → FoundationBeamElement への自動変換
-                        CurrentInputModel.MigrateElementsToFoundationBeams();
-
-                        // 旧データとの互換性: Materials/Sections の初期化
-                        CurrentInputModel.EnsureFoundationBeamDefaults();
-                        CurrentInputModel.EnsureAnalysisTargetDefaults();
-
-                        // プロパティ変更通知
-                        OnPropertyChanged(nameof(CurrentInputModel));
+                        ApplyPostLoadProtocol(projectData, openFileDialog.FileName, "読込が完了しました。");
                     }
                     else
                     {
@@ -2705,27 +2642,7 @@ namespace PileDesign.ViewModels
                         return;
                     }
 
-                    // VM 再アタッチ
-                    CurrentInputModel.AttachViewModel(this);
-                    CurrentFilePath = openFileDialog.FileName;
-
-                    // ComboBox用のカウントリストを再構築
-                    CurrentInputModel.UpdateCountLists();
-
-                    // M-φキャッシュをクリア（新プロジェクト読込時）
-                    PileSection.ClearMphiCache();
-
-                    // 解析結果の復元
-                    RestoreAnalysisState(projectData);
-
-                    // Undo履歴をクリアして新規プロジェクトの初期状態を保存
-                    _undoManager.Clear();
-                    SaveUndoState();
-
-                    UpdateWindowImmediate();
-                    ShowToast("読込が完了しました。");
-
-                    // MRUに追加
+                    // MRU に追加
                     _mruService.AddFile(CurrentFilePath);
 
                     // 自動保存を開始
@@ -2745,7 +2662,7 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// ファイル読込時に解析結果の状態を復元する
         /// </summary>
-        private void RestoreAnalysisState(Models.ProjectData projectData)
+        private void RestoreAnalysisState(Models.ProjectData? projectData)
         {
             // まずすべてリセット
             IsElementSplit = false;
@@ -2754,6 +2671,14 @@ namespace PileDesign.ViewModels
             IsGroupPileSettlementAnalysisDone = false;
             IsVerticalBeamAnalysisDone = false;
             VerticalBeamCaseResults = null;
+
+            // projectData が null（InputModel 単体ロード）の場合は
+            // リセットのみで完了。CurrentModel の以前の値を消すために null を代入する。
+            if (projectData == null)
+            {
+                CurrentModel = null;
+                return;
+            }
 
             var anaModel = CurrentModel;
             var soilPiles = CurrentInputModel?.ElementDivision?.SoilPiles;
@@ -5048,16 +4973,7 @@ namespace PileDesign.ViewModels
                 {
                     CurrentInputModel = projectData.InputModel;
                     CurrentModel = projectData.AnaModel;
-
-                    _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
-
-                    // 旧データとの互換性
-                    CurrentInputModel.InputNodes ??= [];
-                    CurrentInputModel.MigrateElementsToFoundationBeams();
-                    CurrentInputModel.EnsureFoundationBeamDefaults();
-                    CurrentInputModel.EnsureAnalysisTargetDefaults();
-
-                    OnPropertyChanged(nameof(CurrentInputModel));
+                    ApplyPostLoadProtocol(projectData, filePath, "読込が完了しました。");
                 }
                 else
                 {
@@ -5067,26 +4983,8 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
-                CurrentInputModel.AttachViewModel(this);
-                CurrentFilePath = filePath;
-
-                // ComboBox用のカウントリストを再構築
-                CurrentInputModel.UpdateCountLists();
-
-                // MRUに追加
+                // MRU に追加
                 _mruService.AddFile(filePath);
-
-                PileSection.ClearMphiCache();
-
-                // 解析結果の復元
-                RestoreAnalysisState(projectData);
-
-                // Undo履歴をクリアして新規プロジェクトの初期状態を保存
-                _undoManager.Clear();
-                SaveUndoState();
-
-                UpdateWindowImmediate();
-                ShowToast("読込が完了しました。");
 
                 // 自動保存を開始
                 _autoSaveService.Start(CurrentFilePath, CurrentInputModel, CurrentModel, VerticalBeamCaseResults);
@@ -5133,42 +5031,18 @@ namespace PileDesign.ViewModels
                         CurrentInputModel = projectData.InputModel;
                         CurrentModel = projectData.AnaModel;
 
-                        _fileOperationService.ConvertToObservableCollections(CurrentInputModel);
-
-                        // 旧データとの互換性
-                        CurrentInputModel.InputNodes ??= [];
-                        CurrentInputModel.MigrateElementsToFoundationBeams();
-                        CurrentInputModel.EnsureFoundationBeamDefaults();
-                        CurrentInputModel.EnsureAnalysisTargetDefaults();
-
-                        OnPropertyChanged(nameof(CurrentInputModel));
-
-                        CurrentInputModel.AttachViewModel(this);
-
-                        // ComboBox用のカウントリストを再構築
-                        CurrentInputModel.UpdateCountLists();
-
                         // ファイルパスは元のファイル名から推測（自動保存ファイル名から取得）
+                        string? inferredFilePath = null;
                         var originalFileName = System.IO.Path.GetFileNameWithoutExtension(latestAutoSave);
                         var autoSaveIndex = originalFileName.IndexOf("_autosave_");
                         if (autoSaveIndex > 0)
                         {
                             originalFileName = originalFileName[..autoSaveIndex];
                             // 元のファイルパスを推測（未保存ならnull）
-                            CurrentFilePath = originalFileName != "Untitled" ? originalFileName + ".json" : null;
+                            inferredFilePath = originalFileName != "Untitled" ? originalFileName + ".json" : null;
                         }
 
-                        PileSection.ClearMphiCache();
-
-                        // 解析結果の復元
-                        RestoreAnalysisState(projectData);
-
-                        // Undo履歴をクリアして復元状態を初期状態として保存
-                        _undoManager.Clear();
-                        SaveUndoState();
-
-                        UpdateWindowImmediate();
-                        ShowToast("自動保存ファイルの復元が完了しました。");
+                        ApplyPostLoadProtocol(projectData, inferredFilePath, "自動保存ファイルの復元が完了しました。");
 
                         // 復元後は自動保存を開始
                         if (!string.IsNullOrEmpty(CurrentFilePath))

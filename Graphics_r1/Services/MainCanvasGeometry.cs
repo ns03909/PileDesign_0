@@ -710,6 +710,10 @@ namespace PileDesign.Services
     public class TextBlockInfo
     {
         public TextBlock TextBlock { get; set; }
+        // 軽量フィールド（TextBlock不要時に使用）
+        public string Text { get; set; }
+        public double FontSize { get; set; }
+        public Brush Foreground { get; set; }
         public double X { get; set; }
         public double Y { get; set; }
         public double TextAngle { get; set; }

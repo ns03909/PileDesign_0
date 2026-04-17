@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace PileDesign.Services
 {
@@ -42,6 +43,31 @@ namespace PileDesign.Services
 
             string json = JsonSerializer.Serialize(projectData, _jsonOptions);
             File.WriteAllText(filePath, json);
+        }
+
+        /// <summary>
+        /// ProjectData を JSON ファイルに非同期保存（UIスレッドをブロックしない）
+        /// </summary>
+        public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel anaModel,
+            IList<FEM.VerticalBeamCaseResult> verticalBeamCaseResults = null)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
+
+            var projectData = new ProjectData
+            {
+                InputModel = inputModel,
+                AnaModel = anaModel,
+                VerticalBeamCaseResults = verticalBeamCaseResults != null
+                    ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
+                    : null
+            };
+
+            await Task.Run(() =>
+            {
+                string json = JsonSerializer.Serialize(projectData, _jsonOptions);
+                File.WriteAllText(filePath, json);
+            });
         }
 
         /// <summary>
@@ -89,6 +115,21 @@ namespace PileDesign.Services
             }
 
             return projectData;
+        }
+
+        /// <summary>
+        /// JSON ファイルから ProjectData を非同期読み込み（UIスレッドをブロックしない）
+        /// </summary>
+        public async Task<ProjectData> LoadProjectDataAsync(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
+
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException("ファイルが見つかりません。", filePath);
+
+            // I/O + デシリアライズをバックグラウンドスレッドで実行
+            return await Task.Run(() => LoadProjectData(filePath));
         }
 
         /// <summary>

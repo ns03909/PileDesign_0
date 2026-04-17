@@ -3,6 +3,7 @@ using PileDesign.Models;
 using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
@@ -20,6 +21,7 @@ namespace PileDesign.Views
     {
         // クラスフィールドに追加
         private bool _isClosingHandled = false;
+        private EventHandler _requestCloseHandler;
 
         // コンストラクタ
         //public SettlementWindow()
@@ -38,16 +40,26 @@ namespace PileDesign.Views
         public SettlementWindow()
         {
             InitializeComponent();
-            // DataContextはOpenDialogWindowでセットされるので、ここでは何もしない
             Loaded += SettlementWindow_Loaded;
+            Closed += SettlementWindow_Closed;
         }
 
-        // 既存のMainWindowViewModelを受け取るコンストラクタは必要なら残してもOK
         public SettlementWindow(MainWindowViewModel mainWindowViewModel)
         {
             InitializeComponent();
             DataContext = new SettlementViewModel(mainWindowViewModel);
             Loaded += SettlementWindow_Loaded;
+            Closed += SettlementWindow_Closed;
+        }
+
+        private void SettlementWindow_Closed(object sender, System.EventArgs e)
+        {
+            if (DataContext is SettlementViewModel vm && _requestCloseHandler != null)
+            {
+                vm.RequestClose -= _requestCloseHandler;
+                _requestCloseHandler = null;
+            }
+            Canvas.SizeChanged -= Canvas_SizeChanged;
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -71,20 +83,14 @@ namespace PileDesign.Views
 
             // CanvasのSizeChangedイベントにハンドラを追加
             Canvas.SizeChanged += Canvas_SizeChanged;
-            viewModel.RequestClose += (s, e) =>
+            _requestCloseHandler = (s, e) =>
             {
-                {
-                    // すでにクローズ処理中なら何もしない
-                    if (_isClosingHandled) return;
-                    _isClosingHandled = true;
-
-                    if (this.IsLoaded && this.IsVisible)
-                    {
-                        this.Close();
-                    }
-                }
-                ;
+                if (_isClosingHandled) return;
+                _isClosingHandled = true;
+                if (this.IsLoaded && this.IsVisible)
+                    this.Close();
             };
+            viewModel.RequestClose += _requestCloseHandler;
 
             // 杭先端沈下グラフを描画（α, nのデフォルト値で）
             viewModel.AddComponent(viewModel.PileBody.SettleAlpha, viewModel.PileBody.SettleN);

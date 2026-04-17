@@ -145,7 +145,7 @@ namespace PileDesign.Views
             var fillPath = new Path
             {
                 Data = fillGeom,
-                Fill = new SolidColorBrush(Color.FromArgb(55, 100, 140, 200)), // 半透明塗り
+                Fill = BrushCubeFill, // 半透明塗り
                 Stroke = null,
                 IsHitTestVisible = false
             };
@@ -159,7 +159,7 @@ namespace PileDesign.Views
             {
                 Data = outerGeom,
                 Fill = Brushes.Transparent,
-                Stroke = new SolidColorBrush(Color.FromArgb(160, 80, 120, 170)),
+                Stroke = BrushCubeStroke,
                 StrokeThickness = 1.2,
                 IsHitTestVisible = false
             };
@@ -173,7 +173,7 @@ namespace PileDesign.Views
             {
                 Data = innerGeom,
                 Fill = Brushes.Transparent,
-                Stroke = new SolidColorBrush(Color.FromArgb(160, 80, 120, 170)),
+                Stroke = BrushCubeStroke,
                 StrokeThickness = 1.2,
                 IsHitTestVisible = false
             };
@@ -244,7 +244,7 @@ namespace PileDesign.Views
             var trianglePath = new Path
             {
                 Data = triGeom,
-                Fill = new SolidColorBrush(Color.FromArgb(160, 255, 140, 0)), // 半透明オレンジ
+                Fill = BrushCubeArrow, // 半透明オレンジ
                 Stroke = Brushes.OrangeRed,
                 StrokeThickness = 1.5,
                 StrokeLineJoin = PenLineJoin.Round,
@@ -1015,7 +1015,7 @@ namespace PileDesign.Views
                         var path = new Path
                         {
                             Data = pg,
-                            Fill = new SolidColorBrush(Color.FromArgb(60, 98, 176, 226)), // SkyBlue 半透明
+                            Fill = BrushCubeHighlightBlue, // SkyBlue 半透明
                             Stroke = Brushes.SkyBlue,
                             StrokeThickness = 1.5,
                             IsHitTestVisible = false
@@ -1052,7 +1052,7 @@ namespace PileDesign.Views
                             Height = 10,
                             Stroke = Brushes.SkyBlue,
                             StrokeThickness = 2,
-                            Fill = new SolidColorBrush(Color.FromArgb(90, 144, 238, 144)),
+                            Fill = BrushCubeHighlightGreen,
                             IsHitTestVisible = false
                         };
                         Canvas.SetLeft(ellipse, p.X - ellipse.Width / 2);

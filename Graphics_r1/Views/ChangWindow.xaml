@@ -478,49 +478,6 @@
                                                     </DataGridTemplateColumn.CellEditingTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <!-- 引張定着筋 有無 -->
-                                                <!--<DataGridTemplateColumn Header="引張定着筋" Width="120">
-                                                    <DataGridTemplateColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
-                                                                <CheckBox IsChecked="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.HasTensionRebars, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                      Checked="CheckBoxHasTensionAnchorsChecked"
-                                                                      Unchecked="CheckBoxHasTensionAnchorsUnchecked"
-                                                                      HorizontalAlignment="Center"/>
-                                                            </ContentControl>
-                                                        </DataTemplate>
-                                                    </DataGridTemplateColumn.CellTemplate>
-                                                    <DataGridTemplateColumn.CellEditingTemplate>
-                                                        <DataTemplate>
-                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
-                                                                <CheckBox IsChecked="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.HasTensionRebars, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                      Checked="CheckBoxHasTensionAnchorsChecked"
-                                                                      Unchecked="CheckBoxHasTensionAnchorsUnchecked"
-                                                                      HorizontalAlignment="Center"/>
-                                                            </ContentControl>
-                                                        </DataTemplate>
-                                                    </DataGridTemplateColumn.CellEditingTemplate>
-                                                </DataGridTemplateColumn>-->
-
-                                                <!-- 引張定着筋 詳細 -->
-                                                <!--<DataGridTemplateColumn Header="引張定着筋 詳細" Width="180">
-                                                    <DataGridTemplateColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
-                                                                <TextBlock Text="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.TensionSummary, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    TextWrapping="Wrap" Foreground="Gray" />
-                                                            </ContentControl>
-                                                        </DataTemplate>
-                                                    </DataGridTemplateColumn.CellTemplate>
-                                                    <DataGridTemplateColumn.CellEditingTemplate>
-                                                        <DataTemplate>
-                                                            <ContentControl Visibility="{Binding PileTopType, Converter={StaticResource VisibilityConverter}, ConverterParameter='キャプテンパイル工法'}">
-                                                                <TextBlock Text="{Binding DataContext.PileTop.CaptainPile.CTPTensionRebars.TensionSummary, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                    TextWrapping="Wrap" Foreground="Gray" />
-                                                            </ContentControl>
-                                                        </DataTemplate>
-                                                    </DataGridTemplateColumn.CellEditingTemplate>
-                                                </DataGridTemplateColumn>-->
                                                 <!-- FTキャップ -->
                                                 <DataGridTemplateColumn Header="FTキャップ" Width="100">
                                                     <DataGridTemplateColumn.CellTemplate>
@@ -800,18 +757,6 @@
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
-
-                                                <!--<DataGridTextColumn Binding="{Binding H, UpdateSourceTrigger=LostFocus, StringFormat=N3, Mode=TwoWay}" Width="60"
-                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                EditingElementStyle="{StaticResource RightAlignedEditingTextBoxStyle}">
-                                <DataGridTextColumn.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="突出長" HorizontalAlignment="Center"/>
-                                        <controls:FormulaControl Formula="\h" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="(m)" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                </DataGridTextColumn.Header>
-                            </DataGridTextColumn>-->
 
                                                 <DataGridTextColumn Binding="{Binding Number, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" Width="60"
                                                     ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
