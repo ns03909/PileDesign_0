@@ -28,13 +28,10 @@ namespace PileDesign.ViewModels
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
         // 杭体
+        [ObservableProperty]
         private ObservableCollection<PileBodyInput> _pileBodies;
-        public ObservableCollection<PileBodyInput> PileBodies
-        {
-            get => _pileBodies;
-            set => SetProperty(ref _pileBodies, value);
-        }
 
+        // PileBody は外部からの書き込みを防ぐため private setter を維持
         private PileBodyInput _pileBody;
         public PileBodyInput PileBody
         {
@@ -50,12 +47,8 @@ namespace PileDesign.ViewModels
         //    private set => SetProperty(ref _pileBodiesCountPlusOneList, value);
         //}
 
+        [ObservableProperty]
         private ObservableCollection<string> _pileBodiesCountPlusOneList;
-        public ObservableCollection<string> PileBodiesCountPlusOneList
-        {
-            get => _pileBodiesCountPlusOneList;
-            set => SetProperty(ref _pileBodiesCountPlusOneList, value);
-        }
 
 
         //private void UpdatePileBodiesCountPlusOneList()
@@ -91,21 +84,17 @@ namespace PileDesign.ViewModels
         }
 
         // 杭頭レベル
+        [ObservableProperty]
         private double _pileTopAltitude;
-        public double PileTopAltitude
+
+        partial void OnPileTopAltitudeChanged(double value)
         {
-            get => _pileTopAltitude;
-            set
-            {
-                if (SetProperty(ref _pileTopAltitude, value))
-                {
-                    DrawShapes();
-                    UpdateTemporarySoilPile();
-                }
-            }
+            DrawShapes();
+            UpdateTemporarySoilPile();
         }
 
-        // 地盤番号
+        // 地盤番号 — setter は値変化の有無に関わらず常に副作用を走らせる既存仕様のため
+        // partial 移行不可（OnXxxChanged は値変化時のみ呼ばれる）。手書き維持。
         private int _selectedGroundNo = 1;
         public int SelectedGroundNo
         {
@@ -119,37 +108,18 @@ namespace PileDesign.ViewModels
         }
 
         // 地層描画
+        [ObservableProperty]
         private bool _isGroundLayerOverwrapped;
-        public bool IsGroundLayerOverwrapped
-        //{
-        //    get => _isGroundLayerOverwrapped;
-        //    set
-        //    {
-        //        SetProperty(ref _isGroundLayerOverwrapped, value);
-        //        SetGroundInput();
-        //        UpdateTemporarySoilPile();
-        //        OnPropertyChanged(nameof(IsGroundLayerOverwrapped));
-        //    }
-        //}
+
+        partial void OnIsGroundLayerOverwrappedChanged(bool value)
         {
-            get => _isGroundLayerOverwrapped;
-            set
-            {
-                if (SetProperty(ref _isGroundLayerOverwrapped, value))
-                {
-                    SetGroundInput();
-                    UpdateTemporarySoilPile();
-                }
-            }
+            SetGroundInput();
+            UpdateTemporarySoilPile();
         }
 
         // 選択中地盤
+        [ObservableProperty]
         private GroundInput _selectedGroundInput;
-        public GroundInput SelectedGroundInput
-        {
-            get => _selectedGroundInput;
-            set => SetProperty(ref _selectedGroundInput, value);
-        }
 
         private void SetGroundInput()
         {
@@ -196,12 +166,8 @@ namespace PileDesign.ViewModels
         }
 
         // 仮のSoilPile
+        [ObservableProperty]
         private SoilPile _temporarySoilPile;
-        public SoilPile TemporarySoilPile
-        {
-            get => _temporarySoilPile;
-            set => SetProperty(ref _temporarySoilPile, value);
-        }
 
         // xamlフィールド
         public Canvas Canvas { get; set; }

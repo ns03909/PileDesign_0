@@ -31,20 +31,14 @@ namespace PileDesign.ViewModels
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
+        [ObservableProperty]
         private int _pileBodyNo;
-        public int PileBodyNo
-        {
-            get => _pileBodyNo;
-            set => SetProperty(ref _pileBodyNo, value);
-        }
 
+        [ObservableProperty]
         private string _pileBodyType;
-        public string PileBodyType
-        {
-            get => _pileBodyType;
-            set => SetProperty(ref _pileBodyType, value);
-        }
 
+        // PileTop は INotifyPropertyChanged の subscribe/unsubscribe を伴う複雑な
+        // setter のため手書き維持
         private PileTop _pileTop;
         public PileTop PileTop
         {
@@ -109,19 +103,11 @@ namespace PileDesign.ViewModels
             }
         }
 
+        [ObservableProperty]
         private string _pileConstructionType;
-        public string PileConstructionType
-        {
-            get => _pileConstructionType;
-            set => SetProperty(ref _pileConstructionType, value);
-        }
 
+        [ObservableProperty]
         private PileSection _pileSection;
-        public PileSection PileSection
-        {
-            get => _pileSection;
-            set => SetProperty(ref _pileSection, value);
-        }
 
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
@@ -136,21 +122,13 @@ namespace PileDesign.ViewModels
 
         public static Crosshair MyCrosshair_MN { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_MN;
-        public string CrosshairPositionText_MN
-        {
-            get => _crosshairPositionText_MN;
-            set => SetProperty(ref _crosshairPositionText_MN, value);
-        }
 
         public static Crosshair MyCrosshair_ThetaM { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_ThetaM;
-        public string CrosshairPositionText_ThetaM
-        {
-            get => _crosshairPositionText_ThetaM;
-            set => SetProperty(ref _crosshairPositionText_ThetaM, value);
-        }
 
         // 追加: 最上段断面表示用プロパティ群
         //private double _displayTopSectionDiameter;
@@ -174,19 +152,11 @@ namespace PileDesign.ViewModels
         //    set => SetProperty(ref _displayTopSectionMainBarNum, value);
         //}
 
+        [ObservableProperty]
         private double _displayTopSectionPipeDia;
-        public double DisplayTopSectionPipeDia
-        {
-            get => _displayTopSectionPipeDia;
-            set => SetProperty(ref _displayTopSectionPipeDia, value);
-        }
 
+        [ObservableProperty]
         private double _displayTopSectionPipeTs;
-        public double DisplayTopSectionPipeTs
-        {
-            get => _displayTopSectionPipeTs;
-            set => SetProperty(ref _displayTopSectionPipeTs, value);
-        }
 
         // コンストラクタ
         public PileTopViewModel(

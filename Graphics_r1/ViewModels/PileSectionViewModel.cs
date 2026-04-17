@@ -32,20 +32,14 @@ namespace PileDesign.ViewModels
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
+        [ObservableProperty]
         private int _pileBodyNo;
-        public int PileBodyNo
-        {
-            get => _pileBodyNo;
-            set => SetProperty(ref _pileBodyNo, value);
-        }
 
+        [ObservableProperty]
         private int _pileSegmentNo;
-        public int PileSegmentNo
-        {
-            get => _pileSegmentNo;
-            set => SetProperty(ref _pileSegmentNo, value);
-        }
 
+        // PileSection は変更時に非バインド属性 UltimateLimitAxialForceThresholds への
+        // PropertyChanged 通知も発火するため手書き維持
         private PileSection _pileSection;
         public PileSection PileSection
         {
@@ -73,80 +67,55 @@ namespace PileDesign.ViewModels
 
         public static Crosshair MyCrosshair_MN { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_MN;
-        public string CrosshairPositionText_MN
-        {
-            get => _crosshairPositionText_MN;
-            set => SetProperty(ref _crosshairPositionText_MN, value);
-        }
 
         public static Crosshair MyCrosshair_Mphi { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_Mphi;
-        public string CrosshairPositionText_Mphi
-        {
-            get => _crosshairPositionText_Mphi;
-            set => SetProperty(ref _crosshairPositionText_Mphi, value);
-        }
 
         public static Crosshair MyCrosshair_Mtheta { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_Mtheta;
-        public string CrosshairPositionText_Mtheta
-        {
-            get => _crosshairPositionText_Mtheta;
-            set => SetProperty(ref _crosshairPositionText_Mtheta, value);
-        }
 
         public static Crosshair MyCrosshair_NQ { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_NQ;
-        public string CrosshairPositionText_NQ
-        {
-            get => _crosshairPositionText_NQ;
-            set => SetProperty(ref _crosshairPositionText_NQ, value);
-        }
 
+        [ObservableProperty]
         private double _monQd = 1.0;
-        public double MonQd
+
+        partial void OnMonQdChanged(double value)
         {
-            get => _monQd;
-            set
+            try
             {
-                double v = value;
-                if (SetProperty(ref _monQd, v))
+                if (PileSection != null && PileSectionWindowInstance != null)
                 {
-                    try
+                    var thresholds = PileSection.UltimateLimitAxialForceThresholds;
+                    if (thresholds != null && thresholds.Count >= 2)
                     {
-                        // 必要条件を満たす場合、N-Q グラフを再描画する
-                        if (PileSection != null && PileSectionWindowInstance != null)
+                        double NMin = thresholds[0];
+                        double NMax = thresholds[^1];
+                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                         {
-                            var thresholds = PileSection.UltimateLimitAxialForceThresholds;
-                            if (thresholds != null && thresholds.Count >= 2)
-                            {
-                                double NMin = thresholds[0];
-                                double NMax = thresholds[^1];
-                                // UI スレッドで安全に描画メソッドを呼ぶ
-                                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                                {
-                                    DrawNQForCurrentPile(NMin, NMax, 10);
-                                }));
-                            }
-                            else
-                            {
-                                // 閾値が取れない場合は ChartUpdate にフォールバックして全体更新
-                                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                                {
-                                    ChartUpdate();
-                                }));
-                            }
-                        }
+                            DrawNQForCurrentPile(NMin, NMax, 10);
+                        }));
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        System.Diagnostics.Debug.WriteLine($"MonQd change: failed to refresh NQ plot: {ex.Message}");
+                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                        {
+                            ChartUpdate();
+                        }));
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"MonQd change: failed to refresh NQ plot: {ex.Message}");
             }
         }
 
@@ -179,44 +148,37 @@ namespace PileDesign.ViewModels
             }
         }
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsSeismicLevel1))]
+        [NotifyPropertyChangedFor(nameof(IsSeismicLevel2))]
         private int _seismicLevel = 2;
-        public int SeismicLevel
-        {
-            get => _seismicLevel;
-            set
-            {
-                if (SetProperty(ref _seismicLevel, value))
-                {
-                    // SeismicLevel 変更時に N-Q プロットを再描画する（UI スレッドで安全に呼ぶ）
-                    try
-                    {
-                        if (PileSection != null && PileSectionWindowInstance != null)
-                        {
-                            var thresholds = PileSection.UltimateLimitAxialForceThresholds;
-                            if (thresholds != null && thresholds.Count >= 2)
-                            {
-                                double NMin = thresholds[0];
-                                double NMax = thresholds[^1];
-                                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
-                                {
-                                    DrawNQForCurrentPile(NMin, NMax, 10);
-                                }));
-                            }
-                            else
-                            {
-                                Application.Current?.Dispatcher?.BeginInvoke(new Action(() => ChartUpdate()));
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"SeismicLevel change: failed to refresh NQ plot: {ex.Message}");
-                    }
 
-                    // IsSeismicLevel1/2 のバインディング更新通知
-                    OnPropertyChanged(nameof(IsSeismicLevel1));
-                    OnPropertyChanged(nameof(IsSeismicLevel2));
+        partial void OnSeismicLevelChanged(int value)
+        {
+            // SeismicLevel 変更時に N-Q プロットを再描画する（UI スレッドで安全に呼ぶ）
+            try
+            {
+                if (PileSection != null && PileSectionWindowInstance != null)
+                {
+                    var thresholds = PileSection.UltimateLimitAxialForceThresholds;
+                    if (thresholds != null && thresholds.Count >= 2)
+                    {
+                        double NMin = thresholds[0];
+                        double NMax = thresholds[^1];
+                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                        {
+                            DrawNQForCurrentPile(NMin, NMax, 10);
+                        }));
+                    }
+                    else
+                    {
+                        Application.Current?.Dispatcher?.BeginInvoke(new Action(() => ChartUpdate()));
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SeismicLevel change: failed to refresh NQ plot: {ex.Message}");
             }
         }
 

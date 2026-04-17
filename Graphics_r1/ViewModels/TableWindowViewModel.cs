@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using System;
 using System.Collections.Generic;
@@ -13,23 +14,17 @@ using System.Windows.Input;
 
 namespace PileDesign.ViewModels
 {
-    public sealed class TableWindowViewModel : BaseViewModel
+    public sealed partial class TableWindowViewModel : BaseViewModel
     {
         // 全テーブル
         public ObservableCollection<ResultTable> AllTables { get; } = [];
         // フィルタ後
         public ObservableCollection<ResultTable> FilteredTables { get; } = [];
 
+        [ObservableProperty]
         private ResultTable? _selectedTable;
-        public ResultTable? SelectedTable
-        {
-            get => _selectedTable;
-            set
-            {
-                if (SetProperty(ref _selectedTable, value))
-                    ExportCsvCommandRaiseCanExecute();
-            }
-        }
+
+        partial void OnSelectedTableChanged(ResultTable? value) => ExportCsvCommandRaiseCanExecute();
 
         /// <summary>色分け用: 地震荷重ケース一覧</summary>
         public ObservableCollection<LoadCase>? AllSeismicLoadCases { get; set; }
@@ -42,38 +37,20 @@ namespace PileDesign.ViewModels
         public ObservableCollection<string> LoadCombinationFilterOptions { get; } = [];
         public ObservableCollection<string> LiquefactionFilterOptions { get; } = [];
 
+        [ObservableProperty]
         private string _selectedLoadCaseFilter = "ALL";
-        public string SelectedLoadCaseFilter
-        {
-            get => _selectedLoadCaseFilter;
-            set
-            {
-                if (SetProperty(ref _selectedLoadCaseFilter, value))
-                    ApplyFilters();
-            }
-        }
 
+        partial void OnSelectedLoadCaseFilterChanged(string value) => ApplyFilters();
+
+        [ObservableProperty]
         private string _selectedLoadCombinationFilter = "ALL";
-        public string SelectedLoadCombinationFilter
-        {
-            get => _selectedLoadCombinationFilter;
-            set
-            {
-                if (SetProperty(ref _selectedLoadCombinationFilter, value))
-                    ApplyFilters();
-            }
-        }
 
+        partial void OnSelectedLoadCombinationFilterChanged(string value) => ApplyFilters();
+
+        [ObservableProperty]
         private string _selectedLiquefactionFilter = "ALL";
-        public string SelectedLiquefactionFilter
-        {
-            get => _selectedLiquefactionFilter;
-            set
-            {
-                if (SetProperty(ref _selectedLiquefactionFilter, value))
-                    ApplyFilters();
-            }
-        }
+
+        partial void OnSelectedLiquefactionFilterChanged(string value) => ApplyFilters();
 
         public ICommand ExportCsvCommand { get; }
 

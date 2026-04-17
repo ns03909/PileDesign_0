@@ -34,12 +34,8 @@ namespace PileDesign.ViewModels
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
         // 地盤杭セット
+        [ObservableProperty]
         private ObservableCollection<SoilPile> _soilPiles;
-        public ObservableCollection<SoilPile> SoilPiles
-        {
-            get => _soilPiles;
-            set => SetProperty(ref _soilPiles, value);
-        }
 
         // 選択中の地盤杭セット
         private SoilPile _soilPile;
@@ -236,46 +232,26 @@ namespace PileDesign.ViewModels
         public string WarningMessage => "すべての土層-杭セットの沈下性状を確認してください。";
 
         // 杭体番号
+        [ObservableProperty]
         private int _soilPileNo = 1;
-        public int SoilPileNo
-        {
-            get => _soilPileNo;
-            set => SetProperty(ref _soilPileNo, value);
-        }
 
         public ObservableCollection<double> Fs { get; set; } = [];
         public ObservableCollection<double> Ds { get; set; } = [];
 
         // 選択杭区間
+        [ObservableProperty]
         private PileCircumVertical _selectedPileCircumstanceVertical;
-        public PileCircumVertical SelectedPileCircumstanceVertical
-        {
-            get => _selectedPileCircumstanceVertical;
-            set
-            {
-                if (SetProperty(ref _selectedPileCircumstanceVertical, value))
-                {
-                    DrawShapes(); // 選択変更時に杭姿図を再描画
-                }
-            }
-        }
+
+        partial void OnSelectedPileCircumstanceVerticalChanged(PileCircumVertical value) => DrawShapes();
 
         public VerticalLoadTransferMethod.LoadDisplacement SelectedLoadDisplacement { get; set; }
 
+        [ObservableProperty]
         private VerticalLoadTransferMethod _verticalLoadTransferMethod;
-        public VerticalLoadTransferMethod VerticalLoadTransferMethod
-        {
-            get => _verticalLoadTransferMethod;
-            set => SetProperty(ref _verticalLoadTransferMethod, value);
-        }
 
         // 解析制御モード選択（荷重制御法をデフォルトに）
+        [ObservableProperty]
         private AnalysisControlMode _selectedAnalysisMode = AnalysisControlMode.LoadControl;
-        public AnalysisControlMode SelectedAnalysisMode
-        {
-            get => _selectedAnalysisMode;
-            set => SetProperty(ref _selectedAnalysisMode, value);
-        }
 
         // 解析制御モードリスト（ComboBox用）
         public AnalysisControlMode[] AnalysisModes { get; } =
@@ -303,12 +279,8 @@ namespace PileDesign.ViewModels
         public TextBox TextBoxSettleAlpha { get; set; }
         public TextBox TextBoxSettleN { get; set; }
 
+        [ObservableProperty]
         private int _selectedTabIndex;
-        public int SelectedTabIndex
-        {
-            get => _selectedTabIndex;
-            set => SetProperty(ref _selectedTabIndex, value);
-        }
 
         public ComboBox ComboBoxPileTopType { get; set; }
         public ComboBox ComboBoxPresetSettlementParameters { get; set; }
@@ -318,52 +290,28 @@ namespace PileDesign.ViewModels
 
         public static Crosshair MyCrosshair_PileToe { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_PileToe;
-        public string CrosshairPositionText_PileToe
-        {
-            get => _crosshairPositionText_PileToe;
-            set => SetProperty(ref _crosshairPositionText_PileToe, value);
-        }
 
         public static Crosshair MyCrosshair_PileCircumstance { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_PileCircumstance;
-        public string CrosshairPositionText_PileCircumstance
-        {
-            get => _crosshairPositionText_PileCircumstance;
-            set => SetProperty(ref _crosshairPositionText_PileCircumstance, value);
-        }
 
         public static Crosshair MyCrosshair_PileToeSettlement { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_PileToeSettlement;
-        public string CrosshairPositionText_PileToeSettlement
-        {
-            get => _crosshairPositionText_PileToeSettlement;
-            set => SetProperty(ref _crosshairPositionText_PileToeSettlement, value);
-        }
 
         public static Crosshair MyCrosshair_PileTopSettlement { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_PileTopSettlement;
-        public string CrosshairPositionText_PileTopSettlement
-        {
-            get => _crosshairPositionText_PileTopSettlement;
-            set => SetProperty(ref _crosshairPositionText_PileTopSettlement, value);
-        }
 
+        [ObservableProperty]
         private bool _isSettlementLegendVisible = true;
-        public bool IsSettlementLegendVisible
-        {
-            get => _isSettlementLegendVisible;
-            set
-            {
-                if (SetProperty(ref _isSettlementLegendVisible, value))
-                {
-                    ApplyLegendVisibility();
-                }
-            }
-        }
+
+        partial void OnIsSettlementLegendVisibleChanged(bool value) => ApplyLegendVisibility();
 
         private void ApplyLegendVisibility()
         {
