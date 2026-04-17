@@ -504,7 +504,7 @@ namespace PileDesign.Views
                         string format = "{0:N" + viewModel.DecimalPlaces + "}";
                         if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                         {
-                            if (beam.IsPileTop)
+                            if (beam.IsPileHeadElement)
                             {
                                 AddText3D(Brushes.Black, string.Format(format, originalForceI),
                                 nodeIForce2D.X, nodeIForce2D.Y, "C", "C", 0.0);
@@ -822,7 +822,7 @@ namespace PileDesign.Views
                             bool isFoundationBeam = beam.Name.StartsWith("FoundationBeam-");
                             if (viewModel.IsPileTopResultValueVisibleOnly && !isFoundationBeam)
                             {
-                                if (beam.IsPileTop)
+                                if (beam.IsPileHeadElement)
                                 {
                                     AddText3D(Brushes.Black, string.Format(format, origI * multiplier), nodeIDisp2D.X, nodeIDisp2D.Y, "C", "C", 0.0);
                                 }
@@ -2177,7 +2177,7 @@ namespace PileDesign.Views
 
         /// <summary>
         /// 杭頭Mマップ / 杭頭Qマップ を描画
-        /// 最も上の杭要素（IsPileTop）のi端応力を使用
+        /// 各杭の最上段要素（IsPileHeadElement）の i 端応力を使用
         /// </summary>
         private void DrawPileHeadForceMap(MainWindowViewModel viewModel, AnaModel anaModel)
         {
@@ -2194,8 +2194,8 @@ namespace PileDesign.Views
 
             var entries = new System.Collections.Generic.List<(Point3D location, double valueX, double valueY, double valueMag)>();
 
-            // 杭頭Beam要素のリスト（IsPileTop）
-            var pileTopBeams = anaModel.Beams?.Where(b => b.IsPileTop).ToList()
+            // 杭頭Beam要素のリスト（各杭の最上段）
+            var pileTopBeams = anaModel.Beams?.Where(b => b.IsPileHeadElement).ToList()
                                ?? new System.Collections.Generic.List<FEM.Beam>();
 
             foreach (var pile in viewModel.CurrentInputModel.PileLayoutItems)
@@ -2386,7 +2386,7 @@ namespace PileDesign.Views
                 else
                 {
                     // RigidLinkがない場合（ΔZc≈0）: 杭頭ビームのI端を使用
-                    var pileTopBeam = pile.Beams?.FirstOrDefault(b => b.IsPileTop);
+                    var pileTopBeam = pile.Beams?.FirstOrDefault(b => b.IsPileHeadElement);
                     if (pileTopBeam != null)
                     {
                         targetBeam = pileTopBeam;

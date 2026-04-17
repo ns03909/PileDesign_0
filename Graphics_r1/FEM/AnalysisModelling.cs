@@ -416,6 +416,9 @@ namespace PileDesign.FEM
                     // 要素下端が0.5D境界以上であれば杭頭部とする
                     if (z >= pileTopZoneBottom - NumericalConstants.COORDINATE_TOLERANCE)
                         beam.SetPileTopFlag(true);
+                    // 各杭の最上段要素（SegmentIndex == 0）
+                    if (beam.SegmentIndex == 0)
+                        beam.IsPileHeadElement = true;
                     result.Beams.Add(beam);
                     prevPileNode = pileNode;
                 }
@@ -427,6 +430,9 @@ namespace PileDesign.FEM
                     beam.SegmentIndex = i - 1;
                     if (z >= pileTopZoneBottom - NumericalConstants.COORDINATE_TOLERANCE)
                         beam.SetPileTopFlag(true);
+                    // 2 要素構成の杭では先端要素が同時に最上段
+                    if (beam.SegmentIndex == 0)
+                        beam.IsPileHeadElement = true;
                     result.Beams.Add(beam);
                     pileNode.SetBoundary(PileTipBoundary);
                 }

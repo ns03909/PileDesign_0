@@ -129,7 +129,7 @@ namespace PileDesign.Services
                 int pileNo = 0;
                 foreach (var beam in beams)
                 {
-                    if (!beam.IsPileTop) continue;
+                    if (!beam.IsPileHeadElement) continue;
                     pileNo++;
                     var result = FindBeamResult(beam);
                     var bf = result?.CumulativeForce ?? beam.CumulativeForce ?? new BeamForce(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
@@ -452,7 +452,7 @@ namespace PileDesign.Services
                 // 2. 杭頭鉛直力の合計（杭頭Beam要素 I端のFxi: 軸力）
                 {
                     double sumFx = 0, sumFy = 0, sumFz = 0;
-                    foreach (var beam in beams.Where(b => b.IsPileTop))
+                    foreach (var beam in beams.Where(b => b.IsPileHeadElement))
                     {
                         var br = FindBeamResult(beam);
                         var bf = br?.CumulativeForce ?? beam.CumulativeForce;

@@ -2507,9 +2507,9 @@ namespace PileDesign.ViewModels
 
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                // この杭の杭頭Beam要素を検索
+                // この杭の杭頭Beam要素を検索（各杭の最上段要素）
                 var topBeam = targetModel.Beams.FirstOrDefault(b =>
-                    b.IsPileTop &&
+                    b.IsPileHeadElement &&
                     b.NodeI != null &&
                     Math.Abs(b.NodeI.Coord.X - pile.Point3D.X) < 0.01 &&
                     Math.Abs(b.NodeI.Coord.Y - pile.Point3D.Y) < 0.01);

@@ -15,7 +15,19 @@ namespace PileDesign.FEM
         public Node NodeI { get; set; }
         public Node NodeJ { get; set; }
         public double Length { get; set; }
+        /// <summary>
+        /// 杭頭部ゾーン判定（場所打ち鋼管コンクリート杭の鋼管コンクリート部において、
+        /// 杭頭から 0.5D 以内にある要素で true）。M-φ の杭頭/杭中間カーブ切替に使用。
+        /// 非鋼管コンクリート部の杭では全要素が true になる（pileTopZoneBottom = -∞）ため
+        /// 「各杭の最上段要素」判定には使用しないこと — その用途には <see cref="IsPileHeadElement"/> を使う。
+        /// </summary>
         public bool IsPileTop { get; set; } = false;
+
+        /// <summary>
+        /// 各杭の最上段（I 端が杭頭側）要素で true。SegmentIndex == 0 と等価。
+        /// 「杭頭」値表示・杭頭応力テーブル等の「topmost element per pile」用途で使用。
+        /// </summary>
+        public bool IsPileHeadElement { get; set; } = false;
 
         // どの杭体/どのセグメントか（Solver が PileSection に辿るためのメタ情報）
         public int? PileBodyNo { get; set; }
@@ -665,6 +677,7 @@ namespace PileDesign.FEM
             var copy = new Beam(Name, sectionCopy, nodeICopy, nodeJCopy, Ryi_tan, Ryj_tan)
             {
                 IsPileTop = this.IsPileTop,
+                IsPileHeadElement = this.IsPileHeadElement,
                 Ryi_tan = this.Ryi_tan,
                 Rzi_tan = this.Rzi_tan,
                 Ryi_sec = this.Ryi_sec,
