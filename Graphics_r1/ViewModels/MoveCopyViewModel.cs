@@ -1,68 +1,37 @@
-﻿using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
+using System.Windows;
 
 namespace PileDesign.ViewModels
 {
-    public class MoveCopyViewModel : BaseViewModel
+    public partial class MoveCopyViewModel : BaseViewModel
     {
+        // IsCopySelected / IsMoveSelected は相互排他（どちらかが true なら他方は false）
+        [ObservableProperty]
         private bool _isCopySelected;
-        public bool IsCopySelected
-        //{
-        //    get => _isCopySelected;
-        //    set => SetProperty(ref _isCopySelected, value);
-        //}
+
+        partial void OnIsCopySelectedChanged(bool value)
         {
-            get => _isCopySelected;
-            set
-            {
-                if (SetProperty(ref _isCopySelected, value))
-                {
-                    // IsCopySelected が変更された場合、IsMoveSelected を反転
-                    if (value) IsMoveSelected = false;
-                    OnPropertyChanged(nameof(IsCopySelected));
-                }
-            }
+            if (value) IsMoveSelected = false;
         }
 
+        [ObservableProperty]
         private bool _isMoveSelected = true;
-        public bool IsMoveSelected
-        //{
-        //    get => _isMoveSelected;
-        //    set => SetProperty(ref _isMoveSelected, value);
-        //}
+
+        partial void OnIsMoveSelectedChanged(bool value)
         {
-            get => _isMoveSelected;
-            set
-            {
-                if (SetProperty(ref _isMoveSelected, value))
-                {
-                    // IsMoveSelected が変更された場合、IsCopySelected を反転
-                    if (value) IsCopySelected = false;
-                    OnPropertyChanged(nameof(IsMoveSelected));
-                }
-            }
+            if (value) IsCopySelected = false;
         }
 
+        [ObservableProperty]
         private double _dX;
-        public double DX
-        {
-            get => _dX;
-            set => SetProperty(ref _dX, value);
-        }
 
+        [ObservableProperty]
         private double _dY;
-        public double DY
-        {
-            get => _dY;
-            set => SetProperty(ref _dY, value);
-        }
 
+        [ObservableProperty]
         private double _dZ;
-        public double DZ
-        {
-            get => _dZ;
-            set => SetProperty(ref _dZ, value);
-        }
 
+        // RepetitionNumber: 自然数以外は拒否する必要があるため手書きの setter を維持
         private int _repetitionNumber = 1;
         public int RepetitionNumber
         {
@@ -81,19 +50,11 @@ namespace PileDesign.ViewModels
             }
         }
 
+        [ObservableProperty]
         private bool _isInputNodesIncluded = true;
-        public bool IsInputNodesIncluded
-        {
-            get => _isInputNodesIncluded;
-            set => SetProperty(ref _isInputNodesIncluded, value);
-        }
 
+        [ObservableProperty]
         private bool _isPileLayoutIncluded = true;
-        public bool IsPileLayoutIncluded
-        {
-            get => _isPileLayoutIncluded;
-            set => SetProperty(ref _isPileLayoutIncluded, value);
-        }
 
         internal void ResetStatus()
         {
@@ -104,9 +65,5 @@ namespace PileDesign.ViewModels
             IsInputNodesIncluded = true;
             IsPileLayoutIncluded = true;
         }
-
-
     }
 }
-
-

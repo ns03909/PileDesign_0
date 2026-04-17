@@ -1,124 +1,57 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace PileDesign.ViewModels
 {
-    public class BeamSectionWizardViewModel : BaseViewModel
+    public partial class BeamSectionWizardViewModel : BaseViewModel
     {
         // 名称
+        [ObservableProperty]
         private string _name = "500x800";
-        public string Name
-        {
-            get => _name;
-            set => SetProperty(ref _name, value);
-        }
 
         // 断面寸法
+        [ObservableProperty]
         private double _width = 0.5;
-        public double Width
-        {
-            get => _width;
-            set
-            {
-                if (SetProperty(ref _width, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
+        partial void OnWidthChanged(double value) => CalculateProperties();
+
+        [ObservableProperty]
         private double _height = 0.8;
-        public double Height
-        {
-            get => _height;
-            set
-            {
-                if (SetProperty(ref _height, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
+
+        partial void OnHeightChanged(double value) => CalculateProperties();
 
         // 増減係数（デフォルト1.0）
+        [ObservableProperty]
         private double _aFactor = 1.0;
-        public double AFactor
-        {
-            get => _aFactor;
-            set
-            {
-                if (SetProperty(ref _aFactor, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
+        partial void OnAFactorChanged(double value) => CalculateProperties();
+
+        [ObservableProperty]
         private double _ayFactor = 1.0;
-        public double AyFactor
-        {
-            get => _ayFactor;
-            set
-            {
-                if (SetProperty(ref _ayFactor, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
+        partial void OnAyFactorChanged(double value) => CalculateProperties();
+
+        [ObservableProperty]
         private double _azFactor = 1.0;
-        public double AzFactor
-        {
-            get => _azFactor;
-            set
-            {
-                if (SetProperty(ref _azFactor, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
+        partial void OnAzFactorChanged(double value) => CalculateProperties();
+
+        [ObservableProperty]
         private double _ixxFactor = 1.0;
-        public double IxxFactor
-        {
-            get => _ixxFactor;
-            set
-            {
-                if (SetProperty(ref _ixxFactor, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
+        partial void OnIxxFactorChanged(double value) => CalculateProperties();
+
+        [ObservableProperty]
         private double _iyyFactor = 1.0;
-        public double IyyFactor
-        {
-            get => _iyyFactor;
-            set
-            {
-                if (SetProperty(ref _iyyFactor, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
+        partial void OnIyyFactorChanged(double value) => CalculateProperties();
+
+        [ObservableProperty]
         private double _izzFactor = 1.0;
-        public double IzzFactor
-        {
-            get => _izzFactor;
-            set
-            {
-                if (SetProperty(ref _izzFactor, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
-        // 計算結果
+        partial void OnIzzFactorChanged(double value) => CalculateProperties();
+
+        // 計算結果（読み取り専用）
         private double _area;
         public double Area
         {

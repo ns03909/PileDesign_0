@@ -27,16 +27,10 @@ namespace PileDesign.ViewModels
         /// <summary>ログ種別の選択肢</summary>
         public ObservableCollection<string> LogCategories { get; } = [];
 
+        [ObservableProperty]
         private string _selectedLogCategory;
-        public string SelectedLogCategory
-        {
-            get => _selectedLogCategory;
-            set
-            {
-                if (SetProperty(ref _selectedLogCategory, value))
-                    UpdateLogText();
-            }
-        }
+
+        partial void OnSelectedLogCategoryChanged(string value) => UpdateLogText();
 
         /// <summary>カテゴリが複数ある場合のみセレクタを表示</summary>
         public bool IsCategorySelectorVisible => LogCategories.Count > 1;

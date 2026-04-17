@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
@@ -13,7 +14,7 @@ using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
 namespace PileDesign.ViewModels
 {
-    public class GroupPileFactorViewModel : BaseViewModel
+    public partial class GroupPileFactorViewModel : BaseViewModel
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
@@ -21,51 +22,27 @@ namespace PileDesign.ViewModels
         // Undo/Redo 用の UndoManager（Common.Undo 名前空間のもの）
         private readonly PileDesign.Common.Undo.UndoManager _undoManager = new();
 
+        [ObservableProperty]
         private int? _totalPileCount;
-        public int? TotalPileCount
-        {
-            get => _totalPileCount;
-            set => SetProperty(ref _totalPileCount, value);
-        }
 
+        [ObservableProperty]
         private double? _pileSpacing;
-        public double? PileSpacing
-        {
-            get => _pileSpacing;
-            set => SetProperty(ref _pileSpacing, value);
-        }
 
+        [ObservableProperty]
         private double? _pileDia;
-        public double? PileDia
-        {
-            get => _pileDia;
-            set => SetProperty(ref _pileDia, value);
-        }
 
+        [ObservableProperty]
         private double? _pileSpacingDiaRatio;
-        public double? PileSpacingDiaRatio
-        {
-            get => _pileSpacingDiaRatio;
-            set => SetProperty(ref _pileSpacingDiaRatio, value);
-        }
 
+        [ObservableProperty]
         private double? _pileGroupFactor;
-        public double? PileGroupFactor
-        {
-            get => _pileGroupFactor;
-            set => SetProperty(ref _pileGroupFactor, value);
-        }
+
+        [ObservableProperty]
+        private string _crosshairPositionText;
 
         public WpfPlot WpfPlot { get; set; }
         private Scatter MyScatter;
         public static Crosshair MyCrosshair { get; private set; }
-
-        private string _crosshairPositionText;
-        public string CrosshairPositionText
-        {
-            get => _crosshairPositionText;
-            set => SetProperty(ref _crosshairPositionText, value);
-        }
 
         public IRelayCommand CloseCommand { get; }
         public IRelayCommand UndoCommand { get; }
@@ -291,4 +268,3 @@ namespace PileDesign.ViewModels
         public void Redo() => _redoAction();
     }
 }
-

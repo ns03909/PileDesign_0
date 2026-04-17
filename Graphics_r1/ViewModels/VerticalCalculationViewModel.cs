@@ -14,28 +14,16 @@ namespace PileDesign.ViewModels
         //private InputModel _inputModel = InputModel.Instance;
 
         // DataGrid上の選択中のGroundLayerデータ
+        [ObservableProperty]
         private GroundLayerInput _selectedGroundLayerOnDataGrid;
-        public GroundLayerInput SelectedGroundLayerOnDataGrid
-        {
-            get => _selectedGroundLayerOnDataGrid;
-            set => SetProperty(ref _selectedGroundLayerOnDataGrid, value);
-        }
 
         // GroundLayer
+        [ObservableProperty]
         private ObservableCollection<GroundLayerInput> _selectedGroundLayerCollection = [];
-        public ObservableCollection<GroundLayerInput> SelectedGroundLayerCollection
-        {
-            get => _selectedGroundLayerCollection;
-            set => SetProperty(ref _selectedGroundLayerCollection, value);
-        }
 
         // 選択地盤番号
+        [ObservableProperty]
         private int _selectedGroundNo = 1;
-        public int SelectedGroundNo
-        {
-            get => _selectedGroundNo;
-            set => SetProperty(ref _selectedGroundNo, value);
-        }
 
         //// 孔口Z
         //[ObservableProperty]

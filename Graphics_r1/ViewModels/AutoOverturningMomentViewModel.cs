@@ -1,4 +1,5 @@
-﻿using PileDesign.Models.InputData;
+using CommunityToolkit.Mvvm.ComponentModel;
+using PileDesign.Models.InputData;
 using System.Collections.ObjectModel;
 
 namespace PileDesign.ViewModels
@@ -11,6 +12,9 @@ namespace PileDesign.ViewModels
         //public InputModel InputModel => _mainWindowViewModel.CurrentInputModel ?? throw new InvalidOperationException("CurrentInputModel is null. 必ず初期化してください。");
 
 
+        // SumVL0 / SumVLadd / SumVL は getter で PileLayoutItems から毎回計算するため
+        // [ObservableProperty] にせず手書きの get/set を維持する（set は View からの逆方向
+        // バインディング許容だが常に再計算される仕様）
         private double _sumVL0;
         public double SumVL0
         {
@@ -57,63 +61,31 @@ namespace PileDesign.ViewModels
             return GetSumVL0() + GetSumVLadd();
         }
 
+        [ObservableProperty]
         private double _buildingWeight;
-        public double BuildingWeight
-        {
-            get => _buildingWeight;
-            set
-            {
-                SetProperty(ref _buildingWeight, value);
-                SetOverturningMoment();
-            }
-        }
 
+        partial void OnBuildingWeightChanged(double value) => SetOverturningMoment();
+
+        [ObservableProperty]
         private double _effectiveHeight;
-        public double EffectiveHeight
-        {
-            get => _effectiveHeight;
-            set
-            {
-                SetProperty(ref _effectiveHeight, value);
-                SetOverturningMoment();
-            }
-        }
 
+        partial void OnEffectiveHeightChanged(double value) => SetOverturningMoment();
+
+        [ObservableProperty]
         private double _shearCoefficient1;
-        public double ShearCoefficient1
-        {
-            get => _shearCoefficient1;
-            set
-            {
-                SetProperty(ref _shearCoefficient1, value);
-                SetOverturningMoment();
-            }
-        }
 
-        private double _overTurningMoment1;
-        public double OverturningMoment1
-        {
-            get => _overTurningMoment1;
-            set => SetProperty(ref _overTurningMoment1, value);
-        }
+        partial void OnShearCoefficient1Changed(double value) => SetOverturningMoment();
 
+        [ObservableProperty]
+        private double _overturningMoment1;
+
+        [ObservableProperty]
         private double _shearCoefficient2;
-        public double ShearCoefficient2
-        {
-            get => _shearCoefficient2;
-            set
-            {
-                SetProperty(ref _shearCoefficient2, value);
-                SetOverturningMoment();
-            }
-        }
 
-        private double _overTurningMoment2;
-        public double OverturningMoment2
-        {
-            get => _overTurningMoment2;
-            set => SetProperty(ref _overTurningMoment2, value);
-        }
+        partial void OnShearCoefficient2Changed(double value) => SetOverturningMoment();
+
+        [ObservableProperty]
+        private double _overturningMoment2;
 
         private void SetOverturningMoment()
         {
@@ -121,16 +93,10 @@ namespace PileDesign.ViewModels
             OverturningMoment2 = BuildingWeight * EffectiveHeight * ShearCoefficient2 * 0.001; // MNm
         }
 
+        [ObservableProperty]
         private bool _isApplicableE1 = true;
-        public bool IsApplicableE1
-        {
-            get => _isApplicableE1;
-            set
-            {
-                SetProperty(ref _isApplicableE1, value);
-                SetApplicableAllE1();
-            }
-        }
+
+        partial void OnIsApplicableE1Changed(bool value) => SetApplicableAllE1();
 
         private void SetApplicableAllE1()
         {
@@ -140,23 +106,13 @@ namespace PileDesign.ViewModels
             }
         }
 
+        [ObservableProperty]
         private ObservableCollection<bool> _isApplicableE1s = [true, true, true, true];
-        public ObservableCollection<bool> IsApplicableE1s
-        {
-            get => _isApplicableE1s;
-            set => SetProperty(ref _isApplicableE1s, value);
-        }
 
+        [ObservableProperty]
         private bool _isApplicableE2 = true;
-        public bool IsApplicableE2
-        {
-            get => _isApplicableE2;
-            set
-            {
-                SetProperty(ref _isApplicableE2, value);
-                SetApplicableAllE2();
-            }
-        }
+
+        partial void OnIsApplicableE2Changed(bool value) => SetApplicableAllE2();
 
         private void SetApplicableAllE2()
         {
@@ -166,19 +122,11 @@ namespace PileDesign.ViewModels
             }
         }
 
+        [ObservableProperty]
         private ObservableCollection<bool> _isApplicableE2s = [true, true, true, true];
-        public ObservableCollection<bool> IsApplicableE2s
-        {
-            get => _isApplicableE2s;
-            set => SetProperty(ref _isApplicableE2s, value);
-        }
 
+        [ObservableProperty]
         private bool _isApplicableVL = true;
-        public bool IsApplicableVL
-        {
-            get => _isApplicableVL;
-            set => SetProperty(ref _isApplicableVL, value);
-        }
 
         // コンストラクタ
         public AutoOverturningMomentViewModel(MainWindowViewModel mainWindowViewModel)

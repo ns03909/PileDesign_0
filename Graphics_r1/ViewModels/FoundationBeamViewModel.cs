@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PileDesign.Models.InputData;
 using System;
@@ -6,34 +7,29 @@ using System.Windows.Input;
 
 namespace PileDesign.ViewModels
 {
-    public class FoundationBeamViewModel : BaseViewModel
+    public partial class FoundationBeamViewModel : BaseViewModel
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
         // 基礎梁節点コレクション
+        [ObservableProperty]
         private ObservableCollection<FoundationNode> _nodes = [];
-        public ObservableCollection<FoundationNode> Nodes
-        {
-            get => _nodes;
-            set => SetProperty(ref _nodes, value);
-        }
 
         // 基礎梁要素コレクション
+        [ObservableProperty]
         private ObservableCollection<FoundationBeamElement> _beams = [];
-        public ObservableCollection<FoundationBeamElement> Beams
-        {
-            get => _beams;
-            set => SetProperty(ref _beams, value);
-        }
 
         // 接続モード
+        [ObservableProperty]
         private FoundationBeamConnectionMode _connectionMode = FoundationBeamConnectionMode.RigidFloor;
-        public FoundationBeamConnectionMode ConnectionMode
-        {
-            get => _connectionMode;
-            set => SetProperty(ref _connectionMode, value);
-        }
+
+        // 選択された節点・要素
+        [ObservableProperty]
+        private FoundationNode? _selectedNode;
+
+        [ObservableProperty]
+        private FoundationBeamElement? _selectedBeam;
 
         // RequestClose イベント
         public event EventHandler? RequestClose;
@@ -43,21 +39,6 @@ namespace PileDesign.ViewModels
         public ICommand CancelCommand { get; }
         public ICommand AddNodeCommand { get; }
         public ICommand AddBeamCommand { get; }
-
-        // 選択された節点・要素
-        private FoundationNode? _selectedNode;
-        public FoundationNode? SelectedNode
-        {
-            get => _selectedNode;
-            set => SetProperty(ref _selectedNode, value);
-        }
-
-        private FoundationBeamElement? _selectedBeam;
-        public FoundationBeamElement? SelectedBeam
-        {
-            get => _selectedBeam;
-            set => SetProperty(ref _selectedBeam, value);
-        }
 
         // コンストラクタ
         public FoundationBeamViewModel(MainWindowViewModel mainWindowViewModel)

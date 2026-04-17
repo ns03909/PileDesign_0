@@ -1,46 +1,28 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
 namespace PileDesign.ViewModels
 {
-    public class BeamMaterialWizardViewModel : BaseViewModel
+    public partial class BeamMaterialWizardViewModel : BaseViewModel
     {
         // 名称
+        [ObservableProperty]
         private string _name = "FC30";
-        public string Name
-        {
-            get => _name;
-            set => SetProperty(ref _name, value);
-        }
 
         // コンクリート強度 Fc (N/mm²)
+        [ObservableProperty]
         private double _fc = 30.0;
-        public double Fc
-        {
-            get => _fc;
-            set
-            {
-                if (SetProperty(ref _fc, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
+
+        partial void OnFcChanged(double value) => CalculateProperties();
 
         // 単位重量 γ (kN/m³)
+        [ObservableProperty]
         private double _gamma = 24.0;
-        public double Gamma
-        {
-            get => _gamma;
-            set
-            {
-                if (SetProperty(ref _gamma, value))
-                {
-                    CalculateProperties();
-                }
-            }
-        }
 
-        // ポアソン比
+        partial void OnGammaChanged(double value) => CalculateProperties();
+
+        // ポアソン比 (0.0..0.5 にクランプ。[ObservableProperty] は setter で値を書き換えられないため
+        // 手書きの setter を維持する)
         private double _poissonRatio = 0.2;
         public double PoissonRatio
         {
@@ -55,7 +37,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // ヤング係数 Ec (N/mm²)
+        // ヤング係数 Ec (N/mm²) — 読み取り専用の計算結果
         private double _ec;
         public double Ec
         {
@@ -63,7 +45,7 @@ namespace PileDesign.ViewModels
             private set => SetProperty(ref _ec, value);
         }
 
-        // せん断弾性係数 G (N/mm²)
+        // せん断弾性係数 G (N/mm²) — 読み取り専用の計算結果
         private double _g;
         public double G
         {

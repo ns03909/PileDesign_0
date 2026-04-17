@@ -1,56 +1,39 @@
-﻿using PileDesign.Models.InputData;
+using CommunityToolkit.Mvvm.ComponentModel;
+using PileDesign.Models.InputData;
 using System.Collections.ObjectModel;
 
 namespace PileDesign.ViewModels
 {
-    public class EmbedmentViewModel : BaseViewModel
+    public partial class EmbedmentViewModel : BaseViewModel
     {
         //public InputModel InputModel => InputModel.Instance;
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
 
         // 根入層
+        [ObservableProperty]
         private ObservableCollection<EmbedmentDataItem> _embedmentCollection;
-        public ObservableCollection<EmbedmentDataItem> EmbedmentCollection
-        {
-            get => _embedmentCollection;
-            set => SetProperty(ref _embedmentCollection, value);
-        }
 
         // 根入層数
+        [ObservableProperty]
         private int _embedmentLayersCount;
-        public int EmbedmentLayersCount
-        {
-            get => _embedmentLayersCount;
-            set => SetProperty(ref _embedmentLayersCount, value);
-        }
-
 
         // 根入部下端Z
+        [ObservableProperty]
         private double _bottomAltitude;
-        public double BottomAltitude
+
+        // EmbedmentCollectionの1行目のBottomAltitudeを同期する
+        partial void OnBottomAltitudeChanged(double value)
         {
-            get => _bottomAltitude;
-            set
+            if (EmbedmentCollection != null && EmbedmentCollection.Count > 0)
             {
-                if (SetProperty(ref _bottomAltitude, value))
-                {
-                    // EmbedmentCollectionの1行目のBottomAltitudeを更新
-                    if (EmbedmentCollection.Count > 0)
-                    {
-                        EmbedmentCollection[0].BottomAltitude = value;
-                    }
-                }
+                EmbedmentCollection[0].BottomAltitude = value;
             }
         }
 
         // 地盤番号
-        private int groundNo;
-        public int GroundNo
-        {
-            get => groundNo;
-            set => SetProperty(ref groundNo, value);
-        }
+        [ObservableProperty]
+        private int _groundNo;
 
         // コンストラクタ
         public EmbedmentViewModel()
