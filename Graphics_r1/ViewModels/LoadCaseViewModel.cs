@@ -49,27 +49,11 @@ namespace PileDesign.ViewModels
         public ObservableCollection<ObservableCollection<double>> FactoredTotalMassForces2 { get; set; }
 
 
+        [ObservableProperty]
         private ObservableCollection<ObservableCollection<double>> _massForceCombinations1;
-        public ObservableCollection<ObservableCollection<double>> MassForceCombinations1
-        {
-            get => _massForceCombinations1;
-            set
-            {
-                _massForceCombinations1 = value;
-                OnPropertyChanged(nameof(MassForceCombinations1));
-            }
-        }
 
+        [ObservableProperty]
         private ObservableCollection<ObservableCollection<double>> _massForceCombinations2;
-        public ObservableCollection<ObservableCollection<double>> MassForceCombinations2
-        {
-            get => _massForceCombinations2;
-            set
-            {
-                _massForceCombinations2 = value;
-                OnPropertyChanged(nameof(MassForceCombinations2));
-            }
-        }
 
         public int LoadCombinationsCount => LoadCombinations?.Count ?? 0;
 

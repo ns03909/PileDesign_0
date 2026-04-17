@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.Input;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
 using PileDesign.Models.InputData;
@@ -122,28 +123,16 @@ namespace PileDesign.ViewModels
         }
 
         // 追加: 選択された荷重ケース（LoadCase オブジェクトを格納）
+        [ObservableProperty]
         private LoadCase? _selectedLoadCase;
-        public LoadCase? SelectedLoadCase
-        {
-            get => _selectedLoadCase;
-            set => SetProperty(ref _selectedLoadCase, value);
-        }
 
         // 追加: 選択された荷重組合せ
+        [ObservableProperty]
         private LoadCombination? _selectedLoadCombination;
-        public LoadCombination? SelectedLoadCombination
-        {
-            get => _selectedLoadCombination;
-            set => SetProperty(ref _selectedLoadCombination, value);
-        }
 
         // 追加: 液状化フラグ
+        [ObservableProperty]
         private bool _isLiquefaction;
-        public bool IsLiquefaction
-        {
-            get => _isLiquefaction;
-            set => SetProperty(ref _isLiquefaction, value);
-        }
 
         private double _totalHorizontalLoad = 100;
         public double TotalHorizontalLoad
@@ -159,30 +148,18 @@ namespace PileDesign.ViewModels
 
         public static Crosshair MyCrosshair_M { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_M;
-        public string CrosshairPositionText_M
-        {
-            get => _crosshairPositionText_M;
-            set => SetProperty(ref _crosshairPositionText_M, value);
-        }
 
         public static Crosshair MyCrosshair_Q { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_Q;
-        public string CrosshairPositionText_Q
-        {
-            get => _crosshairPositionText_Q;
-            set => SetProperty(ref _crosshairPositionText_Q, value);
-        }
 
         public static Crosshair MyCrosshair_D { get; private set; }
 
+        [ObservableProperty]
         private string _crosshairPositionText_D;
-        public string CrosshairPositionText_D
-        {
-            get => _crosshairPositionText_D;
-            set => SetProperty(ref _crosshairPositionText_D, value);
-        }
 
         // ChangSoilPiles のコレクション変更ハンドラ
         private void ChangSoilPiles_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -498,19 +475,11 @@ namespace PileDesign.ViewModels
         }
 
         // 選択用プロパティ（ComboBox にバインド）
+        [ObservableProperty]
         private string? _selectedLoadCaseName;
-        public string? SelectedLoadCaseName
-        {
-            get => _selectedLoadCaseName;
-            set => SetProperty(ref _selectedLoadCaseName, value);
-        }
 
+        [ObservableProperty]
         private string? _selectedLoadCombinationName;
-        public string? SelectedLoadCombinationName
-        {
-            get => _selectedLoadCombinationName;
-            set => SetProperty(ref _selectedLoadCombinationName, value);
-        }
 
 
 
