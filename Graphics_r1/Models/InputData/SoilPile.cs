@@ -244,6 +244,10 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pileToeGranularityClass, value);
         }
 
+        // 沈下プリセットを自動選択済みか（SettlementWindow 初回表示時に一度だけセット）。
+        // 一度 true になったら手動編集を尊重し、再適用しない。
+        public bool IsSettlementPresetInitialized { get; set; } = false;
+
         // 杭先端径 m
         private double _d;
         public double D
@@ -278,6 +282,47 @@ namespace PileDesign.Models.InputData
         public double Ru => Rpu + Rfu;
 
         // 使用限界支持力 kN
+        /// <summary>
+        /// 指定した杭頭荷重（絶対値, kN）に対応する杭頭沈下量（mm, 絶対値）を
+        /// LoadDisplacements から線形補間で返す。未解析・曲線範囲外は 0 を返す。
+        /// </summary>
+        private double InterpolateD0sForLoadMagnitude(double targetForceMagnitude)
+        {
+            if (LoadDisplacements == null || LoadDisplacements.Count == 0 || targetForceMagnitude <= 0)
+                return 0;
+
+            var pts = LoadDisplacements
+                .Where(ld => !double.IsNaN(ld.PileTopLoad) && !double.IsNaN(ld.D0s))
+                .Select(ld => (load: Math.Abs(ld.PileTopLoad), disp: Math.Abs(ld.D0s)))
+                .OrderBy(p => p.load)
+                .ToList();
+            if (pts.Count < 2) return 0;
+
+            if (targetForceMagnitude >= pts[^1].load) return pts[^1].disp;
+            if (targetForceMagnitude <= pts[0].load) return pts[0].disp;
+
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                if (targetForceMagnitude >= pts[i].load && targetForceMagnitude <= pts[i + 1].load)
+                {
+                    double span = pts[i + 1].load - pts[i].load;
+                    if (span <= 1e-12) return pts[i].disp;
+                    double t = (targetForceMagnitude - pts[i].load) / span;
+                    return pts[i].disp * (1 - t) + pts[i + 1].disp * t;
+                }
+            }
+            return 0;
+        }
+
+        /// <summary>使用限界支持力 R_SLS 時の杭頭沈下量 [mm]</summary>
+        public double SettlementAtR_SLS => InterpolateD0sForLoadMagnitude(R_SLS);
+
+        /// <summary>損傷限界支持力 R_DLS 時の杭頭沈下量 [mm]</summary>
+        public double SettlementAtR_DLS => InterpolateD0sForLoadMagnitude(R_DLS);
+
+        /// <summary>終局限界支持力 R_ULS 時の杭頭沈下量 [mm]</summary>
+        public double SettlementAtR_ULS => InterpolateD0sForLoadMagnitude(R_ULS);
+
         public double R_SLS => (1.0 / 3.0) * Ru;
 
         // 損傷限界支持力 kN
@@ -338,7 +383,22 @@ namespace PileDesign.Models.InputData
 
 
         // 解析結果（荷重-沈下曲線）
-        public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacements { get; set; } = [];
+        // 計算プロパティ（SettlementAtR_SLS/DLS/ULS 等）の更新通知を飛ばすため SetProperty 経由で管理
+        private ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> _loadDisplacements = [];
+        public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacements
+        {
+            get => _loadDisplacements;
+            set
+            {
+                if (SetProperty(ref _loadDisplacements, value))
+                {
+                    OnPropertyChanged(nameof(SettlementAtR_SLS));
+                    OnPropertyChanged(nameof(SettlementAtR_DLS));
+                    OnPropertyChanged(nameof(SettlementAtR_ULS));
+                }
+            }
+        }
+
         public ObservableCollection<VerticalLoadTransferMethod.LoadDisplacement> LoadDisplacementsLimit { get; set; } = [];
 
         // 全節点変位・反力（各荷重ステップ）— DeepCopy/JSON保存から除外
@@ -483,6 +543,9 @@ namespace PileDesign.Models.InputData
             OnPropertyChanged(nameof(R_SLS));
             OnPropertyChanged(nameof(R_DLS));
             OnPropertyChanged(nameof(R_ULS));
+            OnPropertyChanged(nameof(SettlementAtR_SLS));
+            OnPropertyChanged(nameof(SettlementAtR_DLS));
+            OnPropertyChanged(nameof(SettlementAtR_ULS));
         }
 
         // PileBottomAltitude更新メソッド
@@ -965,6 +1028,10 @@ namespace PileDesign.Models.InputData
                 // 解析結果（荷重-沈下曲線）
                 copy.LoadDisplacements = this.LoadDisplacements;
                 copy.LoadDisplacementsLimit = this.LoadDisplacementsLimit;
+                // 全節点データ — [JsonIgnore] フィールドのため参照コピーで保持
+                // （基礎梁考慮沈下解析の per-node 表示に使用）
+                copy.NodeDisplacements = this.NodeDisplacements;
+                copy.NodeReactions = this.NodeReactions;
 
                 copy.PileBodySegments = new ObservableCollection<PileBodySegment>
                     (this.PileBodySegments.Select(segment => segment.DeepCopy()));

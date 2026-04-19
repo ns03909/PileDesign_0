@@ -31,15 +31,43 @@
         <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
+        <conv:TableCategoryConverter x:Key="TableCategoryConverter"/>
     </Window.Resources>
     
-    <DockPanel>
-        <StackPanel Width="220" Margin="6" DockPanel.Dock="Left">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" MinWidth="120"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*" MinWidth="200"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Margin="6">
             <TextBlock Text="テーブル一覧" FontWeight="Bold" Margin="0,0,0,4"/>
-            <ListBox ItemsSource="{Binding FilteredTables}"
-                     SelectedItem="{Binding SelectedTable}"
+            <ListBox SelectedItem="{Binding SelectedTable}"
                      SelectionChanged="ListBox_SelectionChanged"
                      Height="280">
+                <ListBox.Resources>
+                    <!-- カテゴリ（水平解析結果／沈下解析結果）でグループ化 -->
+                    <CollectionViewSource x:Key="GroupedTables" Source="{Binding FilteredTables}">
+                        <CollectionViewSource.GroupDescriptions>
+                            <PropertyGroupDescription Converter="{StaticResource TableCategoryConverter}"/>
+                        </CollectionViewSource.GroupDescriptions>
+                    </CollectionViewSource>
+                </ListBox.Resources>
+                <ListBox.ItemsSource>
+                    <Binding Source="{StaticResource GroupedTables}"/>
+                </ListBox.ItemsSource>
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF62B0E2" Padding="6,3">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
@@ -66,6 +94,11 @@
             </ListBox>
 
             <Separator Margin="0,8,0,8"/>
+
+            <TextBlock Text="テーブル種別フィルタ" Margin="0,0,0,2"/>
+            <ComboBox ItemsSource="{Binding TableCategoryFilterOptions}"
+                      SelectedItem="{Binding SelectedTableCategoryFilter}"
+                      Margin="0,0,0,6"/>
 
             <TextBlock Text="荷重条件フィルタ" Margin="0,0,0,2"/>
             <ComboBox ItemsSource="{Binding LoadCaseFilterOptions}"
@@ -155,7 +188,15 @@
                     Height="32"/>
         </StackPanel>
 
+        <GridSplitter Grid.Column="1"
+                      Width="5"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ShowsPreview="False"/>
+
         <common:EnhancedDataGrid x:Name="ResultGrid"
+                  Grid.Column="2"
                   Margin="6"
                   AutoGenerateColumns="False"
                   ItemsSource="{Binding SelectedTable.Rows}"
@@ -182,5 +223,5 @@
                 </Style>
             </DataGrid.ColumnHeaderStyle>
         </common:EnhancedDataGrid>
-    </DockPanel>
+    </Grid>
 </Window>

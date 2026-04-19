@@ -341,7 +341,7 @@
                                                             <TextBlock Text="鋼板" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="E_s" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -354,7 +354,7 @@
                                                             <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="基準強度" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="F_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -367,7 +367,7 @@
                                                             <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="密度" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="\gamma_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(N/mm3)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -379,7 +379,7 @@
                                                             <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="E_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -392,7 +392,7 @@
                                                         <StackPanel>
                                                             <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kNm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -580,7 +580,7 @@
                                                             <TextBlock Text="地盤変形" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="E_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m2)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -593,7 +593,7 @@
                                                             <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -726,7 +726,7 @@
                                                         <StackPanel>
                                                             <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kNm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -740,7 +740,7 @@
                                                             <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -849,7 +849,7 @@
                                                             <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
                                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                                             <controls:FormulaControl Formula="kh" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -1106,7 +1106,7 @@
                                             <TextBlock Text="鋼板" HorizontalAlignment="Center"/>
                                             <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="E_s" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1119,7 +1119,7 @@
                                             <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
                                             <TextBlock Text="基準強度" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="F_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1132,7 +1132,7 @@
                                             <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
                                             <TextBlock Text="密度" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="\gamma_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(N/mm3)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1144,7 +1144,7 @@
                                             <TextBlock Text="コンクリート" HorizontalAlignment="Center"/>
                                             <TextBlock Text="ヤング率" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="E_c" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(N/mm2)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1155,7 +1155,7 @@
                                         <StackPanel>
                                             <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kNm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1192,7 +1192,7 @@
                                             <TextBlock Text="地盤変形" HorizontalAlignment="Center"/>
                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="E_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(kN/m2)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1205,7 +1205,7 @@
                                             <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1323,7 +1323,7 @@
                                         <StackPanel>
                                             <TextBlock Text="曲げ剛性" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="EI" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(kNm2)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kNm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1337,7 +1337,7 @@
                                             <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="kh_0" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -1465,7 +1465,7 @@
                                             <TextBlock Text="地盤反力" HorizontalAlignment="Center"/>
                                             <TextBlock Text="係数" HorizontalAlignment="Center"/>
                                             <controls:FormulaControl Formula="kh" Style="{StaticResource FormulaControlStyle}" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="(kN/m3)" HorizontalAlignment="Center"/>
+                                            <TextBlock HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>

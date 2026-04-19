@@ -131,10 +131,25 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="2*" />
+                <!-- Col 0: 左ペイン（ラベル・入力）— 最短でもラベルが潰れない MinWidth を保証 -->
+                <ColumnDefinition Width="*" MinWidth="300" />
+                <!-- Col 1: 左⇔中央スプリッタ -->
+                <ColumnDefinition Width="4" />
+                <!-- Col 2: 杭側面プロット -->
+                <ColumnDefinition Width="*" MinWidth="120" />
+                <!-- Col 3: 中央⇔右スプリッタ -->
+                <ColumnDefinition Width="4" />
+                <!-- Col 4: 右ペイン（結果タブ） -->
+                <ColumnDefinition Width="2*" MinWidth="300" />
             </Grid.ColumnDefinitions>
+
+            <!-- 分割バー（ドラッグで各ペイン幅を調整可能） -->
+            <GridSplitter Grid.Row="0" Grid.Column="1" Width="4"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="#DDD" ShowsPreview="True"/>
+            <GridSplitter Grid.Row="0" Grid.Column="3" Width="4"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Background="#DDD" ShowsPreview="True"/>
 
             <!-- 左側のプロット -->
             <Grid Grid.Row="0" Grid.Column="0">
@@ -169,13 +184,18 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <!-- 28,29,30: 使用/損傷/終局 限界支持力時の杭頭沈下量 -->
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
+                    <!-- Col 0: ラベル（余剰を吸収して最長ラベルを表示） -->
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="auto" />
-                    <ColumnDefinition Width="auto" />
-                    <ColumnDefinition Width="auto" />
-
+                    <!-- Col 1: 数式記号（最広 R_{t,UL} 等に合わせた固定幅） -->
+                    <ColumnDefinition Width="40" />
+                    <!-- Col 2: 入力テキストボックス（6 桁数値 + パディングが収まる幅） -->
+                    <ColumnDefinition Width="50" />
+                    <!-- Col 3: 単位（最長 kN/m2） -->
+                    <ColumnDefinition Width="48" />
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="SoilPileNo"/>
@@ -354,8 +374,7 @@
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="17" Grid.Column="3"
-                                Text="kN/m2"/>
+                <TextBlock Grid.Row="17" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
                 <TextBlock Grid.Row="18" Grid.Column="0" 
                                 Text="沈下検討用極限先端支持力度"/>
@@ -370,8 +389,7 @@
                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          KeyDown="TextBox_KeyDown"
                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboartFocus"/>
-                <TextBlock Grid.Row="18" Grid.Column="3"
-                                Text="kN/m2"/>
+                <TextBlock Grid.Row="18" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
                 <TextBlock Grid.Row="19" Grid.Column="0"
                             Text="杭先端面積"/>
@@ -383,8 +401,7 @@
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="19" Grid.Column="3"
-                            Text="m2"/>
+                <TextBlock Grid.Row="19" Grid.Column="3"><Run Text="m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
                 <TextBlock Grid.Row="20" Grid.Column="0"
                             Text="極限先端支持力"/>
@@ -475,15 +492,39 @@
                         HorizontalContentAlignment="Right"/>
                 <TextBlock Grid.Row="27" Grid.Column="3" Text="kN"/>
 
+                <!-- 使用限界支持力時杭頭沈下量 -->
+                <TextBlock Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="2" Text="使用限界支持力時杭頭沈下量"/>
+                <TextBox Grid.Row="28" Grid.Column="2"
+                             Text="{Binding SoilPile.SettlementAtR_SLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="28" Grid.Column="3" Text="mm"/>
+
+                <!-- 損傷限界支持力時杭頭沈下量 -->
+                <TextBlock Grid.Row="29" Grid.Column="0" Grid.ColumnSpan="2" Text="損傷限界支持力時杭頭沈下量"/>
+                <TextBox Grid.Row="29" Grid.Column="2"
+                             Text="{Binding SoilPile.SettlementAtR_DLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="29" Grid.Column="3" Text="mm"/>
+
+                <!-- 終局限界支持力時杭頭沈下量 -->
+                <TextBlock Grid.Row="30" Grid.Column="0" Grid.ColumnSpan="2" Text="終局限界支持力時杭頭沈下量"/>
+                <TextBox Grid.Row="30" Grid.Column="2"
+                             Text="{Binding SoilPile.SettlementAtR_ULS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
+                        Foreground="Gray"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="30" Grid.Column="3" Text="mm"/>
+
                 <!--<Button Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="4"
                          Content="杭の荷重沈下関係解析実行" Command="{Binding ExecuteAnalysisCommand}"/>-->
 
             </Grid>
 
-            <Canvas x:Name="Canvas"  Grid.Row="0" Grid.Column="1" Width="Auto" Height="Auto" Background="AliceBlue"/>
+            <Canvas x:Name="Canvas"  Grid.Row="0" Grid.Column="2" Width="Auto" Height="Auto" Background="AliceBlue"/>
 
             <!-- 右側のプロット -->
-            <TabControl x:Name="ResultTabControl" Grid.Row="0" Grid.Column="2"
+            <TabControl x:Name="ResultTabControl" Grid.Row="0" Grid.Column="4"
                         SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
                 <!--<TabControl Grid.Row="0" Grid.Column="2" 
                         MaxHeight="{Binding RelativeSource={RelativeSource AncestorType=Window}, 
@@ -595,10 +636,8 @@
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="周面" TextAlignment="Center"/>
                                             <TextBlock Text="面積" TextAlignment="Center"/>
-                                            <TextBlock Text="ψL" TextAlignment="Center"/>
-                                            <TextBlock Text="(m2)"
-                                            TextAlignment="Center"
-                                            HorizontalAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="ψ"/><Run Text="L" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -662,7 +701,7 @@
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
-                                            <TextBlock Text="S1" TextAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="S"/><Run Text="1" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                             <TextBlock Text="(mm)"
                                             TextAlignment="Center"
                                             HorizontalAlignment="Center"/>
@@ -675,7 +714,7 @@
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
-                                            <TextBlock Text="S2" TextAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="S"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                             <TextBlock Text="(mm)"
                                             TextAlignment="Center"
                                             HorizontalAlignment="Center"/>
@@ -688,10 +727,8 @@
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
-                                            <TextBlock Text="τ1" TextAlignment="Center"/>
-                                            <TextBlock Text="(kN/m2)"
-                                            TextAlignment="Center"
-                                            HorizontalAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="τ"/><Run Text="1" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -701,10 +738,8 @@
                                 MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                     <DataGridTextColumn.Header>
                                         <StackPanel>
-                                            <TextBlock Text="τ2" TextAlignment="Center"/>
-                                            <TextBlock Text="(kN/m2)"
-                                            TextAlignment="Center"
-                                            HorizontalAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="τ"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -715,10 +750,8 @@
                                     <DataGridTextColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
 
-                                            <TextBlock Text="τT" TextAlignment="Center"/>
-                                            <TextBlock Text="(kN/m2)"
-                                            TextAlignment="Center"
-                                            HorizontalAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="τ"/><Run Text="T" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                         </StackPanel>
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
@@ -731,7 +764,7 @@
                                             <TextBlock Text="極限" TextAlignment="Center"/>
                                             <TextBlock Text="周面" TextAlignment="Center"/>
                                             <TextBlock Text="抵抗力" TextAlignment="Center"/>
-                                            <TextBlock Text="Rf" TextAlignment="Center"/>
+                                            <TextBlock TextAlignment="Center"><Run Text="R"/><Run Text="f" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                             <TextBlock Text="(kN)"
                                             TextAlignment="Center"
                                             HorizontalAlignment="Center"/>

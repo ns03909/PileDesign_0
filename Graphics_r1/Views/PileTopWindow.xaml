@@ -64,7 +64,7 @@
                                     <GroupBox Header="パイルキャップ">
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="Fc (N/mm2)" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBlock Width="100" HorizontalAlignment="Right"><Run Text="F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox x:Name="TextBoxPileCapFc" Width="50"
                                                          Text="{Binding PileTop.PileCapFc, UpdateSourceTrigger=PropertyChanged}"
                                                          HorizontalContentAlignment="Right"
@@ -74,7 +74,7 @@
                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                                 <!--</StackPanel>
                                             <StackPanel Orientation="Horizontal">-->
-                                                <TextBlock Text="γ (kN/m3)" Width="100"  HorizontalAlignment="Right"/>
+                                                <TextBlock Width="100"  HorizontalAlignment="Right"><Run Text="γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox x:Name="TextBoxPileCapGamma" Width="50"
                                                          Text="{Binding PileTop.PileCapGamma, UpdateSourceTrigger=PropertyChanged}"
                                                          HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"
@@ -84,7 +84,7 @@
                                                 <!--TextChanged="TextBoxPileCapGamma_TextChanged"-->
                                                 <!--</StackPanel>
                                             <StackPanel Orientation="Horizontal">-->
-                                                <TextBlock Text="Ec (N/mm2)" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBlock Width="100" HorizontalAlignment="Right"><Run Text="E"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox x:Name="TextBoxPileCapEc" Width="50"
                                                          Text="{Binding PileTop.PileCapEc, UpdateSourceTrigger=LostFocus, StringFormat='{}{0:N0}'}"
                                                          IsReadOnly="True" Foreground="Gray" 
@@ -345,12 +345,12 @@
                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
                                                                  PreviewKeyDown="TextBox_PreviewKeyDown"
                                                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
-                                                        <TextBlock Text="配置辺長tBmax (mm)" Width="150" HorizontalAlignment="Right"
+                                                        <TextBlock Width="150" HorizontalAlignment="Right"
                                                                Visibility="{Binding PileTop.CaptainPile.CTPTensionRebars.IsSquareArrangement,
-                                                                Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                                        <TextBlock Text="配置直径tDmax (mm)" Width="150" HorizontalAlignment="Right"
+                                                                Converter={StaticResource BooleanToVisibilityConverter}}"><Run Text="配置辺長tB"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (mm)"/></TextBlock>
+                                                        <TextBlock Width="150" HorizontalAlignment="Right"
                                                                Visibility="{Binding PileTop.CaptainPile.CTPTensionRebars.IsCircleArrangement,
-                                                                Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                                Converter={StaticResource BooleanToVisibilityConverter}}"><Run Text="配置直径tD"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (mm)"/></TextBlock>
                                                         <TextBox x:Name="TextBoxTDorTBmax" Width="50"
                                                                  Text="{Binding PileTop.CaptainPile.CTPTensionRebars.TDorTBmax, UpdateSourceTrigger=PropertyChanged}"
                                                                 IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right" 

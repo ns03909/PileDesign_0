@@ -212,7 +212,7 @@
 
                                     <ToolBar Grid.Row="0" Grid.Column="0">
                                         <TextBlock Text="荷重タイプ"/>
-                                        <ComboBox ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.LoadingTypeOptions, UpdateSourceTrigger=LostFocus}"
+                                        <ComboBox ItemsSource="{Binding AvailableLoadingTypeOptions, UpdateSourceTrigger=LostFocus}"
                                                   SelectedItem="{Binding CurrentInputModel.PileGroupSettlement.LoadingType, UpdateSourceTrigger=LostFocus}"
                                                   Width="150"
                                                   SelectionChanged="ComboBoxLoadingType_SelectionChanged"/>
@@ -228,7 +228,7 @@
 
                                     <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                         Converter={StaticResource VisibilityConverter},
-                                        ConverterParameter='任意矩形'}">
+                                        ConverterParameter='任意矩形,個別十字,個別十字（基礎梁考慮）'}">
                                         <StackPanel Orientation="Horizontal">
                                             <Button Content="矩形荷重面追加" Width="100" HorizontalAlignment="Left" Command="{Binding AddRectLoadCommand}"/>
                                             <Button Content="基礎指針'19計算例5" Width="100" HorizontalAlignment="Left" Command="{Binding Example5Command}"/>
@@ -387,9 +387,7 @@
                                                         <StackPanel>
                                                             <TextBlock Text="面積"
                                                                 TextAlignment="Center"/>
-                                                            <TextBlock Text="(m2)"
-                                                                TextAlignment="Center"
-                                                                HorizontalAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -401,9 +399,7 @@
                                                         <StackPanel>
                                                             <TextBlock Text="単位面積荷重"
                                                                 TextAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m2)"
-                                                                TextAlignment="Center"
-                                                                HorizontalAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -414,7 +410,7 @@
 
                                     <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                         Converter={StaticResource VisibilityConverter},
-                                        ConverterParameter='個別十字'}">
+                                        ConverterParameter='個別十字,個別十字（基礎梁考慮）'}">
 
                                         <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.ElementDivision.SoilPiles, UpdateSourceTrigger=LostFocus}"
                                             AutoGenerateColumns="False"
@@ -611,7 +607,7 @@
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="変形係数"   TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m3)"  TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>

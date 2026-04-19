@@ -28,6 +28,11 @@ namespace PileDesign.Output
 {
     internal partial class WordDocument(InputModel _inputModel, AnaModel _anaModel, MainWindowViewModel _mainWindowViewModel)
     {
+        // SEQ フィールドが Word の F9 更新に依存せず正しい番号を表示するよう、
+        // コード側で番号を直接カウントして書き込む。
+        private int _figureCounter = 0;
+        private int _tableCounter = 0;
+
         private static class Layout
         {
             // ドキュメント全体の標準フォント
@@ -193,7 +198,7 @@ namespace PileDesign.Output
 
 
         // FrontMatter: タイトル・モデル図・目次・基本説明章
-        private static void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model, byte[]? modelImageBytes = null)
+        private void AddFrontMatter(MainDocumentPart mainPart, Body body, InputModel model, byte[]? modelImageBytes = null)
         {
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddTitle(body, "基礎ぐいの検討書");
@@ -547,7 +552,8 @@ namespace PileDesign.Output
                     new Text("図目次"))
             );
             body.Append(figTitlePara);
-            AddTocField(body, "TOC \\h \\z \\c \"図\"", "（Ctrl+A → F9 で更新）");
+            // TOC \c の識別子は SEQ 識別子と同じ（Latin）を使う。
+            AddTocField(body, "TOC \\h \\z \\c \"Figure\"", "（Ctrl+A → F9 で更新）");
 
             AddLineBreak(body);
 
@@ -558,7 +564,7 @@ namespace PileDesign.Output
                     new Text("表目次"))
             );
             body.Append(tblTitlePara);
-            AddTocField(body, "TOC \\h \\z \\c \"表\"", "（Ctrl+A → F9 で更新）");
+            AddTocField(body, "TOC \\h \\z \\c \"Table\"", "（Ctrl+A → F9 で更新）");
         }
 
         /// <summary>TOCフィールドを1つ挿入するヘルパ</summary>
@@ -1831,7 +1837,7 @@ namespace PileDesign.Output
                 CreateTableCell(["杭断面タイプ"], fontSize, "center"),
                 CreateTableCell(["杭径\n[mm]"], fontSize, "center"),
                 CreateTableCell(["鋼管"], fontSize, "center"),
-                CreateTableCell(["コンクリート\nFc|E|γ|ξ"], fontSize, "center"),
+                CreateTableCell(["コンクリート\nF<_c>|E|γ|ξ"], fontSize, "center"),
                 CreateTableCell(["主筋"], fontSize, "center"),
                 CreateTableCell(["フープ筋"], fontSize, "center")
             );
@@ -2077,7 +2083,7 @@ namespace PileDesign.Output
 
         }
 
-        private static void BuildAnalysisResultSummaryTable(
+        private void BuildAnalysisResultSummaryTable(
             Body body,
             List<string> selectedPileBodies,
             List<int> selectedSegment,
@@ -2133,11 +2139,11 @@ namespace PileDesign.Output
                             else if (colIdx == 2) SetTableCellWithVerticalAlign(cell, GetParagraph("区間No", "center", 8), "center");
                             else if (colIdx == 3) SetTableCellWithVerticalAlign(cell, GetParagraph("上端深さ\n[m]", "center", 8), "center");
                             else if (colIdx == 4) SetTableCellWithVerticalAlign(cell, GetParagraph("下端深さ\n[m]", "center", 8), "center");
-                            else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph("Dmax\n[m]", "center", 8), "center");
-                            else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph("Qmax\n[kN]", "center", 8), "center");
-                            else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph("Mmax\n[kNm]", "center", 8), "center");
-                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph("NMax\n[kN]", "center", 8), "center");
-                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph("NMin\n[kN]", "center", 8), "center");
+                            else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph("D<_max>\n[m]", "center", 8), "center");
+                            else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph("Q<_max>\n[kN]", "center", 8), "center");
+                            else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph("M<_max>\n[kNm]", "center", 8), "center");
+                            else if (colIdx == 8) SetTableCellWithVerticalAlign(cell, GetParagraph("N<_Max>\n[kN]", "center", 8), "center");
+                            else if (colIdx == 9) SetTableCellWithVerticalAlign(cell, GetParagraph("N<_Min>\n[kN]", "center", 8), "center");
                         }
                         else
                         {
@@ -2747,8 +2753,13 @@ namespace PileDesign.Output
 
 
         // 図表番号付きタイトルの挿入メソッド
-        public static void AddAutoFigureCaption(Body body, string captionText, string label = "図", double fontSize = 10.5)
+        public void AddAutoFigureCaption(Body body, string captionText, string label = "図", double fontSize = 10.5)
         {
+            // コード側で番号をインクリメント（SEQ の F9 更新に依存しない）
+            int number;
+            if (label == "図") number = ++_figureCounter;
+            else if (label == "表") number = ++_tableCounter;
+            else number = 1;
             // ラベル（例: "図", "表", "Figure", "Table"）を追加
             Paragraph paragraph = new()
             {
@@ -2759,43 +2770,125 @@ namespace PileDesign.Output
                 }
             };
 
-            Run run = new()
+            // SEQ 識別子は日本語識別子だと Word で解釈されない環境があるため、
+            // 可視ラベルとは分離して Latin 識別子を使う（TOC \c と合わせる）。
+            string seqIdentifier = label switch
             {
-                RunProperties = new RunProperties
-                {
-                    FontSize = new FontSize { Val = (fontSize * 2).ToString() }
-                }
+                "図" => "Figure",
+                "表" => "Table",
+                _ => label
             };
 
-            //// SEQフィールド（自動図表番号）
-            //run.Append(new FieldChar { FieldCharType = FieldCharValues.Begin });
-            //run.Append(new FieldCode(" SEQ Figure \\* ARABIC "));
-            //run.Append(new FieldChar { FieldCharType = FieldCharValues.Separate });
-            //run.Append(new Text("1")); // 初期値（Wordで更新される）
-            //run.Append(new FieldChar { FieldCharType = FieldCharValues.End });
+            FontSize fontSizeVal() => new FontSize { Val = (fontSize * 2).ToString() };
 
-            //run.Append(new Text($" {captionText}"));
+            // ラベル Run
+            var labelRun = new Run(new RunProperties(fontSizeVal()));
+            labelRun.Append(new Text($"{label} ") { Space = SpaceProcessingModeValues.Preserve });
+            paragraph.Append(labelRun);
 
-            //paragraph.Append(run);
-            //body.Append(paragraph);
+            // SEQ フィールド: Begin / InstrText / Separate / 結果 / End を個別 Run で構成。
+            // 各 Run の WithRunProperties で同じフォントサイズを維持。
+            var beginRun = new Run(new RunProperties(fontSizeVal()));
+            beginRun.Append(new FieldChar { FieldCharType = FieldCharValues.Begin });
+            paragraph.Append(beginRun);
 
-            // ラベルを追加
-            run.Append(new Text($"{label}"));
+            var instrRun = new Run(new RunProperties(fontSizeVal()));
+            instrRun.Append(new FieldCode($" SEQ {seqIdentifier} \\* ARABIC ")
+            { Space = SpaceProcessingModeValues.Preserve });
+            paragraph.Append(instrRun);
 
-            // SEQフィールドの識別子もラベルに合わせる
-            run.Append(new FieldChar { FieldCharType = FieldCharValues.Begin });
-            run.Append(new FieldCode($" SEQ {label} \\* ARABIC "));
-            run.Append(new FieldChar { FieldCharType = FieldCharValues.Separate });
-            run.Append(new Text("1")); // 初期値（Wordで更新される）
-            run.Append(new FieldChar { FieldCharType = FieldCharValues.End });
+            var separateRun = new Run(new RunProperties(fontSizeVal()));
+            separateRun.Append(new FieldChar { FieldCharType = FieldCharValues.Separate });
+            paragraph.Append(separateRun);
 
-            run.Append(new Text($" {captionText}"));
+            var valueRun = new Run(new RunProperties(fontSizeVal()));
+            valueRun.Append(new Text(number.ToString())); // コード側で計算した番号を書き込む
+            paragraph.Append(valueRun);
 
-            paragraph.Append(run);
+            var endRun = new Run(new RunProperties(fontSizeVal()));
+            endRun.Append(new FieldChar { FieldCharType = FieldCharValues.End });
+            paragraph.Append(endRun);
+
+            // キャプション本文
+            var captionRun = new Run(new RunProperties(fontSizeVal()));
+            captionRun.Append(new Text($" {captionText}") { Space = SpaceProcessingModeValues.Preserve });
+            paragraph.Append(captionRun);
+
             body.Append(paragraph);
         }
 
         // スコットプロット挿入メソッド
+        /// <summary>
+        /// 杭地盤セット単位で複数杭の系列を 1 図にオーバーレイするバージョン。
+        /// xsByPanelBySeries[panel][series] = x データ配列、ys は全系列共通の Z 軸、
+        /// soilSeries は 0 番パネル（変位）に破線で重ねる地盤変位（杭ごと）。
+        /// </summary>
+        public static void AddPileElevResultMultiToBody(
+            MainDocumentPart mainPart, Body body,
+            List<List<List<double>>> xsByPanelBySeries,
+            List<List<double>> ysPerSeries,
+            List<string> legends,
+            List<List<double>> soilDispsPerSeries,
+            List<string> titles, List<string> xLabels, List<string> yLabels,
+            double widthMm = 150, double heightMm = 100)
+        {
+            ScottPlot.Multiplot multiplot = new();
+            int panelCount = xsByPanelBySeries?.Count ?? 0;
+            if (panelCount == 0) return;
+            multiplot.AddPlots(panelCount);
+
+            for (int p = 0; p < panelCount; p++)
+            {
+                var plot = multiplot.Subplots.GetPlot(p);
+                var seriesList = xsByPanelBySeries[p];
+                int seriesCount = seriesList.Count;
+
+                for (int s = 0; s < seriesCount; s++)
+                {
+                    double[] xs = [.. seriesList[s]];
+                    double[] ys = [.. (s < ysPerSeries.Count ? ysPerSeries[s] : ysPerSeries[^1])];
+                    var scatter = plot.Add.ScatterLine(xs, ys);
+                    if (legends != null && s < legends.Count)
+                        scatter.LegendText = legends[s];
+
+                    // 変位パネル（0 番）: 対応する地盤変位を同色破線で重ねる
+                    if (p == 0 && soilDispsPerSeries != null && s < soilDispsPerSeries.Count)
+                    {
+                        double[] soilXs = [.. soilDispsPerSeries[s]];
+                        if (soilXs.Length == ys.Length)
+                        {
+                            var soilScatter = plot.Add.ScatterLine(soilXs, ys);
+                            soilScatter.LineStyle.Color = scatter.LineStyle.Color;
+                            soilScatter.LineStyle.Pattern = LinePattern.Dashed;
+                        }
+                    }
+                }
+
+                if (seriesCount > 1 || p == 0) plot.ShowLegend();
+
+                var grayColor = new ScottPlot.Color(128, 128, 128, 255);
+                plot.Add.VerticalLine(0, 1, grayColor);
+                plot.Add.HorizontalLine(0, 1, grayColor);
+
+                plot.Axes.Title.Label.Text = titles[p] ?? "";
+                plot.Axes.Bottom.Label.Text = xLabels[p] ?? "";
+                plot.Axes.Left.Label.Text = yLabels[p] ?? "";
+                plot.Axes.Title.Label.FontName = ScottPlot.Fonts.Detect(titles[p] ?? "メイリオ");
+                plot.Axes.Bottom.Label.FontName = ScottPlot.Fonts.Detect(xLabels[p] ?? "メイリオ");
+                plot.Axes.Left.Label.FontName = ScottPlot.Fonts.Detect(yLabels[p] ?? "メイリオ");
+                plot.Legend.FontName = ScottPlot.Fonts.Detect("凡例");
+            }
+
+            multiplot.Layout = new ScottPlot.MultiplotLayouts.Columns();
+
+            string tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".png");
+            int widthPx = MmToPx(widthMm, Dpi, 2.0);
+            int heightPx = MmToPx(heightMm, Dpi, 2.0);
+            multiplot.SavePng(tempFile, widthPx, heightPx);
+            WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+
         public static void AddPileElevResultToBody(
             MainDocumentPart mainPart, Body body,
             List<List<double>> xsLists, List<List<double>> ysLists,
@@ -3386,53 +3479,65 @@ namespace PileDesign.Output
                     continue;
                 }
 
-                if (text[idx..].StartsWith("<^") && idx + 3 < text.Length && text[idx + 3] == '>')
+                if (text[idx..].StartsWith("<^"))
                 {
-                    // 上付き文字
-                    char supChar = text[idx + 2];
-                    var run = new Run(
-                        new RunProperties(
-                            new FontSize() { Val = (fontSize * 2).ToString() },
-                            new RunFonts()
-                            {
-                                Ascii = fontName,
-                                HighAnsi = fontName,
-                                EastAsia = fontName,
-                                ComplexScript = fontName
-                            },
-                            new VerticalTextAlignment() { Val = VerticalPositionValues.Superscript }
-                        ),
-                        new Text(supChar.ToString())
-                    );
-                    runs.Add(run);
-                    idx += 4;
+                    int close = text.IndexOf('>', idx + 2);
+                    if (close > idx + 2)
+                    {
+                        // 上付き文字（複数文字対応）
+                        string supText = text[(idx + 2)..close];
+                        var run = new Run(
+                            new RunProperties(
+                                new FontSize() { Val = (fontSize * 2).ToString() },
+                                new RunFonts()
+                                {
+                                    Ascii = fontName,
+                                    HighAnsi = fontName,
+                                    EastAsia = fontName,
+                                    ComplexScript = fontName
+                                },
+                                new VerticalTextAlignment() { Val = VerticalPositionValues.Superscript }
+                            ),
+                            new Text(supText) { Space = SpaceProcessingModeValues.Preserve }
+                        );
+                        runs.Add(run);
+                        idx = close + 1;
+                        continue;
+                    }
                 }
-                else if (text[idx..].StartsWith("<_") && idx + 3 < text.Length && text[idx + 3] == '>')
+                if (text[idx..].StartsWith("<_"))
                 {
-                    // 下付き文字
-                    char subChar = text[idx + 2];
-                    var run = new Run(
-                        new RunProperties(
-                            new FontSize() { Val = (fontSize * 2).ToString() },
-                            new RunFonts()
-                            {
-                                Ascii = fontName,
-                                HighAnsi = fontName,
-                                EastAsia = fontName,
-                                ComplexScript = fontName
-                            },
-                            new VerticalTextAlignment() { Val = VerticalPositionValues.Subscript }
-                        ),
-                        new Text(subChar.ToString())
-                    );
-                    runs.Add(run);
-                    idx += 4;
+                    int close = text.IndexOf('>', idx + 2);
+                    if (close > idx + 2)
+                    {
+                        // 下付き文字（複数文字対応）
+                        string subText = text[(idx + 2)..close];
+                        var run = new Run(
+                            new RunProperties(
+                                new FontSize() { Val = (fontSize * 2).ToString() },
+                                new RunFonts()
+                                {
+                                    Ascii = fontName,
+                                    HighAnsi = fontName,
+                                    EastAsia = fontName,
+                                    ComplexScript = fontName
+                                },
+                                new VerticalTextAlignment() { Val = VerticalPositionValues.Subscript }
+                            ),
+                            new Text(subText) { Space = SpaceProcessingModeValues.Preserve }
+                        );
+                        runs.Add(run);
+                        idx = close + 1;
+                        continue;
+                    }
                 }
-                else
+
+                // 通常文字
                 {
-                    // 通常文字
                     int nextIdx = text.IndexOfAny(['<', '\n'], idx);
                     if (nextIdx == -1) nextIdx = text.Length;
+                    // 未閉じの '<' は通常文字として扱うため、少なくとも1文字は進める
+                    if (nextIdx == idx) nextIdx = idx + 1;
                     string normalText = text[idx..nextIdx];
                     if (!string.IsNullOrEmpty(normalText))
                     {
@@ -3447,7 +3552,7 @@ namespace PileDesign.Output
                                     ComplexScript = fontName
                                 }
                             ),
-                            new Text(normalText)
+                            new Text(normalText) { Space = SpaceProcessingModeValues.Preserve }
                         );
                         runs.Add(run);
                     }
@@ -3946,12 +4051,12 @@ diameterSelector,
                     Table beamTable = CreateTableWithBorders();
                     TableRow beamHeader = CreateHeaderRow(
                         CreateTableCell(["梁名"], fontSize, "center"),
-                        CreateTableCell(["Ni", "[kN]"], fontSize, "center"),
-                        CreateTableCell(["Qzi", "[kN]"], fontSize, "center"),
-                        CreateTableCell(["Myi", "[kNm]"], fontSize, "center"),
-                        CreateTableCell(["Nj", "[kN]"], fontSize, "center"),
-                        CreateTableCell(["Qzj", "[kN]"], fontSize, "center"),
-                        CreateTableCell(["Myj", "[kNm]"], fontSize, "center")
+                        CreateTableCell(["N<_i>", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["Q<_zi>", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["M<_yi>", "[kNm]"], fontSize, "center"),
+                        CreateTableCell(["N<_j>", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["Q<_zj>", "[kN]"], fontSize, "center"),
+                        CreateTableCell(["M<_yj>", "[kNm]"], fontSize, "center")
                     );
                     beamTable.Append(beamHeader);
 

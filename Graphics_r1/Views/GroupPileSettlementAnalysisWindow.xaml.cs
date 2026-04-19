@@ -25,6 +25,12 @@ namespace PileDesign.Views
         // 群杭荷重タイプ変化時のメソッド
         private void ComboBoxLoadingType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            var selectedItem = (sender as ComboBox)?.SelectedItem as string;
+            // 個別十字系に切り替わった場合は RectLoads を自動生成で置換
+            if (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁考慮）")
+            {
+                viewModel.RebuildAutoCrossRectLoadsIfNeeded();
+            }
 
             viewModel.UpdateWindowAction();
         }

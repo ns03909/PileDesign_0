@@ -59,6 +59,9 @@ namespace PileDesign.Services
             if (!string.IsNullOrEmpty(data.ShallowSoilType))
                 groundInput.ShallowSoilType = data.ShallowSoilType;
 
+            if (!string.IsNullOrEmpty(data.CalculationMethod))
+                groundInput.CalculationMethod = data.CalculationMethod;
+
             // 地層データを適用
             groundInput.GroundLayers = new ObservableCollection<GroundLayerInput>();
             foreach (var layerDto in data.GroundLayers)
@@ -143,7 +146,8 @@ namespace PileDesign.Services
                 GroundAcceleration1 = groundInput.GroundAcceleration1,
                 BedrockDensity = groundInput.BedrockDensity,
                 BedrockShearWaveVelocity = groundInput.BedrockShearWaveVelocity,
-                ShallowSoilType = groundInput.ShallowSoilType
+                ShallowSoilType = groundInput.ShallowSoilType,
+                CalculationMethod = groundInput.CalculationMethod
             };
 
             // 地層データをDTO変換

@@ -409,7 +409,7 @@ namespace PileDesign.Output
                 CreateTableCell([$"レベル{i + 1}", "仮の", "無次元化", "水平変位", "u"], fontSize, "center"),
                 CreateTableCell([$"レベル{i + 1}", "調整後", "無次元化", "水平変位", "u<^*>"], fontSize, "center"),
                 CreateTableCell([$"レベル{i + 1}", "地盤の", "水平変位", "D<_max> u<^*>", "[mm]"], fontSize, "center"),
-                CreateTableCell([$"レベル{i + 1}", "地盤の", "水平変位", "D<_max> u<^*>", "+∑γcyH", "[mm]"], fontSize, "center")
+                CreateTableCell([$"レベル{i + 1}", "地盤の", "水平変位", "D<_max> u<^*>", "+∑γ<_cy>H", "[mm]"], fontSize, "center")
                 );
 
                 table.Append(headerRow);

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace PileDesign.FEM
 {
@@ -162,5 +163,11 @@ namespace PileDesign.FEM
         public List<VerticalBeamBeamResult> BeamResults { get; set; } = [];
         public List<VerticalBeamStepResult> StepResults { get; set; } = [];
         public bool IsConverged { get; set; }
+
+        // 入力荷重と杭反力の合計（平衡の確認用）
+        public double TotalInputLoad_kN => PileResults?.Sum(p => p.InputLoad_kN) ?? 0;
+        public double TotalReaction_kN => PileResults?.Sum(p => p.Reaction_kN) ?? 0;
+        public double BalanceDifference_kN => TotalReaction_kN - TotalInputLoad_kN;
+        public double BalanceRatio => TotalInputLoad_kN != 0 ? TotalReaction_kN / TotalInputLoad_kN : 0;
     }
 }

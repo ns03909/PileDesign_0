@@ -5,7 +5,7 @@
         <g id="CrossFormPressure" transform="matrix(1,0,0,1,534,356)">
             <rect x="356" y="0" width="128" height="128" style="fill:none;"/>
             <g transform="matrix(1.334591,0,0,2.625047,-1789.486144,-4773.610377)">
-                <ellipse cx="1655.553" cy="1842.867" rx="25.432" ry="12.844" style="fill:none;stroke:rgb(255,0,0);stroke-width:4px;"/>
+                <ellipse cx="1655.553" cy="1842.867" rx="25.432" ry="12.844" style="fill:none;stroke:rgb(128,128,128);stroke-width:4px;"/>
             </g>
             <g transform="matrix(0.441882,0,0,0.413258,391.586441,-256.877407)">
                 <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:19.48px;stroke-linecap:butt;"/>

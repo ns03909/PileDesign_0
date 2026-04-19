@@ -194,7 +194,7 @@
 
         <DataTemplate x:Key="DensityToolTipTemplate">
             <StackPanel>
-                <TextBlock Text="基礎指針'19　表2.7.3　土の単位体積重量 (kN/m3)"  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="基礎指針'19　表2.7.3　土の単位体積重量 (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
 
                 <Grid>
                     <Grid.RowDefinitions>
@@ -947,8 +947,8 @@
                                 </ComboBox>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="工学的基盤単位体積重量(kN/m3)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
-                Width="200"/>
+                                <TextBlock HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                Width="200"><Run Text="工学的基盤単位体積重量(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                 <TextBox x:Name="TextBoxBedrockDensity"
                   Text="{Binding GroundInput.BedrockDensity}"
                   VerticalAlignment="Center" Height="25" Width="50"
@@ -1365,8 +1365,8 @@
                                 </ComboBox>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="工学的基盤単位体積重量(kN/m3)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
-                                        Width="200"/>
+                                <TextBlock HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                        Width="200"><Run Text="工学的基盤単位体積重量(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                 <TextBox x:Name="TextBoxBedrockDensity"
                                           Text="{Binding GroundInput.BedrockDensity}"
                                           VerticalAlignment="Center" Height="25" Width="50"
@@ -1581,7 +1581,7 @@
                                                             <TextBlock Text="単位" TextAlignment="Center"/>
                                                             <TextBlock Text="体積" TextAlignment="Center"/>
                                                             <TextBlock Text="重量" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -1641,7 +1641,7 @@
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="粘着力" TextAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
 
                                                     </DataGridTextColumn.Header>
@@ -1686,7 +1686,7 @@
                                                         <StackPanel>
                                                             <TextBlock Text="変形" TextAlignment="Center"/>
                                                             <TextBlock Text="係数" TextAlignment="Center"/>
-                                                            <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
@@ -1931,7 +1931,7 @@
                                                         <TextBlock Text="単位" TextAlignment="Center"/>
                                                         <TextBlock Text="体積" TextAlignment="Center"/>
                                                         <TextBlock Text="重量" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2043,7 +2043,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="細粒分" TextAlignment="Center"/>
                                                         <TextBlock Text="含有率" TextAlignment="Center"/>
-                                                        <TextBlock Text="Fc(%)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text="(%)"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2064,7 +2064,7 @@
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="全応力" TextAlignment="Center"/>
-                                                        <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2075,7 +2075,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="有効" TextAlignment="Center"/>
                                                         <TextBlock Text="応力" TextAlignment="Center"/>
-                                                        <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2110,7 +2110,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="低減" TextAlignment="Center"/>
                                                         <TextBlock Text="係数" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="rd" TextAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center"><Run Text="r"/><Run Text="d" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2121,7 +2121,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="換算" TextAlignment="Center"/>
                                                         <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="N1" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="N"/><Run Text="1" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2132,7 +2132,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="N値" TextAlignment="Center"/>
                                                         <TextBlock Text="増分" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="⊿Nf" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="⊿N"/><Run Text="f" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2143,7 +2143,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="補正" TextAlignment="Center"/>
                                                         <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="Na" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="N"/><Run Text="a" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2154,7 +2154,7 @@
                                                     <StackPanel>
                                                         <TextBlock Text="液状化" TextAlignment="Center"/>
                                                         <TextBlock Text="抵抗比" TextAlignment="Center"/>
-                                                        <TextBlock Text="τL/σz'" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="τ"/><Run Text="L" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/σ"/><Run Text="z" BaselineAlignment="Subscript" FontSize="9"/><Run Text="'"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2167,7 +2167,7 @@
                                                         <TextBlock Text="繰り返し" TextAlignment="Center"/>
                                                         <TextBlock Text="せん断" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                         <TextBlock Text="応力比" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="τd/σz'" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="τ"/><Run Text="d" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/σ"/><Run Text="z" BaselineAlignment="Subscript" FontSize="9"/><Run Text="'"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2206,12 +2206,12 @@
                                                         <TextBlock Text="地盤反力" TextAlignment="Center"/>
                                                         <TextBlock Text="係数" TextAlignment="Center"/>
                                                         <TextBlock Text="低減率" TextAlignment="Center"/>
-                                                        <TextBlock Text="βL" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="β"/><Run Text="L" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding GammaCy[0], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding GammaCy[0], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2219,7 +2219,7 @@
                                                         <TextBlock Text="繰り返し" TextAlignment="Center"/>
                                                         <TextBlock Text="せん断" TextAlignment="Center"/>
                                                         <TextBlock Text="ひずみ" TextAlignment="Center"/>
-                                                        <TextBlock Text="γcy(%)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="γ"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="(%)"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2235,7 +2235,7 @@
                                                         <TextBlock Text="レベル1" TextAlignment="Center"/>
                                                         <TextBlock Text="液状化" TextAlignment="Center"/>
                                                         <TextBlock Text="水平変位" TextAlignment="Center"/>
-                                                        <TextBlock Text="∑γcyH" TextAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center"><Run Text="∑γ"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="H"/></TextBlock>
                                                         <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
@@ -2251,7 +2251,7 @@
                                                         <TextBlock Text="繰り返し" TextAlignment="Center"/>
                                                         <TextBlock Text="せん断" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                         <TextBlock Text="応力比" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="τd/σz'" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="τ"/><Run Text="d" BaselineAlignment="Subscript" FontSize="9"/><Run Text="/σ"/><Run Text="z" BaselineAlignment="Subscript" FontSize="9"/><Run Text="'"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2292,12 +2292,12 @@
                                                         <TextBlock Text="地盤反力" TextAlignment="Center"/>
                                                         <TextBlock Text="係数" TextAlignment="Center"/>
                                                         <TextBlock Text="低減率" TextAlignment="Center"/>
-                                                        <TextBlock Text="βL" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="β"/><Run Text="L" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding GammaCy[1], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding GammaCy[1], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2306,7 +2306,7 @@
                                                         <TextBlock Text="繰り返し" TextAlignment="Center"/>
                                                         <TextBlock Text="せん断" TextAlignment="Center"/>
                                                         <TextBlock Text="ひずみ" TextAlignment="Center"/>
-                                                        <TextBlock Text="γcy(%)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="γ"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="(%)"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2323,7 +2323,7 @@
                                                         <TextBlock Text="レベル2" TextAlignment="Center"/>
                                                         <TextBlock Text="液状化" TextAlignment="Center"/>
                                                         <TextBlock Text="水平変位" TextAlignment="Center"/>
-                                                        <TextBlock Text="∑γcyH" TextAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center"><Run Text="∑γ"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="H"/></TextBlock>
                                                         <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
@@ -2388,7 +2388,7 @@
                                                         <TextBlock Text="レベル1" TextAlignment="Center"/>
                                                         <TextBlock Text="地盤の" TextAlignment="Center"/>
                                                         <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="Dmax u*" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="D"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" u*"/></TextBlock>
                                                         <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
@@ -2401,8 +2401,8 @@
                                                         <TextBlock Text="レベル1" TextAlignment="Center"/>
                                                         <TextBlock Text="地盤の" TextAlignment="Center"/>
                                                         <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="Dmax u*" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="+ ∑γcyH" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="D"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" u*"/></TextBlock>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="+ ∑γ"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="H"/></TextBlock>
                                                         <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
@@ -2472,7 +2472,7 @@
                                                         <TextBlock Text="レベル2" TextAlignment="Center"/>
                                                         <TextBlock Text="地盤の" TextAlignment="Center"/>
                                                         <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="Dmax u*" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="D"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" u*"/></TextBlock>
                                                         <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
@@ -2486,8 +2486,8 @@
                                                         <TextBlock Text="レベル2" TextAlignment="Center"/>
                                                         <TextBlock Text="地盤の" TextAlignment="Center"/>
                                                         <TextBlock Text="水平変位" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="Dmax u*" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                        <TextBlock Text="+ ∑γcyH" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="D"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" u*"/></TextBlock>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="+ ∑γ"/><Run Text="cy" BaselineAlignment="Subscript" FontSize="9"/><Run Text="H"/></TextBlock>
                                                         <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>

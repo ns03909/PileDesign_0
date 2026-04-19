@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
         Title="基礎梁鉛直解析" Height="700" Width="1100"
         WindowStartupLocation="CenterOwner"
@@ -81,7 +82,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">
                     <Button Content="解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}"
                             Width="120" Height="32" Margin="0,0,8,0"
-                            FontWeight="Bold" Background="#FF4472C4" Foreground="White">
+                            FontWeight="Bold" Background="#FF62B0E2" Foreground="White">
                         <Button.Style>
                             <Style TargetType="Button">
                                 <Style.Triggers>
@@ -141,35 +142,80 @@
                         Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BoolToVisConverter}}">
                 <!-- 杭結果 -->
                 <TabItem Header="杭結果">
-                    <DataGrid ItemsSource="{Binding SelectedCaseResult.PileResults}"
-                              AutoGenerateColumns="False" IsReadOnly="True"
-                              CanUserSortColumns="True" CanUserReorderColumns="False"
-                              HeadersVisibility="Column" GridLinesVisibility="All"
-                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="杭No" Binding="{Binding PileNo}" Width="60"/>
-                            <DataGridTextColumn Header="X [m]" Binding="{Binding X, StringFormat=F3}" Width="80"
-                                                ElementStyle="{StaticResource RightAlignedCell}"/>
-                            <DataGridTextColumn Header="Y [m]" Binding="{Binding Y, StringFormat=F3}" Width="80"
-                                                ElementStyle="{StaticResource RightAlignedCell}"/>
-                            <DataGridTextColumn Header="入力荷重 [kN]" Binding="{Binding InputLoad_kN, StringFormat=F1}" Width="110"
-                                                ElementStyle="{StaticResource RightAlignedCell}"/>
-                            <DataGridTextColumn Header="杭反力 [kN]" Binding="{Binding Reaction_kN, StringFormat=F1}" Width="100"
-                                                ElementStyle="{StaticResource RightAlignedCell}"/>
-                            <DataGridTextColumn Header="沈下量 [mm]" Binding="{Binding Settlement_mm, StringFormat=F2}" Width="100"
-                                                ElementStyle="{StaticResource RightAlignedCell}"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <common:EnhancedDataGrid Grid.Row="0"
+                                  ItemsSource="{Binding SelectedCaseResult.PileResults}"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  CanUserSortColumns="True" CanUserReorderColumns="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="All"
+                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                            <common:EnhancedDataGrid.Columns>
+                                <DataGridTextColumn Header="杭No" Binding="{Binding PileNo}" Width="60"/>
+                                <DataGridTextColumn Header="X [m]" Binding="{Binding X, StringFormat=F3}" Width="80"
+                                                    ElementStyle="{StaticResource RightAlignedCell}"/>
+                                <DataGridTextColumn Header="Y [m]" Binding="{Binding Y, StringFormat=F3}" Width="80"
+                                                    ElementStyle="{StaticResource RightAlignedCell}"/>
+                                <DataGridTextColumn Header="入力荷重 [kN]" Binding="{Binding InputLoad_kN, StringFormat=F1}" Width="110"
+                                                    ElementStyle="{StaticResource RightAlignedCell}"/>
+                                <DataGridTextColumn Header="杭反力 [kN]" Binding="{Binding Reaction_kN, StringFormat=F1}" Width="100"
+                                                    ElementStyle="{StaticResource RightAlignedCell}"/>
+                                <DataGridTextColumn Header="沈下量 [mm]" Binding="{Binding Settlement_mm, StringFormat=F2}" Width="100"
+                                                    ElementStyle="{StaticResource RightAlignedCell}"/>
+                            </common:EnhancedDataGrid.Columns>
+                        </common:EnhancedDataGrid>
+
+                        <!-- 合計・バランス表 -->
+                        <Border Grid.Row="1" BorderBrush="#CCC" BorderThickness="0,1,0,0" Padding="6" Background="#F8F8F8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="合計（平衡の確認）" FontWeight="Bold" Margin="0,0,12,4"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="入力荷重合計:" Margin="0,0,12,2"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                           Text="{Binding SelectedCaseResult.TotalInputLoad_kN, StringFormat={}{0:N1} kN}"
+                                           HorizontalAlignment="Right" Margin="0,0,0,2"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="杭反力合計:" Margin="0,0,12,2"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1"
+                                           Text="{Binding SelectedCaseResult.TotalReaction_kN, StringFormat={}{0:N1} kN}"
+                                           HorizontalAlignment="Right" Margin="0,0,0,2"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="差（反力 − 入力）:" Margin="0,0,12,0"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1"
+                                           Text="{Binding SelectedCaseResult.BalanceDifference_kN, StringFormat={}{0:+0.0;-0.0;0.0} kN}"
+                                           HorizontalAlignment="Right" Foreground="#666"/>
+                                <TextBlock Grid.Row="3" Grid.Column="2"
+                                           Text="{Binding SelectedCaseResult.BalanceRatio, StringFormat=(比率 {0:P2})}"
+                                           Margin="12,0,0,0" Foreground="#666"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </TabItem>
 
                 <!-- 節点変位 -->
                 <TabItem Header="節点変位">
-                    <DataGrid ItemsSource="{Binding SelectedCaseResult.NodeResults}"
+                    <common:EnhancedDataGrid ItemsSource="{Binding SelectedCaseResult.NodeResults}"
                               AutoGenerateColumns="False" IsReadOnly="True"
                               CanUserSortColumns="True" CanUserReorderColumns="False"
                               HeadersVisibility="Column" GridLinesVisibility="All"
                               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <DataGrid.Columns>
+                        <common:EnhancedDataGrid.Columns>
                             <DataGridTextColumn Header="節点名" Binding="{Binding NodeName}" Width="150"/>
                             <DataGridTextColumn Header="X [m]" Binding="{Binding X, StringFormat=F3}" Width="80"
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
@@ -181,18 +227,18 @@
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
                             <DataGridTextColumn Header="Ry [rad]" Binding="{Binding Ry_rad, StringFormat=E3}" Width="100"
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                        </common:EnhancedDataGrid.Columns>
+                    </common:EnhancedDataGrid>
                 </TabItem>
 
                 <!-- 梁断面力 -->
                 <TabItem Header="梁断面力">
-                    <DataGrid ItemsSource="{Binding SelectedCaseResult.BeamResults}"
+                    <common:EnhancedDataGrid ItemsSource="{Binding SelectedCaseResult.BeamResults}"
                               AutoGenerateColumns="False" IsReadOnly="True"
                               CanUserSortColumns="True" CanUserReorderColumns="False"
                               HeadersVisibility="Column" GridLinesVisibility="All"
                               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <DataGrid.Columns>
+                        <common:EnhancedDataGrid.Columns>
                             <DataGridTextColumn Header="梁名" Binding="{Binding BeamName}" Width="140"/>
                             <DataGridTextColumn Header="Ni [kN]" Binding="{Binding Ni, StringFormat=F1}" Width="80"
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
@@ -212,26 +258,26 @@
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
                             <DataGridTextColumn Header="Mzj [kNm]" Binding="{Binding Mzj, StringFormat=F1}" Width="80"
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                        </common:EnhancedDataGrid.Columns>
+                    </common:EnhancedDataGrid>
                 </TabItem>
 
                 <!-- 収束履歴 -->
                 <TabItem Header="収束履歴">
-                    <DataGrid ItemsSource="{Binding SelectedCaseResult.StepResults}"
+                    <common:EnhancedDataGrid ItemsSource="{Binding SelectedCaseResult.StepResults}"
                               AutoGenerateColumns="False" IsReadOnly="True"
                               CanUserSortColumns="True" CanUserReorderColumns="False"
                               HeadersVisibility="Column" GridLinesVisibility="All"
                               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <DataGrid.Columns>
+                        <common:EnhancedDataGrid.Columns>
                             <DataGridTextColumn Header="ステップ" Binding="{Binding Step}" Width="70"/>
                             <DataGridTextColumn Header="反復回数" Binding="{Binding Iterations}" Width="80"
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
                             <DataGridTextColumn Header="残差" Binding="{Binding Residual, StringFormat=E3}" Width="110"
                                                 ElementStyle="{StaticResource RightAlignedCell}"/>
                             <DataGridCheckBoxColumn Header="収束" Binding="{Binding IsConverged}" Width="60"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                        </common:EnhancedDataGrid.Columns>
+                    </common:EnhancedDataGrid>
                 </TabItem>
             </TabControl>
         </Grid>

@@ -311,6 +311,7 @@ namespace PileDesign.ViewModels
 
 
         // 基礎指針'19 計算例5 PHC杭
+        // 杭例題に加えて、計算例5の群杭沈下検討用条件（載荷面・矩形荷重・沈下計算用地層）も同時に読み込む
         [RelayCommand]
         private async Task Example5Pile()
         {
@@ -318,6 +319,11 @@ namespace PileDesign.ViewModels
             try
             {
                 await LoadPileExampleAsync("PileExample5", "基礎指針'19 計算例5");
+
+                // 群杭沈下検討用条件のみを追加ロード（PileBodies / PileLayout 等は上書きしない）
+                var groupData = await Task.Run(() => GroupSettlementExampleLoader.LoadFromFile("GroupSettlement5"));
+                GroupSettlementExampleLoader.ApplySettlementConditionsOnly(CurrentInputModel, groupData);
+                UpdateWindowImmediate();
             }
             finally
             {

@@ -757,11 +757,11 @@ namespace PileDesign.Output
                 {
                     CreateTableCell(["深度", "[m]"], fontSize, "center"),
                     CreateTableCell(["N値"], fontSize, "center"),
-                    CreateTableCell(["Fc", "(%)"], fontSize, "center"),
+                    CreateTableCell(["F<_c>", "(%)"], fontSize, "center"),
                     CreateTableCell(["土質"], fontSize, "center"),
                 };
                 for (int f = 0; f < flCount; f++)
-                    headerCells.Add(CreateTableCell([$"FL{f + 1}"], fontSize, "center"));
+                    headerCells.Add(CreateTableCell([$"F<_L{f + 1}>"], fontSize, "center"));
 
                 table.Append(CreateHeaderRow([.. headerCells]));
 

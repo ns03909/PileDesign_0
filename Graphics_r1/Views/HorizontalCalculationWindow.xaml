@@ -135,10 +135,12 @@
                              ToolTip="全杭を代表点に全6DOFで剛体連結"/>
                 <RadioButton Content="剛床連結" GroupName="ConnectionMode" VerticalAlignment="Center"
                              IsChecked="{Binding ConnectionMode, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=RigidFloor}"
-                             IsEnabled="{Binding HasFoundationBeamElements}">
+                             IsEnabled="{Binding HasFoundationBeamElements}"
+                             ToolTipService.ShowOnDisabled="True">
                     <RadioButton.ToolTip>
                         <StackPanel>
-                            <TextBlock Text="Ux,Uy,Rz拘束、Uz,Rx,Ry自由。基礎梁が剛性を負担"/>
+                            <TextBlock Text="全杭を代表点にDOFをX,Y併進、Z回転を拘束"/>
+                            <TextBlock Text="各杭頭接続節点を一般梁要素で連結している場合に適用可"/>
                             <TextBlock Text="{Binding FoundationBeamValidationMessage}" Foreground="Red">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -331,7 +333,7 @@
                 <TextBlock Text="杭軸力:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
                 <RadioButton Content="入力値" GroupName="AxialForceMode" Margin="0,0,12,0" VerticalAlignment="Center"
                              IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                             ToolTip="入力された軸力値のみを使用（従来動作）"/>
+                             ToolTip="入力された軸力値のみを使用"/>
                 <RadioButton Content="入力値＋応力解析結果" GroupName="AxialForceMode" VerticalAlignment="Center"
                              IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay}"
                              ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）"/>

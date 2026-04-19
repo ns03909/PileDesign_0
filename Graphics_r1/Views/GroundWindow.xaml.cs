@@ -122,7 +122,7 @@ namespace PileDesign.Views
                     }
                 }
 
-                // CSVエクスポートメニューを追加
+                // CSVエクスポートメニュー（兼・別ウィンドウで開くメニュー）を追加
                 PlotHelper.AddCsvExportMenu(wpfPlotNValue, "N値");
                 PlotHelper.AddCsvExportMenu(wpfPlotCu, "Cu");
                 PlotHelper.AddCsvExportMenu(wpfPlotVs, "Vs");

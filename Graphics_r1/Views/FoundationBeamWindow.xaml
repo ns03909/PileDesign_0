@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.Views"
         xmlns:models="clr-namespace:PileDesign.Models.InputData"
+        xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
         Title="基礎梁入力" Height="650" Width="900"
         WindowStartupLocation="CenterOwner"
@@ -71,17 +72,17 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <DataGrid Grid.Row="0" ItemsSource="{Binding Nodes}"
+                <common:EnhancedDataGrid Grid.Row="0" ItemsSource="{Binding Nodes}"
                           SelectedItem="{Binding SelectedNode}" AutoGenerateColumns="False"
                           CanUserAddRows="False" CanUserDeleteRows="False" Margin="5">
-                    <DataGrid.Columns>
+                    <common:EnhancedDataGrid.Columns>
                         <DataGridTextColumn Header="No" Binding="{Binding No}" IsReadOnly="True" Width="50"/>
                         <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="120"/>
                         <DataGridTextColumn Header="X (m)" Binding="{Binding X, StringFormat=N3}" Width="*"/>
                         <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, StringFormat=N3}" Width="*"/>
                         <DataGridTextColumn Header="Z (m)" Binding="{Binding Z, StringFormat=N3}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                    </common:EnhancedDataGrid.Columns>
+                </common:EnhancedDataGrid>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
                     <Button Content="追加" Width="80" Margin="0,0,5,0" Command="{Binding AddNodeCommand}"/>
@@ -98,10 +99,10 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <DataGrid Grid.Row="0" ItemsSource="{Binding Beams}"
+                <common:EnhancedDataGrid Grid.Row="0" ItemsSource="{Binding Beams}"
                           SelectedItem="{Binding SelectedBeam}" AutoGenerateColumns="False"
                           CanUserAddRows="False" CanUserDeleteRows="False" Margin="5">
-                    <DataGrid.Columns>
+                    <common:EnhancedDataGrid.Columns>
                         <DataGridTextColumn Header="No" Binding="{Binding No}" IsReadOnly="True" Width="50"/>
                         <DataGridTextColumn Header="断面名" Binding="{Binding SectionName}" Width="100"/>
                         <DataGridTextColumn Header="I端節点" Binding="{Binding NodeI_No}" Width="70"/>
@@ -111,8 +112,8 @@
                         <DataGridTextColumn Header="ヤング係数 (kN/m²)" Binding="{Binding YoungModulus, StringFormat=E2}" Width="*"/>
                         <DataGridTextColumn Header="せん断係数 (kN/m²)" Binding="{Binding ShearModulus, StringFormat=E2}" Width="*"/>
                         <DataGridTextColumn Header="アングルβ (°)" Binding="{Binding AngleBeta, StringFormat=N1}" Width="80"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                    </common:EnhancedDataGrid.Columns>
+                </common:EnhancedDataGrid>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
                     <Button Content="追加" Width="80" Margin="0,0,5,0" Command="{Binding AddBeamCommand}"/>

@@ -29,7 +29,8 @@ namespace PileDesign.Views
 
             List<PathFigure> rectangleGeometries = [];
 
-            if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字")
+            if (viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字"
+                || viewModel.CurrentInputModel.PileGroupSettlement.LoadingType == "個別十字（基礎梁考慮）")
             {
                 if (viewModel.CurrentInputModel.ElementDivision.SoilPiles.Count == 0)
                 {

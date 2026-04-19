@@ -197,16 +197,20 @@ namespace PileDesign.Views
                 {
                     To = 0.0,
                     Duration = new Duration(duration),
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+                    // アニメ終了時に Value を「描画保持」せず、ローカル/バインディング値が再び有効になるようにする
+                    FillBehavior = FillBehavior.Stop
                 };
 
-                // 完了時に ViewModel.CurrentProgress を 0 に合わせる
+                // 完了時に ViewModel.CurrentProgress を 0 にし、アニメーション自体も解除してバインディングを復帰
                 anim.Completed += (s, ev) =>
                 {
                     if (this.DataContext is HorizontalCalculationViewModel vm)
                     {
                         vm.CurrentProgress = 0;
                     }
+                    // null を渡すことで Animated 値を解除。以降 Value は Binding の値（CurrentProgress）で更新される。
+                    ProgressBarMain?.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty, null);
                 };
 
                 ProgressBarMain.BeginAnimation(System.Windows.Controls.Primitives.RangeBase.ValueProperty, anim);

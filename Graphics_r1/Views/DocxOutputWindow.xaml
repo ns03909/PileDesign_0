@@ -217,6 +217,13 @@ WindowStartupLocation="CenterOwner">
                                     <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
                                 </Style></CheckBox.Style>
                             </CheckBox>
+                            <StackPanel Margin="30,0,0,2">
+                                <TextBlock Text="杭変位応力図のまとめ方" FontSize="11" Foreground="#555"/>
+                                <RadioButton Content="杭ごとに個別" GroupName="PileStressGrouping" Margin="0,2,0,0"
+                                             IsChecked="{Binding GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"/>
+                                <RadioButton Content="杭地盤セットごとにまとめる" GroupName="PileStressGrouping" Margin="0,2,0,0"
+                                             IsChecked="{Binding GroupPileStressBySoilPile, Mode=TwoWay}"/>
+                            </StackPanel>
                             <CheckBox Content="杭頭Mマップ" IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,2,0,2">
                                 <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
                                     <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>

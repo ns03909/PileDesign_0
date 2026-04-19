@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-1246,-356)">
+        <rect id="BeamedCrossFormPressure" x="1246" y="356" width="128" height="128" style="fill:none;"/>
+        <clipPath id="_clip1">
+            <rect id="BeamedCrossFormPressure1" serif:id="BeamedCrossFormPressure" x="1246" y="356" width="128" height="128"/>
+        </clipPath>
+        <g clip-path="url(#_clip1)">
+            <g transform="matrix(0,0.111689,-1.012102,0,2095.315353,412.929436)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(247,181,21);stroke:rgb(247,181,21);stroke-width:11.57px;"/>
+            </g>
+            <g transform="matrix(0.111689,0,0,1.012102,1302.929436,-365.315353)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(247,181,21);stroke:rgb(247,181,21);stroke-width:11.57px;"/>
+            </g>
+            <g transform="matrix(1.334591,0,0,2.625047,-899.486144,-4417.610377)">
+                <ellipse cx="1655.553" cy="1842.867" rx="25.432" ry="12.844" style="fill:none;stroke:rgb(128,128,128);stroke-width:4px;stroke-linecap:square;"/>
+            </g>
+            <g transform="matrix(0.441882,0,0,0.413258,1281.586441,99.122593)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:19.48px;"/>
+            </g>
+            <g transform="matrix(0.144052,0,0,0.223385,1265.819859,246.669561)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;"/>
+            </g>
+            <g transform="matrix(0,-0.144052,0.223385,0,1136.669561,461.828198)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;"/>
+            </g>
+            <g transform="matrix(0,-0.144052,0.223385,0,1136.669561,395.970421)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;"/>
+            </g>
+            <g transform="matrix(0.144052,0,0,0.223385,1335.061705,246.669561)">
+                <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:44.34px;"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -176,7 +176,7 @@ namespace PileDesign.Services
 
                 tables.Add(new ResultTable
                 {
-                    Name = "節点変位",
+                    Name = "節点変位（水平）",
                     Category = "NodeDisp",
                     Columns = ResultColumnReflectionCache.GetColumns(typeof(NodeDisplacementRow)),
                     Rows = nodeDispRows,
@@ -211,7 +211,7 @@ namespace PileDesign.Services
 
                 tables.Add(new ResultTable
                 {
-                    Name = "地盤反力",
+                    Name = "地盤反力（水平）",
                     Category = "SoilSpringForce",
                     Columns = ResultColumnReflectionCache.GetColumns(typeof(SoilSpringForceRow)),
                     Rows = soilSpringRows,

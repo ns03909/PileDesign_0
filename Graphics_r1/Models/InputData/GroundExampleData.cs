@@ -63,6 +63,12 @@ namespace PileDesign.Models.InputData
         public string ShallowSoilType { get; set; }
 
         /// <summary>
+        /// 地盤変位算定法（"a1(b1)" または "a2(b2)"）
+        /// </summary>
+        [JsonPropertyName("calculationMethod")]
+        public string CalculationMethod { get; set; }
+
+        /// <summary>
         /// 地層データリスト
         /// </summary>
         [JsonPropertyName("groundLayers")]

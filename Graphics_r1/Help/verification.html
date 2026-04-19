@@ -286,6 +286,85 @@
             font-size: 14px;
             margin: 8px 0;
         }
+
+        /* =========================
+            Figure click & Popup Window
+        ========================= */
+        .figure-container img {
+            cursor: zoom-in;
+            transition: opacity 0.15s, box-shadow 0.15s;
+        }
+        .figure-container img:hover {
+            opacity: 0.85;
+            box-shadow: 0 0 0 2px #62B0E2;
+        }
+
+        .popup-window {
+            position: fixed;
+            background: white;
+            border: 2px solid #62B0E2;
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            min-width: 240px;
+            min-height: 180px;
+            max-width: 95vw;
+            max-height: 95vh;
+            resize: both;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .popup-header {
+            background: #62B0E2;
+            color: white;
+            padding: 6px 10px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            -webkit-user-select: none;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .popup-title {
+            font-weight: bold;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 8px;
+        }
+
+        .popup-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 6px;
+            border-radius: 2px;
+        }
+        .popup-close:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .popup-body {
+            flex: 1;
+            padding: 8px;
+            overflow: auto;
+            background: #fafafa;
+        }
+
+        .popup-body img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
     </style>
 </head>
 
@@ -308,45 +387,44 @@
         <!-- Column Headers (sticky) -->
         <div class="column-headers">
             <div class="column-header column-header-left">文献（図表）</div>
-            <div class="column-header column-header-center">本プログラム</div>
+            <div class="column-header column-header-center">設計例入出力</div>
             <div class="column-header column-header-right">比較・考察</div>
         </div>
 
         <!-- ============================================================
-         計算例5
+     計算例1
     ============================================================ -->
-        <div class="section" id="sec-5">
+        <div class="section" id="sec-1">
             <div class="section-title-row">
-                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例5</div>
-                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例5</div>
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例1</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例1</div>
                 <div class="section-title-cell section-title-cell-right"></div>
             </div>
             <div class="desc-row">
-                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例5（群杭沈下）</div>
-                <div class="desc-cell desc-cell-center">プログラムで計算例5（群杭沈下）を再現し、文献との比較を行う。<br>アプリケーションメニュー → 計算例 → 「基礎指針'19 計算例5...」を読み込む。</div>
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例1</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例1を再現し、文献との比較を行う。</div>
                 <div class="desc-cell desc-cell-right"></div>
             </div>
 
             <!-- 入力条件 -->
-            <div class="item-row">
+            <!--<div class="item-row">
                 <div class="item-cell item-cell-left">
                     <div class="item-title">入力条件</div>
                     <div class="placeholder">
                         文献の入力条件図表をここに配置<br>
-                        <code>images/verification/ex5_ref_input.png</code>
+                        <code>images/verification/ex10_ref_input.png</code>
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
                     <div class="item-title">入力条件</div>
                     <div class="placeholder">
                         プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex5_app_input.png</code>
+                        <code>images/verification/ex10_app_input.png</code>
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
                 </div>
-            </div>
-
+            </div>-->
 
             <!-- *** -->
             <div class="item-row">
@@ -357,22 +435,302 @@
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
+                    <div class="item-title">計算例1　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig1.1.png" alt="図1.1">
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
+                    <p class="description">土質点テーブルで再現。N値、層厚、土の単位体積重量いずれも同じ数値が入力されています。</p>
                 </div>
             </div>
 
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図10.1　杭伏図</div>
+                    <div class="item-title">基礎指針'19　例表1.1　液状化判定結果</div>
                     <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig10.1.png" alt="図10.1">
+                        <img src="images/verification/shishin19/Table1.1.png" alt="表1.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例1　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table1.1.png" alt="表1.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p>全応力、有効応力、低減係数、換算N値、N値増分、補正N値Na、液状化抵抗比はほぼ一致している。
+                    レベル1繰り返しせん断応力比、レベル1液状化安全率FLもほぼよい一致を示している。</p>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表1.2　算定ひずみ</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table1.2.png" alt="表1.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table1.2.png" alt="表1.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p>
+                        文献では上から4.0, 8.0, 1.0, 2.0, 0.5であるが、プログラムのレベル1繰り返しせん断ひずみでは、上から4.00, 8.00, 0.50, 2.00, 0.50である。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例2
+    ============================================================ -->
+        <div class="section" id="sec-2">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例2</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例2</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例2</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例2を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表2.1　敷地地盤の概要</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table2.1.png" alt="表2.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例2　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table2.1.png" alt="表2.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p>同一の値が入力されている。</p>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表2.2　地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table2.2.png" alt="表2.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例2　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table2.2.png" alt="表2.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p class="description">
+                        地表レベルの地盤変位は、文献では127.4mm（液状化なし）、プログラムでは、126.9mm（液状化なし）で良い一致を示している。
+                    </p>
+                </div>
+            </div>
+
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例3
+    ============================================================ -->
+        <div class="section" id="sec-1">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例3</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例3</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例3</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例3を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.1　敷地地盤の概要および地盤モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.1.png" alt="表3.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例3　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table3.1.png" alt="表3.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p class="description">土質点テーブルで土の単位体積重量、S波速度、N値、F<sub>c</sub>いずれも同じ数値が入力されています。</p>
+                </div>
+            </div>
+
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.2　地盤の水平変位</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.2.png" alt="表3.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例3　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table3.2.png" alt="表3.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p class="description">地表レベルの地盤変位は、文献では89mm（液状化なし）、179mm（液状化有）、プログラムでは、147mm（液状化なし）, 317mm（液状化有）で、かなり異なる。
+                    </p>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.3　液状化判定の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.3.png" alt="表3.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例3　土質点テーブル</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table3.3.png" alt="表3.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p>プログラムで入力したFcが一致していない。修正して再確認。</p>
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表3.4　上部構造の地上部分の解析モデル</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table3.4.png" alt="表3.4">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
@@ -389,9 +747,9 @@
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図10.3　杭のM-φ関係</div>
+                    <div class="item-title">基礎指針'19　例表3.5　レベル2地震荷重時の層せん断力および限界層せん断力</div>
                     <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig10.3.png" alt="図10.3">
+                        <img src="images/verification/shishin19/Table3.5.png" alt="表3.5">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
@@ -405,12 +763,80 @@
                 </div>
             </div>
 
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例4
+    ============================================================ -->
+        <div class="section" id="sec-4">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例4</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例4</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例4</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例4を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図10.4　押込側の杭の結果</div>
+                    <div class="item-title">基礎指針'19　例表4.1　地盤定数等</div>
                     <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig10.4.png" alt="図10.4">
+                        <img src="images/verification/shishin19/Table4.1.png" alt="表4.1">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
@@ -424,50 +850,11 @@
                 </div>
             </div>
 
-            <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図10.5　引抜き側の杭の結果</div>
+                    <div class="item-title">基礎指針'19　例表4.2　設計荷重</div>
                     <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig10.5.png" alt="図10.5">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図10.6　押込側の杭の結果</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig10.6.png" alt="図10.6">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図10.7　引抜き側の杭の結果</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig10.7.png" alt="図10.7">
+                        <img src="images/verification/shishin19/Table4.2.png" alt="表4.2">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
@@ -500,6 +887,74 @@
                 </div>
             </div>
 
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例5
+    ============================================================ -->
+        <div class="section" id="sec-5">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例5</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例5</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例5（群杭沈下）</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例5（群杭沈下）を再現し、文献との比較を行う。<br>アプリケーションメニュー → 計算例 → 「基礎指針'19 計算例5...」を読み込む。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex5_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex5_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
@@ -509,7 +964,7 @@
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
-                    <div class="item-title">program</div>
+                    <div class="item-title">計算例5　Top View</div>
                     <div class="figure-container">
                         <img src="images/verification_c/shishin19/Fig5.1.png" alt="図5.1">
                     </div>
@@ -527,7 +982,7 @@
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
-                    <div class="item-title">program</div>
+                    <div class="item-title">計算例5　Front View</div>
                     <div class="figure-container">
                         <img src="images/verification_c/shishin19/Fig5.2.png" alt="図5.2">
                     </div>
@@ -535,6 +990,304 @@
                 <div class="item-cell item-cell-right">
                 </div>
             </div>
+
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.1　各フーチング地震の荷重により生じる即時沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.1.png" alt="表5.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.2　No.3フーチングの荷重により生じるほかのフーチングの即時沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.2.png" alt="表5.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.3　ほかのフーチングの荷重の影響を考慮した即時沈下量</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.3.png" alt="表5.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">計算例5　群杭計算　沈下量　群杭</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Table5.3.png" alt="表5.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.4　基礎梁の有無及び繰り返し収束計算の有無による沈下量と変形角の比較</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.4.png" alt="表5.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表5.5　基礎梁の有無および繰り返し収束計算の有無による地盤反力の比較</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table5.5.png" alt="表5.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                    <p>各点の計算沈下量が一致しています。</p>
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex5_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>群杭沈下量 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例6
+    ============================================================ -->
+        <div class="section" id="sec-6">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例6</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例6</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例6</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例6を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.1　各フーチングの荷重によるNo.1フーチング直下の粘土層の鉛直有効応力増分</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.1.png" alt="表6.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.2　各フーチング直下の粘土層の鉛直有効応力増分（基礎梁なし）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.2.png" alt="表6.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.3　各フーチング直下の粘土層の圧密沈下量（基礎梁なし）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.3.png" alt="表6.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表6.4　基礎梁の有無および繰り返し収束計算の有無による沈下量と変形角の比較</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table6.4.png" alt="表6.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例7
+    ============================================================ -->
+        <div class="section" id="sec-7">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例7</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例7</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例7</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例7を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
 
 
             <!-- *** -->
@@ -557,7 +1310,6 @@
             </div>
 
 
-
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
@@ -577,8 +1329,6 @@
                 </div>
             </div>
 
-
-
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
@@ -597,6 +1347,75 @@
                 <div class="item-cell item-cell-right">
                 </div>
             </div>
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ============================================================
+     計算例8
+    ============================================================ -->
+        <div class="section" id="sec-8">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例8</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例8</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例8</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例8を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
 
 
             <!-- *** -->
@@ -720,6 +1539,113 @@
             </div>
 
 
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表8.1　杭周面摩擦ばね（押込み側）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table8.1.png" alt="表8.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表8.2　杭周面摩擦ばね（引抜き側）</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table8.2.png" alt="表8.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例9
+    ============================================================ -->
+        <div class="section" id="sec-9">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例9</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例9</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例9</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例9を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex9_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex9_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
+
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
@@ -742,26 +1668,6 @@
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図9.10　M-φ関係</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Fig9.10.png" alt="図9.10">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
                     <div class="item-title">基礎指針'19　例図9.2　M-φ関係</div>
                     <div class="figure-container">
                         <img src="images/verification/shishin19/Fig9.2.png" alt="図9.2">
@@ -769,9 +1675,8 @@
                 </div>
                 <div class="item-cell item-cell-center">
                     <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig9.2.png" alt="図9.2">
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
@@ -781,16 +1686,15 @@
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図9.3　杭州の水平地盤ばねの非線形性</div>
+                    <div class="item-title">基礎指針'19　例図9.3　杭周の水平地盤ばねの非線形性</div>
                     <div class="figure-container">
                         <img src="images/verification/shishin19/Fig9.3.png" alt="図9.3">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
                     <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig9.3.png" alt="図9.3">
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
@@ -807,9 +1711,8 @@
                 </div>
                 <div class="item-cell item-cell-center">
                     <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig9.4.png" alt="図9.4">
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
@@ -826,9 +1729,8 @@
                 </div>
                 <div class="item-cell item-cell-center">
                     <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig9.5.png" alt="図9.5">
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
@@ -878,16 +1780,15 @@
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例図9.97　杭応答図</div>
+                    <div class="item-title">基礎指針'19　例図9.9　杭応答図</div>
                     <div class="figure-container">
                         <img src="images/verification/shishin19/Fig9.9.png" alt="図9.9">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
                     <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig9.9.png" alt="図9.9">
                     </div>
                 </div>
                 <div class="item-cell item-cell-right">
@@ -895,12 +1796,13 @@
             </div>
 
 
+
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表1.1　液状化判定結果</div>
+                    <div class="item-title">基礎指針'19　例図9.10　M-φ関係</div>
                     <div class="figure-container">
-                        <img src="images/verification/shishin19/Table1.1.png" alt="表1.1">
+                        <img src="images/verification/shishin19/Fig9.10.png" alt="図9.10">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
@@ -915,12 +1817,211 @@
             </div>
 
 
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表9.1　地盤物性値</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table9.1.png" alt="表9.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例表9.2　静止土圧、受働土圧</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Table9.2.png" alt="表9.2">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+
+            <!-- 解析結果 -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">解析結果</div>
+                    <div class="placeholder">
+                        文献の結果図表をここに配置<br>
+                        <code>images/verification/ex9_ref_result.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">解析結果 ― 数値比較</div>
+                    <table class="comparison-table">
+                        <tr>
+                            <th>項目</th>
+                            <th>文献値</th>
+                            <th>プログラム値</th>
+                            <th>誤差</th>
+                            <th>判定</th>
+                        </tr>
+                        <tr>
+                            <td>杭頭変位 (mm)</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     計算例10
+    ============================================================ -->
+        <div class="section" id="sec-10">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例10</div>
+                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例10</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="desc-row">
+                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例10</div>
+                <div class="desc-cell desc-cell-center">プログラムで計算例10を再現し、文献との比較を行う。</div>
+                <div class="desc-cell desc-cell-right"></div>
+            </div>
+
+            <!-- 入力条件 -->
+            <!--<div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        文献の入力条件図表をここに配置<br>
+                        <code>images/verification/ex10_ref_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex10_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>-->
+
+
             <!-- *** -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表1.2　算定ひずみ</div>
+                    <div class="item-title">基礎指針'19　例図10.1　杭伏図</div>
                     <div class="figure-container">
-                        <img src="images/verification/shishin19/Table1.2.png" alt="表1.2">
+                        <img src="images/verification/shishin19/Fig10.1.png" alt="図10.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig10.1.png" alt="図10.1">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.3　杭のM-φ関係</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.3.png" alt="図10.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="figure-container">
+                        <img src="images/verification_c/shishin19/Fig10.3.png" alt="図10.3">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.4　押込側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.4.png" alt="図10.4">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.5　引抜き側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.5.png" alt="図10.5">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.6　押込側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.6.png" alt="図10.6">
+                    </div>
+                </div>
+                <div class="item-cell item-cell-center">
+                    <div class="item-title">入力条件</div>
+                    <div class="placeholder">
+                        プログラムの入力画面スクリーンショットをここに配置<br>
+                        <code>images/verification/ex3_1_app_input.png</code>
+                    </div>
+                </div>
+                <div class="item-cell item-cell-right">
+                </div>
+            </div>
+
+            <!-- *** -->
+            <div class="item-row">
+                <div class="item-cell item-cell-left">
+                    <div class="item-title">基礎指針'19　例図10.7　引抜き側の杭の結果</div>
+                    <div class="figure-container">
+                        <img src="images/verification/shishin19/Fig10.7.png" alt="図10.7">
                     </div>
                 </div>
                 <div class="item-cell item-cell-center">
@@ -975,494 +2076,6 @@
                 </div>
             </div>
 
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表2.1　敷地地盤の概要</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table2.1.png" alt="表2.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表2.2　地盤の水平変位</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table2.2.png" alt="表2.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表2.1　敷地地盤の地盤モデル</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table3.1.png" alt="表3.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表2.1　地盤の水平変位</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table3.2.png" alt="表3.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表3.3　液状化判定の結果</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table3.3.png" alt="表3.3">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表3.4　上部構造の地上部分の解析モデル</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table3.4.png" alt="表3.4">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表3.5　レベル2地震荷重時の層せん断力および限界層せん断力</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table3.5.png" alt="表3.5">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-
-            <!-- *** -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表4.1　地盤定数等</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table4.1.png" alt="表4.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表4.2　設計荷重</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table4.2.png" alt="表4.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表5.1　各フーチング地震の荷重により生じる即時沈下量</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table5.1.png" alt="表5.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表5.2　No.3フーチングの荷重により生じるほかのフーチングの即時沈下量</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table5.2.png" alt="表5.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表5.3　ほかのフーチングの荷重の影響を考慮した即時沈下量</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table5.3.png" alt="表5.3">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表5.4　基礎梁の有無及び繰り返し収束計算の有無による沈下量と変形角の比較</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table5.4.png" alt="表5.4">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表5.5　基礎梁の有無および繰り返し収束計算の有無による地盤反力の比較</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table5.5.png" alt="表5.5">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表6.1　各フーチングの荷重によるNo.1フーチング直下の粘土層の鉛直有効応力増分</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table6.1.png" alt="表6.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表6.2　各フーチング直下の粘土層の鉛直有効応力増分（基礎梁なし）</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table6.2.png" alt="表6.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表6.2　各フーチング直下の粘土層の圧密沈下量（基礎梁なし）</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table6.3.png" alt="表6.3">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表6.3　各フーチング直下の粘土層圧密沈下量（基礎梁なし）</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table6.4.png" alt="表6.4">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表6.4　基礎梁の有無および繰り返し収束計算の有無による沈下量と変形角の比較</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table8.1.png" alt="表8.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表8.2　杭周面摩擦ばね（引抜き側）</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table8.2.png" alt="表8.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表9.1　地盤物性値</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table9.1.png" alt="表9.1">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">基礎指針'19　例表9.2　静止土圧、受働土圧</div>
-                    <div class="figure-container">
-                        <img src="images/verification/shishin19/Table9.2.png" alt="表9.2">
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex3_1_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
-            <!-- 解析結果 -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">解析結果</div>
-                    <div class="placeholder">
-                        文献の結果図表をここに配置<br>
-                        <code>images/verification/ex5_ref_result.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">解析結果 ― 数値比較</div>
-                    <table class="comparison-table">
-                        <tr>
-                            <th>項目</th>
-                            <th>文献値</th>
-                            <th>プログラム値</th>
-                            <th>誤差</th>
-                            <th>判定</th>
-                        </tr>
-                        <tr>
-                            <td>群杭沈下量 (mm)</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                        </tr>
-                    </table>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-         計算例9
-    ============================================================ -->
-        <div class="section" id="sec-9">
-            <div class="section-title-row">
-                <div class="section-title-cell section-title-cell-left">基礎指針'19 計算例9</div>
-                <div class="section-title-cell section-title-cell-center">基礎指針'19 計算例9</div>
-                <div class="section-title-cell section-title-cell-right"></div>
-            </div>
-            <div class="desc-row">
-                <div class="desc-cell desc-cell-left">出典: 建築基礎構造設計指針 2019年版 計算例9</div>
-                <div class="desc-cell desc-cell-center">プログラムで計算例9を再現し、文献との比較を行う。</div>
-                <div class="desc-cell desc-cell-right"></div>
-            </div>
-
-            <!-- 入力条件 -->
-            <div class="item-row">
-                <div class="item-cell item-cell-left">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        文献の入力条件図表をここに配置<br>
-                        <code>images/verification/ex9_ref_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-center">
-                    <div class="item-title">入力条件</div>
-                    <div class="placeholder">
-                        プログラムの入力画面スクリーンショットをここに配置<br>
-                        <code>images/verification/ex9_app_input.png</code>
-                    </div>
-                </div>
-                <div class="item-cell item-cell-right">
-                </div>
-            </div>
-
             <!-- 解析結果 -->
             <div class="item-row">
                 <div class="item-cell item-cell-left">
@@ -1497,7 +2110,7 @@
         </div>
 
         <!-- ============================================================
-         設計例 3.1
+     設計例 3.1
     ============================================================ -->
         <div class="section" id="sec-3-1">
             <div class="section-title-row">
@@ -3521,35 +4134,35 @@
 
             <!-- 解析結果 -->
             <!--<div class="item-row">
-        <div class="item-cell item-cell-left">
-            <div class="item-title">解析結果</div>
-            <div class="placeholder">
-                文献の結果図表をここに配置<br>
-                <code>images/verification/exk7_ref_result.png</code>
+            <div class="item-cell item-cell-left">
+                <div class="item-title">解析結果</div>
+                <div class="placeholder">
+                    文献の結果図表をここに配置<br>
+                    <code>images/verification/exk7_ref_result.png</code>
+                </div>
             </div>
-        </div>
-        <div class="item-cell item-cell-center">
-            <div class="item-title">解析結果 ― 数値比較</div>
-            <table class="comparison-table">
-                <tr>
-                    <th>項目</th>
-                    <th>文献値</th>
-                    <th>プログラム値</th>
-                    <th>誤差</th>
-                    <th>判定</th>
-                </tr>
-                <tr>
-                    <td>群杭沈下量 (mm)</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                    <td>-</td>
-                </tr>
-            </table>
-        </div>
-        <div class="item-cell item-cell-right">
-        </div>
-    </div>-->
+            <div class="item-cell item-cell-center">
+                <div class="item-title">解析結果 ― 数値比較</div>
+                <table class="comparison-table">
+                    <tr>
+                        <th>項目</th>
+                        <th>文献値</th>
+                        <th>プログラム値</th>
+                        <th>誤差</th>
+                        <th>判定</th>
+                    </tr>
+                    <tr>
+                        <td>群杭沈下量 (mm)</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="item-cell item-cell-right">
+            </div>
+        </div>-->
         </div>
 
         <!-- ============================================================
@@ -3766,6 +4379,162 @@
                 if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         });
+
+        // ===== 図クリックで拡大ポップアップ（複数同時表示可能・ドラッグ/リサイズ対応） =====
+        (function () {
+            let zCounter = 1000;
+            let cascadeIndex = 0;
+            const CASCADE_STEP = 24;
+            const CASCADE_MAX = 10;
+
+            function createImagePopup(imgSrc, title) {
+                const popup = document.createElement('div');
+                popup.className = 'popup-window';
+                popup.style.zIndex = ++zCounter;
+
+                // カスケード配置（複数ポップアップ時に重ならないようずらす）
+                const offset = (cascadeIndex % CASCADE_MAX) * CASCADE_STEP;
+                cascadeIndex++;
+                const baseLeft = Math.max(20, Math.round(window.innerWidth * 0.1));
+                const baseTop = Math.max(20, Math.round(window.innerHeight * 0.08));
+                popup.style.left = (baseLeft + offset) + 'px';
+                popup.style.top = (baseTop + offset) + 'px';
+                popup.style.width = Math.min(800, Math.round(window.innerWidth * 0.7)) + 'px';
+                popup.style.height = Math.min(700, Math.round(window.innerHeight * 0.8)) + 'px';
+
+                const header = document.createElement('div');
+                header.className = 'popup-header';
+                const titleEl = document.createElement('span');
+                titleEl.className = 'popup-title';
+                titleEl.textContent = title || '図';
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'popup-close';
+                closeBtn.title = '閉じる';
+                closeBtn.textContent = '×';
+                header.appendChild(titleEl);
+                header.appendChild(closeBtn);
+
+                const body = document.createElement('div');
+                body.className = 'popup-body';
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.alt = title || '';
+                body.appendChild(img);
+
+                popup.appendChild(header);
+                popup.appendChild(body);
+
+                // 左ボタンドラッグで画像をパン
+                img.style.cursor = 'grab';
+                img.draggable = false;
+                let panning = false;
+                let panStartX = 0, panStartY = 0;
+                let panStartScrollLeft = 0, panStartScrollTop = 0;
+                body.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    panning = true;
+                    panStartX = e.clientX;
+                    panStartY = e.clientY;
+                    panStartScrollLeft = body.scrollLeft;
+                    panStartScrollTop = body.scrollTop;
+                    img.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (!panning) return;
+                    body.scrollLeft = panStartScrollLeft - (e.clientX - panStartX);
+                    body.scrollTop = panStartScrollTop - (e.clientY - panStartY);
+                });
+                const endPan = () => {
+                    if (!panning) return;
+                    panning = false;
+                    img.style.cursor = 'grab';
+                };
+                document.addEventListener('mouseup', endPan);
+                document.addEventListener('mouseleave', endPan);
+
+                // マウスホイールで拡大縮小（カーソル位置を基準にズーム）
+                body.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const curW = img.offsetWidth;
+                    const curH = img.offsetHeight;
+                    if (curW <= 0 || curH <= 0) return;
+                    const rect = body.getBoundingClientRect();
+                    const clientX = e.clientX - rect.left;
+                    const clientY = e.clientY - rect.top;
+                    const ratioX = (clientX + body.scrollLeft) / curW;
+                    const ratioY = (clientY + body.scrollTop) / curH;
+                    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+                    const minW = 40;
+                    const maxW = (img.naturalWidth || curW) * 20;
+                    const newW = Math.max(minW, Math.min(maxW, curW * factor));
+                    img.style.maxWidth = 'none';
+                    img.style.width = newW + 'px';
+                    img.style.height = 'auto';
+                    // カーソル位置の画像上の点が同じ位置にとどまるようスクロール調整
+                    body.scrollLeft = ratioX * img.offsetWidth - clientX;
+                    body.scrollTop = ratioY * img.offsetHeight - clientY;
+                }, { passive: false });
+
+                // 閉じる
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    popup.remove();
+                });
+
+                // クリックで最前面化
+                popup.addEventListener('mousedown', () => {
+                    popup.style.zIndex = ++zCounter;
+                });
+
+                // ドラッグ移動
+                let dragging = false;
+                let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+                header.addEventListener('mousedown', (e) => {
+                    if (e.target === closeBtn) return;
+                    dragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startLeft = parseFloat(popup.style.left) || 0;
+                    startTop = parseFloat(popup.style.top) || 0;
+                    e.preventDefault();
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (!dragging) return;
+                    const nx = startLeft + (e.clientX - startX);
+                    const ny = startTop + (e.clientY - startY);
+                    // 画面外に出過ぎないようクランプ（ヘッダが見える範囲を残す）
+                    const maxLeft = window.innerWidth - 80;
+                    const maxTop = window.innerHeight - 40;
+                    popup.style.left = Math.max(-popup.offsetWidth + 80, Math.min(maxLeft, nx)) + 'px';
+                    popup.style.top = Math.max(0, Math.min(maxTop, ny)) + 'px';
+                });
+                document.addEventListener('mouseup', () => { dragging = false; });
+
+                document.body.appendChild(popup);
+            }
+
+            // 図クリックでポップアップ
+            document.querySelectorAll('.figure-container img').forEach(img => {
+                img.style.cursor = 'zoom-in';
+                img.addEventListener('click', () => {
+                    // 同じ .item-cell 内の .item-title をタイトルに採用（なければ alt）
+                    const cell = img.closest('.item-cell');
+                    const titleEl = cell ? cell.querySelector('.item-title') : null;
+                    const title = (titleEl && titleEl.textContent.trim()) || img.alt || '図';
+                    createImagePopup(img.src, title);
+                });
+            });
+
+            // Esc キーで一番手前のポップアップを閉じる
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                const popups = Array.from(document.querySelectorAll('.popup-window'));
+                if (popups.length === 0) return;
+                popups.sort((a, b) => (parseInt(b.style.zIndex) || 0) - (parseInt(a.style.zIndex) || 0));
+                popups[0].remove();
+            });
+        })();
     </script>
 </body>
 

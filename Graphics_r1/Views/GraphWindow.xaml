@@ -25,6 +25,7 @@
         <conv:LoadCaseAnalyzedConverter x:Key="LoadCaseAnalyzedConverter"/>
         <conv:LoadCombinationAnalyzedConverter x:Key="LoadCombinationAnalyzedConverter"/>
         <conv:LiquefactionAnalyzedConverter x:Key="LiquefactionAnalyzedConverter"/>
+        <conv:GraphCategoryConverter x:Key="GraphCategoryConverter"/>
     </Window.Resources>
 
     <Grid>
@@ -34,16 +35,46 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="*" MinWidth="200"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="210" MinWidth="180"/>
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" Grid.Column="1">
+        <GridSplitter Grid.Row="0" Grid.Column="1"
+                      Width="5"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ShowsPreview="False"/>
+
+        <StackPanel Grid.Row="0" Grid.Column="2">
 
             <TextBlock Text="グラフの種類:" VerticalAlignment="Center"/>
             <ComboBox x:Name="GraphComboBox"
-                ItemsSource="{Binding GraphOptions}"
-                SelectedItem="{Binding SelectedGraphOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                SelectedItem="{Binding SelectedGraphOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                <ComboBox.Resources>
+                    <!-- カテゴリ（水平解析結果／沈下解析結果）でグループ化 -->
+                    <CollectionViewSource x:Key="GroupedGraphOptions" Source="{Binding GraphOptions}">
+                        <CollectionViewSource.GroupDescriptions>
+                            <PropertyGroupDescription Converter="{StaticResource GraphCategoryConverter}"/>
+                        </CollectionViewSource.GroupDescriptions>
+                    </CollectionViewSource>
+                </ComboBox.Resources>
+                <ComboBox.ItemsSource>
+                    <Binding Source="{StaticResource GroupedGraphOptions}"/>
+                </ComboBox.ItemsSource>
+                <ComboBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <Border Background="#FF62B0E2" Padding="6,3">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ComboBox.GroupStyle>
+            </ComboBox>
 
             <StackPanel Visibility="{Binding IsLoadCaseOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="荷重ケース:" VerticalAlignment="Center"/>
@@ -125,10 +156,27 @@
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsPileSegmentOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <TextBlock Text="杭区間番号:" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding PileSegmentLabel}" VerticalAlignment="Center"/>
                 <ComboBox
                     ItemsSource="{Binding PileSegmentOptions}"
                     SelectedItem="{Binding SelectedPileSegmentOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                <TextBlock Text="{Binding SelectedPileSegmentDetails}"
+                           TextWrapping="Wrap"
+                           Margin="0,4,0,0"
+                           FontSize="11"
+                           Foreground="#555">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPileSegmentDetails}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
 
             </StackPanel>
 
@@ -172,6 +220,16 @@
         <ScottPlot:WpfPlot x:Name="wpfPlot" Grid.Row="0" Grid.Column="0"
                            Visibility="{Binding IsSingleGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
+        <Popup x:Name="HoverDetailsPopup"
+               PlacementTarget="{Binding ElementName=wpfPlot}"
+               Placement="Relative"
+               AllowsTransparency="True"
+               IsOpen="False">
+            <Border Background="#F8FFFFFF" BorderBrush="#888" BorderThickness="1" Padding="6" CornerRadius="2">
+                <TextBlock x:Name="HoverDetailsText" FontSize="11" TextWrapping="Wrap" MaxWidth="320"/>
+            </Border>
+        </Popup>
+
         <TextBlock Text="{Binding CrosshairPositionText}" Grid.Row="1" Grid.Column="0" Margin="10" FontSize="14"
                    Visibility="{Binding IsSingleGraphVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 
@@ -212,7 +270,7 @@
                 </Style>
             </TextBlock.Style>
         </TextBlock>
-        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="1" HorizontalAlignment="Right">
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="1" HorizontalAlignment="Right">
             <Button x:Name="ButtonOk" Content="閉じる (Esc)" Height="30" VerticalAlignment="Top"
                     Width="100" Command="{Binding CloseCommand}"/>
         </StackPanel>

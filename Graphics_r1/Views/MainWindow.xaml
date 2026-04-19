@@ -47,6 +47,7 @@
         <conv:SubscriptConverter x:Key="SubscriptConverter" />
         <conv:LoadCaseNameInSeismicCasesToVisibilityConverter x:Key="LoadCaseNameInSeismicCasesToVisibilityConverter"/>
         <conv:AnalysisResultContentEqualsToVisibilityConverter x:Key="AnalysisResultContentEqualsToVisibilityConverter"/>
+        <conv:AnalysisContentCategoryConverter x:Key="AnalysisContentCategoryConverter"/>
         <conv:MidSpanAndPileTopVisibilityConverter x:Key="MidSpanAndPileTopVisibilityConverter"/>
         <conv:ResultValueAndMidSpanAndPileTopVisibilityConverter x:Key="ResultValueAndMidSpanAndPileTopVisibilityConverter"/>
         <conv:LogSliderConverter x:Key="LogSliderConverter" LogMin="0.1" LogMax="1000"/>
@@ -587,6 +588,9 @@
                                 <DataTrigger Binding="{Binding}" Value="個別十字">
                                     <Setter Property="Source" Value="/Icons/CrossFormPressure.svg"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding}" Value="個別十字（基礎梁考慮）">
+                                    <Setter Property="Source" Value="/Icons/BeamedCrossFormPressure.svg"/>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </svgc:SvgViewbox.Style>
@@ -656,7 +660,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="単杭沈下解析 (F6)"/>
+            <Setter Property="Tag" Value="荷重沈下関係解析 (F6)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -665,7 +669,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="単杭沈下解析(済●) (F6)"/>
+                    <Setter Property="Tag" Value="荷重沈下関係解析(済●) (F6)"/>
                     <Setter Property="Foreground" Value="#1565C0"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -681,7 +685,7 @@
                                      Style="{StaticResource SvgIconStyle24}"/>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Tag" Value="群杭沈下解析 (F7)"/>
+            <Setter Property="Tag" Value="群杭沈下解析 (F8)"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
                     <Setter Property="Content">
@@ -690,7 +694,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="群杭沈下解析(済●) (F7)"/>
+                    <Setter Property="Tag" Value="群杭沈下解析(済●) (F8)"/>
                     <Setter Property="Foreground" Value="#E65100"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -1360,7 +1364,7 @@
                     </ribbon:RibbonButton>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="解析実行">
+                <ribbon:RibbonGroup Header="水平解析">
                     <ribbon:RibbonButton x:Name="RibbonButtonLateralLoadAnalysisSettlement"
                          Command="{Binding OpenLateralLoadAnalysisWindowCommand}"
                          IsEnabled="{Binding IsElementSplit}">
@@ -1380,7 +1384,9 @@
                             </Style>
                         </ribbon:RibbonButton.Style>
                     </ribbon:RibbonButton>
+                </ribbon:RibbonGroup>
 
+                <ribbon:RibbonGroup Header="単杭沈下解析">
                     <ribbon:RibbonButton x:Name="RibbonButtonSettlement"
                          PreviewMouseDown="ButtonButtonSettlement_PreviewMouseDown"
                          Command="{Binding OpenSettlementWindowCommand}"
@@ -1388,35 +1394,15 @@
                          IsEnabled="{Binding IsElementSplit}">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
-                                <Setter Property="Label" Value="単杭沈下解析"/>
+                                <Setter Property="Label" Value="荷重沈下関係解析"/>
                                 <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="単杭沈下解析(済●)"/>
+                                        <Setter Property="Label" Value="荷重沈下関係解析(済●)"/>
                                         <Setter Property="Foreground" Value="#1565C0"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ribbon:RibbonButton.Style>
-                    </ribbon:RibbonButton>
-
-                    <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
-                     Click="ButtonGroupPileSettlement_Click"
-                     ToolTip="スタインブレナー近似式による即時沈下量を計算します。群杭荷重タブで荷重面・土層を設定してください。">
-                        <ribbon:RibbonButton.Style>
-                            <Style TargetType="ribbon:RibbonButton">
-                                <Setter Property="Label" Value="群杭沈下解析"/>
-                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
-                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="群杭沈下解析(済●)"/>
-                                        <Setter Property="Foreground" Value="#E65100"/>
-                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
-                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1444,6 +1430,28 @@
                     </ribbon:RibbonButton>
                 </ribbon:RibbonGroup>
 
+                <ribbon:RibbonGroup Header="群杭沈下解析">
+                    <ribbon:RibbonButton x:Name="RibbonButtonGroupPileSettlement"
+                     Click="ButtonGroupPileSettlement_Click"
+                     ToolTip="スタインブレナー近似式による即時沈下量を計算します。群杭荷重タブで荷重面・土層を設定してください。">
+                        <ribbon:RibbonButton.Style>
+                            <Style TargetType="ribbon:RibbonButton">
+                                <Setter Property="Label" Value="群杭沈下解析"/>
+                                <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                                <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
+                                        <Setter Property="Label" Value="群杭沈下解析(済●)"/>
+                                        <Setter Property="Foreground" Value="#E65100"/>
+                                        <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                        <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ribbon:RibbonButton.Style>
+                    </ribbon:RibbonButton>
+                </ribbon:RibbonGroup>
+
 
             </ribbon:RibbonTab>
 
@@ -1457,10 +1465,32 @@
                         SmallImageSource="pack://application:,,,/Icons/AnalysisResult.png"/>
 
                     <ComboBox Width="100"
-                          ItemsSource="{Binding AnalysisResultContentOption}"
                           SelectedItem="{Binding AnalysisResultContent}"
                           ribbon:RibbonControlService.Label="内容"
                              Visibility="{Binding IsAnalysisResultVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ComboBox.Resources>
+                            <!-- カテゴリ（沈下解析結果／水平解析結果）でグループ化 -->
+                            <CollectionViewSource x:Key="GroupedAnalysisContents"
+                                                  Source="{Binding AnalysisResultContentOption}">
+                                <CollectionViewSource.GroupDescriptions>
+                                    <PropertyGroupDescription Converter="{StaticResource AnalysisContentCategoryConverter}"/>
+                                </CollectionViewSource.GroupDescriptions>
+                            </CollectionViewSource>
+                        </ComboBox.Resources>
+                        <ComboBox.ItemsSource>
+                            <Binding Source="{StaticResource GroupedAnalysisContents}"/>
+                        </ComboBox.ItemsSource>
+                        <ComboBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#FF62B0E2" Padding="6,3">
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ComboBox.GroupStyle>
                         <i:Interaction.Triggers>
                             <i:EventTrigger EventName="SelectionChanged">
                                 <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
@@ -1528,7 +1558,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
-                                            <Condition Binding="{Binding AnalysisResultContent}" Value="梁応力"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="梁応力（水平）"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
@@ -1561,7 +1591,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
-                                            <Condition Binding="{Binding AnalysisResultContent}" Value="節点変位"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="節点変位（水平）"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
@@ -1587,7 +1617,7 @@
                                     <MultiDataTrigger>
                                         <MultiDataTrigger.Conditions>
                                             <Condition Binding="{Binding IsAnalysisResultVisible}" Value="True"/>
-                                            <Condition Binding="{Binding AnalysisResultContent}" Value="地盤反力"/>
+                                            <Condition Binding="{Binding AnalysisResultContent}" Value="地盤反力（水平）"/>
                                         </MultiDataTrigger.Conditions>
                                         <Setter Property="Visibility" Value="Visible"/>
                                     </MultiDataTrigger>
@@ -2415,6 +2445,10 @@
                                                         Command="{Binding SplitElementsAtIntersectionsCommand}">
                                                     <svgc:SvgViewbox Source="/Icons/Intersect.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                 </Button>
+                                                <Button ToolTip="IJ逆転：選択要素（無選択時は全要素）の I 端と J 端の節点参照を入れ替えます"
+                                                        Command="{Binding SwapBeamIJCommand}">
+                                                    <svgc:SvgViewbox Source="/Icons/SwapBeamIJ.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                </Button>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="4,2">
                                                 <Button ToolTip="選択要素を重なる一般節点で分割します (Alt + 7)"
@@ -2597,7 +2631,7 @@
                                                             <Button.ToolTip>
                                                                 <StackPanel>
                                                                     <TextBlock Text="慣性力作用点杭接合点図心移動" />
-                                                                    <TextBlock Text="慣性力作用点をすべての杭配置点の図心（杭による重みづけなし）に移動します"/>
+                                                                    <TextBlock Text="すべての地震荷重ケースに対して、慣性力作用点をすべての杭配置点の図心（杭による重みづけ無し）に移動します。"/>
                                                                 </StackPanel>
                                                             </Button.ToolTip>
                                                         </Button>
@@ -4245,15 +4279,12 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="荷重面 = 土層上端 Z(m) " Grid.Row="1" Grid.Column="0"/>
-                                        <TextBlock Text="{Binding CurrentInputModel.FundamentalInput.RefLevel}" 
-                                                     Foreground="Gray" HorizontalAlignment="Right" Grid.Row="1" Grid.Column="1"/>
                                         <TextBox x:Name="TextBoxGroupPileLoadingPlaneAltitude"
-                                                    Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude, 
+                                                    Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude,
                                                     StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
-                                                    Grid.Row="1" Grid.Column="2"
+                                                    Grid.Row="1" Grid.Column="1"
                                                     HorizontalContentAlignment="Right"
                                                     GotFocus="TextBox_GotFocus"
                                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
@@ -4304,7 +4335,7 @@
 
                                                     <ComboBox x:Name="ComboBoxLoadingType"
                                                           Grid.Row="1" Grid.Column="1"
-                                                          ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.LoadingTypeOptions, UpdateSourceTrigger=LostFocus}"
+                                                          ItemsSource="{Binding AvailableLoadingTypeOptions, UpdateSourceTrigger=LostFocus}"
                                                           SelectedItem="{Binding CurrentInputModel.PileGroupSettlement.LoadingType, UpdateSourceTrigger=LostFocus}"
                                                           ItemTemplate="{StaticResource LoadingTypeItemTemplate}"
                                                           Width="150"
@@ -4335,7 +4366,7 @@
 
                                                 <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                                         Converter={StaticResource VisibilityConverter},
-                                                        ConverterParameter='任意矩形'}">
+                                                        ConverterParameter='任意矩形,個別十字,個別十字（基礎梁考慮）'}">
                                                     <Grid>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="*"/>
@@ -4533,9 +4564,7 @@
                                                                     <StackPanel>
                                                                         <TextBlock Text="面積"
                                                                     TextAlignment="Center"/>
-                                                                        <TextBlock Text="(m2)"
-                                                                    TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
+                                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
@@ -4547,9 +4576,7 @@
                                                                     <StackPanel>
                                                                         <TextBlock Text="単位面積荷重"
                                                                     TextAlignment="Center"/>
-                                                                        <TextBlock Text="(kN/m2)"
-                                                                    TextAlignment="Center"
-                                                                    HorizontalAlignment="Center"/>
+                                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
@@ -4560,7 +4587,7 @@
 
                                                 <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                                         Converter={StaticResource VisibilityConverter},
-                                                        ConverterParameter='個別十字'}">
+                                                        ConverterParameter='個別十字,個別十字（基礎梁考慮）'}">
 
                                                     <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.ElementDivision.SoilPiles}"
                                                             AutoGenerateColumns="False"
@@ -4832,7 +4859,7 @@
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="変形係数"   TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                        <TextBlock Text="(kN/m3)"  TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
@@ -5340,20 +5367,20 @@
                                                         Command="{Binding OpenSettlementWindowCommand}"
                                                         IsEnabled="{Binding IsElementSplit}"/>
 
-                                                    <!-- 行1: 群杭沈下解析（状態でアイコン切替） -->
+                                                    <!-- 行1: 基礎梁考慮沈下解析 -->
                                                     <Button Grid.Row="1" Grid.Column="3"
                                                         Padding="0"
-                                                        Style="{StaticResource GroupPileSettlementButtonStyle}"
-                                                        Command="{Binding PileGroupSettlementAnalysisCommand}"/>
-
-                                                    <!-- 行1: 基礎梁考慮沈下解析 -->
-                                                    <Button Grid.Row="1" Grid.Column="4"
-                                                        Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="基礎梁考慮沈下解析"
+                                                        Tag="基礎梁考慮沈下解析 (F7)"
                                                         Command="{Binding OpenVerticalBeamCalculationCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/SettlementWithBeamWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>
+
+                                                    <!-- 行1: 群杭沈下解析（状態でアイコン切替） -->
+                                                    <Button Grid.Row="1" Grid.Column="4"
+                                                        Padding="0"
+                                                        Style="{StaticResource GroupPileSettlementButtonStyle}"
+                                                        Command="{Binding PileGroupSettlementAnalysisCommand}"/>
                                                 </Grid>
                                             </Border>
 

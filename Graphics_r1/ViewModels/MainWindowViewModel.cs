@@ -787,7 +787,12 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DataGridRectLoads_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
-            HandleDataGridCellEditEnding(e, () => IsGroupPileSettlementAnalysisDone = false, updateTree: false);
+            HandleDataGridCellEditEnding(e, () =>
+            {
+                IsGroupPileSettlementAnalysisDone = false;
+                // ユーザ編集時は個別十字系から「任意矩形」に切替
+                SwitchToAnyRectIfCrossType();
+            }, updateTree: false);
         }
 
 
@@ -906,8 +911,63 @@ namespace PileDesign.ViewModels
 
             CurrentInputModel.PileGroupSettlement.RectLoads.Add(new RectLoad());
 
+            // 個別十字系で手動追加された場合は「任意矩形」に切り替え
+            SwitchToAnyRectIfCrossType();
+
             IsGroupPileSettlementAnalysisDone = false;
             RequestUpdateWindow();
+        }
+
+        // 自動生成による RectLoads 置換中のフラグ（ユーザ編集と区別するため）
+        private bool _suppressRectLoadAutoSwitch;
+
+        /// <summary>
+        /// 「個別十字」「個別十字（基礎梁考慮）」が選択されている場合、RectLoads を自動生成値で置き換える。
+        /// </summary>
+        public void RebuildAutoCrossRectLoadsIfNeeded()
+        {
+            if (CurrentInputModel?.PileGroupSettlement == null) return;
+            var lt = CurrentInputModel.PileGroupSettlement.LoadingType;
+            if (lt != "個別十字" && lt != "個別十字（基礎梁考慮）") return;
+
+            // 基礎梁考慮の場合は VB 解析済みが必須
+            if (lt == "個別十字（基礎梁考慮）"
+                && (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0))
+            {
+                return;
+            }
+
+            var piles = CurrentInputModel.PileLayoutItems;
+            var soilPiles = CurrentInputModel.ElementDivision?.SoilPiles;
+            if (piles == null || piles.Count == 0 || soilPiles == null || soilPiles.Count == 0) return;
+
+            var generated = SettlementAnalysisService.BuildAutoCrossRectLoads(
+                CurrentInputModel.PileGroupSettlement, piles, soilPiles, VerticalBeamCaseResults);
+
+            _suppressRectLoadAutoSwitch = true;
+            try
+            {
+                CurrentInputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(generated);
+            }
+            finally
+            {
+                _suppressRectLoadAutoSwitch = false;
+            }
+        }
+
+        /// <summary>
+        /// 現在の荷重タイプが個別十字系の場合、「任意矩形」に切り替える。
+        /// ユーザが荷重データグリッドを手動で編集したときに呼ぶ。
+        /// </summary>
+        public void SwitchToAnyRectIfCrossType()
+        {
+            if (_suppressRectLoadAutoSwitch) return;
+            if (CurrentInputModel?.PileGroupSettlement == null) return;
+            var lt = CurrentInputModel.PileGroupSettlement.LoadingType;
+            if (lt == "個別十字" || lt == "個別十字（基礎梁考慮）")
+            {
+                CurrentInputModel.PileGroupSettlement.LoadingType = "任意矩形";
+            }
         }
 
         // 群杭沈下検討用検討用土層追加メソッド
@@ -1212,6 +1272,8 @@ namespace PileDesign.ViewModels
         private void DeleteRectLoad(object sender)
         {
             DeleteCollectionItem(sender, CurrentInputModel.PileGroupSettlement.RectLoads, immediate: true);
+            // ユーザ手動削除時は個別十字系から「任意矩形」に切替
+            SwitchToAnyRectIfCrossType();
         }
 
         [RelayCommand]
@@ -1412,6 +1474,34 @@ namespace PileDesign.ViewModels
                 int cur = beams.IndexOf(sorted[i]);
                 if (cur != i) beams.Move(cur, i);
             }
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 梁要素: 選択要素（無選択なら全要素）の I/J 節点参照を入れ替える。
+        /// 併せて AngleBeta を (180° − β) に反転し、局所 y 軸の世界空間向きを保つ。
+        /// </summary>
+        [RelayCommand]
+        private void SwapBeamIJ()
+        {
+            var beams = CurrentInputModel.FoundationBeamInput?.Beams;
+            if (beams == null || beams.Count == 0) return;
+
+            var targets = beams.Where(b => b.IsSelected).ToList();
+            if (targets.Count == 0) targets = beams.ToList();
+
+            TrySaveUndoSnapshotSafelyOptimized();
+
+            foreach (var b in targets)
+            {
+                (b.NodeI_Type, b.NodeJ_Type) = (b.NodeJ_Type, b.NodeI_Type);
+                (b.NodeI_Id, b.NodeJ_Id) = (b.NodeJ_Id, b.NodeI_Id);
+                (b.NodeI_No, b.NodeJ_No) = (b.NodeJ_No, b.NodeI_No);
+
+                // ローカル x 軸反転で y 軸が 180° 回る分を β で相殺し、物理的に同じ断面向きを維持する
+                b.AngleBeta = ((180.0 - b.AngleBeta) % 360.0 + 360.0) % 360.0;
+            }
+
             RequestUpdateWindow();
         }
 
@@ -2196,6 +2286,9 @@ namespace PileDesign.ViewModels
             }
             );
 
+            // 個別十字系で手動自動生成された場合は「任意矩形」に切り替え
+            SwitchToAnyRectIfCrossType();
+
             IsGroupPileSettlementAnalysisDone = false;
 
             // 変更後（UpdateWindowImmediate 内で UpdateTreeView も実行される）
@@ -2319,19 +2412,66 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void PileGroupSettlementAnalysis()
         {
-            // 群杭荷重（矩形荷重）が定義されているかチェック
-            var rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
-            if (rectLoads == null || rectLoads.Count == 0)
+            // 荷重タイプ別の事前チェック
+            var loadingType = CurrentInputModel.PileGroupSettlement.LoadingType;
+            if (loadingType == "任意矩形")
             {
-                MessageBox.Show("群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。",
-                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
+                // 群杭荷重（矩形荷重）が定義されているかチェック
+                var rectLoads = CurrentInputModel.PileGroupSettlement.RectLoads;
+                if (rectLoads == null || rectLoads.Count == 0)
+                {
+                    MessageBox.Show("群杭荷重（矩形荷重）が定義されていません。\n荷重タブで矩形荷重を追加してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
 
-            // 荷重値が全て0かチェック
-            if (rectLoads.All(r => r.QA == 0))
+                // 荷重値が全て0かチェック
+                if (rectLoads.All(r => r.QA == 0))
+                {
+                    MessageBox.Show("値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+            else if (loadingType == "個別十字")
             {
-                MessageBox.Show("値が0の群杭荷重（矩形荷重）しか定義されていません。\n荷重タブで荷重値を設定してください。",
+                // 個別十字では杭位置と軸力から矩形荷重を自動生成するため、杭が必要
+                var piles = CurrentInputModel.PileLayoutItems;
+                if (piles == null || piles.Count == 0)
+                {
+                    MessageBox.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                if (piles.All(p => (p.AxialForceVL0 + p.AxialForceVLAdditional) == 0))
+                {
+                    MessageBox.Show("全ての杭の軸力（VL0+VLadd）が0です。\n杭タブで軸力を設定してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+            else if (loadingType == "個別十字（基礎梁考慮）")
+            {
+                if (!IsVerticalBeamAnalysisDone || VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0)
+                {
+                    MessageBox.Show("基礎梁考慮鉛直解析が実行されていません。\n先に基礎梁考慮鉛直解析を実行してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var piles = CurrentInputModel.PileLayoutItems;
+                if (piles == null || piles.Count == 0)
+                {
+                    MessageBox.Show("杭が配置されていません。\n杭タブで杭を追加してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+            else
+            {
+                // "なし" またはその他
+                MessageBox.Show("荷重タイプが設定されていません。\n荷重タブで荷重タイプを選択してください。",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -2349,7 +2489,8 @@ namespace PileDesign.ViewModels
                 GroupPileSettlementXOffset,
                 GroupPileSettlementYOffset,
                 GroupPileSettlementXSpacing,
-                GroupPileSettlementYSpacing);
+                GroupPileSettlementYSpacing,
+                VerticalBeamCaseResults);
 
             if (!result.Success)
             {
@@ -3306,52 +3447,104 @@ namespace PileDesign.ViewModels
             RaiseResultCommandsCanExecute();
         }
 
-        // ヘルプウィンドウ表示メソッド
-        private static HelpWindow? _helpWindow;
+        // メインと別の STA UI スレッドで動かす補助ウィンドウのホスト。
+        // これにより、メイン側の ShowDialog()（モーダル）中でも対象ウィンドウをスクロール・クリックできる。
+        private sealed class SeparateUiWindowHost
+        {
+            public Window? Window;
+            public System.Windows.Threading.Dispatcher? Dispatcher;
+            public System.Threading.Thread? Thread;
+            public readonly object Lock = new();
+        }
+
+        private static readonly SeparateUiWindowHost _helpWindowHost = new();
+        private static readonly SeparateUiWindowHost _verificationWindowHost = new();
+        private static readonly SeparateUiWindowHost _shortcutKeysWindowHost = new();
+
+        // 旧参照を維持（キーダウン等の外部参照で存在すれば使う）
+        private static HelpWindow? _helpWindow => _helpWindowHost.Window as HelpWindow;
+        private static VerificationWindow? _verificationWindow => _verificationWindowHost.Window as VerificationWindow;
+        private static PileDesign.Views.ShortcutKeysWindow? _shortcutKeysWindow => _shortcutKeysWindowHost.Window as PileDesign.Views.ShortcutKeysWindow;
+
+        /// <summary>
+        /// STA バックグラウンドスレッド上でウィンドウを表示する。
+        /// モーダルダイアログ中でも独立して入力を受け付けられる。
+        /// 既に開いていれば対象スレッドで Activate するだけ。
+        /// </summary>
+        private static void OpenOnSeparateUiThread(SeparateUiWindowHost host, Func<Window> factory, string errorPrefix)
+        {
+            try
+            {
+                lock (host.Lock)
+                {
+                    if (host.Dispatcher != null && host.Window != null)
+                    {
+                        var existing = host.Window;
+                        var dispatcher = host.Dispatcher;
+                        dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            try { existing.Activate(); }
+                            catch { /* ウィンドウが閉じ中の場合は無視 */ }
+                        }));
+                        return;
+                    }
+
+                    host.Thread = new System.Threading.Thread(() =>
+                    {
+                        try
+                        {
+                            var window = factory();
+                            host.Window = window;
+                            host.Dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+
+                            window.Closed += (_, _) =>
+                            {
+                                lock (host.Lock)
+                                {
+                                    host.Window = null;
+                                    host.Dispatcher = null;
+                                }
+                                System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown();
+                            };
+                            window.Show();
+                            System.Windows.Threading.Dispatcher.Run();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[{errorPrefix}Thread] {ex.GetType().Name}: {ex.Message}");
+                            lock (host.Lock)
+                            {
+                                host.Window = null;
+                                host.Dispatcher = null;
+                            }
+                        }
+                    });
+                    host.Thread.SetApartmentState(System.Threading.ApartmentState.STA);
+                    host.Thread.IsBackground = true;
+                    host.Thread.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"{errorPrefix}ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         [RelayCommand]
         public static void OpenHelpWindow()
         {
-            try
-            {
-                if (_helpWindow is { IsVisible: true })
-                {
-                    _helpWindow.Activate();
-                    return;
-                }
-
-                _helpWindow = new HelpWindow { Topmost = true };
-                _helpWindow.Closed += (_, _) => _helpWindow = null;
-                _helpWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ヘルプウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            OpenOnSeparateUiThread(_helpWindowHost,
+                () => new HelpWindow { Topmost = true },
+                "ヘルプ");
         }
 
         // 設計例によるプログラムの検証ウィンドウ表示
-        private static VerificationWindow? _verificationWindow;
-
         [RelayCommand]
         public static void OpenVerificationWindow()
         {
-            try
-            {
-                if (_verificationWindow is { IsVisible: true })
-                {
-                    _verificationWindow.Activate();
-                    return;
-                }
-
-                _verificationWindow = new VerificationWindow { Topmost = true };
-                _verificationWindow.Closed += (_, _) => _verificationWindow = null;
-                _verificationWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"検証ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            OpenOnSeparateUiThread(_verificationWindowHost,
+                () => new VerificationWindow { Topmost = true },
+                "検証");
         }
 
         // AI連携: Claude Desktop にMCPサーバーを登録
@@ -3569,33 +3762,19 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private static PileDesign.Views.ShortcutKeysWindow? _shortcutKeysWindow;
-
         [RelayCommand]
         public static void OpenShortcutKeysWindow()
         {
-            try
-            {
-                // 既に開いている場合はアクティブにする
-                if (_shortcutKeysWindow is { IsVisible: true })
+            // 別スレッド上のウィンドウに対して、メインウィンドウを Owner に設定することはできない。
+            // WindowStartupLocation は CenterScreen で代替する。
+            OpenOnSeparateUiThread(_shortcutKeysWindowHost,
+                () => new PileDesign.Views.ShortcutKeysWindow
                 {
-                    _shortcutKeysWindow.Activate();
-                    return;
-                }
-
-                _shortcutKeysWindow = new PileDesign.Views.ShortcutKeysWindow
-                {
-                    Owner = Application.Current.MainWindow,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    ShowInTaskbar = false
-                };
-                _shortcutKeysWindow.Closed += (_, _) => _shortcutKeysWindow = null;
-                _shortcutKeysWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"ショートカット一覧ウィンドウの表示中にエラーが発生しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                    ShowInTaskbar = false,
+                    Topmost = true
+                },
+                "ショートカット一覧");
         }
 
         [RelayCommand]
@@ -4074,38 +4253,52 @@ namespace PileDesign.ViewModels
                 ShowToast("各杭配置の軸力は各断面の軸力適用範囲内です。");
         }
 
+        // 要素分割ウィンドウの再入ガード
+        // F4 連打や Ctrl+D 連打で await Task.Run(DeepCopy) 中に次の呼出しが入ると、
+        // 1 本目の ShowDialog 終了後に 2 本目が開いてしまうのを防ぐ
+        private bool _isElementDivisionWindowOpening;
+
         // 要素分割ウィンドウを開くメソッド
         [RelayCommand]
         public async Task OpenElementDivisionWindowAsync()
         {
-            if (IsPreparedForAnalysis())
+            if (_isElementDivisionWindowOpening) return;
+            _isElementDivisionWindowOpening = true;
+            try
             {
-                // 解析結果が存在する場合、削除確認ダイアログを表示
-                if (!CheckAndResetAnalysisResults()) return;
-
-                // 杭下端より下方に土層・土質点が存在するかチェック
-                var validationError = ValidatePileAndGroundDepth();
-                if (!string.IsNullOrEmpty(validationError))
+                if (IsPreparedForAnalysis())
                 {
-                    MessageBox.Show(validationError, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
+                    // 解析結果が存在する場合、削除確認ダイアログを表示
+                    if (!CheckAndResetAnalysisResults()) return;
+
+                    // 杭下端より下方に土層・土質点が存在するかチェック
+                    var validationError = ValidatePileAndGroundDepth();
+                    if (!string.IsNullOrEmpty(validationError))
+                    {
+                        MessageBox.Show(validationError, "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    // Undo用DeepCopyをダイアログ表示前に完了させる
+                    // （DeepCopy内のSoilPiles一時退避finallyがダイアログ中のSoilPiles変更と競合するのを防ぐ）
+                    var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
+
+                    // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
+                    var window = new ElementDivisionWindow(this);
+                    window.ShowDialog();
+                    if (undoCopy != null)
+                    {
+                        _undoManager.SaveState(undoCopy);
+                        RaiseUndoStateChanged();
+                    }
+
+                    UpdateWindowImmediate();
+                    UpdateTreeView();
                 }
-
-                // Undo用DeepCopyをダイアログ表示前に完了させる
-                // （DeepCopy内のSoilPiles一時退避finallyがダイアログ中のSoilPiles変更と競合するのを防ぐ）
-                var undoCopy = await Task.Run(() => CurrentInputModel.DeepCopy());
-
-                // ウィンドウを即座に表示（重い初期化はContentRenderedイベントで実行）
-                var window = new ElementDivisionWindow(this);
-                window.ShowDialog();
-                if (undoCopy != null)
-                {
-                    _undoManager.SaveState(undoCopy);
-                    RaiseUndoStateChanged();
-                }
-
-                UpdateWindowImmediate();
-                UpdateTreeView();
+            }
+            finally
+            {
+                _isElementDivisionWindowOpening = false;
             }
         }
 

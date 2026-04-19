@@ -212,7 +212,7 @@
                                                                         <DataGridTextColumn.Header>
                                                                             <StackPanel>
                                                                                 <TextBlock Text="粘着力" TextAlignment="Center"/>
-                                                                                <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                                <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                             </StackPanel>
                                                                         </DataGridTextColumn.Header>
                                                                     </DataGridTextColumn>
@@ -234,7 +234,7 @@
                                                                             <StackPanel>
                                                                                 <TextBlock Text="変形" TextAlignment="Center"/>
                                                                                 <TextBlock Text="係数" TextAlignment="Center"/>
-                                                                                <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                                <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                             </StackPanel>
                                                                         </DataGridTextColumn.Header>
                                                                     </DataGridTextColumn>

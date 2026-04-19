@@ -77,7 +77,22 @@
     <None Remove="Help\images\verification_c\Fig5.1.png" />
     <None Remove="Help\images\verification_c\Fig5.2.png" />
     <None Remove="Help\images\verification_c\Fig9.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig1.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig10.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig10.3.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig9.10.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig9.2.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig9.3.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig9.4.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig9.5.png" />
+    <None Remove="Help\images\verification_c\shishin19\Fig9.9.png" />
     <None Remove="Help\images\verification_c\shishin19\Table1.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table1.2.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table2.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table2.2.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table3.1.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table3.2.png" />
+    <None Remove="Help\images\verification_c\shishin19\Table5.3.png" />
     <None Remove="Help\images\viewCube.png" />
     <None Remove="Help\images\図2.1.jpeg" />
     <None Remove="Help\images\図3.1.png" />
@@ -188,6 +203,8 @@
     <None Remove="Icons\cover.png" />
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.png" />
     <None Remove="Icons\CreateAutoUniformlyDistributedLoad.svg" />
+    <None Remove="Icons\BeamedCrossFormPressure.png" />
+    <None Remove="Icons\BeamedCrossFormPressure.svg" />
     <None Remove="Icons\CrossFormPressure.png" />
     <None Remove="Icons\CrossFormPressure.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
@@ -422,6 +439,8 @@
     <None Remove="Icons\SortXY.svg" />
     <None Remove="Icons\SortYX.png" />
     <None Remove="Icons\SortYX.svg" />
+    <None Remove="Icons\SwapBeamIJ.png" />
+    <None Remove="Icons\SwapBeamIJ.svg" />
     <None Remove="Icons\SplitElementByNodes.png" />
     <None Remove="Icons\SplitElementByNodes.svg" />
     <None Remove="Icons\SplitElementEqually.png" />
@@ -431,6 +450,7 @@
     <None Remove="Icons\SurroundingSoilVisible.svg" />
     <None Remove="Icons\SvgIconStyle.png" />
     <None Remove="Icons\SvgIconStyle.svg" />
+    <None Remove="Icons\SwitchIJ.png" />
     <None Remove="Icons\Table.png" />
     <None Remove="Icons\Table.svg" />
     <None Remove="Icons\TickMarkVisible.png" />
@@ -472,6 +492,15 @@
   </ItemGroup>	
 
   <ItemGroup>
+    <Content Include="Help\images\verification_c\shishin19\Fig1.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig10.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig10.3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Help\images\verification_c\shishin19\Fig5.1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -479,6 +508,45 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\images\verification_c\shishin19\Fig9.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.10.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.4.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.5.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Fig9.9.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table1.2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table2.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table2.2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table3.1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table3.2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table3.3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\verification_c\shishin19\Table5.3.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Models\PileLibrary\CaptainPileTensionBarPCD_circle.csv">
@@ -949,6 +1017,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CreateAutoUniformlyDistributedLoad.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamedCrossFormPressure.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\BeamedCrossFormPressure.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CrossFormPressure.png">
@@ -1635,6 +1709,12 @@
     <Resource Include="Icons\SortIJ.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\SwapBeamIJ.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SwapBeamIJ.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\SortNo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1678,6 +1758,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\SvgIconStyle.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\SwitchIJ.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\Table.png">
@@ -1809,7 +1892,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ACadSharp" Version="3.4.24" />
+    <PackageReference Include="ACadSharp" Version="3.4.29" />
     <PackageReference Include="CSparse" Version="4.3.0" />
     <PackageReference Include="HelixToolkit.Geometry" Version="3.1.2" />
     <PackageReference Include="HelixToolkit.Maths" Version="3.1.2" />
@@ -1821,14 +1904,14 @@
     <PackageReference Include="SharpVectors" Version="1.8.5" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.5" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="Svg.Skia" Version="4.2.0" />
+    <PackageReference Include="Svg.Skia" Version="4.3.0" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
          Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3856.49" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3912.50" />
     <PackageReference Include="WpfMath" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
@@ -1856,7 +1939,7 @@
     <PackageReference Include="SharpDX.Direct3D9" Version="4.2.0" />
     <PackageReference Include="SharpDX.DXGI" Version="4.2.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.1" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Properties\Settings.Designer.cs">

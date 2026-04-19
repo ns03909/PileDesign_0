@@ -53,7 +53,9 @@ namespace PileDesign.ViewModels
                     // パネル切替（単一⇔3分割）を先に通知
                     OnPropertyChanged(nameof(IsMultiGraphVisible));
                     OnPropertyChanged(nameof(IsSingleGraphVisible));
+                    OnPropertyChanged(nameof(PileSegmentLabel));
                     UpdateGraph();
+                    UpdatePileSegmentDetails();
                 }
             }
         }
@@ -162,6 +164,7 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _selectedPileOption, value))
                 {
                     UpdateGraph();
+                    UpdatePileSegmentDetails();
                 }
             }
         }
@@ -234,6 +237,7 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _selectedPileSegmentOption, value))
                 {
                     UpdateGraph();
+                    UpdatePileSegmentDetails();
                 }
             }
         }
@@ -243,6 +247,131 @@ namespace PileDesign.ViewModels
         {
             get => int.TryParse(_selectedPileSegmentOption, out int n) ? n : 0;
             set => SelectedPileSegmentOption = value <= 0 ? "All" : value.ToString();
+        }
+
+        // p-y グラフ時は「杭要素番号」、他（杭体区間を指す場合）は「杭区間番号」
+        public string PileSegmentLabel =>
+            SelectedGraphOption == "水平地盤反力度p-y" ? "杭要素番号:" : "杭区間番号:";
+
+        private string _selectedPileSegmentDetails = string.Empty;
+        /// <summary>水平地盤反力度p-y グラフで選択中杭要素に対応する地盤/深さ等の詳細。
+        /// 複数杭選択時は共通する値のみ表示、差異がある項目は「—」。</summary>
+        public string SelectedPileSegmentDetails
+        {
+            get => _selectedPileSegmentDetails;
+            private set => SetProperty(ref _selectedPileSegmentDetails, value);
+        }
+
+        // 各グラフ共通のホバー用: Scatter → 詳細文字列（p-y, M-φ/EI-φ, 杭頭M-θ 等で利用）
+        private readonly Dictionary<ScottPlot.Plottables.Scatter, string> _graphHoverMap = new();
+
+        /// <summary>
+        /// 描画メソッドが Scatter を登録するためのマップ。
+        /// </summary>
+        internal Dictionary<ScottPlot.Plottables.Scatter, string> GraphHoverMap => _graphHoverMap;
+
+        /// <summary>
+        /// 指定した Scatter に対応する詳細文字列を返す（ホバーポップアップ用）。
+        /// </summary>
+        public bool TryGetGraphHoverDetails(ScottPlot.Plottables.Scatter scatter, out string details)
+        {
+            details = string.Empty;
+            if (scatter == null) return false;
+            if (_graphHoverMap.TryGetValue(scatter, out var s))
+            {
+                details = s;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 現在のグラフ種別に合わせて PileSegmentOptions を再構築する。
+        /// p-y 以外（NMINT/QNINT/M-φ/EI-φ 等）は入力杭体セグメント数を、
+        /// p-y は要素分割後の HorizontalSoilReactions 数を使う。
+        /// </summary>
+        private void EnsurePileSegmentOptionsForCurrentGraph()
+        {
+            int count = 0;
+            if (SelectedGraphOption == "水平地盤反力度p-y")
+            {
+                var firstPile = GetSelectedPileLayouts().FirstOrDefault();
+                if (firstPile != null
+                    && firstPile.SoilPileAltNo > 0
+                    && firstPile.SoilPileAltNo <= InputModel.ElementDivision.SoilPiles.Count)
+                {
+                    count = InputModel.ElementDivision.SoilPiles[firstPile.SoilPileAltNo - 1]
+                        .HorizontalSoilReactions?.Count ?? 0;
+                }
+            }
+            else
+            {
+                var pb = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
+                count = pb?.PileBodySegments?.Count ?? 0;
+            }
+
+            if (count <= 0) return;
+            if (PileSegmentOptions != null && PileSegmentOptions.Count == count + 1) return;
+
+            var opts = new ObservableCollection<string> { "All" };
+            foreach (int i in Enumerable.Range(1, count)) opts.Add(i.ToString());
+            PileSegmentOptions = opts;
+            if (!opts.Contains(SelectedPileSegmentOption))
+                SelectedPileSegmentOption = "All";
+        }
+
+        private void UpdatePileSegmentDetails()
+        {
+            if (SelectedGraphOption != "水平地盤反力度p-y"
+                || string.IsNullOrEmpty(SelectedPileSegmentOption)
+                || SelectedPileSegmentOption == "All"
+                || !int.TryParse(SelectedPileSegmentOption, out int oneBased))
+            {
+                SelectedPileSegmentDetails = string.Empty;
+                return;
+            }
+            int idx = oneBased - 1;
+
+            var reactions = new List<HorizontalSoilReactionItem>();
+            foreach (var pile in GetSelectedPileLayouts())
+            {
+                if (pile.SoilPileAltNo <= 0 || pile.SoilPileAltNo > InputModel.ElementDivision.SoilPiles.Count) continue;
+                var sp = InputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1];
+                if (sp?.HorizontalSoilReactions == null) continue;
+                if (idx < 0 || idx >= sp.HorizontalSoilReactions.Count) continue;
+                reactions.Add(sp.HorizontalSoilReactions[idx]);
+            }
+
+            if (reactions.Count == 0)
+            {
+                SelectedPileSegmentDetails = string.Empty;
+                return;
+            }
+
+            static string CommonStr(IEnumerable<string> vals)
+            {
+                var list = vals.ToList();
+                return list.All(v => v == list[0]) ? (list[0] ?? "") : "—";
+            }
+            static string CommonNum(IEnumerable<double> vals, string format)
+            {
+                var list = vals.ToList();
+                return list.All(v => Math.Abs(v - list[0]) < 1e-9) ? list[0].ToString(format) : "—";
+            }
+
+            string name = CommonStr(reactions.Select(r => r.Name));
+            string soilType = CommonStr(reactions.Select(r => r.SoilType));
+            string zTop = CommonNum(reactions.Select(r => r.ZTop), "F3");
+            string zBtm = CommonNum(reactions.Select(r => r.ZBtm), "F3");
+            string b = CommonNum(reactions.Select(r => r.B * 1000.0), "F0");
+            string nValue = CommonNum(reactions.Select(r => r.NValue), "F1");
+
+            SelectedPileSegmentDetails =
+                $"地盤層: {name}\n" +
+                $"土質: {soilType}\n" +
+                $"標高: {zTop} ~ {zBtm} m\n" +
+                $"杭径 B: {b} mm\n" +
+                $"N 値: {nValue}";
         }
 
         // M/Qdスライダー表示
@@ -753,7 +882,7 @@ namespace PileDesign.ViewModels
             if (IsHorizontalAnalysisDone)
             {
                 GraphOptions.Clear();
-                GraphOptions.Add("作用点荷重変形関係");
+                GraphOptions.Add("慣性力作用点荷重変形関係");
                 //GraphOptions.Add("杭頭応力変形関係F");
                 //GraphOptions.Add("杭頭応力変形関係M");
                 //GraphOptions.Add("杭応力F");
@@ -920,7 +1049,7 @@ namespace PileDesign.ViewModels
                 decimalPlacesX = 1;
                 decimalPlacesY = 1;
             }
-            else if (SelectedGraphOption.StartsWith("作用点荷重変形関係"))
+            else if (SelectedGraphOption.StartsWith("慣性力作用点荷重変形関係"))
             {
                 decimalPlacesX = 1;
                 decimalPlacesY = 1;
@@ -1053,7 +1182,7 @@ namespace PileDesign.ViewModels
                 WpfPlot.Refresh();
 
             }
-            else if (SelectedGraphOption.StartsWith("作用点荷重変形関係"))
+            else if (SelectedGraphOption.StartsWith("慣性力作用点荷重変形関係"))
             {
                 IsLoadCaseOptionVisible = true;
                 IsLoadCombinationOptionVisible = true;
@@ -1214,6 +1343,8 @@ namespace PileDesign.ViewModels
                 IsGridOptionVisible = false;
 
                 WpfPlot.Plot.Clear();
+                _graphHoverMap.Clear();
+                EnsurePileSegmentOptionsForCurrentGraph();
 
                 // 杭体と杭区間の取得（境界チェック付き）
                 var pileBody = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
@@ -1232,6 +1363,14 @@ namespace PileDesign.ViewModels
                     return;
                 }
 
+                // 共通ホバー詳細（NMINT: 杭体/区間/PileSection）
+                string nmSectionDetails =
+                    $"杭体: {SelectedPileBodyRef} / 入力杭区間 No: {SelectedPileSegmentNo}\n" +
+                    $"杭種: {pileSection.PileBodyType}\n" +
+                    $"断面種別: {pileSection.PileSectionType}\n" +
+                    $"杭径 D: {pileSection.PileDiameter:F0} mm\n" +
+                    $"杭断面: {pileSection.PileDescription}";
+
                 // NM曲線データが有効な場合のみ描画
                 // 低減後（実線）を先に描画して色を取得し、低減前（破線）に同じ色を適用
 
@@ -1243,6 +1382,7 @@ namespace PileDesign.ViewModels
                         pileSection.FactoredServiceNM.N.ToArray(), pileSection.FactoredServiceNM.M.ToArray());
                     scatterFaService.LegendText = "低減後使用限界";
                     serviceColor = scatterFaService.LineStyle.Color;
+                    _graphHoverMap[scatterFaService] = "低減後使用限界\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredServiceNM.N?.Count > 0 && pileSection.UnfactoredServiceNM.M?.Count > 0)
                 {
@@ -1251,6 +1391,7 @@ namespace PileDesign.ViewModels
                     scatterUnService.LegendText = "低減前使用限界";
                     scatterUnService.LineStyle.Pattern = LinePattern.Dashed;
                     if (serviceColor != default) scatterUnService.LineStyle.Color = serviceColor;
+                    _graphHoverMap[scatterUnService] = "低減前使用限界\n" + nmSectionDetails;
                 }
 
                 // 損傷限界
@@ -1261,6 +1402,7 @@ namespace PileDesign.ViewModels
                         pileSection.FactoredDamageNM.N.ToArray(), pileSection.FactoredDamageNM.M.ToArray());
                     scatterFaDamage.LegendText = "低減後損傷限界";
                     damageColor = scatterFaDamage.LineStyle.Color;
+                    _graphHoverMap[scatterFaDamage] = "低減後損傷限界\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredDamageNM.N?.Count > 0 && pileSection.UnfactoredDamageNM.M?.Count > 0)
                 {
@@ -1269,6 +1411,7 @@ namespace PileDesign.ViewModels
                     scatterUnDamage.LegendText = "低減前損傷限界";
                     scatterUnDamage.LineStyle.Pattern = LinePattern.Dashed;
                     if (damageColor != default) scatterUnDamage.LineStyle.Color = damageColor;
+                    _graphHoverMap[scatterUnDamage] = "低減前損傷限界\n" + nmSectionDetails;
                 }
 
                 // 安全限界
@@ -1279,6 +1422,7 @@ namespace PileDesign.ViewModels
                         pileSection.FactoredUltimateNM.N.ToArray(), pileSection.FactoredUltimateNM.M.ToArray());
                     scatterFaUltimate.LegendText = "低減後安全限界";
                     ultimateColor = scatterFaUltimate.LineStyle.Color;
+                    _graphHoverMap[scatterFaUltimate] = "低減後安全限界\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
                 {
@@ -1287,6 +1431,7 @@ namespace PileDesign.ViewModels
                     scatterUnUltimate.LegendText = "低減前安全限界";
                     scatterUnUltimate.LineStyle.Pattern = LinePattern.Dashed;
                     if (ultimateColor != default) scatterUnUltimate.LineStyle.Color = ultimateColor;
+                    _graphHoverMap[scatterUnUltimate] = "低減前安全限界\n" + nmSectionDetails;
                 }
 
                 List<double> axialForceResultsVL = [];
@@ -1554,6 +1699,8 @@ namespace PileDesign.ViewModels
                 IsMonQdSliderVisible = true;
 
                 WpfPlot.Plot.Clear();
+                _graphHoverMap.Clear();
+                EnsurePileSegmentOptionsForCurrentGraph();
 
                 var pileBody = InputModel.GetPileBodyByPileBodyRef(SelectedPileBodyRef);
                 if (pileBody?.PileBodySegments == null || SelectedPileSegmentNo < 1 || SelectedPileSegmentNo > pileBody.PileBodySegments.Count)
@@ -1570,6 +1717,15 @@ namespace PileDesign.ViewModels
                     WpfPlot.Refresh();
                     return;
                 }
+
+                // 共通ホバー詳細（QNINT: 杭体/区間/PileSection/MonQd）
+                string qnSectionDetails =
+                    $"杭体: {SelectedPileBodyRef} / 入力杭区間 No: {SelectedPileSegmentNo}\n" +
+                    $"杭種: {pileSection.PileBodyType}\n" +
+                    $"断面種別: {pileSection.PileSectionType}\n" +
+                    $"杭径 D: {pileSection.PileDiameter:F0} mm\n" +
+                    $"杭断面: {pileSection.PileDescription}\n" +
+                    $"M/(Q·d): {MonQd:N2}";
 
                 // QN曲線データ描画（MonQdスライダー値で再計算、低減後=実線、低減前=同色破線）
                 var qnCurves = pileSection.ComputeQNForMonQd(MonQd);
@@ -1594,6 +1750,7 @@ namespace PileDesign.ViewModels
                         var sc = WpfPlot.Plot.Add.ScatterLine(factored.N.ToArray(), factored.Q.ToArray());
                         sc.LegendText = $"低減後{label}";
                         color = sc.LineStyle.Color;
+                        _graphHoverMap[sc] = $"低減後{label}\n" + qnSectionDetails;
                     }
                     if (unfactored.N?.Count > 0 && unfactored.Q?.Count > 0)
                     {
@@ -1601,6 +1758,7 @@ namespace PileDesign.ViewModels
                         sc.LegendText = $"低減前{label}";
                         sc.LineStyle.Pattern = LinePattern.Dashed;
                         if (color != default) sc.LineStyle.Color = color;
+                        _graphHoverMap[sc] = $"低減前{label}\n" + qnSectionDetails;
                     }
                 }
 
@@ -1828,6 +1986,7 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
 
+                EnsurePileSegmentOptionsForCurrentGraph();
                 DrawMPhiCurves(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
             else if (SelectedGraphOption == "杭周地盤変位反力")
@@ -1857,22 +2016,7 @@ namespace PileDesign.ViewModels
                 IsGridOptionVisible = false;
 
                 // 杭区間オプションを要素分割後のセグメント数に更新
-                var firstPile = GetSelectedPileLayouts().FirstOrDefault();
-                if (firstPile != null && firstPile.SoilPileAltNo > 0 && firstPile.SoilPileAltNo <= InputModel.ElementDivision.SoilPiles.Count)
-                {
-                    int reactionCount = InputModel.ElementDivision.SoilPiles[firstPile.SoilPileAltNo - 1].HorizontalSoilReactions?.Count ?? 0;
-                    if (reactionCount > 0)
-                    {
-                        var opts = new ObservableCollection<string> { "All" };
-                        foreach (int i in Enumerable.Range(1, reactionCount)) opts.Add(i.ToString());
-                        if (PileSegmentOptions == null || PileSegmentOptions.Count != opts.Count)
-                        {
-                            PileSegmentOptions = opts;
-                            if (!opts.Contains(SelectedPileSegmentOption))
-                                SelectedPileSegmentOption = "All";
-                        }
-                    }
-                }
+                EnsurePileSegmentOptionsForCurrentGraph();
 
                 DrawPyCurvesWithMarker(WpfPlot, MyCrosshair, "CrosshairPositionText");
             }
@@ -2046,6 +2190,7 @@ namespace PileDesign.ViewModels
         {
             var model = AnaModel;
             wpfPlot.Plot.Clear();
+            _graphHoverMap.Clear();
 
             var targetPiles = GetSelectedPileLayouts();
             var selectedLoadCases = GetSelectedLoadCases();
@@ -2208,15 +2353,16 @@ namespace PileDesign.ViewModels
                             double[] plotYValues;
                             if (isEIMode)
                             {
-                                // EI = M / φ（割線剛性）はM-φが折線でも非線形
-                                // → M-φ区間を細分化してEI曲線を生成
+                                // EI = M/φ は M-φ 区間内で双曲線状に変化する。
+                                // ScatterLine は直線近似なので、分割を細かくして描画ポリラインを真の曲線に近づける。
+                                // nDiv=100 で M-φ 折点付近の湾曲もほぼ折線で追従する（計算コスト微小）。
                                 var eiPhis = new List<double>();
                                 var eiValues = new List<double>();
                                 for (int seg2 = 0; seg2 < phis.Count - 1; seg2++)
                                 {
                                     double phi0 = phis[seg2], phi1 = phis[seg2 + 1];
                                     double m0 = moments[seg2], m1 = moments[seg2 + 1];
-                                    int nDiv = 20; // 各区間を20分割
+                                    const int nDiv = 100;
                                     int jStart = (seg2 == 0) ? 1 : 0; // φ=0はスキップ
                                     for (int j = jStart; j <= nDiv; j++)
                                     {
@@ -2244,6 +2390,25 @@ namespace PileDesign.ViewModels
                             scatter.LineStyle.Width = 2;
                             scatter.MarkerSize = isEIMode ? 0 : 5; // EIモードはマーカー不要
                             scatter.LegendText = legend;
+
+                            // ホバー詳細: 杭/要素/入力杭区間/荷重条件/軸力/曲線出典
+                            int inputSegForDetails = -1;
+                            string sectionDesc = "";
+                            if (targetBeam.SegmentIndex is int segForDetails
+                                && soilPile != null && segForDetails >= 0 && segForDetails < soilPile.PileBodySegments.Count)
+                            {
+                                var pbSeg = soilPile.PileBodySegments[segForDetails];
+                                inputSegForDetails = pbSeg.No;
+                                sectionDesc = pbSeg.PileSection?.PileDescription ?? "";
+                            }
+                            string mphiDetails =
+                                $"杭 No: {pileLayout.No} / 要素 Seg{segLabel}\n" +
+                                $"入力杭区間 No: {(inputSegForDetails > 0 ? inputSegForDetails.ToString() : "—")}\n" +
+                                $"杭断面: {(string.IsNullOrEmpty(sectionDesc) ? "—" : sectionDesc)}\n" +
+                                $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}\n" +
+                                $"軸力 N: {axialN:F1} kN\n" +
+                                $"曲線出典: {curveSource}";
+                            _graphHoverMap[scatter] = mphiDetails;
 
                             // 最終ステップの曲率・モーメント取得（lastStepとbeamResultForCurveは上で取得済み）
                             if (lastStep >= 0 && beamResultForCurve != null)
@@ -2287,6 +2452,11 @@ namespace PileDesign.ViewModels
                                     marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
                                     marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
                                     marker.LegendText = $"最終:{legend}";
+                                    _graphHoverMap[marker] =
+                                        mphiDetails + "\n" +
+                                        $"最終 φ: {phiFinal:F6} rad/m\n" +
+                                        $"最終 M: {mFinal:F1} kN·m" +
+                                        (isEIMode ? $"\n最終 EI: {markerY:F0} kN·m²" : "");
                                 }
                             }
                         }
@@ -2427,6 +2597,7 @@ namespace PileDesign.ViewModels
             if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0)
             {
                 wpfPlot.Plot.Clear();
+                _graphHoverMap.Clear();
                 wpfPlot.Refresh();
                 return;
             }
@@ -2437,6 +2608,7 @@ namespace PileDesign.ViewModels
             var selectedCombinations = GetSelectedLoadCombinations();
 
             wpfPlot.Plot.Clear();
+            _graphHoverMap.Clear();
 
             foreach (var loadCase in selectedLoadCases)
             {
@@ -2522,6 +2694,26 @@ namespace PileDesign.ViewModels
                             var scatter = wpfPlot.Plot.Add.Scatter(thetas, moments);
                             scatter.LegendText = legend;
 
+                            // 杭頭詳細: 杭No、断面、回転ばね構成、軸力、荷重条件
+                            double pileHeadZ = pileLayout.PileNodes != null && pileLayout.PileNodes.Count > 0
+                                ? pileLayout.PileNodes[0].Coord.Z : double.NaN;
+                            string headSectionDesc = "";
+                            if (pileLayout.PileBodyNo > 0 && pileLayout.PileBodyNo <= InputModel.PileBodies.Count)
+                            {
+                                var pbody = InputModel.PileBodies[pileLayout.PileBodyNo - 1];
+                                if (pbody?.PileBodySegments != null && pbody.PileBodySegments.Count > 0)
+                                    headSectionDesc = pbody.PileBodySegments[0].PileSection?.PileDescription ?? "";
+                            }
+                            double kUsed = rs.Mode == RotationalSpringMode.CombinedXY ? (rs.KthetaXY ?? 0.0) : (rs.Ktheta ?? 0.0);
+                            string mthetaDetails =
+                                $"杭 No: {pileLayout.No}  (X={pileLayout.X:F3}, Y={pileLayout.Y:F3})\n" +
+                                $"杭頭 Z: {(double.IsFinite(pileHeadZ) ? pileHeadZ.ToString("F3") + " m" : "—")}\n" +
+                                $"杭頭断面: {(string.IsNullOrEmpty(headSectionDesc) ? "—" : headSectionDesc)}\n" +
+                                $"回転ばね: {rs.Name} / Mode: {modeTag} / Kθ: {kUsed:0.###E+0}\n" +
+                                $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}\n" +
+                                $"軸力 N: {axialN:F1} kN";
+                            _graphHoverMap[scatter] = mthetaDetails;
+
                             // 最終ステップの回転角・モーメント取得
                             int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
                             if (lastStep >= 0)
@@ -2563,6 +2755,10 @@ namespace PileDesign.ViewModels
                                         marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
                                         marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
                                         marker.LegendText = $"最終:{legend}";
+                                        _graphHoverMap[marker] =
+                                            mthetaDetails + "\n" +
+                                            $"最終 θ: {thetaFinal:F6} rad\n" +
+                                            $"最終 M: {mFinal:F1} kN·m";
                                     }
                                 }
                             }
@@ -2580,6 +2776,7 @@ namespace PileDesign.ViewModels
         private void DrawPyCurvesWithMarker(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText)
         {
             wpfPlot.Plot.Clear();
+            _graphHoverMap.Clear();
 
             var targetPiles = GetSelectedPileLayouts();
             var selectedLoadCases = GetSelectedLoadCases();
@@ -2618,11 +2815,21 @@ namespace PileDesign.ViewModels
                 for (double y = 0.01; y < 0.05; y += 0.001) yValues.Add(y);   // 10-50mm: 1mm刻み
                 for (double y = 0.05; y < 0.50; y += 0.005) yValues.Add(y);   // 50-500mm: 5mm刻み
 
+                // ホバー詳細文字列（共通部分）
+                string pyDetails =
+                    $"杭 No: {pileLayout.No} / 要素 #{segIdx + 1}\n" +
+                    $"地盤層: {reaction.Name}\n" +
+                    $"土質: {reaction.SoilType}\n" +
+                    $"標高: {reaction.ZTop:F3} ~ {reaction.ZBtm:F3} m\n" +
+                    $"杭径 B: {reaction.B * 1000.0:F0} mm\n" +
+                    $"N 値: {reaction.NValue:F1}";
+
                 // Top曲線
                 var xsT = yValues.Select(y => y * 1000.0).ToArray();
                 var ysT = yValues.Select(y => reaction.GetP(y, pyTop)).ToArray();
                 var curveT = wpfPlot.Plot.Add.ScatterLine(xsT, ysT);
                 curveT.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Top";
+                _graphHoverMap[curveT] = pyDetails;
 
                 // Btm曲線
                 var xsB = xsT; // 同じX値
@@ -2630,6 +2837,7 @@ namespace PileDesign.ViewModels
                 var curveB = wpfPlot.Plot.Add.ScatterLine(xsB, ysB);
                 curveB.LegendText = $"P{pileLayout.No}|Seg{segIdx + 1}|Btm";
                 curveB.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                _graphHoverMap[curveB] = pyDetails;
 
                 // 最終ステップのマーカーを描画（i端・j端）
                 // X軸: 解析結果の相対変位、Y軸: 理論P-y曲線上の値（必ず曲線上に乗る）
@@ -2685,6 +2893,10 @@ namespace PileDesign.ViewModels
                                     marker.MarkerStyle.Shape = shape;
                                     marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
                                     marker.LegendText = $"最終:{legend}";
+                                    _graphHoverMap[marker] =
+                                        pyDetails + "\n" +
+                                        $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}\n" +
+                                        $"{endLabel}: 相対変位 {relDispMm:F2} mm, p = {pTheory:F1} kN/m²";
                                 }
                             }
                         }
@@ -2732,11 +2944,11 @@ namespace PileDesign.ViewModels
                     {
                         if (SelectedGraphOption == "沈下 単杭")
                         {
-                            ys.Add(pile.SinglePileSettlementVL);
+                            ys.Add(pile.SinglePileSettlementVL * 1000); // m → mm
                         }
                         else // if (SelectedGraphOption == "沈下 単杭+群杭")
                         {
-                            ys.Add(pile.SinglePileSettlementVL + pile.GroupPileSettlement);
+                            ys.Add(pile.SinglePileSettlementVL * 1000 + pile.GroupPileSettlement); // m→mm + mm
                         }
 
                     }
@@ -2748,12 +2960,12 @@ namespace PileDesign.ViewModels
                             {
                                 if (SelectedGraphOption == "沈下 単杭")
                                 {
-                                    ys.Add(pile.SinglePileSettlementLevel1s[i]);
+                                    ys.Add(pile.SinglePileSettlementLevel1s[i] * 1000); // m → mm
                                     break;
                                 }
                                 else // if (SelectedGraphOption == "沈下 単杭+群杭")
                                 {
-                                    ys.Add(pile.SinglePileSettlementLevel1s[i] + pile.GroupPileSettlement);
+                                    ys.Add(pile.SinglePileSettlementLevel1s[i] * 1000 + pile.GroupPileSettlement); // m→mm + mm
                                     break;
                                 }
                             }
@@ -2764,12 +2976,12 @@ namespace PileDesign.ViewModels
                             {
                                 if (SelectedGraphOption == "沈下 単杭")
                                 {
-                                    ys.Add(pile.SinglePileSettlementLevel2s[i]);
+                                    ys.Add(pile.SinglePileSettlementLevel2s[i] * 1000); // m → mm
                                     break;
                                 }
                                 else // if (SelectedGraphOption == "沈下 単杭+群杭")
                                 {
-                                    ys.Add(pile.SinglePileSettlementLevel2s[i] + pile.GroupPileSettlement);
+                                    ys.Add(pile.SinglePileSettlementLevel2s[i] * 1000 + pile.GroupPileSettlement); // m→mm + mm
                                     break;
                                 }
                             }
@@ -3264,9 +3476,10 @@ namespace PileDesign.ViewModels
 
 
         // 沈下傾斜レジェンド取得メソッド
+        // ys は mm、xs は m のため、Δy/Δx (mm/m) はそのまま「rad × 1/1000」の表記値に一致する。
         private static string GetSettlementAngleLegendText(double angle)
         {
-            return $"傾斜角{angle * 1000:N1}/1000";
+            return $"傾斜角{angle:N1}/1000";
         }
 
         /// <summary>

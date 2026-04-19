@@ -18,7 +18,7 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _loadingPlaneAltitude, value);
         }
 
-        public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別十字", "なし"];
+        public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別十字", "個別十字（基礎梁考慮）", "なし"];
 
         private string _loadingType;
         public string LoadingType

@@ -92,6 +92,9 @@ namespace PileDesign.Views
             };
             viewModel.RequestClose += _requestCloseHandler;
 
+            // 杭工法と杭先端土質に応じて、初回のみプリセット沈下パラメータを自動適用
+            viewModel.TryApplyDefaultSettlementPreset();
+
             // 杭先端沈下グラフを描画（α, nのデフォルト値で）
             viewModel.AddComponent(viewModel.PileBody.SettleAlpha, viewModel.PileBody.SettleN);
 
@@ -148,6 +151,8 @@ namespace PileDesign.Views
         // 杭周面抵抗力表の選択解除（選択行を再クリックで解除）
         private void DataGridCircum_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            // 左クリック以外（右クリックは ContextMenu を開かせる、中クリックは素通し）は処理しない
+            if (e.ChangedButton != MouseButton.Left) return;
             if (sender is not DataGrid dataGrid) return;
 
             // クリックされた要素からDataGridRowを取得（VisualTreeを使用）
@@ -171,6 +176,8 @@ namespace PileDesign.Views
         // 沈下曲線表の選択解除（選択行を再クリックで解除）
         private void DataGridLoadDisplacement_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            // 左クリック以外（右クリックは ContextMenu を開かせる、中クリックは素通し）は処理しない
+            if (e.ChangedButton != MouseButton.Left) return;
             if (sender is not DataGrid dataGrid) return;
 
             // クリックされた要素からDataGridRowを取得（VisualTreeを使用）

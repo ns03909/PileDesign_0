@@ -281,6 +281,18 @@ namespace PileDesign.FEM
             return tangentStiffnesses;
         }
 
+        /// <summary>
+        /// 現在の <see cref="VectorX"/> から杭節点の地盤反力を計算し
+        /// <see cref="VectorRz"/> に格納する（収束後の状態で呼び出す前提）。
+        /// <see cref="GetSoilReactionVector"/> の偶数インデックスが杭節点の地盤反力 [kN]。
+        /// </summary>
+        private void UpdateNodalReactions(string state)
+        {
+            var reactions = GetSoilReactionVector(state, VectorX);
+            VectorRz.Clear();
+            reactions.CopyTo(VectorRz);
+        }
+
         // 地盤反力取得メソッド
         public Vector<double> GetSoilReactionVector(string state, Vector<double> xs)
         {
@@ -722,7 +734,8 @@ namespace PileDesign.FEM
             string state = "positive";
             VectorX.Clear();
             VectorRz.Clear();
-            VectorRz[^1] = PileWeight;
+            // NOTE: 旧実装では VectorRz[^1] = PileWeight; としていたが、
+            // 正しい節点反力は収束後に UpdateNodalReactions() で組み立てるため不要
 
             for (int i = 0; i < pileNodesCount; i++) // 初期化
             {
@@ -751,6 +764,9 @@ namespace PileDesign.FEM
                 double alpha = InputModel.PileBodies[^1].SettleAlpha;
                 double n = InputModel.PileBodies[^1].SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
+
+                // 収束後の VectorX から節点反力を組み立てて VectorRz に格納
+                UpdateNodalReactions(state);
 
                 VectorX0 = VectorX.Clone();
                 VectorF0 = VectorF.Clone();
@@ -839,6 +855,9 @@ namespace PileDesign.FEM
                 double n = InputModel.PileBodies[^1].SettleN;
                 double rzToe = GetRp(settlement, dp, rpu, alpha, n);
 
+                // 収束後の VectorX から節点反力を組み立てて VectorRz に格納
+                UpdateNodalReactions(state);
+
                 if (state == "positive")
                 {
                     Fs.Add(VectorF.Clone()); // 荷重
@@ -922,6 +941,9 @@ namespace PileDesign.FEM
 
                 // 限界状態フラグの更新
                 UpdateLimitFlags(headLoad, pn, limitFlags);
+
+                // 収束後の VectorX から節点反力を組み立てて VectorRz に格納
+                UpdateNodalReactions(state);
 
                 // 結果を記録
                 if (state == "positive")

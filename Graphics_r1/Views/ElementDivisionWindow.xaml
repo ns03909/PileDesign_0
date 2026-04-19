@@ -483,7 +483,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="単位体積" TextAlignment="Center"/>
                                                                     <TextBlock Text="重量γ" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -514,7 +514,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="粘着力" TextAlignment="Center"/>
                                                                     <TextBlock Text="C" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="kN/m2" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -525,7 +525,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="変形係数" TextAlignment="Center"/>
                                                                     <TextBlock Text="E" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="kN/m2" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -546,8 +546,8 @@
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
                                                                     <TextBlock Text="基準水平地盤" TextAlignment="Center"/>
-                                                                    <TextBlock Text="反力係数kh0" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="kN/m3" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="反力係数k"/><Run Text="h0" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -557,7 +557,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="塑性地盤反力" TextAlignment="Center"/>
                                                                     <TextBlock Text="前方杭py" TextAlignment="Center"/>
-                                                                    <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTemplateColumn.Header>
                                                             <DataGridTemplateColumn.CellTemplate>
@@ -578,7 +578,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="塑性地盤反力" TextAlignment="Center"/>
                                                                     <TextBlock Text="後方杭py" TextAlignment="Center"/>
-                                                                    <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTemplateColumn.Header>
                                                             <DataGridTemplateColumn.CellTemplate>
@@ -920,7 +920,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="単位体積" TextAlignment="Center"/>
                                                                     <TextBlock Text="重量γ" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="(kN/m3)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -943,7 +943,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="粘着力" TextAlignment="Center"/>
                                                                     <TextBlock Text="C" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="kN/m2" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -975,7 +975,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="静止土圧" TextAlignment="Center"/>
                                                                     <TextBlock Text="係数" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                    <TextBlock Text="K0" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="K"/><Run Text="0" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
@@ -998,7 +998,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="静止土圧" TextAlignment="Center"/>
                                                                     <TextBlock Text="p0" TextAlignment="Center"/>
-                                                                    <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTemplateColumn.Header>
                                                             <DataGridTemplateColumn.CellTemplate>
@@ -1019,7 +1019,7 @@
                                                                 <StackPanel>
                                                                     <TextBlock Text="受働土圧" TextAlignment="Center"/>
                                                                     <TextBlock Text="pp" TextAlignment="Center"/>
-                                                                    <TextBlock Text="(kN/m2)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                 </StackPanel>
                                                             </DataGridTemplateColumn.Header>
                                                             <DataGridTemplateColumn.CellTemplate>

@@ -320,7 +320,10 @@ namespace PileDesign.Views
                     (effContent == "沈下" ||
                      effContent == "基礎梁考慮沈下" ||
                      effContent == "基礎梁考慮+群杭沈下" ||
-                     effContent == "基礎梁考慮反力"))
+                     effContent == "基礎梁考慮反力（地盤）" ||
+                     effContent == "基礎梁考慮反力（杭頭集約）" ||
+                     effContent == "単杭反力（地盤）" ||
+                     effContent == "単杭反力（杭頭集約）"))
                 {
                     DrawBubbleAndArrow(
                         _pendingSettlementPoints,

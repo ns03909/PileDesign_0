@@ -33,9 +33,15 @@ namespace PileDesign.ViewModels
         public FEM.AnaModel? AnaModel { get; set; }
 
         // フィルタ選択肢
+        public ObservableCollection<string> TableCategoryFilterOptions { get; } = [];
         public ObservableCollection<string> LoadCaseFilterOptions { get; } = [];
         public ObservableCollection<string> LoadCombinationFilterOptions { get; } = [];
         public ObservableCollection<string> LiquefactionFilterOptions { get; } = [];
+
+        [ObservableProperty]
+        private string _selectedTableCategoryFilter = "ALL";
+
+        partial void OnSelectedTableCategoryFilterChanged(string value) => ApplyFilters();
 
         [ObservableProperty]
         private string _selectedLoadCaseFilter = "ALL";
@@ -77,6 +83,17 @@ namespace PileDesign.ViewModels
 
         private void BuildFilterOptions()
         {
+            // テーブル種別フィルタ: カテゴリ（水平／沈下）
+            TableCategoryFilterOptions.Clear();
+            TableCategoryFilterOptions.Add("ALL");
+            var distinctCategories = AllTables
+                .Select(t => Converters.TableCategoryConverter.CategoryOf(t))
+                .Distinct()
+                .OrderBy(c => c == "水平解析結果" ? 0 : 1)
+                .ToList();
+            foreach (var c in distinctCategories)
+                TableCategoryFilterOptions.Add(c);
+
             LoadCaseFilterOptions.Clear();
             LoadCaseFilterOptions.Add("ALL");
             foreach (var name in AllTables.Select(t => t.LoadCaseName).Where(s => !string.IsNullOrEmpty(s)).Distinct())
@@ -92,6 +109,7 @@ namespace PileDesign.ViewModels
             LiquefactionFilterOptions.Add("有");
             LiquefactionFilterOptions.Add("無");
 
+            SelectedTableCategoryFilter = "ALL";
             SelectedLoadCaseFilter = "ALL";
             SelectedLoadCombinationFilter = "ALL";
             SelectedLiquefactionFilter = "ALL";
@@ -101,6 +119,8 @@ namespace PileDesign.ViewModels
         {
             FilteredTables.Clear();
             var filtered = AllTables.Where(t =>
+                (SelectedTableCategoryFilter == "ALL" ||
+                 Converters.TableCategoryConverter.CategoryOf(t) == SelectedTableCategoryFilter) &&
                 (SelectedLoadCaseFilter == "ALL" || t.LoadCaseName == SelectedLoadCaseFilter) &&
                 (SelectedLoadCombinationFilter == "ALL" || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
                 (SelectedLiquefactionFilter == "ALL" ||

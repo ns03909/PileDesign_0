@@ -5,6 +5,7 @@
   "groundWaterGLDepth": -3.0,
   "stressGLDepth": 0.0,
   "groundAcceleration1": 2.0,
+  "calculationMethod": "a2(b2)",
   "groundLayers": [
     { "no": 0, "bottomGLDepth": -1.8, "layerThickness": 1.8, "bottomAltitude": -1.8, "name": "表土", "granularityClass": "砂質土", "density": 14.6, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 10.0, "cohesive": 0.0, "vs": 120.0, "es": 7000, "isPositiveCircumResistance": false, "isNegativeCircumResistance": false },
     { "no": 1, "bottomGLDepth": -2.8, "layerThickness": 1.0, "bottomAltitude": -2.8, "name": "シルト混じり砂1", "granularityClass": "砂質土", "density": 14.6, "ageCategory": "沖積層", "isEngineeringBedrock": false, "nValue": 18.0, "cohesive": 0.0, "vs": 130.0, "es": 12600, "isPositiveCircumResistance": true, "isNegativeCircumResistance": true },

@@ -764,8 +764,7 @@
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                        <TextBlock  Grid.Row="13" Grid.Column="3" 
-                                Text="kN/m2" />
+                        <TextBlock  Grid.Row="13" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
                         <TextBlock  Grid.Row="14" Grid.Column="0" 
                             Text="杭先端面積" />
@@ -776,8 +775,7 @@
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                        <TextBlock  Grid.Row="14" Grid.Column="3" 
-                            Text="m2" />
+                        <TextBlock  Grid.Row="14" Grid.Column="3"><Run Text="m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
                         <TextBlock  Grid.Row="15" Grid.Column="0" 
                             Text="極限先端支持力"/>

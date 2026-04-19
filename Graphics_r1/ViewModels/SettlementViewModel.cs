@@ -753,6 +753,7 @@ namespace PileDesign.ViewModels
                 {
                     PileBody.SettleAlpha = settleAlpha;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
+                    if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
                     // チャート要素更新と解析実行
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
                     ExecuteAnalysis();
@@ -763,6 +764,7 @@ namespace PileDesign.ViewModels
                 {
                     PileBody.SettleN = settleN;
                     ComboBoxPresetSettlementParameters.SelectedIndex = -1;
+                    if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
                     // チャート要素更新と解析実行
                     AddComponent(PileBody.SettleAlpha, PileBody.SettleN);
                     ExecuteAnalysis();
@@ -855,9 +857,96 @@ namespace PileDesign.ViewModels
                     break;
                 }
             }
+            // ユーザーが手動で選択したので初期化済みマーク
+            if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
             AddComponent(InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha, InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN);
             // プリセット変更時に自動で解析実行
             ExecuteAnalysis();
+        }
+
+        /// <summary>
+        /// 杭工法と杭先端土質から既定のプリセット沈下パラメータを決定する。
+        /// 対応が無ければ null を返す（プリセット変更しない）。
+        /// </summary>
+        private static (string Name, string SoilType)? MapDefaultSettlementPreset(string pileConstructionType, string pileToeGranularityClass)
+        {
+            if (string.IsNullOrEmpty(pileConstructionType) || string.IsNullOrEmpty(pileToeGranularityClass))
+                return null;
+
+            // 場所打ちコンクリート杭（杭体種別が 鉄筋 / 鋼管 のいずれでも PileConstructionType は同値）
+            if (pileConstructionType == "場所打ちコンクリート杭")
+            {
+                return pileToeGranularityClass switch
+                {
+                    "砂質土" => ("(2019)場所打ちコンクリート杭", "砂質土"),
+                    "礫質土" => ("(2019)場所打ちコンクリート杭", "礫質土"),
+                    "粘性土" => ("(2001)場所打ちコンクリート杭", "粘性土"),
+                    _ => null
+                };
+            }
+
+            // 埋込み杭（プレボーリング）— 表記揺れを含めて判定
+            if (pileConstructionType == "埋込み杭（プレボーリング）"
+                || pileConstructionType == "埋込み杭（プレボーリング杭）"
+                || pileConstructionType == "埋込み杭（プレポーリング）")
+            {
+                return pileToeGranularityClass switch
+                {
+                    "砂質土" => ("(2019)既製コンクリート杭", "砂質土"),
+                    "礫質土" => ("(2019)既製コンクリート杭", "礫質土"),
+                    "粘性土" => ("(2019)既製コンクリート杭", "粘性土"),
+                    _ => null
+                };
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 現在の SoilPile について、未初期化なら杭工法と杭先端土質に応じたプリセットを適用する。
+        /// </summary>
+        public void TryApplyDefaultSettlementPreset()
+        {
+            if (SoilPile == null) return;
+            if (SoilPile.IsSettlementPresetInitialized) return;
+
+            var mapped = MapDefaultSettlementPreset(SoilPile.PileConstructionType, SoilPile.PileToeGranularityClass);
+            if (!mapped.HasValue)
+            {
+                // マッピング不可の場合も初期化済みマークして再試行を抑止
+                SoilPile.IsSettlementPresetInitialized = true;
+                return;
+            }
+            string name = mapped.Value.Name;
+            string soilType = mapped.Value.SoilType;
+
+            var pileBody = InputModel.PileBodies[SoilPile.PileBodyNo - 1];
+            foreach (var parameter in pileBody.PileTipSettlementPresetParameters)
+            {
+                if (parameter.Name == name && parameter.SoilType == soilType)
+                {
+                    pileBody.SettleAlpha = parameter.Alpha;
+                    pileBody.SettleN = parameter.N;
+                    pileBody.SettleAlphaString = parameter.Alpha.ToString();
+                    pileBody.SettleNString = parameter.N.ToString();
+
+                    // ComboBox の選択を同期
+                    if (ComboBoxPresetSettlementParameters != null && pileBody.PileTipSettlementPresetParameterNames != null)
+                    {
+                        for (int i = 0; i < pileBody.PileTipSettlementPresetParameterNames.Count; i++)
+                        {
+                            var item = pileBody.PileTipSettlementPresetParameterNames[i];
+                            if (item.Contains(name) && item.Contains(soilType))
+                            {
+                                ComboBoxPresetSettlementParameters.SelectedIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            SoilPile.IsSettlementPresetInitialized = true;
         }
 
 
@@ -1031,6 +1120,8 @@ namespace PileDesign.ViewModels
             {
                 SoilPile = SoilPiles[SoilPileNo - 1];
                 OnPropertyChanged(nameof(UsesPileToeEta));
+                // 切替先 SoilPile が未初期化なら既定プリセットを適用
+                TryApplyDefaultSettlementPreset();
                 // ユーザーが確認したのでランプを点灯
                 MarkPileAsAnalyzed(SoilPileNo - 1);
             }

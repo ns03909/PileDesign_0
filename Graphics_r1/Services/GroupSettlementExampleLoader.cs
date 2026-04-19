@@ -44,6 +44,59 @@ namespace PileDesign.Services
         }
 
         /// <summary>
+        /// 群杭沈下解析の条件のみを適用する（PileBodies/PileLayout/FoundationBeam 等は変更しない）。
+        /// 杭例題と組み合わせて読み込む際に使用する。
+        /// 適用対象: LoadingPlaneAltitude / RectLoads / SettlementSoilLayers / SettlementGridData クリア
+        /// </summary>
+        public static void ApplySettlementConditionsOnly(
+            InputModel inputModel,
+            GroupSettlementExampleData data)
+        {
+            // 群杭沈下解析結果をクリア
+            inputModel.PileGroupSettlement.SettlementGridData = new ObservableCollection<SettlementGridDataItem>();
+            inputModel.PileGroupSettlement.SettlementGridX = new ObservableCollection<double>();
+            inputModel.PileGroupSettlement.SettlementGridY = new ObservableCollection<double>();
+
+            // 載荷面標高
+            inputModel.PileGroupSettlement.LoadingPlaneAltitude = data.LoadingPlaneAltitude;
+
+            // 矩形荷重
+            var rectLoadList = new List<RectLoad>(data.RectLoads?.Count ?? 0);
+            if (data.RectLoads != null)
+            {
+                foreach (var rectLoadDto in data.RectLoads)
+                {
+                    rectLoadList.Add(new RectLoad
+                    {
+                        X1 = rectLoadDto.X1,
+                        X2 = rectLoadDto.X2,
+                        Y1 = rectLoadDto.Y1,
+                        Y2 = rectLoadDto.Y2,
+                        QA = rectLoadDto.QA
+                    });
+                }
+            }
+            inputModel.PileGroupSettlement.RectLoads = new ObservableCollection<RectLoad>(rectLoadList);
+
+            // 沈下計算用地層
+            var soilLayerList = new List<SettlementSoilLayer>(data.SettlementSoilLayers?.Count ?? 0);
+            if (data.SettlementSoilLayers != null)
+            {
+                foreach (var layerDto in data.SettlementSoilLayers)
+                {
+                    soilLayerList.Add(new SettlementSoilLayer
+                    {
+                        BottomAltitude = layerDto.BottomAltitude,
+                        Ek = layerDto.Ek,
+                        PoissonsRatio = layerDto.PoissonsRatio,
+                        Thickness = layerDto.Thickness
+                    });
+                }
+            }
+            inputModel.PileGroupSettlement.SettlementSoilLayers = new ObservableCollection<SettlementSoilLayer>(soilLayerList);
+        }
+
+        /// <summary>
         /// 例題データをInputModelに適用する
         /// </summary>
         public static void ApplyToInputModel(

@@ -484,9 +484,11 @@ namespace PileDesign.Output
                     int pileBodySegmentNo = segment.No;
 
                     // ライン: 杭×荷重ケース×組合せ×液状化ごとの M-φ 曲線
+                    // 同一 (LC, Comb, Liq, 軸力) 相当のキーで重複曲線を間引く
                     List<List<double>> lineListsX = [];
                     List<List<double>> lineListsY = [];
                     List<string> lineListsLegend = [];
+                    var seenCurveKeys = new HashSet<string>();
 
                     // 散布点: 最終ステップの (φ, M)
                     List<double> phiResultsLevel1 = [];
@@ -597,10 +599,16 @@ namespace PileDesign.Output
 
                                         if (phis == null || moments == null || phis.Count < 2) continue;
 
-                                        // 曲線追加
-                                        lineListsX.Add(phis);
-                                        lineListsY.Add(moments);
-                                        lineListsLegend.Add($"杭{pli.No} {loadCase.LoadName} N={axialN:F0}kN");
+                                        // 曲線の重複を抑制: 同一 (LC, Comb, Liq, 軸力[10kN丸め]) はほぼ同一曲線
+                                        int axialNBucket = (int)Math.Round(axialN / 10.0);
+                                        string curveKey = $"{loadCase.LoadName}|{loadCombination.No}|{isLiquefaction}|{axialNBucket}";
+                                        if (seenCurveKeys.Add(curveKey))
+                                        {
+                                            lineListsX.Add(phis);
+                                            lineListsY.Add(moments);
+                                            string liqTag = isLiquefaction ? "液状化" : "非液状化";
+                                            lineListsLegend.Add($"{loadCase.LoadName}|Comb{loadCombination.No}|{liqTag}|N≈{axialN:F0}kN");
+                                        }
 
                                         // 最終ステップの (φ, M) 散布点
                                         if (lastStep >= 0 && beamResultForCurve != null)
@@ -705,6 +713,7 @@ namespace PileDesign.Output
                 List<List<double>> lineListsX = [];
                 List<List<double>> lineListsY = [];
                 List<string> lineListsLegend = [];
+                var seenMThetaKeys = new HashSet<string>();
 
                 List<double> thetaResultsLevel1 = [];
                 List<double> momentResultsLevel1 = [];
@@ -761,9 +770,16 @@ namespace PileDesign.Output
                                 }
                                 if (thetas.Length == 0 || moments.Length == 0) continue;
 
-                                lineListsX.Add(thetas.ToList());
-                                lineListsY.Add(moments.ToList());
-                                lineListsLegend.Add($"杭{pileLayout.No} {loadCase.LoadName} N={axialN:F0}kN");
+                                // 曲線の重複抑制: 同一 (LC, Comb, Liq, Mode, 軸力[10kN丸め]) はほぼ同一曲線
+                                int axialNBucket = (int)Math.Round(axialN / 10.0);
+                                string curveKey = $"{loadCase.LoadName}|{loadCombination.No}|{isLiquefaction}|{modeTag}|{axialNBucket}";
+                                if (seenMThetaKeys.Add(curveKey))
+                                {
+                                    lineListsX.Add(thetas.ToList());
+                                    lineListsY.Add(moments.ToList());
+                                    string liqTag = isLiquefaction ? "液状化" : "非液状化";
+                                    lineListsLegend.Add($"{loadCase.LoadName}|Comb{loadCombination.No}|{liqTag}|Mode:{modeTag}|N≈{axialN:F0}kN");
+                                }
 
                                 // 最終ステップの (θ, M) 散布点
                                 int lastStep = anaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
@@ -835,6 +851,7 @@ namespace PileDesign.Output
 
         /// <summary>
         /// 全杭×全解析荷重ケースの曲げモーメント・せん断力・変位ダイアグラムを出力
+        /// mainWindowViewModel.GroupPileStressBySoilPile でグループ化の有無を切替。
         /// </summary>
         private void AddAllPileStressDiagrams(MainDocumentPart mainPart, Body body,
             bool includeBending, bool includeShear)
@@ -848,6 +865,12 @@ namespace PileDesign.Output
 
             AddPageBreak(body);
             AddHeader1(body, "杭の変位・応力ダイアグラム", 2);
+
+            if (mainWindowViewModel.GroupPileStressBySoilPile)
+            {
+                AddAllPileStressDiagramsGrouped(mainPart, body, includeBending, includeShear, loadCases, loadCombinations);
+                return;
+            }
 
             foreach (var pli in inputModel.PileLayoutItems)
             {
@@ -972,6 +995,150 @@ namespace PileDesign.Output
             }
         }
 
+        /// <summary>
+        /// 杭地盤セット（ElementDivision.SoilPiles）単位でグループ化し、同一セット内の杭を
+        /// 系列オーバーレイとして 1 図にまとめる。(loadCase × comb × liq) ごとに 1 図生成。
+        /// </summary>
+        private void AddAllPileStressDiagramsGrouped(
+            MainDocumentPart mainPart, Body body,
+            bool includeBending, bool includeShear,
+            System.Collections.Generic.IEnumerable<LoadCase> loadCases,
+            System.Collections.Generic.IEnumerable<LoadCombination> loadCombinations)
+        {
+            var soilPiles = inputModel.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0) return;
+
+            for (int soilIdx = 0; soilIdx < soilPiles.Count; soilIdx++)
+            {
+                var soilPile = soilPiles[soilIdx];
+                int altNo = soilIdx + 1;
+
+                var groupPiles = inputModel.PileLayoutItems?
+                    .Where(p => p.SoilPileAltNo == altNo
+                             && p.PileNodes != null && p.SoilNodes != null
+                             && p.Beams != null && p.Beams.Count > 0)
+                    .ToList();
+                if (groupPiles == null || groupPiles.Count == 0) continue;
+
+                string pileRef = soilPile.PileBodyInput?.PileBodyRef ?? "-";
+                string soilRef = soilPile.GroundInput?.GroundRef ?? "-";
+                double headZ = soilPile.Z;
+
+                foreach (var lc in loadCases)
+                {
+                    foreach (var comb in loadCombinations)
+                    {
+                        var liqPatterns = new List<bool>();
+                        if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+                        if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+                        if (liqPatterns.Count == 0) continue;
+
+                        foreach (bool isLiq in liqPatterns)
+                        {
+                            // 各パネル（変位/せん断/曲げ）ごとに、杭ごとの系列を収集
+                            List<List<double>> dispSeries = [];
+                            List<List<double>> shearSeries = [];
+                            List<List<double>> momentSeries = [];
+                            List<List<double>> soilDispSeries = [];
+                            List<List<double>> zSeries = [];
+                            List<string> legends = [];
+                            bool anyData = false;
+
+                            foreach (var pli in groupPiles)
+                            {
+                                List<double> zs = [], moments = [], shears = [], disps = [], soilDisps = [];
+                                bool hasData = false;
+
+                                for (int i = 0; i < pli.PileNodes.Count; i++)
+                                {
+                                    double z = -pli.Z + pli.PileNodes[i].Coord.Z;
+                                    zs.Add(z);
+                                    if (i != 0 && i != pli.PileNodes.Count - 1) zs.Add(z);
+
+                                    double soilUh = 0.0;
+                                    try
+                                    {
+                                        soilUh = pli.SoilNodes[i]
+                                            .GetNodeResult(anaModel, lc, comb, isLiq)
+                                            ?.CumulativeDisp?.Uh ?? 0.0;
+                                    }
+                                    catch { /* ignore */ }
+                                    soilDisps.Add(soilUh);
+                                    if (i != 0 && i != pli.PileNodes.Count - 1) soilDisps.Add(soilUh);
+                                }
+
+                                for (int i = 0; i < pli.Beams.Count; i++)
+                                {
+                                    var res = pli.Beams[i].GetBeamResult(anaModel, lc, comb, isLiq)?.CumulativeForce;
+                                    if (res != null) hasData = true;
+                                    moments.Add(res?.Mi ?? 0.0);
+                                    moments.Add(res?.Mj ?? 0.0);
+                                    shears.Add(res?.Fi ?? 0.0);
+                                    shears.Add(res?.Fj ?? 0.0);
+
+                                    double uhI = 0.0, uhJ = 0.0;
+                                    try
+                                    {
+                                        uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                        uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                    }
+                                    catch { /* ignore */ }
+                                    disps.Add(uhI);
+                                    disps.Add(uhJ);
+                                }
+
+                                if (!hasData) continue;
+                                anyData = true;
+                                zSeries.Add(zs);
+                                dispSeries.Add(disps);
+                                shearSeries.Add(shears);
+                                momentSeries.Add(moments);
+                                soilDispSeries.Add(soilDisps);
+                                legends.Add($"杭No.{pli.No}");
+                            }
+
+                            if (!anyData) continue;
+
+                            // パネル構成: 変位 → (せん断力) → (曲げ)
+                            List<List<List<double>>> xsByPanelBySeries = [dispSeries];
+                            List<string> titles = [""];
+                            List<string> xLabels = ["変位[m]"];
+                            List<string> yLabels = ["Z[m]"];
+
+                            if (includeShear)
+                            {
+                                xsByPanelBySeries.Add(shearSeries);
+                                titles.Add("");
+                                xLabels.Add("せん断力[kN]");
+                                yLabels.Add("Z[m]");
+                            }
+                            if (includeBending)
+                            {
+                                xsByPanelBySeries.Add(momentSeries);
+                                titles.Add("");
+                                xLabels.Add("曲げモーメント[kNm]");
+                                yLabels.Add("Z[m]");
+                            }
+
+                            AddPileElevResultMultiToBody(
+                                mainPart, body,
+                                xsByPanelBySeries,
+                                zSeries,
+                                legends,
+                                soilDispSeries,
+                                titles, xLabels, yLabels,
+                                150, 100);
+
+                            string liqText = isLiq ? "液状化" : "非液状化";
+                            AddAutoFigureCaption(body,
+                                $"杭地盤セット 杭体:{pileRef}|地盤:{soilRef}|杭頭Z={headZ:N1}m | {lc.LoadName} | {comb.Name} | {liqText}",
+                                "図");
+                        }
+                    }
+                }
+            }
+        }
+
         // 荷重沈下関係グラフ挿入メソッド
         private void AddSettlementGraph(MainDocumentPart mainPart, Body body)
         {
@@ -1037,7 +1204,7 @@ namespace PileDesign.Output
         /// <summary>
         /// 杭頭沈下量の表を追加
         /// </summary>
-        private static void AddSettlementDetailTable(
+        private void AddSettlementDetailTable(
             Body body,
             System.Collections.ObjectModel.ObservableCollection<FEM.VerticalLoadTransferMethod.LoadDisplacement> loadDisplacements,
             string caption)
@@ -1076,7 +1243,7 @@ namespace PileDesign.Output
         /// <summary>
         /// 杭周面抵抗力グラフを追加
         /// </summary>
-        private static void AddCircumResistanceGraph(
+        private void AddCircumResistanceGraph(
             MainDocumentPart mainPart,
             Body body,
             Models.InputData.SoilPile soilPile,

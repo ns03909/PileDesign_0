@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -208,6 +209,76 @@ namespace PileDesign.Common
             wpfPlot.Menu.AddSeparator();
             wpfPlot.Menu.Add("CSVコピー", plot => CopyCsvToClipboard(plot));
             wpfPlot.Menu.Add("CSVとして保存...", plot => ExportToCsv(plot, defaultFileName));
+            // 全プロット共通で「別ウィンドウで開く」を追加（モーダル中でも他プロットと独立してリサイズ閲覧可能）
+            wpfPlot.Menu.AddSeparator();
+            wpfPlot.Menu.Add("別ウィンドウで開く", _ => DetachToSeparateWindow(wpfPlot, defaultFileName));
+        }
+
+        // 分離したウィンドウを追跡し、重複生成を防ぐ
+        private static readonly Dictionary<WpfPlot, Window> _detachedPlotWindows = new();
+
+        /// <summary>
+        /// 右クリックメニューに「別ウィンドウで開く」を追加する。
+        /// 同じ WpfPlot インスタンスを新しい Window へ再ペアレントするため、
+        /// 分離中もライブ更新が継続され、閉じれば元のレイアウトに戻る。
+        /// </summary>
+        public static void AddPopoutMenu(WpfPlot wpfPlot, string title)
+        {
+            wpfPlot.Menu.AddSeparator();
+            wpfPlot.Menu.Add("別ウィンドウで開く", _ => DetachToSeparateWindow(wpfPlot, title));
+        }
+
+        private static void DetachToSeparateWindow(WpfPlot wpfPlot, string title)
+        {
+            // 既に分離済みなら前面化
+            if (_detachedPlotWindows.TryGetValue(wpfPlot, out var existing))
+            {
+                try { existing.Activate(); return; }
+                catch { _detachedPlotWindows.Remove(wpfPlot); }
+            }
+
+            // 元の親（Grid 想定）と位置情報を記憶
+            if (wpfPlot.Parent is not Grid originalGrid) return;
+            int originalRow = Grid.GetRow(wpfPlot);
+            int originalColumn = Grid.GetColumn(wpfPlot);
+            int originalRowSpan = Grid.GetRowSpan(wpfPlot);
+            int originalColumnSpan = Grid.GetColumnSpan(wpfPlot);
+            int originalIndex = originalGrid.Children.IndexOf(wpfPlot);
+
+            originalGrid.Children.Remove(wpfPlot);
+
+            var window = new Window
+            {
+                Title = title,
+                Width = 900,
+                Height = 700,
+                Content = wpfPlot,
+                Owner = Window.GetWindow(originalGrid),
+                ShowInTaskbar = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            _detachedPlotWindows[wpfPlot] = window;
+
+            window.Closed += (_, _) =>
+            {
+                _detachedPlotWindows.Remove(wpfPlot);
+                // 新ウィンドウから切り離し
+                window.Content = null;
+                // 元の Grid 位置へ復帰
+                Grid.SetRow(wpfPlot, originalRow);
+                Grid.SetColumn(wpfPlot, originalColumn);
+                Grid.SetRowSpan(wpfPlot, originalRowSpan);
+                Grid.SetColumnSpan(wpfPlot, originalColumnSpan);
+                if (!originalGrid.Children.Contains(wpfPlot))
+                {
+                    int insertAt = Math.Min(originalIndex, originalGrid.Children.Count);
+                    originalGrid.Children.Insert(insertAt, wpfPlot);
+                }
+                wpfPlot.Refresh();
+            };
+
+            window.Show();
         }
 
         /// <summary>

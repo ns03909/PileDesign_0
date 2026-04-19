@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-712,-2492)">
+        <rect id="SwapBeamIJ" x="712" y="2492" width="128" height="128" style="fill:none;"/>
+        <g id="SwapBeamIJ1" serif:id="SwapBeamIJ">
+            <g transform="matrix(1,0,0,1,711.243945,2335.163983)">
+                <path d="M14.756,264.25L114,264.25" style="fill:none;stroke:rgb(98,176,226);stroke-width:8.33px;"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-432.833348,2414.203707)">
+                <g transform="matrix(75,0,0,75,1188.008348,139.946293)">
+                </g>
+                <text x="1165.658px" y="139.946px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">I</text>
+            </g>
+            <g transform="matrix(-1.418051,0,0,1.701919,1663.616518,1941.180578)">
+                <path d="M609.659,373.479L609.659,380.764L598,371.05L609.659,361.336L609.659,368.622L642.223,368.622L642.223,361.336L653.882,371.05L642.223,380.764L642.223,373.479L609.659,373.479Z"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-368.833348,2414.203707)">
+                <g transform="matrix(75,0,0,75,1192.358348,139.946293)">
+                </g>
+                <text x="1161.308px" y="139.946px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:75px;fill:rgb(50,113,173);">J</text>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,791.164432,2556.726418)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+            </g>
+            <g transform="matrix(0.553852,0,0,0.553852,691.920487,2556.726418)">
+                <circle cx="62.214" cy="76.707" r="18.055" style="fill:white;stroke:black;stroke-width:15.05px;"/>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -2343,19 +2343,18 @@ namespace PileDesign.Views
 
             // ComboBoxの選択変更後の内容を取得
             var comboBox = sender as ComboBox;
-            var selectedItem = comboBox?.SelectedItem;
+            var selectedItem = comboBox?.SelectedItem as string;
 
-            // 既存データがある場合のみ確認
             var vm = this.DataContext as PileDesign.ViewModels.MainWindowViewModel;
-            if (vm?.CurrentInputModel?.PileGroupSettlement?.RectLoads?.Count > 0)
+
+            // 個別十字系に切り替わった場合は RectLoads を自動生成で置換
+            if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁考慮）"))
             {
-                // 必要なら確認ダイアログを表示
-                // var result = MessageBox.Show(...);
-                // if (result != MessageBoxResult.Yes) return;
+                vm.RebuildAutoCrossRectLoadsIfNeeded();
             }
 
             // 群杭表示
-            vm.IsSettlementGroundVisible = true;
+            if (vm != null) vm.IsSettlementGroundVisible = true;
 
             // 変更を確定し、前回値を更新
             _prevLoadingType = ComboBoxLoadingType.SelectedItem;
@@ -2961,17 +2960,17 @@ namespace PileDesign.Views
                 e.Handled = true;
             }
 
-            // 群杭沈下解析
+            // 基礎梁考慮沈下解析
             else if (e.Key == Key.F7)
             {
-                ButtonGroupPileSettlement_Click(null, null);
+                viewModel?.OpenVerticalBeamCalculationCommand.Execute(null);
                 e.Handled = true;
             }
 
-            // 基礎梁考慮沈下解析
+            // 群杭沈下解析
             else if (e.Key == Key.F8)
             {
-                viewModel?.OpenVerticalBeamCalculationCommand.Execute(null);
+                ButtonGroupPileSettlement_Click(null, null);
                 e.Handled = true;
             }
 

@@ -944,6 +944,8 @@ namespace PileDesign.ViewModels
                     AutoDetectLiquefactionState();
                     OnPropertyChanged(nameof(IsCurrentNonLiquefactionAnalyzed));
                     OnPropertyChanged(nameof(IsCurrentLiquefactionAnalyzed));
+                    // 荷重ケース変更で解析結果表示を再描画（VB 沈下反力など）
+                    UpdateCanvas3DAction?.Invoke();
                 }
             }
         }
@@ -1074,7 +1076,7 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _analysisResultContentOption, value);
         }
 
-        private string _analysisResultContent /*= "梁応力"*/;
+        private string _analysisResultContent /*= "梁応力（水平）"*/;
         public string AnalysisResultContent
         {
             get => _analysisResultContent;
@@ -1090,7 +1092,9 @@ namespace PileDesign.ViewModels
                     }
 
                     // 沈下系コンテンツ選択時も値表示をON
-                    if (value == "沈下量" || value == "沈下部材角" || value == "沈下反力" || value == "沈下応力")
+                    if (value == "沈下量" || value == "沈下部材角"
+                        || value == "沈下反力（地盤）" || value == "沈下反力（杭頭集約）"
+                        || value == "沈下応力")
                     {
                         IsResultValueVisible = true;
                     }
@@ -1125,7 +1129,8 @@ namespace PileDesign.ViewModels
                         "群杭" => "群杭沈下部材角",
                         _ => "単杭沈下部材角",
                     },
-                    "沈下反力" => "基礎梁考慮反力",
+                    "沈下反力（地盤）" => sub == "単杭" ? "単杭反力（地盤）" : "基礎梁考慮反力（地盤）",
+                    "沈下反力（杭頭集約）" => sub == "単杭" ? "単杭反力（杭頭集約）" : "基礎梁考慮反力（杭頭集約）",
                     "沈下応力" => "基礎梁考慮沈下梁応力",
                     _ => AnalysisResultContent,
                 };
@@ -1155,7 +1160,17 @@ namespace PileDesign.ViewModels
                         AnalysisResultSettlementType = opts[0];
                     break;
                 }
-                case "沈下反力":
+                case "沈下反力（地盤）":
+                case "沈下反力（杭頭集約）":
+                {
+                    var opts = new ObservableCollection<string>();
+                    if (IsVerticalAnalysisDone) opts.Add("単杭");
+                    if (IsVerticalBeamAnalysisDone) opts.Add("基礎梁考慮");
+                    AnalysisResultSettlementOption = opts;
+                    if (opts.Count > 0 && !opts.Contains(AnalysisResultSettlementType))
+                        AnalysisResultSettlementType = opts[0];
+                    break;
+                }
                 case "沈下応力":
                 {
                     var opts = new ObservableCollection<string>();
@@ -2574,7 +2589,8 @@ namespace PileDesign.ViewModels
             }
 
             Toggle("沈下部材角", hasBeams && hasAnySettlement);
-            Toggle("沈下反力", hasBeams && IsVerticalBeamAnalysisDone);
+            Toggle("沈下反力（地盤）", IsVerticalAnalysisDone || (hasBeams && IsVerticalBeamAnalysisDone));
+            Toggle("沈下反力（杭頭集約）", IsVerticalAnalysisDone || (hasBeams && IsVerticalBeamAnalysisDone));
             Toggle("沈下応力", hasBeams && IsVerticalBeamAnalysisDone);
         }
 
@@ -2654,6 +2670,7 @@ namespace PileDesign.ViewModels
                 {
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
                     OnPropertyChanged(nameof(AnalysisStatusText));
+                    OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
                     RaiseResultCommandsCanExecute();
 
                     // 基礎梁考慮 サブオプションの追加/削除
@@ -2667,9 +2684,27 @@ namespace PileDesign.ViewModels
                     {
                         AnalysisResultSettlementOption.Remove(vbSubLabel);
                         VerticalBeamCaseResults = null;
+
+                        // 基礎梁考慮オプションが選択中だった場合は「個別十字」にフォールバック
+                        if (CurrentInputModel?.PileGroupSettlement?.LoadingType == "個別十字（基礎梁考慮）")
+                            CurrentInputModel.PileGroupSettlement.LoadingType = "個別十字";
                     }
                     UpdateSettlementCategories();
                 }
+            }
+        }
+
+        // 荷重タイプコンボボックスに表示するオプション
+        // 基礎梁鉛直解析未実行時は「個別十字（基礎梁考慮）」を除外
+        public List<string> AvailableLoadingTypeOptions
+        {
+            get
+            {
+                var all = CurrentInputModel?.PileGroupSettlement?.LoadingTypeOptions;
+                if (all == null) return [];
+                if (!IsVerticalBeamAnalysisDone)
+                    return all.Where(o => o != "個別十字（基礎梁考慮）").ToList();
+                return [.. all];
             }
         }
 
@@ -2692,10 +2727,10 @@ namespace PileDesign.ViewModels
                 {
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
 
-                    // "梁応力"の表示制御
-                    const string beamForceLabel = "梁応力";
-                    const string nodeDisplacementLabel = "節点変位";
-                    const string nodeSoilSpringLabel = "地盤反力";
+                    // "梁応力（水平）"の表示制御
+                    const string beamForceLabel = "梁応力（水平）";
+                    const string nodeDisplacementLabel = "節点変位（水平）";
+                    const string nodeSoilSpringLabel = "地盤反力（水平）";
                     const string pileHeadMLabel = "杭頭Mマップ";
                     const string pileHeadQLabel = "杭頭Qマップ";
                     const string connectionMLabel = "接合点Mマップ";
@@ -3054,12 +3089,64 @@ namespace PileDesign.ViewModels
         // 液状化有無の出力オプション
         [ObservableProperty] private bool includeOutputLiquefactionYes = true;
         [ObservableProperty] private bool includeOutputLiquefactionNo = true;
+
+        // 杭変位応力ダイアグラムのグループ化
+        // false: 杭ごとに個別の図（既定・従来動作）
+        // true: 杭地盤セット（ElementDivision.SoilPiles）ごとに 1 図にまとめ、同一セット内の杭は系列オーバーレイ
+        [ObservableProperty] private bool groupPileStressBySoilPile = false;
         [ObservableProperty] private bool isLiquefactionYesAnalyzed = false;
         [ObservableProperty] private bool isLiquefactionNoAnalyzed = false;
 
         // コンストラクタ //
+        /// <summary>
+        /// 解析結果コンテンツの正規並び順（水平解析→沈下解析）。
+        /// AnalysisResultContentOption はこの順で並ぶように CollectionChanged で自動整列する。
+        /// </summary>
+        private static readonly List<string> CanonicalAnalysisContentOrder = new()
+        {
+            // 水平解析結果
+            "梁応力（水平）",
+            "節点変位（水平）",
+            "地盤反力（水平）",
+            "杭頭Mマップ",
+            "杭頭Qマップ",
+            "接合点Mマップ",
+            "接合点Qマップ",
+            // 沈下解析結果
+            "沈下量",
+            "沈下部材角",
+            "沈下反力（地盤）",
+            "沈下反力（杭頭集約）",
+            "沈下応力",
+        };
+
+        private bool _reorderingAnalysisContentOption;
+
+        private void EnsureAnalysisResultContentOrder()
+        {
+            if (_reorderingAnalysisContentOption) return;
+            _reorderingAnalysisContentOption = true;
+            try
+            {
+                var sorted = AnalysisResultContentOption
+                    .Select(item => (item, idx: CanonicalAnalysisContentOrder.IndexOf(item)))
+                    .OrderBy(x => x.idx < 0 ? int.MaxValue : x.idx)
+                    .Select(x => x.item)
+                    .ToList();
+                for (int i = 0; i < sorted.Count; i++)
+                {
+                    int cur = AnalysisResultContentOption.IndexOf(sorted[i]);
+                    if (cur != i) AnalysisResultContentOption.Move(cur, i);
+                }
+            }
+            finally { _reorderingAnalysisContentOption = false; }
+        }
+
         public MainWindowViewModel()
         {
+            // 解析結果コンテンツ候補の自動整列
+            _analysisResultContentOption.CollectionChanged += (s, e) => EnsureAnalysisResultContentOrder();
+
             // Services の初期化
             _fileOperationService = new FileOperationService(_jsonOptions);
             _pileLayoutService = new PileLayoutService();

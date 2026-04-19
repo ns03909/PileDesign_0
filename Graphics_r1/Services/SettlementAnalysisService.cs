@@ -1,5 +1,8 @@
+using PileDesign.FEM;
 using PileDesign.Models.InputData;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 
 namespace PileDesign.Services
@@ -50,7 +53,8 @@ namespace PileDesign.Services
             double xOffset,
             double yOffset,
             double xSpacing,
-            double ySpacing)
+            double ySpacing,
+            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults = null)
         {
             // 土層が0の場合は警告を出して処理を中断
             if (pileGroupSettlement.SettlementSoilLayers == null ||
@@ -67,7 +71,8 @@ namespace PileDesign.Services
             ObservableCollection<RectLoad> rectLoads = GenerateRectLoads(
                 pileGroupSettlement,
                 pileLayoutItems,
-                soilPiles);
+                soilPiles,
+                verticalBeamCaseResults);
 
             // 各杭位置での沈下量を計算
             CalculatePileSettlements(pileLayoutItems, rectLoads, pileGroupSettlement.SettlementSoilLayers);
@@ -91,12 +96,35 @@ namespace PileDesign.Services
         }
 
         /// <summary>
+        /// 「個別十字」系の荷重タイプに対し、杭ごとの十字形矩形荷重を自動生成する公開ヘルパー。
+        /// 荷重タイプが個別十字系でない場合は空のコレクションを返す。
+        /// </summary>
+        public static ObservableCollection<RectLoad> BuildAutoCrossRectLoads(
+            PileGroupSettlement pileGroupSettlement,
+            ObservableCollection<PileLayoutDataItem> pileLayoutItems,
+            ObservableCollection<SoilPile> soilPiles,
+            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults)
+        {
+            return GenerateRectLoadsInternal(pileGroupSettlement, pileLayoutItems, soilPiles, verticalBeamCaseResults);
+        }
+
+        /// <summary>
         /// 荷重タイプに応じて矩形荷重を生成
         /// </summary>
         private ObservableCollection<RectLoad> GenerateRectLoads(
             PileGroupSettlement pileGroupSettlement,
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
-            ObservableCollection<SoilPile> soilPiles)
+            ObservableCollection<SoilPile> soilPiles,
+            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults)
+        {
+            return GenerateRectLoadsInternal(pileGroupSettlement, pileLayoutItems, soilPiles, verticalBeamCaseResults);
+        }
+
+        private static ObservableCollection<RectLoad> GenerateRectLoadsInternal(
+            PileGroupSettlement pileGroupSettlement,
+            ObservableCollection<PileLayoutDataItem> pileLayoutItems,
+            ObservableCollection<SoilPile> soilPiles,
+            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults)
         {
             ObservableCollection<RectLoad> rectLoads = [];
 
@@ -120,8 +148,42 @@ namespace PileDesign.Services
                         rectLoads.Add(rectLoad);
                 }
             }
+            else if (pileGroupSettlement.LoadingType == "個別十字（基礎梁考慮）")
+            {
+                // 基礎梁考慮鉛直解析（VL ケース）の杭反力を荷重に適用
+                var vbCase = FindVBLongTermCase(verticalBeamCaseResults);
+                Dictionary<int, double> reactionByPileNo = vbCase?.PileResults?.ToDictionary(r => r.PileNo, r => r.Reaction_kN)
+                                                            ?? [];
+                foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
+                {
+                    SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    double radius = soilPile.GroupPileLoadDia * 0.5;
+                    Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
+                    // 反力が存在しない杭は 0 として扱う
+                    double qa = reactionByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out double r) ? r : 0.0;
+
+                    ObservableCollection<RectLoad> eachRectLoads
+                        = PileGroupSettlement.GetCrossRectLoads(point, radius, qa);
+
+                    foreach (var rectLoad in eachRectLoads)
+                        rectLoads.Add(rectLoad);
+                }
+            }
 
             return rectLoads;
+        }
+
+        /// <summary>
+        /// 基礎梁鉛直解析結果から長期 (VL) ケースの結果を返す。見つからない場合は先頭を返す。
+        /// LoadCaseName は "VL (常時+追加)" のような装飾があるため前方一致で判定。
+        /// </summary>
+        private static VerticalBeamCaseResult FindVBLongTermCase(
+            ObservableCollection<VerticalBeamCaseResult> verticalBeamCaseResults)
+        {
+            if (verticalBeamCaseResults == null || verticalBeamCaseResults.Count == 0) return null;
+            var vl = verticalBeamCaseResults.FirstOrDefault(c =>
+                (c.LoadCaseName ?? string.Empty).TrimStart().StartsWith("VL"));
+            return vl ?? verticalBeamCaseResults[0];
         }
 
         /// <summary>
