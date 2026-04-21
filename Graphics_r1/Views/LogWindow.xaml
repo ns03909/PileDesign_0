@@ -35,18 +35,32 @@
                       MinWidth="150" VerticalAlignment="Center"/>
         </ToolBar>
 
-        <!-- Log Content -->
-        <ScrollViewer Grid.Row="1" x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto">
-            <TextBox Text="{Binding LogText, Mode=OneWay}"
-                     IsReadOnly="True"
-                     TextWrapping="Wrap"
-                     FontFamily="Consolas"
-                     FontSize="12"
-                     Background="#F5F5F5"
-                     Foreground="#333333"
-                     Padding="10"
-                     BorderThickness="0"/>
-        </ScrollViewer>
+        <!-- Log Content (ListBox with virtualization for large log sets) -->
+        <ListBox Grid.Row="1" x:Name="LogListBox"
+                 ItemsSource="{Binding LogLines}"
+                 FontFamily="Consolas"
+                 FontSize="12"
+                 Background="#F5F5F5"
+                 Foreground="#333333"
+                 BorderThickness="0"
+                 HorizontalContentAlignment="Stretch"
+                 VirtualizingStackPanel.IsVirtualizing="True"
+                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.CanContentScroll="True"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="4,0"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="NoWrap"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
 
         <!-- Status Bar -->
         <StatusBar Grid.Row="2">

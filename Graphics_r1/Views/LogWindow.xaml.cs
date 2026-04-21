@@ -1,5 +1,6 @@
 using PileDesign.ViewModels;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace PileDesign.Views
 {
@@ -25,7 +26,12 @@ namespace PileDesign.Views
 
         private void OnScrollToEndRequested(object? sender, System.EventArgs e)
         {
-            LogScrollViewer.ScrollToEnd();
+            // ListBox を末尾までスクロール（最後の項目を表示）
+            if (LogListBox != null && LogListBox.Items.Count > 0)
+            {
+                int lastIndex = LogListBox.Items.Count - 1;
+                LogListBox.ScrollIntoView(LogListBox.Items[lastIndex]);
+            }
         }
 
         protected override void OnClosed(System.EventArgs e)
@@ -33,6 +39,7 @@ namespace PileDesign.Views
             if (DataContext is LogWindowViewModel viewModel)
             {
                 viewModel.ScrollToEndRequested -= OnScrollToEndRequested;
+                viewModel.Dispose();
             }
             base.OnClosed(e);
         }

@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,12 +12,18 @@ using System.Windows;
 
 namespace PileDesign.ViewModels
 {
-    public partial class LogWindowViewModel : ObservableObject
+    public partial class LogWindowViewModel : ObservableObject, IDisposable
     {
-        private readonly Dictionary<string, List<string>> _logSources = new();
+        // 元となるログソース（参照を保持。ObservableCollection ならライブ更新を購読）
+        private readonly Dictionary<string, IEnumerable<string>> _logSources = new();
+        // 現在の購読先（カテゴリ切替時に解除するため保持）
+        private INotifyCollectionChanged? _currentSourceSubscription;
 
-        [ObservableProperty]
-        private string _logText = string.Empty;
+        /// <summary>
+        /// 表示中のログ行（仮想化 ListBox にバインド）。ソースが ObservableCollection の場合は
+        /// CollectionChanged を購読して増分のみを追加するので、数万行でも軽快。
+        /// </summary>
+        public ObservableCollection<string> LogLines { get; } = [];
 
         [ObservableProperty]
         private bool _autoScroll = true;
@@ -30,7 +37,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty]
         private string _selectedLogCategory;
 
-        partial void OnSelectedLogCategoryChanged(string value) => UpdateLogText();
+        partial void OnSelectedLogCategoryChanged(string value) => ReloadFromCurrentSource();
 
         /// <summary>カテゴリが複数ある場合のみセレクタを表示</summary>
         public bool IsCategorySelectorVisible => LogCategories.Count > 1;
@@ -46,20 +53,19 @@ namespace PileDesign.ViewModels
         {
             if (initialLogs != null)
             {
-                var lines = initialLogs.ToList();
-                _logSources["解析ログ"] = lines;
+                _logSources["解析ログ"] = initialLogs;
                 LogCategories.Add("解析ログ");
                 _selectedLogCategory = "解析ログ";
-                UpdateLogText();
+                ReloadFromCurrentSource();
             }
         }
 
-        /// <summary>複数ログソース</summary>
+        /// <summary>複数ログソース。ObservableCollection を渡すとライブ更新される。</summary>
         public LogWindowViewModel(Dictionary<string, IEnumerable<string>> sources)
         {
             foreach (var kvp in sources)
             {
-                _logSources[kvp.Key] = kvp.Value.ToList();
+                _logSources[kvp.Key] = kvp.Value;
                 LogCategories.Add(kvp.Key);
             }
             OnPropertyChanged(nameof(IsCategorySelectorVisible));
@@ -67,50 +73,106 @@ namespace PileDesign.ViewModels
             if (LogCategories.Count > 0)
             {
                 _selectedLogCategory = LogCategories[0];
-                UpdateLogText();
+                ReloadFromCurrentSource();
             }
         }
 
-        private void UpdateLogText()
+        private void ReloadFromCurrentSource()
         {
-            if (_selectedLogCategory != null && _logSources.TryGetValue(_selectedLogCategory, out var lines))
+            // 旧 subscription があれば解除
+            if (_currentSourceSubscription != null)
             {
-                LogText = string.Join(Environment.NewLine, lines);
-                StatusText = $"{lines.Count} log entries";
+                _currentSourceSubscription.CollectionChanged -= OnSourceCollectionChanged;
+                _currentSourceSubscription = null;
+            }
+
+            LogLines.Clear();
+            if (_selectedLogCategory != null && _logSources.TryGetValue(_selectedLogCategory, out var source))
+            {
+                foreach (var line in source) LogLines.Add(line);
+                StatusText = $"{LogLines.Count} log entries";
+
+                // ソースが ObservableCollection なら新規エントリをライブ追従
+                if (source is INotifyCollectionChanged notify)
+                {
+                    _currentSourceSubscription = notify;
+                    _currentSourceSubscription.CollectionChanged += OnSourceCollectionChanged;
+                }
+
+                RequestScrollToEnd();
             }
             else
             {
-                LogText = string.Empty;
                 StatusText = "Ready";
+            }
+        }
+
+        private void OnSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            // UI スレッドにマーシャリング
+            Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    switch (e.Action)
+                    {
+                        case NotifyCollectionChangedAction.Add:
+                            if (e.NewItems != null)
+                                foreach (var x in e.NewItems)
+                                    if (x is string s) LogLines.Add(s);
+                            break;
+                        case NotifyCollectionChangedAction.Reset:
+                            LogLines.Clear();
+                            if (sender is IEnumerable<string> src)
+                                foreach (var s in src) LogLines.Add(s);
+                            break;
+                        default:
+                            // Remove / Replace 系は解析ログでは想定外。フル再構築でフォールバック。
+                            LogLines.Clear();
+                            if (sender is IEnumerable<string> src2)
+                                foreach (var s in src2) LogLines.Add(s);
+                            break;
+                    }
+                    StatusText = $"{LogLines.Count} log entries";
+                    if (AutoScroll) RequestScrollToEnd();
+                }
+                catch
+                {
+                    // UI 更新失敗は非致命
+                }
+            }));
+        }
+
+        private void RequestScrollToEnd()
+        {
+            if (AutoScroll)
+            {
+                ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
             }
         }
 
         [RelayCommand]
         private void CopyLog()
         {
-            if (!string.IsNullOrEmpty(LogText))
-            {
-                Clipboard.SetText(LogText);
-                StatusText = "ログをクリップボードにコピーしました";
-            }
+            if (LogLines.Count == 0) return;
+            var text = string.Join(Environment.NewLine, LogLines);
+            Clipboard.SetText(text);
+            StatusText = "ログをクリップボードにコピーしました";
         }
 
         [RelayCommand]
         private void ClearLog()
         {
             var result = MessageBox.Show(
-                "ログをクリアしますか？",
+                "ログ表示をクリアしますか？（元データは残ります）",
                 "確認",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
-                if (_selectedLogCategory != null && _logSources.ContainsKey(_selectedLogCategory))
-                {
-                    _logSources[_selectedLogCategory].Clear();
-                }
-                UpdateLogText();
+                LogLines.Clear();
+                StatusText = "クリアしました";
             }
         }
 
@@ -128,7 +190,7 @@ namespace PileDesign.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    File.WriteAllText(dialog.FileName, LogText, Encoding.UTF8);
+                    File.WriteAllLines(dialog.FileName, LogLines, Encoding.UTF8);
                     StatusText = $"Log exported to: {Path.GetFileName(dialog.FileName)}";
                 }
             }
@@ -140,6 +202,15 @@ namespace PileDesign.ViewModels
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 StatusText = "Export failed";
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_currentSourceSubscription != null)
+            {
+                _currentSourceSubscription.CollectionChanged -= OnSourceCollectionChanged;
+                _currentSourceSubscription = null;
             }
         }
     }
