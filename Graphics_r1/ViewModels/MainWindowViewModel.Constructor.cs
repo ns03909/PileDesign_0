@@ -3074,6 +3074,7 @@ namespace PileDesign.ViewModels
         [ObservableProperty] private bool includeHorizontal_QNInT = true;
         [ObservableProperty] private bool includeHorizontal_MPhi = true;
         [ObservableProperty] private bool includeHorizontal_MTheta = true;
+        [ObservableProperty] private bool includeHorizontal_NGReport = true;
 
         [ObservableProperty] private bool includePileLocationMap = false;
         [ObservableProperty] private bool includePileAxialLoadMap = false;
@@ -3142,10 +3143,25 @@ namespace PileDesign.ViewModels
             finally { _reorderingAnalysisContentOption = false; }
         }
 
+        // クロススレッドで AnalysisResultContentOption を変更したときに CollectionView が例外を出すのを防ぐための同期ロック
+        private readonly object _analysisResultContentOptionLock = new();
+
         public MainWindowViewModel()
         {
-            // 解析結果コンテンツ候補の自動整列
-            _analysisResultContentOption.CollectionChanged += (s, e) => EnsureAnalysisResultContentOrder();
+            // WPF にクロススレッド変更の同期化を許可（Add/Remove が背景スレッドから来ても UI スレッドへ安全にマーシャル）
+            System.Windows.Data.BindingOperations.EnableCollectionSynchronization(
+                _analysisResultContentOption, _analysisResultContentOptionLock);
+
+            // 解析結果コンテンツ候補の自動整列（CollectionChanged 内で Move すると InvalidOperationException になるため遅延実行）
+            _analysisResultContentOption.CollectionChanged += (s, e) =>
+            {
+                if (_reorderingAnalysisContentOption) return;
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher != null)
+                    dispatcher.BeginInvoke(new Action(EnsureAnalysisResultContentOrder));
+                else
+                    EnsureAnalysisResultContentOrder();
+            };
 
             // Services の初期化
             _fileOperationService = new FileOperationService(_jsonOptions);

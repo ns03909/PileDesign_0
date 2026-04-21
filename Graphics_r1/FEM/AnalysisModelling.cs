@@ -171,12 +171,12 @@ namespace PileDesign.FEM
             (Node embedmentNode, Node soilNode, HorizontalSoilSpring spring) CreateDGBNodesAndSpring(double x, double y, double z)
             {
                 var embedmentNode = new Node();
-                embedmentNode.SetNodeInfo("EmbedmentNode", x, y, z);
+                embedmentNode.SetNodeInfo("根入部節点", x, y, z);
                 var soilNode = new Node();
-                soilNode.SetNodeInfo("SoilNode", x, y, z);
+                soilNode.SetNodeInfo("根入部地盤節点", x, y, z);
                 soilNode.SetIsForcedDisped(true);
                 soilNode.SetBoundary(new(false, false, true, true, true, true));
-                var spring = new HorizontalSoilSpring("地盤ばね", embedmentNode, soilNode);
+                var spring = new HorizontalSoilSpring("土圧合力ばね", embedmentNode, soilNode);
                 return (embedmentNode, soilNode, spring);
             }
 
@@ -389,7 +389,7 @@ namespace PileDesign.FEM
 
                 // Pile Node
                 var pileNode = new Node();
-                pileNode.SetNodeInfo($"PileNode-{pile.No}-{i}", x, y, z);
+                pileNode.SetNodeInfo($"杭節点-{pile.No}-{i}", x, y, z);
                 result.PileNodes.Add(pileNode);
 
                 if (prevPileNode == null)
@@ -439,13 +439,13 @@ namespace PileDesign.FEM
 
                 // Soil Node
                 var soilNode = new Node();
-                soilNode.SetNodeInfo($"SoilNode-{pile.No}-{i}", x, y, z);
+                soilNode.SetNodeInfo($"杭地盤節点-{pile.No}-{i}", x, y, z);
                 soilNode.SetIsForcedDisped(true);
                 soilNode.SetBoundary(SoilNodeBoundary);
                 result.SoilNodes.Add(soilNode);
 
                 // 水平土ばね
-                var hspring = new HorizontalSoilSpring($"HorizontalSoilSpring-{pile.No}-{i}", pileNode, soilNode);
+                var hspring = new HorizontalSoilSpring($"杭地盤ばね-{pile.No}-{i}", pileNode, soilNode);
                 result.HorizontalSoilSprings.Add(hspring);
             }
 
@@ -1131,7 +1131,7 @@ namespace PileDesign.FEM
         /// </summary>
         private void SetPileHeadMasterSlave(PileLayoutDataItem pile, Node capNode)
         {
-            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
+            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pile.No}-0");
             if (pileHeadNode == null) return;
 
             var actionPoint = RigidBodies[0].MasterNode;
@@ -1163,7 +1163,7 @@ namespace PileDesign.FEM
         /// </summary>
         private void SetPileHeadMasterSlaveFlexible(PileLayoutDataItem pile, Node capNode)
         {
-            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
+            var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pile.No}-0");
             if (pileHeadNode == null) return;
 
             // PileNode-0 → CapNode: Ux, Uy, Uz, Rz をslave

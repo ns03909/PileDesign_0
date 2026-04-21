@@ -25,14 +25,18 @@ namespace PileDesign.FEM
         {
             if (Points.Count == 0) return 0.0;
             double t = Math.Abs(theta);
-            if (Points.Count == 1) return InterpFromOrigin(Points[0], t);
-            if (t <= Points[0].Theta) return InterpFromOrigin(Points[0], t);
-            if (t >= Points[^1].Theta) return Points[^1].Moment;
+            // 杭頭 M-θ 曲線は原点対称（奇関数）を仮定。
+            // counter-loading（βU=-1 等）で θ が負側へ振れたときに正しく -M を返すため
+            // 入力の符号を保持し末尾で乗じる。
+            double sign = theta < 0.0 ? -1.0 : 1.0;
+            if (Points.Count == 1) return sign * InterpFromOrigin(Points[0], t);
+            if (t <= Points[0].Theta) return sign * InterpFromOrigin(Points[0], t);
+            if (t >= Points[^1].Theta) return sign * Points[^1].Moment;
 
             int idx = FindSegmentIndex(t);
             var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
             var b = Points[idx];
-            return Lerp(a, b, t);
+            return sign * Lerp(a, b, t);
         }
 
         public double EvaluateTangent(double theta)
@@ -83,7 +87,7 @@ namespace PileDesign.FEM
             return result;
         }
 
-        // 割線剛性: M/θ（内力計算用）
+        // 割線剛性: |M|/|θ|（内力計算用、常に正）
         // θ→0では初期接線剛性に収束
         public double EvaluateSecant(double theta)
         {
@@ -95,8 +99,10 @@ namespace PileDesign.FEM
                 double tan0 = EvaluateTangent(0.0);
                 return tan0;
             }
+            // EvaluateMoment は奇関数として符号付きで返すため、セカント剛性として
+            // 正のスカラー（EI_eff 相当）を維持するには絶対値を取る必要がある。
             double M = EvaluateMoment(theta);
-            double secant = M / t;
+            double secant = Math.Abs(M) / t;
             return secant;
         }
 

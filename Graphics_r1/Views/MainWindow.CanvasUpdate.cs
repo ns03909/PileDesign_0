@@ -190,9 +190,11 @@ namespace PileDesign.Views
                 }
             }
 
-            // 2) 杭配置ごとのライン
+            // 2) 杭配置ごとのライン（非表示杭はスキップ）
             foreach (var pile in vm.CurrentInputModel.PileLayoutItems)
             {
+                if (!pile.IsVisible) continue;
+
                 double x = pile.Point3D.X;
                 double y = pile.Point3D.Y;
 
@@ -238,8 +240,102 @@ namespace PileDesign.Views
         }
 
         // 以降: ヘルパー関数群を同クラス内に追加
-        private static double ScaleDispMmToModel(double dispMm, LoadCombination comb, MainWindowViewModel vm)
-            => dispMm * 0.001 * comb.Alpha1 * vm.DisplacementDiagramRatio * vm.ModelExtent;
+        // 杭節点変位と地盤変位で共有する「物理 [m] → モデル [m]」スケール
+        // PrepareDisplacementScale() で毎描画前に算出。0 ならフォールバック。
+        private double _sharedDispScaleMtoModel;
+
+        private double ScaleDispMmToModel(double dispMm, LoadCombination comb, MainWindowViewModel vm)
+        {
+            // 正規化スケールが準備済みならそれを使用（杭節点変位と揃う）
+            if (_sharedDispScaleMtoModel > 1e-15)
+                return dispMm * 0.001 * comb.Alpha1 * _sharedDispScaleMtoModel;
+            // フォールバック: 従来の線形スケール
+            return dispMm * 0.001 * comb.Alpha1 * vm.DisplacementDiagramRatio * vm.ModelExtent;
+        }
+
+        /// <summary>
+        /// 杭節点変位（UH/UX/UY）と地盤変位の最大値で共通スケールを算出し、
+        /// _sharedDispScaleMtoModel にセットする。UpdateCanvas3D の描画前に呼ぶ。
+        /// 対象でないモード（θ系等）では 0 に戻す。
+        /// </summary>
+        public void PrepareSharedDisplacementScale()
+        {
+            _sharedDispScaleMtoModel = 0;
+            if (DataContext is not MainWindowViewModel vm) return;
+            if (vm.CurrentInputModel == null) return;
+            if (!TryGetLoadContext(vm, out _, out var comb, out _, out _, out int level)) return;
+
+            double maxM = 0;
+
+            // 1) 杭節点変位（水平）モードのときのみ節点側最大を集計
+            if (vm.IsAnalysisResultVisible
+                && vm.AnalysisResultContent == "節点変位（水平）"
+                && (vm.AnalysisResultNodeDisplacementType == "UH"
+                    || vm.AnalysisResultNodeDisplacementType == "UX"
+                    || vm.AnalysisResultNodeDisplacementType == "UY"))
+            {
+                var anaModel = vm.CurrentModel;
+                var selLc = LoadCases.GetLoadCase(vm.CurrentInputModel.LoadCasesInput.AllLoadCases, vm.SelectedLoadCaseName);
+                if (anaModel?.Nodes != null && selLc != null)
+                {
+                    foreach (var node in anaModel.Nodes)
+                    {
+                        if (node == null) continue;
+                        var nr = node.GetNodeResult(anaModel, selLc, comb, vm.IsLiquefaction);
+                        var d = nr?.CumulativeDisp;
+                        if (d == null) continue;
+                        double val = vm.AnalysisResultNodeDisplacementType switch
+                        {
+                            "UH" => Math.Sqrt(d.Ux * d.Ux + d.Uy * d.Uy),
+                            "UX" => Math.Abs(d.Ux),
+                            "UY" => Math.Abs(d.Uy),
+                            _ => 0.0,
+                        };
+                        if (double.IsFinite(val) && val > maxM) maxM = val;
+                    }
+                }
+            }
+
+            // 2) 地盤変位の最大値（Alpha1 を含めた適用後の m）
+            if (vm.IsForcedDisplacementVisible && vm.CurrentInputModel.PileLayoutItems != null)
+            {
+                double maxGroundMm = 0;
+                foreach (var pile in vm.CurrentInputModel.PileLayoutItems)
+                {
+                    if (!pile.IsVisible) continue;
+                    if (vm.IsElementSplit)
+                    {
+                        var soilPile = vm.CurrentInputModel.ElementDivision?.SoilPiles != null
+                            && pile.SoilPileAltNo >= 1
+                            && pile.SoilPileAltNo <= vm.CurrentInputModel.ElementDivision.SoilPiles.Count
+                            ? vm.CurrentInputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1] : null;
+                        if (soilPile?.ZDataItems == null) continue;
+                        foreach (var z in soilPile.ZDataItems)
+                        {
+                            double d = Math.Abs(GetDispFromZDataItem(z, level, vm.IsLiquefaction));
+                            if (d > maxGroundMm) maxGroundMm = d;
+                        }
+                    }
+                    else
+                    {
+                        int gIdx = pile.GroundNo - 1;
+                        if (gIdx < 0 || gIdx >= vm.CurrentInputModel.GroundsInput.Count) continue;
+                        var masses = vm.CurrentInputModel.GroundsInput[gIdx].GroundMassesData;
+                        if (masses == null) continue;
+                        foreach (var m in masses)
+                        {
+                            double d = Math.Abs(GetDispFromGroundMass(m, level, vm.IsLiquefaction));
+                            if (d > maxGroundMm) maxGroundMm = d;
+                        }
+                    }
+                }
+                double maxGroundM = maxGroundMm * 0.001 * (comb?.Alpha1 ?? 1.0);
+                if (maxGroundM > maxM) maxM = maxGroundM;
+            }
+
+            if (maxM > 1e-15)
+                _sharedDispScaleMtoModel = vm.DisplacementDiagramRatio * vm.ModelExtent / maxM;
+        }
 
         private static double GetDispFromZDataItem(ZDataItem item, int level, bool isLiquefaction)
         {

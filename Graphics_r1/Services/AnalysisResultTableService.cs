@@ -225,12 +225,12 @@ namespace PileDesign.Services
             if (beams.Count > 0)
             {
                 // Beam → (杭No, 杭頭からの要素順) の辞書を構築
-                // NodeI名 "PileNode-{pileNo}-{nodeIdx}" から杭No取得、同一杭内の出現順で要素順を決定
+                // NodeI名 "杭節点-{pileNo}-{nodeIdx}" から杭No取得、同一杭内の出現順で要素順を決定
                 var beamPileInfo = new Dictionary<Beam, (int pileNo, int segOrder)>();
                 var pileBeamCounter = new Dictionary<int, int>(); // 杭No → 要素カウンタ
                 foreach (var b in beams)
                 {
-                    if (b.NodeI?.Name != null && b.NodeI.Name.StartsWith("PileNode-"))
+                    if (b.NodeI?.Name != null && b.NodeI.Name.StartsWith("杭節点-"))
                     {
                         var parts = b.NodeI.Name.Split('-');
                         if (parts.Length >= 3 && int.TryParse(parts[1], out int pNo))
@@ -429,7 +429,7 @@ namespace PileDesign.Services
             {
                 var summaryRows = new List<object>();
 
-                // 1. 代表節点水平力（ActionPoint = Nodes[0]）
+                // 1. 代表節点慣性力（ActionPoint = Nodes[0]）
                 if (nodes.Count > 0)
                 {
                     var ap = nodes[0];
@@ -442,40 +442,18 @@ namespace PileDesign.Services
                     {
                         summaryRows.Add(new ForceSummaryRow
                         {
-                            Item = "代表節点水平力",
+                            Item = "代表節点慣性力",
                             Fx = apLoad.Fx, Fy = apLoad.Fy, Fz = apLoad.Fz,
                             Fh = System.Math.Sqrt(apLoad.Fx * apLoad.Fx + apLoad.Fy * apLoad.Fy)
                         });
                     }
                 }
 
-                // 2. 杭頭鉛直力の合計（杭頭Beam要素 I端のFxi: 軸力）
-                {
-                    double sumFx = 0, sumFy = 0, sumFz = 0;
-                    foreach (var beam in beams.Where(b => b.IsPileHeadElement))
-                    {
-                        var br = FindBeamResult(beam);
-                        var bf = br?.CumulativeForce ?? beam.CumulativeForce;
-                        if (bf == null) continue;
-                        // ローカル→グローバル変換
-                        var fLocal = bf.GetVector();
-                        var T = beam.GetCachedCoordTransform();
-                        var fGlobal = T.Transpose() * fLocal;
-                        sumFx += fGlobal[0]; sumFy += fGlobal[1]; sumFz += fGlobal[2];
-                    }
-                    summaryRows.Add(new ForceSummaryRow
-                    {
-                        Item = "杭頭反力合計",
-                        Fx = sumFx, Fy = sumFy, Fz = sumFz,
-                        Fh = System.Math.Sqrt(sumFx * sumFx + sumFy * sumFy)
-                    });
-                }
-
-                // 3. 杭周地盤水平反力の合計（HorizontalSoilSpring: NodeJ名がSoilNode-で始まるもの）
+                // 2. 杭周地盤水平反力の合計（HorizontalSoilSpring: NodeJ名が杭地盤節点-で始まるもの）
                 {
                     double sumFx = 0, sumFy = 0, sumFz = 0;
                     var pileSoilSprings = model.HorizontalSoilSprings?.Where(s =>
-                        s.NodeJ?.Name.StartsWith("SoilNode-") == true) ?? [];
+                        s.NodeJ?.Name.StartsWith("杭地盤節点-") == true) ?? [];
                     foreach (var spring in pileSoilSprings)
                     {
                         var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
@@ -494,11 +472,11 @@ namespace PileDesign.Services
                     });
                 }
 
-                // 4. 土圧合力ばね水平反力の合計（NodeI名がEmbedmentNodeのばね）
+                // 4. 土圧合力ばね水平反力の合計（NodeI名が根入部節点のばね）
                 {
                     double sumFx = 0, sumFy = 0, sumFz = 0;
                     var dgbSprings = model.HorizontalSoilSprings?.Where(s =>
-                        s.NodeI?.Name.StartsWith("EmbedmentNode") == true) ?? [];
+                        s.NodeI?.Name == "根入部節点") ?? [];
                     foreach (var spring in dgbSprings)
                     {
                         var sr = spring.HorizontalSpringResults?.FirstOrDefault(r =>
@@ -512,32 +490,6 @@ namespace PileDesign.Services
                     summaryRows.Add(new ForceSummaryRow
                     {
                         Item = "土圧合力ばね反力合計",
-                        Fx = sumFx, Fy = sumFy, Fz = sumFz,
-                        Fh = System.Math.Sqrt(sumFx * sumFx + sumFy * sumFy)
-                    });
-                }
-
-                // 5. 杭先端反力の合計（杭先端Beam要素 J端の反力）
-                {
-                    double sumFx = 0, sumFy = 0, sumFz = 0;
-                    // 杭先端 = 最下端のBeam要素（NodeJがBoundary.Uz=trueのもの）
-                    foreach (var beam in beams)
-                    {
-                        if (beam.NodeJ == null || !beam.NodeJ.Boundary.Uz) continue;
-                        if (!beam.Name.StartsWith("beam", System.StringComparison.OrdinalIgnoreCase) &&
-                            !beam.Name.StartsWith("Beam", System.StringComparison.OrdinalIgnoreCase)) continue;
-                        var br = FindBeamResult(beam);
-                        var bf = br?.CumulativeForce ?? beam.CumulativeForce;
-                        if (bf == null) continue;
-                        var fLocal = bf.GetVector();
-                        var T = beam.GetCachedCoordTransform();
-                        var fGlobal = T.Transpose() * fLocal;
-                        // J端の力（インデックス6-11）
-                        sumFx += fGlobal[6]; sumFy += fGlobal[7]; sumFz += fGlobal[8];
-                    }
-                    summaryRows.Add(new ForceSummaryRow
-                    {
-                        Item = "杭先端反力合計",
                         Fx = sumFx, Fy = sumFy, Fz = sumFz,
                         Fh = System.Math.Sqrt(sumFx * sumFx + sumFy * sumFy)
                     });

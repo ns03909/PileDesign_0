@@ -287,6 +287,9 @@ namespace PileDesign.Views
                     if (viewModel.IsGridLineVisible) UpdateGridLines3D(); // 通り心の更新
                 }
 
+                // 杭節点変位と地盤変位の共通スケールを事前計算（両者を同じスケールで描画するため）
+                PrepareSharedDisplacementScale();
+
                 if (viewModel.IsForcedDisplacementVisible) UpdateForcedDisplacement3D(); // 3D地盤変位更新メソッド
 
                 // 剛床の描画
@@ -548,16 +551,16 @@ namespace PileDesign.Views
 
         // ミニマップのマッピング用パラメータ
         private double _minimapMinX, _minimapMinY, _minimapScale, _minimapOffsetX, _minimapOffsetY;
+        private Point? _minimapDragLastPos;
+        private const double MinimapDragSensitivity = 0.4; // ドラッグ時の減衰係数（1.0で viewport 追従、< 1.0 で緩やかに）
 
         /// <summary>
-        /// ミニマップクリックでビューを移動
+        /// ミニマップクリックでビュー中心を移動（MouseDown / ドラッグ中の MouseMove から共用）
         /// </summary>
-        private void MinimapCanvas_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void MoveViewToMinimapPoint(Point clickPos)
         {
             if (DataContext is not MainWindowViewModel viewModel) return;
             if (_minimapScale <= 0) return;
-
-            var clickPos = e.GetPosition(MinimapCanvas);
 
             // ミニマップ座標→メインキャンバス座標に逆変換
             double canvasX = (clickPos.X - _minimapOffsetX) / _minimapScale + _minimapMinX;
@@ -572,6 +575,51 @@ namespace PileDesign.Views
                 viewModel.CanvasThreeDView.ViewTransition.Y + (centerY - canvasY));
 
             UpdateCanvas3D();
+        }
+
+        /// <summary>
+        /// ミニマップクリックでビューを移動（ドラッグ開始点）。
+        /// </summary>
+        private void MinimapCanvas_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var pos = e.GetPosition(MinimapCanvas);
+            MoveViewToMinimapPoint(pos);
+            _minimapDragLastPos = pos;
+            MinimapCanvas.CaptureMouse();
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// ミニマップ上を左ボタン押下のままドラッグするとビューを追従移動（減衰付き相対パン）。
+        /// </summary>
+        private void MinimapCanvas_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+            if (!MinimapCanvas.IsMouseCaptured) return;
+            if (_minimapDragLastPos is not Point last) return;
+            if (DataContext is not MainWindowViewModel viewModel) return;
+            if (_minimapScale <= 0) return;
+
+            var cur = e.GetPosition(MinimapCanvas);
+            double dx = cur.X - last.X;
+            double dy = cur.Y - last.Y;
+
+            // ミニマップ上の移動量をキャンバス座標系に変換し、減衰を掛ける
+            double shiftX = -(dx / _minimapScale) * MinimapDragSensitivity;
+            double shiftY = -(dy / _minimapScale) * MinimapDragSensitivity;
+
+            viewModel.CanvasThreeDView.ViewTransition = new Point(
+                viewModel.CanvasThreeDView.ViewTransition.X + shiftX,
+                viewModel.CanvasThreeDView.ViewTransition.Y + shiftY);
+
+            _minimapDragLastPos = cur;
+            UpdateCanvas3D();
+        }
+
+        private void MinimapCanvas_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (MinimapCanvas.IsMouseCaptured) MinimapCanvas.ReleaseMouseCapture();
+            _minimapDragLastPos = null;
         }
 
         /// <summary>

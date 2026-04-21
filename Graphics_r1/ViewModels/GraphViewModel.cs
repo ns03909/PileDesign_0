@@ -897,7 +897,7 @@ namespace PileDesign.ViewModels
                 GraphOptions.Add("杭周地盤変位反力");
                 GraphOptions.Add("水平地盤反力度p-y");
                 // 土圧合力ばねが存在する場合のみ追加
-                if (AnaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "EmbedmentNode"))
+                if (AnaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
                     GraphOptions.Add("土圧合力ばね");
 
                 // FT-Pile / キャプテンパイル M-θ グラフ（該当する杭頭タイプが存在する場合のみ）
@@ -1068,12 +1068,31 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // UpdateGraph 再入防止フラグ
+        // Is*Visible などの property setter がここから再帰的に UpdateGraph を呼ぶと
+        // Plot.Clear 後に scatter が累積してレジェンドが多重表示されるため、
+        // 最外側の呼び出しのみ実処理を行う。
+        private bool _isUpdatingGraph;
+
         // グラフ更新メソッド
         public void UpdateGraph()
         {
             if (WpfPlot == null) return;
             if (SelectedGraphOption == null) return;
+            if (_isUpdatingGraph) return; // 再帰・多重呼び出しを抑制
+            _isUpdatingGraph = true;
+            try
+            {
+                UpdateGraphCore();
+            }
+            finally
+            {
+                _isUpdatingGraph = false;
+            }
+        }
 
+        private void UpdateGraphCore()
+        {
             WpfPlot.Plot.Clear();
             WpfPlot1.Plot.Clear();
             WpfPlot2.Plot.Clear();
@@ -1196,9 +1215,15 @@ namespace PileDesign.ViewModels
 
                 // 杭地盤ばねと土圧合力ばねを分類
                 var pileSoilSprings = AnaModel.HorizontalSoilSprings
-                    .Where(s => s.Name.StartsWith("HorizontalSoilSpring")).ToList();
+                    .Where(s => s.Name.StartsWith("杭地盤ばね")).ToList();
                 var doatsuSoilSprings = AnaModel.HorizontalSoilSprings
-                    .Where(s => s.NodeI?.Name == "EmbedmentNode").ToList();
+                    .Where(s => s.NodeI?.Name == "根入部節点").ToList();
+
+                // 重複描画防止: 同一 (LoadName, Angle, Combination.Name, IsLiq) を二重にプロットしない
+                var plottedKeys = new HashSet<string>();
+
+                // ホバーポップアップ用マップをクリア
+                _graphHoverMap.Clear();
 
                 foreach (LoadCase loadCase in GetSelectedLoadCases())
                 {
@@ -1210,6 +1235,10 @@ namespace PileDesign.ViewModels
                             int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
                             // 解析結果がない場合はスキップ
                             if (lastStep < 0) continue;
+
+                            // 重複スキップ
+                            string dedupKey = $"{loadCase?.LoadName}@{loadCase?.LoadAngle:F2}|{loadCombination?.Name}|{isLiquefaction}";
+                            if (!plottedKeys.Add(dedupKey)) continue;
 
                             List<double> disps = [0];
                             List<double> forces = [0];
@@ -1264,14 +1293,39 @@ namespace PileDesign.ViewModels
 
                             string legend = GetGeneralLegendText(loadCase, loadCombination, isLiquefaction);
 
+                            // ケースごとに共通の色を決定（3 系列を同色に揃え、線種で区別）
+                            var caseColor = GetCaseColor(plottedKeys.Count - 1);
+
+                            // ホバー共通情報
+                            string hoverHeader = $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
+                                + $"組合せ: cmb{loadCombination.No} "
+                                + $"(α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
+                                + $"ステップ数: {lastStep}";
+
                             var scatter = WpfPlot.Plot.Add.Scatter(disps, forces);
-                            scatter.LegendText = legend;
+                            scatter.LegendText = $"慣性力 {legend}";
+                            scatter.Color = caseColor;
+                            scatter.MarkerStyle.FillColor = caseColor;
+                            scatter.MarkerStyle.LineColor = caseColor;
+                            _graphHoverMap[scatter] = hoverHeader
+                                + $"\n系列: 作用点水平荷重"
+                                + $"\n最終 変位: {disps[^1]:N2} mm"
+                                + $"\n最終 荷重: {forces[^1]:N1} kN";
 
                             if (pileSoilSprings.Count > 0)
                             {
                                 var scatterPile = WpfPlot.Plot.Add.Scatter(disps, pileSoilForces);
                                 scatterPile.LegendText = $"杭地盤ばね反力 {legend}";
                                 scatterPile.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                                scatterPile.Color = caseColor;
+                                scatterPile.MarkerStyle.FillColor = caseColor;
+                                scatterPile.MarkerStyle.LineColor = caseColor;
+                                _graphHoverMap[scatterPile] = hoverHeader
+                                    + $"\n系列: 杭地盤ばね反力合計"
+                                    + $"\n最終 変位: {disps[^1]:N2} mm"
+                                    + $"\n最終 反力: {pileSoilForces[^1]:N1} kN"
+                                    + $"\nばね本数: {pileSoilSprings.Count}";
                             }
 
                             if (doatsuSoilSprings.Count > 0)
@@ -1279,6 +1333,14 @@ namespace PileDesign.ViewModels
                                 var scatterDoatsu = WpfPlot.Plot.Add.Scatter(disps, doatsuSoilForces);
                                 scatterDoatsu.LegendText = $"土圧合力ばね反力 {legend}";
                                 scatterDoatsu.LineStyle.Pattern = ScottPlot.LinePattern.Dotted;
+                                scatterDoatsu.Color = caseColor;
+                                scatterDoatsu.MarkerStyle.FillColor = caseColor;
+                                scatterDoatsu.MarkerStyle.LineColor = caseColor;
+                                _graphHoverMap[scatterDoatsu] = hoverHeader
+                                    + $"\n系列: 土圧合力ばね反力合計"
+                                    + $"\n最終 変位: {disps[^1]:N2} mm"
+                                    + $"\n最終 反力: {doatsuSoilForces[^1]:N1} kN"
+                                    + $"\nばね本数: {doatsuSoilSprings.Count}";
                             }
                         }
                     }
@@ -1372,16 +1434,19 @@ namespace PileDesign.ViewModels
                     $"杭断面: {pileSection.PileDescription}";
 
                 // NM曲線データが有効な場合のみ描画
-                // 低減後（実線）を先に描画して色を取得し、低減前（破線）に同じ色を適用
+                // 低減後（実線）を先に描画、低減前（破線）に同じ色を適用
+                // 限界ごとに指定色を付ける: 使用=DeepBlue, 損傷=Green, 安全=PaleRed
+                var serviceColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x32 << 16) | (0x71 << 8) | 0xAD))); // NikkenDeepBlue #3271AD
+                var damageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
+                var ultimateColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0xE9 << 16) | (0x55 << 8) | 0x41))); // NikkenPaleRed #E95541
 
                 // 使用限界
-                ScottPlot.Color serviceColor = default;
                 if (pileSection.FactoredServiceNM.N?.Count > 0 && pileSection.FactoredServiceNM.M?.Count > 0)
                 {
                     var scatterFaService = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.FactoredServiceNM.N.ToArray(), pileSection.FactoredServiceNM.M.ToArray());
                     scatterFaService.LegendText = "低減後使用限界";
-                    serviceColor = scatterFaService.LineStyle.Color;
+                    scatterFaService.LineStyle.Color = serviceColor;
                     _graphHoverMap[scatterFaService] = "低減後使用限界\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredServiceNM.N?.Count > 0 && pileSection.UnfactoredServiceNM.M?.Count > 0)
@@ -1390,18 +1455,17 @@ namespace PileDesign.ViewModels
                         pileSection.UnfactoredServiceNM.N.ToArray(), pileSection.UnfactoredServiceNM.M.ToArray());
                     scatterUnService.LegendText = "低減前使用限界";
                     scatterUnService.LineStyle.Pattern = LinePattern.Dashed;
-                    if (serviceColor != default) scatterUnService.LineStyle.Color = serviceColor;
+                    scatterUnService.LineStyle.Color = serviceColor;
                     _graphHoverMap[scatterUnService] = "低減前使用限界\n" + nmSectionDetails;
                 }
 
                 // 損傷限界
-                ScottPlot.Color damageColor = default;
                 if (pileSection.FactoredDamageNM.N?.Count > 0 && pileSection.FactoredDamageNM.M?.Count > 0)
                 {
                     var scatterFaDamage = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.FactoredDamageNM.N.ToArray(), pileSection.FactoredDamageNM.M.ToArray());
                     scatterFaDamage.LegendText = "低減後損傷限界";
-                    damageColor = scatterFaDamage.LineStyle.Color;
+                    scatterFaDamage.LineStyle.Color = damageColor;
                     _graphHoverMap[scatterFaDamage] = "低減後損傷限界\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredDamageNM.N?.Count > 0 && pileSection.UnfactoredDamageNM.M?.Count > 0)
@@ -1410,18 +1474,17 @@ namespace PileDesign.ViewModels
                         pileSection.UnfactoredDamageNM.N.ToArray(), pileSection.UnfactoredDamageNM.M.ToArray());
                     scatterUnDamage.LegendText = "低減前損傷限界";
                     scatterUnDamage.LineStyle.Pattern = LinePattern.Dashed;
-                    if (damageColor != default) scatterUnDamage.LineStyle.Color = damageColor;
+                    scatterUnDamage.LineStyle.Color = damageColor;
                     _graphHoverMap[scatterUnDamage] = "低減前損傷限界\n" + nmSectionDetails;
                 }
 
                 // 安全限界
-                ScottPlot.Color ultimateColor = default;
                 if (pileSection.FactoredUltimateNM.N?.Count > 0 && pileSection.FactoredUltimateNM.M?.Count > 0)
                 {
                     var scatterFaUltimate = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.FactoredUltimateNM.N.ToArray(), pileSection.FactoredUltimateNM.M.ToArray());
                     scatterFaUltimate.LegendText = "低減後安全限界";
-                    ultimateColor = scatterFaUltimate.LineStyle.Color;
+                    scatterFaUltimate.LineStyle.Color = ultimateColor;
                     _graphHoverMap[scatterFaUltimate] = "低減後安全限界\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
@@ -1430,7 +1493,7 @@ namespace PileDesign.ViewModels
                         pileSection.UnfactoredUltimateNM.N.ToArray(), pileSection.UnfactoredUltimateNM.M.ToArray());
                     scatterUnUltimate.LegendText = "低減前安全限界";
                     scatterUnUltimate.LineStyle.Pattern = LinePattern.Dashed;
-                    if (ultimateColor != default) scatterUnUltimate.LineStyle.Color = ultimateColor;
+                    scatterUnUltimate.LineStyle.Color = ultimateColor;
                     _graphHoverMap[scatterUnUltimate] = "低減前安全限界\n" + nmSectionDetails;
                 }
 
@@ -1547,19 +1610,25 @@ namespace PileDesign.ViewModels
                                 }
                             }
                         }
+                    }
 
+                    // 全杭分のデータを 2 系列（Level1/Level2）にまとめて一度だけ描画
+                    if (axialForceResultsLevel1.Count > 0)
+                    {
                         var scatterResultLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1.ToArray(), [.. momentResultsLevel1]);
                         scatterResultLevel1.LegendText = "レベル1地震時";
                         scatterResultLevel1.LineStyle.Width = 0;
-
+                    }
+                    if (axialForceResultsLevel2.Count > 0)
+                    {
                         var scatterResultLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2.ToArray(), [.. momentResultsLevel2]);
                         scatterResultLevel2.LegendText = "レベル2地震時";
                         scatterResultLevel2.LineStyle.Width = 0;
-
-                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
-                        WpfPlot.Plot.ShowLegend();
-                        WpfPlot.Refresh();
                     }
+
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
+                    WpfPlot.Plot.ShowLegend();
+                    WpfPlot.Refresh();
                 }
             }
             else if (SelectedGraphOption == "定着部NMINT")
@@ -1739,17 +1808,22 @@ namespace PileDesign.ViewModels
                     );
                 }
 
+                // 限界ごとの色: 使用=DeepBlue, 損傷=Green, 安全=PaleRed
+                var qnServiceColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x32 << 16) | (0x71 << 8) | 0xAD))); // NikkenDeepBlue #3271AD
+                var qnDamageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
+                var qnUltimateColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0xE9 << 16) | (0x55 << 8) | 0x41))); // NikkenPaleRed #E95541
+
                 void DrawQNCurvePair(
                     (List<double> N, List<double> Q) factored,
                     (List<double> N, List<double> Q) unfactored,
-                    string label)
+                    string label,
+                    ScottPlot.Color color)
                 {
-                    ScottPlot.Color color = default;
                     if (factored.N?.Count > 0 && factored.Q?.Count > 0)
                     {
                         var sc = WpfPlot.Plot.Add.ScatterLine(factored.N.ToArray(), factored.Q.ToArray());
                         sc.LegendText = $"低減後{label}";
-                        color = sc.LineStyle.Color;
+                        sc.LineStyle.Color = color;
                         _graphHoverMap[sc] = $"低減後{label}\n" + qnSectionDetails;
                     }
                     if (unfactored.N?.Count > 0 && unfactored.Q?.Count > 0)
@@ -1757,14 +1831,14 @@ namespace PileDesign.ViewModels
                         var sc = WpfPlot.Plot.Add.ScatterLine(unfactored.N.ToArray(), unfactored.Q.ToArray());
                         sc.LegendText = $"低減前{label}";
                         sc.LineStyle.Pattern = LinePattern.Dashed;
-                        if (color != default) sc.LineStyle.Color = color;
+                        sc.LineStyle.Color = color;
                         _graphHoverMap[sc] = $"低減前{label}\n" + qnSectionDetails;
                     }
                 }
 
-                DrawQNCurvePair(qnCurves.FactoredService, qnCurves.UnfactoredService, "使用限界");
-                DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, "損傷限界");
-                DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "安全限界");
+                DrawQNCurvePair(qnCurves.FactoredService, qnCurves.UnfactoredService, "使用限界", qnServiceColor);
+                DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, "損傷限界", qnDamageColor);
+                DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "安全限界", qnUltimateColor);
 
                 // 解析結果プロット
                 List<double> axialForceResultsLevel1Q = [];
@@ -1795,6 +1869,8 @@ namespace PileDesign.ViewModels
                 }
                 else
                 {
+                    double globalMaxM = 0, globalMaxQ = 0;
+
                     foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                     {
                         if (InputModel.PileBodies[pileLayoutDataItem.PileBodyNo - 1].PileBodyRef != SelectedPileBodyRef)
@@ -1846,38 +1922,45 @@ namespace PileDesign.ViewModels
                             }
                         }
 
-                        var scatterLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1Q.ToArray(), [.. shearResultsLevel1]);
-                        scatterLevel1.LegendText = "レベル1地震時";
-                        scatterLevel1.LineStyle.Width = 0;
-
-                        var scatterLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2Q.ToArray(), [.. shearResultsLevel2]);
-                        scatterLevel2.LegendText = "レベル2地震時";
-                        scatterLevel2.LineStyle.Width = 0;
-
-                        // 解析結果から該当杭体の最大MonQdを計算
-                        double maxMonQd = 0;
-                        double d = pileSection.EffectiveDepth; // [mm]
-                        if (d > 0 && pileLayoutDataItem.Beams != null)
+                        // 該当杭体全 beam の最大 M / Q を集計（MonQd 算定用）
+                        if (pileLayoutDataItem.Beams != null)
                         {
-                            double maxM = 0, maxQ = 0;
                             foreach (var b in pileLayoutDataItem.Beams)
                             {
                                 foreach (var br in b.BeamResults)
                                 {
                                     if (br.CumulativeForce == null) continue;
-                                    maxM = Math.Max(maxM, br.CumulativeForce.MabsMax);
-                                    maxQ = Math.Max(maxQ, br.CumulativeForce.FabsMax);
+                                    globalMaxM = Math.Max(globalMaxM, br.CumulativeForce.MabsMax);
+                                    globalMaxQ = Math.Max(globalMaxQ, br.CumulativeForce.FabsMax);
                                 }
                             }
-                            if (maxQ > 0)
-                                maxMonQd = (maxM * 1e6) / (maxQ * 1e3 * d);
                         }
-                        MonQdReference = maxMonQd > 0 ? $"解析結果最大値: {maxMonQd:N2}" : "";
-
-                        ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "QNINT", "軸力(kN)", "せん断力(kN)");
-                        WpfPlot.Plot.ShowLegend();
-                        WpfPlot.Refresh();
                     }
+
+                    // 全杭分のデータを 2 系列（Level1/Level2）にまとめて一度だけ描画
+                    if (axialForceResultsLevel1Q.Count > 0)
+                    {
+                        var scatterLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1Q.ToArray(), [.. shearResultsLevel1]);
+                        scatterLevel1.LegendText = "レベル1地震時";
+                        scatterLevel1.LineStyle.Width = 0;
+                    }
+                    if (axialForceResultsLevel2Q.Count > 0)
+                    {
+                        var scatterLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2Q.ToArray(), [.. shearResultsLevel2]);
+                        scatterLevel2.LegendText = "レベル2地震時";
+                        scatterLevel2.LineStyle.Width = 0;
+                    }
+
+                    // MonQd 参照値
+                    double maxMonQd = 0;
+                    double d = pileSection.EffectiveDepth; // [mm]
+                    if (d > 0 && globalMaxQ > 0)
+                        maxMonQd = (globalMaxM * 1e6) / (globalMaxQ * 1e3 * d);
+                    MonQdReference = maxMonQd > 0 ? $"解析結果最大値: {maxMonQd:N2}" : "";
+
+                    ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "QNINT", "軸力(kN)", "せん断力(kN)");
+                    WpfPlot.Plot.ShowLegend();
+                    WpfPlot.Refresh();
                 }
             }
             else if (SelectedGraphOption == "杭変位応力")
@@ -1890,6 +1973,9 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
                 IsLimitStateOptionVisible = true;
+
+                // ホバーポップアップ用マップをクリア（3 パネル共通）
+                _graphHoverMap.Clear();
 
                 try { DrawPileDisp(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "U", "mm"); }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[杭変位応力/Disp] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}"); GraphErrorMessage = $"変位グラフ描画エラー: {ex.Message}"; }
@@ -2000,6 +2086,9 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = true;
                 IsGridOptionVisible = false;
 
+                // ホバーポップアップ用マップをクリア（3 パネル共通）
+                _graphHoverMap.Clear();
+
                 DrawHorizontalSoilReaction(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "RelativeDisp", "mm");
                 DrawHorizontalSoilReaction(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "Reaction", "kN/m");
                 DrawHorizontalSoilReaction(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "SecantStiffness", "kN/m²");
@@ -2044,7 +2133,7 @@ namespace PileDesign.ViewModels
             wpfPlot.Plot.Clear();
 
             var doatsuSprings = AnaModel.HorizontalSoilSprings
-                .Where(s => s.NodeI?.Name == "EmbedmentNode").ToList();
+                .Where(s => s.NodeI?.Name == "根入部節点").ToList();
             if (doatsuSprings.Count == 0) return;
 
             // 最上点・最下点のばねを特定（Z座標で判定）
@@ -2053,6 +2142,7 @@ namespace PileDesign.ViewModels
             if (topSpring == null || btmSpring == null) return;
 
             double maxDispMm = 0; // 全系列の最大相対変位を追跡
+            int caseIndex = 0; // 同一ケース (LC/Comb/Liq) の 3 系列を同色にするためのカウンタ
 
             foreach (LoadCase loadCase in GetSelectedLoadCases())
             {
@@ -2062,6 +2152,8 @@ namespace PileDesign.ViewModels
                     {
                         int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
                         if (lastStep < 0) continue;
+
+                        var caseColor = GetCaseColor(caseIndex++);
 
                         List<double> topRelDisps = [0];
                         List<double> btmRelDisps = [0];
@@ -2130,10 +2222,16 @@ namespace PileDesign.ViewModels
 
                         var scatterTop = wpfPlot.Plot.Add.Scatter(topRelDisps, totalForcesTop);
                         scatterTop.LegendText = $"最上点 {legend}";
+                        scatterTop.Color = caseColor;
+                        scatterTop.MarkerStyle.FillColor = caseColor;
+                        scatterTop.MarkerStyle.LineColor = caseColor;
 
                         var scatterBtm = wpfPlot.Plot.Add.Scatter(btmRelDisps, totalForcesBtm);
                         scatterBtm.LegendText = $"最下点 {legend}";
                         scatterBtm.LineStyle.Pattern = ScottPlot.LinePattern.Dashed;
+                        scatterBtm.Color = caseColor;
+                        scatterBtm.MarkerStyle.FillColor = caseColor;
+                        scatterBtm.MarkerStyle.LineColor = caseColor;
 
                         // 等変形時の理論曲線（loadCase依存、最大変位×1.5まで描画）
                         var dgb = InputModel.ElementDivision?.DoatsuGoryokuBane;
@@ -2166,6 +2264,7 @@ namespace PileDesign.ViewModels
                             scatterTheor.LegendText = $"等変形時（理論） {legend}";
                             scatterTheor.LineStyle.Pattern = ScottPlot.LinePattern.Dotted;
                             scatterTheor.MarkerSize = 0;
+                            scatterTheor.Color = caseColor;
                         }
                     }
                 }
@@ -2263,6 +2362,10 @@ namespace PileDesign.ViewModels
                     {
                         foreach (var isLiquefaction in SelectedLiquefactionCases)
                         {
+                            // 解析未実行の (LoadCase, LoadCombination, Liquefaction) はこの組合せ全てスキップ
+                            int lastStepForSet = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            if (lastStepForSet < 0) continue;
+
                             // 軸力推定
                             double axialN = 0.0;
                             var prop = loadCase.GetType().GetProperty("NonlinearAxialForceN");
@@ -2289,7 +2392,7 @@ namespace PileDesign.ViewModels
                             string curveSource = "none";
 
                             // 解析結果からM-φ曲線を取得（解析で実際に使用したもの）
-                            int lastStep = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                            int lastStep = lastStepForSet;
                             BeamResult beamResultForCurve = null;
                             if (lastStep >= 0)
                             {
@@ -2616,6 +2719,10 @@ namespace PileDesign.ViewModels
                 {
                     foreach (var isLiquefaction in SelectedLiquefactionCases)
                     {
+                        // 解析未実行の (LoadCase, LoadCombination, Liquefaction) はこの組合せ全てスキップ
+                        int lastStepForSet = model.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
+                        if (lastStepForSet < 0) continue;
+
                         foreach (var rs in model.RotationalSprings)
                         {
                             // 対応杭レイアウト探索
@@ -3161,6 +3268,17 @@ namespace PileDesign.ViewModels
                             scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
                             var stressColor = scatter.LineStyle.Color; // 応力ラインの色を取得
 
+                            // ホバーポップアップ用詳細
+                            double absMax = beamForces.Count > 0 ? beamForces.Max(Math.Abs) : 0;
+                            _graphHoverMap[scatter] =
+                                $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
+                                + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
+                                + $"組合せ: cmb{loadCombination.No} (α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
+                                + $"系列: {forceType} ({unit})\n"
+                                + $"最大絶対値: {absMax:N2} {unit}\n"
+                                + $"節点数: {beamZs.Count}";
+
                             // 限界状態の破線ステップライン描画（同じ色で描画）
                             if (showLimitState && soilPile?.PileBodySegments != null)
                             {
@@ -3343,6 +3461,22 @@ namespace PileDesign.ViewModels
 
                             scatterPile.LegendText = "(PILE), " + GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
                             scatterSoil.LegendText = "(SOIL), " + GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+
+                            // ホバーポップアップ用詳細
+                            string hoverHeader = $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
+                                + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
+                                + $"組合せ: cmb{loadCombination.No} (α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}";
+                            double pileMax = pileDisps.Count > 0 ? pileDisps.Max(Math.Abs) : 0;
+                            double soilMax = soilDisps.Count > 0 ? soilDisps.Max(Math.Abs) : 0;
+                            _graphHoverMap[scatterPile] = hoverHeader
+                                + $"\n系列: 杭変位 {dispType} ({unit})"
+                                + $"\n最大絶対値: {pileMax:N2} {unit}"
+                                + $"\n節点数: {pileZs.Count}";
+                            _graphHoverMap[scatterSoil] = hoverHeader
+                                + $"\n系列: 地盤変位 {dispType} ({unit})"
+                                + $"\n最大絶対値: {soilMax:N2} {unit}"
+                                + $"\n節点数: {soilZs.Count}";
                         }
                     }
                 }
@@ -3435,6 +3569,24 @@ namespace PileDesign.ViewModels
                             {
                                 var scatter = wpfPlot.Plot.Add.Scatter(springValues, springZs);
                                 scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+
+                                // ホバーポップアップ用詳細
+                                double absMax = springValues.Count > 0 ? springValues.Max(Math.Abs) : 0;
+                                string seriesLabel = dataType switch
+                                {
+                                    "RelativeDisp" => "相対変位",
+                                    "Reaction" => "水平地盤反力",
+                                    "SecantStiffness" => "ばね割線剛性",
+                                    _ => dataType
+                                };
+                                _graphHoverMap[scatter] =
+                                    $"杭: #{pileLayoutDataItem.PileNo} (X={pileLayoutDataItem.X:N2}, Y={pileLayoutDataItem.Y:N2})\n"
+                                    + $"ケース: {loadCase.LoadName}@{loadCase.LoadAngle:F0}°\n"
+                                    + $"組合せ: cmb{loadCombination.No} (α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})\n"
+                                    + $"液状化: {(isLiquefaction ? "考慮" : "非考慮")}\n"
+                                    + $"系列: {seriesLabel} ({unit})\n"
+                                    + $"最大絶対値: {absMax:N2} {unit}\n"
+                                    + $"節点数: {springZs.Count}";
                             }
                         }
                     }
@@ -3471,7 +3623,33 @@ namespace PileDesign.ViewModels
         // 一般レジェンド取得メソッド
         private static string GetGeneralLegendText(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
-            return loadCase.LoadName + "|" + loadCombination.No + "|LIQ:" + isLiquefaction;
+            // 同名ケース（LoadAngle 違い）を区別するため角度を付記
+            // LoadCombination は No 以外にも α₁/β₁/β₂ で同定されるため組合せ係数も付記して一意化
+            return $"{loadCase.LoadName}@{loadCase.LoadAngle:F0}°|cmb{loadCombination.No}"
+                 + $"(α={loadCombination.Alpha1:F2}/β₁={loadCombination.Beta1:F2}/β₂={loadCombination.Beta2:F2})"
+                 + $"|LIQ:{isLiquefaction}";
+        }
+
+        /// <summary>
+        /// 慣性力作用点荷重変形関係グラフで、ケースごと（同一 LoadCase/Combination/Liq）に共通の色を返す。
+        /// 3 系列（作用点荷重 / 杭地盤ばね反力 / 土圧合力ばね反力）を同色にして線種で区別するのに使用。
+        /// </summary>
+        private static ScottPlot.Color GetCaseColor(int caseIndex)
+        {
+            // 視認性の高い定番パレット。ケースが多い場合はインデックスで循環
+            var palette = new ScottPlot.Color[]
+            {
+                ScottPlot.Color.FromHex("#1F77B4"), // 青
+                ScottPlot.Color.FromHex("#D62728"), // 赤
+                ScottPlot.Color.FromHex("#2CA02C"), // 緑
+                ScottPlot.Color.FromHex("#FF7F0E"), // 橙
+                ScottPlot.Color.FromHex("#9467BD"), // 紫
+                ScottPlot.Color.FromHex("#8C564B"), // 茶
+                ScottPlot.Color.FromHex("#E377C2"), // ピンク
+                ScottPlot.Color.FromHex("#17BECF"), // シアン
+            };
+            int idx = ((caseIndex % palette.Length) + palette.Length) % palette.Length;
+            return palette[idx];
         }
 
 

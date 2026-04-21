@@ -237,7 +237,7 @@ public sealed class HeadlessAnalysisRunner
         // 各杭頭の断面力
         foreach (var pile in InputModel.PileLayoutItems)
         {
-            var pileHeadNode = model.Nodes.FirstOrDefault(n => n.Name == $"PileNode-{pile.No}-0");
+            var pileHeadNode = model.Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pile.No}-0");
             if (pileHeadNode == null) continue;
 
             var pileResult = new PileHeadResult

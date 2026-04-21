@@ -21,6 +21,9 @@
                 <x:Type TypeName="models:FoundationBeamConnectionMode"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+        <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="10">
@@ -78,9 +81,9 @@
                     <common:EnhancedDataGrid.Columns>
                         <DataGridTextColumn Header="No" Binding="{Binding No}" IsReadOnly="True" Width="50"/>
                         <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="120"/>
-                        <DataGridTextColumn Header="X (m)" Binding="{Binding X, StringFormat=N3}" Width="*"/>
-                        <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, StringFormat=N3}" Width="*"/>
-                        <DataGridTextColumn Header="Z (m)" Binding="{Binding Z, StringFormat=N3}" Width="*"/>
+                        <DataGridTextColumn Header="X (m)" Binding="{Binding X, StringFormat=N3}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="*"/>
+                        <DataGridTextColumn Header="Y (m)" Binding="{Binding Y, StringFormat=N3}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="*"/>
+                        <DataGridTextColumn Header="Z (m)" Binding="{Binding Z, StringFormat=N3}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="*"/>
                     </common:EnhancedDataGrid.Columns>
                 </common:EnhancedDataGrid>
 
@@ -107,11 +110,11 @@
                         <DataGridTextColumn Header="断面名" Binding="{Binding SectionName}" Width="100"/>
                         <DataGridTextColumn Header="I端節点" Binding="{Binding NodeI_No}" Width="70"/>
                         <DataGridTextColumn Header="J端節点" Binding="{Binding NodeJ_No}" Width="70"/>
-                        <DataGridTextColumn Header="幅 (m)" Binding="{Binding Width, StringFormat=N3}" Width="80"/>
-                        <DataGridTextColumn Header="高さ (m)" Binding="{Binding Height, StringFormat=N3}" Width="80"/>
-                        <DataGridTextColumn Header="ヤング係数 (kN/m²)" Binding="{Binding YoungModulus, StringFormat=E2}" Width="*"/>
-                        <DataGridTextColumn Header="せん断係数 (kN/m²)" Binding="{Binding ShearModulus, StringFormat=E2}" Width="*"/>
-                        <DataGridTextColumn Header="アングルβ (°)" Binding="{Binding AngleBeta, StringFormat=N1}" Width="80"/>
+                        <DataGridTextColumn Header="幅 (m)" Binding="{Binding Width, StringFormat=N3}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="80"/>
+                        <DataGridTextColumn Header="高さ (m)" Binding="{Binding Height, StringFormat=N3}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="80"/>
+                        <DataGridTextColumn Header="ヤング係数 (kN/m²)" Binding="{Binding YoungModulus, StringFormat=E2}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="*"/>
+                        <DataGridTextColumn Header="せん断係数 (kN/m²)" Binding="{Binding ShearModulus, StringFormat=E2}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="*"/>
+                        <DataGridTextColumn Header="アングルβ (°)" Binding="{Binding AngleBeta, StringFormat=N1}" ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="80"/>
                     </common:EnhancedDataGrid.Columns>
                 </common:EnhancedDataGrid>
 

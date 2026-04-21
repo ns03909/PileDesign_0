@@ -360,6 +360,18 @@ namespace PileDesign.Output
                 AddPageBreak(body);
                 AddHeader1(body, "上部構造、基礎部への作用の組み合わせ", 2);
                 AddLoadCombinationTable(mainPart, body);
+
+                // 水平解析済みかつ根入れ部（土圧合力ばね）が存在する場合、レベル1／レベル2の反力合計表を追加
+                if (mainWindowViewModel?.IsHorizontalAnalysisDone == true
+                    && anaModel?.HorizontalSoilSprings != null
+                    && anaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
+                {
+                    AddLineBreak(body);
+                    AddHorizontalReactionSummaryTable(mainPart, body, 1);
+                    AddLineBreak(body);
+                    AddHorizontalReactionSummaryTable(mainPart, body, 2);
+                }
+
                 var soilPiles = inputModel.ElementDivision.SoilPiles;
                 if (soilPiles is { Count: > 0 })
                 {
@@ -432,6 +444,13 @@ namespace PileDesign.Output
                 double layoutW = 150; double layoutH = 200;
                 AddPilingLayoutDiagramByMm(mainPart, body, widthMm: layoutW, heightMm: layoutH, GetPileTopShearForceMark);
                 AddAutoFigureCaption(body, "杭頭せん断力マップ", "図");
+            }
+            // 水平解析 検定（NGのみ）
+            if (mainWindowViewModel.IncludeHorizontal_NGReport
+                && mainWindowViewModel?.IsHorizontalAnalysisDone == true
+                && anaModel != null)
+            {
+                AddHorizontalEvaluationReport(body, factored: true);
             }
             if (mainWindowViewModel.IncludeSettlement) // 沈下
             {
@@ -2483,6 +2502,153 @@ namespace PileDesign.Output
             }
             // 8. bodyにTableを追加
             body.Append(table);
+        }
+
+        /// <summary>
+        /// 水平解析の反力合計（土圧合力ばね／杭周地盤ばね）を、指定レベルの荷重ケース × 作用組合せで表出力。
+        /// 根入れ部が存在し水平解析が実行済みの場合のみ呼ばれる想定。
+        /// </summary>
+        private void AddHorizontalReactionSummaryTable(MainDocumentPart mainDocumentPart, Body body, int level)
+        {
+            var loadCasesInput = inputModel?.LoadCasesInput;
+            if (loadCasesInput?.LoadCombinations == null || loadCasesInput.LoadCombinations.Count == 0) return;
+            if (anaModel == null) return;
+
+            var cases = level == 1 ? loadCasesInput.LoadCasesLevel1 : loadCasesInput.LoadCasesLevel2;
+            if (cases == null || cases.Count == 0) return;
+
+            int combCount = loadCasesInput.LoadCombinations.Count;
+
+            var liqPatterns = new List<bool>();
+            if (mainWindowViewModel.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
+            if (mainWindowViewModel.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
+            if (liqPatterns.Count == 0) liqPatterns.Add(true);
+
+            var dgbSprings = anaModel.HorizontalSoilSprings?
+                .Where(s => s.NodeI?.Name == "根入部節点").ToList() ?? [];
+            var pileSprings = anaModel.HorizontalSoilSprings?
+                .Where(s => s.NodeJ?.Name != null && s.NodeJ.Name.StartsWith("杭地盤節点-")).ToList() ?? [];
+
+            if (dgbSprings.Count == 0 && pileSprings.Count == 0) return;
+
+            string ComputeCellText(List<HorizontalSoilSpring> springs, LoadCombination comb)
+            {
+                var sb = new System.Text.StringBuilder();
+                for (int ci = 0; ci < cases.Count; ci++)
+                {
+                    var lc = cases[ci];
+                    foreach (var isLiq in liqPatterns)
+                    {
+                        int lastStep = anaModel.GetAnalysisLastStep(lc, comb, isLiq);
+                        if (lastStep < 0) continue;
+                        double sumFx = 0, sumFy = 0;
+                        foreach (var spring in springs)
+                        {
+                            var r = spring.HorizontalSpringResults?.FirstOrDefault(rr =>
+                                rr.IsLiquefaction == isLiq && rr.Step == lastStep &&
+                                rr.LoadCase?.LoadName == lc.LoadName &&
+                                rr.LoadCombination?.Name == comb.Name);
+                            if (r?.CumulativeForce == null) continue;
+                            sumFx += r.CumulativeForce.Fxi;
+                            sumFy += r.CumulativeForce.Fyi;
+                        }
+                        double fh = Math.Sqrt(sumFx * sumFx + sumFy * sumFy);
+                        string liqMark = liqPatterns.Count > 1 ? (isLiq ? "[液]" : "[非液]") : string.Empty;
+                        if (sb.Length > 0) sb.Append('\n');
+                        sb.Append($"{lc.LoadName}{liqMark}: {fh:N1}");
+                    }
+                }
+                return sb.ToString();
+            }
+
+            var table = new Table();
+            var borders = new TableBorders(
+                new TopBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                new BottomBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                new LeftBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                new RightBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                new InsideHorizontalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 },
+                new InsideVerticalBorder { Val = BorderValues.Single, Color = "000000", Size = 4 }
+            );
+            table.AppendChild(new TableProperties(borders));
+
+            // Row 1: ヘッダー
+            {
+                var row = new TableRow();
+                var headCell = new TableCell();
+                SetTableCellWithVerticalAlign(headCell, GetParagraph($"レベル{level}\n水平解析 反力合計", "center", 8), "center");
+                row.Append(headCell);
+                for (int c = 0; c < combCount; c++)
+                {
+                    var cell = new TableCell();
+                    SetTableCellWithVerticalAlign(cell, GetParagraph($"{c + 1}", "center", 8), "center");
+                    row.Append(cell);
+                }
+                table.Append(row);
+            }
+
+            // Row 2: 土圧合力ばね反力合計
+            {
+                var row = new TableRow();
+                var labelCell = new TableCell();
+                SetTableCellWithVerticalAlign(labelCell, GetParagraph("土圧合力ばね\n反力合計 [kN]", "center", 8), "center");
+                row.Append(labelCell);
+                for (int c = 0; c < combCount; c++)
+                {
+                    var cell = new TableCell();
+                    string text = dgbSprings.Count > 0 ? ComputeCellText(dgbSprings, loadCasesInput.LoadCombinations[c]) : "—";
+                    SetTableCellWithVerticalAlign(cell, GetParagraph(text, "right", 8), "center");
+                    row.Append(cell);
+                }
+                table.Append(row);
+            }
+
+            // Row 3: 杭反力合計（杭周地盤ばね反力合計）
+            {
+                var row = new TableRow();
+                var labelCell = new TableCell();
+                SetTableCellWithVerticalAlign(labelCell, GetParagraph("杭反力合計\n[kN]", "center", 8), "center");
+                row.Append(labelCell);
+                for (int c = 0; c < combCount; c++)
+                {
+                    var cell = new TableCell();
+                    string text = pileSprings.Count > 0 ? ComputeCellText(pileSprings, loadCasesInput.LoadCombinations[c]) : "—";
+                    SetTableCellWithVerticalAlign(cell, GetParagraph(text, "right", 8), "center");
+                    row.Append(cell);
+                }
+                table.Append(row);
+            }
+
+            body.Append(table);
+        }
+
+        /// <summary>
+        /// 水平解析の検定結果（NG のみ）を DOCX に追記する。
+        /// </summary>
+        private void AddHorizontalEvaluationReport(Body body, bool factored)
+        {
+            if (mainWindowViewModel == null) return;
+
+            string text;
+            try
+            {
+                text = ViewModels.EvaluationWindowViewModel.BuildEvaluationText(mainWindowViewModel, factored, displayFilter: 0);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DOCX] 検定テキスト生成失敗: {ex.Message}");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            AddPageBreak(body);
+            AddHeader1(body, factored ? "水平解析 検定（低減後／NG項目）" : "水平解析 検定（低減前／NG項目）", 2);
+
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            foreach (var line in lines)
+            {
+                AddText(body, line, "left", 9);
+            }
         }
 
 

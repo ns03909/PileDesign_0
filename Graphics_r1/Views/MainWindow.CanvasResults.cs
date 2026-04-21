@@ -700,11 +700,13 @@ namespace PileDesign.Views
                     // Beam/DummyBeam 毎に端点の変位を取得してポリライン描画
                     double maxAbsValue = allValues.Count > 0 ? Math.Max(Math.Abs(allValues.Min()), Math.Abs(allValues.Max())) : 0.0;
 
-                    // 変位ダイアグラムのスケール: 最大変位で正規化し、比率×ModelExtentを適用
+                    // 変位ダイアグラムのスケール: 共通スケール（地盤変位と揃える）優先、なければ最大変位で正規化
                     double maxRawDisp = multiplier > 0 ? maxAbsValue / multiplier : 0;
-                    double dispScale = maxRawDisp > 1e-15
-                        ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxRawDisp
-                        : 0;
+                    double dispScale = _sharedDispScaleMtoModel > 1e-15
+                        ? _sharedDispScaleMtoModel
+                        : (maxRawDisp > 1e-15
+                            ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxRawDisp
+                            : 0);
 
                     // DummyBeams（根入れ部）描画 — 非アクティブ杭が存在する場合はスキップ
                     if (!hasInvisiblePile && viewModel.CurrentInputModel.ElementDivision.DoatsuGoryokuBane != null && anaModel?.DummyBeams != null)
@@ -1090,9 +1092,11 @@ namespace PileDesign.Views
                 double uh = Math.Sqrt(nd.Ux * nd.Ux + nd.Uy * nd.Uy + nd.Uz * nd.Uz);
                 if (uh > maxDisp) maxDisp = uh;
             }
-            double ds = maxDisp > 1e-15
-                ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxDisp
-                : 0;
+            double ds = _sharedDispScaleMtoModel > 1e-15
+                ? _sharedDispScaleMtoModel
+                : (maxDisp > 1e-15
+                    ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxDisp
+                    : 0);
 
             DrawDeformedElements(viewModel, anaModelDef, lc, lcomb, ds,
                 hasInvisiblePile, visibleBeams, invisibleFBNames);
@@ -1492,26 +1496,8 @@ namespace PileDesign.Views
                 if (pile.PileNodes == null || pile.PileNodes.Count < 2) continue;
                 if (pile.Beams == null || pile.Beams.Count == 0) continue;
 
-                // 杭単位で色決定（杭頭 NodeI 〜 杭先端 NodeJ の平均表示値で代表色）
-                PathGeometry sectionPathGeo;
-                if (colorize)
-                {
-                    var topNode = pile.Beams[0]?.NodeI;
-                    var bottomNode = pile.Beams[^1]?.NodeJ;
-                    double vI = topNode != null && nodeToValue.TryGetValue(topNode, out var a) ? a : 0;
-                    double vJ = bottomNode != null && nodeToValue.TryGetValue(bottomNode, out var b) ? b : 0;
-                    Color col = PickColorFromGeoms(0.5 * (vI + vJ), colorGeoms, Colors.Gray);
-                    if (!pathByColor.TryGetValue(col, out var existing))
-                    {
-                        existing = new PathGeometry();
-                        pathByColor[col] = existing;
-                    }
-                    sectionPathGeo = existing;
-                }
-                else
-                {
-                    sectionPathGeo = defaultPathGeo;
-                }
+                // 非 colorize 時は単色用（従来通り）
+                PathGeometry sectionPathGeo = colorize ? null : defaultPathGeo;
 
                 // 要素分割後のセグメント情報を取得（SoilPile経由）
                 ObservableCollection<PileBodySegment> soilPileSegments = null;
@@ -1531,12 +1517,22 @@ namespace PileDesign.Views
                 var radiusList = new List<double>();
                 // 要素境界のインデックス（楕円を描画する位置）
                 var boundaryIndices = new List<int>();
+                // 各輪郭点に対応する「表示値」（色分け用の補間値。colorize=false 時は未使用）
+                var pointValues = new List<double>();
 
                 // 各Beam要素の変形後中心線を連結して輪郭線を生成
                 for (int i = 0; i < pile.Beams.Count; i++)
                 {
                     var beam = pile.Beams[i];
                     if (beam.NodeI == null || beam.NodeJ == null) continue;
+
+                    // この梁の端部表示値（colorize 時のみ意味あり）
+                    double vBeamI = 0, vBeamJ = 0;
+                    if (colorize)
+                    {
+                        nodeToValue.TryGetValue(beam.NodeI, out vBeamI);
+                        nodeToValue.TryGetValue(beam.NodeJ, out vBeamJ);
+                    }
 
                     // 杭径を取得
                     double pileDia = 0;
@@ -1604,6 +1600,13 @@ namespace PileDesign.Views
                         centerPoints.Add(pts2D[k]);
                         tangentVectors.Add(tangent);
                         radiusList.Add(radius2D);
+
+                        // 色分け用: 梁軸方向の位置比率 t で vBeamI と vBeamJ を線形補間
+                        if (colorize)
+                        {
+                            double t = (pts2D.Count > 1) ? (double)k / (pts2D.Count - 1) : 0.0;
+                            pointValues.Add((1.0 - t) * vBeamI + t * vBeamJ);
+                        }
                     }
 
                     // 要素J端の境界インデックスを記録
@@ -1612,16 +1615,51 @@ namespace PileDesign.Views
 
                 if (leftPoints.Count < 2) continue;
 
-                // 左右の輪郭線をPathGeometryに追加
+                // 左右の輪郭線を PathGeometry に追加
+                // colorize=true: 各セグメントの中間値で色を決定し、色別 PathGeometry に振り分け
+                // colorize=false: すべて defaultPathGeo に集約
                 for (int k = 0; k < leftPoints.Count - 1; k++)
-                    sectionPathGeo.AddGeometry(new LineGeometry(leftPoints[k], leftPoints[k + 1]));
-                for (int k = 0; k < rightPoints.Count - 1; k++)
-                    sectionPathGeo.AddGeometry(new LineGeometry(rightPoints[k], rightPoints[k + 1]));
+                {
+                    PathGeometry targetGeo;
+                    if (colorize)
+                    {
+                        double vMid = 0.5 * (pointValues[k] + pointValues[k + 1]);
+                        Color col = PickColorFromGeoms(vMid, colorGeoms, Colors.Gray);
+                        if (!pathByColor.TryGetValue(col, out var existing))
+                        {
+                            existing = new PathGeometry();
+                            pathByColor[col] = existing;
+                        }
+                        targetGeo = existing;
+                    }
+                    else
+                    {
+                        targetGeo = sectionPathGeo;
+                    }
+                    targetGeo.AddGeometry(new LineGeometry(leftPoints[k], leftPoints[k + 1]));
+                    targetGeo.AddGeometry(new LineGeometry(rightPoints[k], rightPoints[k + 1]));
+                }
 
-                // 全要素境界に楕円を描画
+                // 全要素境界に楕円を描画（節点値そのもので色付け）
                 foreach (int idx in boundaryIndices)
                 {
-                    AddDeformedEllipse(sectionPathGeo, centerPoints[idx], tangentVectors[idx], radiusList[idx], flattening);
+                    PathGeometry targetGeo;
+                    if (colorize)
+                    {
+                        double vNode = pointValues[idx];
+                        Color col = PickColorFromGeoms(vNode, colorGeoms, Colors.Gray);
+                        if (!pathByColor.TryGetValue(col, out var existing))
+                        {
+                            existing = new PathGeometry();
+                            pathByColor[col] = existing;
+                        }
+                        targetGeo = existing;
+                    }
+                    else
+                    {
+                        targetGeo = sectionPathGeo;
+                    }
+                    AddDeformedEllipse(targetGeo, centerPoints[idx], tangentVectors[idx], radiusList[idx], flattening);
                 }
             }
 
@@ -2146,14 +2184,19 @@ namespace PileDesign.Views
                 viewModel.CurrentInputModel.LoadCasesInput.LoadCombinations, viewModel.SelectedLoadCombinationName);
 
             // 荷重ケースに対応する結果を検索するヘルパー
+            // 重要: FirstOrDefault で先頭ステップを拾うと途中段階の小さい値になるため、
+            // Step が最大（= 最終収束ステップ）のものを取得する。
             HorizontalSpringResult FindSpringResult(HorizontalSoilSpring spring)
             {
                 if (spring.HorizontalSpringResults == null || selectedLoadCase == null || selectedLoadCombination == null)
                     return null;
-                return spring.HorizontalSpringResults.FirstOrDefault(r =>
-                    r.LoadCase?.LoadName == selectedLoadCase.LoadName &&
-                    r.LoadCombination?.Name == selectedLoadCombination.Name &&
-                    r.IsLiquefaction == viewModel.IsLiquefaction);
+                return spring.HorizontalSpringResults
+                    .Where(r =>
+                        r.LoadCase?.LoadName == selectedLoadCase.LoadName &&
+                        r.LoadCombination?.Name == selectedLoadCombination.Name &&
+                        r.IsLiquefaction == viewModel.IsLiquefaction)
+                    .OrderByDescending(r => r.Step)
+                    .FirstOrDefault();
             }
 
             // 選択されたタイプを取得
@@ -2231,12 +2274,15 @@ namespace PileDesign.Views
                     double displayValue = GetSoilSpringValue(s, springType);
                     if (!double.IsFinite(displayValue)) continue; // NaN/Infinity防止
 
-                    // 反力値から矢印方向と長さを決定
-                    double fx = s.CumulativeForce.GetByIndex(0);
-                    double fy = s.CumulativeForce.GetByIndex(1);
-                    double fz = s.CumulativeForce.GetByIndex(2);
+                    // CumulativeForce = Ke·disp は「変位状態を保つのに必要な節点等価外力」
+                    // ＝ k·(u_pile − u_soil) の符号を持つ。ユーザが期待する「地盤が杭に及ぼす反力」
+                    // （= −k·(u_pile − u_soil) = 杭の相対変位を抑制する方向）に揃えるため、
+                    // 描画用には符号を反転する。
+                    double fx = -s.CumulativeForce.GetByIndex(0);
+                    double fy = -s.CumulativeForce.GetByIndex(1);
+                    double fz = -s.CumulativeForce.GetByIndex(2);
 
-                    // 選択されたタイプに応じた反力方向ベクトル
+                    // 選択されたタイプに応じた反力方向ベクトル（反転済みの反力成分）
                     var forceDir = springType switch
                     {
                         "RX" => new System.Windows.Media.Media3D.Vector3D(fx, 0, 0),
@@ -2303,10 +2349,14 @@ namespace PileDesign.Views
                     picked.PathGeometry.AddGeometry(new LineGeometry(head2D, side2));
 
                     // 値ラベル（任意、選択されたタイプの値を表示）
+                    // 矢印の尾側に配置（杭本体との重なりを避けるため head よりも外側）
                     if (viewModel.IsResultValueVisible)
                     {
                         string fmt = "{0:N" + viewModel.DecimalPlaces + "}";
-                        AddText3D(Brushes.Black, string.Format(fmt, displayValue), (head2D.X + tail2D.X) * 0.5, (head2D.Y + tail2D.Y) * 0.5, "C", "C", 0);
+                        // 尾から外向きに少しオフセットして重なりを防ぐ
+                        double labelOffset = viewModel.ArrowHeadLength * 0.5;
+                        Point labelPos = tail2D - dirNorm * labelOffset;
+                        AddText3D(Brushes.Black, string.Format(fmt, displayValue), labelPos.X, labelPos.Y, "C", "C", 0);
                     }
                 }
                 catch
@@ -2430,23 +2480,26 @@ namespace PileDesign.Views
             // I端の力・モーメント成分を取得
             // Index 0-2: Fx, Fy, Fz (並進力)
             // Index 3-5: Mx, My, Mz (モーメント)
-            double fx = spring.CumulativeForce.GetByIndex(0);
-            double fy = spring.CumulativeForce.GetByIndex(1);
-            double fz = spring.CumulativeForce.GetByIndex(2);
-            double mx = spring.CumulativeForce.GetByIndex(3);
-            double my = spring.CumulativeForce.GetByIndex(4);
-            double mz = spring.CumulativeForce.GetByIndex(5);
+            // CumulativeForce = Ke·disp は「変位状態を保つのに必要な節点等価外力」で、
+            // ユーザが期待する「地盤が杭に及ぼす反力」（＝杭変位を抑制する向き）とは逆符号。
+            // ここでは反力として表示するため符号を反転する。
+            double fx = -spring.CumulativeForce.GetByIndex(0);
+            double fy = -spring.CumulativeForce.GetByIndex(1);
+            double fz = -spring.CumulativeForce.GetByIndex(2);
+            double mx = -spring.CumulativeForce.GetByIndex(3);
+            double my = -spring.CumulativeForce.GetByIndex(4);
+            double mz = -spring.CumulativeForce.GetByIndex(5);
 
             return springType switch
             {
                 "RX" => fx,
                 "RY" => fy,
                 "RZ" => fz,
-                "R" => Math.Sqrt(fx * fx + fy * fy + fz * fz),  // 全方向反力
+                "R" => Math.Sqrt(fx * fx + fy * fy + fz * fz),  // 全方向反力（符号反転の有無に影響されない絶対値）
                 "MX" => mx,
                 "MY" => my,
                 "MZ" => mz,
-                "MH" => Math.Sqrt(mx * mx + my * my),  // 水平モーメント
+                "MH" => Math.Sqrt(mx * mx + my * my),  // 水平モーメント（絶対値）
                 _ => Math.Sqrt(fx * fx + fy * fy + fz * fz)     // デフォルトはR
             };
         }

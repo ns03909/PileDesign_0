@@ -1119,27 +1119,7 @@
                                                IsChecked="{Binding IsAxialLoadingVisible}"
                                                LargeImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"
                                                SmallImageSource="pack://application:,,,/Icons/IsAxialLoadVisible.png"/>
-                    <StackPanel Orientation="Horizontal"
-                                ToolTip="モデル範囲に対する最大応力ダイアグラム長の比率">
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="IsEnabled" Value="False"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsMassLoadingVisible}" Value="True">
-                                        <Setter Property="IsEnabled" Value="True"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsAxialLoadingVisible}" Value="True">
-                                        <Setter Property="IsEnabled" Value="True"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
-                                TickFrequency="0.1" IsSnapToTickEnabled="False"
-                                Value="{Binding ForceDiagramRatio}"/>
-                        <TextBox Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                 VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
-                    </StackPanel>
+                    <!-- ダイアグラムスケール（応力）は右端「ダイアグラムスケール・テキスト・値表示」グループに統合済み -->
                 </ribbon:RibbonGroup>
                 
                 <!-- 土層・土質点関連 -->
@@ -1182,38 +1162,7 @@
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
                                                    LargeImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"
                                                    SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
-                    <StackPanel Orientation="Horizontal">
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Setter Property="IsEnabled" Value="False"/>
-                                <Style.Triggers>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding DataContext.IsForcedDisplacementVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
-                                            <Condition Binding="{Binding DataContext.IsDisplacementDiagramRatioApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Setter Property="IsEnabled" Value="True"/>
-                                    </MultiDataTrigger>
-                                    <MultiDataTrigger>
-                                        <MultiDataTrigger.Conditions>
-                                            <Condition Binding="{Binding DataContext.IsForcedDisplacementVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="False"/>
-                                            <Condition Binding="{Binding DataContext.IsDisplacementDiagramRatioApplicable, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/>
-                                        </MultiDataTrigger.Conditions>
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                        <Setter Property="IsEnabled" Value="False"/>
-                                    </MultiDataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
-                                TickFrequency="0.1" IsSnapToTickEnabled="False"
-                                Value="{Binding DisplacementDiagramRatio}"
-                                ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
-                        <TextBox Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                 VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
-                    </StackPanel>
+                    <!-- ダイアグラムスケール（変位）は右端「ダイアグラムスケール・テキスト・値表示」グループに統合済み -->
                 </ribbon:RibbonGroup>
 
                 <!-- 群杭沈下ビュー -->
@@ -1286,23 +1235,86 @@
                 </ribbon:RibbonGroup>
 
 
-                <!-- テキスト -->
-                <ribbon:RibbonGroup Header="テキスト" SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
-                    <ribbon:RibbonButton
-                     LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
-                     SmallImageSource="pack://application:,,,/Icons/LabelSize.png"
-                     ToolTip="テキストサイズを変更します。"
-                     IsHitTestVisible="False" Focusable="False"/>
-                    <ComboBox Width="50"
-                      ItemsSource="{Binding LabelSizeOption}"
-                      SelectedItem="{Binding LabelSize}"
-                      ribbon:RibbonControlService.Label="サイズ">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="SelectionChanged">
-                                <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </ComboBox>
+                <!-- 値表示・ダイアグラムスケール・テキスト 統合グループ（右端、解析結果タブと同じ） -->
+                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- ダイアグラムスケールセクション（2 行: 応力 / 変位） -->
+                        <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="応力" VerticalAlignment="Center" Width="28"
+                                           ToolTip="ダイアグラムスケール（応力）"/>
+                                <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                        Value="{Binding ForceDiagramRatio}"
+                                        ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
+                                <TextBox Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                         VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                                    Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="変位" VerticalAlignment="Center" Width="28"
+                                           ToolTip="ダイアグラムスケール（変位）"/>
+                                <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                        Value="{Binding DisplacementDiagramRatio}"
+                                        ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
+                                <TextBox Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                         VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 区切り -->
+                        <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
+
+                        <!-- テキストサイズセクション（1 行） -->
+                        <StackPanel Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="テキスト" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <ComboBox Width="50"
+                                  ItemsSource="{Binding LabelSizeOption}"
+                                  SelectedItem="{Binding LabelSize}"
+                                  ToolTip="テキストサイズ">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="SelectionChanged">
+                                        <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- 区切り -->
+                        <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
+
+                        <!-- 値表示セクション（3 行: チェック群 / 位置 / 小数） -->
+                        <StackPanel Orientation="Vertical" Margin="10,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
+                                <CheckBox Content="要素中間"
+                                      IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
+                                      IsEnabled="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
+                                <CheckBox Content="杭頭"
+                                      IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
+                                      IsEnabled="{Binding IsResultValueVisible}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                                <TextBlock Text="位置" VerticalAlignment="Center" Width="28"/>
+                                <Slider Width="70" Minimum="0" Maximum="20"
+                                    Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
+                                     Text="{Binding TextPositionAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                                <TextBlock Text="小数" VerticalAlignment="Center" Width="28"/>
+                                <Slider Width="70" Minimum="0" Maximum="5"
+                                    Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
+                                     Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
                 </ribbon:RibbonGroup>
 
             </ribbon:RibbonTab>
@@ -1637,59 +1649,6 @@
                                SmallImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"/>
                 </ribbon:RibbonGroup>
                 
-                <ribbon:RibbonGroup Header="値表示">
-                    <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}"/>
-                    <CheckBox Content="要素中間"
-                          IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
-                          IsEnabled="{Binding IsResultValueVisible}"/>
-                    <CheckBox Content="杭頭"
-                          IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
-                          IsEnabled="{Binding IsResultValueVisible}"/>
-
-                    <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsResultValueVisible}">
-                        <TextBlock Text="位置" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="20"
-                            Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
-                             Text="{Binding TextPositionAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsResultValueVisible}">
-                        <TextBlock Text="小数" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <Slider Width="70" Minimum="0" Maximum="5"
-                            Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
-                             Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
-                             PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                             KeyDown="TextBox_KeyDown"/>
-                    </StackPanel>
-                </ribbon:RibbonGroup>
-
-                <ribbon:RibbonGroup Header="ダイアグラムスケール">
-                    <StackPanel Orientation="Vertical" Margin="0,2">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="応力" VerticalAlignment="Center" Width="28"/>
-                            <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="False"
-                                    Value="{Binding ForceDiagramRatio}"
-                                    ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
-                            <TextBox Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                     VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal"
-                                Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="変位" VerticalAlignment="Center" Width="28"/>
-                            <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
-                                    TickFrequency="0.1" IsSnapToTickEnabled="False"
-                                    Value="{Binding DisplacementDiagramRatio}"
-                                    ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
-                            <TextBox Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                     VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
-                        </StackPanel>
-                    </StackPanel>
-                </ribbon:RibbonGroup>
-
                 <ribbon:RibbonGroup Header="バブル">
                     <ribbon:RibbonSplitButton Label="バブル表示" IsCheckable="True"
                                               IsChecked="{Binding IsBubbleVisible}"
@@ -1786,23 +1745,86 @@
                              SmallImageSource="pack://application:,,,/Icons/Check.png"/>
                 </ribbon:RibbonGroup>
 
-                <!-- テキスト（表示タブと同じ） -->
-                <ribbon:RibbonGroup Header="テキスト" SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
-                    <ribbon:RibbonButton
-                     LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
-                     SmallImageSource="pack://application:,,,/Icons/LabelSize.png"
-                     ToolTip="テキストサイズを変更します。"
-                     IsHitTestVisible="False" Focusable="False"/>
-                    <ComboBox Width="50"
-                      ItemsSource="{Binding LabelSizeOption}"
-                      SelectedItem="{Binding LabelSize}"
-                      ribbon:RibbonControlService.Label="サイズ">
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="SelectionChanged">
-                                <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                    </ComboBox>
+                <!-- 値表示・ダイアグラムスケール・テキスト 統合グループ（右端） -->
+                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- ダイアグラムスケールセクション（2 行: 応力 / 変位） -->
+                        <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="応力" VerticalAlignment="Center" Width="28"
+                                           ToolTip="ダイアグラムスケール（応力）"/>
+                                <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                        Value="{Binding ForceDiagramRatio}"
+                                        ToolTip="モデル範囲に対する最大ダイアグラム長の比率"/>
+                                <TextBox Text="{Binding ForceDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                         VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                                    Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="変位" VerticalAlignment="Center" Width="28"
+                                           ToolTip="ダイアグラムスケール（変位）"/>
+                                <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="False"
+                                        Value="{Binding DisplacementDiagramRatio}"
+                                        ToolTip="モデル範囲に対する最大変位ダイアグラム長の比率"/>
+                                <TextBox Text="{Binding DisplacementDiagramRatio, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                                         VerticalAlignment="Center" Width="35" Margin="4,0,0,0" HorizontalContentAlignment="Right"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- 区切り -->
+                        <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
+
+                        <!-- テキストサイズセクション（1 行） -->
+                        <StackPanel Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="テキスト" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <ComboBox Width="50"
+                                  ItemsSource="{Binding LabelSizeOption}"
+                                  SelectedItem="{Binding LabelSize}"
+                                  ToolTip="テキストサイズ">
+                                <i:Interaction.Triggers>
+                                    <i:EventTrigger EventName="SelectionChanged">
+                                        <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
+                                    </i:EventTrigger>
+                                </i:Interaction.Triggers>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- 区切り -->
+                        <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
+
+                        <!-- 値表示セクション（3 行: チェック群 / 位置 / 小数） -->
+                        <StackPanel Orientation="Vertical" Margin="10,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
+                                <CheckBox Content="要素中間"
+                                      IsChecked="{Binding IsMidSpanResultValueVisibleOnly}"
+                                      IsEnabled="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
+                                <CheckBox Content="杭頭"
+                                      IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
+                                      IsEnabled="{Binding IsResultValueVisible}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                                <TextBlock Text="位置" VerticalAlignment="Center" Width="28"/>
+                                <Slider Width="70" Minimum="0" Maximum="20"
+                                    Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
+                                     Text="{Binding TextPositionAdjuster, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                                <TextBlock Text="小数" VerticalAlignment="Center" Width="28"/>
+                                <Slider Width="70" Minimum="0" Maximum="5"
+                                    Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
+                                     Text="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                     KeyDown="TextBox_KeyDown"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
                 </ribbon:RibbonGroup>
 
             </ribbon:RibbonTab>
@@ -5504,7 +5526,7 @@
                                                         <ComboBox
                                                               ItemsSource="{Binding AnalysisResultBeamForceOption}"
                                                               SelectedItem="{Binding AnalysisResultBeamForceType}"
-                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=梁応力|沈下応力}">
+                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=梁応力（水平）|沈下応力}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
@@ -5516,7 +5538,7 @@
                                                         <ComboBox 
                                                               ItemsSource="{Binding AnalysisResultNodeDisplacementOption}"
                                                               SelectedItem="{Binding AnalysisResultNodeDisplacementType}"
-                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=節点変位}">
+                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=節点変位（水平）}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
@@ -5528,7 +5550,7 @@
                                                         <ComboBox
                                                               ItemsSource="{Binding AnalysisResultSoilSpringOption}"
                                                               SelectedItem="{Binding AnalysisResultSoilSpringType}"
-                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=地盤反力}">
+                                                              Visibility="{Binding AnalysisResultContent, Converter={StaticResource AnalysisResultContentEqualsToVisibilityConverter}, ConverterParameter=地盤反力（水平）}">
                                                             <i:Interaction.Triggers>
                                                                 <i:EventTrigger EventName="SelectionChanged">
                                                                     <i:InvokeCommandAction Command="{Binding ComboBox3DAnalysisResultContent_OnSelectionChangedCommand}"/>
@@ -5757,7 +5779,9 @@
                                             HorizontalAlignment="Stretch"
                                             VerticalAlignment="Stretch"
                                             SizeChanged="MinimapCanvas_SizeChanged"
-                                            MouseLeftButtonDown="MinimapCanvas_MouseLeftButtonDown"/>
+                                            MouseLeftButtonDown="MinimapCanvas_MouseLeftButtonDown"
+                                            MouseMove="MinimapCanvas_MouseMove"
+                                            MouseLeftButtonUp="MinimapCanvas_MouseLeftButtonUp"/>
                                 </Border>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutAnchorablePane>

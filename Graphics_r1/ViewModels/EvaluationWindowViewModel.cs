@@ -52,6 +52,17 @@ namespace PileDesign.ViewModels
             RunEvaluation(factored: true);
         }
 
+        /// <summary>
+        /// UI を介さず検定テキストを取得する（DOCX 出力などから利用）。
+        /// </summary>
+        /// <param name="displayFilter">0=NGのみ, 1=OKのみ, 2=両方</param>
+        public static string BuildEvaluationText(MainWindowViewModel mainVm, bool factored, int displayFilter)
+        {
+            var vm = new EvaluationWindowViewModel(mainVm) { DisplayFilter = displayFilter };
+            vm.RunEvaluation(factored);
+            return vm.EvaluationText;
+        }
+
         private void RunEvaluation(bool factored)
         {
             _lastFactored = factored;

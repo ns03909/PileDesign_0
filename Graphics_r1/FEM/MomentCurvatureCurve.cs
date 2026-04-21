@@ -9,6 +9,12 @@ namespace PileDesign.FEM
     {
         public List<(double Phi, double Moment)> Points { get; } = new();
 
+        // 点列が φ ≥ 0 のみで定義されている場合に true。
+        // この場合、負の φ に対しては原点対称（奇関数）として |φ| で評価し sign(φ) を乗じる。
+        // counter-loading（βU=-1 等）で杭体が負の曲率側へ振れても、正側と同じ塑性挙動
+        // （降伏後剛性低下）を反映させ、Newton 反復のチャタリングを防ぐ。
+        private readonly bool _isOneSided;
+
         public MomentCurvatureCurve() { }
 
         public MomentCurvatureCurve(IEnumerable<(double phi, double moment)> points)
@@ -47,11 +53,22 @@ namespace PileDesign.FEM
 
             // 最低でも2点が必要（1点なら EvaluateTangent で 0 を返す）
             Points = merged;
+
+            // 全点が φ ≥ -ε なら片側定義とみなす
+            _isOneSided = Points.All(p => p.Phi >= -eps);
         }
 
         public double EvaluateMoment(double phi)
         {
             if (Points == null || Points.Count == 0) return 0.0;
+            // 片側定義曲線に対しては奇関数として評価（負 φ も塑性域を正しく反映）
+            if (_isOneSided && phi < 0.0)
+                return -EvaluateMomentCore(-phi);
+            return EvaluateMomentCore(phi);
+        }
+
+        private double EvaluateMomentCore(double phi)
+        {
             if (Points.Count == 1) return Points[0].Moment;
 
             for (int i = 0; i < Points.Count - 1; i++)
@@ -97,6 +114,10 @@ namespace PileDesign.FEM
                 return 0.0;
             }
 
+            // 片側定義曲線に対しては |φ| で検索（負 φ でも降伏後剛性を正しく返す）。
+            // 奇関数 M(−φ)=−M(φ) の微分は偶関数 → 接線剛性は |φ| 依存で OK。
+            double lookup = (_isOneSided && phi < 0.0) ? -phi : phi;
+
             // 各セグメントの傾きを事前計算
             var slopes = new double[Points.Count - 1];
             for (int i = 0; i < Points.Count - 1; i++)
@@ -112,12 +133,12 @@ namespace PileDesign.FEM
             // K_tan ≠ dF/dd → Newton-Raphson 収束停滞の原因になる。
             for (int i = 0; i < Points.Count - 1; i++)
             {
-                if (phi >= Points[i].Phi && phi <= Points[i + 1].Phi)
+                if (lookup >= Points[i].Phi && lookup <= Points[i + 1].Phi)
                     return slopes[i];
             }
 
             // 範囲外の場合は端部の傾きを使用
-            double result = (phi < Points[0].Phi) ? slopes[0] : slopes[^1];
+            double result = (lookup < Points[0].Phi) ? slopes[0] : slopes[^1];
             return result;
         }
 

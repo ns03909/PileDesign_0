@@ -50,9 +50,11 @@ namespace PileDesign.Views
                         }
                     };
 
-                    // p-y グラフのマウスホバー詳細ポップアップ
-                    wpfPlot.MouseMove += WpfPlot_HoverDetails_MouseMove;
-                    wpfPlot.MouseLeave += (s, args) => HoverDetailsPopup.IsOpen = false;
+                    // マウスホバー詳細ポップアップを全プロットに対応
+                    AttachHoverDetails(wpfPlot);
+                    AttachHoverDetails(wpfPlot1);
+                    AttachHoverDetails(wpfPlot2);
+                    AttachHoverDetails(wpfPlot3);
                 }
             };
 
@@ -74,7 +76,17 @@ namespace PileDesign.Views
             };
         }
 
-        private void WpfPlot_HoverDetails_MouseMove(object sender, MouseEventArgs e)
+        /// <summary>
+        /// 指定した WpfPlot にマウスホバー詳細ポップアップのハンドラを取り付ける。
+        /// </summary>
+        private void AttachHoverDetails(ScottPlot.WPF.WpfPlot plot)
+        {
+            if (plot == null) return;
+            plot.MouseMove += (s, args) => HandleHoverMove(plot, args);
+            plot.MouseLeave += (s, args) => HoverDetailsPopup.IsOpen = false;
+        }
+
+        private void HandleHoverMove(ScottPlot.WPF.WpfPlot plot, MouseEventArgs e)
         {
             if (DataContext is not GraphViewModel vm) return;
             if (vm.GraphHoverMap.Count == 0)
@@ -83,16 +95,16 @@ namespace PileDesign.Views
                 return;
             }
 
-            var p = e.GetPosition(wpfPlot);
-            var mousePixel = new Pixel(p.X * wpfPlot.DisplayScale, p.Y * wpfPlot.DisplayScale);
-            var mouseLocation = wpfPlot.Plot.GetCoordinates(mousePixel);
+            var p = e.GetPosition(plot);
+            var mousePixel = new Pixel(p.X * plot.DisplayScale, p.Y * plot.DisplayScale);
+            var mouseLocation = plot.Plot.GetCoordinates(mousePixel);
 
             double minDist = double.MaxValue;
             Scatter nearest = null;
-            foreach (var scatter in wpfPlot.Plot.GetPlottables().OfType<Scatter>())
+            foreach (var scatter in plot.Plot.GetPlottables().OfType<Scatter>())
             {
                 if (!vm.GraphHoverMap.ContainsKey(scatter)) continue;
-                var pt = scatter.Data.GetNearest(mouseLocation, wpfPlot.Plot.LastRender);
+                var pt = scatter.Data.GetNearest(mouseLocation, plot.Plot.LastRender);
                 if (!pt.IsReal) continue;
                 double dx = pt.Coordinates.X - mouseLocation.X;
                 double dy = pt.Coordinates.Y - mouseLocation.Y;
@@ -106,9 +118,11 @@ namespace PileDesign.Views
 
             if (nearest != null && vm.TryGetGraphHoverDetails(nearest, out string details))
             {
+                // ポップアップ位置は Window 相対に変換
+                var pWin = e.GetPosition(this);
                 HoverDetailsText.Text = details;
-                HoverDetailsPopup.HorizontalOffset = p.X + 16;
-                HoverDetailsPopup.VerticalOffset = p.Y + 16;
+                HoverDetailsPopup.HorizontalOffset = pWin.X + 16;
+                HoverDetailsPopup.VerticalOffset = pWin.Y + 16;
                 if (!HoverDetailsPopup.IsOpen) HoverDetailsPopup.IsOpen = true;
             }
             else

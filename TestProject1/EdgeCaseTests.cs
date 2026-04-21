@@ -415,6 +415,156 @@ namespace TestProject1
             Assert.AreEqual(-200.0, curve.EvaluateMoment(-0.01), 1e-6);
             Assert.AreEqual(200.0, curve.EvaluateMoment(0.01), 1e-6);
         }
+
+        /// <summary>
+        /// 片側（φ≥0）のみで定義された M-φ 曲線に対し、負 φ 側でも原点対称に
+        /// 降伏後の挙動を再現すること（counter-loading 収束性のための対称化）。
+        /// </summary>
+        [TestMethod]
+        public void OneSidedCurve_SymmetricEvaluation_NegativePhiUsesPostYieldBehavior()
+        {
+            // 二段折れ線: 降伏前 EI=1e5、降伏後 EI=1e4 （10 倍の剛性低下）
+            var curve = new MomentCurvatureCurve(new[]
+            {
+                (0.0, 0.0),      // 原点
+                (0.001, 100.0),  // 降伏点: K_elastic = 100/0.001 = 1e5
+                (0.011, 200.0),  // 降伏後: K_post = (200-100)/(0.011-0.001) = 1e4
+            });
+
+            // モーメントが符号付きで対称に評価されること
+            Assert.AreEqual(100.0, curve.EvaluateMoment(0.001), 1e-6);
+            Assert.AreEqual(-100.0, curve.EvaluateMoment(-0.001), 1e-6);
+            Assert.AreEqual(150.0, curve.EvaluateMoment(0.006), 1e-6);
+            Assert.AreEqual(-150.0, curve.EvaluateMoment(-0.006), 1e-6);
+
+            // 接線剛性: 降伏後の |φ| に対して post-yield 剛性を返すこと
+            // （修正前は負 φ で常に初期弾性剛性 1e5 を返していた）
+            Assert.AreEqual(1e5, curve.EvaluateTangent(0.0005), 1.0);   // 弾性域
+            Assert.AreEqual(1e5, curve.EvaluateTangent(-0.0005), 1.0);  // 弾性域（負側）
+            Assert.AreEqual(1e4, curve.EvaluateTangent(0.006), 1.0);    // 降伏後
+            Assert.AreEqual(1e4, curve.EvaluateTangent(-0.006), 1.0);   // 降伏後（負側）★ 修正で追加
+
+            // 両側点列を持つ既存曲線は従来通り（対称化は片側のみに適用）
+            var twoSided = new MomentCurvatureCurve(new[]
+            {
+                (-0.01, -150.0), (0.0, 0.0), (0.01, 200.0)  // 非対称
+            });
+            Assert.AreEqual(-150.0, twoSided.EvaluateMoment(-0.01), 1e-6);
+            Assert.AreEqual(200.0, twoSided.EvaluateMoment(0.01), 1e-6);
+        }
+
+        /// <summary>
+        /// RotationalSpring の M-θ 曲線（片側定義）が負 θ に対して
+        /// 原点対称に符号付きモーメントを返すこと。
+        /// </summary>
+        [TestMethod]
+        public void RotationalMomentRotationCurve_SymmetricEvaluation_NegativeTheta()
+        {
+            var curve = new MomentRotationCurve(new[]
+            {
+                (0.001, 100.0),
+                (0.010, 150.0),
+            });
+
+            // 正側（既存挙動）
+            Assert.AreEqual(100.0, curve.EvaluateMoment(0.001), 1e-6);
+            Assert.AreEqual(150.0, curve.EvaluateMoment(0.010), 1e-6);
+
+            // 負側（修正点）: 以前は +100, +150 を返していた
+            Assert.AreEqual(-100.0, curve.EvaluateMoment(-0.001), 1e-6);
+            Assert.AreEqual(-150.0, curve.EvaluateMoment(-0.010), 1e-6);
+
+            // プラトー外挿（|θ| > θ_last）も対称
+            Assert.AreEqual(150.0, curve.EvaluateMoment(0.050), 1e-6);
+            Assert.AreEqual(-150.0, curve.EvaluateMoment(-0.050), 1e-6);
+
+            // セカント剛性は正のスカラー（F = K·θ で符号は θ 側から戻る）
+            Assert.IsTrue(curve.EvaluateSecant(0.005) > 0);
+            Assert.IsTrue(curve.EvaluateSecant(-0.005) > 0);
+            Assert.AreEqual(curve.EvaluateSecant(0.005), curve.EvaluateSecant(-0.005), 1e-10);
+        }
+    }
+
+    // ====================================================================
+    // DoatsuGoryokuBaneItem（土圧合力ばね）の境界値テスト
+    // counter-loading（負方向漸増）時に圧力が正しい符号で評価されること
+    // ====================================================================
+    [TestClass]
+    public class DoatsuGoryokuBaneItemEdgeCaseTests
+    {
+        private static DoatsuGoryokuBaneItem BuildTestItem()
+        {
+            // Pp - P0 が既知の値になるパラメータを用意
+            // P0 = (Q + γ·(ZTop-ZBtm)) · K0
+            // Pp = (Q + γ·(ZTop-ZBtm)) · Kp + 2·C·√Kp
+            // γ=10, ZTop=1, ZBtm=0, Q=0, K0=0.5, Φ=30°(Kp=3), C=0
+            //   → P0 = 5, Pp = 30, Pp-P0 = 25
+            var item = new DoatsuGoryokuBaneItem
+            {
+                Gamma = 10,
+                Phi = 30,
+                C = 0,
+                ZTop = 1,
+                ZBtm = 0,
+                K0 = 0.5,
+                Q = 0,
+            };
+            item.SetDeltaPAndYsp(deltaP: 0.01, ysp: 0.005);
+            return item;
+        }
+
+        [TestMethod]
+        public void GetPressure_ZeroDisp_ReturnsZero()
+        {
+            var item = BuildTestItem();
+            Assert.AreEqual(0.0, item.GetPressure(0.0), 1e-12);
+        }
+
+        [TestMethod]
+        public void GetPressure_PositivePlateau_ReturnsPpMinusP0()
+        {
+            var item = BuildTestItem();
+            double ppMinusP0 = item.Pp - item.P0;
+            Assert.AreEqual(ppMinusP0, item.GetPressure(item.DeltaP), 1e-9);
+            Assert.AreEqual(ppMinusP0, item.GetPressure(0.03), 1e-9);  // 3倍のプラトー
+        }
+
+        [TestMethod]
+        public void GetPressure_NegativeDisp_IsOddSymmetric()
+        {
+            // 奇関数 P(-x) = -P(x) であること
+            var item = BuildTestItem();
+            double[] testDisps = [0.001, 0.003, 0.005, 0.008, 0.009];
+            foreach (var d in testDisps)
+            {
+                double posP = item.GetPressure(d);
+                double negP = item.GetPressure(-d);
+                Assert.AreEqual(-posP, negP, 1e-9, $"GetPressure({-d}) should equal -GetPressure({d}): got {negP} vs -{posP}");
+            }
+        }
+
+        [TestMethod]
+        public void GetPressure_NegativePlateau_ReturnsMinusPpMinusP0()
+        {
+            // 修正前は |disp| ≈ 2·DeltaP でゼロ除算、それを超えると符号反転（+Pp が返る）
+            // 修正後は |disp| >= DeltaP で -(Pp-P0) プラトーへ
+            var item = BuildTestItem();
+            double ppMinusP0 = item.Pp - item.P0;
+
+            Assert.AreEqual(-ppMinusP0, item.GetPressure(-item.DeltaP), 1e-9);
+            Assert.AreEqual(-ppMinusP0, item.GetPressure(-2 * item.DeltaP), 1e-9);  // 旧: Inf
+            Assert.AreEqual(-ppMinusP0, item.GetPressure(-3 * item.DeltaP), 1e-9);  // 旧: +3·(Pp-P0) (符号反転)
+        }
+
+        [TestMethod]
+        public void GetPressure_NoSingularity_AtTwiceDeltaP()
+        {
+            // |disp| = 2·DeltaP はまさに旧実装でゼロ除算を起こした点
+            var item = BuildTestItem();
+            double val = item.GetPressure(-2 * item.DeltaP);
+            Assert.IsTrue(double.IsFinite(val), "値が有限であるべき（修正前は Inf/NaN）");
+            Assert.AreEqual(-(item.Pp - item.P0), val, 1e-9);
+        }
     }
 
     // ====================================================================

@@ -366,7 +366,11 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isModelCreating, value);
         }
 
-        // 解析ケース数
+        // v19: 自動ステップ二分による追加ステップ数（再試行時に加算されるステップの累計）
+        // 解析実行中のみ増加。解析開始時にリセット。
+        private int _bisectionExtraSteps = 0;
+
+        // 解析ケース数（基本値 + 再試行追加）
         public int TotalCalculationCount
         {
             get
@@ -387,8 +391,9 @@ namespace PileDesign.ViewModels
                 // 1荷重あたりレベル2解析計算ステップ数
                 int level2Steps = Level2CalculationStepsCount;
 
-                // 計算式
-                return liquefactionFactor * (level1Count * level1Steps + level2Count * level2Steps) * combinationCount;
+                // 計算式（基本 + 再試行分）
+                int baseTotal = liquefactionFactor * (level1Count * level1Steps + level2Count * level2Steps) * combinationCount;
+                return baseTotal + _bisectionExtraSteps;
             }
         }
 
@@ -1544,6 +1549,11 @@ namespace PileDesign.ViewModels
             targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
             int calcNo = 0;
 
+            // v19: 解析開始時に再試行による追加ステップ数をリセット
+            _bisectionExtraSteps = 0;
+            OnPropertyChanged(nameof(TotalCalculationCount));
+            OnPropertyChanged(nameof(ProgressText));
+
             // 初期進捗を報告
             progress?.Report(new Models.AnalysisProgress
             {
@@ -1582,32 +1592,101 @@ namespace PileDesign.ViewModels
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
-                        targetModel.InitializeStates();
-
-                        // 荷重ケース固有の剛体スレーブ割当を適用（回転ばねの有効/無効を切替）
-                        ApplyPileHeadRigidBindingForLoadCase(targetModel, loadCase);
-
-                        // 杭非線形ONのときだけ M–φ/M–θ をセット
-                        if (loadCase.IsPileNonLinear)
-                        {
-                            SetupMPhiFromPileSectionForLoadCase(targetModel, loadCase);
-                        }
-                        // M–θ は常にセット（非線形OFFは剛 KThetaXY=KRigid）
-                        SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
-
-                        int nStep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
+                        // v20: 難易度事前検出 (Phase 1) — counter-loading を事前に detect し、
+                        // 最初から大きな nStep で実行することで失敗試行のムダを回避
+                        //
+                        // 仕組み:
+                        //   - Easy  (順方向通常): 基本 nStep (Level1=2, Level2=8 等) で開始、retry 最大 3
+                        //   - Medium (高 α): 基本 ×2 で開始、retry 最大 2
+                        //   - Hard  (counter-loading 系): 基本 ×4 (min 32) で開始、retry 最大 1
+                        int configuredNStep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
                             loadCase.Level == 1 ? Level1CalculationStepsCount :
                             loadCase.Level == 2 ? Level2CalculationStepsCount :
                             1;
+                        var difficulty = ClassifyCaseDifficulty(loadCase, loadCombination, isLiquefaction);
+                        int baseNStep = configuredNStep;
+                        int MAX_STEP_BISECTIONS = 3;
+                        if (loadCase.IsSoilNonLinear || loadCase.IsPileNonLinear)
+                        {
+                            // 非線形ケースのみ事前検出を適用
+                            switch (difficulty)
+                            {
+                                case CaseDifficulty.Hard:
+                                    baseNStep = Math.Max(configuredNStep * 4, 32);
+                                    MAX_STEP_BISECTIONS = 1;
+                                    break;
+                                case CaseDifficulty.Medium:
+                                    baseNStep = configuredNStep * 2;
+                                    MAX_STEP_BISECTIONS = 2;
+                                    break;
+                                case CaseDifficulty.Easy:
+                                default:
+                                    // 基本 nStep のまま (3 回 retry)
+                                    break;
+                            }
+                            if (baseNStep != configuredNStep)
+                            {
+                                await AddLogAsync($"  🔎 難易度事前検出: {difficulty} 組合せ (αL={loadCombination.Alpha1:N2}, βU={loadCombination.Beta1:N2}, βL={loadCombination.Beta2:N2}) → 初期 nStep={baseNStep} (設定値 {configuredNStep} の代わり)");
+                            }
+                        }
+                        int nStep = baseNStep;
+                        int bisectionAttempt = 0;
+                        bool caseConverged = false;
 
-                        SetVectorDF(targetModel, loadCase, loadCombination, level, iLC, nStep);
-                        targetModel.MapOnVectorDF();
-                        InitializeSoilDisplacementIncrement(targetModel, loadCase, loadCombination, level, isLiquefaction, nStep);
+                        while (true)
+                        {
+                            // 再試行時の巻き戻し用に、結果リストのサイズをスナップショット
+                            int snapAnaStepResults = targetModel.AnalysisStepResults?.Count ?? 0;
+                            var snapNodeResults = new int[targetModel.Nodes.Count];
+                            for (int i_ = 0; i_ < targetModel.Nodes.Count; i_++)
+                                snapNodeResults[i_] = targetModel.Nodes[i_].NodeResults.Count;
+                            var snapBeamResults = new int[targetModel.Beams.Count];
+                            for (int i_ = 0; i_ < targetModel.Beams.Count; i_++)
+                                snapBeamResults[i_] = targetModel.Beams[i_].BeamResults.Count;
+                            var snapHSpringResults = new int[targetModel.HorizontalSoilSprings.Count];
+                            for (int i_ = 0; i_ < targetModel.HorizontalSoilSprings.Count; i_++)
+                                snapHSpringResults[i_] = targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count;
+                            int[]? snapRotSpringResults = null;
+                            if (targetModel.RotationalSprings != null)
+                            {
+                                snapRotSpringResults = new int[targetModel.RotationalSprings.Count];
+                                for (int i_ = 0; i_ < targetModel.RotationalSprings.Count; i_++)
+                                    snapRotSpringResults[i_] = targetModel.RotationalSprings[i_].RotationalSpringResults.Count;
+                            }
 
-                        // v15: 変位予測器用の変数（前ステップの変位増分を記録）
-                        MathNet.Numerics.LinearAlgebra.Vector<double>? prevStepDispIncrement = null;
+                            targetModel.InitializeStates();
 
-                        for (int step = 0; step < nStep; step++)
+                            // 荷重ケース固有の剛体スレーブ割当を適用（回転ばねの有効/無効を切替）
+                            ApplyPileHeadRigidBindingForLoadCase(targetModel, loadCase);
+
+                            // 杭非線形ONのときだけ M–φ/M–θ をセット
+                            if (loadCase.IsPileNonLinear)
+                            {
+                                SetupMPhiFromPileSectionForLoadCase(targetModel, loadCase);
+                            }
+                            // M–θ は常にセット（非線形OFFは剛 KThetaXY=KRigid）
+                            SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
+
+                            SetVectorDF(targetModel, loadCase, loadCombination, level, iLC, nStep);
+                            targetModel.MapOnVectorDF();
+                            InitializeSoilDisplacementIncrement(targetModel, loadCase, loadCombination, level, isLiquefaction, nStep);
+
+                            if (bisectionAttempt > 0)
+                                await AddLogAsync($"  ♻ ケース再試行 ({bisectionAttempt}/{MAX_STEP_BISECTIONS}): ステップ数を {baseNStep} → {nStep} に増やして再計算 (以降の総ステップ数: {TotalCalculationCount})");
+
+                            // このアテンプト内で未収束ステップが発生したか
+                            bool caseFailedThisAttempt = false;
+
+                            // v20 Phase 2: 物理的未収束と判定された場合、再試行ループから直接抜ける
+                            bool physicallyUnconvergeable = false;
+
+                            // v19: このアテンプト内で実際に実行されたステップ数（早期脱出時に使用）
+                            int stepsExecutedInAttempt = 0;
+
+                            // v15: 変位予測器用の変数（前ステップの変位増分を記録）
+                            MathNet.Numerics.LinearAlgebra.Vector<double>? prevStepDispIncrement = null;
+
+                            for (int step = 0; step < nStep; step++)
                         {
                             await Task.Yield(); // ここでUIスレッドを解放
                             token.ThrowIfCancellationRequested();
@@ -1630,7 +1709,8 @@ namespace PileDesign.ViewModels
                                 StartTime = startTime
                             });
 
-                            await AddLogAsync($"[{calcNo}/{TotalCalculationCount}]" + "荷重ケース：" + level + "-" + $"{iLC + 1}" + ", " + "液状化" + (isLiquefaction ? "考慮, " : "非考慮, ") +
+                            string retryTag = bisectionAttempt > 0 ? $" 再試行{bisectionAttempt}/{MAX_STEP_BISECTIONS}" : "";
+                            await AddLogAsync($"[{calcNo}/{TotalCalculationCount}{retryTag}]" + "荷重ケース：" + level + "-" + $"{iLC + 1}" + ", " + "液状化" + (isLiquefaction ? "考慮, " : "非考慮, ") +
                                 $"[{iLCOM + 1}]" +
                                 "αL:" + $"{loadCombination.Alpha1:N2}" +
                                 ", βU:" + $"{loadCombination.Beta1:N2}" +
@@ -1699,6 +1779,11 @@ namespace PileDesign.ViewModels
                             // v13: 緩やかな発散検出用の変数
                             int slowDivergenceCount = 0;            // 連続増加回数
                             const int SLOW_DIVERGENCE_LIMIT = 10;   // この回数連続増加で緩やかな発散と判定
+
+                            // v18: 長期未改善検出（counter-loading で残差が振動するケース対策）
+                            // minResidualSeen が一定回数更新されない場合、収束基準を minSeen * 1.2 に緩和
+                            int iterationsSinceMinUpdated = 0;
+                            const int NO_IMPROVEMENT_LIMIT = 30;
 
                             // v17: 長時間反復時の収束基準緩和（40反復以上 + 残差≦RELAXED_ALPHA で緩和）
 
@@ -1888,6 +1973,28 @@ namespace PileDesign.ViewModels
                                 {
                                     minResidualSeen = currentResidual;  // 最小残差を更新
                                     slowDivergenceCount = 0;  // 最小更新時にリセット
+                                    iterationsSinceMinUpdated = 0;  // v18: 改善があったのでリセット
+                                }
+                                else
+                                {
+                                    iterationsSinceMinUpdated++;  // v18: 未改善カウント進行
+                                }
+
+                                // v18: 長期未改善検出 - 振動パターンで stagnation/slow-divergence の
+                                // どちらも triggers しない場合に最後のセーフティネットとして働く
+                                // 緩和値は「現在残差 × 1.1」「最小残差 × 1.2」の大きい方を採用し、
+                                // 今この反復でループが確実に抜けられるようにする（振動残差では minSeen*1.2 が不十分）
+                                if (iterationsSinceMinUpdated >= NO_IMPROVEMENT_LIMIT && !SkipIteration)
+                                {
+                                    double relaxed = Math.Max(
+                                        Math.Max(minResidualSeen * 1.2, currentResidual * 1.1),
+                                        RELAXED_ALPHA);
+                                    if (relaxed > effectiveAlpha)
+                                    {
+                                        effectiveAlpha = relaxed;
+                                        await AddLogAsync($"  ⚠ 長期未改善検出: {NO_IMPROVEMENT_LIMIT}反復で最小残差 {minResidualSeen:E2} が更新されません。収束基準を緩和します ({alpha:E2}→{effectiveAlpha:E2})");
+                                        iterationsSinceMinUpdated = 0;  // 再カウント
+                                    }
                                 }
 
                                 // v17: 長時間反復時の収束基準緩和
@@ -1984,11 +2091,34 @@ namespace PileDesign.ViewModels
                             {
                                 double finalResidual = targetModel.NormsROnNormsFint;
                                 await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
+                                caseFailedThisAttempt = true;
                             }
                             else
                             {
                                 string relaxedNote = effectiveAlpha > alpha ? $" (緩和基準α={effectiveAlpha:E2})" : "";
                                 await AddLogAsync($"  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
+
+                                // v19: 緩和基準が本来の許容値から大きく逸脱している場合は、再試行対象とする
+                                // （長期未改善／停滞検出で緩和はしたが、物理的にはまだ収束していない状態）
+                                // ただし最終試行でない場合に限る（最終試行では緩和収束を受け入れる）
+                                const double RELAX_ACCEPT_THRESHOLD = 1e-2;  // 残差 1% 未満なら緩和収束を受け入れる
+
+                                // v20 Phase 2: 物理的未収束の判定
+                                // 緩和基準が極端に大きい（>10）かつ bisectionAttempt>=1 (既に 1 度倍増している)なら
+                                // これ以上倍増しても収束する見込みなし → 中止（「耐力超過の可能性」として記録）
+                                const double PHYSICALLY_UNCONVERGEABLE_THRESHOLD = 10.0;
+                                if (effectiveAlpha > PHYSICALLY_UNCONVERGEABLE_THRESHOLD && bisectionAttempt >= 1)
+                                {
+                                    await AddLogAsync($"    ⛔ 緩和基準 {effectiveAlpha:E2} が物理的未収束閾値 {PHYSICALLY_UNCONVERGEABLE_THRESHOLD:E2} を超過。耐力超過の可能性があり、これ以上の倍増は無効と判断");
+                                    await AddLogAsync($"    → このケースは物理的未収束として記録します（解析は続行）");
+                                    physicallyUnconvergeable = true;
+                                    caseFailedThisAttempt = false;  // 再試行しない
+                                }
+                                else if (effectiveAlpha > RELAX_ACCEPT_THRESHOLD && bisectionAttempt < MAX_STEP_BISECTIONS)
+                                {
+                                    await AddLogAsync($"    → 緩和基準 {effectiveAlpha:E2} が許容水準 {RELAX_ACCEPT_THRESHOLD:E2} を超過。ステップ分割を増やして再試行対象とします");
+                                    caseFailedThisAttempt = true;
+                                }
                             }
 
                             // v12: ライン探索を自動で有効化した場合、元に戻す
@@ -2046,7 +2176,84 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
+                            // v19: このステップが完了したことを記録
+                            stepsExecutedInAttempt = step + 1;
+
+                            // v20 Phase 2: 物理的未収束なら直ちに中止（再試行しない）
+                            if (physicallyUnconvergeable)
+                            {
+                                int remainingPhys = nStep - (step + 1);
+                                if (remainingPhys > 0)
+                                {
+                                    await AddLogAsync($"  ⛔ 物理的未収束のため残り {remainingPhys} ステップをスキップ");
+                                }
+                                break;
+                            }
+
+                            // v19: 早期脱出 - 既に再試行対象と判定されており、再試行回数に余裕がある場合
+                            // 残りステップは truncate で破棄されるので計算時間の無駄。即座に再試行へ移行する
+                            if (caseFailedThisAttempt && bisectionAttempt < MAX_STEP_BISECTIONS)
+                            {
+                                int remaining = nStep - (step + 1);
+                                if (remaining > 0)
+                                {
+                                    await AddLogAsync($"  ⏩ 残り {remaining} ステップをスキップして再試行へ移行");
+                                }
+                                break;
+                            }
                         }
+
+                        // v19: ケース完了判定と再試行ロジック
+                        // v20 Phase 2: 物理的未収束が検出された場合は即中止（再試行しない）
+                        if (physicallyUnconvergeable)
+                        {
+                            await AddLogAsync($"  ⛔ 物理的未収束として確定（耐力超過の可能性）。このケースは再試行せず次へ進みます");
+                            break;  // 諦めて次のケースへ
+                        }
+                        if (!caseFailedThisAttempt)
+                        {
+                            caseConverged = true;
+                            break;  // retry while-loop を抜けて次のケースへ
+                        }
+                        if (bisectionAttempt >= MAX_STEP_BISECTIONS)
+                        {
+                            await AddLogAsync($"  ❌ 最大再試行回数 ({MAX_STEP_BISECTIONS}) 到達。このケースは未収束で確定 (最終 nStep={nStep})");
+                            break;  // 諦めて次のケースへ
+                        }
+
+                        // 失敗アテンプトの結果を巻き戻し
+                        while (targetModel.AnalysisStepResults.Count > snapAnaStepResults)
+                            targetModel.AnalysisStepResults.RemoveAt(targetModel.AnalysisStepResults.Count - 1);
+                        for (int i_ = 0; i_ < targetModel.Nodes.Count; i_++)
+                            while (targetModel.Nodes[i_].NodeResults.Count > snapNodeResults[i_])
+                                targetModel.Nodes[i_].NodeResults.RemoveAt(targetModel.Nodes[i_].NodeResults.Count - 1);
+                        for (int i_ = 0; i_ < targetModel.Beams.Count; i_++)
+                            while (targetModel.Beams[i_].BeamResults.Count > snapBeamResults[i_])
+                                targetModel.Beams[i_].BeamResults.RemoveAt(targetModel.Beams[i_].BeamResults.Count - 1);
+                        for (int i_ = 0; i_ < targetModel.HorizontalSoilSprings.Count; i_++)
+                            while (targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count > snapHSpringResults[i_])
+                                targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.RemoveAt(targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count - 1);
+                        if (targetModel.RotationalSprings != null && snapRotSpringResults != null)
+                        {
+                            for (int i_ = 0; i_ < targetModel.RotationalSprings.Count; i_++)
+                                while (targetModel.RotationalSprings[i_].RotationalSpringResults.Count > snapRotSpringResults[i_])
+                                    targetModel.RotationalSprings[i_].RotationalSpringResults.RemoveAt(targetModel.RotationalSprings[i_].RotationalSpringResults.Count - 1);
+                        }
+
+                        // v19: 総ステップ数の調整
+                        // baseline は旧 nStep (=oldNStep) を計上済み
+                        // 実際にこのアテンプトで実行したのは stepsExecutedInAttempt ステップ
+                        // 次のアテンプトで新 nStep (=oldNStep*2) ステップを実行する
+                        // → 調整 = (実行済 + 新 nStep) - 旧 nStep = stepsExecutedInAttempt + newNStep - oldNStep
+                        int oldNStep = nStep;
+                        bisectionAttempt++;
+                        nStep *= 2;
+                        _bisectionExtraSteps += stepsExecutedInAttempt + nStep - oldNStep;
+                        OnPropertyChanged(nameof(TotalCalculationCount));
+                        OnPropertyChanged(nameof(ProgressText));
+                    }  // end retry while-loop
+
+                    _ = caseConverged; // 抑制: 未使用警告（将来診断に利用する可能性）
 
                         // NaN診断: 荷重ケース完了
                         // FEM.NaNDiagnostics.End();
@@ -2672,6 +2879,45 @@ namespace PileDesign.ViewModels
             targetModel.SetT();
         }
 
+        #region Case Difficulty Classifier (v20 Phase 1)
+
+        /// <summary>
+        /// 荷重ケース × 荷重組合せ × 液状化 の組合せの数値解法上の難易度。
+        /// Hard: counter-loading や高 α 液状化系など Newton が振動/発散しやすい
+        /// Medium: 中程度の非線形性
+        /// Easy: 標準的な順方向載荷
+        /// </summary>
+        private enum CaseDifficulty { Easy, Medium, Hard }
+
+        /// <summary>
+        /// 組合せの判定。Counter-loading（βU × βL < 0）と高 α 液状化系を Hard に分類し、
+        /// 最初から大きな nStep で実行するための事前検出を行う。
+        /// </summary>
+        private static CaseDifficulty ClassifyCaseDifficulty(LoadCase lc, LoadCombination combo, bool isLiq)
+        {
+            double bu = combo.Beta1;  // βU (上部質量慣性力の係数)
+            double bl = combo.Beta2;  // βL (基礎質量慣性力の係数)
+            double aL = combo.Alpha1; // αL (地盤変位量の係数)
+
+            // Counter-loading: 上部慣性力と基礎慣性力の符号が反対 → 杭頭で打消し合う難しい組合せ
+            // 例: αL=0.5, βU=-1.0, βL=0.5 → βU*βL = -0.5 < 0
+            bool counterLoading = bu * bl < 0.0;
+
+            // 上部慣性力が大きく逆向き（βU 強負）+ 液状化 + Level 2 の組合せも難しい
+            bool strongCounterLiq = isLiq && lc.Level == 2 && bu < -0.5;
+
+            if (counterLoading || strongCounterLiq)
+                return CaseDifficulty.Hard;
+
+            // 高 α + Level 2（地盤変位が大きい）は Medium
+            if (aL >= 0.8 && lc.Level == 2)
+                return CaseDifficulty.Medium;
+
+            return CaseDifficulty.Easy;
+        }
+
+        #endregion
+
         #region Line Search (線探索)
 
         /// <summary>
@@ -3037,7 +3283,7 @@ namespace PileDesign.ViewModels
                     double groundDisp1 = isLiquefaction ? zDataItem.GroundDisp1L : zDataItem.GroundDisp1;
                     double groundDisp2 = isLiquefaction ? zDataItem.GroundDisp2L : zDataItem.GroundDisp2;
                     NodeDisp dd = CalcDisplacement(groundDisp1, groundDisp2, level, alpha1, nStep, loadAngle);
-                    FEM.Node soilNode = targetModel.FindNode("SoilNode", null, null, z);
+                    FEM.Node soilNode = targetModel.FindNode("根入部地盤節点", null, null, z);
                     soilNode.SetIncrementalForcedDisp(dd);
                     soilNode.SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
                 }

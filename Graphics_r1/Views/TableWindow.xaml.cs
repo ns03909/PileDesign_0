@@ -1,5 +1,6 @@
 ﻿using PileDesign.Output;
 using PileDesign.ViewModels;
+using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -88,7 +89,7 @@ namespace PileDesign.Views
                     };
                 }
 
-                ResultGrid.Columns.Add(new DataGridTextColumn
+                var column = new DataGridTextColumn
                 {
                     Header = header,
                     Binding = new Binding(col.Property.Name)
@@ -96,8 +97,34 @@ namespace PileDesign.Views
                         StringFormat = col.Format
                     },
                     IsReadOnly = true
-                });
+                };
+
+                // 数値型の列は右揃えにする
+                if (IsNumericType(col.Property.PropertyType))
+                    column.ElementStyle = _rightAlignTextStyle;
+
+                ResultGrid.Columns.Add(column);
             }
+        }
+
+        private static readonly Style _rightAlignTextStyle = BuildRightAlignStyle();
+
+        private static Style BuildRightAlignStyle()
+        {
+            var style = new Style(typeof(TextBlock));
+            style.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Right));
+            style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
+            style.Setters.Add(new Setter(TextBlock.MarginProperty, new Thickness(0, 0, 4, 0)));
+            return style;
+        }
+
+        private static bool IsNumericType(Type t)
+        {
+            if (t == null) return false;
+            t = Nullable.GetUnderlyingType(t) ?? t;
+            return t == typeof(double) || t == typeof(float) || t == typeof(decimal)
+                || t == typeof(int) || t == typeof(long) || t == typeof(short) || t == typeof(sbyte)
+                || t == typeof(uint) || t == typeof(ulong) || t == typeof(ushort) || t == typeof(byte);
         }
 
         // CSVエクスポートのコンテキストメニュークリックイベントハンドラ

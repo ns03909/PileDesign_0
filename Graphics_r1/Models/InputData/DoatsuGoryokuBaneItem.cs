@@ -134,19 +134,22 @@ namespace PileDesign.Models.InputData
         }
 
         // kN/m2
+        // 原点対称（奇関数）として評価。入力 disp の符号を保持し、|disp| で有理近似を評価する。
+        // 旧実装は disp < DeltaP の判定が負側で常に真となり、|disp| ≈ 2·DeltaP 付近でゼロ除算、
+        // それを越えると denom の符号が反転して圧力が誤った方向に出る（counter-loading で発散）。
         public double GetPressure(double disp)
         {
-            if (disp == 0)
+            if (disp == 0) return 0;
+            double sign = disp < 0 ? -1.0 : 1.0;
+            double absDisp = Math.Abs(disp);
+            if (absDisp < DeltaP)
             {
-                return 0;
-            }
-            else if (disp < DeltaP)
-            {
-                return (Pp - P0) * (DeltaP - Ysp) * disp / (2 * DeltaP * Ysp + (DeltaP - 3 * Ysp) * Math.Abs(disp));
+                return sign * (Pp - P0) * (DeltaP - Ysp) * absDisp
+                       / (2 * DeltaP * Ysp + (DeltaP - 3 * Ysp) * absDisp);
             }
             else
             {
-                return Pp - P0;
+                return sign * (Pp - P0);
             }
         }
 
