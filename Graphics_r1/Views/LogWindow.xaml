@@ -12,6 +12,12 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
     </Window.Resources>
+    <Window.InputBindings>
+        <!-- Ctrl+C: 選択行があればそれを、なければ全件をコピー -->
+        <KeyBinding Modifiers="Control" Key="C"
+                    Command="{Binding CopyLogCommand}"
+                    CommandParameter="{Binding SelectedItems, ElementName=LogListBox}"/>
+    </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -21,7 +27,10 @@
 
         <!-- Toolbar -->
         <ToolBar Grid.Row="0" Padding="5">
-            <Button Content="コピー (Ctrl+C)" Command="{Binding CopyLogCommand}" Padding="10,2"/>
+            <Button Content="コピー (Ctrl+C)"
+                    Command="{Binding CopyLogCommand}"
+                    CommandParameter="{Binding SelectedItems, ElementName=LogListBox}"
+                    Padding="10,2"/>
             <Separator/>
             <Button Content="ファイル出力" Command="{Binding ExportLogCommand}" Padding="10,2"/>
             <Separator/>
@@ -35,9 +44,11 @@
                       MinWidth="150" VerticalAlignment="Center"/>
         </ToolBar>
 
-        <!-- Log Content (ListBox with virtualization for large log sets) -->
+        <!-- Log Content (ListBox with virtualization for large log sets)
+             SelectionMode=Extended で Ctrl+A / Shift+Click / Ctrl+Click がネイティブに効く -->
         <ListBox Grid.Row="1" x:Name="LogListBox"
                  ItemsSource="{Binding LogLines}"
+                 SelectionMode="Extended"
                  FontFamily="Consolas"
                  FontSize="12"
                  Background="#F5F5F5"

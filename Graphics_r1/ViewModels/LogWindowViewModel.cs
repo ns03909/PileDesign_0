@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -152,12 +153,28 @@ namespace PileDesign.ViewModels
         }
 
         [RelayCommand]
-        private void CopyLog()
+        private void CopyLog(object? parameter)
         {
-            if (LogLines.Count == 0) return;
-            var text = string.Join(Environment.NewLine, LogLines);
+            // 選択行があれば選択のみ、なければ全件をコピー
+            IEnumerable<string> source;
+            int selectedCount = 0;
+            if (parameter is IList list && list.Count > 0)
+            {
+                source = list.Cast<string>();
+                selectedCount = list.Count;
+            }
+            else
+            {
+                source = LogLines;
+            }
+
+            if (!source.Any()) return;
+
+            var text = string.Join(Environment.NewLine, source);
             Clipboard.SetText(text);
-            StatusText = "ログをクリップボードにコピーしました";
+            StatusText = selectedCount > 0
+                ? $"{selectedCount} 行をクリップボードにコピーしました"
+                : "ログをクリップボードにコピーしました";
         }
 
         [RelayCommand]
