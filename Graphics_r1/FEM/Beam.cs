@@ -212,10 +212,36 @@ namespace PileDesign.FEM
             if (_combinedCurve != null)
             {
                 double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
-                double EIeff = _combinedCurve.EvaluateTangent(phiRes);
-                // System.Diagnostics.Debug.WriteLine($"EvaluateEIeff: Beam={Name}, phiRes={phiRes:E6}, EIeff_raw={EIeff:E6}, EI0y={EI0y:E6}, curvePoints={_combinedCurve.Points?.Count ?? 0}");
-                if (!double.IsFinite(EIeff) || EIeff <= 0.0) EIeff = (EI0y > 0.0 ? EI0y : EI0z);
-                return (EIeff, EIeff);
+                double EItan = _combinedCurve.EvaluateTangent(phiRes);
+                double EIsec = _combinedCurve.EvaluateSecant(phiRes);
+
+                // v23 (A-1): 接線側フォールバックは 0.001×EI0 に縮小（旧: EI0）
+                double EI0fallback = EI0y > 0.0 ? EI0y : EI0z;
+                if (!double.IsFinite(EItan) || EItan <= 0.0) EItan = 0.001 * EI0fallback;
+                if (!double.IsFinite(EIsec) || EIsec <= 0.0) EIsec = EI0fallback;
+
+                // v24 (B-2): 合成 M-φ の対角 Jacobian ブレンド
+                // p–y 曲線と同じ形の真の Jacobian:
+                //   dMy/dφy = EI_tan × cos²θ + EI_sec × sin²θ
+                //   dMz/dφz = EI_tan × sin²θ + EI_sec × cos²θ
+                //   dMy/dφz = dMz/dφy = (EI_tan - EI_sec) × cosθ × sinθ    （本 fix では未反映）
+                // ここで cosθ = φy/φres, sinθ = φz/φres。
+                // 旧実装は (EI_tan, EI_tan) 等方で、φy / φz の比に関係なく両軸とも EI_tan を使用していた。
+                // 新実装は対角ブロックのみ（非対角 off-diagonal 項は現 SetKe 構造で表現不可）を正しく反映し、
+                // 曲率主軸に沿う方向は EI_tan、垂直方向は EI_sec を返す。
+                // 非対角項が残ることで α が完全に 1.0 にはならないが、等方近似よりは大幅に改善される。
+                if (phiRes < 1e-15)
+                {
+                    // φ ≈ 0: 方向未定、等方 EI_sec（初期剛性相当）で扱う
+                    return (EIsec, EIsec);
+                }
+                double cosT = phiY / phiRes;
+                double sinT = phiZ / phiRes;
+                double cos2 = cosT * cosT;
+                double sin2 = sinT * sinT;
+                double EIy = EItan * cos2 + EIsec * sin2;
+                double EIz = EItan * sin2 + EIsec * cos2;
+                return (EIy, EIz);
             }
 
             // 個別曲線があればそれで評価、なければ初期 EI をフォールバック
@@ -224,8 +250,9 @@ namespace PileDesign.FEM
             try { eiy = _yCurve?.EvaluateTangent(phiY) ?? double.NaN; } catch { eiy = double.NaN; }
             try { eiz = _zCurve?.EvaluateTangent(phiZ) ?? double.NaN; } catch { eiz = double.NaN; }
 
-            if (!double.IsFinite(eiy) || eiy <= 0.0) eiy = EI0y;
-            if (!double.IsFinite(eiz) || eiz <= 0.0) eiz = EI0z;
+            // v23 (A-1): 個別軸も同様、塑性域での初期剛性フォールバックを縮小
+            if (!double.IsFinite(eiy) || eiy <= 0.0) eiy = 0.001 * EI0y;
+            if (!double.IsFinite(eiz) || eiz <= 0.0) eiz = 0.001 * EI0z;
 
             return (eiy, eiz);
         }

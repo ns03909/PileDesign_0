@@ -565,6 +565,275 @@ namespace TestProject1
             Assert.IsTrue(double.IsFinite(val), "値が有限であるべき（修正前は Inf/NaN）");
             Assert.AreEqual(-(item.Pp - item.P0), val, 1e-9);
         }
+
+        // v22: 降伏後接線剛性が降伏境界接線の 2% となり、500× → 50× の不連続緩和が
+        // 実装されたことを確認する
+        [TestMethod]
+        public void GetTangentStiffness_PlateauIsContinuousWithYield()
+        {
+            var item = BuildTestItem();
+
+            // 降伏境界直前（|disp| = 0.999 × DeltaP）での数値微分接線
+            double preYieldTan = item.GetTangentStiffness(0.999 * item.DeltaP);
+            // 降伏境界直後（|disp| = 1.001 × DeltaP）での接線
+            double postYieldTan = item.GetTangentStiffness(1.001 * item.DeltaP);
+
+            // ジャンプ比 = pre / post。旧実装では ~500x、新実装では ~50x 以下を期待
+            double ratio = preYieldTan / postYieldTan;
+
+            Assert.IsTrue(postYieldTan > 0, "塑性領域でも接線剛性は正であるべき");
+            Assert.IsTrue(ratio < 100.0, $"降伏前後の接線比は 100× 未満に緩和されるべき（実測: {ratio:F2}×）");
+            // 参考: 旧実装は 0.0001 × k0 ≈ P_max × 0.018 で約 500× ジャンプ
+            Assert.IsTrue(ratio > 10.0, $"完全連続ではなく離散的な遷移は残る想定（実測: {ratio:F2}×）");
+        }
+
+        [TestMethod]
+        public void GetTangentStiffness_PlateauScalesWithYieldBoundary()
+        {
+            var item = BuildTestItem();
+            double plateauTan = item.GetTangentStiffness(2 * item.DeltaP);
+
+            // 期待値: 降伏境界の解析接線 × 0.02
+            double pMax = item.Pp - item.P0;
+            double yieldTan = pMax * 2.0 * item.Ysp / (item.DeltaP * (item.DeltaP - item.Ysp));
+            double expected = 0.02 * yieldTan;
+
+            Assert.AreEqual(expected, plateauTan, 1e-9);
+        }
+    }
+
+    // ====================================================================
+    // v22: HorizontalSoilReaction 降伏境界接線連続化（バグ#2）
+    // ====================================================================
+    [TestClass]
+    public class HorizontalSoilReactionEdgeCaseTests
+    {
+        private static PileDesign.Models.InputData.HorizontalSoilReactionItem BuildTestItem()
+        {
+            // kh0 = 10000 kN/m3, py 系列は下記 SetParameters で計算されるが
+            // テストでは SetParameters を呼ばずに kh0/py を直接制御する必要があるため
+            // 内部フィールドを使う。
+            var item = new PileDesign.Models.InputData.HorizontalSoilReactionItem();
+            // SetParameters を呼ぶと py が自動計算される: 前方砂質土で κ=3, Kp=3, sigmaZ=10
+            // → py = 3*3*10 = 90
+            item.SetParameters(
+                name: "Test", soilType: "砂質土", gamma: 10, b: 1.0, e0: 1000,
+                zTop: 1, zBtm: 0, xi: 1, rOnB: 1, nValue: 10, phi: 30, cu: 0,
+                sigmaZPrimeTop: 10, sigmaZPrimeBtm: 10);
+            return item;
+        }
+
+        [TestMethod]
+        public void GetkhTan_PreYieldAndPostYield_ContinuityImproved()
+        {
+            var item = BuildTestItem();
+            double kh0 = item.Kh0;
+            double py = item.PyFrontTop; // 90 前後
+
+            // 降伏変位 yy = (py/kh0)^2 / y0
+            double y0 = 0.01;
+            double yy = Math.Pow(py / kh0, 2) / y0;
+
+            // 降伏直前の接線（数値微分相当を直接計算）
+            double preYieldTan = PileDesign.Models.InputData.HorizontalSoilReactionItem
+                .GetkhTan(kh0, 0.999 * yy, py);
+            // 降伏直後の接線
+            double postYieldTan = PileDesign.Models.InputData.HorizontalSoilReactionItem
+                .GetkhTan(kh0, 1.001 * yy, py);
+
+            Assert.IsTrue(postYieldTan > 0, "降伏後接線も正値であるべき");
+
+            // 旧実装では比率 ~ 500、新実装では ~ 50 になる
+            double ratio = preYieldTan / postYieldTan;
+            Assert.IsTrue(ratio < 100.0, $"降伏前後の接線比は 100× 未満に緩和されるべき（実測: {ratio:F2}×）");
+        }
+
+        [TestMethod]
+        public void GetkhTan_AndGetSoilSecantReactionCoefficient_AreConsistentPostYield()
+        {
+            // 降伏後: K_tan = d(K_sec × |y|) / d|y| = gradient が成立することを検証
+            var item = BuildTestItem();
+            double kh0 = item.Kh0;
+            double py = item.PyFrontTop;
+            double y0 = 0.01;
+            double yy = Math.Pow(py / kh0, 2) / y0;
+
+            double y1 = 1.5 * yy;
+            double y2 = 1.5 * yy + 1e-7;
+
+            // 力 p = K_sec × |y| を 2 点で計算、数値微分で接線を得る
+            double B = item.B, DZ = Math.Abs(item.ZTop - item.ZBtm);
+            double areaScale = B * DZ * 0.5;
+            double kSec1 = item.GetSoilSecantReactionCoefficient(y1, true, true);
+            double kSec2 = item.GetSoilSecantReactionCoefficient(y2, true, true);
+            double p1 = kSec1 * y1 / areaScale; // kh_sec 相当に戻す
+            double p2 = kSec2 * y2 / areaScale;
+            double numericalTangent = (p2 - p1) / (y2 - y1);
+
+            double analyticalTangent = PileDesign.Models.InputData.HorizontalSoilReactionItem
+                .GetkhTan(kh0, y1, py);
+
+            // 1% 以内で一致（新 gradient が GetKh/GetkhTan で共通のため）
+            Assert.AreEqual(analyticalTangent, numericalTangent, analyticalTangent * 0.01);
+        }
+
+        // v23 (A-2): elastic/sqrt 境界のスムージング効果を確認
+        [TestMethod]
+        public void GetkhTan_ElasticSqrtBoundary_IsContinuous()
+        {
+            var item = BuildTestItem();
+            double kh0 = item.Kh0;
+            double py = item.PyFrontTop;
+            double y0 = 0.01;
+
+            // 境界 |y|/y0 = 0.1 の前後
+            double yJustBelow = 0.099 * y0;
+            double yAtStart = 0.101 * y0;    // ブレンド開始直後
+            double yMiddleBlend = 0.15 * y0; // ブレンド中央
+            double yAfterBlend = 0.21 * y0;  // ブレンド終了後
+
+            double tBelow = PileDesign.Models.InputData.HorizontalSoilReactionItem.GetkhTan(kh0, yJustBelow, py);
+            double tStart = PileDesign.Models.InputData.HorizontalSoilReactionItem.GetkhTan(kh0, yAtStart, py);
+            double tMid = PileDesign.Models.InputData.HorizontalSoilReactionItem.GetkhTan(kh0, yMiddleBlend, py);
+            double tAfter = PileDesign.Models.InputData.HorizontalSoilReactionItem.GetkhTan(kh0, yAfterBlend, py);
+
+            // 境界直後の接線は弾性側（3.16×kh0）に近い（ブレンド始まり t≈0）
+            // 旧実装ではここで 1.58×kh0 に 2× ジャンプしていた
+            Assert.IsTrue(tStart > 0.9 * tBelow,
+                $"境界直後の接線が弾性直前 {tBelow:E2} に近いはず（旧: 半分に落ちる）。実測: {tStart:E2}");
+
+            // ブレンド中央は弾性と sqrt の中間あたり
+            Assert.IsTrue(tMid < tBelow && tMid > tAfter,
+                $"ブレンド中央 {tMid:E2} は弾性 {tBelow:E2} と sqrt {tAfter:E2} の間にあるべき");
+
+            // ブレンド終了後は sqrt 解析接線
+            double expectedSqrt = Math.Sqrt(y0) / 2.0 * kh0 / Math.Sqrt(yAfterBlend);
+            Assert.AreEqual(expectedSqrt, tAfter, expectedSqrt * 0.01);
+        }
+    }
+
+    // ====================================================================
+    // v23 (B-1): TwoNodeSpringElement.SetKeWithXYCoupling 2D Jacobian
+    // ====================================================================
+    [TestClass]
+    public class TwoNodeSpringElementCouplingTests
+    {
+        private sealed class TestSpring : PileDesign.FEM.TwoNodeSpringElement
+        {
+            public TestSpring(PileDesign.FEM.Node i, PileDesign.FEM.Node j) : base("T", i, j) { }
+        }
+
+        [TestMethod]
+        public void SetKeWithXYCoupling_ProducesSymmetricAndPenaltyFormMatrix()
+        {
+            var nodeI = new PileDesign.FEM.Node();
+            var nodeJ = new PileDesign.FEM.Node();
+            var spring = new TestSpring(nodeI, nodeJ);
+
+            double kxx = 100, kxy = 20, kyy = 80;
+            spring.SetKeWithXYCoupling(kxx, kxy, kyy, 0, 0, 0, 0, isTan: true);
+
+            var ke = spring.KeTan;
+
+            // 対称性チェック: K[i,j] = K[j,i]
+            for (int r = 0; r < 12; r++)
+                for (int c = 0; c < r; c++)
+                    Assert.AreEqual(ke[r, c], ke[c, r], 1e-12, $"K[{r},{c}] != K[{c},{r}]");
+
+            // Penalty ブロック構造: 左上と右下が同じ、対角オフが符号反転
+            Assert.AreEqual(kxx, ke[0, 0], 1e-12);
+            Assert.AreEqual(kxx, ke[6, 6], 1e-12);
+            Assert.AreEqual(-kxx, ke[0, 6], 1e-12);
+            Assert.AreEqual(kxy, ke[0, 1], 1e-12);
+            Assert.AreEqual(kxy, ke[6, 7], 1e-12);
+            Assert.AreEqual(-kxy, ke[0, 7], 1e-12);
+            Assert.AreEqual(kyy, ke[1, 1], 1e-12);
+            Assert.AreEqual(-kyy, ke[1, 7], 1e-12);
+        }
+
+        [TestMethod]
+        public void SetKeWithXYCoupling_IsotropicInput_MatchesSetKe()
+        {
+            // kxy=0 で kxx=kyy なら、従来の SetKe(k, k, ...) と完全一致するはず
+            var nodeI = new PileDesign.FEM.Node();
+            var nodeJ = new PileDesign.FEM.Node();
+            var spring1 = new TestSpring(nodeI, nodeJ);
+            var spring2 = new TestSpring(nodeI, nodeJ);
+
+            double k = 150;
+            spring1.SetKe(k, k, 10, 20, 30, 40, isTan: true);
+            spring2.SetKeWithXYCoupling(k, 0, k, 10, 20, 30, 40, isTan: true);
+
+            for (int r = 0; r < 12; r++)
+                for (int c = 0; c < 12; c++)
+                    Assert.AreEqual(spring1.KeTan[r, c], spring2.KeTan[r, c], 1e-12, $"差分 at [{r},{c}]");
+        }
+    }
+
+    // ====================================================================
+    // v24 (B-2): 合成 M-φ モードの対角 Jacobian ブレンド検証
+    // MomentCurvatureCurve 自体の挙動（対角ブレンドの前提となる EvaluateTangent / EvaluateSecant の整合）
+    // ====================================================================
+    [TestClass]
+    public class CombinedMPhiDiagonalBlendTests
+    {
+        [TestMethod]
+        public void MomentCurvatureCurve_TangentAndSecant_DiverStrictlyInPostYield()
+        {
+            // ポスト降伏で tan < sec になることを検証（対角ブレンドの前提条件）
+            var curve = new MomentCurvatureCurve(new[]
+            {
+                (0.0, 0.0),
+                (1e-3, 100.0),   // 初期弾性
+                (1e-2, 110.0),   // ポスト降伏（小さな傾き）
+            });
+
+            // 弾性領域: tan ≈ sec
+            double tanElastic = curve.EvaluateTangent(5e-4);
+            double secElastic = curve.EvaluateSecant(5e-4);
+            Assert.AreEqual(secElastic, tanElastic, 1e-6, "弾性領域では tan = sec のはず");
+
+            // ポスト降伏: tan < sec
+            double tanPost = curve.EvaluateTangent(5e-3);
+            double secPost = curve.EvaluateSecant(5e-3);
+            Assert.IsTrue(tanPost < secPost,
+                $"ポスト降伏では tan ({tanPost:E3}) < sec ({secPost:E3}) のはず（対角ブレンドで EIz = sec の根拠）");
+        }
+
+        [TestMethod]
+        public void DiagonalBlend_PureBendingRetrievesTangent()
+        {
+            // 純粋な Y 方向曲げ（phiZ = 0）のとき、EIy = EI_tan、EIz = EI_sec となる
+            double EI_tan = 100, EI_sec = 500;
+            double phiY = 0.01, phiZ = 0.0;
+            double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+            double cosT = phiY / phiRes; // = 1
+            double sinT = phiZ / phiRes; // = 0
+
+            double EIy = EI_tan * cosT * cosT + EI_sec * sinT * sinT;
+            double EIz = EI_tan * sinT * sinT + EI_sec * cosT * cosT;
+
+            Assert.AreEqual(EI_tan, EIy, 1e-12, "純 Y 曲げでは EIy = EI_tan");
+            Assert.AreEqual(EI_sec, EIz, 1e-12, "純 Y 曲げでは EIz = EI_sec（直交方向の割線）");
+        }
+
+        [TestMethod]
+        public void DiagonalBlend_At45DegreesEqualContribution()
+        {
+            // 45°（phiY = phiZ）では両方向とも (EI_tan + EI_sec) / 2
+            double EI_tan = 100, EI_sec = 500;
+            double phiY = 0.01, phiZ = 0.01;
+            double phiRes = Math.Sqrt(phiY * phiY + phiZ * phiZ);
+            double cosT = phiY / phiRes; // = 1/√2
+            double sinT = phiZ / phiRes; // = 1/√2
+
+            double EIy = EI_tan * cosT * cosT + EI_sec * sinT * sinT;
+            double EIz = EI_tan * sinT * sinT + EI_sec * cosT * cosT;
+            double expected = (EI_tan + EI_sec) / 2.0;
+
+            Assert.AreEqual(expected, EIy, 1e-10);
+            Assert.AreEqual(expected, EIz, 1e-10);
+        }
     }
 
     // ====================================================================

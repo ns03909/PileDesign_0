@@ -153,6 +153,30 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // v22 修正: 塑性領域（|disp| ≥ DeltaP）の接線剛性は、以前 `0.0001 × k0`
+        // （k0 は初期接線）だったが、降伏境界の解析接線と比較して約 1/500 と極端に小さく、
+        // NR 反復で「塑性 ↔ 非線形」を行き来する springs があると K 行列が毎反復で激変し
+        // ラインサーチが α=0.5 に張り付く収束停滞の主因だった。
+        // 新実装: 降伏境界 |disp|=DeltaP の解析接線を基準として、その PostYieldTangentRatio 倍。
+        // これにより不連続が約 1/10 に緩和される（500× → ~50×）。
+        // 物理的には plateau 圧力 (Pp-P0) は厳密には一定だが、K_tan はあくまで NR 用の
+        // 「regularization 済み近似接線」であり、力の計算は GetSecantStiffness が担うため
+        // 物理量 F_int = K_sec × disp の値には影響しない。
+        private const double PostYieldTangentRatio = 0.02;
+
+        // 降伏境界 |disp|=DeltaP における有理近似式の解析接線
+        // p(u) = (Pp-P0) × A × u / (B + C × u), A=DeltaP-Ysp, B=2×DeltaP×Ysp, C=DeltaP-3×Ysp
+        // dp/du = (Pp-P0) × A × B / (B + C × u)²
+        // |u|=DeltaP のとき B + C×DeltaP = DeltaP × A なので
+        // dp/du(DeltaP) = (Pp-P0) × A × B / (DeltaP² × A²) = (Pp-P0) × B / (DeltaP² × A)
+        //                = (Pp-P0) × 2×Ysp / (DeltaP × (DeltaP-Ysp))
+        private double YieldBoundaryTangent()
+        {
+            double denom = DeltaP * (DeltaP - Ysp);
+            if (Math.Abs(denom) < 1e-30) return 0.0;
+            return (Pp - P0) * 2.0 * Ysp / denom;
+        }
+
         // kN/m3
         public double GetTangentStiffness(double disp)
         {
@@ -171,9 +195,14 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                // 塑性領域: 小さな接線剛性を維持（ゼロだと剛性マトリクスが特異になる）
-                // HorizontalSoilReaction.GetkhTanと同様に、初期剛性の0.01%程度を返す
-                return 0.0001 * k0;
+                // 塑性領域: 降伏境界接線の一定比率を採用（降伏境界との不連続を緩和）
+                double yieldTan = YieldBoundaryTangent();
+                if (!double.IsFinite(yieldTan) || yieldTan <= 0.0)
+                {
+                    // YieldBoundaryTangent が計算不可（極端な入力）な場合のフォールバック
+                    return 0.0001 * k0;
+                }
+                return PostYieldTangentRatio * yieldTan;
             }
         }
 

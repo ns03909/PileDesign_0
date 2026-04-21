@@ -234,6 +234,34 @@ namespace PileDesign.ViewModels
             }
         }
 
+        // v21 Phase 3 prep: ケース並列度の設定（現状は 1 固定）
+        //
+        // 将来 2 以上を指定可能にするための予約プロパティ。以下の Phase 3.1 実装が揃うまで、
+        // setter 側でハード的に 1 に丸める（誤設定による即時クラッシュを防ぐ安全装置）。
+        //
+        // Phase 3.1 で必要な作業（別 session 想定・2–4 日規模）:
+        //   1. InputModel 部分グラフ（PileLayoutItems / ElementDivision.{DoatsuGoryokuBane,SoilPiles}）の
+        //      per-worker 深クローン基盤。PileLayoutItem.AxialForce / SoilNodes / DoatsuGoryokuBane.Items
+        //      のノード参照を、DeepCopy 済み AnaModel のノードに再バインドする fixup が必要。
+        //   2. 以下の private メソッドを AnaModel 受け取り形に徹底リファクタ（現状は this.InputModel を直読）:
+        //      UpdateSoilDisp / UpdateF / UpdateAxialForceFromAnalysis / PrepareKmat /
+        //      SetupMPhiFromPileSectionForLoadCase / SetupNonlinearMThetaForLoadCase /
+        //      SetupMPhiByCurrentAxialForMiddleBeam / ApplyPileHeadRigidBindingForLoadCase /
+        //      InitializeSoilDisplacementIncrement / SetVectorDF。
+        //   3. MathNet Control.MaxDegreeOfParallelism を case-parallel 実行時のみ 1 に絞る
+        //      （内部 solver の over-subscription 防止。現在 Environment.ProcessorCount のまま）。
+        //   4. ログ / 進捗 / _bisectionExtraSteps のスレッドセーフ化（インターロック or lock）。
+        //   5. Parallel.ForEachAsync で (LoadCase, LoadCombination, isLiquefaction) トリプルを
+        //      並列処理し、完了後に (LoadCase.No, LoadCombination.No, isLiq, step) キーで
+        //      AnalysisStepResults / NodeResults / BeamResults / Spring*Results を決定的にマージ。
+        private int _maxCaseDegreeOfParallelism = 1;
+        public int MaxCaseDegreeOfParallelism
+        {
+            get => _maxCaseDegreeOfParallelism;
+            // Phase 3.1 未完のため 1 に丸めて保存する（UI 表示用に値は維持）
+            set => SetProperty(ref _maxCaseDegreeOfParallelism, Math.Max(1, Math.Min(1, value)));
+        }
+
         // 選択地盤番号
         private int _selectedGroundNo = 1;
         public int SelectedGroundNo
@@ -1525,9 +1553,8 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // 直近のばね剛性最小/最大を保持（PrepareKmatで更新）
-        private double _lastSpringKMin = double.NaN;
-        private double _lastSpringKMax = double.NaN;
+        // v21 Phase 3 prep: ばね剛性 min/max はインスタンスフィールドを廃し、
+        // FindK / PrepareKmat の戻り値（out パラメータ）で局所管理する。
 
         public async Task RunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress = null)
         {
@@ -1565,6 +1592,26 @@ namespace PileDesign.ViewModels
             });
 
             const double alpha = 1e-5;
+
+            // v21 Phase 3 prep: 将来のケース並列化に向けた設計メモ（このループを並列実行する場合の必要要件）
+            //
+            // ■ 現状はスレッド安全ではない以下の共有状態に注意:
+            //   - InputModel.PileLayoutItems[].AxialForce   → InitializeAxialForces / UpdateAxialForceFromAnalysis が書換
+            //   - InputModel.PileLayoutItems[].SoilNodes[].CumulativeForcedDisp  → UpdateSoilDisp が書換
+            //   - InputModel.ElementDivision.DoatsuGoryokuBane.Items[].*SoilNode.CumulativeForcedDisp  → 同上
+            //   - InputModel.ElementDivision.SoilPiles[].HorizontalSoilReactions  → PrepareKmat が評価（読み取り中に他 worker が AxialForce 経由で値を変える可能性）
+            //   - targetModel.AnalysisStepResults / Nodes[].NodeResults / Beams[].BeamResults / HorizontalSoilSprings[].HorizontalSpringResults / RotationalSprings[].RotationalSpringResults  → 結果 append
+            //
+            // ■ 並列化手順（Phase 3.1 本実装時）:
+            //   (a) 事前に cases = [(lc, combo, isLiq), ...] を全列挙
+            //   (b) 各 case ごとに InputModel+AnaModel の「スレッド固有コピー」を構築
+            //       （PileLayoutItem / DoatsuGoryokuBane / SoilPiles の書換対象を clone し、
+            //        AnaModel.DeepCopy 済みのノードへ参照 fixup）
+            //   (c) Parallel.ForEachAsync(cases, new ParallelOptions { MaxDegreeOfParallelism = MaxCaseDegreeOfParallelism }, ...)
+            //   (d) 完了後、key=(lc.No, combo.No, isLiq, step) で AnalysisStepResults / 各要素 Results を
+            //       決定的順序でマージ（乱序混入を防ぐ）
+            //   (e) MathNet Control.MaxDegreeOfParallelism を並列実行中は 1 にクランプ
+            //   (f) AddLogAsync / CurrentProgress / _bisectionExtraSteps を Interlocked or lock で保護
             foreach (var loadCaseItem in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
             {
                 LoadCase loadCase = loadCaseItem;
@@ -1626,7 +1673,14 @@ namespace PileDesign.ViewModels
                             }
                             if (baseNStep != configuredNStep)
                             {
-                                await AddLogAsync($"  🔎 難易度事前検出: {difficulty} 組合せ (αL={loadCombination.Alpha1:N2}, βU={loadCombination.Beta1:N2}, βL={loadCombination.Beta2:N2}) → 初期 nStep={baseNStep} (設定値 {configuredNStep} の代わり)");
+                                // v22: Phase 1 事前検出による初期 nStep 増加分も TotalCalculationCount に
+                                // 反映する。旧実装は再試行時のみ _bisectionExtraSteps を加算していたため、
+                                // 事前検出で初期から大きな nStep を選んだ場合、進捗カウンタが超過表示
+                                // （例: 207/180）になっていた。
+                                _bisectionExtraSteps += (baseNStep - configuredNStep);
+                                OnPropertyChanged(nameof(TotalCalculationCount));
+                                OnPropertyChanged(nameof(ProgressText));
+                                await AddLogAsync($"  🔎 難易度事前検出: {difficulty} 組合せ (αL={loadCombination.Alpha1:N2}, βU={loadCombination.Beta1:N2}, βL={loadCombination.Beta2:N2}) → 初期 nStep={baseNStep} (設定値 {configuredNStep} の代わり, 総ステップ数: {TotalCalculationCount})");
                             }
                         }
                         int nStep = baseNStep;
@@ -1684,7 +1738,11 @@ namespace PileDesign.ViewModels
                             int stepsExecutedInAttempt = 0;
 
                             // v15: 変位予測器用の変数（前ステップの変位増分を記録）
+                            // v23 (C): 2 ステップ外挿のため前々ステップの増分も保持。
+                            // 3 ステップ目以降は du_predict = du_prev + 0.5×(du_prev − du_prev_prev) で
+                            // 加速度項（変位の曲率）を考慮した 2 次予測に切替。1 反復目の残差を 1 桁下げる効果。
                             MathNet.Numerics.LinearAlgebra.Vector<double>? prevStepDispIncrement = null;
+                            MathNet.Numerics.LinearAlgebra.Vector<double>? prevPrevStepDispIncrement = null;
 
                             for (int step = 0; step < nStep; step++)
                         {
@@ -1718,12 +1776,24 @@ namespace PileDesign.ViewModels
                                 ",　荷重ステップ" + (step + 1) + "/" + nStep +
                                 (RelaxationFactor < 1.0 ? $", 緩和係数={RelaxationFactor:N2}" : ""));
 
-                            // v15: 予測ステップ（前ステップの変位増分があれば適用）
+                            // v15/v23: 予測ステップ（前ステップの変位増分があれば適用）
                             if (step > 0 && prevStepDispIncrement != null && targetModel.VectorD != null)
                             {
-                                // 予測係数: 荷重増分は一定なので前ステップと同じ変位増分を期待
-                                const double predictorFactor = 0.8; // 控えめに80%を適用
-                                var predictorIncrement = predictorFactor * prevStepDispIncrement;
+                                MathNet.Numerics.LinearAlgebra.Vector<double> predictorIncrement;
+                                if (step > 1 && prevPrevStepDispIncrement != null)
+                                {
+                                    // v23 (C): 2 次外挿 u_{n+1} − u_n ≈ Δu_prev + 0.5×(Δu_prev − Δu_prev_prev)
+                                    // 変位増分の変化率（加速度項）を取り込み、非線形が強いステップでも良い初期点になる。
+                                    // 係数 0.5 は過剰外挿を避けるためのダンピング（全振幅 1.0 で共振する可能性あり）。
+                                    var accel = prevStepDispIncrement - prevPrevStepDispIncrement;
+                                    predictorIncrement = prevStepDispIncrement + 0.5 * accel;
+                                }
+                                else
+                                {
+                                    // 初回はデータ不足で 1 次予測（前ステップ増分の 80%）
+                                    const double predictorFactor = 0.8;
+                                    predictorIncrement = predictorFactor * prevStepDispIncrement;
+                                }
                                 targetModel.ApplyDispIncrement(predictorIncrement);
 
                                 // 節点変位も更新（既存のラインサーチ用メソッドを流用）
@@ -1775,6 +1845,9 @@ namespace PileDesign.ViewModels
                             int divergenceCount = 0;                // 発散検出回数
                             const double DIVERGENCE_RATIO = 100.0;  // 残差がこの倍率を超えたら発散とみなす
                             bool autoSwitchedToLineSearch = false;  // 自動でライン探索に切り替えたか
+                            // v21 Phase 3 prep: インスタンスフィールド _useLineSearch の書き換えを廃止。
+                            // 効果的ライン探索フラグは「ユーザー設定 UseLineSearch OR 自動切替 autoSwitchedToLineSearch」の union として
+                            // 反復の各タイミングで再評価する（旧 _useLineSearch フィールド書き換え時と同じ意味論）。
 
                             // v13: 緩やかな発散検出用の変数
                             int slowDivergenceCount = 0;            // 連続増加回数
@@ -1790,10 +1863,18 @@ namespace PileDesign.ViewModels
                             // v16: 診断値をループ外に宣言（Modified NRフェーズでスキップしても前回値を保持）
                             double diagKMin = double.NaN, diagKMax = double.NaN;
                             double dispMaxAbs = double.NaN;
+                            // v21 Phase 3 prep: 旧 _lastSpringKMin/_lastSpringKMax（インスタンスフィールド）は
+                            // 反復間／ステップ間で値を保持する副作用があり、診断ログに前回値を表示していた。
+                            // 同じ挙動を保つため、ここでステップ局所として宣言し、FindK を呼ばない反復では
+                            // 前回反復の値をそのまま引き継ぐ。
+                            double springKMin = double.NaN, springKMax = double.NaN;
 
                             while (targetModel.NormsROnNormsFint >= effectiveAlpha && n_iteration <= maxIterations)
                             {
-                                double springKMin = double.NaN, springKMax = double.NaN;
+                                // v21 Phase 3 prep: 効果的ライン探索フラグを「ユーザー設定 ∪ 自動切替」の union として毎反復評価
+                                // （旧コード: auto-switch 時に _useLineSearch フィールドを true に書換 → UseLineSearch プロパティが true になる
+                                //   を field 書換なしで再現。インスタンスフィールドを汚さないため並列化への準備になる）
+                                bool effectiveUseLineSearch = UseLineSearch || autoSwitchedToLineSearch;
                                 double usedRelaxFactor = currentRelaxFactor; // このステップで使う値を保存
 
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
@@ -1818,11 +1899,11 @@ namespace PileDesign.ViewModels
                                         UpdateBeamMPhiTangent(targetModel, useRelaxation: relaxTangent);
                                     }
 
-                                    // KTan 組立（内部で _lastSpringKMin/_lastSpringKMax を更新）
+                                    // KTan 組立（戻り値で springK の min/max を受け取る）
                                     // v17: Modified NRモードの適応フェーズではKマトリクス組立をスキップ（高速化）
                                     if (useFullNR || !loadCase.IsPileNonLinear || n_iteration == 1)
                                     {
-                                        FindK(iLC, targetModel);
+                                        (springKMin, springKMax) = FindK(iLC, targetModel);
 
                                         // 初回反復時のみ剛性マトリクスの安定性チェック
                                         if (n_iteration == 1)
@@ -1835,7 +1916,7 @@ namespace PileDesign.ViewModels
                                     }
 
                                     // ラインサーチ or 通常の更新
-                                    if (UseLineSearch)
+                                    if (effectiveUseLineSearch)
                                     {
                                         // ラインサーチ: Newton方向を計算し、最適なステップ長を探索
                                         var newtonDir = SolveNewtonDirection(targetModel);
@@ -1872,9 +1953,8 @@ namespace PileDesign.ViewModels
                                         FEM.NaNDiagnostics.CheckBeamForces(targetModel.Beams);
                                     } */
 
-                                    // 診断値: ばね剛性min/max（PrepareKMatで集計済み）
-                                    springKMin = _lastSpringKMin;
-                                    springKMax = _lastSpringKMax;
+                                    // v21 Phase 3 prep: ばね剛性 min/max は FindK の戻り値から直接取得するため
+                                    // ここでの再代入は不要（FindK を呼ばない分岐では NaN のまま）
 
                                     // v17: 診断値K対角は重い処理なので、最初の反復と5反復ごとのみ計算
                                     // Modified NRモードの適応フェーズではKが更新されないため計算頻度を下げる
@@ -1907,9 +1987,9 @@ namespace PileDesign.ViewModels
                                 }
 
 
-                                // 残差ログ
+                                // 残差ログ（ラインサーチ判定はステップ局所 flag を使用。旧 _useLineSearch 書き換え時と同じ挙動）
                                 string relaxInfo;
-                                if (UseLineSearch && usedRelaxFactor < 0.99)
+                                if (effectiveUseLineSearch && usedRelaxFactor < 0.99)
                                     relaxInfo = $" (α={usedRelaxFactor:N2})";  // ラインサーチのステップ長
                                 else if (currentRelaxFactor < 0.99)
                                     relaxInfo = $" (ω={currentRelaxFactor:N2})"; // 緩和係数
@@ -2019,7 +2099,7 @@ namespace PileDesign.ViewModels
                                         await AddLogAsync($"  ⚠ 緩やかな発散検出: {slowDivergenceCount}回連続で残差が増加しています (最小:{minResidualSeen:E2} → 現在:{currentResidual:E2})");
 
                                         // すでにライン探索を使用している場合は、収束基準を緩和
-                                        if (UseLineSearch || autoSwitchedToLineSearch)
+                                        if (effectiveUseLineSearch)
                                         {
                                             // 最小残差から5%以内なら収束とみなす
                                             double relaxedTarget = minResidualSeen * 1.05;
@@ -2037,13 +2117,13 @@ namespace PileDesign.ViewModels
                                     slowDivergenceCount = 0;  // 改善があればリセット
                                 }
 
-                                if (isDiverging && !autoSwitchedToLineSearch && !UseLineSearch && !SkipIteration)
+                                if (isDiverging && !autoSwitchedToLineSearch && !effectiveUseLineSearch && !SkipIteration)
                                 {
                                     divergenceCount++;
                                     if (divergenceCount >= 2)  // 2回連続で発散検出
                                     {
-                                        // 自動的にライン探索に切り替え
-                                        _useLineSearch = true;
+                                        // 自動的にライン探索に切り替え（ステップ局所の effectiveUseLineSearch のみ更新）
+                                        effectiveUseLineSearch = true;
                                         autoSwitchedToLineSearch = true;
                                         currentRelaxFactor = 1.0;  // ライン探索時は緩和係数をリセット
                                         await AddLogAsync($"  ⚠ 発散検出: 残差が大幅に増加しました (初期:{initialResidual:E2} → 現在:{currentResidual:E2})。ライン探索に自動切り替えします。");
@@ -2121,15 +2201,14 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
-                            // v12: ライン探索を自動で有効化した場合、元に戻す
-                            if (autoSwitchedToLineSearch)
-                            {
-                                _useLineSearch = false;
-                            }
+                            // v21 Phase 3 prep: 自動ライン探索はステップ局所の effectiveUseLineSearch で
+                            // 処理するため、インスタンスフィールド _useLineSearch の復元は不要
 
-                            // v15: このステップの変位増分を記録（次ステップの予測器用）
+                            // v15/v23: このステップの変位増分を記録（次ステップの予測器用）
+                            // 2 次外挿のため前々ステップの増分も保持する
                             if (vectorDAtStepStart != null && targetModel.VectorD != null)
                             {
+                                prevPrevStepDispIncrement = prevStepDispIncrement;
                                 prevStepDispIncrement = targetModel.VectorD - vectorDAtStepStart;
                             }
 
@@ -2733,10 +2812,11 @@ namespace PileDesign.ViewModels
         }
 
         // 要素剛性マトリクスの計算メソッド（KTanの組立: ばね剛性 min/max を集計）
-        private void FindK(int iLC, AnaModel targetModel)
+        private (double springKMin, double springKMax) FindK(int iLC, AnaModel targetModel)
         {
-            PrepareKmat(iLC, true, targetModel); // node.TangentSpringのセット _lastSpringKMin/_lastSpringKMax を内部で更新
+            PrepareKmat(iLC, true, targetModel, out double springKMin, out double springKMax); // node.TangentSpring のセット
             targetModel.MapOnKtanMat(); // 要素剛性、節点剛性の剛性マトリクスKmatへのマッピング
+            return (springKMin, springKMax);
         }
 
         private static void SolveDdAndUpdateX(AnaModel targetModel, double relaxationFactor = 1.0) // Solve Ku = -R 全体剛性方程式の求解, Update x = x + u 配置更新 // R = R - dF
@@ -3456,38 +3536,72 @@ namespace PileDesign.ViewModels
             }
         }
 
-        private void PrepareKmat(int iLC, bool isTan, AnaModel model)
+        private void PrepareKmat(int iLC, bool isTan, AnaModel model, out double springKMin, out double springKMax)
         {
-            // 診断: ばね剛性の min/max を集計
+            // 診断: ばね剛性の min/max を集計（out で呼び出し元に返す）
             double springMin = double.PositiveInfinity;
             double springMax = double.NegativeInfinity;
 
             // 土圧合力ばね
+            //
+            // v22 修正（バグ#1）: 隣接する DoatsuGoryoku Item は「内部節点のスプリング」を共有する
+            // （AnalysisModelling.cs: Items[i+1].TopSpring === Items[i].BtmSpring）。
+            // 旧実装は Items を素直に反復し SetKe を呼んでいたため、共有スプリングは後続 Item の
+            // 半分面積 (DY × DZ × 0.5) で上書きされ、**もう一方の層の寄与が失われていた**。
+            //
+            // 結果として:
+            //   - 内部節点の K/F が本来の ~半分になる（両層の半面積合算であるべきところ）
+            //   - 構造側が土圧合力の一部しか受け取らず、解析結果が物理的に不正確
+            //
+            // 修正: 一旦各ユニークスプリングへの寄与を (kx, ky) ペアで集計し、最後に 1 回だけ SetKe する。
+            // これで内部節点は「上層の下半分 + 下層の上半分」の寄与を正しく合算できる。
             if (InputModel.ElementDivision.DoatsuGoryokuBane != null)
             {
-                for (int i = 0; i < InputModel.ElementDivision.DoatsuGoryokuBane.Items.Count; i++)
+                var items = InputModel.ElementDivision.DoatsuGoryokuBane.Items;
+                // ユニークスプリング → 累積 (kx, ky)
+                var accum = new Dictionary<FEM.HorizontalSoilSpring, (double kx, double ky)>(ReferenceEqualityComparer.Instance);
+
+                void AddContribution(FEM.HorizontalSoilSpring spring, double kx, double ky)
                 {
-                    var item = InputModel.ElementDivision.DoatsuGoryokuBane.Items[i];
+                    if (spring == null) return;
+                    if (accum.TryGetValue(spring, out var prev))
+                        accum[spring] = (prev.kx + kx, prev.ky + ky);
+                    else
+                        accum[spring] = (kx, ky);
+                }
+
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
 
                     var relDispTop = item.TopEmbedmentNode.CumulativeDisp - item.TopSoilNode.CumulativeDisp;
                     var kVecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
-                    double kxTop = SafeK(kVecTop.Kx);
-                    double kyTop = SafeK(kVecTop.Ky);
-                    item.TopHorizontalSoilSpring.SetKe(kxTop, kyTop, 0, 0, 0, 0, isTan);
-                    springMin = Math.Min(springMin, Math.Min(kxTop, kyTop));
-                    springMax = Math.Max(springMax, Math.Max(kxTop, kyTop));
+                    AddContribution(item.TopHorizontalSoilSpring, SafeK(kVecTop.Kx), SafeK(kVecTop.Ky));
 
                     var relDisplacementBtm = item.BtmEmbedmentNode.CumulativeDisp - item.BtmSoilNode.CumulativeDisp;
                     var kVecBtm = isTan ? item.GetTangentStiffnessVector(relDisplacementBtm) : item.GetSecantStiffnessVector(relDisplacementBtm);
-                    double kxBtm = SafeK(kVecBtm.Kx);
-                    double kyBtm = SafeK(kVecBtm.Ky);
-                    item.BtmHorizontalSoilSpring.SetKe(kxBtm, kyBtm, 0, 0, 0, 0, isTan);
-                    springMin = Math.Min(springMin, Math.Min(kxBtm, kyBtm));
-                    springMax = Math.Max(springMax, Math.Max(kxBtm, kyBtm));
+                    AddContribution(item.BtmHorizontalSoilSpring, SafeK(kVecBtm.Kx), SafeK(kVecBtm.Ky));
+                }
+
+                foreach (var kvp in accum)
+                {
+                    double kxTotal = kvp.Value.kx;
+                    double kyTotal = kvp.Value.ky;
+                    kvp.Key.SetKe(kxTotal, kyTotal, 0, 0, 0, 0, isTan);
+                    springMin = Math.Min(springMin, Math.Min(kxTotal, kyTotal));
+                    springMax = Math.Max(springMax, Math.Max(kxTotal, kyTotal));
                 }
             }
 
             // 杭ばね
+            //
+            // v23 (B-1): 接線剛性では 2D Jacobian（交差項あり）を使用する。
+            // 旧実装は K_tan を対角 (k, k) として set していたが、p–y 曲線の力は
+            // f = p(|u|) × u/|u| の形で「変位方向に沿う」ため、非線形領域では
+            // df/du は 対称 2x2 ブロック [[kxx, kxy],[kxy, kyy]] になる。
+            // この真の Jacobian を使うことで Newton 方向が改善し α=1.0 に近い収束を期待できる。
+            // 割線剛性（isTan=false）側は F_int = K_sec(|u|) × u（等方）で正しく力を表現するため
+            // 従来通り対角で OK（secant × disp がそのまま force を返す性質を維持）。
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
                 var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
@@ -3504,39 +3618,66 @@ namespace PileDesign.ViewModels
                         ? Math.Sqrt(relDisplacement.Ux * relDisplacement.Ux + relDisplacement.Uy * relDisplacement.Uy)
                         : 0.0;
 
-                    double k = 0.0;
+                    // 接線・割線両方を蓄積（2D Jacobian 用にどちらも必要）
+                    double kTan = 0.0;
+                    double kSec = 0.0;
                     if (i > 0 && i - 1 < reactionCount)
                     {
                         bool isTop = false;
-                        k += isTan
-                            ? horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile)
-                            : horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
+                        kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile);
+                        kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
                     }
                     if (i < pileLayoutItem.PileNodes.Count - 1 && i < reactionCount)
                     {
                         bool isTop = true;
-                        k += isTan
-                            ? horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile)
-                            : horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
+                        kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile);
+                        kSec += horizontalReactions[i].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
                     }
 
-                    k = SafeK(k);
+                    kTan = SafeK(kTan);
+                    kSec = SafeK(kSec);
 
-                    // 最下端節点でk=0の場合、隣接要素の剛性を使用（剛性マトリクス特異防止）
-                    if (k <= 0.0 && i > 0 && i - 2 >= 0 && i - 2 < reactionCount)
+                    // 最下端節点で k=0 の場合、隣接要素の剛性を使用（剛性マトリクス特異防止）
+                    if ((isTan ? kTan : kSec) <= 0.0 && i > 0 && i - 2 >= 0 && i - 2 < reactionCount)
                     {
-                        k = isTan
-                            ? horizontalReactions[i - 2].GetSoilTangentReactionCoefficient(abs, false, isFrontPile)
-                            : horizontalReactions[i - 2].GetSoilSecantReactionCoefficient(abs, false, isFrontPile);
-                        k = SafeK(k);
+                        double kFallbackTan = horizontalReactions[i - 2].GetSoilTangentReactionCoefficient(abs, false, isFrontPile);
+                        double kFallbackSec = horizontalReactions[i - 2].GetSoilSecantReactionCoefficient(abs, false, isFrontPile);
+                        if (kTan <= 0.0) kTan = SafeK(kFallbackTan);
+                        if (kSec <= 0.0) kSec = SafeK(kFallbackSec);
                         System.Diagnostics.Debug.WriteLine(
-                            $"[UpdateSoilSprings] WARNING: Pile-{pileLayoutItem.PileNo} node {i} k=0 → 隣接要素の剛性{k:E3}を代用");
+                            $"[UpdateSoilSprings] WARNING: Pile-{pileLayoutItem.PileNo} node {i} k=0 → 隣接要素の剛性 tan={kTan:E3}/sec={kSec:E3} を代用");
                     }
 
-                    pileLayoutItem.HorizontalSoilSprings[i].SetKe(k, k, 0, 0, 0, 0, isTan);
+                    var spring = pileLayoutItem.HorizontalSoilSprings[i];
 
-                    springMin = Math.Min(springMin, k);
-                    springMax = Math.Max(springMax, k);
+                    if (isTan)
+                    {
+                        // v23 (B-1) 接線剛性: 2D Jacobian
+                        // |u| が極小なら方向が不定なので等方に縮退（従来通り）
+                        double kxxDiag, kxyOff, kyyDiag;
+                        if (abs < 1e-12)
+                        {
+                            kxxDiag = kTan; kyyDiag = kTan; kxyOff = 0.0;
+                        }
+                        else
+                        {
+                            double cosT = relDisplacement.Ux / abs;
+                            double sinT = relDisplacement.Uy / abs;
+                            kxxDiag = kTan * cosT * cosT + kSec * sinT * sinT;
+                            kyyDiag = kTan * sinT * sinT + kSec * cosT * cosT;
+                            kxyOff = (kTan - kSec) * cosT * sinT;
+                        }
+                        spring.SetKeWithXYCoupling(kxxDiag, kxyOff, kyyDiag, 0, 0, 0, 0, isTan: true);
+                        springMin = Math.Min(springMin, Math.Min(kxxDiag, kyyDiag));
+                        springMax = Math.Max(springMax, Math.Max(kxxDiag, kyyDiag));
+                    }
+                    else
+                    {
+                        // 割線剛性: 等方 (K_sec × disp がそのまま force を向ける)
+                        spring.SetKe(kSec, kSec, 0, 0, 0, 0, isTan: false);
+                        springMin = Math.Min(springMin, kSec);
+                        springMax = Math.Max(springMax, kSec);
+                    }
                 }
             }
 
@@ -3623,8 +3764,8 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            _lastSpringKMin = double.IsInfinity(springMin) ? double.NaN : springMin;
-            _lastSpringKMax = double.IsNegativeInfinity(springMax) ? double.NaN : springMax;
+            springKMin = double.IsInfinity(springMin) ? double.NaN : springMin;
+            springKMax = double.IsNegativeInfinity(springMax) ? double.NaN : springMax;
         }
 
 
@@ -3633,8 +3774,8 @@ namespace PileDesign.ViewModels
         //    => (double.IsFinite(v) && v > 0.0) ? v : 0.0;
 
         // 変更: ラッパーに model 引数を追加
-        private void PrepareKTanMat(int iLC, AnaModel model) => PrepareKmat(iLC, true, model);
-        private void PrepareKSecMat(int iLC, AnaModel model) => PrepareKmat(iLC, false, model);
+        private void PrepareKTanMat(int iLC, AnaModel model) => PrepareKmat(iLC, true, model, out _, out _);
+        private void PrepareKSecMat(int iLC, AnaModel model) => PrepareKmat(iLC, false, model, out _, out _);
 
         // 既存: K組立本体（model を受け取る版）
         //private void PrepareKMat(int iLC, bool isTan, AnaModel model)

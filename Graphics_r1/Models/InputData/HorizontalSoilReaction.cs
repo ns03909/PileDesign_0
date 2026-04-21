@@ -110,6 +110,23 @@ namespace PileDesign.Models.InputData
             return GetKh(Kh0, y, py) * B * (ZTop - ZBtm) * 0.5;
         }
 
+        // 降伏後接線剛性の比率（v22 修正）
+        // 旧値 `0.001 × py / yy` は降伏境界の解析接線に対し 約 1/500 と極端に小さく、
+        // NR 反復で「降伏 ↔ 弾性」を行き来する springs があると K 行列の値が毎反復で
+        // 500× も変動し、ラインサーチが α=0.5 に張り付いて収束停滞の主因になっていた。
+        // 新値は「降伏境界の解析接線の 2%」。GetKh/GetkhTan の両方で同じ gradient を使うので
+        // 力 F_int = K_sec × |y| と接線 K_tan の整合性（K_tan = dF/d|y|）は完全に保たれる。
+        // 降伏後の p は平坦ではなく僅かに増加する形となるが、|y|=2×yy で p は 1% 程度しか
+        // 増えず物理的に妥当な範囲に収まる。
+        private const double PostYieldTangentRatio = 0.02;
+
+        // 降伏境界 |y|=yy における解析接線（pre-yield 式の d(p)/d|y|）
+        // p_pre = kh0 × √(y0 × |y|), dp/d|y| = kh0 × √y0 / (2 × √|y|)
+        // |y|=yy のとき √yy = py/(kh0×√y0) なので、
+        // dp/d|y|(yy) = kh0 × √y0 × kh0 × √y0 / (2 × py) = kh0² × y0 / (2 × py)
+        private static double YieldBoundaryTangent(double kh0, double py)
+            => kh0 * kh0 * 0.01 / (2.0 * py); // y0 = 0.01 固定
+
         // 水平地盤反力係数khを返すメソッド (kN/m3)
         private static double GetKh(double kh0, double y, double py)
         {
@@ -126,13 +143,20 @@ namespace PileDesign.Models.InputData
             }
             else
             {
-                //return py / Math.Abs(y);
                 double yy = Math.Pow(py / kh0, 2) / y0;
-                double gradient = 0.001 * py / yy; // 降伏時割線剛性の 0.1%
+                double gradient = PostYieldTangentRatio * YieldBoundaryTangent(kh0, py);
                 double p = gradient * (Math.Abs(y) - yy) + py;
                 return p / Math.Abs(y);
             }
         }
+
+        // v23 (A-2) 弾性・sqrt 領域境界のスムージング幅
+        // |y|/y0 = 0.1 (= 1mm) 付近で弾性 (3.16×kh0) → sqrt (1.58×kh0) へ 2× ジャンプが発生。
+        // この狭い区間で接線を Hermite ブレンドして不連続を解消する。
+        // ブレンド区間内では K_tan が d(K_sec × |y|)/d|y| と僅かにずれるが、
+        // 幅が 0.1y0 と狭く影響は限定的。多数の節点が同時に境界を跨ぐチャタリングを防ぐ。
+        private const double ElasticSqrtBlendStart = 0.10; // |y|/y0
+        private const double ElasticSqrtBlendEnd = 0.20;   // |y|/y0
 
         // 水平地盤反力の接線剛性を返すメソッド (kN/m3)
         public static double GetkhTan(double kh0, double y, double py)
@@ -140,21 +164,35 @@ namespace PileDesign.Models.InputData
             double y0 = 0.01; // m, 1cm
 
             if (py == 0) return 0;
+            double absY = Math.Abs(y);
+            double yRatio = absY / y0;
 
-            if (Math.Abs(y) / y0 <= 0.1)
+            if (yRatio <= ElasticSqrtBlendStart)
             {
                 return 3.16 * kh0;
             }
-            else if (kh0 / Math.Sqrt(Math.Abs(y) / y0) * Math.Abs(y) < py)
+
+            // sqrt 領域の解析接線
+            double sqrtTangent = Math.Sqrt(y0) / 2.0 * kh0 / Math.Sqrt(absY);
+
+            // v23 (A-2) 境界ブレンド: |y|/y0 ∈ [0.10, 0.20] で弾性 → sqrt に滑らかに遷移
+            if (yRatio < ElasticSqrtBlendEnd)
             {
-                return Math.Sqrt(y0) / 2.0 * kh0 / Math.Sqrt(Math.Abs(y));
+                double t = (yRatio - ElasticSqrtBlendStart) / (ElasticSqrtBlendEnd - ElasticSqrtBlendStart);
+                // smoothstep: 3t² − 2t³ (両端で微分係数ゼロ、C¹ 連続)
+                double s = t * t * (3.0 - 2.0 * t);
+                double elasticTangent = 3.16 * kh0;
+                return (1.0 - s) * elasticTangent + s * sqrtTangent;
             }
-            else
+
+            // 通常 sqrt 領域（降伏未到達）
+            if (kh0 / Math.Sqrt(yRatio) * absY < py)
             {
-                double yy = Math.Pow(py / kh0, 2) / y0;
-                double gradient = 0.001 * py / yy; // 降伏時割線剛性の 0.1%
-                return gradient;
+                return sqrtTangent;
             }
+
+            // 降伏後は降伏境界接線の PostYieldTangentRatio 倍を一定値として採用
+            return PostYieldTangentRatio * YieldBoundaryTangent(kh0, py);
         }
 
         // 反力pを返すメソッド (kN/m2)
