@@ -1642,10 +1642,14 @@ namespace PileDesign.ViewModels
                         // v20: 難易度事前検出 (Phase 1) — counter-loading を事前に detect し、
                         // 最初から大きな nStep で実行することで失敗試行のムダを回避
                         //
+                        // v26 (案 B): Hard 側を控えめに (×4 min 32 → ×2 min 16) + retry 上限を 1→2 に
+                        // 拡張。この初期値でも足りない場合は「早期適応検出」(後述) で
+                        // 30 反復停滞を待たず retry を即時発火させる。
+                        //
                         // 仕組み:
                         //   - Easy  (順方向通常): 基本 nStep (Level1=2, Level2=8 等) で開始、retry 最大 3
                         //   - Medium (高 α): 基本 ×2 で開始、retry 最大 2
-                        //   - Hard  (counter-loading 系): 基本 ×4 (min 32) で開始、retry 最大 1
+                        //   - Hard  (counter-loading 系): 基本 ×2 (min 16) で開始、retry 最大 2
                         int configuredNStep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
                             loadCase.Level == 1 ? Level1CalculationStepsCount :
                             loadCase.Level == 2 ? Level2CalculationStepsCount :
@@ -1659,8 +1663,8 @@ namespace PileDesign.ViewModels
                             switch (difficulty)
                             {
                                 case CaseDifficulty.Hard:
-                                    baseNStep = Math.Max(configuredNStep * 4, 32);
-                                    MAX_STEP_BISECTIONS = 1;
+                                    baseNStep = Math.Max(configuredNStep * 2, 16);
+                                    MAX_STEP_BISECTIONS = 2;
                                     break;
                                 case CaseDifficulty.Medium:
                                     baseNStep = configuredNStep * 2;
@@ -1743,6 +1747,11 @@ namespace PileDesign.ViewModels
                             // 加速度項（変位の曲率）を考慮した 2 次予測に切替。1 反復目の残差を 1 桁下げる効果。
                             MathNet.Numerics.LinearAlgebra.Vector<double>? prevStepDispIncrement = null;
                             MathNet.Numerics.LinearAlgebra.Vector<double>? prevPrevStepDispIncrement = null;
+
+                            // v26 (案 B): 早期適応検出用の反復数累積。最初の EARLY_ADAPTIVE_OBS_STEPS
+                            // ステップの平均反復数が閾値を超えたら即 retry。30 反復停滞の検出より早く発火する。
+                            // bisectionAttempt==0 の初回試行でのみ評価（retry 後は通常の停滞検出に任せる）。
+                            int iterSumFirstSteps = 0;
 
                             for (int step = 0; step < nStep; step++)
                         {
@@ -2257,6 +2266,29 @@ namespace PileDesign.ViewModels
 
                             // v19: このステップが完了したことを記録
                             stepsExecutedInAttempt = step + 1;
+
+                            // v26 (案 B): 早期適応検出 — 最初 EARLY_ADAPTIVE_OBS_STEPS ステップの
+                            // 平均反復数が閾値を超えたら即 retry。初回試行でのみ評価。
+                            // Hard pre-detect を ×4 min 32 から ×2 min 16 に緩めたので、
+                            // 本来もっと刻みが必要なケースを早期に拾う保険として機能する。
+                            const int EARLY_ADAPTIVE_OBS_STEPS = 2;
+                            const double EARLY_ADAPTIVE_ITER_THRESHOLD = 15.0;
+                            if (bisectionAttempt == 0 && step < EARLY_ADAPTIVE_OBS_STEPS)
+                            {
+                                iterSumFirstSteps += Math.Min(n_iteration, maxIterations);
+                            }
+                            if (bisectionAttempt == 0 && step + 1 == EARLY_ADAPTIVE_OBS_STEPS
+                                && !caseFailedThisAttempt && !physicallyUnconvergeable
+                                && bisectionAttempt < MAX_STEP_BISECTIONS)
+                            {
+                                double avgIter = iterSumFirstSteps / (double)EARLY_ADAPTIVE_OBS_STEPS;
+                                if (avgIter >= EARLY_ADAPTIVE_ITER_THRESHOLD)
+                                {
+                                    await AddLogAsync($"  🚨 早期適応検出: 最初 {EARLY_ADAPTIVE_OBS_STEPS} ステップの平均反復数 {avgIter:N1} が閾値 {EARLY_ADAPTIVE_ITER_THRESHOLD:N0} を超過 → ステップ分割を増やして再試行");
+                                    caseFailedThisAttempt = true;
+                                    // 後続の「残り ステップをスキップして再試行へ移行」ロジックで retry に入る
+                                }
+                            }
 
                             // v20 Phase 2: 物理的未収束なら直ちに中止（再試行しない）
                             if (physicallyUnconvergeable)
