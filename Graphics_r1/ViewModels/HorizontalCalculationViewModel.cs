@@ -2265,12 +2265,17 @@ namespace PileDesign.ViewModels
                                 if (remainingPhys > 0)
                                 {
                                     await AddLogAsync($"  ⛔ 物理的未収束のため残り {remainingPhys} ステップをスキップ");
+                                    // v25: 未実行ステップ分を総ステップ数から差し引き、進捗バーを 100% 到達させる
+                                    _bisectionExtraSteps -= remainingPhys;
+                                    OnPropertyChanged(nameof(TotalCalculationCount));
+                                    OnPropertyChanged(nameof(ProgressText));
                                 }
                                 break;
                             }
 
                             // v19: 早期脱出 - 既に再試行対象と判定されており、再試行回数に余裕がある場合
                             // 残りステップは truncate で破棄されるので計算時間の無駄。即座に再試行へ移行する
+                            // （再試行時は後段の _bisectionExtraSteps 調整で計上/相殺されるので、ここでは減算しない）
                             if (caseFailedThisAttempt && bisectionAttempt < MAX_STEP_BISECTIONS)
                             {
                                 int remaining = nStep - (step + 1);
@@ -2297,6 +2302,14 @@ namespace PileDesign.ViewModels
                         if (bisectionAttempt >= MAX_STEP_BISECTIONS)
                         {
                             await AddLogAsync($"  ❌ 最大再試行回数 ({MAX_STEP_BISECTIONS}) 到達。このケースは未収束で確定 (最終 nStep={nStep})");
+                            // v25: 最終アテンプトで未実行に終わったステップ分を総ステップ数から差し引く
+                            int remainingAtMax = nStep - stepsExecutedInAttempt;
+                            if (remainingAtMax > 0)
+                            {
+                                _bisectionExtraSteps -= remainingAtMax;
+                                OnPropertyChanged(nameof(TotalCalculationCount));
+                                OnPropertyChanged(nameof(ProgressText));
+                            }
                             break;  // 諦めて次のケースへ
                         }
 
@@ -3153,9 +3166,10 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 2次補間を用いた高速ラインサーチ（v14改良版）
-        /// 2〜3回の試行結果から2次関数をフィッティングし、最適αを予測
-        /// 試行回数を従来の8回→3〜4回に削減
+        /// 2次補間を用いた高速ラインサーチ（v14 → v25 G+ 改良版）
+        /// v25 G+: f'(0) ≈ -2f(0) の線形化勾配を使った 2 点 quadratic fit を先頭で試す。
+        /// 成功すれば中間点 trial を省略できる（α=1 の 1 回のみで閉形式解）。
+        /// 失敗時は従来の 3 点 quadratic fit（中間点を full eval に精度向上）にフォールバック。
         /// </summary>
         /// <param name="targetModel">解析モデル</param>
         /// <param name="newtonDirection">Newton方向</param>
@@ -3186,26 +3200,50 @@ namespace PileDesign.ViewModels
                 return alpha1;
             }
 
-            // Step 2: α=0.5で軽量評価
+            double f0 = currentResidual;
+
+            // v25 G+: 勾配情報による 2 点 quadratic fit（閉形式）
+            // Newton 方向 Δu は K_tan Δu = -R を満たす。f(α) = ||R(u+αΔu)||² とおくと
+            // linearize: R(u+αΔu) ≈ R(u) - α R(u) = (1-α) R(u)
+            // ⇒ f(α) ≈ (1-α)² f(0), f'(0) ≈ -2 f(0)
+            // Quadratic fit: a α² + b α + c with c=f0, b=-2 f0, a=f1+f0
+            // α* = -b/(2a) = f0 / (f0 + f1), clamped to [0.05, 0.95]
+            // 3 点 fit と比べて中間点 trial が不要なので、成功時は評価 1 回節約できる。
+            if (f0 > 0 && f1 > 0)
+            {
+                double alphaGrad = f0 / (f0 + f1);
+                alphaGrad = Math.Clamp(alphaGrad, 0.05, 0.95);
+
+                RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                double fGrad = EvaluateResidualAtAlpha(
+                    targetModel, savedVectorD, newtonDirection, alphaGrad, iLC, isPileNonLinear, isLightweight: true);
+
+                if (fGrad < f0)
+                {
+                    RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                    EvaluateResidualAtAlpha(
+                        targetModel, savedVectorD, newtonDirection, alphaGrad, iLC, isPileNonLinear, isLightweight: false);
+                    _lastAcceptedAlpha = alphaGrad;
+                    return alphaGrad;
+                }
+            }
+
+            // Step 2: α=0.5 で評価（v25 G+: lightweight → full に変更し fit 精度向上）
             RestoreNodeDisplacements(targetModel, savedNodeDisps);
             double alpha2 = 0.5;
             double f2 = EvaluateResidualAtAlpha(
-                targetModel, savedVectorD, newtonDirection, alpha2, iLC, isPileNonLinear, isLightweight: true);
+                targetModel, savedVectorD, newtonDirection, alpha2, iLC, isPileNonLinear, isLightweight: false);
 
-            // α=0.5で残差が減少すれば採用
+            // α=0.5で残差が減少すれば採用（full eval 済みなので再評価不要）
             if (f2 < currentResidual)
             {
-                RestoreNodeDisplacements(targetModel, savedNodeDisps);
-                double finalResidual = EvaluateResidualAtAlpha(
-                    targetModel, savedVectorD, newtonDirection, alpha2, iLC, isPileNonLinear, isLightweight: false);
                 _lastAcceptedAlpha = alpha2;
                 return alpha2;
             }
 
-            // Step 3: 2次補間で最適αを予測
+            // Step 3: 3 点 quadratic fit（f0, f2, f1 から α* を推定）
             // f(α) ≈ a*α² + b*α + c の係数を推定
             // 3点: (0, f0=currentResidual), (0.5, f2), (1.0, f1)
-            double f0 = currentResidual;
             // f(0) = c = f0
             // f(0.5) = 0.25a + 0.5b + c = f2
             // f(1) = a + b + c = f1

@@ -196,9 +196,19 @@ namespace PileDesign.Models.InputData
         }
 
         // 反力pを返すメソッド (kN/m2)
+        // v25: 対称性バグ修正。旧実装 `Math.Min(Kh*y, py)` は y>0 側のみ py で clamp され、
+        // y<0 側は clamp されず負方向に無制限に伸びていた（v22 で GetKh の plateau が
+        // `py/|y|` → `(gradient*(|y|-yy)+py)/|y|` に変わり post-yield creep が生じた副作用）。
+        // 現在は `sign(y) × min(Kh(|y|) × |y|, py)` で両側対称に clamp する。
+        // ※ 表示専用（グラフ / MGT エクスポート / 要素分割ダイアログ）。
+        //    FEM 本体は `GetSoilSecantReactionCoefficient` / `GetSoilTangentReactionCoefficient`
+        //    経由で |y| 対称、post-yield creep を許容する（本メソッドと意図的に挙動が異なる）
         public double GetP(double y, double py)
         {
-            return Math.Min(GetKh(Kh0, y, py) * y, py);
+            if (y == 0 || py == 0) return 0;
+            double sign = y > 0 ? 1.0 : -1.0;
+            double absY = Math.Abs(y);
+            return sign * Math.Min(GetKh(Kh0, absY, py) * absY, py);
         }
 
         // 基準水平地盤反力係数kh0を返すメソッド (kN/m3)

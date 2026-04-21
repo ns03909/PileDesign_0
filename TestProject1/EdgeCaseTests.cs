@@ -710,6 +710,56 @@ namespace TestProject1
             double expectedSqrt = Math.Sqrt(y0) / 2.0 * kh0 / Math.Sqrt(yAfterBlend);
             Assert.AreEqual(expectedSqrt, tAfter, expectedSqrt * 0.01);
         }
+
+        // v25: GetP の対称性回帰テスト
+        // 旧実装 `Math.Min(Kh*y, py)` は y<0 側で clamp されず post-yield creep が不等
+        // に発生していた。counter-loading 解析の表示や MGT エクスポートに影響。
+        [TestMethod]
+        public void GetP_PostYield_IsAntisymmetricAcrossZero()
+        {
+            var item = BuildTestItem();
+            double py = item.PyFrontTop;
+            double y0 = 0.01;
+            double yy = Math.Pow(py / item.Kh0, 2) / y0;
+
+            // 十分塑性化した領域（|y| > yy）で正負対称に評価
+            double yPos = 5.0 * yy;
+            double yNeg = -5.0 * yy;
+
+            double pPos = item.GetP(yPos, py);
+            double pNeg = item.GetP(yNeg, py);
+
+            Assert.AreEqual(-pPos, pNeg, 1e-9,
+                $"GetP は奇関数であるべき: p({yPos})={pPos}, p({yNeg})={pNeg}");
+            // 両側とも py 以下に clamp されているはず
+            Assert.IsTrue(Math.Abs(pPos) <= py + 1e-9, $"|p(+y)| が py={py} を超過: {pPos}");
+            Assert.IsTrue(Math.Abs(pNeg) <= py + 1e-9, $"|p(-y)| が py={py} を超過: {pNeg}");
+        }
+
+        [TestMethod]
+        public void GetP_Zero_ReturnsZero()
+        {
+            var item = BuildTestItem();
+            Assert.AreEqual(0.0, item.GetP(0.0, item.PyFrontTop), 1e-12);
+        }
+
+        [TestMethod]
+        public void GetP_PreYield_IsAntisymmetric()
+        {
+            var item = BuildTestItem();
+            double py = item.PyFrontTop;
+            double y0 = 0.01;
+            double yy = Math.Pow(py / item.Kh0, 2) / y0;
+
+            // sqrt 領域（|y| < yy）
+            double ySmall = 0.3 * yy;
+            double pPos = item.GetP(ySmall, py);
+            double pNeg = item.GetP(-ySmall, py);
+
+            Assert.AreEqual(-pPos, pNeg, 1e-9);
+            Assert.IsTrue(pPos > 0, "正の y では正の p");
+            Assert.IsTrue(pNeg < 0, "負の y では負の p");
+        }
     }
 
     // ====================================================================
