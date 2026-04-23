@@ -713,6 +713,12 @@ namespace PileDesign.FEM
             {
                 IsPileTop = this.IsPileTop,
                 IsPileHeadElement = this.IsPileHeadElement,
+                // E3c-2-fix (2026-04-23): PileBodyNo / SegmentIndex を copy 漏れ していたため、
+                // DeepCopy された caseModel では SetupMPhiFromPileSectionForLoadCase で全 beam が
+                // "skippedNoPileBody" として弾かれ M-φ 曲線がセットされず K 行列が divergence していた
+                PileBodyNo = this.PileBodyNo,
+                SegmentIndex = this.SegmentIndex,
+                Length = this.Length,
                 Ryi_tan = this.Ryi_tan,
                 Rzi_tan = this.Rzi_tan,
                 Ryi_sec = this.Ryi_sec,
@@ -727,6 +733,10 @@ namespace PileDesign.FEM
                 KSec_z = this.KSec_z,
                 EA_multiplier = this.EA_multiplier,
                 EA_Multiplier = this.EA_Multiplier,
+                CurrentCurvature = this.CurrentCurvature,
+                CurrentMoment = this.CurrentMoment,
+                CurrentMPhiSegmentIndex = this.CurrentMPhiSegmentIndex,
+                PreviousMPhiSegmentIndex = this.PreviousMPhiSegmentIndex,
                 IncrementalDisp = this.IncrementalDisp?.Clone(),
                 CumulativeDisp = this.CumulativeDisp?.Clone(),
                 IncrementalForce = this.IncrementalForce?.Clone(),
