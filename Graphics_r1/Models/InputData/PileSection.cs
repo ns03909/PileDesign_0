@@ -513,6 +513,29 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 場所打ち鉄筋コンクリート杭の杭頭 M-θ 関係が適用可能な軸力範囲か判定します。
+        /// 基礎指針: -Ft ≤ σ0 ≤ (1/4)·ξ·Fc の範囲でのみ M-θ を考慮、範囲外は剛結扱い。
+        ///   σ0  = N / Ae [N/mm²]  (N: axial force, Ae: effective area)
+        ///   Ft  : concrete tensile strength [N/mm²]
+        ///   ξ·Fc: reduced compressive strength [N/mm²]
+        /// 他の断面型では false を返す。
+        /// </summary>
+        public bool IsWithinMThetaValidAxialRange(double axialN)
+        {
+            var section = CreateSectionCalculator();
+            if (section is not InsituReinforcedConcreteSection rcSection)
+                return false;
+            if (rcSection.Ae <= 0.0) return false;
+
+            // 単位変換: axialN [kN] → N, σ0 [N/mm²]
+            double sigma0 = (axialN * 1000.0) / rcSection.Ae;
+            double Ft = rcSection.Ft;
+            double xiFc = rcSection.InsituConcrete.Gsi * rcSection.InsituConcrete.Fc;
+
+            return sigma0 >= -Ft && sigma0 <= 0.25 * xiFc;
+        }
+
+        /// <summary>
         /// M-φキャッシュの統計情報を取得します。
         /// </summary>
         public static (int hits, int misses, int cacheSize) GetMphiCacheStats()

@@ -564,6 +564,16 @@ namespace PileDesign.Models.InputData
                     var pileSection = PileBodySegments?.FirstOrDefault()?.PileSection;
                     if (pileSection != null)
                     {
+                        // 基礎指針: 軸応力度 σ0 = N/Ae が -Ft ≤ σ0 ≤ (1/4)·ξ·Fc の範囲でのみ
+                        // M-θ を考慮する。範囲外 (強引張 or 高圧縮) は杭頭を剛結として検討。
+                        if (!pileSection.IsWithinMThetaValidAxialRange(axialN))
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[GetMThetaRelationship] 場所打ちRC杭: N={axialN:F1} kN 軸力範囲外 " +
+                                $"(σ0 ∉ [-Ft, ξFc/4]) → Rigid()");
+                            return PileHeadRotationDef.Rigid();
+                        }
+
                         try
                         {
                             // PileSection.GetMThetaRelationship: axialN は kN、戻り値は θ[rad], M[kNm]

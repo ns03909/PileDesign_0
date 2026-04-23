@@ -2128,9 +2128,19 @@ namespace PileDesign.ViewModels
                                 }, token);
 
                                 // v28: Task.Run 外で新規クラックを UI ログに出力 (AddLogAsync はキュー方式で非同期 flush)
-                                foreach (var (name, mRes, mcr) in newlyCrackedSprings)
+                                // 複数杭が同時クラックする場合 (重荷重で 1 反復目から全杭が Mcr 到達する等) は
+                                // 集約して 1 行に圧縮する。単独クラックは従来通り詳細行で出力。
+                                if (newlyCrackedSprings.Count == 1)
                                 {
+                                    var (name, mRes, mcr) = newlyCrackedSprings[0];
                                     await AddLogAsync($"　　📌 杭頭 RotSpring {name}: Mcr 到達 → クラック判定 (|M|={mRes:E3} ≥ Mcr={mcr:E3} kNm)、以降 post-crack curve 使用");
+                                }
+                                else if (newlyCrackedSprings.Count > 1)
+                                {
+                                    double mMin = newlyCrackedSprings.Min(x => x.Item2);
+                                    double mMax = newlyCrackedSprings.Max(x => x.Item2);
+                                    double mcrRef = newlyCrackedSprings[0].Item3;
+                                    await AddLogAsync($"　　📌 杭頭 Mcr 到達 → クラック判定 {newlyCrackedSprings.Count} 本 (|M|=[{mMin:E3}, {mMax:E3}] ≥ Mcr={mcrRef:E3} kNm)、以降 post-crack curve 使用");
                                 }
 
                                 // v28 問題 A 診断: 杭体 M-φ セグメント変化 (集計ログ、最大 5 件の詳細)
