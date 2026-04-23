@@ -3630,8 +3630,9 @@ namespace PileDesign.ViewModels
 
                             if (useRectDist)
                             {
-                                // 全節点の相対変位を先にキャッシュ (2 セグメントから参照するため)
+                                // 全節点の 相対変位 と FEM 実測ばね反力 をキャッシュ
                                 double[] nodeRelDisps = new double[nSprings];
+                                double[] nodeActualForces = new double[nSprings]; // |F|_FEM [kN]
                                 for (int k = 0; k < nSprings; k++)
                                 {
                                     var sp = horizontalSoilSprings[k];
@@ -3646,6 +3647,12 @@ namespace PileDesign.ViewModels
                                     double dx = res.CumulativeDisp.Dxi - res.CumulativeDisp.Dxj;
                                     double dy = res.CumulativeDisp.Dyi - res.CumulativeDisp.Dyj;
                                     nodeRelDisps[k] = Math.Sqrt(dx * dx + dy * dy);
+                                    if (res.CumulativeForce != null)
+                                    {
+                                        double fx = res.CumulativeForce.Fxi;
+                                        double fy = res.CumulativeForce.Fyi;
+                                        nodeActualForces[k] = Math.Sqrt(fx * fx + fy * fy);
+                                    }
                                 }
 
                                 // isFront: 当該荷重ケースでのこの杭の前後判定 (p-y 計算に影響)
@@ -3655,8 +3662,32 @@ namespace PileDesign.ViewModels
                                             && iLC < pileLayoutDataItem.IsFrontPiles.Count
                                             && pileLayoutDataItem.IsFrontPiles[iLC];
 
-                                // セグメントごとに 4 隅の点 (Z_top, Z_mid, Z_mid, Z_btm) を追加して長方形を作る。
-                                // 連続セグメントは Z_btm_j = Z_top_{j+1} で接続されるため全体で連続した階段線になる。
+                                // 各節点 k の理論 上/下 寄与 (FEM と同じモデルで再計算) と、FEM 実測値に合わせた
+                                // 比例スケール factor を計算
+                                //   F_above_k: 節点 k の上方セグメント (k-1) の下半分寄与 (isTop=false)
+                                //   F_below_k: 節点 k の下方セグメント k の上半分寄与   (isTop=true)
+                                //   F_above_k + F_below_k = F_node_theory → scale_k = F_actual / F_theory
+                                double[] fAboveScaled = new double[nSprings];
+                                double[] fBelowScaled = new double[nSprings];
+                                for (int k = 0; k < nSprings; k++)
+                                {
+                                    double y = nodeRelDisps[k];
+                                    double fAboveTh = 0, fBelowTh = 0;
+                                    if (k > 0 && (k - 1) < reactions.Count)
+                                        fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront));
+                                    if (k < reactions.Count)
+                                        fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront));
+
+                                    double sum = fAboveTh + fBelowTh;
+                                    double scale = sum > 1e-10 ? nodeActualForces[k] / sum : 1.0;
+                                    fAboveScaled[k] = fAboveTh * scale;
+                                    fBelowScaled[k] = fBelowTh * scale;
+                                }
+
+                                // セグメントごとに 4 隅の点を追加して長方形を作る
+                                //   セグメント j の 上半分 [Z_top, Z_mid] = 節点 j の F_below (scaled)
+                                //   セグメント j の 下半分 [Z_mid, Z_btm] = 節点 j+1 の F_above (scaled)
+                                // 各半分の half-tributary area = L/2 × B でスケールして圧力/反力係数に
                                 for (int j = 0; j < reactions.Count; j++)
                                 {
                                     double zTop = reactions[j].ZTop;
@@ -3665,16 +3696,18 @@ namespace PileDesign.ViewModels
                                     double L = zTop - zBtm;
                                     if (L <= 0) continue;
                                     double B = reactions[j].B > 0 ? reactions[j].B : 1.0;
+                                    double halfArea = 0.5 * L * B; // kN → kN/m² 変換用
 
-                                    // 上半分: ノード j の変位、セグメント j の top 側 py
+                                    // 上半分: 節点 j の 下方寄与 (F_below_j) がこのセグメントの上半分に対応
+                                    double fUpper = (j < nSprings) ? fBelowScaled[j] : 0;
+                                    // 下半分: 節点 j+1 の 上方寄与 (F_above_{j+1}) がこのセグメントの下半分に対応
+                                    double fLower = ((j + 1) < nSprings) ? fAboveScaled[j + 1] : 0;
+
+                                    double pUpperPa = halfArea > 0 ? fUpper / halfArea : 0; // kN/m²
+                                    double pLowerPa = halfArea > 0 ? fLower / halfArea : 0;
+
                                     double yUp = (j < nSprings) ? nodeRelDisps[j] : 0;
-                                    double pyTop = isFront ? reactions[j].PyFrontTop : reactions[j].PyRearTop;
-                                    double pUpperPa = Math.Abs(reactions[j].GetP(yUp, pyTop)); // kN/m² (pressure)
-
-                                    // 下半分: ノード j+1 の変位、セグメント j の bottom 側 py
-                                    double yLo = (j + 1 < nSprings) ? nodeRelDisps[j + 1] : 0;
-                                    double pyBtm = isFront ? reactions[j].PyFrontBtm : reactions[j].PyRearBtm;
-                                    double pLowerPa = Math.Abs(reactions[j].GetP(yLo, pyBtm)); // kN/m²
+                                    double yLo = ((j + 1) < nSprings) ? nodeRelDisps[j + 1] : 0;
 
                                     double vUp, vLo;
                                     if (dataType == "Reaction")
@@ -3684,12 +3717,11 @@ namespace PileDesign.ViewModels
                                     }
                                     else // SecantStiffness
                                     {
-                                        // kh_sec = p / y [kN/m³]。y=0 近傍では 0 扱い
-                                        vUp = yUp > 1e-10 ? pUpperPa / yUp : 0;
+                                        vUp = yUp > 1e-10 ? pUpperPa / yUp : 0; // kN/m³
                                         vLo = yLo > 1e-10 ? pLowerPa / yLo : 0;
                                     }
 
-                                    // 長方形を作る 4 点 (Z 降順で追加、次セグメントと連続)
+                                    // 長方形を作る 4 点
                                     springValues.Add(vUp); springZs.Add(zTop);
                                     springValues.Add(vUp); springZs.Add(zMid);
                                     springValues.Add(vLo); springZs.Add(zMid);
