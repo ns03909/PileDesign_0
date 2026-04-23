@@ -157,11 +157,15 @@ namespace PileDesign.Views
             // 1 行追加あたり O(1) で TextContainer に追記するため UI をブロックしない。
             // Option B (2026-04-24): ケースタグ [Lx-x.Cx.(Liq|Dry)] が含まれる行は
             // 「すべて」タブと併せて対応するケースタブにも追記する。
+            // 案 X (2026-04-24): MDOP=1 (逐次) では並列追跡の必要がないためケースタブを作らない。
             if (LogTextBox == null || LogTabControl == null) return;
 
             // 追記前に visible タブの TextBox が最下段付近に居たか判定 (smart scroll)
             var visibleTextBox = GetVisibleTabTextBox();
             bool wasAtBottom = IsTextBoxAtBottom(visibleTextBox);
+
+            // ケースタブを作るかどうか: MDOP > 1 の時のみ作成
+            bool createCaseTabs = (DataContext as HorizontalCalculationViewModel)?.MaxCaseDegreeOfParallelism > 1;
 
             if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
             {
@@ -170,11 +174,14 @@ namespace PileDesign.Views
                     string line = item + Environment.NewLine;
                     LogTextBox.AppendText(line);  // 常に「すべて」タブへ追記
 
-                    string? caseTag = ExtractCaseTag(item);
-                    if (caseTag != null)
+                    if (createCaseTabs)
                     {
-                        var caseTb = EnsureCaseTab(caseTag);
-                        caseTb.AppendText(line);
+                        string? caseTag = ExtractCaseTag(item);
+                        if (caseTag != null)
+                        {
+                            var caseTb = EnsureCaseTab(caseTag);
+                            caseTb.AppendText(line);
+                        }
                     }
                 }
             }
@@ -205,15 +212,21 @@ namespace PileDesign.Views
             LogTextBox.Clear();
             ClearCaseTabs();
             if (items == null) return;
+
+            bool createCaseTabs = (DataContext as HorizontalCalculationViewModel)?.MaxCaseDegreeOfParallelism > 1;
+
             foreach (var item in items)
             {
                 string line = item + Environment.NewLine;
                 LogTextBox.AppendText(line);
-                string? caseTag = ExtractCaseTag(item);
-                if (caseTag != null)
+                if (createCaseTabs)
                 {
-                    var caseTb = EnsureCaseTab(caseTag);
-                    caseTb.AppendText(line);
+                    string? caseTag = ExtractCaseTag(item);
+                    if (caseTag != null)
+                    {
+                        var caseTb = EnsureCaseTab(caseTag);
+                        caseTb.AppendText(line);
+                    }
                 }
             }
             LogTextBox.ScrollToEnd();
