@@ -1652,35 +1652,35 @@ namespace PileDesign.ViewModels
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
-                        // v20: 難易度事前検出 (Phase 1) — counter-loading を事前に detect し、
-                        // 最初から大きな nStep で実行することで失敗試行のムダを回避
+                        // v20: 荷重方向の事前検出 — counter-loading (逆方向組合せ) を検出し、
+                        // 最初から小さな荷重ステップで実行することで失敗試行のムダを回避
                         //
                         // v28 (2026-04-23): Approach I で杭頭 Ry リミットサイクルが根本解決したため、
-                        // 分類を counter-loading (βU × βL < 0) 一本に簡素化、Hard nStep を 16 → 12 に緩和。
-                        // 物理的根拠: S 字曲げ (杭頭と杭体下部で逆符号の塑性ヒンジが同時形成) は
-                        // Newton 方向が接線不連続で振動しやすい。その他の難しさは Approach I で
-                        // 除去済み、または早期適応検出 (v26 案 B) が実測ベースで救済。
+                        // 分類を βU × βL の符号のみに簡素化、CounterLoading 時の nStep を 16 → 12 に緩和。
+                        // 物理的根拠: 逆方向組合せは S 字曲げ (杭頭と杭体下部で逆符号の塑性ヒンジが
+                        // 同時形成) が発生し、Newton 方向が接線不連続で振動しやすい。その他の難しさは
+                        // Approach I で除去済み、または早期適応検出 (v26 案 B) が実測ベースで救済。
                         //
                         // 仕組み:
-                        //   - Easy (βU × βL ≥ 0): configured nStep で開始、retry 最大 3
-                        //   - Hard (counter-loading): 基本 ×2 (min 12) で開始、retry 最大 2
+                        //   - Forward (βU × βL ≥ 0): configured nStep で開始、retry 最大 3
+                        //   - CounterLoading (βU × βL < 0): 基本 ×2 (min 12) で開始、retry 最大 2
                         int configuredNStep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
                             loadCase.Level == 1 ? Level1CalculationStepsCount :
                             loadCase.Level == 2 ? Level2CalculationStepsCount :
                             1;
-                        var difficulty = ClassifyCaseDifficulty(loadCase, loadCombination, isLiquefaction);
+                        var loadDirection = ClassifyLoadCombinationDirection(loadCase, loadCombination, isLiquefaction);
                         int baseNStep = configuredNStep;
                         int MAX_STEP_BISECTIONS = 3;
                         if (loadCase.IsSoilNonLinear || loadCase.IsPileNonLinear)
                         {
                             // 非線形ケースのみ事前検出を適用
-                            switch (difficulty)
+                            switch (loadDirection)
                             {
-                                case CaseDifficulty.Hard:
+                                case LoadCombinationDirection.CounterLoading:
                                     baseNStep = Math.Max(configuredNStep * 2, 12);
                                     MAX_STEP_BISECTIONS = 2;
                                     break;
-                                case CaseDifficulty.Easy:
+                                case LoadCombinationDirection.Forward:
                                 default:
                                     // 基本 nStep のまま (3 回 retry)
                                     break;
@@ -1694,7 +1694,8 @@ namespace PileDesign.ViewModels
                                 _bisectionExtraSteps += (baseNStep - configuredNStep);
                                 OnPropertyChanged(nameof(TotalCalculationCount));
                                 OnPropertyChanged(nameof(ProgressText));
-                                await AddLogAsync($"  🔎 難易度事前検出: {difficulty} 組合せ (αL={loadCombination.Alpha1:N2}, βU={loadCombination.Beta1:N2}, βL={loadCombination.Beta2:N2}) → 初期 nStep={baseNStep} (設定値 {configuredNStep} の代わり, 総ステップ数: {TotalCalculationCount})");
+                                string directionLabel = loadDirection == LoadCombinationDirection.CounterLoading ? "逆方向組合せ" : "順方向組合せ";
+                                await AddLogAsync($"  🔎 荷重方向事前検出: {directionLabel} (αL={loadCombination.Alpha1:N2}, βU={loadCombination.Beta1:N2}, βL={loadCombination.Beta2:N2}) → 初期 nStep={baseNStep} (設定値 {configuredNStep} の代わり, 総ステップ数: {TotalCalculationCount})");
                             }
                         }
                         int nStep = baseNStep;
@@ -3311,25 +3312,28 @@ namespace PileDesign.ViewModels
             targetModel.SetT();
         }
 
-        #region Case Difficulty Classifier (v20 Phase 1)
+        #region Load Combination Direction Classifier (v20 Phase 1, v28 simplified)
 
         /// <summary>
-        /// 荷重ケース × 荷重組合せ × 液状化 の組合せの数値解法上の難易度。
-        /// Hard: counter-loading (βU × βL &lt; 0) — S 字曲げで接線不連続が発生しやすい
-        /// Easy: それ以外
+        /// 荷重組合せの載荷方向分類。
+        /// Forward (順方向組合せ): βU × βL ≥ 0 — 上部・基礎慣性力が同方向
+        /// CounterLoading (逆方向組合せ): βU × βL &lt; 0 — 上部・基礎慣性力が逆方向 (S字曲げ)
         /// </summary>
-        private enum CaseDifficulty { Easy, Hard }
+        private enum LoadCombinationDirection { Forward, CounterLoading }
 
         /// <summary>
-        /// v28 (2026-04-23): counter-loading (βU × βL &lt; 0) のみ Hard に分類。
-        /// 物理的根拠: 杭頭と杭体下部で反対向きの曲げ (S字曲げ) が発生し、
-        /// 逆符号の塑性ヒンジが同時形成 → Newton 方向が接線不連続で振動しやすい。
+        /// v28 (2026-04-23): βU × βL の符号のみで分類。
+        /// 物理的根拠: 逆方向組合せは杭頭と杭体下部で反対向きの曲げ (S字曲げ) が発生し、
+        /// 逆符号の塑性ヒンジが同時形成 → Newton 方向が接線不連続で振動しやすいため、
+        /// 最初から小さな荷重ステップで開始する。
         /// Approach I で杭頭 Ry リミットサイクルが解決済みのため、高 αL や強 βU 液状化等の
         /// 静的分類は廃止。早期適応検出 (v26 案 B) が実測ベースで救済する。
         /// </summary>
-        private static CaseDifficulty ClassifyCaseDifficulty(LoadCase lc, LoadCombination combo, bool isLiq)
+        private static LoadCombinationDirection ClassifyLoadCombinationDirection(LoadCase lc, LoadCombination combo, bool isLiq)
         {
-            return (combo.Beta1 * combo.Beta2 < 0.0) ? CaseDifficulty.Hard : CaseDifficulty.Easy;
+            return (combo.Beta1 * combo.Beta2 < 0.0)
+                ? LoadCombinationDirection.CounterLoading
+                : LoadCombinationDirection.Forward;
         }
 
         #endregion
