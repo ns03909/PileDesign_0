@@ -1656,19 +1656,9 @@ namespace PileDesign.ViewModels
                         // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
                         string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
-                        // E3c-2 (2026-04-23): ケース固有モデル = targetModel の DeepCopy。
-                        // 結果マージのため、DeepCopy 前に主モデルの結果件数をスナップショットしておく。
-                        // 現時点では逐次実行。E3c-3 で Parallel.ForEach 化する予定。
-                        // 変数名は内側 while ループで使う snapXxxResults と衝突を避けるため caseSnapXxx に。
-                        int caseSnapAnaStepResults = targetModel.AnalysisStepResults?.Count ?? 0;
-                        var caseSnapNodeResultCounts = targetModel.Nodes.Select(n => n.NodeResults.Count).ToArray();
-                        var caseSnapBeamResultCounts = targetModel.Beams.Select(b => b.BeamResults.Count).ToArray();
-                        var caseSnapHSpringResultCounts = targetModel.HorizontalSoilSprings.Select(s => s.HorizontalSpringResults.Count).ToArray();
-                        int[]? caseSnapRotSpringResultCounts = null;
-                        if (targetModel.RotationalSprings != null)
-                            caseSnapRotSpringResultCounts = targetModel.RotationalSprings.Select(rs => rs.RotationalSpringResults.Count).ToArray();
-
-                        AnaModel caseModel = targetModel.DeepCopy();
+                        // E3c-1 (2026-04-23): ケース固有モデル。現時点では targetModel のエイリアス (逐次モード、挙動不変)。
+                        // E3c-2 で DeepCopy に差し替え、E3c-3 で Parallel.ForEach 化する予定。
+                        AnaModel caseModel = targetModel;
 
                         // v20: 荷重方向の事前検出 — counter-loading (逆方向組合せ) を検出し、
                         // 最初から小さな荷重ステップで実行することで失敗試行のムダを回避
@@ -2769,15 +2759,6 @@ namespace PileDesign.ViewModels
 
                         // NaN診断: 荷重ケース完了
                         // FEM.NaNDiagnostics.End();
-
-                        // E3c-2: caseModel (DeepCopy) で蓄積した結果を targetModel (主モデル) に merge
-                        AnaModel.AppendCaseResultsToMain(
-                            targetModel, caseModel,
-                            caseSnapAnaStepResults,
-                            caseSnapNodeResultCounts,
-                            caseSnapBeamResultCounts,
-                            caseSnapHSpringResultCounts,
-                            caseSnapRotSpringResultCounts);
                     }
                 }
             }
