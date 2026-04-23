@@ -501,91 +501,104 @@ namespace PileDesign.FEM
         }
 
         // 強制変位のマップオン
+        // v28 F-new 最適化 (2026-04-23): K の全非ゼロを 1 パスで走査し、その場で R 更新 +
+        // 強制 DOF 行/列を除外した新 K を COO 形式で構築する。
+        //   従来: for i=0..CountFree × for 強制 DOF × sparse indexed access で O(N_forced × N)
+        //          かつ matrixK[i,j]=0 の sparse set もスロット更新で低速。1.9 秒/iter。
+        //   今回: EnumerateIndexed 1 パス (O(nnz)) で完結。数十 ms/iter に期待。
         public (Matrix<double>, Vector<double>) GetForcedDispOnLoadVectorAndStiffnessMatrix(bool Istan)
         {
             var orig = Istan ? KAA_tan : KAA_sec;
             var vecOrig = VectorR ?? throw new InvalidOperationException("VectorR is null");
 
-            // orig が null またはサイズ不正のガード
             if (orig == null) throw new InvalidOperationException("Stiffness matrix is not initialized.");
             if (orig.RowCount != CountFree) throw new InvalidOperationException("Matrix size mismatch.");
 
-            // orig が Sparse であれば clone（Sparse clone はメモリ効率良い）
-            Matrix<double> matrixK;
-            if (orig.GetType().Name.Contains("Sparse"))
-                matrixK = orig.Clone(); // Sparse clone -> OK
-            else
-            {
-                // fallback: 明示的に sparse を作って非ゼロだけコピー（Dense 全複製を避ける）
-                var sparse = Matrix<double>.Build.Sparse(CountFree, CountFree);
-                // 非ゼロ要素だけをコピー（API に応じて EnumerateIndexed を使う）
-                foreach (var (i, j, val) in orig.EnumerateIndexed(Zeros.AllowSkip))
-                    sparse[i, j] = val;
-                matrixK = sparse;
-            }
-
             var vectorR = vecOrig.Clone();
 
-            // 荷重ベクトルへの操作
+            // 強制変位 DOF を収集 (eq → u_forced)
+            var forcedUByEq = new Dictionary<int, double>();
             foreach (var node in Nodes)
             {
-                if (node.IsForcedDisped == true)
+                if (!node.IsForcedDisped) continue;
+                NodeDisp forcedDisp = node.CumulativeForcedDisp - node.CumulativeDisp;
+                for (int k = 0; k < 2; k++)
                 {
-                    NodeDisp forcedDisp = node.CumulativeForcedDisp - node.CumulativeDisp; // 強制変位の取得
-
-                    for (int k = 0; k < 2; k++)
-                    {
-                        var eq = node.EquationNumber[k];
-                        {
-                            double forcedDispComponent = forcedDisp.GetByIndex(k); // 強制変位の該当成分を取得
-                            for (int i = 0; i < CountFree; i++)
-                            {
-                                vectorR[i] -= matrixK[i, eq] * forcedDispComponent; // 強制変位を考慮して調整
-                            }
-                        }
-                    }
+                    int eq = node.EquationNumber[k];
+                    if (eq >= 0 && eq < CountFree)
+                        forcedUByEq[eq] = forcedDisp.GetByIndex(k);
                 }
             }
 
-            foreach (var node in Nodes)
+            // 強制変位なし → K は clone だけで良い (fast path)
+            if (forcedUByEq.Count == 0)
             {
-                if (node.IsForcedDisped == true)
+                Matrix<double> kClone;
+                if (orig.GetType().Name.Contains("Sparse"))
+                    kClone = orig.Clone();
+                else
                 {
-                    NodeDisp forcedDisp = node.CumulativeForcedDisp - node.CumulativeDisp; // 強制変位の取得
+                    kClone = Matrix<double>.Build.Sparse(CountFree, CountFree);
+                    foreach (var entry in orig.EnumerateIndexed(Zeros.AllowSkip))
+                        kClone[entry.Item1, entry.Item2] = entry.Item3;
+                }
+                return (kClone, vectorR);
+            }
 
-                    for (int k = 0; k < 2; k++)
-                    {
-                        var eq = node.EquationNumber[k];
-                        {
-                            double forcedDispComponent = forcedDisp.GetByIndex(k); // 強制変位の該当成分を取得
+            // 強制 DOF あり: 1 パスで R 更新 + フィルタ済み新 K の COO を構築
+            int nnzEstimate = 1024;
+            var rowList = new List<int>(nnzEstimate);
+            var colList = new List<int>(nnzEstimate);
+            var valList = new List<double>(nnzEstimate);
 
-                            vectorR[eq] = forcedDispComponent; // 荷重ベクトルの該当要素に強制変位を設定
-                        }
-                    }
+            foreach (var entry in orig.EnumerateIndexed(Zeros.AllowSkip))
+            {
+                int i = entry.Item1;
+                int j = entry.Item2;
+                double v = entry.Item3;
+                if (v == 0.0) continue;
+
+                bool iForced = forcedUByEq.ContainsKey(i);
+                bool jForced = forcedUByEq.ContainsKey(j);
+
+                // R[i] -= K[i, j] × u_forced (j が強制、i は強制でない場合のみ意味あり。
+                // i が強制なら後段で R[eq]=u に上書きされる)
+                if (jForced && !iForced)
+                {
+                    vectorR[i] -= v * forcedUByEq[j];
+                }
+
+                // 強制 DOF の行・列でない成分だけ新 K に転記
+                if (!iForced && !jForced)
+                {
+                    rowList.Add(i);
+                    colList.Add(j);
+                    valList.Add(v);
                 }
             }
 
-            // 剛性マトリクスへの操作
-            foreach (var node in Nodes)
+            // vectorR[eq] = u_forced (強制 DOF の最終値)
+            foreach (var kv in forcedUByEq)
             {
-                if (node.IsForcedDisped == true)
-                {
-                    for (int k = 0; k < 2; k++)
-                    {
-                        var eq = node.EquationNumber[k];
-                        {
-                            matrixK[eq, eq] = 1.0; // 剛性マトリクスの該当要素を1に設定
-                            for (int i = 0; i < CountFree; i++)
-                            {
-                                if (i == eq) continue; // 自分自身の方程式番号はスキップ
-                                matrixK[i, eq] = 0.0; // 剛性マトリクスの該当要素をゼロに設定
-                                matrixK[eq, i] = 0.0; // 剛性マトリクスの該当要素をゼロに設定
-                            }
-                        }
-                    }
-                }
+                vectorR[kv.Key] = kv.Value;
             }
-            return (matrixK, vectorR);
+
+            // 強制 DOF 対角 1.0 を追加
+            foreach (var eq in forcedUByEq.Keys)
+            {
+                rowList.Add(eq);
+                colList.Add(eq);
+                valList.Add(1.0);
+            }
+
+            // 新 K を一括構築
+            var newK = Matrix<double>.Build.Sparse(CountFree, CountFree);
+            for (int idx = 0; idx < rowList.Count; idx++)
+            {
+                newK[rowList[idx], colList[idx]] = valList[idx];
+            }
+
+            return (newK, vectorR);
         }
 
         // 残余力の初期値を得るメソッド
