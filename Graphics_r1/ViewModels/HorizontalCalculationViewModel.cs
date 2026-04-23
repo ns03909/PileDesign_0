@@ -1599,7 +1599,10 @@ namespace PileDesign.ViewModels
             }
 
             targetModel.SetSlaveNodes(); // 剛体連結のスレーブ節点のセット
-            int calcNo = 0;
+
+            // E3c-3 (2026-04-23): ケース並列化対応。calcNo を StrongBox に包み Interlocked で
+            // atomic にインクリメントする。MDOP=1 (逐次) でも同じ経路 (overhead は無視できる)。
+            var calcNoBox = new System.Runtime.CompilerServices.StrongBox<int>(0);
 
             // v19: 解析開始時に再試行による追加ステップ数をリセット
             _bisectionExtraSteps = 0;
@@ -1637,6 +1640,18 @@ namespace PileDesign.ViewModels
             //       決定的順序でマージ（乱序混入を防ぐ）
             //   (e) MathNet Control.MaxDegreeOfParallelism を並列実行中は 1 にクランプ
             //   (f) AddLogAsync / CurrentProgress / _bisectionExtraSteps を Interlocked or lock で保護
+
+            // E3c-3 (2026-04-23): ケース並列化中は MathNet 内部並列度を 1 に clamp。
+            // 並列ケース × 並列 MathNet の掛け算でスレッド過剰を防ぐ。MDOP=1 (逐次) では clamp 不要。
+            int _caseMDOP = Math.Max(1, MaxCaseDegreeOfParallelism);
+            int _origMathNetMDOP = MathNet.Numerics.Control.MaxDegreeOfParallelism;
+            if (_caseMDOP > 1)
+            {
+                MathNet.Numerics.Control.MaxDegreeOfParallelism = 1;
+            }
+
+            try
+            {
             foreach (var loadCaseItem in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
             {
                 LoadCase loadCase = loadCaseItem;
@@ -1813,22 +1828,26 @@ namespace PileDesign.ViewModels
                             // v15: ステップ開始時の変位を記録（予測器用）
                             var vectorDAtStepStart = caseModel.VectorD?.Clone();
 
-                            calcNo += 1;
-                            CurrentProgress = calcNo; // 進捗を更新
+                            // E3c-3: Interlocked で atomic にインクリメント (MDOP>1 対応)。
+                            // curCalcNo は以降このステップ内で使用する (他スレッドが更新しても読み取りは安定)。
+                            int curCalcNo = System.Threading.Interlocked.Increment(ref calcNoBox.Value);
+                            // CurrentProgress 更新は WPF UI binding を触るため Dispatcher 経由で安全に
+                            // (UI スレッド上なら即時実行、pool スレッドなら UI キューへ投げる)。
+                            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => CurrentProgress = curCalcNo);
 
                             // 進捗を報告
                             progress?.Report(new Models.AnalysisProgress
                             {
-                                Percentage = TotalCalculationCount > 0 ? (calcNo * 100.0 / TotalCalculationCount) : 0,
+                                Percentage = TotalCalculationCount > 0 ? (curCalcNo * 100.0 / TotalCalculationCount) : 0,
                                 CurrentStep = $"レベル{level}-{iLC + 1}, {(isLiquefaction ? "液状化考慮" : "液状化非考慮")}, " +
                                              $"組合せ[{iLCOM + 1}], ステップ{step + 1}/{nStep}",
-                                CurrentStepNumber = calcNo,
+                                CurrentStepNumber = curCalcNo,
                                 TotalSteps = TotalCalculationCount,
                                 StartTime = startTime
                             });
 
                             string retryTag = bisectionAttempt > 0 ? $" 再試行{bisectionAttempt}/{MAX_STEP_BISECTIONS}" : "";
-                            await AddLogAsync($"[{calcNo}/{TotalCalculationCount}{retryTag}]" + "荷重ケース：" + level + "-" + $"{iLC + 1}" + ", " + "液状化" + (isLiquefaction ? "考慮, " : "非考慮, ") +
+                            await AddLogAsync($"[{curCalcNo}/{TotalCalculationCount}{retryTag}]" + "荷重ケース：" + level + "-" + $"{iLC + 1}" + ", " + "液状化" + (isLiquefaction ? "考慮, " : "非考慮, ") +
                                 $"[{iLCOM + 1}]" +
                                 "αL:" + $"{loadCombination.Alpha1:N2}" +
                                 ", βU:" + $"{loadCombination.Beta1:N2}" +
@@ -2801,6 +2820,12 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
+            }
+            }
+            finally
+            {
+                // E3c-3: MathNet 並列度を元に戻す
+                MathNet.Numerics.Control.MaxDegreeOfParallelism = _origMathNetMDOP;
             }
 
             token.ThrowIfCancellationRequested();
