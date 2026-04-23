@@ -55,6 +55,7 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(IsSingleGraphVisible));
                     OnPropertyChanged(nameof(PileSegmentLabel));
                     OnPropertyChanged(nameof(IsDistributedModeOptionVisible));
+                    OnPropertyChanged(nameof(IsPureTheoreticalOptionVisible));
                     UpdateGraph();
                     UpdatePileSegmentDetails();
                 }
@@ -115,12 +116,30 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _isDistributedMode, value))
                 {
                     UpdateGraph();
+                    OnPropertyChanged(nameof(IsPureTheoreticalOptionVisible));
+                }
+            }
+        }
+
+        // 分布モード内での表示切替: FEM 実測へ比例スケール か 純理論値か
+        // false (既定): 上下寄与の合計が FEM 実測と一致するよう scale_k = F_actual/F_theory を乗ずる
+        // true         : scale_k = 1 (純理論値のみ、土層パラメータ差がそのまま見える)
+        private bool _isPureTheoreticalMode;
+        public bool IsPureTheoreticalMode
+        {
+            get => _isPureTheoreticalMode;
+            set
+            {
+                if (SetProperty(ref _isPureTheoreticalMode, value))
+                {
+                    UpdateGraph();
                 }
             }
         }
 
         // XAML から Visibility 制御用
         public bool IsDistributedModeOptionVisible => SelectedGraphOption == "杭周地盤変位反力";
+        public bool IsPureTheoreticalOptionVisible => IsDistributedModeOptionVisible && IsDistributedMode;
 
         private ObservableCollection<string> _loadCombinationOptions;
         public ObservableCollection<string> LoadCombinationOptions
@@ -3673,13 +3692,19 @@ namespace PileDesign.ViewModels
                                 {
                                     double y = nodeRelDisps[k];
                                     double fAboveTh = 0, fBelowTh = 0;
+                                    // FEM (HorizontalCalculationViewModel) と同じ境界条件:
+                                    //   上方寄与: k > 0 かつ セグメント k-1 が存在
+                                    //   下方寄与: k が最終節点でない (k < nSprings - 1) かつ セグメント k が存在
                                     if (k > 0 && (k - 1) < reactions.Count)
                                         fAboveTh = Math.Abs(reactions[k - 1].GetSoilReaction(y, isTop: false, isFront));
-                                    if (k < reactions.Count)
+                                    if (k < nSprings - 1 && k < reactions.Count)
                                         fBelowTh = Math.Abs(reactions[k].GetSoilReaction(y, isTop: true, isFront));
 
+                                    // 純理論モード時は scale=1 (FEM スケールなし、理論値そのまま)
                                     double sum = fAboveTh + fBelowTh;
-                                    double scale = sum > 1e-10 ? nodeActualForces[k] / sum : 1.0;
+                                    double scale = IsPureTheoreticalMode
+                                        ? 1.0
+                                        : (sum > 1e-10 ? nodeActualForces[k] / sum : 1.0);
                                     fAboveScaled[k] = fAboveTh * scale;
                                     fBelowScaled[k] = fBelowTh * scale;
                                 }
