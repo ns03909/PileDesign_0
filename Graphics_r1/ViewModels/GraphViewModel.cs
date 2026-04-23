@@ -752,12 +752,30 @@ namespace PileDesign.ViewModels
             get => !IsMultiGraphVisible;
         }
 
+        // グラフフィルタ: レベル絞込み用の特別オプション名 (他のケース名と衝突しないよう L1/L2 接頭辞)
+        public const string LoadCaseFilterLevel1 = "L1 (地震荷重レベル1)";
+        public const string LoadCaseFilterLevel2 = "L2 (地震荷重レベル2)";
+
         private ObservableCollection<LoadCase> GetSelectedLoadCases()
         {
             ObservableCollection<LoadCase> selectedLoadCases = [];
             if (SelectedLoadCaseOption == "All")
             {
                 selectedLoadCases = InputModel.LoadCasesInput.AllSeismicLoadCases;
+            }
+            else if (SelectedLoadCaseOption == LoadCaseFilterLevel1)
+            {
+                foreach (var loadCase in InputModel.LoadCasesInput.AllSeismicLoadCases)
+                {
+                    if (loadCase.Level == 1) selectedLoadCases.Add(loadCase);
+                }
+            }
+            else if (SelectedLoadCaseOption == LoadCaseFilterLevel2)
+            {
+                foreach (var loadCase in InputModel.LoadCasesInput.AllSeismicLoadCases)
+                {
+                    if (loadCase.Level == 2) selectedLoadCases.Add(loadCase);
+                }
             }
             else
             {
@@ -825,7 +843,8 @@ namespace PileDesign.ViewModels
             IsGroupPileSettlementAnalysisDone = _mainWindowViewModel.IsGroupPileSettlementAnalysisDone;
             IsVerticalBeamAnalysisDone = _mainWindowViewModel.IsVerticalBeamAnalysisDone;
 
-            LoadCaseOptions = ["All"];
+            // フィルタ: 全部 / レベル絞り込み / 個別ケース
+            LoadCaseOptions = ["All", LoadCaseFilterLevel1, LoadCaseFilterLevel2];
             foreach (LoadCase loadCase in InputModel.LoadCasesInput.AllLoadCases)
             {
                 LoadCaseOptions.Add(loadCase.LoadName);
