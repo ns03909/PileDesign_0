@@ -452,25 +452,30 @@
             </Grid.RowDefinitions>
 
             <TextBlock Text="計算ログ" Grid.Row="0"/>
-            <!-- Text binding は廃止。CalculationLog の CollectionChanged を View 側で購読し、
-                 LogTextBox.AppendText で増分追記する (Text 全文再レイアウトを回避、UI フリーズ対策) -->
-            <TextBox x:Name="LogTextBox"
-                     Grid.Row="1"
-                     IsReadOnly="True"
-                     TextWrapping="NoWrap"
-                     VerticalScrollBarVisibility="Auto"
-                     HorizontalScrollBarVisibility="Auto"
-                     FontFamily="Consolas"
-                     FontSize="12"
-                     Background="#FAFAFA"
-                     AcceptsReturn="True">
-                <TextBox.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="コピー (Ctrl+C)" Command="ApplicationCommands.Copy"/>
-                        <MenuItem Header="全選択 (Ctrl+A)" Command="ApplicationCommands.SelectAll"/>
-                    </ContextMenu>
-                </TextBox.ContextMenu>
-            </TextBox>
+            <!-- Option B: TabControl で「すべて」タブ + ケースごとのタブ (並列実行時にケース単位でログを追跡可能に)
+                 - All タブ: 全ログを混在 (x:Name="LogTextBox")
+                 - ケースタブ: 動的追加、case tag [L2-1.C1.Liq] を header にする
+                 - 1 行増える毎に AppendText で増分追記 (Text binding 廃止) -->
+            <TabControl x:Name="LogTabControl" Grid.Row="1">
+                <TabItem Header="すべて" x:Name="LogTabAll">
+                    <TextBox x:Name="LogTextBox"
+                             IsReadOnly="True"
+                             TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto"
+                             FontFamily="Consolas"
+                             FontSize="12"
+                             Background="#FAFAFA"
+                             AcceptsReturn="True">
+                        <TextBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="コピー (Ctrl+C)" Command="ApplicationCommands.Copy"/>
+                                <MenuItem Header="全選択 (Ctrl+A)" Command="ApplicationCommands.SelectAll"/>
+                            </ContextMenu>
+                        </TextBox.ContextMenu>
+                    </TextBox>
+                </TabItem>
+            </TabControl>
         </Grid>
 
         <!-- 下部ボタン -->

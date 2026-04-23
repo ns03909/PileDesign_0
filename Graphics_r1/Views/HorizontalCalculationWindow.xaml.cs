@@ -1,5 +1,6 @@
 ﻿using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -81,64 +82,140 @@ namespace PileDesign.Views
         // 居た場合のみ追記後に自動スクロールする。手動で上を見ている時は引き戻さない。
         private const double AutoScrollThresholdPx = 32.0;
 
-        private bool IsLogTextBoxAtBottom()
+        // ケースタグ抽出正規表現: [L2-1.C1.Liq] 等、[Lx-x.Cx.(Liq|Dry)]
+        private static readonly Regex CaseTagPattern = new(
+            @"\[L\d+-\d+\.C\d+\.(?:Liq|Dry)\]", RegexOptions.Compiled);
+
+        // 動的生成したケースタブの TextBox (ケースタグ → TextBox)
+        private readonly Dictionary<string, TextBox> _caseTabTextBoxes = new();
+
+        private static string? ExtractCaseTag(string? line)
         {
-            if (LogTextBox == null) return true;
-            // VerticalOffset + ViewportHeight >= ExtentHeight - threshold なら最下段付近
-            double offset = LogTextBox.VerticalOffset;
-            double viewport = LogTextBox.ViewportHeight;
-            double extent = LogTextBox.ExtentHeight;
-            // 初期状態 (extent=0) も bottom 扱い → 最初の追記ではスクロールする
+            if (string.IsNullOrEmpty(line)) return null;
+            var match = CaseTagPattern.Match(line);
+            return match.Success ? match.Value : null;
+        }
+
+        private bool IsTextBoxAtBottom(TextBox? tb)
+        {
+            if (tb == null) return true;
+            double offset = tb.VerticalOffset;
+            double viewport = tb.ViewportHeight;
+            double extent = tb.ExtentHeight;
             if (extent <= 0) return true;
             return offset + viewport >= extent - AutoScrollThresholdPx;
+        }
+
+        /// <summary>現在表示中のタブに含まれる TextBox。All タブは LogTextBox。</summary>
+        private TextBox? GetVisibleTabTextBox()
+        {
+            if (LogTabControl?.SelectedItem is TabItem tab && tab.Content is TextBox tb) return tb;
+            return LogTextBox;
+        }
+
+        /// <summary>指定ケースタグ用の TextBox を返す (必要なら新規タブ生成)。</summary>
+        private TextBox EnsureCaseTab(string caseTag)
+        {
+            if (_caseTabTextBoxes.TryGetValue(caseTag, out var existing))
+                return existing;
+
+            var tb = new TextBox
+            {
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.NoWrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 12,
+                Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xFA)),
+                AcceptsReturn = true,
+            };
+            var menu = new ContextMenu();
+            menu.Items.Add(new MenuItem { Header = "コピー (Ctrl+C)", Command = ApplicationCommands.Copy });
+            menu.Items.Add(new MenuItem { Header = "全選択 (Ctrl+A)", Command = ApplicationCommands.SelectAll });
+            tb.ContextMenu = menu;
+
+            var tab = new TabItem { Header = caseTag, Content = tb };
+            LogTabControl.Items.Add(tab);
+            _caseTabTextBoxes[caseTag] = tb;
+            return tb;
+        }
+
+        /// <summary>「すべて」以外のケースタブを全削除してキャッシュもクリア。</summary>
+        private void ClearCaseTabs()
+        {
+            if (LogTabControl == null) return;
+            // index 0 = "すべて" タブ。後ろから削除
+            for (int i = LogTabControl.Items.Count - 1; i >= 1; i--)
+                LogTabControl.Items.RemoveAt(i);
+            _caseTabTextBoxes.Clear();
         }
 
         private void CalculationLog_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             // UI フリーズ対策: Text binding は廃止し、AppendText で増分追記。
-            // これにより WPF TextBox の全文再レイアウト O(total text) を避け、
-            // 1 行追加あたり O(1) の処理で済む。
-            if (LogTextBox == null) return;
+            // 1 行追加あたり O(1) で TextContainer に追記するため UI をブロックしない。
+            // Option B (2026-04-24): ケースタグ [Lx-x.Cx.(Liq|Dry)] が含まれる行は
+            // 「すべて」タブと併せて対応するケースタブにも追記する。
+            if (LogTextBox == null || LogTabControl == null) return;
 
-            // 追記「前」にユーザーが最下段付近に居たかを記録 (smart scroll 判定)
-            bool wasAtBottom = IsLogTextBoxAtBottom();
+            // 追記前に visible タブの TextBox が最下段付近に居たか判定 (smart scroll)
+            var visibleTextBox = GetVisibleTabTextBox();
+            bool wasAtBottom = IsTextBoxAtBottom(visibleTextBox);
 
             if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
             {
                 foreach (string item in e.NewItems)
-                    LogTextBox.AppendText(item + Environment.NewLine);
+                {
+                    string line = item + Environment.NewLine;
+                    LogTextBox.AppendText(line);  // 常に「すべて」タブへ追記
+
+                    string? caseTag = ExtractCaseTag(item);
+                    if (caseTag != null)
+                    {
+                        var caseTb = EnsureCaseTab(caseTag);
+                        caseTb.AppendText(line);
+                    }
+                }
             }
             else if (e.Action == NotifyCollectionChangedAction.Reset)
             {
                 LogTextBox.Clear();
+                ClearCaseTabs();
             }
-            // Replace/Remove/Move 等は未対応 (この VM では Add/Reset のみ発生)
 
-            // smart scroll: 追記前に最下段に居なかった場合はスクロールしない
-            // (手動でログを遡って読んでいるユーザーの位置を維持)
             if (!wasAtBottom) return;
-
-            // ScrollToEnd は O(text size) のため多数回呼ばない。1 フラッシュ 1 回に coalesce。
             if (_scrollToEndPending) return;
             _scrollToEndPending = true;
             LogTextBox.Dispatcher.BeginInvoke(() =>
             {
                 _scrollToEndPending = false;
-                LogTextBox?.ScrollToEnd();
+                // 現在表示中のタブの TextBox を末尾へスクロール
+                GetVisibleTabTextBox()?.ScrollToEnd();
             });
         }
 
         /// <summary>
-        /// LogTextBox を CalculationLog の現在内容で一度に再構築する。
+        /// LogTextBox とケースタブを CalculationLog の現在内容で一度に再構築する。
         /// DataContext 変更時や初回 subscribe 時に使う。
         /// </summary>
         private void PopulateLogTextBox(System.Collections.Generic.IEnumerable<string>? items)
         {
             if (LogTextBox == null) return;
             LogTextBox.Clear();
+            ClearCaseTabs();
             if (items == null) return;
             foreach (var item in items)
-                LogTextBox.AppendText(item + Environment.NewLine);
+            {
+                string line = item + Environment.NewLine;
+                LogTextBox.AppendText(line);
+                string? caseTag = ExtractCaseTag(item);
+                if (caseTag != null)
+                {
+                    var caseTb = EnsureCaseTab(caseTag);
+                    caseTb.AppendText(line);
+                }
+            }
             LogTextBox.ScrollToEnd();
         }
 
