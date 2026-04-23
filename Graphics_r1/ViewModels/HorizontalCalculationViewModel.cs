@@ -1650,6 +1650,11 @@ namespace PileDesign.ViewModels
                 MathNet.Numerics.Control.MaxDegreeOfParallelism = 1;
             }
 
+            // E3c-3-enable: MDOP > 1 のとき、ケースを Task.Run で並行実行し SemaphoreSlim で
+            // 同時実行数を _caseMDOP に制限。MDOP=1 では null のまま、従来通り逐次実行。
+            var _caseTasks = new List<System.Threading.Tasks.Task>();
+            System.Threading.SemaphoreSlim? _caseSemaphore = _caseMDOP > 1 ? new System.Threading.SemaphoreSlim(_caseMDOP) : null;
+
             try
             {
             foreach (var loadCaseItem in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
@@ -1679,6 +1684,12 @@ namespace PileDesign.ViewModels
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
+                        // E3c-3-enable: ケース 1 件分の body を local function に wrap。
+                        // MDOP=1 ではこのまま直接 await で呼出、MDOP>1 では Task.Run に投げて並行実行。
+                        // foreach 変数 (loadCase, loadCombination, isLiquefaction, iLC, iLCOM, level) は
+                        // C# 5.0 以降の仕様により各反復で fresh な変数として cap される。
+                        async System.Threading.Tasks.Task RunThisCaseAsync()
+                        {
                         // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
                         string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
@@ -2818,14 +2829,38 @@ namespace PileDesign.ViewModels
                                 caseSnapHSpringResultCounts,
                                 caseSnapRotSpringResultCounts);
                         }
+                        } // end local function RunThisCaseAsync
+
+                        // E3c-3-enable: MDOP>1 なら Task.Run に投げ semaphore で throttle、
+                        // MDOP=1 なら直接 await して逐次挙動を維持
+                        if (_caseSemaphore != null)
+                        {
+                            await _caseSemaphore.WaitAsync(token);
+                            _caseTasks.Add(System.Threading.Tasks.Task.Run(async () =>
+                            {
+                                try { await RunThisCaseAsync(); }
+                                finally { _caseSemaphore.Release(); }
+                            }, token));
+                        }
+                        else
+                        {
+                            await RunThisCaseAsync();
+                        }
                     }
                 }
+            }
+
+            // E3c-3-enable: 並列投入された全ケースの完了を待つ (MDOP=1 では _caseTasks は空)
+            if (_caseTasks.Count > 0)
+            {
+                await System.Threading.Tasks.Task.WhenAll(_caseTasks);
             }
             }
             finally
             {
-                // E3c-3: MathNet 並列度を元に戻す
+                // E3c-3: MathNet 並列度を元に戻す + semaphore 解放
                 MathNet.Numerics.Control.MaxDegreeOfParallelism = _origMathNetMDOP;
+                _caseSemaphore?.Dispose();
             }
 
             token.ThrowIfCancellationRequested();
