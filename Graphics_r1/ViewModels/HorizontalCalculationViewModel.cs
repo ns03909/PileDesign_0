@@ -1691,6 +1691,23 @@ namespace PileDesign.ViewModels
                         // C# 5.0 以降の仕様により各反復で fresh な変数として cap される。
                         async System.Threading.Tasks.Task RunThisCaseAsync()
                         {
+                        // E3c-3 tune (2026-04-23): inner Task.Run ネスト回避用ヘルパー。
+                        // MDOP=1 (逐次): 従来通り Task.Run に投げて UI をブロックしない。
+                        // MDOP>1 (並列): 既に外側 Task.Run 内 (ThreadPool worker) で実行中なので
+                        //   同期実行で十分。inner Task.Run を挟むと ThreadPool 消費量が
+                        //   MDOP × (NR 反復数) 倍に膨らみ starvation を招く。
+                        async System.Threading.Tasks.Task RunWork(System.Action work)
+                        {
+                            if (_caseMDOP > 1)
+                            {
+                                work();
+                            }
+                            else
+                            {
+                                await System.Threading.Tasks.Task.Run(work, token);
+                            }
+                        }
+
                         // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
                         string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
@@ -2021,7 +2038,8 @@ namespace PileDesign.ViewModels
                                 var currentYieldedSoilSprings = new HashSet<string>();
 
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
-                                await Task.Run(() =>
+                                // E3c-3 tune: MDOP>1 時は RunWork が同期実行に切替えて Task.Run nesting を回避
+                                await RunWork(() =>
                                 {
                                     // トークンを投げて途中キャンセルを可能にする
                                     token.ThrowIfCancellationRequested();
@@ -2228,7 +2246,7 @@ namespace PileDesign.ViewModels
                                     // ループ内の要所で再チェック（重い処理の長い段階がある場合はここに複数入れる）
                                     token.ThrowIfCancellationRequested();
 
-                                }, token);
+                                });
 
                                 // v28: Task.Run 外で新規クラックを UI ログに出力 (AddLogAsync はキュー方式で非同期 flush)
                                 // 複数杭が同時クラックする場合 (重荷重で 1 反復目から全杭が Mcr 到達する等) は
@@ -2365,7 +2383,8 @@ namespace PileDesign.ViewModels
                                     && aitkenFiredCount < AITKEN_MAX_FIRE
                                     && recentCumulativeDisp.Count >= AITKEN_HISTORY)
                                 {
-                                    await Task.Run(() =>
+                                    // E3c-3 tune: MDOP>1 時は RunWork が同期実行 (nesting 回避)
+                                    await RunWork(() =>
                                     {
                                         int historyCount = recentCumulativeDisp.Count;
                                         foreach (var nd in caseModel.Nodes)
@@ -2386,7 +2405,7 @@ namespace PileDesign.ViewModels
                                         // 内力と残差を再計算（次の反復で新しい残差が評価される）
                                         FindT(iLC, caseModel);
                                         caseModel.FindR();
-                                    }, token);
+                                    });
 
                                     aitkenFiredCount++;
                                     flipFlopCount = 0;
