@@ -325,6 +325,92 @@ namespace PileDesign.FEM
             }
         }
 
+        /// <summary>
+        /// F-old (2026-04-23) 並列 K 組立用: localStiffness を ResolvedDofMap に従って分配し、
+        /// COO 三つ組 (row, col, val) をリストに追加する。
+        /// スレッドローカル COO 蓄積 → 最後に SparseOfIndexed で一括構築する用途。
+        /// AddStiffnessToGlobal の ResolvedDofMap 経路と同一セマンティクス (重複 index は加算される)。
+        /// </summary>
+        public static void AppendStiffnessToCoo(
+            List<(int r, int c, double v)> coo,
+            Matrix<double> localStiffness,
+            bool isRowFree, bool isColFree,
+            Node nodeI, Node nodeJ)
+        {
+            bool useResolvedMap = nodeI.ResolvedDofMap != null && nodeJ.ResolvedDofMap != null;
+
+            if (!useResolvedMap)
+            {
+                AppendStiffnessToCooLegacy(coo, localStiffness, isRowFree, isColFree, nodeI, nodeJ);
+                return;
+            }
+
+            DofTerm[][] maps = new DofTerm[12][];
+            for (int d = 0; d < 6; d++) maps[d] = nodeI.ResolvedDofMap[d] ?? [];
+            for (int d = 0; d < 6; d++) maps[6 + d] = nodeJ.ResolvedDofMap[d] ?? [];
+
+            for (int i = 0; i < 12; i++)
+            {
+                var termsI = maps[i];
+                if (termsI.Length == 0) continue;
+
+                for (int j = 0; j < 12; j++)
+                {
+                    double kval = localStiffness[i, j];
+                    if (kval == 0.0) continue;
+
+                    var termsJ = maps[j];
+                    if (termsJ.Length == 0) continue;
+
+                    foreach (var ti in termsI)
+                    {
+                        if ((isRowFree && ti.Eq < 0) || (!isRowFree && ti.Eq >= 0)) continue;
+                        foreach (var tj in termsJ)
+                        {
+                            if ((isColFree && tj.Eq < 0) || (!isColFree && tj.Eq >= 0)) continue;
+                            coo.Add((ti.Eq, tj.Eq, ti.Coeff * kval * tj.Coeff));
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void AppendStiffnessToCooLegacy(
+            List<(int r, int c, double v)> coo,
+            Matrix<double> localStiffness,
+            bool isRowFree, bool isColFree,
+            Node nodeI, Node nodeJ)
+        {
+            Matrix<double> transferedLocalStiffness;
+            if (nodeI.HasMasterSlave || nodeJ.HasMasterSlave)
+            {
+                var transferMatrix = Matrix<double>.Build.DenseIdentity(12);
+                for (int r = 0; r < 6; r++)
+                    for (int c = 0; c < 6; c++)
+                    {
+                        transferMatrix[r, c] = nodeI.TransferMatrix[r, c];
+                        transferMatrix[r + 6, c + 6] = nodeJ.TransferMatrix[r, c];
+                    }
+                transferedLocalStiffness = transferMatrix.Transpose() * localStiffness * transferMatrix;
+            }
+            else
+            {
+                transferedLocalStiffness = localStiffness;
+            }
+
+            var eq = GetEquationNumbers(nodeI, nodeJ);
+            for (int i_row = 0; i_row < 12; i_row++)
+            {
+                if ((isRowFree && eq[i_row] < 0) || (!isRowFree && eq[i_row] >= 0)) continue;
+                for (int i_col = 0; i_col < 12; i_col++)
+                {
+                    if ((isColFree && eq[i_col] < 0) || (!isColFree && eq[i_col] >= 0)) continue;
+                    double v = transferedLocalStiffness[i_row, i_col];
+                    if (v != 0.0) coo.Add((eq[i_row], eq[i_col], v));
+                }
+            }
+        }
+
         /// <summary>従来の TransferMatrix 方式（フォールバック用）</summary>
         private static void AddStiffnessToGlobalLegacy(
             Matrix<double> matrixGlobalStiffness,
