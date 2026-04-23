@@ -227,7 +227,7 @@
             <CheckBox IsChecked="{Binding IsPureTheoreticalMode, Mode=TwoWay}"
                       Margin="16,4,0,0"
                       Visibility="{Binding IsPureTheoreticalOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                      ToolTip="OFF (既定): 上下寄与の合計が FEM 実測ばね反力と一致するよう比例倍&#x0a;  scale = F_actual / (F_above_theory + F_below_theory)&#x0a;ON: scale = 1 (理論値そのまま)&#x0a;  土層パラメータ (Kh0, py) の差がそのまま可視化される&#x0a;  層変化点での段差検証に有用">
+                      ToolTip="解析結果の相対変位から上下土層それぞれの地盤反力・反力係数を再計算します&#x0a;OFF (既定): 上下寄与の合計が FEM 実測ばね反力と一致するよう比例倍&#x0a;  scale = F_actual / (F_above_theory + F_below_theory)&#x0a;ON: scale = 1 (理論値そのまま)&#x0a;  土層パラメータ (Kh0, py) の差がそのまま可視化される">
                 <TextBlock Text="純理論値 (FEM スケールなし)" TextWrapping="Wrap"/>
             </CheckBox>
 
