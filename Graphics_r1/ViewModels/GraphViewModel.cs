@@ -2839,19 +2839,45 @@ namespace PileDesign.ViewModels
                                     double dRx = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
                                     double dRy = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
                                     double dRz = rsResult.CumulativeDisp.Rzj - rsResult.CumulativeDisp.Rzi;
+                                    double mxi = rsResult.CumulativeForce.Mxi;
+                                    double myi = rsResult.CumulativeForce.Myi;
+                                    double mzi = rsResult.CumulativeForce.Mzi;
 
-                                    double thetaFinal = rs.Mode == RotationalSpringMode.CombinedXY
-                                        ? Math.Sqrt(dRx * dRx + dRy * dRy)
-                                        : (rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
+                                    double thetaFinal;
+                                    double mFinal;
+                                    bool isPeakPlot = false;
+                                    if (rs.Mode == RotationalSpringMode.CombinedXY)
+                                    {
+                                        // v28 アプローチ I: post-crack で方向ロック + ヒステリシスされた杭は
+                                        // **ピーク履歴値 (ThetaProjMax, curve(ThetaProjMax))** をプロット。
+                                        // 現在値 (θ_proj, M_proj) は線形除荷経路上の点で、monotonic loading
+                                        // curve 上には乗らない。設計的にはピーク時の最大 demand を包絡線で
+                                        // 示す方が意味のある可視化。
+                                        if (rsResult.HasCracked
+                                            && rsResult.CrackNx.HasValue
+                                            && rsResult.CrackNy.HasValue
+                                            && rsResult.ThetaProjMax > 0.0
+                                            && rs.CurveXY != null)
+                                        {
+                                            thetaFinal = rsResult.ThetaProjMax;
+                                            mFinal = Math.Abs(rs.CurveXY.EvaluateMoment(thetaFinal));
+                                            isPeakPlot = true;
+                                        }
+                                        else
+                                        {
+                                            thetaFinal = Math.Sqrt(dRx * dRx + dRy * dRy);
+                                            mFinal = Math.Sqrt(mxi * mxi + myi * myi);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        thetaFinal = rs.Dof == RotationalDof.Rx ? Math.Abs(dRx)
                                             : rs.Dof == RotationalDof.Ry ? Math.Abs(dRy)
-                                            : Math.Abs(dRz));
-
-                                    // モーメント（CombinedXYはRx,Ry回転の合成なのでMxi,Myiを使用）
-                                    double mFinal = rs.Mode == RotationalSpringMode.CombinedXY
-                                        ? Math.Sqrt(rsResult.CumulativeForce.Mxi * rsResult.CumulativeForce.Mxi + rsResult.CumulativeForce.Myi * rsResult.CumulativeForce.Myi)
-                                        : (rs.Dof == RotationalDof.Rx ? Math.Abs(rsResult.CumulativeForce.Mxi)
-                                            : rs.Dof == RotationalDof.Ry ? Math.Abs(rsResult.CumulativeForce.Myi)
-                                            : Math.Abs(rsResult.CumulativeForce.Mzi));
+                                            : Math.Abs(dRz);
+                                        mFinal = rs.Dof == RotationalDof.Rx ? Math.Abs(mxi)
+                                            : rs.Dof == RotationalDof.Ry ? Math.Abs(myi)
+                                            : Math.Abs(mzi);
+                                    }
 
                                     // マーカープロット
                                     if (double.IsFinite(thetaFinal) && double.IsFinite(mFinal) && thetaFinal > 0)
@@ -2862,10 +2888,28 @@ namespace PileDesign.ViewModels
                                         marker.MarkerStyle.Shape = ScottPlot.MarkerShape.FilledCircle;
                                         marker.Color = ScottPlot.Color.FromColor(System.Drawing.Color.Red);
                                         marker.LegendText = $"最終:{legend}";
-                                        _graphHoverMap[marker] =
-                                            mthetaDetails + "\n" +
-                                            $"最終 θ: {thetaFinal:F6} rad\n" +
-                                            $"最終 M: {mFinal:F1} kN·m";
+
+                                        if (isPeakPlot)
+                                        {
+                                            // ピーク表示: 現在値 (θ_proj, M_proj) もホバーに併記
+                                            double dRxH = rsResult.CumulativeDisp.Rxj - rsResult.CumulativeDisp.Rxi;
+                                            double dRyH = rsResult.CumulativeDisp.Ryj - rsResult.CumulativeDisp.Ryi;
+                                            double thetaProjNow = dRxH * rsResult.CrackNx.Value + dRyH * rsResult.CrackNy.Value;
+                                            double mProjNow = mxi * rsResult.CrackNx.Value + myi * rsResult.CrackNy.Value;
+                                            _graphHoverMap[marker] =
+                                                mthetaDetails + "\n" +
+                                                $"ピーク θ_proj_max (n=({rsResult.CrackNx:F3},{rsResult.CrackNy:F3})): {thetaFinal:F6} rad\n" +
+                                                $"ピーク M: {mFinal:F1} kN·m\n" +
+                                                $"現在 θ_proj: {thetaProjNow:F6} rad / M_proj: {mProjNow:F1} kN·m\n" +
+                                                "(post-crack 方向ロック: n 方向ピーク履歴値を表示)";
+                                        }
+                                        else
+                                        {
+                                            _graphHoverMap[marker] =
+                                                mthetaDetails + "\n" +
+                                                $"最終 θ: {thetaFinal:F6} rad\n" +
+                                                $"最終 M: {mFinal:F1} kN·m";
+                                        }
                                     }
                                 }
                             }
