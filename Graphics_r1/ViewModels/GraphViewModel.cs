@@ -3569,6 +3569,18 @@ namespace PileDesign.ViewModels
                 var horizontalSoilSprings = pileLayoutDataItem.HorizontalSoilSprings;
                 if (horizontalSoilSprings == null || horizontalSoilSprings.Count == 0) continue;
 
+                // 案 B: ノードごとのトリビュータリ長を求めるため、対応する HorizontalSoilReactions
+                // (地盤セグメント定義) を取得。SoilPileAltNo が無効な場合は reactions を null にして
+                // フォールバック (division スキップ、= 旧挙動の kN/kN/m を表示)
+                List<Models.InputData.HorizontalSoilReactionItem>? reactions = null;
+                if (pileLayoutDataItem.SoilPileAltNo > 0
+                    && pileLayoutDataItem.SoilPileAltNo <= InputModel.ElementDivision.SoilPiles.Count)
+                {
+                    var sp = InputModel.ElementDivision.SoilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
+                    if (sp?.HorizontalSoilReactions != null && sp.HorizontalSoilReactions.Count > 0)
+                        reactions = sp.HorizontalSoilReactions.ToList();
+                }
+
                 foreach (LoadCase loadCase in GetSelectedLoadCases())
                 {
                     foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
@@ -3582,8 +3594,10 @@ namespace PileDesign.ViewModels
                             List<double> springZs = [];
                             List<double> springValues = [];
 
-                            foreach (var spring in horizontalSoilSprings)
+                            int nSprings = horizontalSoilSprings.Count;
+                            for (int i = 0; i < nSprings; i++)
                             {
+                                var spring = horizontalSoilSprings[i];
                                 if (spring?.NodeI?.Coord == null) continue;
 
                                 // 深度（杭節点のZ座標）
@@ -3604,13 +3618,28 @@ namespace PileDesign.ViewModels
                                 double relDispY = result.CumulativeDisp.Dyi - result.CumulativeDisp.Dyj;
                                 double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
 
-                                // ばね反力（杭節点側のX,Y合成）
+                                // ばね反力（杭節点側のX,Y合成） [kN] — ノード位置のばね内力総量
                                 double forceX = result.CumulativeForce.Fxi;
                                 double forceY = result.CumulativeForce.Fyi;
                                 double force = Math.Sqrt(forceX * forceX + forceY * forceY);
 
-                                // ばね割線剛性 = 反力 / 相対変位
-                                double secantStiffness = relDisp > 1e-10 ? force / relDisp : 0;
+                                // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
+                                double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;
+
+                                // 案 B: 単位長さあたりに変換 (杭設計慣行に合わせ kN/m, kN/m² 表示)
+                                // トリビュータリ長 = 上側セグメント×0.5 + 下側セグメント×0.5
+                                //   spring[i] は pileNode[i] に対応。reactions[j] は pileNode[j]〜pileNode[j+1] のセグメント。
+                                //   よって node i の tributary = 0.5 × (L_{i-1} [上側] + L_i [下側])
+                                double tribLength = 0.0;
+                                if (reactions != null)
+                                {
+                                    if (i > 0 && (i - 1) < reactions.Count)
+                                        tribLength += 0.5 * (reactions[i - 1].ZTop - reactions[i - 1].ZBtm);
+                                    if (i < nSprings - 1 && i < reactions.Count)
+                                        tribLength += 0.5 * (reactions[i].ZTop - reactions[i].ZBtm);
+                                }
+                                // reactions が取れない / tribLength=0 の場合は単位長 1m として旧挙動相当に
+                                if (tribLength <= 0) tribLength = 1.0;
 
                                 springZs.Add(z);
 
@@ -3620,11 +3649,13 @@ namespace PileDesign.ViewModels
                                 }
                                 else if (dataType == "Reaction")
                                 {
-                                    springValues.Add(force); // kN/m（ばね反力）
+                                    // 単位長さあたりの地盤反力 [kN/m] = 総反力[kN] / トリビュータリ長[m]
+                                    springValues.Add(force / tribLength);
                                 }
                                 else if (dataType == "SecantStiffness")
                                 {
-                                    springValues.Add(secantStiffness); // kN/m²
+                                    // 単位長さあたりの割線剛性 [kN/m²] = 総剛性[kN/m] / トリビュータリ長[m]
+                                    springValues.Add(springStiffness / tribLength);
                                 }
                             }
 
