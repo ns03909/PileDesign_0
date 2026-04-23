@@ -54,6 +54,7 @@ namespace PileDesign.ViewModels
                     OnPropertyChanged(nameof(IsMultiGraphVisible));
                     OnPropertyChanged(nameof(IsSingleGraphVisible));
                     OnPropertyChanged(nameof(PileSegmentLabel));
+                    OnPropertyChanged(nameof(IsDistributedModeOptionVisible));
                     UpdateGraph();
                     UpdatePileSegmentDetails();
                 }
@@ -101,6 +102,25 @@ namespace PileDesign.ViewModels
                 }
             }
         }
+
+        // 案 C (2026-04-24): 水平地盤反力 / ばね割線剛性 を「単位長さあたり」表示に切替。
+        // false: 総量 (kN, kN/m) + 折線 (従来挙動)
+        // true : 単位長さあたり (kN/m, kN/m²) + ステップグラフ (分布風)
+        private bool _isDistributedMode;
+        public bool IsDistributedMode
+        {
+            get => _isDistributedMode;
+            set
+            {
+                if (SetProperty(ref _isDistributedMode, value))
+                {
+                    UpdateGraph();
+                }
+            }
+        }
+
+        // XAML から Visibility 制御用
+        public bool IsDistributedModeOptionVisible => SelectedGraphOption == "杭周地盤変位反力";
 
         private ObservableCollection<string> _loadCombinationOptions;
         public ObservableCollection<string> LoadCombinationOptions
@@ -2109,8 +2129,11 @@ namespace PileDesign.ViewModels
                 _graphHoverMap.Clear();
 
                 DrawHorizontalSoilReaction(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "RelativeDisp", "mm");
-                DrawHorizontalSoilReaction(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "Reaction", "kN/m");
-                DrawHorizontalSoilReaction(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "SecantStiffness", "kN/m²");
+                // 案 C: IsDistributedMode で単位表示を切替
+                string reactionUnit = IsDistributedMode ? "kN/m" : "kN";
+                string stiffnessUnit = IsDistributedMode ? "kN/m²" : "kN/m";
+                DrawHorizontalSoilReaction(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "Reaction", reactionUnit);
+                DrawHorizontalSoilReaction(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "SecantStiffness", stiffnessUnit);
             }
             else if (SelectedGraphOption == "水平地盤反力度p-y")
             {
@@ -3626,19 +3649,17 @@ namespace PileDesign.ViewModels
                                 // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
                                 double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;
 
-                                // 案 B: 単位長さあたりに変換 (杭設計慣行に合わせ kN/m, kN/m² 表示)
+                                // 案 C: IsDistributedMode=true のときだけ単位長さあたりに変換。
                                 // トリビュータリ長 = 上側セグメント×0.5 + 下側セグメント×0.5
-                                //   spring[i] は pileNode[i] に対応。reactions[j] は pileNode[j]〜pileNode[j+1] のセグメント。
-                                //   よって node i の tributary = 0.5 × (L_{i-1} [上側] + L_i [下側])
                                 double tribLength = 0.0;
-                                if (reactions != null)
+                                if (IsDistributedMode && reactions != null)
                                 {
                                     if (i > 0 && (i - 1) < reactions.Count)
                                         tribLength += 0.5 * (reactions[i - 1].ZTop - reactions[i - 1].ZBtm);
                                     if (i < nSprings - 1 && i < reactions.Count)
                                         tribLength += 0.5 * (reactions[i].ZTop - reactions[i].ZBtm);
                                 }
-                                // reactions が取れない / tribLength=0 の場合は単位長 1m として旧挙動相当に
+                                // IsDistributedMode=false または tribLength 取得失敗時は 1.0 (除算で値が変わらない)
                                 if (tribLength <= 0) tribLength = 1.0;
 
                                 springZs.Add(z);
@@ -3649,12 +3670,12 @@ namespace PileDesign.ViewModels
                                 }
                                 else if (dataType == "Reaction")
                                 {
-                                    // 単位長さあたりの地盤反力 [kN/m] = 総反力[kN] / トリビュータリ長[m]
+                                    // OFF: 総反力 [kN], ON: 単位長さあたり [kN/m]
                                     springValues.Add(force / tribLength);
                                 }
                                 else if (dataType == "SecantStiffness")
                                 {
-                                    // 単位長さあたりの割線剛性 [kN/m²] = 総剛性[kN/m] / トリビュータリ長[m]
+                                    // OFF: 総ばね剛性 [kN/m], ON: 単位長さあたり [kN/m²]
                                     springValues.Add(springStiffness / tribLength);
                                 }
                             }
@@ -3663,6 +3684,13 @@ namespace PileDesign.ViewModels
                             {
                                 var scatter = wpfPlot.Plot.Add.Scatter(springValues, springZs);
                                 scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
+
+                                // 案 C: 単位長さあたり表示 + 反力/剛性のみ、ステップグラフ (長方形分布風) に
+                                if (IsDistributedMode && (dataType == "Reaction" || dataType == "SecantStiffness"))
+                                {
+                                    // StepVertical: (x1,y1)→(x1,y2)→(x2,y2) — 値を保持しながら z を移動、次の節点で値ジャンプ
+                                    scatter.ConnectStyle = ScottPlot.ConnectStyle.StepVertical;
+                                }
 
                                 // ホバーポップアップ用詳細
                                 double absMax = springValues.Count > 0 ? springValues.Max(Math.Abs) : 0;
