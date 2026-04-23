@@ -1701,6 +1701,12 @@ namespace PileDesign.ViewModels
                         int bisectionAttempt = 0;
                         bool caseConverged = false;
 
+                        // v28 (2026-04-23) 改善ゲート: 前 attempt の平均反復数を保持し、
+                        // retry 後にほとんど改善しない場合 (細分化が無効な構造的ラインサーチ制約)
+                        // は以降の retry を抑制して無駄な計算を避ける。
+                        double prevAttemptAvgIter = double.PositiveInfinity;
+                        bool retryGateDisabled = false;
+
                         while (true)
                         {
                             // 再試行時の巻き戻し用に、結果リストのサイズをスナップショット
@@ -1760,7 +1766,7 @@ namespace PileDesign.ViewModels
 
                             // v26 (案 B): 早期適応検出用の反復数累積。最初の EARLY_ADAPTIVE_OBS_STEPS
                             // ステップの平均反復数が閾値を超えたら即 retry。30 反復停滞の検出より早く発火する。
-                            // bisectionAttempt==0 の初回試行でのみ評価（retry 後は通常の停滞検出に任せる）。
+                            // v28 (2026-04-23): retry attempt でも計測し、改善ゲートで無効 retry を検出する。
                             int iterSumFirstSteps = 0;
 
                             for (int step = 0; step < nStep; step++)
@@ -2487,7 +2493,7 @@ namespace PileDesign.ViewModels
                                     physicallyUnconvergeable = true;
                                     caseFailedThisAttempt = false;  // 再試行しない
                                 }
-                                else if (effectiveAlpha > RELAX_ACCEPT_THRESHOLD && bisectionAttempt < MAX_STEP_BISECTIONS)
+                                else if (effectiveAlpha > RELAX_ACCEPT_THRESHOLD && bisectionAttempt < MAX_STEP_BISECTIONS && !retryGateDisabled)
                                 {
                                     await AddLogAsync($"    → 緩和基準 {effectiveAlpha:E2} が許容水準 {RELAX_ACCEPT_THRESHOLD:E2} を超過。ステップ分割を増やして再試行対象とします");
                                     caseFailedThisAttempt = true;
@@ -2552,29 +2558,55 @@ namespace PileDesign.ViewModels
                             stepsExecutedInAttempt = step + 1;
 
                             // v26 (案 B): 早期適応検出 — 最初 EARLY_ADAPTIVE_OBS_STEPS ステップの
-                            // 平均反復数が閾値を超えたら即 retry。初回試行でのみ評価。
-                            // Hard pre-detect を ×4 min 32 から ×2 min 16 に緩めたので、
-                            // 本来もっと刻みが必要なケースを早期に拾う保険として機能する。
+                            // 平均反復数が閾値を超えたら即 retry。30 反復停滞検出より早く発火する。
+                            // v28 (2026-04-23): 改善ゲート追加。retry 後 attempt で avg iter が前 attempt より
+                            // 十分改善していない場合 (構造的ラインサーチ制約等で細分化が無効) は
+                            // 再 retry を抑制し、現 nStep で完遂させる。
                             const int EARLY_ADAPTIVE_OBS_STEPS = 2;
-                            // v28 アプローチ I 採用後の 2026-04-23 調整: 15 → 18
-                            // 方向ロック+ヒステリシスで post-crack 初期反復は 13〜18 回程度で収束するが、
-                            // 閾値 15 だと正常ケースで過剰発動 (不要な retry) するため緩和。
                             const double EARLY_ADAPTIVE_ITER_THRESHOLD = 18.0;
-                            if (bisectionAttempt == 0 && step < EARLY_ADAPTIVE_OBS_STEPS)
+                            const double RETRY_IMPROVEMENT_MIN_RATIO = 0.10;  // 10% 以上改善必要
+                            if (step < EARLY_ADAPTIVE_OBS_STEPS)
                             {
                                 iterSumFirstSteps += Math.Min(n_iteration, maxIterations);
                             }
-                            if (bisectionAttempt == 0 && step + 1 == EARLY_ADAPTIVE_OBS_STEPS
+                            if (step + 1 == EARLY_ADAPTIVE_OBS_STEPS
                                 && !caseFailedThisAttempt && !physicallyUnconvergeable
+                                && !retryGateDisabled
                                 && bisectionAttempt < MAX_STEP_BISECTIONS)
                             {
                                 double avgIter = iterSumFirstSteps / (double)EARLY_ADAPTIVE_OBS_STEPS;
-                                if (avgIter >= EARLY_ADAPTIVE_ITER_THRESHOLD)
+                                bool threshExceeded = avgIter >= EARLY_ADAPTIVE_ITER_THRESHOLD;
+
+                                if (bisectionAttempt == 0)
                                 {
-                                    await AddLogAsync($"  🚨 早期適応検出: 最初 {EARLY_ADAPTIVE_OBS_STEPS} ステップの平均反復数 {avgIter:N1} が閾値 {EARLY_ADAPTIVE_ITER_THRESHOLD:N0} を超過 → ステップ分割を増やして再試行");
-                                    caseFailedThisAttempt = true;
-                                    // 後続の「残り ステップをスキップして再試行へ移行」ロジックで retry に入る
+                                    // 初回 attempt: 閾値ベース判定 (従来ロジック)
+                                    if (threshExceeded)
+                                    {
+                                        await AddLogAsync($"  🚨 早期適応検出: 最初 {EARLY_ADAPTIVE_OBS_STEPS} ステップの平均反復数 {avgIter:N1} が閾値 {EARLY_ADAPTIVE_ITER_THRESHOLD:N0} を超過 → ステップ分割を増やして再試行");
+                                        caseFailedThisAttempt = true;
+                                    }
                                 }
+                                else
+                                {
+                                    // retry attempt: 改善ゲート — 閾値超過 AND 前 attempt 比 10% 以上改善 の両方で再 retry
+                                    double improvement = prevAttemptAvgIter > 0 && double.IsFinite(prevAttemptAvgIter)
+                                        ? (prevAttemptAvgIter - avgIter) / prevAttemptAvgIter
+                                        : 1.0;
+
+                                    if (threshExceeded && improvement >= RETRY_IMPROVEMENT_MIN_RATIO)
+                                    {
+                                        await AddLogAsync($"  🚨 早期適応検出 (retry {bisectionAttempt}/{MAX_STEP_BISECTIONS}): 平均反復数 {avgIter:N1} (前 attempt {prevAttemptAvgIter:N1}, 改善 {improvement * 100:F1}%) → さらに分割して再試行");
+                                        caseFailedThisAttempt = true;
+                                    }
+                                    else if (threshExceeded)
+                                    {
+                                        // 閾値は超えているが改善が 10% 未満 → 細分化が無効な構造 → retry 抑制
+                                        await AddLogAsync($"  ✋ 改善ゲート: retry 後平均反復数 {avgIter:N1} (前 attempt {prevAttemptAvgIter:N1}, 改善 {improvement * 100:F1}%) が最小改善率 {RETRY_IMPROVEMENT_MIN_RATIO * 100:F0}% 未満 → 以降の retry を抑制、現 nStep={nStep} で完遂");
+                                        retryGateDisabled = true;
+                                    }
+                                }
+
+                                prevAttemptAvgIter = avgIter;
                             }
 
                             // v20 Phase 2: 物理的未収束なら直ちに中止（再試行しない）
