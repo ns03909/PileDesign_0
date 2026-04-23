@@ -1656,6 +1656,10 @@ namespace PileDesign.ViewModels
                         // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
                         string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
+                        // E3c-1 (2026-04-23): ケース固有モデル。現時点では targetModel のエイリアス (逐次モード、挙動不変)。
+                        // E3c-2 で DeepCopy に差し替え、E3c-3 で Parallel.ForEach 化する予定。
+                        AnaModel caseModel = targetModel;
+
                         // v20: 荷重方向の事前検出 — counter-loading (逆方向組合せ) を検出し、
                         // 最初から小さな荷重ステップで実行することで失敗試行のムダを回避
                         //
@@ -1715,40 +1719,40 @@ namespace PileDesign.ViewModels
                         while (true)
                         {
                             // 再試行時の巻き戻し用に、結果リストのサイズをスナップショット
-                            int snapAnaStepResults = targetModel.AnalysisStepResults?.Count ?? 0;
-                            var snapNodeResults = new int[targetModel.Nodes.Count];
-                            for (int i_ = 0; i_ < targetModel.Nodes.Count; i_++)
-                                snapNodeResults[i_] = targetModel.Nodes[i_].NodeResults.Count;
-                            var snapBeamResults = new int[targetModel.Beams.Count];
-                            for (int i_ = 0; i_ < targetModel.Beams.Count; i_++)
-                                snapBeamResults[i_] = targetModel.Beams[i_].BeamResults.Count;
-                            var snapHSpringResults = new int[targetModel.HorizontalSoilSprings.Count];
-                            for (int i_ = 0; i_ < targetModel.HorizontalSoilSprings.Count; i_++)
-                                snapHSpringResults[i_] = targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count;
+                            int snapAnaStepResults = caseModel.AnalysisStepResults?.Count ?? 0;
+                            var snapNodeResults = new int[caseModel.Nodes.Count];
+                            for (int i_ = 0; i_ < caseModel.Nodes.Count; i_++)
+                                snapNodeResults[i_] = caseModel.Nodes[i_].NodeResults.Count;
+                            var snapBeamResults = new int[caseModel.Beams.Count];
+                            for (int i_ = 0; i_ < caseModel.Beams.Count; i_++)
+                                snapBeamResults[i_] = caseModel.Beams[i_].BeamResults.Count;
+                            var snapHSpringResults = new int[caseModel.HorizontalSoilSprings.Count];
+                            for (int i_ = 0; i_ < caseModel.HorizontalSoilSprings.Count; i_++)
+                                snapHSpringResults[i_] = caseModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count;
                             int[]? snapRotSpringResults = null;
-                            if (targetModel.RotationalSprings != null)
+                            if (caseModel.RotationalSprings != null)
                             {
-                                snapRotSpringResults = new int[targetModel.RotationalSprings.Count];
-                                for (int i_ = 0; i_ < targetModel.RotationalSprings.Count; i_++)
-                                    snapRotSpringResults[i_] = targetModel.RotationalSprings[i_].RotationalSpringResults.Count;
+                                snapRotSpringResults = new int[caseModel.RotationalSprings.Count];
+                                for (int i_ = 0; i_ < caseModel.RotationalSprings.Count; i_++)
+                                    snapRotSpringResults[i_] = caseModel.RotationalSprings[i_].RotationalSpringResults.Count;
                             }
 
-                            targetModel.InitializeStates();
+                            caseModel.InitializeStates();
 
                             // 荷重ケース固有の剛体スレーブ割当を適用（回転ばねの有効/無効を切替）
-                            ApplyPileHeadRigidBindingForLoadCase(targetModel, loadCase);
+                            ApplyPileHeadRigidBindingForLoadCase(caseModel, loadCase);
 
                             // 杭非線形ONのときだけ M–φ/M–θ をセット
                             if (loadCase.IsPileNonLinear)
                             {
-                                SetupMPhiFromPileSectionForLoadCase(targetModel, loadCase);
+                                SetupMPhiFromPileSectionForLoadCase(caseModel, loadCase);
                             }
                             // M–θ は常にセット（非線形OFFは剛 KThetaXY=KRigid）
-                            SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
+                            SetupNonlinearMThetaForLoadCase(caseModel, loadCase);
 
-                            SetVectorDF(targetModel, loadCase, loadCombination, level, iLC, nStep);
-                            targetModel.MapOnVectorDF();
-                            InitializeSoilDisplacementIncrement(targetModel, loadCase, loadCombination, level, isLiquefaction, nStep);
+                            SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, nStep);
+                            caseModel.MapOnVectorDF();
+                            InitializeSoilDisplacementIncrement(caseModel, loadCase, loadCombination, level, isLiquefaction, nStep);
 
                             if (bisectionAttempt > 0)
                                 await AddLogAsync($"  ♻ ケース再試行 ({bisectionAttempt}/{MAX_STEP_BISECTIONS}): ステップ数を {baseNStep} → {nStep} に増やして再計算 (以降の総ステップ数: {TotalCalculationCount})");
@@ -1781,7 +1785,7 @@ namespace PileDesign.ViewModels
                             _pauseEvent.Wait(token); // ここで一時停止を考慮
 
                             // v15: ステップ開始時の変位を記録（予測器用）
-                            var vectorDAtStepStart = targetModel.VectorD?.Clone();
+                            var vectorDAtStepStart = caseModel.VectorD?.Clone();
 
                             calcNo += 1;
                             CurrentProgress = calcNo; // 進捗を更新
@@ -1807,7 +1811,7 @@ namespace PileDesign.ViewModels
                                 (RelaxationFactor < 1.0 ? $", 緩和係数={RelaxationFactor:N2}" : ""));
 
                             // v15/v23: 予測ステップ（前ステップの変位増分があれば適用）
-                            if (step > 0 && prevStepDispIncrement != null && targetModel.VectorD != null)
+                            if (step > 0 && prevStepDispIncrement != null && caseModel.VectorD != null)
                             {
                                 MathNet.Numerics.LinearAlgebra.Vector<double> predictorIncrement;
                                 if (step > 1 && prevPrevStepDispIncrement != null)
@@ -1824,13 +1828,13 @@ namespace PileDesign.ViewModels
                                     const double predictorFactor = 0.8;
                                     predictorIncrement = predictorFactor * prevStepDispIncrement;
                                 }
-                                targetModel.ApplyDispIncrement(predictorIncrement);
+                                caseModel.ApplyDispIncrement(predictorIncrement);
 
                                 // 節点変位も更新（既存のラインサーチ用メソッドを流用）
-                                UpdateNodeDisplacementsForLineSearch(targetModel, predictorIncrement);
+                                UpdateNodeDisplacementsForLineSearch(caseModel, predictorIncrement);
                             }
 
-                            targetModel.InitializeNormsqR_onNormsqFint();
+                            caseModel.InitializeNormsqR_onNormsqFint();
 
                             // NaN診断: ステップ開始
                             // if (step == 0)
@@ -1852,28 +1856,28 @@ namespace PileDesign.ViewModels
                             // v28 F-new: CsparseLinearSolver の内部タイマー (CSC 変換 / 分解 / 代入) をリセット
                             FEM.CsparseLinearSolver.ResetInternalTimers();
 
-                            UpdateSoilDisp(targetModel);
-                            UpdateF(targetModel);
+                            UpdateSoilDisp(caseModel);
+                            UpdateF(caseModel);
 
                             // 入力値＋応力解析結果モード: 前ステップのFxiを入力軸力に加算
                             if (UseAnalysisAxialForce && step > 0)
                             {
-                                UpdateAxialForceFromAnalysis(targetModel);
+                                UpdateAxialForceFromAnalysis(caseModel);
                             }
 
                             // 現ステップ軸力での M–φ 再解決は、杭非線形ONのときのみ
                             if (loadCase.IsPileNonLinear)
                             {
-                                SetupMPhiByCurrentAxialForMiddleBeam(targetModel);
+                                SetupMPhiByCurrentAxialForMiddleBeam(caseModel);
                             }
 
-                            targetModel.SetR();
+                            caseModel.SetR();
 
                             // 反復なし簡易法の場合は1回で終了
                             int maxIterations = SkipIteration ? 1 : 100;
                             // 適応的緩和係数の初期化
                             double currentRelaxFactor = SkipIteration ? 1.0 : RelaxationFactor; // 簡易法は緩和なし
-                            double prevResidual = targetModel.NormsROnNormsFint;
+                            double prevResidual = caseModel.NormsROnNormsFint;
                             int consecutiveDecrease = 0; // 連続減少カウント
 
                             // v11: 停滞検出用の変数
@@ -1941,7 +1945,7 @@ namespace PileDesign.ViewModels
                             var prevYieldedSoilSprings = new HashSet<string>();    // "pileNo-nodeIdx-side" で識別
                             bool isFirstIterSnapshot = true;
 
-                            while (targetModel.NormsROnNormsFint >= effectiveAlpha && n_iteration <= maxIterations)
+                            while (caseModel.NormsROnNormsFint >= effectiveAlpha && n_iteration <= maxIterations)
                             {
                                 // v21 Phase 3 prep: 効果的ライン探索フラグを「ユーザー設定 ∪ 自動切替」の union として毎反復評価
                                 // （旧コード: auto-switch 時に _useLineSearch フィールドを true に書換 → UseLineSearch プロパティが true になる
@@ -1966,7 +1970,7 @@ namespace PileDesign.ViewModels
                                     token.ThrowIfCancellationRequested();
 
                                     // N は荷重ケース一定だが、簡便に毎回解決しても可（コストは小）
-                                    //SetupNonlinearMThetaForLoadCase(targetModel, loadCase);
+                                    //SetupNonlinearMThetaForLoadCase(caseModel, loadCase);
 
                                     // Newton-Raphsonモード:
                                     // - Full NR: 常に毎反復で接線剛性+Kマトリクス更新
@@ -1978,7 +1982,7 @@ namespace PileDesign.ViewModels
                                         // Full NR: ダンピングなし（正確なヤコビアンで2次収束）
                                         // Modified NR の初期反復: ダンピングあり（安定化）
                                         bool relaxTangent = UseModifiedNewtonRaphson;
-                                        UpdateBeamMPhiTangent(targetModel, useRelaxation: relaxTangent);
+                                        UpdateBeamMPhiTangent(caseModel, useRelaxation: relaxTangent);
                                     }
 
                                     // KTan 組立（戻り値で springK の min/max を受け取る）
@@ -1986,14 +1990,14 @@ namespace PileDesign.ViewModels
                                     if (useFullNR || !loadCase.IsPileNonLinear || n_iteration == 1)
                                     {
                                         long _tsFindK = System.Diagnostics.Stopwatch.GetTimestamp();
-                                        (springKMin, springKMax) = FindK(iLC, targetModel);
+                                        (springKMin, springKMax) = FindK(iLC, caseModel);
                                         profFindKTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFindK;
                                         profFindKCalls++;
 
                                         // 初回反復時のみ剛性マトリクスの安定性チェック
                                         if (n_iteration == 1)
                                         {
-                                            targetModel.ValidateStability(useEigenvalueCheck: false);
+                                            caseModel.ValidateStability(useEigenvalueCheck: false);
                                         }
                                     }
                                     else
@@ -2005,15 +2009,15 @@ namespace PileDesign.ViewModels
                                     {
                                         // ラインサーチ: Newton方向を計算し、最適なステップ長を探索
                                         long _tsSolve = System.Diagnostics.Stopwatch.GetTimestamp();
-                                        var newtonDir = SolveNewtonDirection(targetModel);
+                                        var newtonDir = SolveNewtonDirection(caseModel);
                                         profSolveTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSolve;
 
-                                        double currentRes = targetModel.NormsROnNormsFint;
+                                        double currentRes = caseModel.NormsROnNormsFint;
 
                                         // バックトラッキングラインサーチで最適αを見つける
                                         long _tsLS = System.Diagnostics.Stopwatch.GetTimestamp();
                                         double optimalAlpha = BacktrackingLineSearch(
-                                            targetModel, newtonDir, currentRes, iLC, loadCase.IsPileNonLinear, out int _lsTrials);
+                                            caseModel, newtonDir, currentRes, iLC, loadCase.IsPileNonLinear, out int _lsTrials);
                                         profLineSearchTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsLS;
                                         profLineSearchCalls++;
                                         profLineSearchTrialsTotal += _lsTrials;
@@ -2025,28 +2029,28 @@ namespace PileDesign.ViewModels
                                     {
                                         // 通常の更新（緩和係数適用）
                                         long _tsSolve = System.Diagnostics.Stopwatch.GetTimestamp();
-                                        SolveDdAndUpdateX(targetModel, usedRelaxFactor);
+                                        SolveDdAndUpdateX(caseModel, usedRelaxFactor);
                                         profSolveTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSolve;
 
                                         // 割線剛性更新（FindTの前に実行して、最新のK_secで内力を計算）
                                         if (loadCase.IsPileNonLinear)
-                                            UpdateBeamMPhiSecant(targetModel);
+                                            UpdateBeamMPhiSecant(caseModel);
 
                                         // 断面力・T更新と残差更新
                                         long _tsFindT = System.Diagnostics.Stopwatch.GetTimestamp();
-                                        FindT(iLC, targetModel);
+                                        FindT(iLC, caseModel);
                                         profFindTTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFindT;
 
-                                        targetModel.FindR();
+                                        caseModel.FindR();
                                     }
 
                                     /* NaN診断: 反復ごとのチェック
                                     FEM.NaNDiagnostics.SetIteration(n_iteration);
-                                    if (!double.IsFinite(targetModel.NormsROnNormsFint))
+                                    if (!double.IsFinite(caseModel.NormsROnNormsFint))
                                     {
                                         FEM.NaNDiagnostics.LogNaN($"NormsROnNormsFint is NaN at iteration {n_iteration}!");
-                                        FEM.NaNDiagnostics.CheckNodeDisplacements(targetModel.Nodes);
-                                        FEM.NaNDiagnostics.CheckBeamForces(targetModel.Beams);
+                                        FEM.NaNDiagnostics.CheckNodeDisplacements(caseModel.Nodes);
+                                        FEM.NaNDiagnostics.CheckBeamForces(caseModel.Beams);
                                     } */
 
                                     // v21 Phase 3 prep: ばね剛性 min/max は FindK の戻り値から直接取得するため
@@ -2056,18 +2060,18 @@ namespace PileDesign.ViewModels
                                     // Modified NRモードの適応フェーズではKが更新されないため計算頻度を下げる
                                     if (n_iteration == 1 || n_iteration % 5 == 0)
                                     {
-                                        (diagKMin, diagKMax) = GetKDiagonalMiNMax(targetModel, isTan: true);
+                                        (diagKMin, diagKMax) = GetKDiagonalMiNMax(caseModel, isTan: true);
                                     }
 
                                     // 診断値: 代表自由度の |d| 最大値（節点の増分変位から）
-                                    dispMaxAbs = GetMaxAbsIncrementalDisp(targetModel);
+                                    dispMaxAbs = GetMaxAbsIncrementalDisp(caseModel);
 
                                     // v27: 振動診断用 — 上位 3 DOF を取得（Ux/Uy/Uz/Rx/Ry/Rz 全成分対象）
-                                    dominantDofs = GetTopIncrementalDofs(targetModel, 3);
+                                    dominantDofs = GetTopIncrementalDofs(caseModel, 3);
 
                                     // v27: 案 A — CumulativeDisp スナップショットをキューに追加（Aitken 平均化用）
-                                    var snap = new Dictionary<string, NodeDisp>(targetModel.Nodes.Count);
-                                    foreach (var nd in targetModel.Nodes)
+                                    var snap = new Dictionary<string, NodeDisp>(caseModel.Nodes.Count);
+                                    foreach (var nd in caseModel.Nodes)
                                         snap[nd.Name] = nd.CumulativeDisp.Clone();
                                     recentCumulativeDisp.Enqueue(snap);
                                     while (recentCumulativeDisp.Count > AITKEN_HISTORY)
@@ -2077,9 +2081,9 @@ namespace PileDesign.ViewModels
                                     // 場所打ち RC 杭の杭頭回転ばねで |M| が Mcr を初めて超えた瞬間を検出し、
                                     // HasCrackedXY = true にラッチ。以降は post-crack curve を使用 (除荷しても戻らない)。
                                     // 閾値 0.999×Mcr で若干緩めてヒステリシスラッチを安定化。
-                                    if (targetModel.RotationalSprings != null)
+                                    if (caseModel.RotationalSprings != null)
                                     {
-                                        foreach (var rs in targetModel.RotationalSprings)
+                                        foreach (var rs in caseModel.RotationalSprings)
                                         {
                                             if (rs?.McrXY is null || rs.HasCrackedXY) continue;
                                             double mx = rs.CumulativeForce?.Mxj ?? 0.0;
@@ -2096,13 +2100,13 @@ namespace PileDesign.ViewModels
 
                                     // v28 問題 A 診断: 杭体 M-φ セグメント変化 と 土ばね降伏状態変化を収集
                                     // iter 22→23 の残差爆発原因を特定する。Beam.Name が共通のため List idx で識別。
-                                    if (targetModel.Beams != null)
+                                    if (caseModel.Beams != null)
                                     {
-                                        int beamCount = targetModel.Beams.Count;
+                                        int beamCount = caseModel.Beams.Count;
                                         currentBeamSegments = new int[beamCount];
                                         for (int idx = 0; idx < beamCount; idx++)
                                         {
-                                            var beam = targetModel.Beams[idx];
+                                            var beam = caseModel.Beams[idx];
                                             int curSeg = (beam.ResolvedCombinedCurve != null) ? beam.CurrentMPhiSegmentIndex : -1;
                                             currentBeamSegments[idx] = curSeg;
                                             if (!isFirstIterSnapshot
@@ -2125,8 +2129,8 @@ namespace PileDesign.ViewModels
                                             if (reactions == null) continue;
                                             bool isFront = pli.IsFrontPiles != null && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
                                             // E3b: case-local な PileNodes / SoilNodes を取得
-                                            var pliPileNodes = targetModel.GetPileNodes(pli);
-                                            var pliSoilNodes = targetModel.GetSoilNodes(pli);
+                                            var pliPileNodes = caseModel.GetPileNodes(pli);
+                                            var pliSoilNodes = caseModel.GetSoilNodes(pli);
                                             for (int i = 0; i < pliPileNodes.Count && i < pliSoilNodes.Count; i++)
                                             {
                                                 var pn = pliPileNodes[i];
@@ -2251,13 +2255,13 @@ namespace PileDesign.ViewModels
                                     relaxInfo = $" (ω={currentRelaxFactor:N2})"; // 緩和係数
                                 else
                                     relaxInfo = "";
-                                if (targetModel.NormsROnNormsFint < alpha)
+                                if (caseModel.NormsROnNormsFint < alpha)
                                 {
-                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged" + relaxInfo);
+                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{caseModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged" + relaxInfo);
                                 }
                                 else
                                 {
-                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}" + relaxInfo);
+                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{caseModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}" + relaxInfo);
                                 }
 
                                 // 診断ログ
@@ -2307,7 +2311,7 @@ namespace PileDesign.ViewModels
                                     await Task.Run(() =>
                                     {
                                         int historyCount = recentCumulativeDisp.Count;
-                                        foreach (var nd in targetModel.Nodes)
+                                        foreach (var nd in caseModel.Nodes)
                                         {
                                             double ux = 0, uy = 0, uz = 0, rx = 0, ry = 0, rz = 0;
                                             foreach (var hist in recentCumulativeDisp)
@@ -2323,8 +2327,8 @@ namespace PileDesign.ViewModels
                                             nd.IncrementalDisp = new NodeDisp(0, 0, 0, 0, 0, 0);
                                         }
                                         // 内力と残差を再計算（次の反復で新しい残差が評価される）
-                                        FindT(iLC, targetModel);
-                                        targetModel.FindR();
+                                        FindT(iLC, caseModel);
+                                        caseModel.FindR();
                                     }, token);
 
                                     aitkenFiredCount++;
@@ -2339,11 +2343,11 @@ namespace PileDesign.ViewModels
                                     // 現状はリセット無しで、Aitken → 減衰 → 停滞 → 長期未改善検出 → 緩和基準の
                                     // シーケンスで最小残差が最終値になる。
 
-                                    await AddLogAsync($"　　🔄 Aitken 平均化 #{aitkenFiredCount}/{AITKEN_MAX_FIRE} 発動: 直近 {AITKEN_HISTORY} 反復の CumulativeDisp 平均で書換 → 残差={targetModel.NormsROnNormsFint:E2}");
+                                    await AddLogAsync($"　　🔄 Aitken 平均化 #{aitkenFiredCount}/{AITKEN_MAX_FIRE} 発動: 直近 {AITKEN_HISTORY} 反復の CumulativeDisp 平均で書換 → 残差={caseModel.NormsROnNormsFint:E2}");
                                 }
 
                                 // 適応的緩和係数の更新（UseAdaptiveRelaxation=trueの場合のみ）
-                                double currentResidual = targetModel.NormsROnNormsFint;
+                                double currentResidual = caseModel.NormsROnNormsFint;
                                 if (UseAdaptiveRelaxation)
                                 {
                                     double residualRatio = prevResidual > 1e-20 ? currentResidual / prevResidual : 1.0;
@@ -2501,17 +2505,17 @@ namespace PileDesign.ViewModels
 
                             // Maximum iteration check
                             string dispInfo = !double.IsNaN(dispMaxAbs) ? $", max|d|={dispMaxAbs:E3}m" : "";
-                            bool converged = !(n_iteration > maxIterations && targetModel.NormsROnNormsFint >= effectiveAlpha);
+                            bool converged = !(n_iteration > maxIterations && caseModel.NormsROnNormsFint >= effectiveAlpha);
                             if (!converged)
                             {
-                                double finalResidual = targetModel.NormsROnNormsFint;
+                                double finalResidual = caseModel.NormsROnNormsFint;
                                 await AddLogAsync($"  → 未収束: 最大反復回数 {maxIterations} に到達。残差ノルム={finalResidual:E3} (許容値={effectiveAlpha:E3}){dispInfo}");
                                 caseFailedThisAttempt = true;
                             }
                             else
                             {
                                 string relaxedNote = effectiveAlpha > alpha ? $" (緩和基準α={effectiveAlpha:E2})" : "";
-                                await AddLogAsync($"{caseTag}  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
+                                await AddLogAsync($"{caseTag}  → Converged in {n_iteration} iterations. Residual norm={caseModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
 
                                 // v28 D: プロファイリング情報をステップ収束時に出力
                                 profStepTimer.Stop();
@@ -2560,23 +2564,23 @@ namespace PileDesign.ViewModels
 
                             // v15/v23: このステップの変位増分を記録（次ステップの予測器用）
                             // 2 次外挿のため前々ステップの増分も保持する
-                            if (vectorDAtStepStart != null && targetModel.VectorD != null)
+                            if (vectorDAtStepStart != null && caseModel.VectorD != null)
                             {
                                 prevPrevStepDispIncrement = prevStepDispIncrement;
-                                prevStepDispIncrement = targetModel.VectorD - vectorDAtStepStart;
+                                prevStepDispIncrement = caseModel.VectorD - vectorDAtStepStart;
                             }
 
                             // デバッグ: 杭頭変位・M-θばねの確認
                             if (step == 0 || step == nStep - 1)
                             {
-                                var actionPt = targetModel.Nodes[0];
+                                var actionPt = caseModel.Nodes[0];
                                 // System.Diagnostics.Debug.WriteLine(
                                 //     $"[Step{step}] ActionPoint Ux={actionPt.CumulativeDisp?.Ux:E3} Rx={actionPt.CumulativeDisp?.Rx:E3} Ry={actionPt.CumulativeDisp?.Ry:E3}");
                                 foreach (var pile in InputModel.PileLayoutItems.Take(2))
                                 {
-                                    var rxy = targetModel.GetPileTopRotationalSpring(pile);
+                                    var rxy = caseModel.GetPileTopRotationalSpring(pile);
                                     var capNode = rxy?.NodeI;
-                                    var pileHead = targetModel.GetPileNodes(pile)?.FirstOrDefault();
+                                    var pileHead = caseModel.GetPileNodes(pile)?.FirstOrDefault();
                                     double capRx = capNode?.CumulativeDisp?.Rx ?? 0;
                                     double pileRx = pileHead?.CumulativeDisp?.Rx ?? 0;
                                     double kRx = rxy?.KeTan?[3, 3] ?? -1;
@@ -2591,18 +2595,18 @@ namespace PileDesign.ViewModels
                                 }
                             }
 
-                            targetModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iteration, targetModel.NormsROnNormsFint));
-                            foreach (var node in targetModel.Nodes)
+                            caseModel.AnalysisStepResults.Add(new(loadCase, loadCombination, isLiquefaction, step, n_iteration, caseModel.NormsROnNormsFint));
+                            foreach (var node in caseModel.Nodes)
                                 node.NodeResults.Add(new(loadCase, loadCombination, isLiquefaction, step, node));
-                            foreach (var beam in targetModel.Beams)
+                            foreach (var beam in caseModel.Beams)
                                 beam.BeamResults.Add(new(loadCase, loadCombination, isLiquefaction, step, beam));
-                            foreach (var spring in targetModel.HorizontalSoilSprings)
+                            foreach (var spring in caseModel.HorizontalSoilSprings)
                                 spring.HorizontalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, spring));
-                            //foreach (var rotationalSpring in targetModel.RotationalSprings)
+                            //foreach (var rotationalSpring in caseModel.RotationalSprings)
                             //    rotationalSpring.RotationalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, rotationalSpring));
-                            if (targetModel.RotationalSprings != null)
+                            if (caseModel.RotationalSprings != null)
                             {
-                                foreach (var rotationalSpring in targetModel.RotationalSprings)
+                                foreach (var rotationalSpring in caseModel.RotationalSprings)
                                 {
                                     rotationalSpring.RotationalSpringResults.Add(new(loadCase, loadCombination, isLiquefaction, step, rotationalSpring));
                                     // else: この荷重ケースでは回転ばねは存在するが「使用されなかった」ため結果を保存しない
@@ -2720,22 +2724,22 @@ namespace PileDesign.ViewModels
                         }
 
                         // 失敗アテンプトの結果を巻き戻し
-                        while (targetModel.AnalysisStepResults.Count > snapAnaStepResults)
-                            targetModel.AnalysisStepResults.RemoveAt(targetModel.AnalysisStepResults.Count - 1);
-                        for (int i_ = 0; i_ < targetModel.Nodes.Count; i_++)
-                            while (targetModel.Nodes[i_].NodeResults.Count > snapNodeResults[i_])
-                                targetModel.Nodes[i_].NodeResults.RemoveAt(targetModel.Nodes[i_].NodeResults.Count - 1);
-                        for (int i_ = 0; i_ < targetModel.Beams.Count; i_++)
-                            while (targetModel.Beams[i_].BeamResults.Count > snapBeamResults[i_])
-                                targetModel.Beams[i_].BeamResults.RemoveAt(targetModel.Beams[i_].BeamResults.Count - 1);
-                        for (int i_ = 0; i_ < targetModel.HorizontalSoilSprings.Count; i_++)
-                            while (targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count > snapHSpringResults[i_])
-                                targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.RemoveAt(targetModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count - 1);
-                        if (targetModel.RotationalSprings != null && snapRotSpringResults != null)
+                        while (caseModel.AnalysisStepResults.Count > snapAnaStepResults)
+                            caseModel.AnalysisStepResults.RemoveAt(caseModel.AnalysisStepResults.Count - 1);
+                        for (int i_ = 0; i_ < caseModel.Nodes.Count; i_++)
+                            while (caseModel.Nodes[i_].NodeResults.Count > snapNodeResults[i_])
+                                caseModel.Nodes[i_].NodeResults.RemoveAt(caseModel.Nodes[i_].NodeResults.Count - 1);
+                        for (int i_ = 0; i_ < caseModel.Beams.Count; i_++)
+                            while (caseModel.Beams[i_].BeamResults.Count > snapBeamResults[i_])
+                                caseModel.Beams[i_].BeamResults.RemoveAt(caseModel.Beams[i_].BeamResults.Count - 1);
+                        for (int i_ = 0; i_ < caseModel.HorizontalSoilSprings.Count; i_++)
+                            while (caseModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count > snapHSpringResults[i_])
+                                caseModel.HorizontalSoilSprings[i_].HorizontalSpringResults.RemoveAt(caseModel.HorizontalSoilSprings[i_].HorizontalSpringResults.Count - 1);
+                        if (caseModel.RotationalSprings != null && snapRotSpringResults != null)
                         {
-                            for (int i_ = 0; i_ < targetModel.RotationalSprings.Count; i_++)
-                                while (targetModel.RotationalSprings[i_].RotationalSpringResults.Count > snapRotSpringResults[i_])
-                                    targetModel.RotationalSprings[i_].RotationalSpringResults.RemoveAt(targetModel.RotationalSprings[i_].RotationalSpringResults.Count - 1);
+                            for (int i_ = 0; i_ < caseModel.RotationalSprings.Count; i_++)
+                                while (caseModel.RotationalSprings[i_].RotationalSpringResults.Count > snapRotSpringResults[i_])
+                                    caseModel.RotationalSprings[i_].RotationalSpringResults.RemoveAt(caseModel.RotationalSprings[i_].RotationalSpringResults.Count - 1);
                         }
 
                         // v19: 総ステップ数の調整
