@@ -3280,6 +3280,53 @@ namespace PileDesign.ViewModels
             WpfPlot.Refresh();
         }
 
+        // 土層背景色 (2026-04-24): 地盤ウィンドウと同じ配色
+        //   粘性土: 薄茶  (210, 180, 140, 64)
+        //   砂質土: 薄橙  (255, 165,   0, 64)
+        //   礫質土: 薄緑  (144, 238, 144, 64)
+        //   他    : 薄灰  (200, 200, 200, 32)
+        private static ScottPlot.Color GetSoilTypeBackgroundColor(string? soilType) => soilType switch
+        {
+            "粘性土" => new ScottPlot.Color(210, 180, 140, 64),
+            "砂質土" => new ScottPlot.Color(255, 165, 0, 64),
+            "礫質土" => new ScottPlot.Color(144, 238, 144, 64),
+            _ => new ScottPlot.Color(200, 200, 200, 32),
+        };
+
+        /// <summary>
+        /// 最初に選択された杭の HorizontalSoilReactions から土層境界を推定し、
+        /// 連続する同 SoilType セグメントを 1 層としてまとめて VerticalSpan で背景色を付ける。
+        /// GraphWindow の杭周地盤変位反力 / 杭変位応力 グラフで呼ぶ。
+        /// </summary>
+        private void AddSoilLayerBackground(WpfPlot wpfPlot)
+        {
+            var piles = GetSelectedPileLayouts();
+            if (piles == null) return;
+            PileLayoutDataItem? pile = piles.FirstOrDefault();
+            if (pile == null) return;
+            if (pile.SoilPileAltNo <= 0 || pile.SoilPileAltNo > InputModel.ElementDivision.SoilPiles.Count) return;
+            var sp = InputModel.ElementDivision.SoilPiles[pile.SoilPileAltNo - 1];
+            if (sp?.HorizontalSoilReactions == null || sp.HorizontalSoilReactions.Count == 0) return;
+
+            var reactions = sp.HorizontalSoilReactions;
+
+            // 連続する同 SoilType セグメントを 1 層としてまとめる
+            int i = 0;
+            while (i < reactions.Count)
+            {
+                string? currentType = reactions[i].SoilType;
+                double zTop = reactions[i].ZTop;
+                int j = i;
+                while (j + 1 < reactions.Count && reactions[j + 1].SoilType == currentType)
+                    j++;
+                double zBtm = reactions[j].ZBtm;
+                var color = GetSoilTypeBackgroundColor(currentType);
+                // VerticalSpan(yMin, yMax, color): Z(深さ)軸は Y 軸、zBtm が yMin (下方)、zTop が yMax
+                wpfPlot.Plot.Add.VerticalSpan(zBtm, zTop, color);
+                i = j + 1;
+            }
+        }
+
         // 杭応力描画
         private void DrawPileForce(WpfPlot wpfPlot, Crosshair crosshair, string CrosshairPositionText, string forceType, string unit)
         {
@@ -3291,6 +3338,9 @@ namespace PileDesign.ViewModels
                 wpfPlot.Refresh();
                 return;
             }
+
+            // 土層背景色を scatter より先に追加
+            AddSoilLayerBackground(wpfPlot);
 
             // 限界状態表示が有効かどうか
             bool showLimitState = SelectedLimitState != "なし" &&
@@ -3472,6 +3522,9 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 土層背景色を scatter より先に追加
+            AddSoilLayerBackground(wpfPlot);
+
             var selectedPiles = GetSelectedPileLayouts();
             if (AnaModel == null) return;
 
@@ -3607,6 +3660,9 @@ namespace PileDesign.ViewModels
                 wpfPlot.Refresh();
                 return;
             }
+
+            // 土層背景色を scatter より先に追加 (背後に描画される)
+            AddSoilLayerBackground(wpfPlot);
 
             foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
             {
