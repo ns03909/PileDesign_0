@@ -77,6 +77,21 @@ namespace PileDesign.Views
 
         // ScrollToEnd の BeginInvoke coalesce 用フラグ (UI スレッドのみアクセスなので volatile 不要)
         private bool _scrollToEndPending;
+        // smart scroll: 追記の直前にユーザーが最下段付近に居たかどうか。
+        // 居た場合のみ追記後に自動スクロールする。手動で上を見ている時は引き戻さない。
+        private const double AutoScrollThresholdPx = 32.0;
+
+        private bool IsLogTextBoxAtBottom()
+        {
+            if (LogTextBox == null) return true;
+            // VerticalOffset + ViewportHeight >= ExtentHeight - threshold なら最下段付近
+            double offset = LogTextBox.VerticalOffset;
+            double viewport = LogTextBox.ViewportHeight;
+            double extent = LogTextBox.ExtentHeight;
+            // 初期状態 (extent=0) も bottom 扱い → 最初の追記ではスクロールする
+            if (extent <= 0) return true;
+            return offset + viewport >= extent - AutoScrollThresholdPx;
+        }
 
         private void CalculationLog_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
@@ -84,6 +99,9 @@ namespace PileDesign.Views
             // これにより WPF TextBox の全文再レイアウト O(total text) を避け、
             // 1 行追加あたり O(1) の処理で済む。
             if (LogTextBox == null) return;
+
+            // 追記「前」にユーザーが最下段付近に居たかを記録 (smart scroll 判定)
+            bool wasAtBottom = IsLogTextBoxAtBottom();
 
             if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
             {
@@ -95,6 +113,10 @@ namespace PileDesign.Views
                 LogTextBox.Clear();
             }
             // Replace/Remove/Move 等は未対応 (この VM では Add/Reset のみ発生)
+
+            // smart scroll: 追記前に最下段に居なかった場合はスクロールしない
+            // (手動でログを遡って読んでいるユーザーの位置を維持)
+            if (!wasAtBottom) return;
 
             // ScrollToEnd は O(text size) のため多数回呼ばない。1 フラッシュ 1 回に coalesce。
             if (_scrollToEndPending) return;
