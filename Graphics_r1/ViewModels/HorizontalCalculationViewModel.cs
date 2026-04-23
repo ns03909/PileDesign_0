@@ -1844,6 +1844,9 @@ namespace PileDesign.ViewModels
                             int profLineSearchCalls = 0;
                             int profLineSearchTrialsTotal = 0;
 
+                            // v28 F-new: CsparseLinearSolver の内部タイマー (CSC 変換 / 分解 / 代入) をリセット
+                            FEM.CsparseLinearSolver.ResetInternalTimers();
+
                             UpdateSoilDisp();
                             UpdateF(targetModel);
 
@@ -2511,7 +2514,11 @@ namespace PileDesign.ViewModels
                                 double _findTMs = profFindTTicks * _tickToMs;
                                 double _lsTrialAvg = profLineSearchCalls > 0 ? profLineSearchTrialsTotal / (double)profLineSearchCalls : 0.0;
                                 double _totalSec = profStepTimer.Elapsed.TotalSeconds;
-                                await AddLogAsync($"    ⏱ プロファイル: K組立={_findKMs:F0}ms×{profFindKCalls}, Solve={_solveMs:F0}ms, " +
+                                string _solverTag = $"[{FEM.CsparseLinearSolver.LastSuccessfulSolver}]";
+                                double _cscMs = FEM.CsparseLinearSolver.CscBuildTicks * _tickToMs;
+                                double _factMs = FEM.CsparseLinearSolver.FactorizeTicks * _tickToMs;
+                                double _backSubMs = FEM.CsparseLinearSolver.SolveBackSubTicks * _tickToMs;
+                                await AddLogAsync($"    ⏱ プロファイル: K組立={_findKMs:F0}ms×{profFindKCalls}, Solve={_solveMs:F0}ms {_solverTag} (CSC={_cscMs:F0} 分解={_factMs:F0} 代入={_backSubMs:F0}), " +
                                     (profLineSearchCalls > 0
                                         ? $"LS={_lsMs:F0}ms×{profLineSearchCalls} (avg trial={_lsTrialAvg:F1}), "
                                         : $"FindT={_findTMs:F0}ms, ") +
