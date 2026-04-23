@@ -216,18 +216,20 @@
             <Button Content="レジェンド表示切替" Command="{Binding ToggleLegendCommand}" />
 
             <!-- 案 C v2 (2026-04-24): 「杭周地盤変位反力」グラフで地盤反力度 / 反力係数に切替 -->
-            <CheckBox Content="地盤反力度・反力係数表示 (ステップグラフ)"
-                      IsChecked="{Binding IsDistributedMode, Mode=TwoWay}"
+            <CheckBox IsChecked="{Binding IsDistributedMode, Mode=TwoWay}"
                       Margin="0,8,0,0"
                       Visibility="{Binding IsDistributedModeOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                      ToolTip="ON: トリビュータリ長 L と杭幅 B で除算&#x0a;  水平地盤反力 [kN/m²] = force / (L×B)   (地盤反力度 p)&#x0a;  水平地盤反力係数 [kN/m³] = stiffness / (L×B)   (反力係数 kh)&#x0a;  描画: ステップグラフ (長方形分布風)&#x0a;OFF: 節点毎の総反力 [kN] / 総ばね剛性 [kN/m] を折線で表示"/>
+                      ToolTip="ON: トリビュータリ長 L と杭幅 B で除算&#x0a;  水平地盤反力 [kN/m²] = force / (L×B)   (地盤反力度 p)&#x0a;  水平地盤反力係数 [kN/m³] = stiffness / (L×B)   (反力係数 kh)&#x0a;  描画: ステップグラフ (長方形分布風)&#x0a;OFF: 節点毎の総反力 [kN] / 総ばね剛性 [kN/m] を折線で表示">
+                <TextBlock Text="地盤反力度・反力係数表示 (ステップグラフ)" TextWrapping="Wrap"/>
+            </CheckBox>
 
             <!-- 分布モード内での 実測スケール vs 純理論 切替 -->
-            <CheckBox Content="純理論値 (FEM スケールなし)"
-                      IsChecked="{Binding IsPureTheoreticalMode, Mode=TwoWay}"
+            <CheckBox IsChecked="{Binding IsPureTheoreticalMode, Mode=TwoWay}"
                       Margin="16,4,0,0"
                       Visibility="{Binding IsPureTheoreticalOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                      ToolTip="OFF (既定): 上下寄与の合計が FEM 実測ばね反力と一致するよう比例倍&#x0a;  scale = F_actual / (F_above_theory + F_below_theory)&#x0a;ON: scale = 1 (理論値そのまま)&#x0a;  土層パラメータ (Kh0, py) の差がそのまま可視化される&#x0a;  層変化点での段差検証に有用"/>
+                      ToolTip="OFF (既定): 上下寄与の合計が FEM 実測ばね反力と一致するよう比例倍&#x0a;  scale = F_actual / (F_above_theory + F_below_theory)&#x0a;ON: scale = 1 (理論値そのまま)&#x0a;  土層パラメータ (Kh0, py) の差がそのまま可視化される&#x0a;  層変化点での段差検証に有用">
+                <TextBlock Text="純理論値 (FEM スケールなし)" TextWrapping="Wrap"/>
+            </CheckBox>
 
         </StackPanel>
 
