@@ -3620,79 +3620,123 @@ namespace PileDesign.ViewModels
                             List<double> springValues = [];
 
                             int nSprings = horizontalSoilSprings.Count;
-                            for (int i = 0; i < nSprings; i++)
+
+                            // 案 C (v3): 分布モード + 反力/反力係数 は セグメント単位で上下半分に分けて長方形分布を作る。
+                            //   - 上半分 [Z_top, Z_mid] は ノード j の相対変位 y_j と セグメント j の top 側 py を使う
+                            //   - 下半分 [Z_mid, Z_btm] は ノード j+1 の相対変位 y_{j+1} と セグメント j の bottom 側 py を使う
+                            //   計算は HorizontalSoilReactionItem.GetP(y, py) を利用 (設計モデルと厳密一致)
+                            bool useRectDist = IsDistributedMode && reactions != null
+                                && (dataType == "Reaction" || dataType == "SecantStiffness");
+
+                            if (useRectDist)
                             {
-                                var spring = horizontalSoilSprings[i];
-                                if (spring?.NodeI?.Coord == null) continue;
-
-                                // 深度（杭節点のZ座標）
-                                double z = spring.NodeI.Coord.Z;
-
-                                // 結果を取得（最終ステップ）
-                                var result = spring.HorizontalSpringResults?
-                                    .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
-                                             && r.LoadCombination?.No == loadCombination.No
-                                             && r.IsLiquefaction == isLiquefaction)
-                                    .OrderByDescending(r => r.Step)
-                                    .FirstOrDefault();
-
-                                if (result?.CumulativeDisp == null || result?.CumulativeForce == null) continue;
-
-                                // 相対変位（杭節点 - 地盤節点）のX,Y合成
-                                double relDispX = result.CumulativeDisp.Dxi - result.CumulativeDisp.Dxj;
-                                double relDispY = result.CumulativeDisp.Dyi - result.CumulativeDisp.Dyj;
-                                double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
-
-                                // ばね反力（杭節点側のX,Y合成） [kN] — ノード位置のばね内力総量
-                                double forceX = result.CumulativeForce.Fxi;
-                                double forceY = result.CumulativeForce.Fyi;
-                                double force = Math.Sqrt(forceX * forceX + forceY * forceY);
-
-                                // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
-                                double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;
-
-                                // 案 C (v2): IsDistributedMode=true のときだけ
-                                //   - トリビュータリ長 L で除算して 単位長さあたり に変換
-                                //   - さらに 杭幅 B で除算して 地盤反力度 (kN/m²) / 反力係数 (kN/m³) に変換
-                                // L と B は tributary 部分ごとに異なり得るので、L 重み付き B を使う
-                                double tribLength = 0.0;
-                                double tribBSum = 0.0; // Σ B_j × L_j (重み付き合計)
-                                if (IsDistributedMode && reactions != null)
+                                // 全節点の相対変位を先にキャッシュ (2 セグメントから参照するため)
+                                double[] nodeRelDisps = new double[nSprings];
+                                for (int k = 0; k < nSprings; k++)
                                 {
-                                    if (i > 0 && (i - 1) < reactions.Count)
+                                    var sp = horizontalSoilSprings[k];
+                                    if (sp == null) continue;
+                                    var res = sp.HorizontalSpringResults?
+                                        .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                 && r.LoadCombination?.No == loadCombination.No
+                                                 && r.IsLiquefaction == isLiquefaction)
+                                        .OrderByDescending(r => r.Step)
+                                        .FirstOrDefault();
+                                    if (res?.CumulativeDisp == null) continue;
+                                    double dx = res.CumulativeDisp.Dxi - res.CumulativeDisp.Dxj;
+                                    double dy = res.CumulativeDisp.Dyi - res.CumulativeDisp.Dyj;
+                                    nodeRelDisps[k] = Math.Sqrt(dx * dx + dy * dy);
+                                }
+
+                                // isFront: 当該荷重ケースでのこの杭の前後判定 (p-y 計算に影響)
+                                int iLC = loadCase.No - 1;
+                                bool isFront = pileLayoutDataItem.IsFrontPiles != null
+                                            && iLC >= 0
+                                            && iLC < pileLayoutDataItem.IsFrontPiles.Count
+                                            && pileLayoutDataItem.IsFrontPiles[iLC];
+
+                                // セグメントごとに 4 隅の点 (Z_top, Z_mid, Z_mid, Z_btm) を追加して長方形を作る。
+                                // 連続セグメントは Z_btm_j = Z_top_{j+1} で接続されるため全体で連続した階段線になる。
+                                for (int j = 0; j < reactions.Count; j++)
+                                {
+                                    double zTop = reactions[j].ZTop;
+                                    double zBtm = reactions[j].ZBtm;
+                                    double zMid = 0.5 * (zTop + zBtm);
+                                    double L = zTop - zBtm;
+                                    if (L <= 0) continue;
+                                    double B = reactions[j].B > 0 ? reactions[j].B : 1.0;
+
+                                    // 上半分: ノード j の変位、セグメント j の top 側 py
+                                    double yUp = (j < nSprings) ? nodeRelDisps[j] : 0;
+                                    double pyTop = isFront ? reactions[j].PyFrontTop : reactions[j].PyRearTop;
+                                    double pUpperPa = Math.Abs(reactions[j].GetP(yUp, pyTop)); // kN/m² (pressure)
+
+                                    // 下半分: ノード j+1 の変位、セグメント j の bottom 側 py
+                                    double yLo = (j + 1 < nSprings) ? nodeRelDisps[j + 1] : 0;
+                                    double pyBtm = isFront ? reactions[j].PyFrontBtm : reactions[j].PyRearBtm;
+                                    double pLowerPa = Math.Abs(reactions[j].GetP(yLo, pyBtm)); // kN/m²
+
+                                    double vUp, vLo;
+                                    if (dataType == "Reaction")
                                     {
-                                        double L = 0.5 * (reactions[i - 1].ZTop - reactions[i - 1].ZBtm);
-                                        tribLength += L;
-                                        tribBSum += reactions[i - 1].B * L;
+                                        vUp = pUpperPa;
+                                        vLo = pLowerPa;
                                     }
-                                    if (i < nSprings - 1 && i < reactions.Count)
+                                    else // SecantStiffness
                                     {
-                                        double L = 0.5 * (reactions[i].ZTop - reactions[i].ZBtm);
-                                        tribLength += L;
-                                        tribBSum += reactions[i].B * L;
+                                        // kh_sec = p / y [kN/m³]。y=0 近傍では 0 扱い
+                                        vUp = yUp > 1e-10 ? pUpperPa / yUp : 0;
+                                        vLo = yLo > 1e-10 ? pLowerPa / yLo : 0;
                                     }
-                                }
-                                double tribBEff = tribLength > 0 ? tribBSum / tribLength : 1.0;
-                                if (tribLength <= 0) tribLength = 1.0;
-                                if (tribBEff <= 0) tribBEff = 1.0;
 
-                                springZs.Add(z);
+                                    // 長方形を作る 4 点 (Z 降順で追加、次セグメントと連続)
+                                    springValues.Add(vUp); springZs.Add(zTop);
+                                    springValues.Add(vUp); springZs.Add(zMid);
+                                    springValues.Add(vLo); springZs.Add(zMid);
+                                    springValues.Add(vLo); springZs.Add(zBtm);
+                                }
+                            }
+                            else
+                            {
+                                // 従来の節点ベース処理 (RelativeDisp または IsDistributedMode=OFF)
+                                for (int i = 0; i < nSprings; i++)
+                                {
+                                    var spring = horizontalSoilSprings[i];
+                                    if (spring?.NodeI?.Coord == null) continue;
 
-                                if (dataType == "RelativeDisp")
-                                {
-                                    springValues.Add(relDisp * 1000.0); // mm
-                                }
-                                else if (dataType == "Reaction")
-                                {
-                                    // OFF: 総反力 [kN]
-                                    // ON : p = force / (L × B) [kN/m²] — 地盤反力度 (pile face pressure)
-                                    springValues.Add(force / (tribLength * tribBEff));
-                                }
-                                else if (dataType == "SecantStiffness")
-                                {
-                                    // OFF: 総ばね剛性 [kN/m]
-                                    // ON : kh = springStiffness / (L × B) [kN/m³] — 水平地盤反力係数
-                                    springValues.Add(springStiffness / (tribLength * tribBEff));
+                                    // 深度（杭節点のZ座標）
+                                    double z = spring.NodeI.Coord.Z;
+
+                                    // 結果を取得（最終ステップ）
+                                    var result = spring.HorizontalSpringResults?
+                                        .Where(r => r.LoadCase?.LoadName == loadCase.LoadName
+                                                 && r.LoadCombination?.No == loadCombination.No
+                                                 && r.IsLiquefaction == isLiquefaction)
+                                        .OrderByDescending(r => r.Step)
+                                        .FirstOrDefault();
+
+                                    if (result?.CumulativeDisp == null || result?.CumulativeForce == null) continue;
+
+                                    // 相対変位（杭節点 - 地盤節点）のX,Y合成
+                                    double relDispX = result.CumulativeDisp.Dxi - result.CumulativeDisp.Dxj;
+                                    double relDispY = result.CumulativeDisp.Dyi - result.CumulativeDisp.Dyj;
+                                    double relDisp = Math.Sqrt(relDispX * relDispX + relDispY * relDispY);
+
+                                    // ばね反力 (resultant) [kN]
+                                    double forceX = result.CumulativeForce.Fxi;
+                                    double forceY = result.CumulativeForce.Fyi;
+                                    double force = Math.Sqrt(forceX * forceX + forceY * forceY);
+
+                                    // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
+                                    double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;
+
+                                    springZs.Add(z);
+                                    if (dataType == "RelativeDisp")
+                                        springValues.Add(relDisp * 1000.0); // mm
+                                    else if (dataType == "Reaction")
+                                        springValues.Add(force); // kN
+                                    else if (dataType == "SecantStiffness")
+                                        springValues.Add(springStiffness); // kN/m
                                 }
                             }
 
@@ -3700,13 +3744,8 @@ namespace PileDesign.ViewModels
                             {
                                 var scatter = wpfPlot.Plot.Add.Scatter(springValues, springZs);
                                 scatter.LegendText = GetPileLegendText(loadCase, loadCombination, isLiquefaction, pileLayoutDataItem);
-
-                                // 案 C: 単位長さあたり表示 + 反力/剛性のみ、ステップグラフ (長方形分布風) に
-                                if (IsDistributedMode && (dataType == "Reaction" || dataType == "SecantStiffness"))
-                                {
-                                    // StepVertical: (x1,y1)→(x1,y2)→(x2,y2) — 値を保持しながら z を移動、次の節点で値ジャンプ
-                                    scatter.ConnectStyle = ScottPlot.ConnectStyle.StepVertical;
-                                }
+                                // 案 C v3: 長方形分布モードでは 4 点/セグメントを直線で結ぶだけで長方形が描ける
+                                // (ConnectStyle の調整は不要)
 
                                 // ホバーポップアップ用詳細
                                 double absMax = springValues.Count > 0 ? springValues.Max(Math.Abs) : 0;
