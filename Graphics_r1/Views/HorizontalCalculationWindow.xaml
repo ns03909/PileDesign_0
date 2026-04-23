@@ -396,8 +396,9 @@
                              Text="{Binding MaxCaseDegreeOfParallelism, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                              PreviewTextInput="NumericOnly_PreviewTextInput"
                              DataObject.Pasting="NumericOnly_Pasting"
-                             ToolTip="複数荷重ケースを同時に並行実行する数&#x0a;1 = 逐次 (安全、従来挙動)&#x0a;2 以上 = 並列実行 (高速化期待、実験的)&#x0a;ハングする場合は 1 に戻してください"/>
-                    <TextBlock Text="(1=逐次)" Foreground="Gray" VerticalAlignment="Center"/>
+                             ToolTip="複数荷重ケースを同時に並行実行する数&#x0a;1 = 逐次 (安全、従来挙動)&#x0a;2 以上 = 並列実行 (高速化期待、実験的)&#x0a;最大は PC の論理プロセッサ数&#x0a;ハングする場合は 1 に戻してください"/>
+                    <TextBlock Text="{Binding ProcessorCount, StringFormat='(1=逐次, max={0})'}"
+                               Foreground="Gray" VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
 

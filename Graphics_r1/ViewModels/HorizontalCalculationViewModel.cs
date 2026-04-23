@@ -276,11 +276,16 @@ namespace PileDesign.ViewModels
         // (想定原因: Task.Run のネスト × 8 並列 → ThreadPool starvation or GC 圧迫 or
         //  MathNet 内部並列との競合)。将来のチューニング後に既定値を上げる予定。
         // ユーザーが 2 以上に設定すれば並列実行される。
+        // 上限は Environment.ProcessorCount (論理プロセッサ数) で clamp する。それ以上に
+        // しても Task は待機するだけで意味がなく、メモリ圧迫で hang リスクが増える。
+        public int ProcessorCount => Environment.ProcessorCount;
+
         private int _maxCaseDegreeOfParallelism = 1;
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;
-            set => SetProperty(ref _maxCaseDegreeOfParallelism, Math.Max(1, value));
+            set => SetProperty(ref _maxCaseDegreeOfParallelism,
+                Math.Clamp(value, 1, Environment.ProcessorCount));
         }
 
         // 選択地盤番号
