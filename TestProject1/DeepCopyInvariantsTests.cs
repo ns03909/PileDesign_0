@@ -180,6 +180,99 @@ namespace TestProject1
             Assert.AreEqual(2, main.Nodes[0].NodeResults[2].Step);
         }
 
+        // ====================================================================
+        // E3a: CaseLocalSnapshot (case-local Node / AxialForce accessors)
+        // ====================================================================
+
+        [TestMethod]
+        public void MainModel_GetPileNodes_FallsBackToInputModel()
+        {
+            // 主モデル (CaseLocalState == null) では GetPileNodes は InputModel の PileNodes を返す
+            var (model, nI, nJ, _, _, _) = BuildSimpleModel();
+            var pli = new PileDesign.Models.InputData.PileLayoutDataItem();
+            pli.PileNodes.Add(nI);
+            pli.PileNodes.Add(nJ);
+
+            Assert.IsNull(model.CaseLocalState, "主モデルは CaseLocalState == null");
+            var pileNodes = model.GetPileNodes(pli);
+            Assert.AreSame(nI, pileNodes[0]);
+            Assert.AreSame(nJ, pileNodes[1]);
+        }
+
+        [TestMethod]
+        public void DeepCopy_GetPileNodes_ReturnsCopyReferences()
+        {
+            // DeepCopy 後、GetPileNodes は InputModel.PileLayoutItems に登録された Node の
+            // copy 側インスタンスを返さなければならない (元インスタンスを返してはならない)
+            var (main, nI, nJ, nK, _, _) = BuildSimpleModel();
+
+            // InputModel に PileLayoutItem を登録 (nI, nJ を持つ)
+            var pli = new PileDesign.Models.InputData.PileLayoutDataItem();
+            pli.PileNodes.Add(nI);
+            pli.PileNodes.Add(nJ);
+            pli.SoilNodes.Add(nK);
+            pli.AxialForce = 123.45;
+            // Pre-populate then assign (避けるため: Add の CollectionChanged が MainWindowViewModel を要求する)
+            main.InputModel.PileLayoutItems = new System.Collections.ObjectModel.ObservableCollection<PileDesign.Models.InputData.PileLayoutDataItem> { pli };
+
+            var copy = main.DeepCopy();
+            Assert.IsNotNull(copy.CaseLocalState, "DeepCopy 後は CaseLocalState 非 null");
+
+            var copyNodeSet = new HashSet<Node>(copy.Nodes, ReferenceEqualityComparer.Instance);
+
+            var casePileNodes = copy.GetPileNodes(pli);
+            Assert.AreEqual(2, casePileNodes.Count);
+            Assert.IsTrue(copyNodeSet.Contains(casePileNodes[0]),
+                "case-local PileNodes[0] は copy.Nodes 上のインスタンスを返さなければならない");
+            Assert.IsTrue(copyNodeSet.Contains(casePileNodes[1]),
+                "case-local PileNodes[1] も同上");
+            Assert.AreNotSame(nI, casePileNodes[0],
+                "元の nI を返してはならない");
+
+            var caseSoilNodes = copy.GetSoilNodes(pli);
+            Assert.AreEqual(1, caseSoilNodes.Count);
+            Assert.IsTrue(copyNodeSet.Contains(caseSoilNodes[0]));
+            Assert.AreNotSame(nK, caseSoilNodes[0]);
+        }
+
+        [TestMethod]
+        public void DeepCopy_GetAxialForce_SnapshotIsolated()
+        {
+            var (main, nI, _, _, _, _) = BuildSimpleModel();
+            var pli = new PileDesign.Models.InputData.PileLayoutDataItem();
+            pli.PileNodes.Add(nI);
+            pli.AxialForce = 500.0;
+            // Pre-populate then assign (避けるため: Add の CollectionChanged が MainWindowViewModel を要求する)
+            main.InputModel.PileLayoutItems = new System.Collections.ObjectModel.ObservableCollection<PileDesign.Models.InputData.PileLayoutDataItem> { pli };
+
+            var copy = main.DeepCopy();
+            Assert.AreEqual(500.0, copy.GetAxialForce(pli), 1e-15, "DeepCopy 直後は元と同じ値");
+
+            // コピー側で AxialForce を更新しても InputModel.pli.AxialForce は変わらない
+            copy.SetAxialForce(pli, 777.0);
+            Assert.AreEqual(777.0, copy.GetAxialForce(pli), 1e-15);
+            Assert.AreEqual(500.0, pli.AxialForce, 1e-15,
+                "コピーの AxialForce 更新が InputModel に伝播してはならない");
+            Assert.AreEqual(500.0, main.GetAxialForce(pli), 1e-15,
+                "main モデルから見た AxialForce は元のまま");
+        }
+
+        [TestMethod]
+        public void MainModel_SetAxialForce_WritesToInputModel()
+        {
+            // 主モデルでは SetAxialForce は InputModel を直接書換える (後方互換)
+            var (main, nI, _, _, _, _) = BuildSimpleModel();
+            var pli = new PileDesign.Models.InputData.PileLayoutDataItem();
+            pli.PileNodes.Add(nI);
+            pli.AxialForce = 100.0;
+            // Pre-populate then assign (避けるため: Add の CollectionChanged が MainWindowViewModel を要求する)
+            main.InputModel.PileLayoutItems = new System.Collections.ObjectModel.ObservableCollection<PileDesign.Models.InputData.PileLayoutDataItem> { pli };
+
+            main.SetAxialForce(pli, 999.0);
+            Assert.AreEqual(999.0, pli.AxialForce, 1e-15,
+                "主モデルの SetAxialForce は InputModel.AxialForce を更新する");
+        }
+
         [TestMethod]
         public void AppendCaseResultsToMain_DoesNotDuplicateExistingResults()
         {

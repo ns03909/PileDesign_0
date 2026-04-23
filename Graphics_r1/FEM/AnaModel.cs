@@ -8,10 +8,56 @@ using System.Text.Json.Serialization;
 
 namespace PileDesign.FEM
 {
+    /// <summary>
+    /// E3a (2026-04-23): ケース並列化で AnaModel を per-case DeepCopy する際、
+    /// InputModel.PileLayoutItems / ElementDivision.DoatsuGoryokuBane は共有 (copy しない)
+    /// なので、そこに格納されている Node 参照や AxialForce は「元モデルの値」のまま。
+    /// これを caseModel 側で書換えるとワーカー間でレースする。
+    ///
+    /// 対策として、caseModel (=DeepCopy の戻り値) だけが持つ「ケース固有の Node マップ /
+    /// AxialForce 値」を本スナップショットに保持する。主モデル (= 通常構築された AnaModel)
+    /// は Snapshot を持たない (null) ので、従来通り InputModel を直接参照する。
+    ///
+    /// 使い方: 呼び出し側は AnaModel.GetPileNodes(item) / GetAxialForce(item) / SetAxialForce(...)
+    /// 経由で Node や AxialForce にアクセスする。Snapshot が null なら InputModel へフォールバック、
+    /// 非 null なら case-local dict を参照する。
+    /// </summary>
+    public sealed class CaseLocalSnapshot
+    {
+        /// <summary>PileLayoutItem → caseModel 側の PileNodes リスト</summary>
+        public Dictionary<PileLayoutDataItem, List<Node>> PileNodes { get; } = new();
+
+        /// <summary>PileLayoutItem → caseModel 側の SoilNodes リスト</summary>
+        public Dictionary<PileLayoutDataItem, List<Node>> SoilNodes { get; } = new();
+
+        /// <summary>PileLayoutItem → 現在の AxialForce (ケース毎に更新可能)</summary>
+        public Dictionary<PileLayoutDataItem, double> AxialForces { get; } = new();
+
+        /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopSoilNode</summary>
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopSoilNodes { get; } = new();
+
+        /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmSoilNode</summary>
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmSoilNodes { get; } = new();
+
+        /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopEmbedmentNode</summary>
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopEmbedmentNodes { get; } = new();
+
+        /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmEmbedmentNode</summary>
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmEmbedmentNodes { get; } = new();
+    }
+
     public class AnaModel
     {
         private readonly InputModel _inputModel;
         public InputModel InputModel => _inputModel;
+
+        /// <summary>
+        /// E3a: case-local 状態のスナップショット。主モデルでは null、DeepCopy の戻り値では非 null。
+        /// これが null のとき、Get/Set 系ヘルパーは InputModel を直接参照する (従来挙動)。
+        /// 非 null のときは caseModel 固有の値に切替わる。
+        /// </summary>
+        [JsonIgnore]
+        public CaseLocalSnapshot? CaseLocalState { get; private set; }
 
         public List<Node> Nodes { get; set; }
         public List<Beam> Beams { get; set; }
@@ -1263,7 +1309,123 @@ namespace PileDesign.FEM
             if (this.VectorT != null) copy.VectorT = this.VectorT.Clone();
             if (this.VectorR != null) copy.VectorR = this.VectorR.Clone();
 
+            // ---- Step 6: Case-local snapshot を構築 (E3a) ----
+            // InputModel.PileLayoutItems / DoatsuGoryokuBane は main と共有するため、
+            // そこに格納されている Node 参照 (元インスタンス) を new Node 群へ付け替える
+            // スナップショットを caseModel 専用に持たせる。
+            var snap = new CaseLocalSnapshot();
+            if (_inputModel?.PileLayoutItems != null)
+            {
+                foreach (var pli in _inputModel.PileLayoutItems)
+                {
+                    if (pli == null) continue;
+                    var pileNodeList = new List<Node>(pli.PileNodes?.Count ?? 0);
+                    if (pli.PileNodes != null)
+                    {
+                        foreach (var n in pli.PileNodes)
+                            pileNodeList.Add(n != null && nodeMap.TryGetValue(n, out var nn) ? nn : n);
+                    }
+                    snap.PileNodes[pli] = pileNodeList;
+
+                    var soilNodeList = new List<Node>(pli.SoilNodes?.Count ?? 0);
+                    if (pli.SoilNodes != null)
+                    {
+                        foreach (var n in pli.SoilNodes)
+                            soilNodeList.Add(n != null && nodeMap.TryGetValue(n, out var nn) ? nn : n);
+                    }
+                    snap.SoilNodes[pli] = soilNodeList;
+
+                    snap.AxialForces[pli] = pli.AxialForce;
+                }
+            }
+            var dgb = _inputModel?.ElementDivision?.DoatsuGoryokuBane;
+            if (dgb?.Items != null)
+            {
+                foreach (var item in dgb.Items)
+                {
+                    if (item == null) continue;
+                    if (item.TopSoilNode != null && nodeMap.TryGetValue(item.TopSoilNode, out var tsn))
+                        snap.DoatsuTopSoilNodes[item] = tsn;
+                    if (item.BtmSoilNode != null && nodeMap.TryGetValue(item.BtmSoilNode, out var bsn))
+                        snap.DoatsuBtmSoilNodes[item] = bsn;
+                    if (item.TopEmbedmentNode != null && nodeMap.TryGetValue(item.TopEmbedmentNode, out var ten))
+                        snap.DoatsuTopEmbedmentNodes[item] = ten;
+                    if (item.BtmEmbedmentNode != null && nodeMap.TryGetValue(item.BtmEmbedmentNode, out var ben))
+                        snap.DoatsuBtmEmbedmentNodes[item] = ben;
+                }
+            }
+            copy.CaseLocalState = snap;
+
             return copy;
+        }
+
+        // ---- Case-local アクセサ (E3a) ----
+        // 主モデルでは InputModel を直接返す (従来挙動)、case-local コピーでは snapshot を返す。
+        // E3b で UpdateSoilDisp / PrepareKmat / UpdateAxialForceFromAnalysis 等をこれらに切替える。
+
+        /// <summary>ケース固有の PileNodes を取得。主モデルでは item.PileNodes、コピーでは caseModel 側 Node 群。</summary>
+        public IList<Node> GetPileNodes(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.PileNodes.TryGetValue(item, out var list))
+                return list;
+            return item.PileNodes;
+        }
+
+        /// <summary>ケース固有の SoilNodes を取得。</summary>
+        public IList<Node> GetSoilNodes(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.SoilNodes.TryGetValue(item, out var list))
+                return list;
+            return item.SoilNodes;
+        }
+
+        /// <summary>ケース固有の AxialForce を取得。</summary>
+        public double GetAxialForce(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.AxialForces.TryGetValue(item, out var v))
+                return v;
+            return item.AxialForce;
+        }
+
+        /// <summary>ケース固有の AxialForce を設定。主モデルでは InputModel 本体を書換える (従来挙動)。</summary>
+        public void SetAxialForce(PileLayoutDataItem item, double value)
+        {
+            if (CaseLocalState != null)
+                CaseLocalState.AxialForces[item] = value;
+            else
+                item.AxialForce = value;
+        }
+
+        /// <summary>DoatsuGoryokuBane Item の TopSoilNode を取得 (case-local 対応)。</summary>
+        public Node GetDoatsuTopSoilNode(DoatsuGoryokuBaneItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.DoatsuTopSoilNodes.TryGetValue(item, out var n))
+                return n;
+            return item.TopSoilNode;
+        }
+
+        /// <summary>DoatsuGoryokuBane Item の BtmSoilNode を取得 (case-local 対応)。</summary>
+        public Node GetDoatsuBtmSoilNode(DoatsuGoryokuBaneItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.DoatsuBtmSoilNodes.TryGetValue(item, out var n))
+                return n;
+            return item.BtmSoilNode;
+        }
+
+        /// <summary>DoatsuGoryokuBane Item の TopEmbedmentNode を取得 (case-local 対応)。</summary>
+        public Node GetDoatsuTopEmbedmentNode(DoatsuGoryokuBaneItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.DoatsuTopEmbedmentNodes.TryGetValue(item, out var n))
+                return n;
+            return item.TopEmbedmentNode;
+        }
+
+        /// <summary>DoatsuGoryokuBane Item の BtmEmbedmentNode を取得 (case-local 対応)。</summary>
+        public Node GetDoatsuBtmEmbedmentNode(DoatsuGoryokuBaneItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.DoatsuBtmEmbedmentNodes.TryGetValue(item, out var n))
+                return n;
+            return item.BtmEmbedmentNode;
         }
 
         /// <summary>
