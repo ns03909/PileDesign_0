@@ -405,6 +405,26 @@ namespace PileDesign.ViewModels
         /// FlushLogsToUi がキャッシュを更新するので getter は O(1)。</summary>
         public string CalculationLogText => _cachedLogText;
 
+        // 並列モニタ (案 B, 2026-04-24): 現在実行中のケースを表示するウィンドウ用。
+        // RunThisCaseAsync の開始/終了で UI スレッド上から Add/Remove される。
+        public ObservableCollection<CaseMonitorItem> ActiveCases { get; } = [];
+
+        private int _completedCaseCount;
+        public int CompletedCaseCount
+        {
+            get => _completedCaseCount;
+            set => SetProperty(ref _completedCaseCount, value);
+        }
+
+        private int _totalPlannedCaseCount;
+        public int TotalPlannedCaseCount
+        {
+            get => _totalPlannedCaseCount;
+            set => SetProperty(ref _totalPlannedCaseCount, value);
+        }
+
+        public int PendingCaseCount => Math.Max(0, TotalPlannedCaseCount - CompletedCaseCount - ActiveCases.Count);
+
         // 解析実行済みフラグ
         private bool _isAnalysisExecuted = false;
         public bool IsAnalysisExecuted
@@ -497,6 +517,11 @@ namespace PileDesign.ViewModels
 
         // 追加: Viewに警告表示を依頼するイベント（MessageBoxを直接呼ばない）
         public event Action<string>? RequestShowWarning;
+
+        // 並列モニタ (案 B, 2026-04-24): View に 並列モニタウィンドウの開閉を依頼。
+        // MDOP>=2 で解析開始時に Show、解析終了/キャンセル時に Hide。
+        public event Action? RequestShowParallelMonitor;
+        public event Action? RequestHideParallelMonitor;
 
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ManualResetEventSlim _pauseEvent = new(true); // trueで初期状態は「進行」
@@ -1080,6 +1105,9 @@ namespace PileDesign.ViewModels
             {
                 IsAnalysisRunning = false;
 
+                // 並列モニタが開いていれば閉じる (正常終了/キャンセル/エラー全てで共通)
+                Application.Current?.Dispatcher.Invoke(() => RequestHideParallelMonitor?.Invoke());
+
                 // CancellationTokenSourceをDisposeしてリソース解放
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
@@ -1611,6 +1639,22 @@ namespace PileDesign.ViewModels
             await AddLogAsync("解析計算処理開始");
             await Task.Yield();
 
+            // 並列モニタ (案 B): 新解析のたびに Active/Completed をリセット
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                ActiveCases.Clear();
+                CompletedCaseCount = 0;
+                TotalPlannedCaseCount = TotalCalculationCount;
+                OnPropertyChanged(nameof(PendingCaseCount));
+            });
+
+            // MDOP>=2 ならモニタを表示
+            bool showMonitor = MaxCaseDegreeOfParallelism > 1;
+            if (showMonitor)
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(() => RequestShowParallelMonitor?.Invoke());
+            }
+
             // 進捗報告用の開始時刻を記録
             var startTime = DateTime.Now;
 
@@ -1734,6 +1778,13 @@ namespace PileDesign.ViewModels
                         // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
                         string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
+                        // 並列モニタ (案 B, 2026-04-24): ケース開始時に Active リストへ追加。
+                        // TotalSteps は nStep 確定後 (後続の baseNStep 計算後) に更新される。
+                        var monitorItem = new CaseMonitorItem(caseTag, 0);
+                        System.Windows.Application.Current?.Dispatcher.Invoke(() => ActiveCases.Add(monitorItem));
+                        try
+                        {
+
                         // E3c-2 (2026-04-23): ケース固有モデル = targetModel の DeepCopy。
                         // E3c-3 (2026-04-23): snapshot + DeepCopy は targetModel の state を同時に
                         // 参照するため atomic である必要あり。逐次モードでは lock は no-op。
@@ -1802,6 +1853,12 @@ namespace PileDesign.ViewModels
                         int nStep = baseNStep;
                         int bisectionAttempt = 0;
                         bool caseConverged = false;
+
+                        // 並列モニタ: 初期 nStep 確定後に TotalSteps を更新
+                        {
+                            int initialNStep = nStep;
+                            System.Windows.Application.Current?.Dispatcher.Invoke(() => monitorItem.TotalSteps = initialNStep);
+                        }
 
                         // v28 (2026-04-23) 改善ゲート: 前 attempt の平均反復数を保持し、
                         // retry 後にほとんど改善しない場合 (細分化が無効な構造的ラインサーチ制約)
@@ -2872,6 +2929,17 @@ namespace PileDesign.ViewModels
                                 caseSnapHSpringResultCounts,
                                 caseSnapRotSpringResultCounts);
                         }
+                        } // end try
+                        finally
+                        {
+                            // 並列モニタ: ケース終了 (正常/例外/キャンセルいずれも) で Active から除去し Completed++
+                            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                            {
+                                ActiveCases.Remove(monitorItem);
+                                CompletedCaseCount++;
+                                OnPropertyChanged(nameof(PendingCaseCount));
+                            });
+                        }
                         } // end local function RunThisCaseAsync
 
                         // E3c-3-enable: MDOP>1 なら Task.Run に投げ semaphore で throttle、
@@ -2908,6 +2976,9 @@ namespace PileDesign.ViewModels
 
             token.ThrowIfCancellationRequested();
             await AddLogAsync("計算終了");
+
+            // 並列モニタを閉じる (開いていれば)
+            System.Windows.Application.Current?.Dispatcher.Invoke(() => RequestHideParallelMonitor?.Invoke());
 
             // 検定比の計算（解析完了後に一括処理）- 未完成のため一時無効化
             try

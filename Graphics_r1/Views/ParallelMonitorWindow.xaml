@@ -1,0 +1,75 @@
+<Window x:Class="PileDesign.Views.ParallelMonitorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PileDesign.ViewModels"
+        mc:Ignorable="d"
+        Title="並列解析モニタ" Height="320" Width="420"
+        Topmost="True"
+        ShowInTaskbar="False"
+        WindowStartupLocation="Manual"
+        ResizeMode="CanResize">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 進捗サマリ -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,4">
+            <TextBlock Text="完了: " FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding CompletedCaseCount}" MinWidth="30"/>
+            <TextBlock Text=" / "/>
+            <TextBlock Text="{Binding TotalPlannedCaseCount}" MinWidth="30"/>
+            <TextBlock Text="    実行中: " FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding ActiveCases.Count}" MinWidth="20"/>
+            <TextBlock Text="    待機: " FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding PendingCaseCount}" MinWidth="30"/>
+        </StackPanel>
+
+        <ProgressBar Grid.Row="1"
+                     Minimum="0"
+                     Maximum="{Binding TotalPlannedCaseCount}"
+                     Value="{Binding CompletedCaseCount, Mode=OneWay}"
+                     Height="10" Margin="0,0,0,8"
+                     Foreground="#62B0E2"/>
+
+        <!-- 実行中ケース一覧 -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding ActiveCases}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type local:CaseMonitorItem}">
+                        <Border BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="4,3">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="● " Foreground="#4CAF50"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding CaseTag}"
+                                           FontFamily="Consolas"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <TextBlock Text="step " Foreground="Gray"/>
+                                    <TextBlock Text="{Binding CurrentStep}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="/"/>
+                                    <TextBlock Text="{Binding TotalSteps}"/>
+                                    <TextBlock Text="  iter " Foreground="Gray" Margin="4,0,0,0"/>
+                                    <TextBlock Text="{Binding CurrentIteration}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <TextBlock Grid.Row="3" Margin="0,6,0,0" Foreground="Gray" FontSize="10"
+                   Text="※ 並列実行 (ケース並列 ≥ 2) 時のみ表示されます"/>
+    </Grid>
+</Window>

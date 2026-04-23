@@ -20,6 +20,9 @@ namespace PileDesign.Views
         private readonly bool _isAnalysisResultCheckShown = false; // フラグ追加
         private bool _isClosingHandled = false;
 
+        // 並列モニタウィンドウ (案 B, 2026-04-24)。解析中のみ表示。
+        private ParallelMonitorWindow? _parallelMonitorWindow;
+
         public HorizontalCalculationWindow()
         {
             InitializeComponent();
@@ -232,6 +235,28 @@ namespace PileDesign.Views
             LogTextBox.ScrollToEnd();
         }
 
+        /// <summary>VM から要求: 並列モニタを表示 (MDOP>=2 時の解析開始時)</summary>
+        private void OnRequestShowParallelMonitor()
+        {
+            if (this.DataContext is not HorizontalCalculationViewModel vm) return;
+            // 既に開いていれば何もしない (多重 Show 防止)
+            if (_parallelMonitorWindow != null && _parallelMonitorWindow.IsVisible) return;
+
+            _parallelMonitorWindow = new ParallelMonitorWindow(vm, this);
+            _parallelMonitorWindow.Closed += (_, __) => _parallelMonitorWindow = null;
+            _parallelMonitorWindow.Show();
+        }
+
+        /// <summary>VM から要求: 並列モニタを閉じる (解析終了/キャンセル/エラー時)</summary>
+        private void OnRequestHideParallelMonitor()
+        {
+            if (_parallelMonitorWindow != null)
+            {
+                _parallelMonitorWindow.Close();
+                _parallelMonitorWindow = null;
+            }
+        }
+
         private async void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
         {
             // DataContext が ViewModel の場合はイベントを購読
@@ -251,6 +276,11 @@ namespace PileDesign.Views
 
                 vm.RequestClose -= OnRequestClose;
                 vm.RequestClose += OnRequestClose;
+
+                vm.RequestShowParallelMonitor -= OnRequestShowParallelMonitor;
+                vm.RequestShowParallelMonitor += OnRequestShowParallelMonitor;
+                vm.RequestHideParallelMonitor -= OnRequestHideParallelMonitor;
+                vm.RequestHideParallelMonitor += OnRequestHideParallelMonitor;
 
                 // ウィンドウ表示後にバックグラウンドでFEMモデルを作成
                 await vm.InitializeModelAsync();
@@ -308,7 +338,15 @@ namespace PileDesign.Views
                 vm.RequestShowWarning -= OnRequestShowWarning;
                 vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
                 vm.RequestClose -= OnRequestClose;
+                vm.RequestShowParallelMonitor -= OnRequestShowParallelMonitor;
+                vm.RequestHideParallelMonitor -= OnRequestHideParallelMonitor;
                 vm.UnsubscribeEvents(); // LoadCase/LoadCombinationのPropertyChanged購読を解除
+            }
+            // 並列モニタウィンドウが開きっぱなしなら閉じる
+            if (_parallelMonitorWindow != null)
+            {
+                _parallelMonitorWindow.Close();
+                _parallelMonitorWindow = null;
             }
             this.Loaded -= HorizontalCalculationWindow_Loaded;
             this.Unloaded -= HorizontalCalculationWindow_Unloaded;
@@ -324,6 +362,8 @@ namespace PileDesign.Views
                 oldVm.RequestShowWarning -= OnRequestShowWarning;
                 oldVm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
                 oldVm.RequestClose -= OnRequestClose;
+                oldVm.RequestShowParallelMonitor -= OnRequestShowParallelMonitor;
+                oldVm.RequestHideParallelMonitor -= OnRequestHideParallelMonitor;
             }
             if (e.NewValue is HorizontalCalculationViewModel newVm)
             {
@@ -331,6 +371,8 @@ namespace PileDesign.Views
                 newVm.RequestShowWarning += OnRequestShowWarning;
                 newVm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
                 newVm.RequestClose += OnRequestClose;
+                newVm.RequestShowParallelMonitor += OnRequestShowParallelMonitor;
+                newVm.RequestHideParallelMonitor += OnRequestHideParallelMonitor;
                 // 新 VM のログを LogTextBox に反映 (Text binding 廃止対応)
                 PopulateLogTextBox(newVm.CalculationLog);
             }
