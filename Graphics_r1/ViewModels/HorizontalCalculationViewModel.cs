@@ -1655,14 +1655,15 @@ namespace PileDesign.ViewModels
                         // v20: 難易度事前検出 (Phase 1) — counter-loading を事前に detect し、
                         // 最初から大きな nStep で実行することで失敗試行のムダを回避
                         //
-                        // v26 (案 B): Hard 側を控えめに (×4 min 32 → ×2 min 16) + retry 上限を 1→2 に
-                        // 拡張。この初期値でも足りない場合は「早期適応検出」(後述) で
-                        // 30 反復停滞を待たず retry を即時発火させる。
+                        // v28 (2026-04-23): Approach I で杭頭 Ry リミットサイクルが根本解決したため、
+                        // 分類を counter-loading (βU × βL < 0) 一本に簡素化、Hard nStep を 16 → 12 に緩和。
+                        // 物理的根拠: S 字曲げ (杭頭と杭体下部で逆符号の塑性ヒンジが同時形成) は
+                        // Newton 方向が接線不連続で振動しやすい。その他の難しさは Approach I で
+                        // 除去済み、または早期適応検出 (v26 案 B) が実測ベースで救済。
                         //
                         // 仕組み:
-                        //   - Easy  (順方向通常): 基本 nStep (Level1=2, Level2=8 等) で開始、retry 最大 3
-                        //   - Medium (高 α): 基本 ×2 で開始、retry 最大 2
-                        //   - Hard  (counter-loading 系): 基本 ×2 (min 16) で開始、retry 最大 2
+                        //   - Easy (βU × βL ≥ 0): configured nStep で開始、retry 最大 3
+                        //   - Hard (counter-loading): 基本 ×2 (min 12) で開始、retry 最大 2
                         int configuredNStep = (!loadCase.IsSoilNonLinear && !loadCase.IsPileNonLinear) ? 1 :
                             loadCase.Level == 1 ? Level1CalculationStepsCount :
                             loadCase.Level == 2 ? Level2CalculationStepsCount :
@@ -1676,11 +1677,7 @@ namespace PileDesign.ViewModels
                             switch (difficulty)
                             {
                                 case CaseDifficulty.Hard:
-                                    baseNStep = Math.Max(configuredNStep * 2, 16);
-                                    MAX_STEP_BISECTIONS = 2;
-                                    break;
-                                case CaseDifficulty.Medium:
-                                    baseNStep = configuredNStep * 2;
+                                    baseNStep = Math.Max(configuredNStep * 2, 12);
                                     MAX_STEP_BISECTIONS = 2;
                                     break;
                                 case CaseDifficulty.Easy:
@@ -3318,37 +3315,21 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 荷重ケース × 荷重組合せ × 液状化 の組合せの数値解法上の難易度。
-        /// Hard: counter-loading や高 α 液状化系など Newton が振動/発散しやすい
-        /// Medium: 中程度の非線形性
-        /// Easy: 標準的な順方向載荷
+        /// Hard: counter-loading (βU × βL &lt; 0) — S 字曲げで接線不連続が発生しやすい
+        /// Easy: それ以外
         /// </summary>
-        private enum CaseDifficulty { Easy, Medium, Hard }
+        private enum CaseDifficulty { Easy, Hard }
 
         /// <summary>
-        /// 組合せの判定。Counter-loading（βU × βL < 0）と高 α 液状化系を Hard に分類し、
-        /// 最初から大きな nStep で実行するための事前検出を行う。
+        /// v28 (2026-04-23): counter-loading (βU × βL &lt; 0) のみ Hard に分類。
+        /// 物理的根拠: 杭頭と杭体下部で反対向きの曲げ (S字曲げ) が発生し、
+        /// 逆符号の塑性ヒンジが同時形成 → Newton 方向が接線不連続で振動しやすい。
+        /// Approach I で杭頭 Ry リミットサイクルが解決済みのため、高 αL や強 βU 液状化等の
+        /// 静的分類は廃止。早期適応検出 (v26 案 B) が実測ベースで救済する。
         /// </summary>
         private static CaseDifficulty ClassifyCaseDifficulty(LoadCase lc, LoadCombination combo, bool isLiq)
         {
-            double bu = combo.Beta1;  // βU (上部質量慣性力の係数)
-            double bl = combo.Beta2;  // βL (基礎質量慣性力の係数)
-            double aL = combo.Alpha1; // αL (地盤変位量の係数)
-
-            // Counter-loading: 上部慣性力と基礎慣性力の符号が反対 → 杭頭で打消し合う難しい組合せ
-            // 例: αL=0.5, βU=-1.0, βL=0.5 → βU*βL = -0.5 < 0
-            bool counterLoading = bu * bl < 0.0;
-
-            // 上部慣性力が大きく逆向き（βU 強負）+ 液状化 + Level 2 の組合せも難しい
-            bool strongCounterLiq = isLiq && lc.Level == 2 && bu < -0.5;
-
-            if (counterLoading || strongCounterLiq)
-                return CaseDifficulty.Hard;
-
-            // 高 α + Level 2（地盤変位が大きい）は Medium
-            if (aL >= 0.8 && lc.Level == 2)
-                return CaseDifficulty.Medium;
-
-            return CaseDifficulty.Easy;
+            return (combo.Beta1 * combo.Beta2 < 0.0) ? CaseDifficulty.Hard : CaseDifficulty.Easy;
         }
 
         #endregion
