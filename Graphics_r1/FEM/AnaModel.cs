@@ -1265,6 +1265,87 @@ namespace PileDesign.FEM
 
             return copy;
         }
+
+        /// <summary>
+        /// E2 (2026-04-23): ケース並列化 E3 で使用する結果マージ。
+        /// case-local (DeepCopy 済) AnaModel で蓄積した結果を main AnaModel に append する。
+        /// snapshot は DeepCopy 前の main の各結果コレクション長を渡す。caseModel はコピーなので
+        /// snapshot 以前のエントリは main と同一内容であり、snapshot 以降が「そのケースで追加した結果」。
+        /// これを main へ移送する。
+        /// ※ E2 ではまだ呼び出し側を繋いでいない（逐次実行のまま）。E3 で per-case DeepCopy と
+        ///    Parallel.ForEach を導入した時点で使用開始する。
+        /// </summary>
+        public static void AppendCaseResultsToMain(
+            AnaModel main,
+            AnaModel caseModel,
+            int snapAnaStepResults,
+            int[] snapNodeResults,
+            int[] snapBeamResults,
+            int[] snapHSpringResults,
+            int[]? snapRotSpringResults)
+        {
+            if (main == null) throw new ArgumentNullException(nameof(main));
+            if (caseModel == null) throw new ArgumentNullException(nameof(caseModel));
+
+            // AnalysisStepResults: caseModel[snap..] を main に append
+            if (caseModel.AnalysisStepResults != null)
+            {
+                for (int i = snapAnaStepResults; i < caseModel.AnalysisStepResults.Count; i++)
+                    main.AnalysisStepResults.Add(caseModel.AnalysisStepResults[i]);
+            }
+
+            // Node.NodeResults
+            if (snapNodeResults != null)
+            {
+                int nodeCount = Math.Min(main.Nodes.Count, caseModel.Nodes.Count);
+                for (int n = 0; n < nodeCount; n++)
+                {
+                    var src = caseModel.Nodes[n].NodeResults;
+                    var dst = main.Nodes[n].NodeResults;
+                    int snap = n < snapNodeResults.Length ? snapNodeResults[n] : 0;
+                    for (int i = snap; i < src.Count; i++) dst.Add(src[i]);
+                }
+            }
+
+            // Beam.BeamResults
+            if (snapBeamResults != null)
+            {
+                int beamCount = Math.Min(main.Beams.Count, caseModel.Beams.Count);
+                for (int b = 0; b < beamCount; b++)
+                {
+                    var src = caseModel.Beams[b].BeamResults;
+                    var dst = main.Beams[b].BeamResults;
+                    int snap = b < snapBeamResults.Length ? snapBeamResults[b] : 0;
+                    for (int i = snap; i < src.Count; i++) dst.Add(src[i]);
+                }
+            }
+
+            // HorizontalSoilSpring.HorizontalSpringResults
+            if (snapHSpringResults != null && main.HorizontalSoilSprings != null && caseModel.HorizontalSoilSprings != null)
+            {
+                int hsCount = Math.Min(main.HorizontalSoilSprings.Count, caseModel.HorizontalSoilSprings.Count);
+                for (int h = 0; h < hsCount; h++)
+                {
+                    var src = caseModel.HorizontalSoilSprings[h].HorizontalSpringResults;
+                    var dst = main.HorizontalSoilSprings[h].HorizontalSpringResults;
+                    int snap = h < snapHSpringResults.Length ? snapHSpringResults[h] : 0;
+                    for (int i = snap; i < src.Count; i++) dst.Add(src[i]);
+                }
+            }
+
+            // RotationalSpring.RotationalSpringResults
+            if (snapRotSpringResults != null && main.RotationalSprings != null && caseModel.RotationalSprings != null)
+            {
+                int rsCount = Math.Min(main.RotationalSprings.Count, caseModel.RotationalSprings.Count);
+                for (int r = 0; r < rsCount; r++)
+                {
+                    var src = caseModel.RotationalSprings[r].RotationalSpringResults;
+                    var dst = main.RotationalSprings[r].RotationalSpringResults;
+                    int snap = r < snapRotSpringResults.Length ? snapRotSpringResults[r] : 0;
+                    for (int i = snap; i < src.Count; i++) dst.Add(src[i]);
+                }
+            }
+        }
     }
 }
 

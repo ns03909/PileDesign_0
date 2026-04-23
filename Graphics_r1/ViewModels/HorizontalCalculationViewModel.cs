@@ -1651,6 +1651,9 @@ namespace PileDesign.ViewModels
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
+                        // E2 (2026-04-23): 並列化後のログ混在対策。反復/収束/プロファイルログの先頭に付与
+                        string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
+
                         // v20: 荷重方向の事前検出 — counter-loading (逆方向組合せ) を検出し、
                         // 最初から小さな荷重ステップで実行することで失敗試行のムダを回避
                         //
@@ -1690,7 +1693,7 @@ namespace PileDesign.ViewModels
                                 // 反映する。旧実装は再試行時のみ _bisectionExtraSteps を加算していたため、
                                 // 事前検出で初期から大きな nStep を選んだ場合、進捗カウンタが超過表示
                                 // （例: 207/180）になっていた。
-                                _bisectionExtraSteps += (baseNStep - configuredNStep);
+                                System.Threading.Interlocked.Add(ref _bisectionExtraSteps, baseNStep - configuredNStep);
                                 OnPropertyChanged(nameof(TotalCalculationCount));
                                 OnPropertyChanged(nameof(ProgressText));
                                 string directionLabel = loadDirection == LoadCombinationDirection.CounterLoading ? "逆方向組合せ" : "順方向組合せ";
@@ -2245,15 +2248,15 @@ namespace PileDesign.ViewModels
                                     relaxInfo = "";
                                 if (targetModel.NormsROnNormsFint < alpha)
                                 {
-                                    await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged" + relaxInfo);
+                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged" + relaxInfo);
                                 }
                                 else
                                 {
-                                    await AddLogAsync("　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}" + relaxInfo);
+                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{targetModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}" + relaxInfo);
                                 }
 
                                 // 診断ログ
-                                await AddLogAsync($"　　diag(K)[min,max]=[{diagKMin:E3}, {diagKMax:E3}], spring k[min,max]=[{springKMin:E3}, {springKMax:E3}], max|d|={dispMaxAbs:E3}");
+                                await AddLogAsync($"{caseTag}　　diag(K)[min,max]=[{diagKMin:E3}, {diagKMax:E3}], spring k[min,max]=[{springKMin:E3}, {springKMax:E3}], max|d|={dispMaxAbs:E3}");
 
                                 // v27: 振動診断 — 支配 DOF (上位 3) とフリップフロップ検出
                                 // リミットサイクル (残差が周期的に跳ね返って収束しない) の原因 DOF を特定する。
@@ -2284,7 +2287,7 @@ namespace PileDesign.ViewModels
                                     static string SignedExp(double v) => (v >= 0 ? "+" : "") + v.ToString("E2");
                                     string topStr = string.Join(", ",
                                         dominantDofs.Select(x => $"{x.Key}={SignedExp(x.Value)}"));
-                                    await AddLogAsync($"　　　dominant δu: {topStr}{flipInfo}");
+                                    await AddLogAsync($"{caseTag}　　　dominant δu: {topStr}{flipInfo}");
                                 }
 
                                 // v27: 案 A — リミットサイクル Aitken 平均化
@@ -2503,7 +2506,7 @@ namespace PileDesign.ViewModels
                             else
                             {
                                 string relaxedNote = effectiveAlpha > alpha ? $" (緩和基準α={effectiveAlpha:E2})" : "";
-                                await AddLogAsync($"  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
+                                await AddLogAsync($"{caseTag}  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
 
                                 // v28 D: プロファイリング情報をステップ収束時に出力
                                 profStepTimer.Stop();
@@ -2518,7 +2521,7 @@ namespace PileDesign.ViewModels
                                 double _cscMs = FEM.CsparseLinearSolver.CscBuildTicks * _tickToMs;
                                 double _factMs = FEM.CsparseLinearSolver.FactorizeTicks * _tickToMs;
                                 double _backSubMs = FEM.CsparseLinearSolver.SolveBackSubTicks * _tickToMs;
-                                await AddLogAsync($"    ⏱ プロファイル: K組立={_findKMs:F0}ms×{profFindKCalls}, Solve={_solveMs:F0}ms {_solverTag} (CSC={_cscMs:F0} 分解={_factMs:F0} 代入={_backSubMs:F0}), " +
+                                await AddLogAsync($"{caseTag}    ⏱ プロファイル: K組立={_findKMs:F0}ms×{profFindKCalls}, Solve={_solveMs:F0}ms {_solverTag} (CSC={_cscMs:F0} 分解={_factMs:F0} 代入={_backSubMs:F0}), " +
                                     (profLineSearchCalls > 0
                                         ? $"LS={_lsMs:F0}ms×{profLineSearchCalls} (avg trial={_lsTrialAvg:F1}), "
                                         : $"FindT={_findTMs:F0}ms, ") +
@@ -2664,7 +2667,7 @@ namespace PileDesign.ViewModels
                                 {
                                     await AddLogAsync($"  ⛔ 物理的未収束のため残り {remainingPhys} ステップをスキップ");
                                     // v25: 未実行ステップ分を総ステップ数から差し引き、進捗バーを 100% 到達させる
-                                    _bisectionExtraSteps -= remainingPhys;
+                                    System.Threading.Interlocked.Add(ref _bisectionExtraSteps, -remainingPhys);
                                     OnPropertyChanged(nameof(TotalCalculationCount));
                                     OnPropertyChanged(nameof(ProgressText));
                                 }
@@ -2704,7 +2707,7 @@ namespace PileDesign.ViewModels
                             int remainingAtMax = nStep - stepsExecutedInAttempt;
                             if (remainingAtMax > 0)
                             {
-                                _bisectionExtraSteps -= remainingAtMax;
+                                System.Threading.Interlocked.Add(ref _bisectionExtraSteps, -remainingAtMax);
                                 OnPropertyChanged(nameof(TotalCalculationCount));
                                 OnPropertyChanged(nameof(ProgressText));
                             }
@@ -2738,7 +2741,7 @@ namespace PileDesign.ViewModels
                         int oldNStep = nStep;
                         bisectionAttempt++;
                         nStep *= 2;
-                        _bisectionExtraSteps += stepsExecutedInAttempt + nStep - oldNStep;
+                        System.Threading.Interlocked.Add(ref _bisectionExtraSteps, stepsExecutedInAttempt + nStep - oldNStep);
                         OnPropertyChanged(nameof(TotalCalculationCount));
                         OnPropertyChanged(nameof(ProgressText));
                     }  // end retry while-loop
@@ -3423,6 +3426,15 @@ namespace PileDesign.ViewModels
                 ? LoadCombinationDirection.CounterLoading
                 : LoadCombinationDirection.Forward;
         }
+
+        /// <summary>
+        /// E2 (2026-04-23): ケース識別子の短いタグ。並列化後にログが混在しても
+        /// どのケース由来か即座に分かるようにするため、反復・収束・プロファイル
+        /// などの反復性ログの先頭に付与する。
+        /// 形式: [L{level}-{iLC+1}.C{iLCOM+1}.{Liq|Dry}]  (例: [L2-1.C4.Liq])
+        /// </summary>
+        private static string BuildCaseTag(int level, int iLC, int iLCOM, bool isLiquefaction)
+            => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "Dry")}] ";
 
         #endregion
 

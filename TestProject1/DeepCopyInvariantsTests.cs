@@ -137,5 +137,71 @@ namespace TestProject1
             Assert.IsNotNull(copy.KAA_tan, "コピー側は MapOnKtanMat で KAA_tan が設定される");
             Assert.IsNull(model.KAA_tan, "元モデルの KAA_tan は影響を受けてはならない");
         }
+
+        // ====================================================================
+        // E2: AppendCaseResultsToMain (ケース並列化 E3 で使用する結果マージ helper)
+        // ====================================================================
+
+        [TestMethod]
+        public void AppendCaseResultsToMain_MovesNewNodeResultsFromCaseToMain()
+        {
+            // シナリオ: main で既存結果 1 件 → DeepCopy → caseModel で 2 件追加 → main に merge
+            var (main, _, _, _, _, _) = BuildSimpleModel();
+            var lc = new PileDesign.Models.InputData.LoadCase { LoadName = "LC1" };
+            var combo = new PileDesign.Models.InputData.LoadCombination(1, 1.0, 0.0, 0.0);
+
+            // main に既存結果 1 件 (main.Nodes[0])。SoilDisp は Node デフォルトで null のため
+            // NodeResult.DeepCopy が NRE にならないよう事前に初期化する。
+            main.Nodes[0].SoilDisp = new NodeDisp(0, 0, 0, 0, 0, 0);
+            main.Nodes[0].NodeResults.Add(new NodeResult(lc, combo, false, 0, main.Nodes[0]));
+
+            // snapshot (DeepCopy 前の結果件数)
+            int snapAna = main.AnalysisStepResults.Count;
+            var snapNode = main.Nodes.Select(n => n.NodeResults.Count).ToArray();
+            var snapBeam = main.Beams.Select(b => b.BeamResults.Count).ToArray();
+            var snapHSp = main.HorizontalSoilSprings.Select(s => s.HorizontalSpringResults.Count).ToArray();
+
+            // DeepCopy
+            var caseModel = main.DeepCopy();
+
+            // caseModel で結果を 2 件追加 (Nodes[0])
+            caseModel.Nodes[0].NodeResults.Add(new NodeResult(lc, combo, false, 1, caseModel.Nodes[0]));
+            caseModel.Nodes[0].NodeResults.Add(new NodeResult(lc, combo, false, 2, caseModel.Nodes[0]));
+
+            // merge
+            AnaModel.AppendCaseResultsToMain(main, caseModel, snapAna, snapNode, snapBeam, snapHSp, null);
+
+            // main.Nodes[0] は既存 1 + 追加 2 = 3 件になる
+            Assert.AreEqual(3, main.Nodes[0].NodeResults.Count,
+                "追加された 2 件が main に merge されていなければならない");
+            // 追加されたステップは 1, 2 (0 は既存)
+            Assert.AreEqual(0, main.Nodes[0].NodeResults[0].Step);
+            Assert.AreEqual(1, main.Nodes[0].NodeResults[1].Step);
+            Assert.AreEqual(2, main.Nodes[0].NodeResults[2].Step);
+        }
+
+        [TestMethod]
+        public void AppendCaseResultsToMain_DoesNotDuplicateExistingResults()
+        {
+            var (main, _, _, _, _, _) = BuildSimpleModel();
+            var lc = new PileDesign.Models.InputData.LoadCase { LoadName = "LC1" };
+            var combo = new PileDesign.Models.InputData.LoadCombination(1, 1.0, 0.0, 0.0);
+
+            main.Nodes[0].SoilDisp = new NodeDisp(0, 0, 0, 0, 0, 0);
+            main.Nodes[0].NodeResults.Add(new NodeResult(lc, combo, false, 0, main.Nodes[0]));
+
+            int snapAna = main.AnalysisStepResults.Count;
+            var snapNode = main.Nodes.Select(n => n.NodeResults.Count).ToArray();
+            var snapBeam = main.Beams.Select(b => b.BeamResults.Count).ToArray();
+            var snapHSp = main.HorizontalSoilSprings.Select(s => s.HorizontalSpringResults.Count).ToArray();
+
+            var caseModel = main.DeepCopy();
+            // caseModel で NOTHING added
+            AnaModel.AppendCaseResultsToMain(main, caseModel, snapAna, snapNode, snapBeam, snapHSp, null);
+
+            // 何も追加されていないので既存 1 件のまま (duplicate しない)
+            Assert.AreEqual(1, main.Nodes[0].NodeResults.Count,
+                "case で何も追加していなければ merge で重複してはならない");
+        }
     }
 }
