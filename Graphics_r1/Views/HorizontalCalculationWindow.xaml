@@ -448,8 +448,9 @@
             </Grid.RowDefinitions>
 
             <TextBlock Text="計算ログ" Grid.Row="0"/>
+            <!-- Text binding は廃止。CalculationLog の CollectionChanged を View 側で購読し、
+                 LogTextBox.AppendText で増分追記する (Text 全文再レイアウトを回避、UI フリーズ対策) -->
             <TextBox x:Name="LogTextBox"
-                     Text="{Binding CalculationLogText, Mode=OneWay}"
                      Grid.Row="1"
                      IsReadOnly="True"
                      TextWrapping="NoWrap"

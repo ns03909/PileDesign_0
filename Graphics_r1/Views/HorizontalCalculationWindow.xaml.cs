@@ -80,15 +80,44 @@ namespace PileDesign.Views
 
         private void CalculationLog_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            // UI フリーズ対策: CalculationLog.Add が N 回連続発火しても ScrollToEnd の BeginInvoke を
-            // 1 回しか queue しない。ログ 5000 行 × ScrollToEnd O(text size) の重畳を回避。
+            // UI フリーズ対策: Text binding は廃止し、AppendText で増分追記。
+            // これにより WPF TextBox の全文再レイアウト O(total text) を避け、
+            // 1 行追加あたり O(1) の処理で済む。
+            if (LogTextBox == null) return;
+
+            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+            {
+                foreach (string item in e.NewItems)
+                    LogTextBox.AppendText(item + Environment.NewLine);
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Reset)
+            {
+                LogTextBox.Clear();
+            }
+            // Replace/Remove/Move 等は未対応 (この VM では Add/Reset のみ発生)
+
+            // ScrollToEnd は O(text size) のため多数回呼ばない。1 フラッシュ 1 回に coalesce。
             if (_scrollToEndPending) return;
             _scrollToEndPending = true;
-            LogTextBox?.Dispatcher.BeginInvoke(() =>
+            LogTextBox.Dispatcher.BeginInvoke(() =>
             {
                 _scrollToEndPending = false;
                 LogTextBox?.ScrollToEnd();
             });
+        }
+
+        /// <summary>
+        /// LogTextBox を CalculationLog の現在内容で一度に再構築する。
+        /// DataContext 変更時や初回 subscribe 時に使う。
+        /// </summary>
+        private void PopulateLogTextBox(System.Collections.Generic.IEnumerable<string>? items)
+        {
+            if (LogTextBox == null) return;
+            LogTextBox.Clear();
+            if (items == null) return;
+            foreach (var item in items)
+                LogTextBox.AppendText(item + Environment.NewLine);
+            LogTextBox.ScrollToEnd();
         }
 
         private async void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
@@ -105,6 +134,8 @@ namespace PileDesign.Views
 
                 vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
                 vm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
+                // 既存ログがあれば初期表示 (通常は空)
+                PopulateLogTextBox(vm.CalculationLog);
 
                 vm.RequestClose -= OnRequestClose;
                 vm.RequestClose += OnRequestClose;
@@ -188,6 +219,8 @@ namespace PileDesign.Views
                 newVm.RequestShowWarning += OnRequestShowWarning;
                 newVm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
                 newVm.RequestClose += OnRequestClose;
+                // 新 VM のログを LogTextBox に反映 (Text binding 廃止対応)
+                PopulateLogTextBox(newVm.CalculationLog);
             }
         }
 
