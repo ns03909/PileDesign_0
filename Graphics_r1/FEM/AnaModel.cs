@@ -1149,26 +1149,119 @@ namespace PileDesign.FEM
 
         public AnaModel DeepCopy()
         {
-            // 各リストの要素もDeepCopyする
-            var nodes = this.Nodes.Select(n => n.DeepCopy()).ToList();
-            var beams = this.Beams.Select(b => b.DeepCopy()).ToList();
-            var dummyBeams = this.DummyBeams.Select(db => db.DeepCopy()).ToList();
-            var rigidBodies = this.RigidBodies.Select(rb => rb.DeepCopy()).ToList();
-            var horizontalSoilSprings = this.HorizontalSoilSprings.Select(s => s.DeepCopy()).ToList();
-            var rotationalSprings = this.RotationalSprings.Select(rs => rs.DeepCopy()).ToList();
+            // E1 (2026-04-23): ケース並列化の前提条件として、以下の不変量を保証する。
+            //   - copy.Nodes 上の Node インスタンスと、Beam.NodeI/J / RigidBody.MasterNode & SlaveNodes /
+            //     各 TwoNodeSpringElement.NodeI/J / Node.MasterNodes[] が「同一参照」であること
+            //   従来の DeepCopy は各要素が独自に Node を DeepCopy していたため、copy.Nodes と
+            //   copy.Beams[i].NodeI が別インスタンスになり、並列ワーカーで状態が分岐する。
+            //   解決策: 先に Node 一覧を DeepCopy してマップを構築し、他要素の Node 参照を
+            //   マップ経由で fixup する。
 
+            // ---- Step 1: Node コピーと参照マップ構築 ----
+            var nodeMap = new Dictionary<Node, Node>(ReferenceEqualityComparer.Instance);
+            var nodes = new List<Node>(this.Nodes.Count);
+            foreach (var n in this.Nodes)
+            {
+                var nc = n.DeepCopy();
+                nodeMap[n] = nc;
+                nodes.Add(nc);
+            }
+
+            // ---- Step 2: コピー済 Node の MasterNodes[] を新 Node 群へ fixup ----
+            // (Node.DeepCopy は MasterNodes 配列をシャローコピーし元インスタンスを指したままになる)
+            foreach (var n in this.Nodes)
+            {
+                var nc = nodeMap[n];
+                for (int d = 0; d < 6; d++)
+                {
+                    var oldMaster = n.MasterNodes[d];
+                    if (oldMaster != null && nodeMap.TryGetValue(oldMaster, out var newMaster))
+                        nc.MasterNodes[d] = newMaster;
+                }
+            }
+
+            // ---- Step 3: 要素コピー + NodeI/J 参照 fixup ----
+            Node MapNode(Node n) => (n != null && nodeMap.TryGetValue(n, out var nn)) ? nn : n;
+
+            var beams = new List<Beam>(this.Beams.Count);
+            foreach (var b in this.Beams)
+            {
+                var bc = b.DeepCopy();
+                bc.NodeI = MapNode(b.NodeI);
+                bc.NodeJ = MapNode(b.NodeJ);
+                beams.Add(bc);
+            }
+
+            // DummyBeam: NodeI/J は get only なので、DeepCopy を回避してコンストラクタに new Node を渡す
+            var dummyBeams = new List<DummyBeam>(this.DummyBeams.Count);
+            foreach (var db in this.DummyBeams)
+            {
+                var dbc = new DummyBeam(db.Name, MapNode(db.NodeI), MapNode(db.NodeJ))
+                {
+                    Length = db.Length,
+                    DummyBeamResults = new System.Collections.ObjectModel.ObservableCollection<DummyBeamResult>(
+                        db.DummyBeamResults.Select(r => r.DeepCopy()))
+                };
+                dummyBeams.Add(dbc);
+            }
+
+            var rigidBodies = new List<RigidBody>(this.RigidBodies.Count);
+            foreach (var rb in this.RigidBodies)
+            {
+                var rbc = rb.DeepCopy();
+                rbc.MasterNode = MapNode(rb.MasterNode);
+                rbc.SlaveNodes = rb.SlaveNodes.Select(MapNode).ToList();
+                rigidBodies.Add(rbc);
+            }
+
+            var horizontalSoilSprings = new List<HorizontalSoilSpring>(this.HorizontalSoilSprings.Count);
+            foreach (var s in this.HorizontalSoilSprings)
+            {
+                var sc = s.DeepCopy();
+                sc.NodeI = MapNode(s.NodeI);
+                sc.NodeJ = MapNode(s.NodeJ);
+                horizontalSoilSprings.Add(sc);
+            }
+
+            var rotationalSprings = new List<RotationalSpring>(this.RotationalSprings.Count);
+            foreach (var rs in this.RotationalSprings)
+            {
+                var rsc = rs.DeepCopy();
+                rsc.NodeI = MapNode(rs.NodeI);
+                rsc.NodeJ = MapNode(rs.NodeJ);
+                rotationalSprings.Add(rsc);
+            }
+
+            // ここでコンストラクタを呼ぶ時点で MasterNodes は新 Node 群を指しているため、
+            // ResolveConstraintChains が正しい ResolvedDofMap を構築する
             var copy = new AnaModel(_inputModel, nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings, rotationalSprings);
 
-            // PenaltySpringsのDeepCopy
+            // PenaltySprings
             if (this.PenaltySprings != null)
-                copy.PenaltySprings = this.PenaltySprings.Select(ps => ps.DeepCopy()).ToList();
+            {
+                var psList = new List<HorizontalSoilSpring>(this.PenaltySprings.Count);
+                foreach (var p in this.PenaltySprings)
+                {
+                    var pc = p.DeepCopy();
+                    pc.NodeI = MapNode(p.NodeI);
+                    pc.NodeJ = MapNode(p.NodeJ);
+                    psList.Add(pc);
+                }
+                copy.PenaltySprings = psList;
+            }
 
-            // AnalysisStepResultsもDeepCopy
+            // AnalysisStepResults
             foreach (var result in this.AnalysisStepResults)
                 copy.AnalysisStepResults.Add(result.DeepCopy());
 
-            // 必要に応じて他のプロパティもコピー
-            // 例: copy.VectorF = this.VectorF.Clone();
+            // E1: NR state ベクトル類を明示 clone (ケース間で前ケースの state が残らないよう
+            // InitializeVectorF/D でゼロ化されるが、デバッグ時の再現性のため現状をコピー)
+            if (this.VectorF != null) copy.VectorF = this.VectorF.Clone();
+            if (this.VectorDF != null) copy.VectorDF = this.VectorDF.Clone();
+            if (this.VectorD != null) copy.VectorD = this.VectorD.Clone();
+            if (this.VectorDD != null) copy.VectorDD = this.VectorDD.Clone();
+            if (this.VectorT != null) copy.VectorT = this.VectorT.Clone();
+            if (this.VectorR != null) copy.VectorR = this.VectorR.Clone();
 
             return copy;
         }
