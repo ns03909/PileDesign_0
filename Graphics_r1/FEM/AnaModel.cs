@@ -1554,6 +1554,105 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
+        /// E3c 診断 (2026-04-23): DeepCopy 後の caseModel が main (原本) と状態的に等価か検証する。
+        /// 等価とは: 対応する Node/Beam/Spring の state (Boundary, EquationNumber, CumulativeDisp,
+        /// Section 値, Spring.KeTan 等) が bit-exact に一致すること。
+        /// 差分が見つかったら文字列に列挙して返す (空文字列なら OK)。
+        /// </summary>
+        public static string ValidateDeepCopyEquivalence(AnaModel main, AnaModel copy)
+        {
+            var diffs = new System.Text.StringBuilder();
+
+            if (main.CountFree != copy.CountFree)
+                diffs.AppendLine($"CountFree: {main.CountFree} vs {copy.CountFree}");
+            if (main.CountFix != copy.CountFix)
+                diffs.AppendLine($"CountFix: {main.CountFix} vs {copy.CountFix}");
+            if (main.Nodes.Count != copy.Nodes.Count)
+                diffs.AppendLine($"Nodes.Count: {main.Nodes.Count} vs {copy.Nodes.Count}");
+            if (main.Beams.Count != copy.Beams.Count)
+                diffs.AppendLine($"Beams.Count: {main.Beams.Count} vs {copy.Beams.Count}");
+            if (main.HorizontalSoilSprings.Count != copy.HorizontalSoilSprings.Count)
+                diffs.AppendLine($"HorizontalSoilSprings.Count: {main.HorizontalSoilSprings.Count} vs {copy.HorizontalSoilSprings.Count}");
+
+            int nodesToCheck = Math.Min(main.Nodes.Count, copy.Nodes.Count);
+            for (int i = 0; i < nodesToCheck; i++)
+            {
+                var mn = main.Nodes[i];
+                var cn = copy.Nodes[i];
+                if (mn.Name != cn.Name) { diffs.AppendLine($"Nodes[{i}].Name: {mn.Name} vs {cn.Name}"); continue; }
+                for (int d = 0; d < 6; d++)
+                {
+                    if (mn.EquationNumber[d] != cn.EquationNumber[d])
+                        diffs.AppendLine($"Nodes[{i}={mn.Name}].EquationNumber[{d}]: {mn.EquationNumber[d]} vs {cn.EquationNumber[d]}");
+                    if (mn.GetBoundary(d) != cn.GetBoundary(d))
+                        diffs.AppendLine($"Nodes[{i}={mn.Name}].Boundary[{d}]: {mn.GetBoundary(d)} vs {cn.GetBoundary(d)}");
+                }
+                if (mn.IsForcedDisped != cn.IsForcedDisped)
+                    diffs.AppendLine($"Nodes[{i}={mn.Name}].IsForcedDisped: {mn.IsForcedDisped} vs {cn.IsForcedDisped}");
+                if (mn.IsLoaded != cn.IsLoaded)
+                    diffs.AppendLine($"Nodes[{i}={mn.Name}].IsLoaded: {mn.IsLoaded} vs {cn.IsLoaded}");
+                // CumulativeDisp (6 成分)
+                for (int d = 0; d < 6; d++)
+                {
+                    double m = mn.CumulativeDisp?.GetByIndex(d) ?? 0;
+                    double c = cn.CumulativeDisp?.GetByIndex(d) ?? 0;
+                    if (m != c)
+                        diffs.AppendLine($"Nodes[{i}={mn.Name}].CumulativeDisp[{d}]: {m:G17} vs {c:G17}");
+                }
+                // Master の整合 (名前ベースで比較)
+                for (int d = 0; d < 6; d++)
+                {
+                    var mMaster = mn.MasterNodes[d]?.Name;
+                    var cMaster = cn.MasterNodes[d]?.Name;
+                    if (mMaster != cMaster)
+                        diffs.AppendLine($"Nodes[{i}={mn.Name}].MasterNodes[{d}].Name: {mMaster} vs {cMaster}");
+                }
+            }
+
+            int beamsToCheck = Math.Min(main.Beams.Count, copy.Beams.Count);
+            for (int i = 0; i < beamsToCheck; i++)
+            {
+                var mb = main.Beams[i];
+                var cb = copy.Beams[i];
+                if (mb.NodeI?.Name != cb.NodeI?.Name)
+                    diffs.AppendLine($"Beams[{i}={mb.Name}].NodeI.Name: {mb.NodeI?.Name} vs {cb.NodeI?.Name}");
+                if (mb.NodeJ?.Name != cb.NodeJ?.Name)
+                    diffs.AppendLine($"Beams[{i}={mb.Name}].NodeJ.Name: {mb.NodeJ?.Name} vs {cb.NodeJ?.Name}");
+                if (mb.KTan_y != cb.KTan_y)
+                    diffs.AppendLine($"Beams[{i}={mb.Name}].KTan_y: {mb.KTan_y:G17} vs {cb.KTan_y:G17}");
+                if (mb.Ryi_tan != cb.Ryi_tan)
+                    diffs.AppendLine($"Beams[{i}={mb.Name}].Ryi_tan: {mb.Ryi_tan:G17} vs {cb.Ryi_tan:G17}");
+                if (mb.Section?.IY != cb.Section?.IY)
+                    diffs.AppendLine($"Beams[{i}={mb.Name}].Section.IY: {mb.Section?.IY} vs {cb.Section?.IY}");
+                // CumulativeForce
+                if (mb.CumulativeForce?.Fxi != cb.CumulativeForce?.Fxi)
+                    diffs.AppendLine($"Beams[{i}={mb.Name}].CumulativeForce.Fxi: {mb.CumulativeForce?.Fxi:G17} vs {cb.CumulativeForce?.Fxi:G17}");
+            }
+
+            int springsToCheck = Math.Min(main.HorizontalSoilSprings.Count, copy.HorizontalSoilSprings.Count);
+            for (int i = 0; i < springsToCheck; i++)
+            {
+                var ms = main.HorizontalSoilSprings[i];
+                var cs = copy.HorizontalSoilSprings[i];
+                if (ms.NodeI?.Name != cs.NodeI?.Name)
+                    diffs.AppendLine($"HS[{i}].NodeI.Name: {ms.NodeI?.Name} vs {cs.NodeI?.Name}");
+                // KeTan diagonal
+                if (ms.KeTan != null && cs.KeTan != null)
+                {
+                    for (int d = 0; d < Math.Min(6, ms.KeTan.RowCount); d++)
+                    {
+                        if (ms.KeTan[d, d] != cs.KeTan[d, d])
+                            diffs.AppendLine($"HS[{i}={ms.Name}].KeTan[{d},{d}]: {ms.KeTan[d, d]:G17} vs {cs.KeTan[d, d]:G17}");
+                    }
+                }
+                else if ((ms.KeTan == null) != (cs.KeTan == null))
+                    diffs.AppendLine($"HS[{i}={ms.Name}].KeTan null mismatch: main={ms.KeTan == null} copy={cs.KeTan == null}");
+            }
+
+            return diffs.ToString();
+        }
+
+        /// <summary>
         /// E2 (2026-04-23): ケース並列化 E3 で使用する結果マージ。
         /// case-local (DeepCopy 済) AnaModel で蓄積した結果を main AnaModel に append する。
         /// snapshot は DeepCopy 前の main の各結果コレクション長を渡す。caseModel はコピーなので
