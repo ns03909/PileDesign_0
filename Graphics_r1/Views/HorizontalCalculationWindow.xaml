@@ -102,9 +102,12 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- 上部コントロール -->
+        <!-- 上部コントロール (ウィンドウが小さい時は縦スクロール) -->
 
-        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical">
+        <ScrollViewer Grid.Row="0" Grid.Column="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Vertical">
 
             <!--<Button Content="水平解析モデル作成" Command="{Binding AnalysisModelingCommand}"/>-->
 
@@ -385,8 +388,19 @@
                               IsChecked="{Binding SkipIteration, Mode=TwoWay}"
                               ToolTip="各ステップで1回のみ解析（最も安定）&#x0a;荷重ステップ数を32～64に増やしてください"/>
                 </StackPanel>
+
+                <!-- ケース並列度 (E3c-3): 複数ケースを Task.Run で並行実行 -->
+                <StackPanel Orientation="Horizontal" Margin="0,2">
+                    <TextBlock Text="ケース並列:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
+                    <TextBox Width="40" VerticalAlignment="Center" Margin="0,0,4,0"
+                             Text="{Binding MaxCaseDegreeOfParallelism, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                             PreviewTextInput="NumericOnly_PreviewTextInput"
+                             DataObject.Pasting="NumericOnly_Pasting"
+                             ToolTip="複数荷重ケースを同時に並行実行する数&#x0a;1 = 逐次 (安全、従来挙動)&#x0a;2 以上 = 並列実行 (高速化期待、実験的)&#x0a;ハングする場合は 1 に戻してください"/>
+                    <TextBlock Text="(1=逐次)" Foreground="Gray" VerticalAlignment="Center"/>
+                </StackPanel>
             </StackPanel>
-            
+
             <!-- ...existing code... -->
             <Button Content="水平解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}">
                 <Button.Style>
@@ -405,6 +419,7 @@
             <Button Content="水平解析キャンセル (Esc)" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
 
         </StackPanel>
+        </ScrollViewer>
 
         <!-- メイン表示部: TabControlでタブ切替 -->
         <StatusBar Grid.Row="2" Grid.ColumnSpan="2" Height="30"  VerticalAlignment="Bottom">

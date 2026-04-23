@@ -75,12 +75,19 @@ namespace PileDesign.Views
             // 解析が実行中でない場合はそのまま閉じる（_isClosingHandledはtrueのまま）
         }
 
+        // ScrollToEnd の BeginInvoke coalesce 用フラグ (UI スレッドのみアクセスなので volatile 不要)
+        private bool _scrollToEndPending;
+
         private void CalculationLog_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            // TextBoxの末尾にスクロール
+            // UI フリーズ対策: CalculationLog.Add が N 回連続発火しても ScrollToEnd の BeginInvoke を
+            // 1 回しか queue しない。ログ 5000 行 × ScrollToEnd O(text size) の重畳を回避。
+            if (_scrollToEndPending) return;
+            _scrollToEndPending = true;
             LogTextBox?.Dispatcher.BeginInvoke(() =>
             {
-                LogTextBox.ScrollToEnd();
+                _scrollToEndPending = false;
+                LogTextBox?.ScrollToEnd();
             });
         }
 

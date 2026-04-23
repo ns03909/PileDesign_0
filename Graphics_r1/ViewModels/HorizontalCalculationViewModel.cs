@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -57,6 +58,11 @@ namespace PileDesign.ViewModels
         private volatile bool _logTimerStarted;
         private System.Timers.ElapsedEventHandler? _logFlushHandler;
 
+        // ログテキストのキャッシュ: string.Join を毎回実行すると O(N²) の GC 圧迫で
+        // UI フリーズ原因となる。StringBuilder にインクリメンタル追記してキャッシュ保持。
+        private readonly StringBuilder _logTextBuilder = new();
+        private volatile string _cachedLogText = string.Empty;
+
         private void StartLogTimerIfNeeded()
         {
             if (_logTimerStarted) return;
@@ -69,10 +75,21 @@ namespace PileDesign.ViewModels
         private void FlushLogsToUi()
         {
             if (_logQueue.IsEmpty) return;
+            // 先にワーカースレッドで queue をドレイン → UI dispatch 内の作業を最小化
+            var newLines = new List<string>(64);
+            while (_logQueue.TryDequeue(out var line))
+                newLines.Add(line);
+            if (newLines.Count == 0) return;
+
             Application.Current?.Dispatcher.Invoke(() =>
             {
-                while (_logQueue.TryDequeue(out var line))
+                foreach (var line in newLines)
+                {
                     CalculationLog.Add(line);
+                    if (_logTextBuilder.Length > 0) _logTextBuilder.Append(Environment.NewLine);
+                    _logTextBuilder.Append(line);
+                }
+                _cachedLogText = _logTextBuilder.ToString();
                 OnPropertyChanged(nameof(CalculationLogText));
             });
         }
@@ -379,8 +396,9 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _calculationLog, value);
         }
 
-        /// <summary>ログ全体をテキストとして返す（TextBoxバインド用）</summary>
-        public string CalculationLogText => string.Join(Environment.NewLine, CalculationLog);
+        /// <summary>ログ全体をテキストとして返す（TextBoxバインド用）。
+        /// FlushLogsToUi がキャッシュを更新するので getter は O(1)。</summary>
+        public string CalculationLogText => _cachedLogText;
 
         // 解析実行済みフラグ
         private bool _isAnalysisExecuted = false;
