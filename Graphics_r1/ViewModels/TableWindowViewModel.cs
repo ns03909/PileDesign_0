@@ -16,6 +16,10 @@ namespace PileDesign.ViewModels
 {
     public sealed partial class TableWindowViewModel : BaseViewModel
     {
+        // グラフウィンドウと同じ特別フィルタ名 (レベル一括絞り込み)
+        public const string LoadCaseFilterLevel1 = "L1 (地震荷重レベル1)";
+        public const string LoadCaseFilterLevel2 = "L2 (地震荷重レベル2)";
+
         // 全テーブル
         public ObservableCollection<ResultTable> AllTables { get; } = [];
         // フィルタ後
@@ -96,6 +100,11 @@ namespace PileDesign.ViewModels
 
             LoadCaseFilterOptions.Clear();
             LoadCaseFilterOptions.Add("ALL");
+            // レベル一括絞り込み: AllSeismicLoadCases がセットされていて対応ケースが存在する時のみ追加
+            bool hasL1 = AllSeismicLoadCases?.Any(lc => lc.Level == 1) == true;
+            bool hasL2 = AllSeismicLoadCases?.Any(lc => lc.Level == 2) == true;
+            if (hasL1) LoadCaseFilterOptions.Add(LoadCaseFilterLevel1);
+            if (hasL2) LoadCaseFilterOptions.Add(LoadCaseFilterLevel2);
             foreach (var name in AllTables.Select(t => t.LoadCaseName).Where(s => !string.IsNullOrEmpty(s)).Distinct())
                 LoadCaseFilterOptions.Add(name);
 
@@ -117,11 +126,25 @@ namespace PileDesign.ViewModels
 
         private void ApplyFilters()
         {
+            // レベル絞り込み時は該当ケース名の集合を事前構築 (LoadCaseName → Level 判定用)
+            HashSet<string>? levelCaseNames = null;
+            if (SelectedLoadCaseFilter == LoadCaseFilterLevel1 || SelectedLoadCaseFilter == LoadCaseFilterLevel2)
+            {
+                int targetLevel = SelectedLoadCaseFilter == LoadCaseFilterLevel1 ? 1 : 2;
+                levelCaseNames = new HashSet<string>(
+                    AllSeismicLoadCases?
+                        .Where(lc => lc.Level == targetLevel)
+                        .Select(lc => lc.LoadName)
+                    ?? []);
+            }
+
             FilteredTables.Clear();
             var filtered = AllTables.Where(t =>
                 (SelectedTableCategoryFilter == "ALL" ||
                  Converters.TableCategoryConverter.CategoryOf(t) == SelectedTableCategoryFilter) &&
-                (SelectedLoadCaseFilter == "ALL" || t.LoadCaseName == SelectedLoadCaseFilter) &&
+                (SelectedLoadCaseFilter == "ALL"
+                    || (levelCaseNames != null && levelCaseNames.Contains(t.LoadCaseName))
+                    || t.LoadCaseName == SelectedLoadCaseFilter) &&
                 (SelectedLoadCombinationFilter == "ALL" || t.LoadCombinationName == SelectedLoadCombinationFilter) &&
                 (SelectedLiquefactionFilter == "ALL" ||
                  (SelectedLiquefactionFilter == "有" ? t.IsLiquefaction : !t.IsLiquefaction))
