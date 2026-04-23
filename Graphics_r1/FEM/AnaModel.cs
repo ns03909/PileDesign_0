@@ -33,6 +33,9 @@ namespace PileDesign.FEM
         /// <summary>PileLayoutItem → 現在の AxialForce (ケース毎に更新可能)</summary>
         public Dictionary<PileLayoutDataItem, double> AxialForces { get; } = new();
 
+        /// <summary>PileLayoutItem → 現在の AxialForceIncrement (ケース毎に計算)</summary>
+        public Dictionary<PileLayoutDataItem, double> AxialForceIncrements { get; } = new();
+
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopSoilNode</summary>
         public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopSoilNodes { get; } = new();
 
@@ -44,6 +47,21 @@ namespace PileDesign.FEM
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmEmbedmentNode</summary>
         public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmEmbedmentNodes { get; } = new();
+
+        /// <summary>PileLayoutItem → caseModel 側の PileTopRotationalSpring (null の場合あり)</summary>
+        public Dictionary<PileLayoutDataItem, RotationalSpring?> PileTopRotationalSprings { get; } = new();
+
+        /// <summary>PileLayoutItem → caseModel 側の HorizontalSoilSprings リスト</summary>
+        public Dictionary<PileLayoutDataItem, List<HorizontalSoilSpring>> PileHorizontalSoilSprings { get; } = new();
+
+        /// <summary>PileLayoutItem → caseModel 側の Beams リスト</summary>
+        public Dictionary<PileLayoutDataItem, List<Beam>> PileBeams { get; } = new();
+
+        /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopHorizontalSoilSpring</summary>
+        public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuTopHorizontalSoilSprings { get; } = new();
+
+        /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmHorizontalSoilSpring</summary>
+        public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuBtmHorizontalSoilSprings { get; } = new();
     }
 
     public class AnaModel
@@ -1095,12 +1113,14 @@ namespace PileDesign.FEM
         }
 
         // 常時荷重のセット
+        // E3b: CaseLocalSnapshot 経由で書込。主モデルでは InputModel.pileLayoutItem.AxialForce を
+        // 直接更新 (従来挙動)、case-local コピーでは snapshot.AxialForces[pli] を更新する。
         private void InitializeAxialForces()  //PileDesign
         {
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                pileLayoutItem.AxialForce =
-                    pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional; // レベル1の杭軸力増分
+                double baselineAxial = pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional; // レベル1の杭軸力増分
+                SetAxialForce(pileLayoutItem, baselineAxial);
             }
         }
 
@@ -1309,11 +1329,29 @@ namespace PileDesign.FEM
             if (this.VectorT != null) copy.VectorT = this.VectorT.Clone();
             if (this.VectorR != null) copy.VectorR = this.VectorR.Clone();
 
-            // ---- Step 6: Case-local snapshot を構築 (E3a) ----
+            // ---- Step 6: Case-local snapshot を構築 (E3a/E3b) ----
             // InputModel.PileLayoutItems / DoatsuGoryokuBane は main と共有するため、
-            // そこに格納されている Node 参照 (元インスタンス) を new Node 群へ付け替える
-            // スナップショットを caseModel 専用に持たせる。
+            // そこに格納されている Node / Spring / Beam 参照 (元インスタンス) を new インスタンス群へ
+            // 付け替えるスナップショットを caseModel 専用に持たせる。
             var snap = new CaseLocalSnapshot();
+
+            // Spring / Beam の reference → reference マップを構築 (Node と同様の fixup)
+            var hsSpringMap = new Dictionary<HorizontalSoilSpring, HorizontalSoilSpring>(ReferenceEqualityComparer.Instance);
+            for (int i = 0; i < this.HorizontalSoilSprings.Count; i++)
+                hsSpringMap[this.HorizontalSoilSprings[i]] = horizontalSoilSprings[i];
+            if (this.PenaltySprings != null && copy.PenaltySprings != null)
+            {
+                int n = Math.Min(this.PenaltySprings.Count, copy.PenaltySprings.Count);
+                for (int i = 0; i < n; i++)
+                    hsSpringMap[this.PenaltySprings[i]] = copy.PenaltySprings[i];
+            }
+            var rsSpringMap = new Dictionary<RotationalSpring, RotationalSpring>(ReferenceEqualityComparer.Instance);
+            for (int i = 0; i < this.RotationalSprings.Count; i++)
+                rsSpringMap[this.RotationalSprings[i]] = rotationalSprings[i];
+            var beamMap = new Dictionary<Beam, Beam>(ReferenceEqualityComparer.Instance);
+            for (int i = 0; i < this.Beams.Count; i++)
+                beamMap[this.Beams[i]] = beams[i];
+
             if (_inputModel?.PileLayoutItems != null)
             {
                 foreach (var pli in _inputModel.PileLayoutItems)
@@ -1336,6 +1374,32 @@ namespace PileDesign.FEM
                     snap.SoilNodes[pli] = soilNodeList;
 
                     snap.AxialForces[pli] = pli.AxialForce;
+                    snap.AxialForceIncrements[pli] = pli.AxialForceIncrement;
+
+                    // PileTopRotationalSpring
+                    if (pli.PileTopRotationalSpring != null
+                        && rsSpringMap.TryGetValue(pli.PileTopRotationalSpring, out var newRs))
+                        snap.PileTopRotationalSprings[pli] = newRs;
+                    else
+                        snap.PileTopRotationalSprings[pli] = pli.PileTopRotationalSpring;
+
+                    // HorizontalSoilSprings
+                    var hsList = new List<HorizontalSoilSpring>(pli.HorizontalSoilSprings?.Count ?? 0);
+                    if (pli.HorizontalSoilSprings != null)
+                    {
+                        foreach (var s in pli.HorizontalSoilSprings)
+                            hsList.Add(s != null && hsSpringMap.TryGetValue(s, out var nn) ? nn : s);
+                    }
+                    snap.PileHorizontalSoilSprings[pli] = hsList;
+
+                    // Beams
+                    var bList = new List<Beam>(pli.Beams?.Count ?? 0);
+                    if (pli.Beams != null)
+                    {
+                        foreach (var b in pli.Beams)
+                            bList.Add(b != null && beamMap.TryGetValue(b, out var nn) ? nn : b);
+                    }
+                    snap.PileBeams[pli] = bList;
                 }
             }
             var dgb = _inputModel?.ElementDivision?.DoatsuGoryokuBane;
@@ -1352,6 +1416,10 @@ namespace PileDesign.FEM
                         snap.DoatsuTopEmbedmentNodes[item] = ten;
                     if (item.BtmEmbedmentNode != null && nodeMap.TryGetValue(item.BtmEmbedmentNode, out var ben))
                         snap.DoatsuBtmEmbedmentNodes[item] = ben;
+                    if (item.TopHorizontalSoilSpring != null && hsSpringMap.TryGetValue(item.TopHorizontalSoilSpring, out var ths))
+                        snap.DoatsuTopHorizontalSoilSprings[item] = ths;
+                    if (item.BtmHorizontalSoilSpring != null && hsSpringMap.TryGetValue(item.BtmHorizontalSoilSpring, out var bhs))
+                        snap.DoatsuBtmHorizontalSoilSprings[item] = bhs;
                 }
             }
             copy.CaseLocalState = snap;
@@ -1396,6 +1464,23 @@ namespace PileDesign.FEM
                 item.AxialForce = value;
         }
 
+        /// <summary>ケース固有の AxialForceIncrement を取得。</summary>
+        public double GetAxialForceIncrement(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.AxialForceIncrements.TryGetValue(item, out var v))
+                return v;
+            return item.AxialForceIncrement;
+        }
+
+        /// <summary>ケース固有の AxialForceIncrement を設定。</summary>
+        public void SetAxialForceIncrement(PileLayoutDataItem item, double value)
+        {
+            if (CaseLocalState != null)
+                CaseLocalState.AxialForceIncrements[item] = value;
+            else
+                item.AxialForceIncrement = value;
+        }
+
         /// <summary>DoatsuGoryokuBane Item の TopSoilNode を取得 (case-local 対応)。</summary>
         public Node GetDoatsuTopSoilNode(DoatsuGoryokuBaneItem item)
         {
@@ -1426,6 +1511,46 @@ namespace PileDesign.FEM
             if (CaseLocalState != null && CaseLocalState.DoatsuBtmEmbedmentNodes.TryGetValue(item, out var n))
                 return n;
             return item.BtmEmbedmentNode;
+        }
+
+        /// <summary>ケース固有の PileTopRotationalSpring を取得。</summary>
+        public RotationalSpring? GetPileTopRotationalSpring(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.PileTopRotationalSprings.TryGetValue(item, out var rs))
+                return rs;
+            return item.PileTopRotationalSpring;
+        }
+
+        /// <summary>ケース固有の HorizontalSoilSprings を取得。</summary>
+        public IList<HorizontalSoilSpring> GetPileHorizontalSoilSprings(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.PileHorizontalSoilSprings.TryGetValue(item, out var list))
+                return list;
+            return item.HorizontalSoilSprings;
+        }
+
+        /// <summary>ケース固有の Beams を取得。</summary>
+        public IList<Beam> GetPileBeams(PileLayoutDataItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.PileBeams.TryGetValue(item, out var list))
+                return list;
+            return item.Beams;
+        }
+
+        /// <summary>DoatsuGoryokuBane Item の TopHorizontalSoilSpring を取得。</summary>
+        public HorizontalSoilSpring? GetDoatsuTopHorizontalSoilSpring(DoatsuGoryokuBaneItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.DoatsuTopHorizontalSoilSprings.TryGetValue(item, out var s))
+                return s;
+            return item.TopHorizontalSoilSpring;
+        }
+
+        /// <summary>DoatsuGoryokuBane Item の BtmHorizontalSoilSpring を取得。</summary>
+        public HorizontalSoilSpring? GetDoatsuBtmHorizontalSoilSpring(DoatsuGoryokuBaneItem item)
+        {
+            if (CaseLocalState != null && CaseLocalState.DoatsuBtmHorizontalSoilSprings.TryGetValue(item, out var s))
+                return s;
+            return item.BtmHorizontalSoilSpring;
         }
 
         /// <summary>

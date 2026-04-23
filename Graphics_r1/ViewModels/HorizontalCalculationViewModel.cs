@@ -1172,7 +1172,8 @@ namespace PileDesign.ViewModels
                 double axialN_kN = 0.0;
                 if (pileByPileBodyNo.TryGetValue(pb, out var pile))
                 {
-                    axialN_kN = pile.AxialForce / 1000.0; // N → kN
+                    // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)
+                    axialN_kN = model.GetAxialForce(pile) / 1000.0; // N → kN
                 }
 
                 // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
@@ -1454,7 +1455,8 @@ namespace PileDesign.ViewModels
                         var pile = InputModel.PileLayoutItems?.FirstOrDefault(p => p.No == pileNo);
                         if (pile != null)
                         {
-                            axialN = pile.AxialForce; // kN単位（PileBodyInput内でN単位に変換される）
+                            // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)
+                            axialN = model.GetAxialForce(pile); // kN単位（PileBodyInput内でN単位に変換される）
                         }
                     }
                 }
@@ -1850,7 +1852,7 @@ namespace PileDesign.ViewModels
                             // v28 F-new: CsparseLinearSolver の内部タイマー (CSC 変換 / 分解 / 代入) をリセット
                             FEM.CsparseLinearSolver.ResetInternalTimers();
 
-                            UpdateSoilDisp();
+                            UpdateSoilDisp(targetModel);
                             UpdateF(targetModel);
 
                             // 入力値＋応力解析結果モード: 前ステップのFxiを入力軸力に加算
@@ -2122,10 +2124,13 @@ namespace PileDesign.ViewModels
                                             var reactions = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.HorizontalSoilReactions;
                                             if (reactions == null) continue;
                                             bool isFront = pli.IsFrontPiles != null && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
-                                            for (int i = 0; i < pli.PileNodes.Count && i < pli.SoilNodes.Count; i++)
+                                            // E3b: case-local な PileNodes / SoilNodes を取得
+                                            var pliPileNodes = targetModel.GetPileNodes(pli);
+                                            var pliSoilNodes = targetModel.GetSoilNodes(pli);
+                                            for (int i = 0; i < pliPileNodes.Count && i < pliSoilNodes.Count; i++)
                                             {
-                                                var pn = pli.PileNodes[i];
-                                                var sn = pli.SoilNodes[i];
+                                                var pn = pliPileNodes[i];
+                                                var sn = pliSoilNodes[i];
                                                 if (pn?.CumulativeDisp is null || sn?.CumulativeDisp is null) continue;
                                                 var rel = pn.CumulativeDisp - sn.CumulativeDisp;
                                                 double abs = Math.Sqrt(rel.Ux * rel.Ux + rel.Uy * rel.Uy);
@@ -2569,9 +2574,9 @@ namespace PileDesign.ViewModels
                                 //     $"[Step{step}] ActionPoint Ux={actionPt.CumulativeDisp?.Ux:E3} Rx={actionPt.CumulativeDisp?.Rx:E3} Ry={actionPt.CumulativeDisp?.Ry:E3}");
                                 foreach (var pile in InputModel.PileLayoutItems.Take(2))
                                 {
-                                    var rxy = pile.PileTopRotationalSpring;
+                                    var rxy = targetModel.GetPileTopRotationalSpring(pile);
                                     var capNode = rxy?.NodeI;
-                                    var pileHead = pile.PileNodes?.FirstOrDefault();
+                                    var pileHead = targetModel.GetPileNodes(pile)?.FirstOrDefault();
                                     double capRx = capNode?.CumulativeDisp?.Rx ?? 0;
                                     double pileRx = pileHead?.CumulativeDisp?.Rx ?? 0;
                                     double kRx = rxy?.KeTan?[3, 3] ?? -1;
@@ -3137,12 +3142,13 @@ namespace PileDesign.ViewModels
             foreach (var pile in InputModel.PileLayoutItems)
             {
                 // 現ステップの解析軸力（N → kN）
-                double axialN_kN = pile.AxialForce / 1000.0;
+                // E3b: case-local AxialForce / Beams を取得 (主モデルでは従来と同じ参照)
+                double axialN_kN = model.GetAxialForce(pile) / 1000.0;
 
                 int pb = pile.PileBodyNo;
                 if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;
 
-                foreach (var beam in pile.Beams)
+                foreach (var beam in model.GetPileBeams(pile))
                 {
                     if (beam.SegmentIndex is not int seg) continue;
                     // SoilPile.PileBodySegments はマッチ済み（要素ごとに1エントリ）
@@ -3198,7 +3204,10 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                pileLayoutItem.AxialForce += pileLayoutItem.AxialForceIncrement; // 杭軸力の更新 [kN]
+                // E3b: case-local AxialForce / AxialForceIncrement 経由で update
+                double current = targetModel.GetAxialForce(pileLayoutItem);
+                double increment = targetModel.GetAxialForceIncrement(pileLayoutItem);
+                targetModel.SetAxialForce(pileLayoutItem, current + increment); // 杭軸力の更新 [kN]
             }
         }
 
@@ -3226,7 +3235,10 @@ namespace PileDesign.ViewModels
 
                 // 入力軸力（圧縮が正）に解析結果（圧縮が負）を加算 → 符号反転
                 // AxialForce = 入力値による軸力 + (-Fxi_analysis)
-                pile.AxialForce -= fxiAnalysis; // 圧縮増 → Fxi負 → -(-) = 加算
+                // E3b: CaseLocalSnapshot 経由で読書き。主モデルでは pile.AxialForce を直接更新 (従来挙動)、
+                // case-local コピーでは snapshot.AxialForces[pile] を更新。
+                double current = targetModel.GetAxialForce(pile);
+                targetModel.SetAxialForce(pile, current - fxiAnalysis); // 圧縮増 → Fxi負 → -(-) = 加算
             }
         }
 
@@ -3819,6 +3831,8 @@ namespace PileDesign.ViewModels
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
                 var soilPile = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1];
+                // E3b: case-local SoilNodes 経由 (主モデルでは InputModel.PileLayoutItems.SoilNodes と同一参照)
+                var soilNodes = targetModel.GetSoilNodes(pileLayoutItem);
                 for (int i = 0; i < soilPile.ZDataItems.Count; i++)
                 {
                     var zData = soilPile.ZDataItems[i];
@@ -3826,8 +3840,8 @@ namespace PileDesign.ViewModels
                     double groundDisp2 = isLiquefaction ? zData.GroundDisp2L : zData.GroundDisp2;
                     NodeDisp dd = CalcDisplacement(groundDisp1, groundDisp2, level, alpha1, nStep, loadAngle);
 
-                    pileLayoutItem.SoilNodes[i].SetIncrementalForcedDisp(dd);
-                    pileLayoutItem.SoilNodes[i].SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
+                    soilNodes[i].SetIncrementalForcedDisp(dd);
+                    soilNodes[i].SetCumulativeForcedDisp(initialCumulativeSoilDisplacement);
                 }
             }
 
@@ -3871,21 +3885,27 @@ namespace PileDesign.ViewModels
 
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
+                // E3b: case-local AxialForceIncrement 経由で書込
+                double increment;
                 if (level == 1)
                 {
-                    pileLayoutItem.AxialForceIncrement = (pileLayoutItem.AxialForceLevel1s[iLC]
+                    increment = (pileLayoutItem.AxialForceLevel1s[iLC]
                         - (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional)) / nStep; // レベル1の杭軸力増分 [kN]
                 }
                 else //(level == 2)
                 {
-                    pileLayoutItem.AxialForceIncrement = (pileLayoutItem.AxialForceLevel2s[iLC]
+                    increment = (pileLayoutItem.AxialForceLevel2s[iLC]
                         - (pileLayoutItem.AxialForceVL0 + pileLayoutItem.AxialForceVLAdditional)) / nStep; // レベル2の杭軸力増分 [kN]
                 }
+                targetModel.SetAxialForceIncrement(pileLayoutItem, increment);
             }
         }
 
         // 地盤変位の更新
-        private void UpdateSoilDisp()
+        // E3b: targetModel 引数を受取り、AnaModel ヘルパー経由で case-local な
+        // Node を書換えるよう変更。主モデルでは従来通り InputModel 側 Node を更新、
+        // case-local コピーでは snapshot 上の Node を更新する。
+        private void UpdateSoilDisp(AnaModel targetModel)
         {
             // DoatsuGoryokuBaneの節点の地盤変位を更新
             var doatsuGoryokuBane = InputModel.ElementDivision.DoatsuGoryokuBane;
@@ -3893,21 +3913,26 @@ namespace PileDesign.ViewModels
             {
                 for (int i = 0; i < doatsuGoryokuBane.Items.Count; i++)
                 {
+                    var dgbItem = doatsuGoryokuBane.Items[i];
                     if (i == 0)
                     {
-                        doatsuGoryokuBane.Items[i].TopSoilNode.CumulativeForcedDisp
-                            += doatsuGoryokuBane.Items[i].TopSoilNode.IncrementalForcedDisp;
+                        var topSoilNode = targetModel.GetDoatsuTopSoilNode(dgbItem);
+                        if (topSoilNode != null)
+                            topSoilNode.CumulativeForcedDisp += topSoilNode.IncrementalForcedDisp;
                     }
-                    doatsuGoryokuBane.Items[i].BtmSoilNode.CumulativeForcedDisp
-                        += doatsuGoryokuBane.Items[i].BtmSoilNode.IncrementalForcedDisp;
+                    var btmSoilNode = targetModel.GetDoatsuBtmSoilNode(dgbItem);
+                    if (btmSoilNode != null)
+                        btmSoilNode.CumulativeForcedDisp += btmSoilNode.IncrementalForcedDisp;
                 }
             }
 
             // PileLayoutItemsの節点の地盤変位を更新
             foreach (var pileLayoutItem in InputModel.PileLayoutItems)
             {
-                if (pileLayoutItem?.SoilNodes == null) continue;
-                foreach (var node in pileLayoutItem.SoilNodes)
+                if (pileLayoutItem == null) continue;
+                var soilNodes = targetModel.GetSoilNodes(pileLayoutItem);
+                if (soilNodes == null) continue;
+                foreach (var node in soilNodes)
                 {
                     if (node?.IncrementalForcedDisp != null)
                     {
@@ -4052,13 +4077,21 @@ namespace PileDesign.ViewModels
                 {
                     var item = items[i];
 
-                    var relDispTop = item.TopEmbedmentNode.CumulativeDisp - item.TopSoilNode.CumulativeDisp;
-                    var kVecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
-                    AddContribution(item.TopHorizontalSoilSpring, SafeK(kVecTop.Kx), SafeK(kVecTop.Ky));
+                    // E3b: case-local な Node/Spring を取得 (主モデルでは item.TopEmbedmentNode などと同一参照)
+                    var topEmb = model.GetDoatsuTopEmbedmentNode(item);
+                    var topSoil = model.GetDoatsuTopSoilNode(item);
+                    var btmEmb = model.GetDoatsuBtmEmbedmentNode(item);
+                    var btmSoil = model.GetDoatsuBtmSoilNode(item);
+                    var topHs = model.GetDoatsuTopHorizontalSoilSpring(item);
+                    var btmHs = model.GetDoatsuBtmHorizontalSoilSpring(item);
 
-                    var relDisplacementBtm = item.BtmEmbedmentNode.CumulativeDisp - item.BtmSoilNode.CumulativeDisp;
+                    var relDispTop = topEmb.CumulativeDisp - topSoil.CumulativeDisp;
+                    var kVecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
+                    AddContribution(topHs, SafeK(kVecTop.Kx), SafeK(kVecTop.Ky));
+
+                    var relDisplacementBtm = btmEmb.CumulativeDisp - btmSoil.CumulativeDisp;
                     var kVecBtm = isTan ? item.GetTangentStiffnessVector(relDisplacementBtm) : item.GetSecantStiffnessVector(relDisplacementBtm);
-                    AddContribution(item.BtmHorizontalSoilSpring, SafeK(kVecBtm.Kx), SafeK(kVecBtm.Ky));
+                    AddContribution(btmHs, SafeK(kVecBtm.Kx), SafeK(kVecBtm.Ky));
                 }
 
                 foreach (var kvp in accum)
@@ -4085,11 +4118,16 @@ namespace PileDesign.ViewModels
                 var horizontalReactions = InputModel.ElementDivision.SoilPiles[pileLayoutItem.SoilPileAltNo - 1].HorizontalSoilReactions;
                 var isFrontPile = pileLayoutItem.IsFrontPiles[iLC];
 
+                // E3b: case-local な PileNodes / SoilNodes / HorizontalSoilSprings を取得
+                var pileNodes = model.GetPileNodes(pileLayoutItem);
+                var soilNodes = model.GetSoilNodes(pileLayoutItem);
+                var pileSprings = model.GetPileHorizontalSoilSprings(pileLayoutItem);
+
                 int reactionCount = horizontalReactions.Count;
-                for (int i = 0; i < pileLayoutItem.PileNodes.Count; i++)
+                for (int i = 0; i < pileNodes.Count; i++)
                 {
-                    var pileNode = pileLayoutItem.PileNodes[i];
-                    var soilNode = pileLayoutItem.SoilNodes[i];
+                    var pileNode = pileNodes[i];
+                    var soilNode = soilNodes[i];
                     var relDisplacement = pileNode.CumulativeDisp - soilNode.CumulativeDisp;
                     // NaN防止
                     double abs = (double.IsFinite(relDisplacement.Ux) && double.IsFinite(relDisplacement.Uy))
@@ -4105,7 +4143,7 @@ namespace PileDesign.ViewModels
                         kTan += horizontalReactions[i - 1].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile);
                         kSec += horizontalReactions[i - 1].GetSoilSecantReactionCoefficient(abs, isTop, isFrontPile);
                     }
-                    if (i < pileLayoutItem.PileNodes.Count - 1 && i < reactionCount)
+                    if (i < pileNodes.Count - 1 && i < reactionCount)
                     {
                         bool isTop = true;
                         kTan += horizontalReactions[i].GetSoilTangentReactionCoefficient(abs, isTop, isFrontPile);
@@ -4126,7 +4164,7 @@ namespace PileDesign.ViewModels
                             $"[UpdateSoilSprings] WARNING: Pile-{pileLayoutItem.PileNo} node {i} k=0 → 隣接要素の剛性 tan={kTan:E3}/sec={kSec:E3} を代用");
                     }
 
-                    var spring = pileLayoutItem.HorizontalSoilSprings[i];
+                    var spring = pileSprings[i];
 
                     if (isTan)
                     {
@@ -4165,7 +4203,8 @@ namespace PileDesign.ViewModels
                 // M-θ曲線から接線/割線剛性を評価（クランプなし: K/F整合性を保つ）
                 foreach (var pile in InputModel.PileLayoutItems)
                 {
-                    var rxy = pile.PileTopRotationalSpring;
+                    // E3b: case-local な RotationalSpring を取得
+                    var rxy = model.GetPileTopRotationalSpring(pile);
                     if (rxy == null) continue;
 
                     var pileHeadNode = rxy.NodeJ;
