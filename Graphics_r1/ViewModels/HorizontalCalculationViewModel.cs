@@ -1951,6 +1951,17 @@ namespace PileDesign.ViewModels
                             token.ThrowIfCancellationRequested();
                             _pauseEvent.Wait(token); // ここで一時停止を考慮
 
+                            // 並列モニタ: 現ステップ / 総ステップ を更新 (BeginInvoke で UI をブロックしない)
+                            {
+                                int stepDisplay = step + 1;
+                                int nStepDisplay = nStep;
+                                System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+                                {
+                                    monitorItem.CurrentStep = stepDisplay;
+                                    monitorItem.TotalSteps = nStepDisplay;
+                                });
+                            }
+
                             // v15: ステップ開始時の変位を記録（予測器用）
                             var vectorDAtStepStart = caseModel.VectorD?.Clone();
 
@@ -2674,6 +2685,13 @@ namespace PileDesign.ViewModels
 
                                 await Task.Yield(); // UIスレッドを解放
                                 n_iteration += 1;
+
+                                // 並列モニタ: NR 反復数を更新 (BeginInvoke、ワーカー非ブロック)
+                                {
+                                    int iterDisplay = n_iteration;
+                                    System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+                                        monitorItem.CurrentIteration = iterDisplay);
+                                }
                             }
 
                             // Maximum iteration check
