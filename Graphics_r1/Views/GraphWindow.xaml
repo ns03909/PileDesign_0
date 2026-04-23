@@ -215,12 +215,12 @@
 
             <Button Content="レジェンド表示切替" Command="{Binding ToggleLegendCommand}" />
 
-            <!-- 案 C (2026-04-24): 「杭周地盤変位反力」グラフでのみ単位長さ表示に切替 -->
-            <CheckBox Content="単位長さあたり表示 (ステップグラフ)"
+            <!-- 案 C v2 (2026-04-24): 「杭周地盤変位反力」グラフで地盤反力度 / 反力係数に切替 -->
+            <CheckBox Content="地盤反力度・反力係数表示 (ステップグラフ)"
                       IsChecked="{Binding IsDistributedMode, Mode=TwoWay}"
                       Margin="0,8,0,0"
                       Visibility="{Binding IsDistributedModeOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                      ToolTip="ON: 水平地盤反力 [kN/m] / 割線剛性 [kN/m²] をトリビュータリ長で除して単位長さあたり&#x0a;       表示に変換し、ステップグラフ (長方形分布風) で描画&#x0a;OFF: ノード毎の総反力 [kN] / 総剛性 [kN/m] を折線で表示"/>
+                      ToolTip="ON: トリビュータリ長 L と杭幅 B で除算&#x0a;  水平地盤反力 [kN/m²] = force / (L×B)   (地盤反力度 p)&#x0a;  水平地盤反力係数 [kN/m³] = stiffness / (L×B)   (反力係数 kh)&#x0a;  描画: ステップグラフ (長方形分布風)&#x0a;OFF: 節点毎の総反力 [kN] / 総ばね剛性 [kN/m] を折線で表示"/>
 
         </StackPanel>
 

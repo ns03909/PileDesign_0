@@ -2129,9 +2129,11 @@ namespace PileDesign.ViewModels
                 _graphHoverMap.Clear();
 
                 DrawHorizontalSoilReaction(WpfPlot1, MyCrosshair1, "CrosshairPositionText1", "RelativeDisp", "mm");
-                // 案 C: IsDistributedMode で単位表示を切替
-                string reactionUnit = IsDistributedMode ? "kN/m" : "kN";
-                string stiffnessUnit = IsDistributedMode ? "kN/m²" : "kN/m";
+                // 案 C (v2): IsDistributedMode で単位表示を切替
+                //   OFF: 総反力 [kN] / 総剛性 [kN/m]
+                //   ON : 反力度 [kN/m²] (L, B で除算) / 反力係数 [kN/m³]
+                string reactionUnit = IsDistributedMode ? "kN/m²" : "kN";
+                string stiffnessUnit = IsDistributedMode ? "kN/m³" : "kN/m";
                 DrawHorizontalSoilReaction(WpfPlot2, MyCrosshair2, "CrosshairPositionText2", "Reaction", reactionUnit);
                 DrawHorizontalSoilReaction(WpfPlot3, MyCrosshair3, "CrosshairPositionText3", "SecantStiffness", stiffnessUnit);
             }
@@ -3649,18 +3651,30 @@ namespace PileDesign.ViewModels
                                 // ばね全体剛性 [kN/m] = 反力 [kN] / 変位 [m]
                                 double springStiffness = relDisp > 1e-10 ? force / relDisp : 0;
 
-                                // 案 C: IsDistributedMode=true のときだけ単位長さあたりに変換。
-                                // トリビュータリ長 = 上側セグメント×0.5 + 下側セグメント×0.5
+                                // 案 C (v2): IsDistributedMode=true のときだけ
+                                //   - トリビュータリ長 L で除算して 単位長さあたり に変換
+                                //   - さらに 杭幅 B で除算して 地盤反力度 (kN/m²) / 反力係数 (kN/m³) に変換
+                                // L と B は tributary 部分ごとに異なり得るので、L 重み付き B を使う
                                 double tribLength = 0.0;
+                                double tribBSum = 0.0; // Σ B_j × L_j (重み付き合計)
                                 if (IsDistributedMode && reactions != null)
                                 {
                                     if (i > 0 && (i - 1) < reactions.Count)
-                                        tribLength += 0.5 * (reactions[i - 1].ZTop - reactions[i - 1].ZBtm);
+                                    {
+                                        double L = 0.5 * (reactions[i - 1].ZTop - reactions[i - 1].ZBtm);
+                                        tribLength += L;
+                                        tribBSum += reactions[i - 1].B * L;
+                                    }
                                     if (i < nSprings - 1 && i < reactions.Count)
-                                        tribLength += 0.5 * (reactions[i].ZTop - reactions[i].ZBtm);
+                                    {
+                                        double L = 0.5 * (reactions[i].ZTop - reactions[i].ZBtm);
+                                        tribLength += L;
+                                        tribBSum += reactions[i].B * L;
+                                    }
                                 }
-                                // IsDistributedMode=false または tribLength 取得失敗時は 1.0 (除算で値が変わらない)
+                                double tribBEff = tribLength > 0 ? tribBSum / tribLength : 1.0;
                                 if (tribLength <= 0) tribLength = 1.0;
+                                if (tribBEff <= 0) tribBEff = 1.0;
 
                                 springZs.Add(z);
 
@@ -3670,13 +3684,15 @@ namespace PileDesign.ViewModels
                                 }
                                 else if (dataType == "Reaction")
                                 {
-                                    // OFF: 総反力 [kN], ON: 単位長さあたり [kN/m]
-                                    springValues.Add(force / tribLength);
+                                    // OFF: 総反力 [kN]
+                                    // ON : p = force / (L × B) [kN/m²] — 地盤反力度 (pile face pressure)
+                                    springValues.Add(force / (tribLength * tribBEff));
                                 }
                                 else if (dataType == "SecantStiffness")
                                 {
-                                    // OFF: 総ばね剛性 [kN/m], ON: 単位長さあたり [kN/m²]
-                                    springValues.Add(springStiffness / tribLength);
+                                    // OFF: 総ばね剛性 [kN/m]
+                                    // ON : kh = springStiffness / (L × B) [kN/m³] — 水平地盤反力係数
+                                    springValues.Add(springStiffness / (tribLength * tribBEff));
                                 }
                             }
 
@@ -3698,7 +3714,7 @@ namespace PileDesign.ViewModels
                                 {
                                     "RelativeDisp" => "相対変位",
                                     "Reaction" => "水平地盤反力",
-                                    "SecantStiffness" => "ばね割線剛性",
+                                    "SecantStiffness" => "水平地盤反力係数",
                                     _ => dataType
                                 };
                                 _graphHoverMap[scatter] =
@@ -3719,7 +3735,7 @@ namespace PileDesign.ViewModels
             {
                 "RelativeDisp" => "相対変位",
                 "Reaction" => "水平地盤反力",
-                "SecantStiffness" => "ばね割線剛性",
+                "SecantStiffness" => "水平地盤反力係数",
                 _ => dataType
             };
             string axisX = title + " " + unit;
