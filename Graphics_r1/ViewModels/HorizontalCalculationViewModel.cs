@@ -1833,6 +1833,17 @@ namespace PileDesign.ViewModels
                             // FEM.NaNDiagnostics.Log($"=== Step {step + 1}/{nStep}, LC={loadCase.LoadName}, Liq={isLiquefaction} ===");
 
                             int n_iteration = 1;
+
+                            // v28 D: プロファイリング用 Stopwatch (ステップ局所、並列化時もワーカー内で安全)
+                            var profStepTimer = System.Diagnostics.Stopwatch.StartNew();
+                            long profFindKTicks = 0;
+                            long profSolveTicks = 0;
+                            long profLineSearchTicks = 0;
+                            long profFindTTicks = 0;
+                            int profFindKCalls = 0;
+                            int profLineSearchCalls = 0;
+                            int profLineSearchTrialsTotal = 0;
+
                             UpdateSoilDisp();
                             UpdateF(targetModel);
 
@@ -1966,7 +1977,10 @@ namespace PileDesign.ViewModels
                                     // v17: Modified NRモードの適応フェーズではKマトリクス組立をスキップ（高速化）
                                     if (useFullNR || !loadCase.IsPileNonLinear || n_iteration == 1)
                                     {
+                                        long _tsFindK = System.Diagnostics.Stopwatch.GetTimestamp();
                                         (springKMin, springKMax) = FindK(iLC, targetModel);
+                                        profFindKTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFindK;
+                                        profFindKCalls++;
 
                                         // 初回反復時のみ剛性マトリクスの安定性チェック
                                         if (n_iteration == 1)
@@ -1982,12 +1996,19 @@ namespace PileDesign.ViewModels
                                     if (effectiveUseLineSearch)
                                     {
                                         // ラインサーチ: Newton方向を計算し、最適なステップ長を探索
+                                        long _tsSolve = System.Diagnostics.Stopwatch.GetTimestamp();
                                         var newtonDir = SolveNewtonDirection(targetModel);
+                                        profSolveTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSolve;
+
                                         double currentRes = targetModel.NormsROnNormsFint;
 
                                         // バックトラッキングラインサーチで最適αを見つける
+                                        long _tsLS = System.Diagnostics.Stopwatch.GetTimestamp();
                                         double optimalAlpha = BacktrackingLineSearch(
-                                            targetModel, newtonDir, currentRes, iLC, loadCase.IsPileNonLinear);
+                                            targetModel, newtonDir, currentRes, iLC, loadCase.IsPileNonLinear, out int _lsTrials);
+                                        profLineSearchTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsLS;
+                                        profLineSearchCalls++;
+                                        profLineSearchTrialsTotal += _lsTrials;
 
                                         // 最適αでの状態は既にEvaluateResidualAtAlpha内で適用済み
                                         usedRelaxFactor = optimalAlpha; // ログ用に記録
@@ -1995,14 +2016,18 @@ namespace PileDesign.ViewModels
                                     else
                                     {
                                         // 通常の更新（緩和係数適用）
+                                        long _tsSolve = System.Diagnostics.Stopwatch.GetTimestamp();
                                         SolveDdAndUpdateX(targetModel, usedRelaxFactor);
+                                        profSolveTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSolve;
 
                                         // 割線剛性更新（FindTの前に実行して、最新のK_secで内力を計算）
                                         if (loadCase.IsPileNonLinear)
                                             UpdateBeamMPhiSecant(targetModel);
 
                                         // 断面力・T更新と残差更新
+                                        long _tsFindT = System.Diagnostics.Stopwatch.GetTimestamp();
                                         FindT(iLC, targetModel);
+                                        profFindTTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsFindT;
 
                                         targetModel.FindR();
                                     }
@@ -2476,6 +2501,21 @@ namespace PileDesign.ViewModels
                             {
                                 string relaxedNote = effectiveAlpha > alpha ? $" (緩和基準α={effectiveAlpha:E2})" : "";
                                 await AddLogAsync($"  → Converged in {n_iteration} iterations. Residual norm={targetModel.NormsROnNormsFint:E3}{relaxedNote}{dispInfo}");
+
+                                // v28 D: プロファイリング情報をステップ収束時に出力
+                                profStepTimer.Stop();
+                                double _tickToMs = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                                double _findKMs = profFindKCalls > 0 ? (profFindKTicks * _tickToMs) / profFindKCalls : 0.0;
+                                double _solveMs = profLineSearchCalls > 0 ? (profSolveTicks * _tickToMs) / profLineSearchCalls : (profSolveTicks * _tickToMs);
+                                double _lsMs = profLineSearchCalls > 0 ? (profLineSearchTicks * _tickToMs) / profLineSearchCalls : 0.0;
+                                double _findTMs = profFindTTicks * _tickToMs;
+                                double _lsTrialAvg = profLineSearchCalls > 0 ? profLineSearchTrialsTotal / (double)profLineSearchCalls : 0.0;
+                                double _totalSec = profStepTimer.Elapsed.TotalSeconds;
+                                await AddLogAsync($"    ⏱ プロファイル: K組立={_findKMs:F0}ms×{profFindKCalls}, Solve={_solveMs:F0}ms, " +
+                                    (profLineSearchCalls > 0
+                                        ? $"LS={_lsMs:F0}ms×{profLineSearchCalls} (avg trial={_lsTrialAvg:F1}), "
+                                        : $"FindT={_findTMs:F0}ms, ") +
+                                    $"total={_totalSec:F1}s");
 
                                 // v19: 緩和基準が本来の許容値から大きく逸脱している場合は、再試行対象とする
                                 // （長期未改善／停滞検出で緩和はしたが、物理的にはまだ収束していない状態）
@@ -3550,14 +3590,19 @@ namespace PileDesign.ViewModels
             MathNet.Numerics.LinearAlgebra.Vector<double> newtonDirection,
             double currentResidual,
             int iLC,
-            bool isPileNonLinear)
+            bool isPileNonLinear,
+            out int trialCount)
         {
             // 現在の累積変位と節点変位を保存
             var savedVectorD = targetModel.VectorD.Clone();
             var savedNodeDisps = SaveNodeDisplacements(targetModel);
 
+            // 試行回数カウンタ (EvaluateResidualAtAlpha 呼出し回数を集計)
+            trialCount = 0;
+
             // Step 1: α=1.0で完全評価
             double alpha1 = 1.0;
+            trialCount++;
             double f1 = EvaluateResidualAtAlpha(
                 targetModel, savedVectorD, newtonDirection, alpha1, iLC, isPileNonLinear, isLightweight: false);
 
@@ -3583,12 +3628,14 @@ namespace PileDesign.ViewModels
                 alphaGrad = Math.Clamp(alphaGrad, 0.05, 0.95);
 
                 RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                trialCount++;
                 double fGrad = EvaluateResidualAtAlpha(
                     targetModel, savedVectorD, newtonDirection, alphaGrad, iLC, isPileNonLinear, isLightweight: true);
 
                 if (fGrad < f0)
                 {
                     RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                    trialCount++;
                     EvaluateResidualAtAlpha(
                         targetModel, savedVectorD, newtonDirection, alphaGrad, iLC, isPileNonLinear, isLightweight: false);
                     _lastAcceptedAlpha = alphaGrad;
@@ -3599,6 +3646,7 @@ namespace PileDesign.ViewModels
             // Step 2: α=0.5 で評価（v25 G+: lightweight → full に変更し fit 精度向上）
             RestoreNodeDisplacements(targetModel, savedNodeDisps);
             double alpha2 = 0.5;
+            trialCount++;
             double f2 = EvaluateResidualAtAlpha(
                 targetModel, savedVectorD, newtonDirection, alpha2, iLC, isPileNonLinear, isLightweight: false);
 
@@ -3636,12 +3684,14 @@ namespace PileDesign.ViewModels
 
             // Step 4: 最適αで評価
             RestoreNodeDisplacements(targetModel, savedNodeDisps);
+            trialCount++;
             double fOpt = EvaluateResidualAtAlpha(
                 targetModel, savedVectorD, newtonDirection, alphaOpt, iLC, isPileNonLinear, isLightweight: true);
 
             if (fOpt < currentResidual)
             {
                 RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                trialCount++;
                 double finalResidual = EvaluateResidualAtAlpha(
                     targetModel, savedVectorD, newtonDirection, alphaOpt, iLC, isPileNonLinear, isLightweight: false);
                 _lastAcceptedAlpha = alphaOpt;
@@ -3664,6 +3714,7 @@ namespace PileDesign.ViewModels
                 if (Math.Abs(alpha - alphaOpt) < 0.05) continue; // 既に試したαはスキップ
 
                 RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                trialCount++;
                 double trialResidual = EvaluateResidualAtAlpha(
                     targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: true);
 
@@ -3676,6 +3727,7 @@ namespace PileDesign.ViewModels
                 if (trialResidual < currentResidual)
                 {
                     RestoreNodeDisplacements(targetModel, savedNodeDisps);
+                    trialCount++;
                     double finalResidual = EvaluateResidualAtAlpha(
                         targetModel, savedVectorD, newtonDirection, alpha, iLC, isPileNonLinear, isLightweight: false);
                     _lastAcceptedAlpha = alpha;
@@ -3685,6 +3737,7 @@ namespace PileDesign.ViewModels
 
             // すべて失敗した場合、最良のαを使用
             RestoreNodeDisplacements(targetModel, savedNodeDisps);
+            trialCount++;
             EvaluateResidualAtAlpha(targetModel, savedVectorD, newtonDirection, bestAlpha, iLC, isPileNonLinear, isLightweight: false);
             _lastAcceptedAlpha = bestAlpha;
 
