@@ -254,12 +254,15 @@ namespace PileDesign.ViewModels
         //   5. Parallel.ForEachAsync で (LoadCase, LoadCombination, isLiquefaction) トリプルを
         //      並列処理し、完了後に (LoadCase.No, LoadCombination.No, isLiq, step) キーで
         //      AnalysisStepResults / NodeResults / BeamResults / Spring*Results を決定的にマージ。
+        // E3c-3 (2026-04-23): ケース並列度。1 = 逐次 (従来と同一挙動)、2 以上で並列実行。
+        // 初期値は 1 (安全)。実機検証後に Environment.ProcessorCount 等に設定可能。
+        // 並列実行中は MathNet.Numerics.Control.MaxDegreeOfParallelism を 1 に clamp して
+        // ネストされたスレッド供給による過剰 context switch を防ぐ。
         private int _maxCaseDegreeOfParallelism = 1;
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;
-            // Phase 3.1 未完のため 1 に丸めて保存する（UI 表示用に値は維持）
-            set => SetProperty(ref _maxCaseDegreeOfParallelism, Math.Max(1, Math.Min(1, value)));
+            set => SetProperty(ref _maxCaseDegreeOfParallelism, Math.Max(1, value));
         }
 
         // 選択地盤番号
@@ -397,6 +400,14 @@ namespace PileDesign.ViewModels
         // v19: 自動ステップ二分による追加ステップ数（再試行時に加算されるステップの累計）
         // 解析実行中のみ増加。解析開始時にリセット。
         private int _bisectionExtraSteps = 0;
+
+        // E3c-3 (2026-04-23): ケース並列化用。
+        // DeepCopy 直後の主モデル結果件数 snapshot と、case body 完了後の
+        // AppendCaseResultsToMain 呼出は共に targetModel の ObservableCollection
+        // を参照/変更するため、複数ワーカー間でレースする。両フェーズを
+        // _caseMergeLock で atomic 化する。逐次モード (MaxCaseDegreeOfParallelism=1) では
+        // 競合がないため lock は no-op として機能。
+        private readonly object _caseMergeLock = new();
 
         // 解析ケース数（基本値 + 再試行追加）
         public int TotalCalculationCount
@@ -1657,17 +1668,23 @@ namespace PileDesign.ViewModels
                         string caseTag = BuildCaseTag(level, iLC, iLCOM, isLiquefaction);
 
                         // E3c-2 (2026-04-23): ケース固有モデル = targetModel の DeepCopy。
-                        // 結果マージのため、DeepCopy 前に主モデルの結果件数をスナップショットしておく。
-                        // 現時点では逐次実行。E3c-3 で Parallel.ForEach 化する予定。
-                        int caseSnapAnaStepResults = targetModel.AnalysisStepResults?.Count ?? 0;
-                        var caseSnapNodeResultCounts = targetModel.Nodes.Select(n => n.NodeResults.Count).ToArray();
-                        var caseSnapBeamResultCounts = targetModel.Beams.Select(b => b.BeamResults.Count).ToArray();
-                        var caseSnapHSpringResultCounts = targetModel.HorizontalSoilSprings.Select(s => s.HorizontalSpringResults.Count).ToArray();
+                        // E3c-3 (2026-04-23): snapshot + DeepCopy は targetModel の state を同時に
+                        // 参照するため atomic である必要あり。逐次モードでは lock は no-op。
+                        int caseSnapAnaStepResults;
+                        int[] caseSnapNodeResultCounts, caseSnapBeamResultCounts, caseSnapHSpringResultCounts;
                         int[]? caseSnapRotSpringResultCounts = null;
-                        if (targetModel.RotationalSprings != null)
-                            caseSnapRotSpringResultCounts = targetModel.RotationalSprings.Select(rs => rs.RotationalSpringResults.Count).ToArray();
+                        AnaModel caseModel;
+                        lock (_caseMergeLock)
+                        {
+                            caseSnapAnaStepResults = targetModel.AnalysisStepResults?.Count ?? 0;
+                            caseSnapNodeResultCounts = targetModel.Nodes.Select(n => n.NodeResults.Count).ToArray();
+                            caseSnapBeamResultCounts = targetModel.Beams.Select(b => b.BeamResults.Count).ToArray();
+                            caseSnapHSpringResultCounts = targetModel.HorizontalSoilSprings.Select(s => s.HorizontalSpringResults.Count).ToArray();
+                            if (targetModel.RotationalSprings != null)
+                                caseSnapRotSpringResultCounts = targetModel.RotationalSprings.Select(rs => rs.RotationalSpringResults.Count).ToArray();
 
-                        AnaModel caseModel = targetModel.DeepCopy();
+                            caseModel = targetModel.DeepCopy();
+                        }
 
                         // v20: 荷重方向の事前検出 — counter-loading (逆方向組合せ) を検出し、
                         // 最初から小さな荷重ステップで実行することで失敗試行のムダを回避
@@ -2770,13 +2787,18 @@ namespace PileDesign.ViewModels
                         // FEM.NaNDiagnostics.End();
 
                         // E3c-2: caseModel (DeepCopy) で蓄積した結果を targetModel (主モデル) に merge
-                        AnaModel.AppendCaseResultsToMain(
-                            targetModel, caseModel,
-                            caseSnapAnaStepResults,
-                            caseSnapNodeResultCounts,
-                            caseSnapBeamResultCounts,
-                            caseSnapHSpringResultCounts,
-                            caseSnapRotSpringResultCounts);
+                        // E3c-3: 複数ワーカーが targetModel の ObservableCollection に append する
+                        // 可能性があるため lock で atomic 化。逐次モードでは no-op。
+                        lock (_caseMergeLock)
+                        {
+                            AnaModel.AppendCaseResultsToMain(
+                                targetModel, caseModel,
+                                caseSnapAnaStepResults,
+                                caseSnapNodeResultCounts,
+                                caseSnapBeamResultCounts,
+                                caseSnapHSpringResultCounts,
+                                caseSnapRotSpringResultCounts);
+                        }
                     }
                 }
             }
