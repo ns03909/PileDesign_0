@@ -5,8 +5,8 @@
     "forceActionPointX": 26.6,
     "forceActionPointY": 15.3,
     "forceActionPointZ": -2.0,
-    "upperMassForce": 0,
-    "foundationMassForce": 0
+    "upperMassForce": 8247.5,
+    "foundationMassForce": 9796
   },
   "loadCaseLevel2": {
     "forceActionPointX": 26.6,
