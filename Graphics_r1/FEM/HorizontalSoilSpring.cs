@@ -158,6 +158,14 @@ namespace PileDesign.FEM
 
         public List<HorizontalSpringResult> HorizontalSpringResults { get; set; } = [];
 
+        // v28 問題 A 診断: p-y 降伏状態を反復ごとに追跡。
+        // true = 降伏後 (|y| >= yy, K_tan = post-yield 定数), false = 弾性。
+        // 反復間の状態変化を検出してログ出力する。
+        [JsonIgnore]
+        public bool IsYielded { get; set; } = false;
+        [JsonIgnore]
+        public bool PreviousIsYielded { get; set; } = false;
+
         // パラメータなしコンストラクタ（シリアライザ用）
         public HorizontalSoilSpring() : base() { }
 

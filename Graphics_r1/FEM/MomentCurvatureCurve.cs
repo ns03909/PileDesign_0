@@ -105,6 +105,23 @@ namespace PileDesign.FEM
             }
         }
 
+        /// <summary>
+        /// 現在の φ が属するセグメントのインデックスを返す (0 起点)。
+        /// 0: Points[0]→Points[1] 区間 (通常は弾性〜Mcr), 1: Points[1]→Points[2] 区間 (ひび割れ後), ...
+        /// Points が 2 点未満なら -1。範囲外 (φ < Points[0] or φ > Points[^1]) は端点セグメントを返す。
+        /// </summary>
+        public int GetSegmentIndex(double phi)
+        {
+            if (Points == null || Points.Count < 2) return -1;
+            double lookup = (_isOneSided && phi < 0.0) ? -phi : phi;
+            for (int i = 0; i < Points.Count - 1; i++)
+            {
+                if (lookup >= Points[i].Phi && lookup <= Points[i + 1].Phi)
+                    return i;
+            }
+            return lookup < Points[0].Phi ? 0 : Points.Count - 2;
+        }
+
         // dM/dφ（接線剛性）: EI_eff として扱える
         // 改良版: セグメント境界付近でスムーズにブレンドして不連続性を解消
         public double EvaluateTangent(double phi)

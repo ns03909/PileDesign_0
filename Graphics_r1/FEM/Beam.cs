@@ -325,6 +325,14 @@ namespace PileDesign.FEM
         // 要素中央のモーメント（M-φ曲線から直接評価、解析中に更新される）
         public double CurrentMoment { get; set; }
 
+        // v28 問題 A 診断: M-φ 曲線のどのセグメントに現在の φ が属するかを追跡。
+        // 0 = 弾性 (|φ| < φ_cr), 1 = ひび割れ後, 2 = 降伏後... (Points のインデックス)
+        // 反復ごとに更新され、前反復との差分で状態変化を検出する。
+        [JsonIgnore]
+        public int CurrentMPhiSegmentIndex { get; set; } = -1;
+        [JsonIgnore]
+        public int PreviousMPhiSegmentIndex { get; set; } = -1;
+
         [JsonIgnore]
         public Matrix<double> KeTan { get; set; }
         [JsonIgnore]

@@ -1438,6 +1438,9 @@ namespace PileDesign.ViewModels
 
             foreach (var spring in model.RotationalSprings)
             {
+                // v28: 各ケースの setup 時にクラック履歴をリセット (ケース間独立)
+                spring.ResetCrackState();
+
                 int pb = (spring.PileBodyNo is int v && v > 0) ? v : 1;
                 if (pb <= 0 || pb > InputModel.PileBodies.Count) continue;
 
@@ -1470,6 +1473,7 @@ namespace PileDesign.ViewModels
                     spring.Mode = RotationalSpringMode.CombinedXY;
                     spring.CurveXY = null;
                     spring.KthetaXY = KBig;
+                    spring.McrXY = null; // Mode 切替は非線形ケースでのみ有効
                     continue;
                 }
 
@@ -1488,10 +1492,19 @@ namespace PileDesign.ViewModels
                     case PileHeadRotationMode.CombinedXY:
                         spring.Mode = RotationalSpringMode.CombinedXY;
                         spring.CurveXY = def.CurveXY;
-                        // sec 側の代替として KThetaXY を設定（優先順位: def.KThetaXY → 曲線の初期接線 → KMin）
+                        // v28: Mcr 同期 Mode 切替 (ヒステリシス付き) 用。場所打ち RC 杭のみ非 null。
+                        spring.McrXY = def.McrXY;
+                        // 状態はケース開始時にリセットするため念のためクリア
+                        spring.ResetCrackState();
+                        // sec 側の代替として KThetaXY を設定（優先順位: def.KThetaXY → Mcr 有りなら KBig → 曲線の初期接線 → KMin）
                         if (def.KthetaXY.HasValue && def.KthetaXY.Value > 0.0)
                         {
                             spring.KthetaXY = def.KthetaXY;
+                        }
+                        else if (def.McrXY.HasValue)
+                        {
+                            // Mcr 同期 Mode 切替が有効 → 未クラック時は剛 (KBig) 扱いで開始
+                            spring.KthetaXY = KBig;
                         }
                         else if (spring.CurveXY != null)
                         {
@@ -1878,6 +1891,34 @@ namespace PileDesign.ViewModels
                             // 前回反復の値をそのまま引き継ぐ。
                             double springKMin = double.NaN, springKMax = double.NaN;
 
+                            // v27: 振動診断 — 支配 DOF (最大 |δu| の自由度) の符号反転 (flip-flop) 検出
+                            // リミットサイクル型の発散（残差が単調減少せず周期的に跳ね返る）の原因 DOF を特定する。
+                            // 反復間で同じ key が連続して現れ、かつ符号が逆転したら flip としてカウント。
+                            List<(string Key, string NodeName, string DofName, double Value)> dominantDofs = null;
+                            string prevDominantDofKey = null;
+                            int prevDominantSign = 0;   // +1 / -1 / 0
+                            int flipFlopCount = 0;
+
+                            // v27: 案 A — リミットサイクル Aitken 平均化
+                            // flip# が AITKEN_FLIP_TRIGGER に達したら、直近 AITKEN_HISTORY 反復の CumulativeDisp を
+                            // 単純平均で置換し、周期振動のアトラクタ平均点に飛ばす。暴走防止のため MAX_FIRE 回まで。
+                            // 検証結果 (2026-04-23): TRIGGER=2 (A-plus) や MAX_FIRE=4+リセット (A-rev) を試したが
+                            // いずれも案 A より悪化。TRIGGER=3 / MAX_FIRE=2 / リセットなしが最適だった。
+                            // 理由: 長期未改善検出が Aitken 後の最小残差 (≈10.9) をそのまま採用することで
+                            // 緩和基準判定が有利になる。minResidualSeen をリセットすると逆効果。
+                            const int AITKEN_HISTORY = 3;
+                            const int AITKEN_FLIP_TRIGGER = 3;
+                            const int AITKEN_MAX_FIRE = 2;
+                            var recentCumulativeDisp = new Queue<Dictionary<string, NodeDisp>>();
+                            int aitkenFiredCount = 0;
+
+                            // v28 問題 A 診断: 反復間の状態変化 (M-φ セグメント, 土ばね降伏) を検出するスナップショット
+                            // 各反復の末尾で現在状態を記録、次反復の Task.Run 外で差分ログを出力
+                            // Beam.Name が全 beam 共通のため List インデックスで一意識別
+                            int[] prevBeamSegments = null;  // index = beam idx, value = segment index
+                            var prevYieldedSoilSprings = new HashSet<string>();    // "pileNo-nodeIdx-side" で識別
+                            bool isFirstIterSnapshot = true;
+
                             while (targetModel.NormsROnNormsFint >= effectiveAlpha && n_iteration <= maxIterations)
                             {
                                 // v21 Phase 3 prep: 効果的ライン探索フラグを「ユーザー設定 ∪ 自動切替」の union として毎反復評価
@@ -1885,6 +1926,16 @@ namespace PileDesign.ViewModels
                                 //   を field 書換なしで再現。インスタンスフィールドを汚さないため並列化への準備になる）
                                 bool effectiveUseLineSearch = UseLineSearch || autoSwitchedToLineSearch;
                                 double usedRelaxFactor = currentRelaxFactor; // このステップで使う値を保存
+
+                                // v28: Mcr 同期 Mode 切替で新規クラック検出したばね名を収集 (Task.Run 外でログ出力するため)
+                                var newlyCrackedSprings = new List<(string Name, double M, double Mcr)>();
+
+                                // v28 問題 A 診断: 反復内で状態変化した要素を収集 (Beam は List idx で一意識別)
+                                var mphiChanges = new List<(int BeamIdx, int Prev, int Curr)>();
+                                var newlyYieldedSoilSprings = new List<string>();  // 新規降伏した p-y ばね
+                                var newlyUnyieldedSoilSprings = new List<string>(); // 降伏解除された p-y ばね
+                                int[] currentBeamSegments = null;  // index = beam idx
+                                var currentYieldedSoilSprings = new HashSet<string>();
 
                                 // 重い計算をバックグラウンドで実行（診断値もここで算出）
                                 await Task.Run(() =>
@@ -1975,10 +2026,157 @@ namespace PileDesign.ViewModels
                                     // 診断値: 代表自由度の |d| 最大値（節点の増分変位から）
                                     dispMaxAbs = GetMaxAbsIncrementalDisp(targetModel);
 
+                                    // v27: 振動診断用 — 上位 3 DOF を取得（Ux/Uy/Uz/Rx/Ry/Rz 全成分対象）
+                                    dominantDofs = GetTopIncrementalDofs(targetModel, 3);
+
+                                    // v27: 案 A — CumulativeDisp スナップショットをキューに追加（Aitken 平均化用）
+                                    var snap = new Dictionary<string, NodeDisp>(targetModel.Nodes.Count);
+                                    foreach (var nd in targetModel.Nodes)
+                                        snap[nd.Name] = nd.CumulativeDisp.Clone();
+                                    recentCumulativeDisp.Enqueue(snap);
+                                    while (recentCumulativeDisp.Count > AITKEN_HISTORY)
+                                        recentCumulativeDisp.Dequeue();
+
+                                    // v28: Mcr 同期 Mode 切替 (ヒステリシス付き)
+                                    // 場所打ち RC 杭の杭頭回転ばねで |M| が Mcr を初めて超えた瞬間を検出し、
+                                    // HasCrackedXY = true にラッチ。以降は post-crack curve を使用 (除荷しても戻らない)。
+                                    // 閾値 0.999×Mcr で若干緩めてヒステリシスラッチを安定化。
+                                    if (targetModel.RotationalSprings != null)
+                                    {
+                                        foreach (var rs in targetModel.RotationalSprings)
+                                        {
+                                            if (rs?.McrXY is null || rs.HasCrackedXY) continue;
+                                            double mx = rs.CumulativeForce?.Mxj ?? 0.0;
+                                            double my = rs.CumulativeForce?.Myj ?? 0.0;
+                                            double mRes = Math.Sqrt(mx * mx + my * my);
+                                            if (mRes >= rs.McrXY.Value * 0.999)
+                                            {
+                                                // v28 アプローチ I: クラック発生時点のモーメント方向 (= 回転方向) を記録
+                                                rs.MarkCracked(mx, my);
+                                                newlyCrackedSprings.Add((rs.Name ?? "<unnamed>", mRes, rs.McrXY.Value));
+                                            }
+                                        }
+                                    }
+
+                                    // v28 問題 A 診断: 杭体 M-φ セグメント変化 と 土ばね降伏状態変化を収集
+                                    // iter 22→23 の残差爆発原因を特定する。Beam.Name が共通のため List idx で識別。
+                                    if (targetModel.Beams != null)
+                                    {
+                                        int beamCount = targetModel.Beams.Count;
+                                        currentBeamSegments = new int[beamCount];
+                                        for (int idx = 0; idx < beamCount; idx++)
+                                        {
+                                            var beam = targetModel.Beams[idx];
+                                            int curSeg = (beam.ResolvedCombinedCurve != null) ? beam.CurrentMPhiSegmentIndex : -1;
+                                            currentBeamSegments[idx] = curSeg;
+                                            if (!isFirstIterSnapshot
+                                                && prevBeamSegments != null && idx < prevBeamSegments.Length
+                                                && prevBeamSegments[idx] != curSeg
+                                                && curSeg >= 0 && prevBeamSegments[idx] >= 0)  // -1 (no curve) はスキップ
+                                            {
+                                                mphiChanges.Add((idx, prevBeamSegments[idx], curSeg));
+                                            }
+                                        }
+                                    }
+
+                                    // 土ばね降伏状態: 各杭ノードについて |y| が yy を超えているか判定
+                                    if (InputModel?.PileLayoutItems != null)
+                                    {
+                                        foreach (var pli in InputModel.PileLayoutItems)
+                                        {
+                                            if (pli.PileNodes == null || pli.SoilNodes == null) continue;
+                                            var reactions = InputModel.ElementDivision?.SoilPiles?[pli.SoilPileAltNo - 1]?.HorizontalSoilReactions;
+                                            if (reactions == null) continue;
+                                            bool isFront = pli.IsFrontPiles != null && iLC < pli.IsFrontPiles.Count && pli.IsFrontPiles[iLC];
+                                            for (int i = 0; i < pli.PileNodes.Count && i < pli.SoilNodes.Count; i++)
+                                            {
+                                                var pn = pli.PileNodes[i];
+                                                var sn = pli.SoilNodes[i];
+                                                if (pn?.CumulativeDisp is null || sn?.CumulativeDisp is null) continue;
+                                                var rel = pn.CumulativeDisp - sn.CumulativeDisp;
+                                                double abs = Math.Sqrt(rel.Ux * rel.Ux + rel.Uy * rel.Uy);
+                                                // i-1 (bottom side) と i (top side) の 2 層
+                                                if (i > 0 && i - 1 < reactions.Count && reactions[i - 1].IsYieldedAtY(abs, isTop: false, isFront))
+                                                {
+                                                    string key = $"{pli.No}-{i}-btm";
+                                                    currentYieldedSoilSprings.Add(key);
+                                                }
+                                                if (i < reactions.Count && reactions[i].IsYieldedAtY(abs, isTop: true, isFront))
+                                                {
+                                                    string key = $"{pli.No}-{i}-top";
+                                                    currentYieldedSoilSprings.Add(key);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 変化集計 (2 反復目以降)
+                                    if (!isFirstIterSnapshot)
+                                    {
+                                        foreach (var key in currentYieldedSoilSprings)
+                                        {
+                                            if (!prevYieldedSoilSprings.Contains(key))
+                                                newlyYieldedSoilSprings.Add(key);
+                                        }
+                                        foreach (var key in prevYieldedSoilSprings)
+                                        {
+                                            if (!currentYieldedSoilSprings.Contains(key))
+                                                newlyUnyieldedSoilSprings.Add(key);
+                                        }
+                                    }
+
                                     // ループ内の要所で再チェック（重い処理の長い段階がある場合はここに複数入れる）
                                     token.ThrowIfCancellationRequested();
 
                                 }, token);
+
+                                // v28: Task.Run 外で新規クラックを UI ログに出力 (AddLogAsync はキュー方式で非同期 flush)
+                                foreach (var (name, mRes, mcr) in newlyCrackedSprings)
+                                {
+                                    await AddLogAsync($"　　📌 杭頭 RotSpring {name}: Mcr 到達 → クラック判定 (|M|={mRes:E3} ≥ Mcr={mcr:E3} kNm)、以降 post-crack curve 使用");
+                                }
+
+                                // v28 問題 A 診断: 杭体 M-φ セグメント変化 (集計ログ、最大 5 件の詳細)
+                                if (mphiChanges.Count > 0 && currentBeamSegments != null)
+                                {
+                                    // セグメント分布サマリ (curve 持ちの beam のみ集計、-1 はスキップ)
+                                    var segDist = new Dictionary<int, int>();
+                                    foreach (int seg in currentBeamSegments)
+                                    {
+                                        if (seg < 0) continue;
+                                        if (!segDist.ContainsKey(seg)) segDist[seg] = 0;
+                                        segDist[seg]++;
+                                    }
+                                    string distStr = string.Join(", ", segDist.OrderBy(k => k.Key).Select(kv => $"seg{kv.Key}:{kv.Value}本"));
+                                    int advances = mphiChanges.Count(c => c.Curr > c.Prev);
+                                    int recedes = mphiChanges.Count(c => c.Curr < c.Prev);
+                                    var topChanges = mphiChanges.Take(5).Select(c => $"beam[{c.BeamIdx}]:{c.Prev}→{c.Curr}");
+                                    string detailStr = string.Join(", ", topChanges);
+                                    string suffix = mphiChanges.Count > 5 ? $" ...他 {mphiChanges.Count - 5} 件" : "";
+                                    await AddLogAsync($"　　  ▼ M-φ セグメント変化 {mphiChanges.Count} 件 (進行:{advances}, 戻り:{recedes}): [{detailStr}{suffix}] / 分布 [{distStr}]");
+                                }
+
+                                // v28 問題 A 診断: 土ばね p-y 降伏状態変化
+                                if (newlyYieldedSoilSprings.Count > 0 || newlyUnyieldedSoilSprings.Count > 0)
+                                {
+                                    string yieldedSample = newlyYieldedSoilSprings.Count > 0
+                                        ? string.Join(", ", newlyYieldedSoilSprings.Take(3)) + (newlyYieldedSoilSprings.Count > 3 ? $" ...他 {newlyYieldedSoilSprings.Count - 3}" : "")
+                                        : "-";
+                                    string unyieldedSample = newlyUnyieldedSoilSprings.Count > 0
+                                        ? string.Join(", ", newlyUnyieldedSoilSprings.Take(3)) + (newlyUnyieldedSoilSprings.Count > 3 ? $" ...他 {newlyUnyieldedSoilSprings.Count - 3}" : "")
+                                        : "-";
+                                    await AddLogAsync($"　　  ▼ 土ばね p-y 降伏状態変化: 新規降伏 {newlyYieldedSoilSprings.Count} 件 [{yieldedSample}], 降伏解除 {newlyUnyieldedSoilSprings.Count} 件 [{unyieldedSample}] / 現時点降伏 {currentYieldedSoilSprings.Count} 件");
+                                }
+
+                                // スナップショット更新
+                                prevBeamSegments = currentBeamSegments;
+                                prevYieldedSoilSprings = currentYieldedSoilSprings;
+                                isFirstIterSnapshot = false;
+
+                                // v28 アプローチ I 採用後の 2026-04-23 更新:
+                                // ω=0.01 強制低減 + forceDisableLineSearchNextIter の workaround は削除済。
+                                // 方向ロック + ヒステリシス (CrackNx/CrackNy/ThetaProjMax) で根本解決したため、
+                                // Newton は通常のライン探索 + adaptive relaxation で安定動作する。
 
                                 if (StopONMaxDisplacement && !double.IsNaN(dispMaxAbs) && Math.Abs(dispMaxAbs) > MaxAllowedDisplacement)
                                 {
@@ -2015,6 +2213,85 @@ namespace PileDesign.ViewModels
 
                                 // 診断ログ
                                 await AddLogAsync($"　　diag(K)[min,max]=[{diagKMin:E3}, {diagKMax:E3}], spring k[min,max]=[{springKMin:E3}, {springKMax:E3}], max|d|={dispMaxAbs:E3}");
+
+                                // v27: 振動診断 — 支配 DOF (上位 3) とフリップフロップ検出
+                                // リミットサイクル (残差が周期的に跳ね返って収束しない) の原因 DOF を特定する。
+                                // 前反復と同じ key が最大 |δu| を示し、かつ符号が逆転 → flip としてカウント。
+                                // |δu| < FLIP_THRESHOLD はノイズとみなして無視。
+                                if (dominantDofs != null && dominantDofs.Count > 0)
+                                {
+                                    const double FLIP_THRESHOLD = 1e-10;
+                                    var top = dominantDofs[0];
+                                    int curSign = Math.Sign(top.Value);
+                                    string flipInfo = "";
+                                    if (Math.Abs(top.Value) > FLIP_THRESHOLD
+                                        && prevDominantDofKey == top.Key
+                                        && prevDominantSign != 0 && curSign != 0
+                                        && curSign != prevDominantSign)
+                                    {
+                                        flipFlopCount++;
+                                        flipInfo = $" ⚠ flip#{flipFlopCount}";
+                                    }
+                                    else if (prevDominantDofKey != top.Key)
+                                    {
+                                        // 支配 DOF が変わった → リセット
+                                        flipFlopCount = 0;
+                                    }
+                                    prevDominantDofKey = top.Key;
+                                    prevDominantSign = curSign;
+
+                                    static string SignedExp(double v) => (v >= 0 ? "+" : "") + v.ToString("E2");
+                                    string topStr = string.Join(", ",
+                                        dominantDofs.Select(x => $"{x.Key}={SignedExp(x.Value)}"));
+                                    await AddLogAsync($"　　　dominant δu: {topStr}{flipInfo}");
+                                }
+
+                                // v27: 案 A — リミットサイクル Aitken 平均化
+                                // 支配 DOF の flip が AITKEN_FLIP_TRIGGER 回連続検出されたら、
+                                // 直近 AITKEN_HISTORY 反復の CumulativeDisp を単純平均で置き換えて周期の中心点に飛ばす。
+                                // これで周期 2〜3 のリミットサイクルを破って収束に向かわせる。
+                                // 暴走防止のため AITKEN_MAX_FIRE 回までに制限。
+                                if (flipFlopCount >= AITKEN_FLIP_TRIGGER
+                                    && aitkenFiredCount < AITKEN_MAX_FIRE
+                                    && recentCumulativeDisp.Count >= AITKEN_HISTORY)
+                                {
+                                    await Task.Run(() =>
+                                    {
+                                        int historyCount = recentCumulativeDisp.Count;
+                                        foreach (var nd in targetModel.Nodes)
+                                        {
+                                            double ux = 0, uy = 0, uz = 0, rx = 0, ry = 0, rz = 0;
+                                            foreach (var hist in recentCumulativeDisp)
+                                            {
+                                                if (!hist.TryGetValue(nd.Name, out var d)) continue;
+                                                ux += d.Ux; uy += d.Uy; uz += d.Uz;
+                                                rx += d.Rx; ry += d.Ry; rz += d.Rz;
+                                            }
+                                            nd.CumulativeDisp = new NodeDisp(
+                                                ux / historyCount, uy / historyCount, uz / historyCount,
+                                                rx / historyCount, ry / historyCount, rz / historyCount);
+                                            // 増分変位は 0 にリセット（平均化後は新規スタート扱い）
+                                            nd.IncrementalDisp = new NodeDisp(0, 0, 0, 0, 0, 0);
+                                        }
+                                        // 内力と残差を再計算（次の反復で新しい残差が評価される）
+                                        FindT(iLC, targetModel);
+                                        targetModel.FindR();
+                                    }, token);
+
+                                    aitkenFiredCount++;
+                                    flipFlopCount = 0;
+                                    prevDominantDofKey = null;
+                                    prevDominantSign = 0;
+                                    recentCumulativeDisp.Clear();
+
+                                    // 注: minResidualSeen / iterationsSinceMinUpdated はリセットしない。
+                                    // A-rev で検証したが、リセットすると長期未改善検出が機能しなくなり、
+                                    // Aitken 後に一時的に到達した低い残差がそのまま最終値として採用されなくなって悪化した。
+                                    // 現状はリセット無しで、Aitken → 減衰 → 停滞 → 長期未改善検出 → 緩和基準の
+                                    // シーケンスで最小残差が最終値になる。
+
+                                    await AddLogAsync($"　　🔄 Aitken 平均化 #{aitkenFiredCount}/{AITKEN_MAX_FIRE} 発動: 直近 {AITKEN_HISTORY} 反復の CumulativeDisp 平均で書換 → 残差={targetModel.NormsROnNormsFint:E2}");
+                                }
 
                                 // 適応的緩和係数の更新（UseAdaptiveRelaxation=trueの場合のみ）
                                 double currentResidual = targetModel.NormsROnNormsFint;
@@ -2272,7 +2549,10 @@ namespace PileDesign.ViewModels
                             // Hard pre-detect を ×4 min 32 から ×2 min 16 に緩めたので、
                             // 本来もっと刻みが必要なケースを早期に拾う保険として機能する。
                             const int EARLY_ADAPTIVE_OBS_STEPS = 2;
-                            const double EARLY_ADAPTIVE_ITER_THRESHOLD = 15.0;
+                            // v28 アプローチ I 採用後の 2026-04-23 調整: 15 → 18
+                            // 方向ロック+ヒステリシスで post-crack 初期反復は 13〜18 回程度で収束するが、
+                            // 閾値 15 だと正常ケースで過剰発動 (不要な retry) するため緩和。
+                            const double EARLY_ADAPTIVE_ITER_THRESHOLD = 18.0;
                             if (bisectionAttempt == 0 && step < EARLY_ADAPTIVE_OBS_STEPS)
                             {
                                 iterSumFirstSteps += Math.Min(n_iteration, maxIterations);
@@ -2675,6 +2955,11 @@ namespace PileDesign.ViewModels
                 if (beam.ResolvedCombinedCurve != null)
                 {
                     beam.CurrentMoment = beam.ResolvedCombinedCurve.EvaluateMoment(phiRes);
+                    // v28 問題 A 診断: M-φ セグメントインデックス (接線更新時のみ、毎反復 1 回記録)
+                    if (isTangent)
+                    {
+                        beam.CurrentMPhiSegmentIndex = beam.ResolvedCombinedCurve.GetSegmentIndex(phiRes);
+                    }
                 }
 
                 if (isTangent)
@@ -2977,6 +3262,31 @@ namespace PileDesign.ViewModels
                 maxAbs = Math.Max(maxAbs, Math.Abs(d.Uz));
             }
             return maxAbs;
+        }
+
+        // v27: 振動診断用 — |δu| 絶対値が大きい順に DOF を取得。
+        // リミットサイクル (flip-flop) の原因となっている DOF を特定するため、
+        // Ux/Uy/Uz/Rx/Ry/Rz の 6 成分すべてを対象に取る。
+        // 返り値: (Key="Node名:DOF名", NodeName, DofName, 符号付き値) のリスト。
+        private static List<(string Key, string NodeName, string DofName, double Value)>
+            GetTopIncrementalDofs(AnaModel model, int topN)
+        {
+            string[] dofNames = { "Ux", "Uy", "Uz", "Rx", "Ry", "Rz" };
+            var list = new List<(string Key, string NodeName, string DofName, double Value)>();
+            foreach (var nd in model.Nodes)
+            {
+                var d = nd.IncrementalDisp;
+                if (d is null) continue;
+                for (int i = 0; i < 6; i++)
+                {
+                    double v = d.GetByIndex(i);
+                    if (v == 0.0) continue;
+                    list.Add(($"{nd.Name}:{dofNames[i]}", nd.Name, dofNames[i], v));
+                }
+            }
+            list.Sort((a, b) => Math.Abs(b.Value).CompareTo(Math.Abs(a.Value)));
+            if (list.Count > topN) list.RemoveRange(topN, list.Count - topN);
+            return list;
         }
 
         // Find T 内力ベクトルの計算メソッド
@@ -3766,21 +4076,98 @@ namespace PileDesign.ViewModels
                     double dRy = (pileHeadNode.CumulativeDisp?.Ry ?? 0.0) - (capNode.CumulativeDisp?.Ry ?? 0.0);
 
                     double kRx = 0.0, kRy = 0.0;
+                    double kRxy = 0.0;       // v28 問題 B: Rx-Ry off-diagonal (2D Jacobian)
+                    bool useRxRyCoupling = false;
                     if (rxy.Mode == RotationalSpringMode.CombinedXY)
                     {
-                        double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
-                        double kxy;
-                        if (rxy.CurveXY != null)
+                        const double KBigRigid = 1e10;  // SetupNonlinearMThetaForLoadCase の KBig と同値
+
+                        // v28 アプローチ I: 場所打ち RC 杭 post-crack で方向ロック + ヒステリシス
+                        if (rxy.McrXY.HasValue && rxy.HasCrackedXY
+                            && rxy.CrackNx.HasValue && rxy.CrackNy.HasValue && rxy.CurveXY != null)
                         {
-                            kxy = isTan
-                                ? SafeK(rxy.CurveXY.EvaluateTangent(theta))
-                                : SafeK(rxy.CurveXY.EvaluateSecant(theta));
+                            double nx = rxy.CrackNx.Value;
+                            double ny = rxy.CrackNy.Value;
+                            // n 方向への投影 (符号付き): forward なら +、reverse なら -
+                            double thetaProj = dRx * nx + dRy * ny;
+
+                            // ヒステリシス: θ_proj_max の更新 (前進時のみ大きくなる)
+                            if (thetaProj > rxy.ThetaProjMax) rxy.ThetaProjMax = thetaProj;
+
+                            double kParTan, kParSec;  // n 方向の接線/割線剛性
+                            if (thetaProj >= rxy.ThetaProjMax - 1e-15)
+                            {
+                                // 前進: post-crack curve (1e-8 の急勾配はバイパス)
+                                double absProj = Math.Abs(thetaProj);
+                                kParTan = SafeK(rxy.CurveXY.EvaluatePostCrackTangent(absProj));
+                                kParSec = SafeK(rxy.CurveXY.EvaluateSecant(absProj));
+                            }
+                            else
+                            {
+                                // 除荷 (θ_proj < θ_proj_max): 線形戻り (剛)
+                                // (0, 0) → (θ_proj_max, M_max) の直線 → K = M_max / θ_proj_max
+                                double thetaMax = rxy.ThetaProjMax;
+                                double mMax = rxy.CurveXY.EvaluateMoment(thetaMax);
+                                double kUnload = (thetaMax > 1e-15) ? SafeK(Math.Abs(mMax) / thetaMax) : SafeK(rxy.CurveXY.EvaluateTangent(0));
+                                kParTan = kUnload;
+                                kParSec = kUnload;  // 線形なので接線 = 割線
+                            }
+
+                            // ランク 1 + 小さな直交剛性 (数値的安定化)
+                            // n 方向: kParallel (剛性フル)
+                            // 直交方向: kPerp = kParallel × 0.05 (5%, 特異行列防止)
+                            const double PERP_RATIO = 0.05;
+                            double kParallel = isTan ? kParTan : kParSec;
+                            double kPerp = kParallel * PERP_RATIO;
+                            double nx2 = nx * nx;
+                            double ny2 = ny * ny;
+                            double nxy = nx * ny;
+                            kRx = kParallel * nx2 + kPerp * ny2;    // kRxx
+                            kRy = kParallel * ny2 + kPerp * nx2;    // kRyy
+                            kRxy = (kParallel - kPerp) * nxy;        // off-diagonal
+                            useRxRyCoupling = true;
                         }
                         else
                         {
-                            kxy = SafeK(rxy.KthetaXY ?? 0.0);
+                            // 未クラック / 他杭種: 従来の等方モデル (2D Jacobian)
+                            double theta = Math.Sqrt(dRx * dRx + dRy * dRy);
+                            double kTanIso, kSecIso;
+                            if (rxy.CurveXY != null)
+                            {
+                                if (rxy.McrXY.HasValue && !rxy.HasCrackedXY)
+                                {
+                                    kTanIso = KBigRigid;
+                                    kSecIso = KBigRigid;
+                                }
+                                else
+                                {
+                                    kTanIso = SafeK(rxy.CurveXY.EvaluateTangent(theta));
+                                    kSecIso = SafeK(rxy.CurveXY.EvaluateSecant(theta));
+                                }
+                            }
+                            else
+                            {
+                                kTanIso = kSecIso = SafeK(rxy.KthetaXY ?? 0.0);
+                            }
+
+                            // isotropic 2D Jacobian: K_tan ≠ K_sec で off-diagonal 発生
+                            if (isTan && theta >= 1e-12 && Math.Abs(kTanIso - kSecIso) > 1e-6 * Math.Max(kTanIso, kSecIso))
+                            {
+                                double cosA = dRx / theta;
+                                double sinA = dRy / theta;
+                                double cos2 = cosA * cosA;
+                                double sin2 = sinA * sinA;
+                                kRx = kTanIso * cos2 + kSecIso * sin2;
+                                kRy = kTanIso * sin2 + kSecIso * cos2;
+                                kRxy = (kTanIso - kSecIso) * cosA * sinA;
+                                useRxRyCoupling = true;
+                            }
+                            else
+                            {
+                                double k = isTan ? kTanIso : kSecIso;
+                                kRx = k; kRy = k; kRxy = 0.0;
+                            }
                         }
-                        kRx = kxy; kRy = kxy;
                     }
                     else
                     {
@@ -3830,7 +4217,11 @@ namespace PileDesign.ViewModels
                     double kz = rxy.TieUz ? KBig : 0.0;
                     double kRz = rxy.TieRz ? KBig : 0.0;
                     // Rx/Ry は M–θ に基づき算出した kRx/kRy を用いる
-                    rxy.SetKe(kx, ky, kz, kRx, kRy, kRz, isTan);
+                    // v28 問題 B: 2D Jacobian 有効時は Rx-Ry off-diagonal 付き K を使用
+                    if (useRxRyCoupling)
+                        rxy.SetKeWithRxRyCoupling(kx, ky, kz, kRx, kRxy, kRy, kRz, isTan);
+                    else
+                        rxy.SetKe(kx, ky, kz, kRx, kRy, kRz, isTan);
                 }
             }
 

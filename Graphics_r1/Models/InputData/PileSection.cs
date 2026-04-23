@@ -494,6 +494,25 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 場所打ち鉄筋コンクリート杭の杭頭ひび割れモーメント Mcr を返します。
+        /// 他の断面型では null を返します (Mcr 同期 Mode 切替は無効)。
+        /// 単位: 入力 axialN [kN], 返り値 [kNm]。
+        /// </summary>
+        public double? GetPileHeadMcrInKNm(double axialN)
+        {
+            var section = CreateSectionCalculator();
+            if (section is not InsituReinforcedConcreteSection rcSection)
+                return null;
+
+            // 単位変換: 軸力 kN → N
+            (double mcrNmm, _) = rcSection.GetCrackMoment(axialN * 1000.0, false);
+            if (!double.IsFinite(mcrNmm) || mcrNmm <= 0.0) return null;
+
+            // 単位変換: M [N·mm] → [kNm]
+            return mcrNmm * 1e-6;
+        }
+
+        /// <summary>
         /// M-φキャッシュの統計情報を取得します。
         /// </summary>
         public static (int hits, int misses, int cacheSize) GetMphiCacheStats()

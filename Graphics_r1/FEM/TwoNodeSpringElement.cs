@@ -79,6 +79,43 @@ namespace PileDesign.FEM
             if (isTan) KeTan = ke; else KeSec = ke;
         }
 
+        // v28 (問題 B): 回転方向に 2×2 交差項を持つ剛性（杭頭回転ばねの 2D Jacobian 用）
+        // Combined XY の杭頭回転ばね（isotropic M-θ）でクラック済 (K_tan ≠ K_sec) 時の正しいヤコビアン:
+        //   M_x = M(|θ|) × θ_x/|θ|, M_y = M(|θ|) × θ_y/|θ|   (θ_x=Rx, θ_y=Ry)
+        //   dM_x/dRx = K_tan × cos²α + K_sec × sin²α = kRxx
+        //   dM_x/dRy = (K_tan − K_sec) × cosα × sinα      = kRxy
+        //   dM_y/dRy = K_tan × sin²α + K_sec × cos²α      = kRyy
+        //     (cosα = Rx/|θ|, sinα = Ry/|θ|)
+        // SetKe の対角 (K_tan, K_tan) では off-axis 交差項がゼロとなり Newton 方向が不正確。
+        // この関数では Rx/Ry (index 3/4 および 9/10) に 2x2 対称ブロックを配置し、
+        // Ux/Uy/Uz/Rz は従来通り対角。
+        public void SetKeWithRxRyCoupling(double kx, double ky, double kz, double kRxx, double kRxy, double kRyy, double kRz, bool isTan)
+        {
+            var ke = Matrix<double>.Build.Dense(12, 12, 0.0);
+
+            // Ux, Uy, Uz: 対角
+            ke[0, 0] = kx; ke[6, 6] = kx; ke[0, 6] = -kx; ke[6, 0] = -kx;
+            ke[1, 1] = ky; ke[7, 7] = ky; ke[1, 7] = -ky; ke[7, 1] = -ky;
+            ke[2, 2] = kz; ke[8, 8] = kz; ke[2, 8] = -kz; ke[8, 2] = -kz;
+
+            // Rx-Ry ブロック（2x2 結合）: [[kRxx, kRxy], [kRxy, kRyy]]
+            // 12x12 の i=3,4（NodeI の Rx,Ry）と i=9,10（NodeJ の Rx,Ry）に対して
+            // [K -K; -K K] 構造を展開する
+            ke[3, 3] = kRxx; ke[3, 4] = kRxy;
+            ke[4, 3] = kRxy; ke[4, 4] = kRyy;
+            ke[9, 9] = kRxx; ke[9, 10] = kRxy;
+            ke[10, 9] = kRxy; ke[10, 10] = kRyy;
+            ke[3, 9] = -kRxx; ke[3, 10] = -kRxy;
+            ke[4, 9] = -kRxy; ke[4, 10] = -kRyy;
+            ke[9, 3] = -kRxx; ke[9, 4] = -kRxy;
+            ke[10, 3] = -kRxy; ke[10, 4] = -kRyy;
+
+            // Rz: 対角
+            ke[5, 5] = kRz; ke[11, 11] = kRz; ke[5, 11] = -kRz; ke[11, 5] = -kRz;
+
+            if (isTan) KeTan = ke; else KeSec = ke;
+        }
+
         public Matrix<double> MapOnGlobalStiff(Matrix<double> K, bool isTan, bool isRowFree, bool isColFree)
         {
             var eq = Utils.GetEquationNumbers(NodeI, NodeJ);

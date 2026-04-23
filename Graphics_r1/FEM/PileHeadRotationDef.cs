@@ -25,10 +25,19 @@ namespace PileDesign.FEM
         public double? Kx { get; init; }
         public double? Ky { get; init; }
 
+        // v28: Mcr 同期 Mode 切替用 (場所打ち鉄筋コンクリート杭のみ非 null)
+        // null なら従来挙動 (Mode 切替なし)。単位 kNm。
+        public double? McrXY { get; init; }
+
         // Factory
         public static PileHeadRotationDef Rigid() => new() { Mode = PileHeadRotationMode.Rigid };
-        public static PileHeadRotationDef Combined(MomentRotationCurve curve) =>
-            new() { Mode = PileHeadRotationMode.CombinedXY, CurveXY = curve };
+
+        /// <summary>
+        /// 合成XY M-θ 曲線を指定。mcr を渡した場合は Mcr 同期 Mode 切替 (ヒステリシス付き) が有効になる。
+        /// </summary>
+        public static PileHeadRotationDef Combined(MomentRotationCurve curve, double? mcr = null) =>
+            new() { Mode = PileHeadRotationMode.CombinedXY, CurveXY = curve, McrXY = mcr };
+
         public static PileHeadRotationDef CombinedLinear(double k) =>
             new() { Mode = PileHeadRotationMode.CombinedXY, KthetaXY = k };
         public static PileHeadRotationDef Separate(MomentRotationCurve? cx, MomentRotationCurve? cy, double? kx = null, double? ky = null) =>

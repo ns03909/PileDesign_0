@@ -110,6 +110,21 @@ namespace PileDesign.Models.InputData
             return GetKh(Kh0, y, py) * B * (ZTop - ZBtm) * 0.5;
         }
 
+        /// <summary>
+        /// v28 問題 A 診断: この変位 y が降伏状態かどうかを返す (p-y 曲線の弾性 sqrt 領域を越えたか)。
+        /// 降伏判定式: kh0 × √y0 / √|y| × |y| ≥ py   (弾性 sqrt 領域で p が py に到達)
+        /// = kh0 × √(y0 × |y|) ≥ py
+        /// = |y| ≥ (py / kh0)² / y0  (= yy)
+        /// </summary>
+        public bool IsYieldedAtY(double y, bool isTop, bool isFront)
+        {
+            double py = isFront ? (isTop ? PyFrontTop : PyFrontBtm) : (isTop ? PyRearTop : PyRearBtm);
+            if (py <= 0 || Kh0 <= 0) return false;
+            const double y0 = 0.01;
+            double yy = Math.Pow(py / Kh0, 2) / y0;
+            return Math.Abs(y) >= yy;
+        }
+
         // 降伏後接線剛性の比率（v22 修正）
         // 旧値 `0.001 × py / yy` は降伏境界の解析接線に対し 約 1/500 と極端に小さく、
         // NR 反復で「降伏 ↔ 弾性」を行き来する springs があると K 行列の値が毎反復で

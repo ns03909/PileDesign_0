@@ -574,11 +574,17 @@ namespace PileDesign.Models.InputData
                                 var pts = new List<(double theta, double moment)>(thetas.Count);
                                 for (int i = 0; i < thetas.Count; i++)
                                     pts.Add((thetas[i], ms[i]));
+
+                                // v28: Mcr 同期 Mode 切替 (ヒステリシス付き) 用に Mcr [kNm] も取得。
+                                // null の場合は Mode 切替無効 (従来挙動)。
+                                double? mcrKNm = pileSection.GetPileHeadMcrInKNm(axialN);
+
                                 System.Diagnostics.Debug.WriteLine(
                                     $"[GetMThetaRelationship] 場所打ちRC杭: points={pts.Count}, " +
                                     $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
-                                    $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}]");
-                                return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
+                                    $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}], " +
+                                    $"Mcr={mcrKNm?.ToString("F1") ?? "null"} kNm");
+                                return PileHeadRotationDef.Combined(new MomentRotationCurve(pts), mcrKNm);
                             }
                         }
                         catch (Exception ex)

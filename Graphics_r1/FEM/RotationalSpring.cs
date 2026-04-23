@@ -87,6 +87,38 @@ namespace PileDesign.FEM
             return result;
         }
 
+        /// <summary>
+        /// post-crack 接線剛性: Points[0]→Points[1] の急勾配 (penalty 近似の剛結区間) をスキップする。
+        /// Mcr 同期 Mode 切替 (ヒステリシス付き) で HasCrackedXY == true になった後、
+        /// θ が小さくても Points[1]→Points[2] の傾きを返すことで、K1 ≫ K2 の急変を回避する。
+        ///
+        /// Points[0] == (0, 0), Points[1] == (θ_small, Mcr) を前提:
+        ///   |θ| ≤ Points[1].Theta  → Points[1]→Points[2] の傾き ((My - Mcr)/(θy - θ_small))
+        ///   |θ| in [Points[1], Points[2]] → 同じ傾き (同一セグメント)
+        ///   |θ| in [Points[2], Points[3]] → Points[2]→Points[3] の傾き
+        ///   |θ| > Points[3]        → 0 (plateau)
+        /// Points.Count < 3 の場合は通常の EvaluateTangent にフォールバック。
+        /// </summary>
+        public double EvaluatePostCrackTangent(double theta)
+        {
+            if (Points.Count < 3) return EvaluateTangent(theta);
+            double t = Math.Abs(theta);
+
+            // θ が Points[1] 以下 → Points[1]→Points[2] の傾きを返す (first segment バイパス)
+            if (t <= Points[1].Theta)
+            {
+                return SafeSlope(Points[1], Points[2]);
+            }
+            // θ が末尾点を超える → plateau (EvaluateTangent と同挙動)
+            if (t >= Points[^1].Theta) return 0.0;
+
+            // 中間セグメント: 通常通り (Points[1] 以降のセグメントを探索)
+            int idx = FindSegmentIndex(t);
+            var a = (Theta: (idx == 0 ? 0.0 : Points[idx - 1].Theta), Moment: (idx == 0 ? 0.0 : Points[idx - 1].Moment));
+            var b = Points[idx];
+            return SafeSlope(a, b);
+        }
+
         // 割線剛性: |M|/|θ|（内力計算用、常に正）
         // θ→0では初期接線剛性に収束
         public double EvaluateSecant(double theta)
@@ -184,6 +216,57 @@ namespace PileDesign.FEM
         public MomentRotationCurve? CurveXY { get; set; }   // CombinedXY
         public double? Ktheta { get; set; }                 // SingleDof 線形K
         public double? KthetaXY { get; set; }               // CombinedXY 線形K
+
+        // v28: Mcr 同期 Mode 切替 (ヒステリシス付き)
+        // 場所打ち鉄筋コンクリート杭の杭頭でのみ使用。|M| が Mcr を一度も超えていない間は
+        // K = KBig の完全剛扱い、一度超えたら以降は post-crack curve を使用 (除荷しても剛に戻らない)。
+        // McrXY = null なら従来挙動 (他杭種)。
+        [System.Text.Json.Serialization.JsonIgnore]  // 揮発状態、保存不要
+        public double? McrXY { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasCrackedXY { get; private set; } = false;
+
+        // v28 アプローチ I: 方向ロック + ヒステリシス
+        // クラック発生時の単位方向ベクトル (n_x, n_y)。post-crack はこの方向に沿って曲線評価。
+        // Ry 等が反転しても moment の方向は n に固定され、符号反転による F_int ジャンプが起きない。
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double? CrackNx { get; private set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double? CrackNy { get; private set; }
+
+        // ヒステリシス: n 方向への投影 θ_proj の最大値 (post-crack 単調前進を追跡)。
+        // θ_proj < ThetaProjMax なら除荷モード (線形戻り、高剛性) で Newton 振動を抑制。
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double ThetaProjMax { get; set; } = 0.0;
+
+        /// <summary>
+        /// Mcr 到達を記録。同時にクラック方向 (M の方向、= 回転方向と等価) を単位ベクトルとして保存。
+        /// mx, my は CumulativeForce.Mxj, Myj (kNm) で渡す。
+        /// </summary>
+        public void MarkCracked(double mx, double my)
+        {
+            HasCrackedXY = true;
+            double norm = Math.Sqrt(mx * mx + my * my);
+            if (norm > 1e-15)
+            {
+                CrackNx = mx / norm;
+                CrackNy = my / norm;
+            }
+            else
+            {
+                // フォールバック: 方向不明なら +Y を仮定
+                CrackNx = 0.0; CrackNy = 1.0;
+            }
+            ThetaProjMax = 0.0;  // 次反復で θ_proj から更新される
+        }
+
+        public void ResetCrackState()
+        {
+            HasCrackedXY = false;
+            CrackNx = null; CrackNy = null;
+            ThetaProjMax = 0.0;
+        }
 
         public int? PileBodyNo { get; set; }
 
