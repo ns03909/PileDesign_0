@@ -218,9 +218,17 @@ namespace PileDesign.ViewModels
                     {
                         var v = c.Property.GetValue(item);
                         if (v == null) return "";
-                        return c.Format is not null && v is IFormattable f
+                        string formatted = c.Format is not null && v is IFormattable f
                             ? f.ToString(c.Format, ci)
                             : v.ToString() ?? "";
+                        // Excel 貼付け互換: 数値型の桁区切りコンマを除去
+                        // (Excel が列区切りとして再分割する問題を回避)
+                        if (v is sbyte or byte or short or ushort or int or uint or long or ulong
+                             or float or double or decimal)
+                        {
+                            formatted = formatted.Replace(",", string.Empty);
+                        }
+                        return formatted;
                     });
                     sb.AppendLine(string.Join("\t", values));
                 }

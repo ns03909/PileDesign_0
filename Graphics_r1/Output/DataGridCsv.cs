@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -13,6 +14,18 @@ namespace PileDesign.Output
 {
     internal class DataGridCsv
     {
+        // 桁区切りコンマを含む数値パターン: -?1,234(,567)*(.89)?
+        // Excel 貼付け時にセル内のカンマが列区切りとして解釈される問題を避けるため、
+        // このパターンにマッチするセル値はコンマを除去する。
+        private static readonly Regex ThousandGroupedNumberPattern = new(
+            @"^-?\d{1,3}(,\d{3})+(\.\d+)?$", RegexOptions.Compiled);
+
+        private static string StripThousandSeparator(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
+            return ThousandGroupedNumberPattern.IsMatch(text) ? text.Replace(",", string.Empty) : text;
+        }
+
         // データグリッドをCSVファイルにエクスポートするメソッド
         public static void CreateCsv(IEnumerable<object> data, DataGrid dataGrid, string filePath)
         {
@@ -111,7 +124,7 @@ namespace PileDesign.Output
         {
             // まず表示済みセルから取得を試みる
             if (column.GetCellContent(item) is TextBlock tb)
-                return tb.Text;
+                return StripThousandSeparator(tb.Text);
 
             // バインディングパスからプロパティ値を直接取得（仮想化対応）
             Binding? binding = null;
@@ -135,9 +148,9 @@ namespace PileDesign.Output
 
                         // StringFormatがある場合は適用
                         if (!string.IsNullOrEmpty(binding.StringFormat))
-                            return string.Format(binding.StringFormat, value);
+                            return StripThousandSeparator(string.Format(binding.StringFormat, value));
 
-                        return value.ToString() ?? string.Empty;
+                        return StripThousandSeparator(value.ToString() ?? string.Empty);
                     }
                 }
                 catch { }
