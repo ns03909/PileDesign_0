@@ -775,11 +775,10 @@ namespace PileDesign.ViewModels
                 AnaModels.RemoveAt(1);
             }
 
-            // MainWindowViewModelにCurrentModelをセット
-            if (Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainWindowViewModel)
-            {
-                mainWindowViewModel.CurrentModel = this.CurrentModel; // AnaModels[0]など
-            }
+            // 「破棄して閉じる」はメイン側の既存結果 (RESULTS_OLD) を保持するのが
+            // 本来の意味。ここで CurrentModel を上書きすると AnaModels[0] に入っている
+            // 空の編集用 AnaModel がメインに流れ込み、既存結果が消失する。
+            // → メインの CurrentModel には一切触れない。
 
             // ダイアログを閉じる
             RequestClose?.Invoke(this, EventArgs.Empty);

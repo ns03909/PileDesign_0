@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using System;
 using System.Collections.ObjectModel;
@@ -11,6 +12,9 @@ namespace PileDesign.ViewModels
     {
         private readonly MainWindowViewModel _mainWindowViewModel;
         public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
+
+        // キャンセル時に復元するためのスナップショット (Initialize で取得)
+        private FoundationBeamInput? _prevFoundationBeamInput;
 
         // 基礎梁節点コレクション
         [ObservableProperty]
@@ -61,6 +65,10 @@ namespace PileDesign.ViewModels
 
             var fbInput = InputModel.FoundationBeamInput;
 
+            // キャンセル時の復元用スナップショットを取得
+            // (Nodes/Beams は参照コピーで直接編集する設計のため、バックアップが必要)
+            _prevFoundationBeamInput = DeepCopyUtil.CloneJson(fbInput);
+
             // 参照をコピー（直接編集）
             Nodes = fbInput.Nodes;
             Beams = fbInput.Beams;
@@ -86,6 +94,13 @@ namespace PileDesign.ViewModels
 
         private void OnCancel()
         {
+            // Initialize で取得したスナップショットに戻す。
+            // Nodes/Beams は参照コピーで直接編集する設計のため、
+            // InputModel.FoundationBeamInput 自体を差し替えて変更を破棄する。
+            if (_prevFoundationBeamInput != null)
+            {
+                InputModel.FoundationBeamInput = _prevFoundationBeamInput;
+            }
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
