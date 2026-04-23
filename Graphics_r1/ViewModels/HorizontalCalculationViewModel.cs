@@ -255,10 +255,11 @@ namespace PileDesign.ViewModels
         //      並列処理し、完了後に (LoadCase.No, LoadCombination.No, isLiq, step) キーで
         //      AnalysisStepResults / NodeResults / BeamResults / Spring*Results を決定的にマージ。
         // E3c-3 (2026-04-23): ケース並列度。1 = 逐次 (従来と同一挙動)、2 以上で並列実行。
-        // 既定値 = 論理コア数 (ユーザー環境で自動検出)。
-        // 並列実行中は MathNet.Numerics.Control.MaxDegreeOfParallelism を 1 に clamp して
-        // ネストされたスレッド供給による過剰 context switch を防ぐ。
-        private int _maxCaseDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount);
+        // デフォルトは 1 (安全)。並列 infra は実装済だが、実機 8 並列テストで hang を確認
+        // (想定原因: Task.Run のネスト × 8 並列 → ThreadPool starvation or GC 圧迫 or
+        //  MathNet 内部並列との競合)。将来のチューニング後に既定値を上げる予定。
+        // ユーザーが 2 以上に設定すれば並列実行される。
+        private int _maxCaseDegreeOfParallelism = 1;
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;
