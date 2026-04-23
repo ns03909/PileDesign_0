@@ -61,6 +61,37 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 荷重条件など、ジオメトリを変更しない編集で呼ぶ確認ヘルパ。
+        /// 解析結果のみリセットし、要素分割 (IsElementSplit) は保持する。
+        /// 解析結果がなければダイアログを出さず true を返す (編集続行)。
+        /// </summary>
+        public bool CheckAndResetAnalysisResultsKeepingSplit(string text)
+        {
+            bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
+                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
+            if (!hasResults) return true;
+
+            MessageBoxResult result = MessageBox.Show(
+                $"{text}を確定するには、既存の解析結果を削除する必要があります。\nよろしいですか。\n（要素分割は保持されます）",
+                "確認",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning);
+            if (result == MessageBoxResult.Cancel) return false;
+
+            // 解析結果のみリセット、IsElementSplit は保持
+            IsHorizontalAnalysisDone = false;
+            IsVerticalAnalysisDone = false;
+            IsGroupPileSettlementAnalysisDone = false;
+            IsVerticalBeamAnalysisDone = false;
+            IsAnalysisResultVisible = false;
+            CurrentModel = null;
+
+            UpdateWindowImmediate();
+            UpdateTreeView();
+            return true;
+        }
+
+        /// <summary>
         /// 材料・断面の変更時など、確認ダイアログなしで解析結果を自動削除する。
         /// 解析結果が存在する場合のみリセットを実行する。
         /// </summary>

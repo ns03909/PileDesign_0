@@ -240,7 +240,9 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnOk()
         {
-            if (!_mainWindowViewModel.CheckAndResetElementSplit("荷重条件"))
+            // 荷重条件の変更はジオメトリ (メッシュ) に影響しないため、要素分割は保持する。
+            // 解析結果のみリセットする (旧 CheckAndResetElementSplit は分割も破棄していた)。
+            if (!_mainWindowViewModel.CheckAndResetAnalysisResultsKeepingSplit("荷重条件"))
                 return;
 
             InputModel.LoadCasesInput.LoadCombinationFactor = LoadCombinationFactor;
