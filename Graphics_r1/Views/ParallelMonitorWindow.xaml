@@ -25,7 +25,7 @@
             <TextBlock Text=" / "/>
             <TextBlock Text="{Binding TotalPlannedCaseCount}" MinWidth="30"/>
             <TextBlock Text="    実行中: " FontWeight="SemiBold"/>
-            <TextBlock Text="{Binding ActiveCases.Count}" MinWidth="20"/>
+            <TextBlock Text="{Binding ActiveCasesCount}" MinWidth="20"/>
             <TextBlock Text="    待機: " FontWeight="SemiBold"/>
             <TextBlock Text="{Binding PendingCaseCount}" MinWidth="30"/>
         </StackPanel>

@@ -409,21 +409,30 @@ namespace PileDesign.ViewModels
         // RunThisCaseAsync の開始/終了で UI スレッド上から Add/Remove される。
         public ObservableCollection<CaseMonitorItem> ActiveCases { get; } = [];
 
+        private int _activeCasesCount;
+        /// <summary>ActiveCases.Count の明示プロパティ。ObservableCollection.Count の
+        /// binding が一部環境で更新されないため、Add/Remove と同時にこちらも更新する。</summary>
+        public int ActiveCasesCount
+        {
+            get => _activeCasesCount;
+            set => SetProperty(ref _activeCasesCount, value);
+        }
+
         private int _completedCaseCount;
         public int CompletedCaseCount
         {
             get => _completedCaseCount;
-            set => SetProperty(ref _completedCaseCount, value);
+            set { if (SetProperty(ref _completedCaseCount, value)) OnPropertyChanged(nameof(PendingCaseCount)); }
         }
 
         private int _totalPlannedCaseCount;
         public int TotalPlannedCaseCount
         {
             get => _totalPlannedCaseCount;
-            set => SetProperty(ref _totalPlannedCaseCount, value);
+            set { if (SetProperty(ref _totalPlannedCaseCount, value)) OnPropertyChanged(nameof(PendingCaseCount)); }
         }
 
-        public int PendingCaseCount => Math.Max(0, TotalPlannedCaseCount - CompletedCaseCount - ActiveCases.Count);
+        public int PendingCaseCount => Math.Max(0, TotalPlannedCaseCount - CompletedCaseCount - ActiveCasesCount);
 
         // 解析実行済みフラグ
         private bool _isAnalysisExecuted = false;
@@ -1643,8 +1652,10 @@ namespace PileDesign.ViewModels
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 ActiveCases.Clear();
+                ActiveCasesCount = 0;
                 CompletedCaseCount = 0;
                 TotalPlannedCaseCount = TotalCalculationCount;
+                // setter 内で PendingCaseCount PropertyChanged も発火するが念のため再度発火
                 OnPropertyChanged(nameof(PendingCaseCount));
             });
 
@@ -1780,8 +1791,14 @@ namespace PileDesign.ViewModels
 
                         // 並列モニタ (案 B, 2026-04-24): ケース開始時に Active リストへ追加。
                         // TotalSteps は nStep 確定後 (後続の baseNStep 計算後) に更新される。
+                        // BeginInvoke: ワーカースレッドをブロックしない (Invoke は UI 処理完了まで待機)
                         var monitorItem = new CaseMonitorItem(caseTag, 0);
-                        System.Windows.Application.Current?.Dispatcher.Invoke(() => ActiveCases.Add(monitorItem));
+                        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
+                        {
+                            ActiveCases.Add(monitorItem);
+                            ActiveCasesCount = ActiveCases.Count;
+                            OnPropertyChanged(nameof(PendingCaseCount));
+                        });
                         try
                         {
 
@@ -2933,11 +2950,12 @@ namespace PileDesign.ViewModels
                         finally
                         {
                             // 並列モニタ: ケース終了 (正常/例外/キャンセルいずれも) で Active から除去し Completed++
-                            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                            // BeginInvoke でワーカーをブロックせずに UI 更新を要求
+                            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() =>
                             {
                                 ActiveCases.Remove(monitorItem);
-                                CompletedCaseCount++;
-                                OnPropertyChanged(nameof(PendingCaseCount));
+                                ActiveCasesCount = ActiveCases.Count;
+                                CompletedCaseCount++;  // setter 内で PendingCaseCount PropertyChanged も発火
                             });
                         }
                         } // end local function RunThisCaseAsync
