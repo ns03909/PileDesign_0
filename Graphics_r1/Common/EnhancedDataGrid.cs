@@ -262,7 +262,14 @@ namespace PileDesign.Common
                                 // WPFのStringFormat ("N3"等) をstring.Format互換 ("{0:N3}") に変換
                                 if (!fmt.Contains('{'))
                                     fmt = $"{{0:{fmt}}}";
-                                return string.Format(fmt, value);
+                                string formatted = string.Format(fmt, value);
+                                // Excel 貼付け互換: N1/N3 等の桁区切りコンマ "1,554.0" を
+                                // Excel が列区切りとして解釈し 1 セルを複数セルに分割するケース
+                                // (直前の「区切り位置」設定の残留等) があるため、数値型のみ
+                                // コンマを除去する。小数点のピリオドはそのまま維持。
+                                if (IsNumericType(value))
+                                    formatted = formatted.Replace(",", string.Empty);
+                                return formatted;
                             }
                             catch { return value.ToString() ?? string.Empty; }
                         }
@@ -345,6 +352,10 @@ namespace PileDesign.Common
             }
             return null;
         }
+
+        private static bool IsNumericType(object value) =>
+            value is sbyte or byte or short or ushort or int or uint or long or ulong
+                 or float or double or decimal;
 
         private static object? GetPropertyValue(object item, string path)
         {
