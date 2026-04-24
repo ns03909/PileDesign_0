@@ -280,7 +280,11 @@ namespace PileDesign.ViewModels
         // しても Task は待機するだけで意味がなく、メモリ圧迫で hang リスクが増える。
         public int ProcessorCount => Environment.ProcessorCount;
 
-        private int _maxCaseDegreeOfParallelism = 1;
+        // 既定値 2: MDOP=2 は実機テスト済で安全性と速度のバランスが良い。
+        //   MDOP=1 はそれ以上にして解析時間を半減できる。
+        //   MDOP=8 では以前 hang が発生したが Task.Run nesting 解消 (34fe538) で
+        //   改善済。ただし大きすぎると GC 圧迫リスクあり、ProcessorCount で上限 clamp。
+        private int _maxCaseDegreeOfParallelism = 2;
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;

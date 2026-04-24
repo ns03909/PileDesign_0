@@ -107,9 +107,19 @@
         <ScrollViewer Grid.Row="0" Grid.Column="0"
                       VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <!-- セクションヘッダ (左ペインのセクション見出し) -->
+                <Style x:Key="SectionHeader" TargetType="TextBlock">
+                    <Setter Property="FontWeight" Value="Bold"/>
+                    <Setter Property="Foreground" Value="#62B0E2"/>
+                    <Setter Property="Margin" Value="0,10,0,4"/>
+                    <Setter Property="Padding" Value="0,0,0,2"/>
+                </Style>
+            </ScrollViewer.Resources>
         <StackPanel Orientation="Vertical">
 
-            <!--<Button Content="水平解析モデル作成" Command="{Binding AnalysisModelingCommand}"/>-->
+            <!-- ========== モデル情報 ========== -->
+            <TextBlock Text="■ モデル情報" Style="{StaticResource SectionHeader}"/>
 
             <Grid >
                 <Grid.ColumnDefinitions>
@@ -117,7 +127,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="節点数" Width="100" HorizontalAlignment="Left"/>
-                <TextBox Text="{Binding NodesCount, UpdateSourceTrigger=PropertyChanged}" 
+                <TextBox Text="{Binding NodesCount, UpdateSourceTrigger=PropertyChanged}"
                          Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
             </Grid>
 
@@ -127,7 +137,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="要素数" Width="100" HorizontalAlignment="Left"/>
-                <TextBox Text="{Binding BeamsCount, UpdateSourceTrigger=PropertyChanged}" 
+                <TextBox Text="{Binding BeamsCount, UpdateSourceTrigger=PropertyChanged}"
                          Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
             </Grid>
 
@@ -161,6 +171,9 @@
                 </RadioButton>
             </StackPanel>
 
+            <!-- ========== 解析対象 ========== -->
+            <TextBlock Text="■ 解析対象" Style="{StaticResource SectionHeader}"/>
+
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="液状化" Width="100"/>
                 <RadioButton Content="あり" GroupName="Liquefaction"
@@ -171,7 +184,7 @@
                 IsChecked="{Binding LiquefactionOption, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Both}"/>
             </StackPanel>
 
-            <TextBlock Text="解析対象 荷重ケース レベル1" Margin="0,10,0,0"/>
+            <TextBlock Text="荷重ケース レベル1" Margin="0,10,0,0"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
                 <Button Content="すべて対象" Command="{Binding ApplyAllLoadCasesLevel1Command}" Width="80" Margin="0,0,5,0"/>
@@ -226,7 +239,7 @@
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
 
-            <TextBlock Text="解析対象 荷重ケース レベル2" Margin="0,10,0,0"/>
+            <TextBlock Text="荷重ケース レベル2" Margin="0,10,0,0"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
                 <Button Content="すべて対象" Command="{Binding ApplyAllLoadCasesLevel2Command}" Width="80" Margin="0,0,5,0"/>
@@ -292,13 +305,16 @@
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
 
+            <!-- ========== 荷重ステップ ========== -->
+            <TextBlock Text="■ 荷重ステップ" Style="{StaticResource SectionHeader}"/>
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Level1 1荷重あたり計算ステップ数" Grid.Column="0"  HorizontalAlignment="Left"/>
-                <TextBox Text="{Binding Level1CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1" Width="50" 
+                <TextBox Text="{Binding Level1CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1" Width="50"
                           HorizontalAlignment="Right" HorizontalContentAlignment="Right"/>
             </Grid>
 
@@ -308,21 +324,35 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Level2 1荷重あたり計算ステップ数" Grid.Column="0" HorizontalAlignment="Left"/>
-                <TextBox Text="{Binding Level2CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1" 
-                         Width="50" 
+                <TextBox Text="{Binding Level2CalculationStepsCount, UpdateSourceTrigger=LostFocus}" Grid.Column="1"
+                         Width="50"
                          HorizontalAlignment="Right" HorizontalContentAlignment="Right"/>
             </Grid>
 
-
-            <DockPanel Margin="0,10,0,0">
+            <DockPanel Margin="0,6,0,0">
                 <TextBlock Text="全解析ケース数："/>
                 <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Right"/>
             </DockPanel>
-            <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Margin="0,10,0,0"/>
+            <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Foreground="Gray" FontSize="11"/>
 
+            <!-- ========== 設計条件 ========== -->
+            <TextBlock Text="■ 設計条件" Style="{StaticResource SectionHeader}"/>
 
-            <!-- ここを既存レイアウトの設定パネル等に挿入 -->
-            <StackPanel Orientation="Horizontal" Margin="8" VerticalAlignment="Center" x:Name="DisplacementThresholdPanel">
+            <!-- 杭軸力モード -->
+            <StackPanel Orientation="Horizontal" Margin="0,2">
+                <TextBlock Text="杭軸力:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
+                <RadioButton Content="入力値" GroupName="AxialForceMode" Margin="0,0,12,0" VerticalAlignment="Center"
+                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                             ToolTip="入力された軸力値のみを使用"/>
+                <RadioButton Content="入力値＋応力解析結果" GroupName="AxialForceMode" VerticalAlignment="Center"
+                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay}"
+                             ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）"/>
+            </StackPanel>
+
+            <!-- ========== 解析条件 ========== -->
+            <TextBlock Text="■ 解析条件" Style="{StaticResource SectionHeader}"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,2" VerticalAlignment="Center" x:Name="DisplacementThresholdPanel">
                 <CheckBox Content="変位閾値で解析中止"
                       IsChecked="{Binding StopONMaxDisplacement, Mode=TwoWay}"
                       VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -334,19 +364,11 @@
                      ToolTip="最大許容代表変位（m）。この値を超えると解析が停止します。"/>
             </StackPanel>
 
-            <!-- 杭軸力モード -->
-            <StackPanel Orientation="Horizontal" Margin="8,4">
-                <TextBlock Text="杭軸力:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
-                <RadioButton Content="入力値" GroupName="AxialForceMode" Margin="0,0,12,0" VerticalAlignment="Center"
-                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                             ToolTip="入力された軸力値のみを使用"/>
-                <RadioButton Content="入力値＋応力解析結果" GroupName="AxialForceMode" VerticalAlignment="Center"
-                             IsChecked="{Binding UseAnalysisAxialForce, Mode=TwoWay}"
-                             ToolTip="入力軸力に解析で得られた軸力Fxiを加算&#x0a;（各荷重ステップ開始時に更新）"/>
-            </StackPanel>
+            <!-- ========== 収束計算 ========== -->
+            <TextBlock Text="■ 収束計算" Style="{StaticResource SectionHeader}"/>
 
             <!-- Newton-Raphson設定 -->
-            <StackPanel Orientation="Vertical" Margin="8,4">
+            <StackPanel Orientation="Vertical">
                 <!-- NR法の種類（排他的） -->
                 <StackPanel Orientation="Horizontal" Margin="0,2">
                     <TextBlock Text="NR法:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
@@ -391,21 +413,28 @@
                               IsChecked="{Binding SkipIteration, Mode=TwoWay}"
                               ToolTip="各ステップで1回のみ解析（最も安定）&#x0a;荷重ステップ数を32～64に増やしてください"/>
                 </StackPanel>
-
-                <!-- ケース並列度 (E3c-3): 複数ケースを Task.Run で並行実行 -->
-                <StackPanel Orientation="Horizontal" Margin="0,2">
-                    <TextBlock Text="ケース並列:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" Width="60"/>
-                    <TextBox Width="40" VerticalAlignment="Center" Margin="0,0,4,0"
-                             Text="{Binding MaxCaseDegreeOfParallelism, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                             PreviewTextInput="NumericOnly_PreviewTextInput"
-                             DataObject.Pasting="NumericOnly_Pasting"
-                             ToolTip="複数荷重ケースを同時に並行実行する数&#x0a;1 = 逐次 (安全、従来挙動)&#x0a;2 以上 = 並列実行 (高速化期待、実験的)&#x0a;最大は PC の論理プロセッサ数&#x0a;ハングする場合は 1 に戻してください"/>
-                    <TextBlock Text="{Binding ProcessorCount, StringFormat='(1=逐次, max={0})'}"
-                               Foreground="Gray" VerticalAlignment="Center"/>
-                </StackPanel>
             </StackPanel>
 
-            <!-- ...existing code... -->
+            <!-- ========== 並列処理 ========== -->
+            <TextBlock Text="■ 並列処理" Style="{StaticResource SectionHeader}"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,2">
+                <TextBlock Text="同時実行ケース数:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                <TextBox Width="40" VerticalAlignment="Center" Margin="0,0,4,0"
+                         Text="{Binding MaxCaseDegreeOfParallelism, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                         PreviewTextInput="NumericOnly_PreviewTextInput"
+                         DataObject.Pasting="NumericOnly_Pasting"
+                         ToolTip="複数の荷重ケースを同時に並行して計算する数 (並列処理)&#x0a;1 = 逐次 (1 ケースずつ順に)&#x0a;2 以上 = 並列 (N ケースを同時に CPU で処理)&#x0a;最大は PC の論理プロセッサ数&#x0a;メモリ不足やハングする場合は値を小さくしてください"/>
+                <TextBlock Text="{Binding ProcessorCount, StringFormat='(1=逐次, 最大={0})'}"
+                           Foreground="Gray" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Foreground="Gray" FontSize="11" Margin="0,0,0,2"
+                       TextWrapping="Wrap"
+                       Text="2 以上でケース単位の並列実行が有効。CPU コアを活用して解析時間を短縮します。"/>
+
+            <!-- ========== 実行 ========== -->
+            <TextBlock Text="■ 実行" Style="{StaticResource SectionHeader}"/>
+
             <Button Content="水平解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}">
                 <Button.Style>
                     <Style TargetType="Button">
