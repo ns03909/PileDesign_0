@@ -24,6 +24,63 @@ namespace PileDesign.Output
         private static int MmToPx(double mm, double dpi = DefaultDpi, double scale = 1.0)
             => (int)Math.Round(mm * dpi * scale * InchPerMm);
 
+        /// <summary>
+        /// 土質ごとの背景色 (地盤ウィンドウと同じ配色、半透明)。
+        ///   粘性土: 薄茶 (210,180,140,64)
+        ///   砂質土: 薄橙 (255,165,  0,64)
+        ///   礫質土: 薄緑 (144,238,144,64)
+        ///   その他: 薄灰 (200,200,200,32)
+        /// </summary>
+        private static Brush GetSoilTypeBackgroundBrush(string? granularityClass) => granularityClass switch
+        {
+            "粘性土" => new SolidColorBrush(Color.FromArgb(64, 210, 180, 140)),
+            "砂質土" => new SolidColorBrush(Color.FromArgb(64, 255, 165, 0)),
+            "礫質土" => new SolidColorBrush(Color.FromArgb(64, 144, 238, 144)),
+            _ => new SolidColorBrush(Color.FromArgb(32, 200, 200, 200)),
+        };
+
+        /// <summary>
+        /// ピクセル空間上で土層ごとに薄い背景を描画する。
+        /// ToImagePoint は (worldX, worldY=altitude) を受けるラムダ。
+        /// </summary>
+        private static void DrawSoilLayerBackground(
+            DrawingContext dc,
+            SoilPile soilPile,
+            int widthPx,
+            int heightPx,
+            double scalePxPerM,
+            Func<double, double, Point> ToImagePoint)
+        {
+            var groundLayers = soilPile?.GroundInput?.GroundLayers;
+            if (groundLayers == null || groundLayers.Count == 0) return;
+
+            double soilPileZ = soilPile!.Z;
+            double originYPx = ToImagePoint(0, 0).Y;
+
+            for (int i = 0; i < groundLayers.Count; i++)
+            {
+                var layer = groundLayers[i];
+                // 各層の上端/下端 altitude (Z, m 単位)。BottomAltitude が存在するので TopAltitude は前層から取る
+                double topAlt = (i == 0)
+                    ? soilPileZ // 0 depth at pile top
+                    : groundLayers[i - 1].BottomAltitude;
+                double btmAlt = layer.BottomAltitude;
+                // Altitude 差を px に: ToImagePoint は World(y=Altitude) を描画座標に変換する
+                // y_top_altitude は上にあるので画像上での Y は小さくなる
+                double yTopPx = -(topAlt - soilPileZ) * scalePxPerM + originYPx;
+                double yBtmPx = -(btmAlt - soilPileZ) * scalePxPerM + originYPx;
+                double top = Math.Min(yTopPx, yBtmPx);
+                double btm = Math.Max(yTopPx, yBtmPx);
+                // 画像範囲と交差部分のみ描画
+                double visTop = Math.Max(0, top);
+                double visBtm = Math.Min(heightPx, btm);
+                if (visBtm <= visTop) continue;
+
+                var brush = GetSoilTypeBackgroundBrush(layer.GranularityClass);
+                dc.DrawRectangle(brush, null, new Rect(0, visTop, widthPx, visBtm - visTop));
+            }
+        }
+
         // Example: WPF-based diagram -> PNG bytes (migrated from CreateLoadCombinationDiagramDrawing / SaveLoadCombinationDiagramByMm)
         public static byte[] RenderLoadCombinationDiagramPng(
             double ps, double pf, double alphaL, double betaU, double betaL,
@@ -298,6 +355,9 @@ namespace PileDesign.Output
 
                     // background
                     dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, widthPx, heightPx));
+
+                    // 土層背景色 (地盤ウィンドウと同じ配色): 薄茶/薄橙/薄緑/薄灰の半透明で塗る
+                    DrawSoilLayerBackground(dc, soilPile, widthPx, heightPx, scalePxPerM, ToImagePoint);
 
                     // draw pile segments (rectangles) and keep min/max Y px for center line
                     double topMostPx = double.MaxValue;
@@ -827,6 +887,9 @@ namespace PileDesign.Output
                     // 背景
                     target.DrawRectangle(new Rect(0, 0, widthPx, heightPx), DrawingStyle.Filled(Colors.White, null, 0));
 
+                    // 土層背景色 (地盤ウィンドウと同配色) を杭セグメントより前に塗る
+                    DrawGroundLayerBackgroundsInternal(helper, soilPile.GroundInput, minX, maxX);
+
                     // 杭セグメント描画
                     DrawPileSegmentsInternal(helper, segments, pileTopZ);
 
@@ -884,6 +947,40 @@ namespace PileDesign.Output
         /// <summary>
         /// 地盤層を描画（内部メソッド）
         /// </summary>
+        /// <summary>
+        /// 土層ごとの背景色を塗る。地盤ウィンドウと同じ配色。
+        /// minX..maxX のワールド X 範囲で層ごとに塗る (X-Z 断面上)。
+        /// </summary>
+        private static void DrawGroundLayerBackgroundsInternal(DrawingHelper helper, GroundInput ground, double minX, double maxX)
+        {
+            if (ground?.GroundLayers == null || ground.GroundLayers.Count == 0) return;
+
+            // 上端 altitude: GroundTopAltitude または最初の層の上端 (= 前層なし→GroundTopAltitude)
+            double topAlt = ground.GroundTopAltitude;
+            foreach (var layer in ground.GroundLayers)
+            {
+                double btmAlt = layer.BottomAltitude;
+                var color = layer.GranularityClass switch
+                {
+                    "粘性土" => Color.FromArgb(64, 210, 180, 140),
+                    "砂質土" => Color.FromArgb(64, 255, 165, 0),
+                    "礫質土" => Color.FromArgb(64, 144, 238, 144),
+                    _ => Color.FromArgb(32, 200, 200, 200),
+                };
+                var style = DrawingStyle.Filled(color, null, 0);
+                // 4 角形 (minX, btmAlt) → (maxX, btmAlt) → (maxX, topAlt) → (minX, topAlt)
+                //   _transform.Transform(Point3D) で 3D → 2D ピクセルに射影
+                helper.AddFilledPolygon(new[]
+                {
+                    helper.Transform.Transform(new Point3D(minX, 0, btmAlt)),
+                    helper.Transform.Transform(new Point3D(maxX, 0, btmAlt)),
+                    helper.Transform.Transform(new Point3D(maxX, 0, topAlt)),
+                    helper.Transform.Transform(new Point3D(minX, 0, topAlt)),
+                }, style);
+                topAlt = btmAlt;
+            }
+        }
+
         private static void DrawGroundLayersInternal(DrawingHelper helper, GroundInput ground, double pileTopZ, double xOffset)
         {
             if (ground?.GroundLayers == null) return;
