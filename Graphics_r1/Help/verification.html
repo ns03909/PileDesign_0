@@ -74,7 +74,8 @@
             Column Headers (sticky)
         ========================= */
         .column-headers {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -82,12 +83,12 @@
         }
 
         .column-header {
-            flex: 1;
             font-size: 14px;
             font-weight: bold;
             color: #62B0E2;
             text-align: center;
             padding: 8px;
+            min-width: 0;
         }
 
         .column-header-left {
@@ -117,17 +118,18 @@
 
         /* Section title row */
         .section-title-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
             background-color: #e8f4fd;
         }
 
         .section-title-cell {
-            flex: 1;
             padding: 8px 24px;
             font-size: 16px;
             font-weight: bold;
             color: #333;
             border-left: 4px solid #62B0E2;
+            min-width: 0;
         }
 
         .section-title-cell-left {
@@ -146,14 +148,15 @@
 
         /* Description row */
         .desc-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
         }
 
         .desc-cell {
-            flex: 1;
             padding: 8px 24px 4px;
             line-height: 1.7;
             color: #444;
+            min-width: 0;
         }
 
         .desc-cell-left {
@@ -174,13 +177,14 @@
             Item Row (sub-item level)
         ========================= */
         .item-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
             border-top: 1px solid #e0e0e0;
         }
 
         .item-cell {
-            flex: 1;
             padding: 12px 24px 16px;
+            min-width: 0;
         }
 
         .item-cell-left {
