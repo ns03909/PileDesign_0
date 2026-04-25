@@ -21,13 +21,23 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _projectName, value);
         }
 
-        // 参照レベル
+        // 参照レベル（docx 出力ラベル専用、例: "TP"）
         private string _refLevel;
         public string RefLevel
         {
             get => _refLevel;
             set => SetProperty(ref _refLevel, value);
         }
+
+        // Z=0 が絶対標高で何 m に相当するか（docx 出力でのみ使用）
+        private double _referenceAltitude;
+        public double ReferenceAltitude
+        {
+            get => _referenceAltitude;
+            set => SetProperty(ref _referenceAltitude, value);
+        }
+
+        public double ToAbsolute(double z) => z + ReferenceAltitude;
 
         // 耐震グレード
         private string _seismicGrade;
@@ -67,6 +77,7 @@ namespace PileDesign.Models.InputData
         public FundamentalInput()
         {
             RefLevel = "TP";
+            ReferenceAltitude = 0.0;
             ProjectNo = "J240000-#";
             ProjectName = "プロジェクト名";
             SeismicGrade = "A";

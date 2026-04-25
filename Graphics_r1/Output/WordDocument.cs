@@ -253,9 +253,9 @@ namespace PileDesign.Output
 
             AddHeader1(body, "荷重条件", 1);
             AddText(body, "レベル1荷重");
-            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1);
+            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1, inputModel.FundamentalInput);
             AddText(body, "レベル2荷重");
-            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2);
+            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2, inputModel.FundamentalInput);
             AddLineBreak(body);
 
             AddHeader1(body, "杭体", 1);
@@ -263,7 +263,7 @@ namespace PileDesign.Output
             AddLineBreak(body);
 
             AddHeader1(body, "杭配置", 1);
-            AddPileLayoutTables(body, inputModel.PileLayoutItems);
+            AddPileLayoutTables(body, inputModel.PileLayoutItems, inputModel.FundamentalInput);
             AddLineBreak(body);
 
             AddHeader1(body, "杭軸力", 1);
@@ -282,7 +282,7 @@ namespace PileDesign.Output
             if (mainWindowViewModel.IncludeGroundInformation) // 地盤
             {
                 AddHeader1(body, "地盤", 1);
-                AddGroundInfo(body, inputModel.GroundsInput);
+                AddGroundInfo(body, inputModel.GroundsInput, inputModel.FundamentalInput);
                 AddLineBreak(body);
             }
 
@@ -298,8 +298,8 @@ namespace PileDesign.Output
                 if (mainWindowViewModel.IsVerticalAnalysisDone)
                 {
                     AddHeader1(body, "杭の支持力", 1);
-                    AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles);
-                    AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles);
+                    AddPileResistanceDescription(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
+                    AddVerticalResistance(body, inputModel.ElementDivision.SoilPiles, inputModel.FundamentalInput);
                     AddLineBreak(body);
 
                     // 杭の支持力検討
@@ -341,7 +341,7 @@ namespace PileDesign.Output
                     AddHeader1(body, "根入部", 1);
                     if (mainWindowViewModel.CalculationReportLevel >= 2)
                     {
-                        AddEmbedment(body, inputModel.EmbedmentInput);
+                        AddEmbedment(body, inputModel.EmbedmentInput, inputModel.FundamentalInput);
                         AddLineBreak(body);
                     }
                 }

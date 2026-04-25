@@ -61,7 +61,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="Z軸符号" HorizontalAlignment="Left" Grid.Column="0"/>
+                <TextBlock Text="標高記号" HorizontalAlignment="Left" Grid.Column="0"/>
                 <TextBox x:Name="textBoxRefLevel0" 
                     TextWrapping="Wrap" Grid.Column="1"
                     GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
@@ -78,6 +78,28 @@
                         <ToolTip>
                             <TextBlock>
                                 <Run>3文字まで</Run>
+                            </TextBlock>
+                        </ToolTip>
+                    </TextBox.ToolTip>
+                </TextBox>
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Z=0 の標高 (m)" HorizontalAlignment="Left" Grid.Column="0"/>
+                <TextBox x:Name="textBoxReferenceAltitude"
+                    Text="{Binding ReferenceAltitude, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
+                    TextWrapping="Wrap" Grid.Column="1"
+                    GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                    KeyDown="TextBox_KeyDown"
+                    common:TextBoxNavigationBehavior.Enable="True">
+                    <TextBox.ToolTip>
+                        <ToolTip>
+                            <TextBlock>
+                                <Run>Z=0 が絶対標高で何 m に相当するかを指定します (docx 出力時の標高表記に使用)</Run>
                             </TextBlock>
                         </ToolTip>
                     </TextBox.ToolTip>

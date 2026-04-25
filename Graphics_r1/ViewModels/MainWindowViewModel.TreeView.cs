@@ -71,7 +71,13 @@ namespace PileDesign.ViewModels
 
             dataFundamental1.Children.Add(new CTreeViewData
             {
-                Name = $"基準標高:{CurrentInputModel.FundamentalInput.RefLevel}",
+                Name = $"標高記号:{CurrentInputModel.FundamentalInput.RefLevel}",
+                TextColor = Brushes.Red
+            });
+
+            dataFundamental1.Children.Add(new CTreeViewData
+            {
+                Name = $"Z=0 絶対標高:{CurrentInputModel.FundamentalInput.ReferenceAltitude:N3}m",
                 TextColor = Brushes.Red
             });
 
@@ -191,7 +197,7 @@ namespace PileDesign.ViewModels
                 groundChildrenGround.Children.Add(
                     new CTreeViewData()
                     {
-                        Name = $"地表Z: {CurrentInputModel.FundamentalInput.RefLevel}{AddSign(gModel[i].GroundTopAltitude, "N3")}m, "
+                        Name = $"地表Z: {AddSign(gModel[i].GroundTopAltitude, "N3")}m, "
                     });
 
                 groundChildrenGround.Children.Add(
@@ -316,7 +322,7 @@ namespace PileDesign.ViewModels
                     },
                     new CTreeViewData
                     {
-                        Name = $"下端Z: {CurrentInputModel.FundamentalInput.RefLevel}{AddSign(CurrentInputModel.EmbedmentInput.BottomAltitude,"N3")}m",
+                        Name = $"下端Z: {AddSign(CurrentInputModel.EmbedmentInput.BottomAltitude,"N3")}m",
                     },
                 ],
             };
@@ -359,7 +365,7 @@ namespace PileDesign.ViewModels
                     Name = $"<{i + 1}> (セット数:)",
                     Children = [
                         new CTreeViewData{
-                            Name = $"杭頭Z: {CurrentInputModel.FundamentalInput.RefLevel}{AddSign(CurrentInputModel.ElementDivision.SoilPiles[i].Z,"N3")}m",
+                            Name = $"杭頭Z: {AddSign(CurrentInputModel.ElementDivision.SoilPiles[i].Z,"N3")}m",
                         },
                         new CTreeViewData{
                             Name = $"杭体番号: {CurrentInputModel.ElementDivision.SoilPiles[i].PileBodyNo}",

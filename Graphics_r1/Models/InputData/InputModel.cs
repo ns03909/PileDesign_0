@@ -576,6 +576,56 @@ namespace PileDesign.Models.InputData
             AttachPileBodiesHandlers();
         }
 
+        /// <summary>
+        /// 地盤関係の Z 値を一括シフトする。ReferenceAltitude 変更時に呼び、
+        /// 絶対標高を保持したまま Z 座標だけ更新するのに使う。
+        ///
+        /// 実装は「標高 = GL深さ + 孔口Z」の不変関係を使って冪等に再計算する。
+        /// GroundLayerViewModel.SyncDepthAltitude などが動いても二重シフトしない。
+        /// </summary>
+        public void ShiftGroundZByDelta(double deltaZ)
+        {
+            if (deltaZ == 0.0) return;
+            if (GroundsInput == null || GroundsInput.Count == 0) return;
+
+            SuppressNotifications();
+            try
+            {
+                foreach (var ground in GroundsInput)
+                {
+                    if (ground == null) continue;
+
+                    // 孔口Z を delta 分だけシフト
+                    ground.GroundTopAltitude += deltaZ;
+
+                    // 他の標高は不変関係「標高 = GL深さ + 孔口Z」で再計算（冪等）
+                    ground.GroundWaterTableAltitude = ground.GroundWaterGLDepth + ground.GroundTopAltitude;
+                    ground.StressAltitude = ground.StressGLDepth + ground.GroundTopAltitude;
+
+                    if (ground.GroundLayers != null)
+                    {
+                        foreach (var layer in ground.GroundLayers)
+                        {
+                            if (layer == null) continue;
+                            layer.BottomAltitude = layer.BottomGLDepth + ground.GroundTopAltitude;
+                        }
+                    }
+                    if (ground.GroundMassesData != null)
+                    {
+                        foreach (var mass in ground.GroundMassesData)
+                        {
+                            if (mass == null) continue;
+                            mass.AltitudeDepth = mass.GLDepth + ground.GroundTopAltitude;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                ResumeAndNotify();
+            }
+        }
+
         // 軽量版
         public void AttachViewModel(MainWindowViewModel mainWindowViewModel)
         {
@@ -1289,11 +1339,19 @@ namespace PileDesign.Models.InputData
                         No = FoundationBeamInput.Beams.Count + 1,
                         NodeI_No = nodeDict[startKey].No,
                         NodeJ_No = nodeDict[endKey].No,
+                        MaterialNo = 1,
+                        SectionNo = 1,
                         Width = 0.5,  // デフォルト値
                         Height = 0.8, // デフォルト値
                         SectionName = "Default"
                     };
                     FoundationBeamInput.Beams.Add(beam);
+                }
+
+                // 旧データ変換した梁要素は MaterialNo=1 / SectionNo=1 を参照するため、参照先を保証
+                if (FoundationBeamInput.Beams.Count > 0)
+                {
+                    FoundationBeamInput.EnsureDefaultMaterialAndSection();
                 }
 
                 // 変換成功メッセージ

@@ -42,10 +42,18 @@ namespace PileDesign.Output
                 // 3行目:
                 TableRow row2 = new();
                 row2.Append(
-                    CreateTableCellWithWidth("Z軸符号", "left", width0),
-                    CreateTableCellWithWidth($"{fundamentalInput.RefLevel:N3}", "left", width1)
+                    CreateTableCellWithWidth("標高記号", "left", width0),
+                    CreateTableCellWithWidth(fundamentalInput.RefLevel, "left", width1)
                 );
                 table.Append(row2);
+
+                // 4行目: Z=0 の標高
+                TableRow row3 = new();
+                row3.Append(
+                    CreateTableCellWithWidth("Z=0 の標高 (m)", "left", width0),
+                    CreateTableCellWithWidth($"{fundamentalInput.ReferenceAltitude:N3}", "left", width1)
+                );
+                table.Append(row3);
 
                 // 列幅を設定
                 //SetColumnWidth(table, 0, 20); // 1列目の幅
@@ -60,7 +68,7 @@ namespace PileDesign.Output
         }
 
         // 荷重条件の表を追加するメソッド
-        private static void AddLoadCaseTable(Body body, ObservableCollection<LoadCase> loadCases)
+        private static void AddLoadCaseTable(Body body, ObservableCollection<LoadCase> loadCases, FundamentalInput fundamentalInput)
         {
             double fontSize = 8.0;
             Table table = CreateTableWithBorders();
@@ -74,7 +82,7 @@ namespace PileDesign.Output
             CreateTableCell(["杭体", "非線形性"], fontSize, "center"),
             CreateTableCell(["慣性力", "位置", "X座標", "[m]"], fontSize, "center"),
             CreateTableCell(["慣性力", "位置", "Y座標", "[m]"], fontSize, "center"),
-            CreateTableCell(["慣性力", "位置", "Z座標", "[m]"], fontSize, "center"),
+            CreateTableCell(["慣性力", "位置", "Z", "[m]"], fontSize, "center"),
             CreateTableCell(["上部構造", "慣性力", "[kN]"], fontSize, "center"),
             CreateTableCell(["基礎部", "慣性力", "[kN]"], fontSize, "center")
             );
@@ -108,7 +116,7 @@ namespace PileDesign.Output
         }
 
         //
-        public static void AddGroundInfo(Body body, ObservableCollection<GroundInput> grounds)
+        public static void AddGroundInfo(Body body, ObservableCollection<GroundInput> grounds, FundamentalInput fundamentalInput)
         {
             double fontSize = 8.0;
             if (grounds == null || grounds.Count == 0) return;
@@ -124,6 +132,7 @@ namespace PileDesign.Output
                 TableRow headerRow = CreateHeaderRow(
                     CreateTableCell(["項目"], fontSize, "center"),
                     CreateTableCell(["深度[m]"], fontSize, "center"),
+                    CreateTableCell(["標高[m]"], fontSize, "center"),
                     CreateTableCell(["Z[m]"], fontSize, "center")
                 );
                 table.Append(headerRow);
@@ -133,6 +142,7 @@ namespace PileDesign.Output
                 row1.Append(
                     CreateTableCell(["孔口レベル"], fontSize, "center"),
                     CreateTableCell([$"{ground.GLDepth:N3}"], fontSize, "right"),
+                    CreateTableCell([$"{fundamentalInput.ToAbsolute(ground.GroundTopAltitude):N3}"], fontSize, "right"),
                     CreateTableCell([$"{ground.GroundTopAltitude:N3}"], fontSize, "right")
                 );
                 table.Append(row1);
@@ -142,6 +152,7 @@ namespace PileDesign.Output
                 row2.Append(
                     CreateTableCell(["地下水位"], fontSize, "center"),
                     CreateTableCell([$"{ground.GroundWaterGLDepth:N3}"], fontSize, "right"),
+                    CreateTableCell([$"{fundamentalInput.ToAbsolute(ground.GroundWaterTableAltitude):N3}"], fontSize, "right"),
                     CreateTableCell([$"{ground.GroundWaterTableAltitude:N3}"], fontSize, "right")
                 );
                 table.Append(row2);
@@ -151,6 +162,7 @@ namespace PileDesign.Output
                 row3.Append(
                     CreateTableCell(["地中応力検討用レベル"], fontSize, "center"),
                     CreateTableCell([$"{ground.StressGLDepth:N3}"], fontSize, "right"),
+                    CreateTableCell([$"{fundamentalInput.ToAbsolute(ground.StressAltitude):N3}"], fontSize, "right"),
                     CreateTableCell([$"{ground.StressAltitude:N3}"], fontSize, "right")
                 );
                 table.Append(row3);
@@ -159,11 +171,11 @@ namespace PileDesign.Output
 
                 body.Append(new Paragraph());
 
-                AddGroundLayerTable(body, ground.GroundLayers);
+                AddGroundLayerTable(body, ground.GroundLayers, fundamentalInput);
 
                 body.Append(new Paragraph());
 
-                AddGroundMassTable(body, ground.GroundMassesData);
+                AddGroundMassTable(body, ground.GroundMassesData, fundamentalInput);
 
                 body.Append(new Paragraph());
 
@@ -176,7 +188,7 @@ namespace PileDesign.Output
         }
 
         // 地盤情報の表を追加するメソッド
-        public static void AddGroundLayerTable(Body body, ObservableCollection<GroundLayerInput> groundLayers)
+        public static void AddGroundLayerTable(Body body, ObservableCollection<GroundLayerInput> groundLayers, FundamentalInput fundamentalInput)
         {
             double fontSize = 8.0;
             Table table = CreateTableWithBorders();
@@ -186,6 +198,7 @@ namespace PileDesign.Output
             CreateTableCell(["土層", "番号"], fontSize, "center"),
             CreateTableCell(["層厚", "[m]"], fontSize, "center"),
             CreateTableCell(["下端", "深度", "[m]"], fontSize, "center"),
+            CreateTableCell(["下端", "標高", "[m]"], fontSize, "center"),
             CreateTableCell(["下端", "Z", "[m]"], fontSize, "center"),
             CreateTableCell(["土層", "分類"], fontSize, "center"),
             CreateTableCell(["単位", "体積", "重量", "[kN/m<^3>]"], fontSize, "center"),
@@ -206,6 +219,7 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([no.ToString()], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.LayerThickness:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.BottomGLDepth:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{fundamentalInput.ToAbsolute(groundLayer.BottomAltitude):N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.BottomAltitude:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.GranularityClass}"], fontSize, "center"));
                 dataRow.Append(CreateTableCell([$"{groundLayer.Density:N1}"], fontSize, "right"));
@@ -221,7 +235,7 @@ namespace PileDesign.Output
         }
 
         // 地盤情報の表を追加するメソッド
-        public static void AddGroundMassTable(Body body, ObservableCollection<GroundMassDataInput> groundMasses)
+        public static void AddGroundMassTable(Body body, ObservableCollection<GroundMassDataInput> groundMasses, FundamentalInput fundamentalInput)
         {
             double fontSize = 8.0;
             Table table = CreateTableWithBorders();
@@ -231,6 +245,7 @@ namespace PileDesign.Output
             CreateTableCell(["土", "質点", "番号"], fontSize, "center"),
             CreateTableCell(["間隔", "[m]"], fontSize, "center"),
             CreateTableCell(["深度", "[m]"], fontSize, "center"),
+            CreateTableCell(["標高", "[m]"], fontSize, "center"),
             CreateTableCell(["Z", "[m]"], fontSize, "center"),
             CreateTableCell(["粒度", "分類"], fontSize, "center"),
             CreateTableCell(["土層", "番号"], fontSize, "center"),
@@ -250,6 +265,7 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([no.ToString()], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundMass.Spacing:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundMass.GLDepth:N3}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{fundamentalInput.ToAbsolute(groundMass.AltitudeDepth):N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundMass.AltitudeDepth:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundMass.GranularityClass}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{groundMass.LayerNo}"], fontSize, "right"));
@@ -445,13 +461,13 @@ namespace PileDesign.Output
         }
 
         // 荷重条件の表を追加するメソッド
-        public static void AddLoadCasesTable(Body body, LoadCasesInput loadCasesInput)
+        public static void AddLoadCasesTable(Body body, LoadCasesInput loadCasesInput, FundamentalInput fundamentalInput)
         {
             // レベル1の表を追加
-            AddLoadCaseTable(body, loadCasesInput.LoadCasesLevel1);
+            AddLoadCaseTable(body, loadCasesInput.LoadCasesLevel1, fundamentalInput);
             AddText(body, "");
             // レベル2の表を追加
-            AddLoadCaseTable(body, loadCasesInput.LoadCasesLevel2);
+            AddLoadCaseTable(body, loadCasesInput.LoadCasesLevel2, fundamentalInput);
 
         }
 
@@ -621,7 +637,7 @@ namespace PileDesign.Output
         }
 
         // 杭配置の表を追加するメソッド
-        public static void AddPileLayoutTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems)
+        public static void AddPileLayoutTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems, FundamentalInput fundamentalInput)
         {
             double fontSize = 8;
             Table table = CreateTableWithBorders();
@@ -753,7 +769,7 @@ namespace PileDesign.Output
         }
 
         // 前後方杭の表を追加するメソッド
-        public static void AddEmbedment(Body body, EmbedmentInput embedmentInput)
+        public static void AddEmbedment(Body body, EmbedmentInput embedmentInput, FundamentalInput fundamentalInput)
         {
             double fontSize = 8;
             Table table = CreateTableWithBorders();
@@ -800,7 +816,7 @@ namespace PileDesign.Output
             => (src != null && idx >= 0 && idx < src.Count) ? (src[idx] ? "前" : "後") : string.Empty;
 
         // 杭抵抗
-        private static void AddPileResistanceDescription(Body body, ObservableCollection<SoilPile> soilPiles)
+        private static void AddPileResistanceDescription(Body body, ObservableCollection<SoilPile> soilPiles, FundamentalInput fundamentalInput)
         {
             AddHeader1(body, "杭支持力の検討", 3);
             AddText(body, "杭支持力の検討では、杭の押込側と引抜側の使用限界、損傷限界、終局限界を計算し、表にまとめます。");
@@ -815,9 +831,12 @@ namespace PileDesign.Output
                 TableRow tipHeader = CreateHeaderRow(
                     CreateTableCell(["杭体番号"], fs, "center"),
                     CreateTableCell(["杭先端径", "[mm]"], fs, "center"),
-                    CreateTableCell(["杭先端標高", "[m]"], fs, "center"),
-                    CreateTableCell(["N値算定", "上端標高", "[m]"], fs, "center"),
-                    CreateTableCell(["N値算定", "下端標高", "[m]"], fs, "center"),
+                    CreateTableCell(["杭先端", "標高", "[m]"], fs, "center"),
+                    CreateTableCell(["杭先端", "Z", "[m]"], fs, "center"),
+                    CreateTableCell(["N値算定", "上端", "標高", "[m]"], fs, "center"),
+                    CreateTableCell(["N値算定", "上端", "Z", "[m]"], fs, "center"),
+                    CreateTableCell(["N値算定", "下端", "標高", "[m]"], fs, "center"),
+                    CreateTableCell(["N値算定", "下端", "Z", "[m]"], fs, "center"),
                     CreateTableCell(["算定対象N値"], fs, "center"),
                     CreateTableCell(["平均N値"], fs, "center")
                 );
@@ -828,14 +847,18 @@ namespace PileDesign.Output
                     string pileRef = soilPile.PileBodyInput?.PileBodyRef ?? "不明";
                     string toeDia = soilPile.PileBodyInput?.PileBodySegments?.Count > 0
                         ? $"{soilPile.PileBodyInput.PileToeDia:N0}" : "不明";
-                    string toeAlt = soilPile.PileBodyInput?.PileBodySegments?.Count > 0
-                        ? $"{soilPile.PileBottomAltitude:N3}" : "不明";
+                    bool hasSeg = soilPile.PileBodyInput?.PileBodySegments?.Count > 0;
+                    string toeAlt = hasSeg ? $"{fundamentalInput.ToAbsolute(soilPile.PileBottomAltitude):N3}" : "不明";
+                    string toeZ = hasSeg ? $"{soilPile.PileBottomAltitude:N3}" : "不明";
 
                     TableRow row = new();
                     row.Append(CreateTableCell([$"{pileRef}"], fs, "center"));
                     row.Append(CreateTableCell([$"{toeDia}"], fs, "right"));
                     row.Append(CreateTableCell([$"{toeAlt}"], fs, "right"));
+                    row.Append(CreateTableCell([$"{toeZ}"], fs, "right"));
+                    row.Append(CreateTableCell([$"{fundamentalInput.ToAbsolute(soilPile.PileToeNValueAverageRangeUpperAltitude):N3}"], fs, "right"));
                     row.Append(CreateTableCell([$"{soilPile.PileToeNValueAverageRangeUpperAltitude:N3}"], fs, "right"));
+                    row.Append(CreateTableCell([$"{fundamentalInput.ToAbsolute(soilPile.PileToeNValueAverageRangeLowerAltitude):N3}"], fs, "right"));
                     row.Append(CreateTableCell([$"{soilPile.PileToeNValueAverageRangeLowerAltitude:N3}"], fs, "right"));
                     row.Append(CreateTableCell([$"{soilPile.NValuesForAverage}"], fs, "center"));
                     row.Append(CreateTableCell([$"{soilPile.PileToeNValue:N1}"], fs, "right"));
@@ -860,10 +883,10 @@ namespace PileDesign.Output
         }
 
         // 杭支持力一覧表メソッド
-        public static void AddVerticalResistance(Body body, ObservableCollection<SoilPile> soilPiles)
+        public static void AddVerticalResistance(Body body, ObservableCollection<SoilPile> soilPiles, FundamentalInput fundamentalInput)
         {
             double fontSize = 8;
-            Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(13));
+            Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(14));
 
             // 1行目: 表題
             TableRow headerRow = CreateHeaderRow(
@@ -873,7 +896,8 @@ namespace PileDesign.Output
                 CreateTableCell(["杭工法"], fontSize, "center"),
                 CreateTableCell(["杭頭径", "[mm]"], fontSize, "center"),
                 CreateTableCell(["杭先端径", "[mm]"], fontSize, "center"),
-                CreateTableCell(["杭先端", "Z標高", "[m]"], fontSize, "center"),
+                CreateTableCell(["杭先端", "標高", "[m]"], fontSize, "center"),
+                CreateTableCell(["杭先端", "Z", "[m]"], fontSize, "center"),
                 CreateTableCell(["押込側", "使用", "限界", "R_{SLS}", "[kN]"], fontSize, "center"),
                 CreateTableCell(["押込側", "損傷", "限界", "R_{DLS}", "[kN]"], fontSize, "center"),
                 CreateTableCell(["押込側", "終局", "限界", "R_{ULS}", "[kN]"], fontSize, "center"),
@@ -895,6 +919,7 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileConstructionType}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileBodySegments[0].PileSection?.PileDiameter ?? 0:N0}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBodyInput.PileToeDia:N0}"], fontSize, "right"));
+                dataRow.Append(CreateTableCell([$"{fundamentalInput.ToAbsolute(soilPile.PileBottomAltitude):N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.PileBottomAltitude:N3}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.R_SLS:N1}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{soilPile.R_DLS:N1}"], fontSize, "right"));

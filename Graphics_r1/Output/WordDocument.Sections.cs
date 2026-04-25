@@ -749,13 +749,14 @@ namespace PileDesign.Output
 
                 double fontSize = 8;
                 int flCount = ground.GroundMassesData.Max(m => m.FL?.Count ?? 0);
-                int colCount = 4 + flCount; // 深度, N値, Fc, 土質 + FL×n
+                int colCount = 5 + flCount; // 標高, Z, N値, Fc, 土質 + FL×n
                 Table table = CreateTableWithBordersAndWidths(GetEqualColumnWidths(colCount));
 
                 // ヘッダ行
                 var headerCells = new List<TableCell>
                 {
-                    CreateTableCell(["深度", "[m]"], fontSize, "center"),
+                    CreateTableCell(["標高", "[m]"], fontSize, "center"),
+                    CreateTableCell(["Z", "[m]"], fontSize, "center"),
                     CreateTableCell(["N値"], fontSize, "center"),
                     CreateTableCell(["F<_c>", "(%)"], fontSize, "center"),
                     CreateTableCell(["土質"], fontSize, "center"),
@@ -769,6 +770,7 @@ namespace PileDesign.Output
                 foreach (var mass in ground.GroundMassesData)
                 {
                     TableRow row = new();
+                    row.Append(CreateTableCell([$"{inputModel.FundamentalInput.ToAbsolute(mass.AltitudeDepth):N2}"], fontSize, "right"));
                     row.Append(CreateTableCell([$"{mass.AltitudeDepth:N2}"], fontSize, "right"));
                     row.Append(CreateTableCell([$"{mass.NValue:N1}"], fontSize, "right"));
                     row.Append(CreateTableCell([$"{mass.Fc:N0}"], fontSize, "right"));

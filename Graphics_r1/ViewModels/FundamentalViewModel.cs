@@ -35,6 +35,49 @@ namespace PileDesign.ViewModels
         }
 
         [ObservableProperty]
+        private double _referenceAltitude;
+
+        // 確認ダイアログキャンセル時の revert 中は再入を抑制するフラグ
+        private bool _suppressReferenceAltitudeConfirm;
+
+        partial void OnReferenceAltitudeChanged(double value)
+        {
+            if (_suppressReferenceAltitudeConfirm) return;
+
+            var oldValue = InputModel.FundamentalInput.ReferenceAltitude;
+            if (oldValue == value) return;
+
+            // 解析結果・要素分割があればユーザーに確認（キャンセルなら値を戻す）
+            if (!_mainWindowViewModel.ConfirmResetAllForGeometryChange("Z=0 の標高の変更"))
+            {
+                _suppressReferenceAltitudeConfirm = true;
+                try { ReferenceAltitude = oldValue; }
+                finally { _suppressReferenceAltitudeConfirm = false; }
+                return;
+            }
+
+            var delta = value - oldValue;
+
+            _undoManager.PushAction(
+                () => {
+                    // Undo: ReferenceAltitude を戻し、地盤 Z を逆方向にシフト
+                    InputModel.FundamentalInput.ReferenceAltitude = oldValue;
+                    InputModel.ShiftGroundZByDelta(+delta);
+                },
+                () => {
+                    // Redo: ReferenceAltitude を進め、地盤 Z をシフト
+                    InputModel.FundamentalInput.ReferenceAltitude = value;
+                    InputModel.ShiftGroundZByDelta(-delta);
+                },
+                "基準標高変更"
+            );
+
+            // 即時適用: 標高（絶対）は不変、ReferenceAltitude が変わった分だけ地盤 Z を逆方向にシフト
+            InputModel.FundamentalInput.ReferenceAltitude = value;
+            InputModel.ShiftGroundZByDelta(-delta);
+        }
+
+        [ObservableProperty]
         private string _projectNo;
 
         partial void OnProjectNoChanged(string value)
@@ -69,6 +112,9 @@ namespace PileDesign.ViewModels
 
         partial void OnSeismicGradeChanged(string value)
         {
+            // 性能グレード変更は解析自体（変位・応力）には影響せず、
+            // 検定（NM 曲線の選択：損傷限界 / 安全限界）の規則だけが変わるため、
+            // 解析結果の削除は行わない（次回の検定で自動的に新しいルールが適用される）。
             var oldValue = InputModel.FundamentalInput.SeismicGrade;
 
             _undoManager.PushAction(
@@ -108,6 +154,7 @@ namespace PileDesign.ViewModels
             PrevFundamentalInput = InputModel.FundamentalInput.ShallowCopy();
 
             RefLevel = InputModel.FundamentalInput.RefLevel;
+            ReferenceAltitude = InputModel.FundamentalInput.ReferenceAltitude;
             ProjectNo = InputModel.FundamentalInput.ProjectNo;
             ProjectName = InputModel.FundamentalInput.ProjectName;
             Point3D0 = InputModel.FundamentalInput.Point3D0;
@@ -146,6 +193,9 @@ namespace PileDesign.ViewModels
             {
                 case nameof(FundamentalInput.RefLevel):
                     RefLevel = InputModel.FundamentalInput.RefLevel;
+                    break;
+                case nameof(FundamentalInput.ReferenceAltitude):
+                    ReferenceAltitude = InputModel.FundamentalInput.ReferenceAltitude;
                     break;
                 case nameof(FundamentalInput.ProjectNo):
                     ProjectNo = InputModel.FundamentalInput.ProjectNo;
