@@ -202,7 +202,11 @@ namespace PileDesign.Views
                     UpdateSelectedNodesAndElements3D(); // 選択要素も描画
                     if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
                     UpdateCanvasCube();
-                    viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, viewModel.PileStrokeThickness, viewModel.SoilStrokeThickness);
+                    // 操作中のストローク幅を 60% に縮小 (ピクセル数 ∝ thickness なのでラスタライズ高速化)
+                    // EndViewInteraction の最終フル描画で元値に戻る
+                    double pileTh = _isViewInteracting ? viewModel.PileStrokeThickness * 0.6 : viewModel.PileStrokeThickness;
+                    double soilTh = _isViewInteracting ? viewModel.SoilStrokeThickness * 0.6 : viewModel.SoilStrokeThickness;
+                    viewModel.CanvasGeometry.DrawAllPaths(Canvas3DLayout, pileTh, soilTh);
                     return;
                 }
 
