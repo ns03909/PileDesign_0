@@ -1223,9 +1223,10 @@ namespace PileDesign.FEM
             //   解決策: 先に Node 一覧を DeepCopy してマップを構築し、他要素の Node 参照を
             //   マップ経由で fixup する。
 
-            // ---- Step 1: Node コピーと参照マップ構築 ----
-            var nodeMap = new Dictionary<Node, Node>(ReferenceEqualityComparer.Instance);
-            var nodes = new List<Node>(this.Nodes.Count);
+            // ---- Step 1: Node コピーと参照マップ構築 (capacity hint で rehash 回避) ----
+            int nodeCount = this.Nodes.Count;
+            var nodeMap = new Dictionary<Node, Node>(nodeCount, ReferenceEqualityComparer.Instance);
+            var nodes = new List<Node>(nodeCount);
             foreach (var n in this.Nodes)
             {
                 var nc = n.DeepCopy();
@@ -1235,27 +1236,35 @@ namespace PileDesign.FEM
 
             // ---- Step 2: コピー済 Node の MasterNodes[] を新 Node 群へ fixup ----
             // (Node.DeepCopy は MasterNodes 配列をシャローコピーし元インスタンスを指したままになる)
+            // 全 Node が nodeMap に登録された後でないと fixup できないため別ループ。
+            // ローカル変数化 + indexer 1 回化で Dictionary lookup を半減。
             foreach (var n in this.Nodes)
             {
                 var nc = nodeMap[n];
+                var srcMasters = n.MasterNodes;
+                var dstMasters = nc.MasterNodes;
                 for (int d = 0; d < 6; d++)
                 {
-                    var oldMaster = n.MasterNodes[d];
+                    var oldMaster = srcMasters[d];
                     if (oldMaster != null && nodeMap.TryGetValue(oldMaster, out var newMaster))
-                        nc.MasterNodes[d] = newMaster;
+                        dstMasters[d] = newMaster;
                 }
             }
 
             // ---- Step 3: 要素コピー + NodeI/J 参照 fixup ----
+            // 並行して Step 6 用の要素マップも構築 (Step 6 で再 iterate を回避)
             Node MapNode(Node n) => (n != null && nodeMap.TryGetValue(n, out var nn)) ? nn : n;
 
-            var beams = new List<Beam>(this.Beams.Count);
+            int beamCount = this.Beams.Count;
+            var beams = new List<Beam>(beamCount);
+            var beamMap = new Dictionary<Beam, Beam>(beamCount, ReferenceEqualityComparer.Instance);
             foreach (var b in this.Beams)
             {
                 var bc = b.DeepCopy();
                 bc.NodeI = MapNode(b.NodeI);
                 bc.NodeJ = MapNode(b.NodeJ);
                 beams.Add(bc);
+                beamMap[b] = bc;
             }
 
             // DummyBeam: NodeI/J は get only なので、DeepCopy を回避してコンストラクタに new Node を渡す
@@ -1280,29 +1289,37 @@ namespace PileDesign.FEM
                 rigidBodies.Add(rbc);
             }
 
-            var horizontalSoilSprings = new List<HorizontalSoilSpring>(this.HorizontalSoilSprings.Count);
+            int hsCount = this.HorizontalSoilSprings.Count;
+            var horizontalSoilSprings = new List<HorizontalSoilSpring>(hsCount);
+            // hsSpringMap は PenaltySprings のぶん余裕を見て確保
+            int hsMapCapacity = hsCount + (this.PenaltySprings?.Count ?? 0);
+            var hsSpringMap = new Dictionary<HorizontalSoilSpring, HorizontalSoilSpring>(hsMapCapacity, ReferenceEqualityComparer.Instance);
             foreach (var s in this.HorizontalSoilSprings)
             {
                 var sc = s.DeepCopy();
                 sc.NodeI = MapNode(s.NodeI);
                 sc.NodeJ = MapNode(s.NodeJ);
                 horizontalSoilSprings.Add(sc);
+                hsSpringMap[s] = sc;
             }
 
-            var rotationalSprings = new List<RotationalSpring>(this.RotationalSprings.Count);
+            int rsCount = this.RotationalSprings.Count;
+            var rotationalSprings = new List<RotationalSpring>(rsCount);
+            var rsSpringMap = new Dictionary<RotationalSpring, RotationalSpring>(rsCount, ReferenceEqualityComparer.Instance);
             foreach (var rs in this.RotationalSprings)
             {
                 var rsc = rs.DeepCopy();
                 rsc.NodeI = MapNode(rs.NodeI);
                 rsc.NodeJ = MapNode(rs.NodeJ);
                 rotationalSprings.Add(rsc);
+                rsSpringMap[rs] = rsc;
             }
 
             // ここでコンストラクタを呼ぶ時点で MasterNodes は新 Node 群を指しているため、
             // ResolveConstraintChains が正しい ResolvedDofMap を構築する
             var copy = new AnaModel(_inputModel, nodes, beams, dummyBeams, rigidBodies, horizontalSoilSprings, rotationalSprings);
 
-            // PenaltySprings
+            // PenaltySprings (Step 6 で hsSpringMap を再利用するため、ここで map 登録も同時に行う)
             if (this.PenaltySprings != null)
             {
                 var psList = new List<HorizontalSoilSpring>(this.PenaltySprings.Count);
@@ -1312,6 +1329,7 @@ namespace PileDesign.FEM
                     pc.NodeI = MapNode(p.NodeI);
                     pc.NodeJ = MapNode(p.NodeJ);
                     psList.Add(pc);
+                    hsSpringMap[p] = pc;
                 }
                 copy.PenaltySprings = psList;
             }
@@ -1334,23 +1352,8 @@ namespace PileDesign.FEM
             // そこに格納されている Node / Spring / Beam 参照 (元インスタンス) を new インスタンス群へ
             // 付け替えるスナップショットを caseModel 専用に持たせる。
             var snap = new CaseLocalSnapshot();
-
-            // Spring / Beam の reference → reference マップを構築 (Node と同様の fixup)
-            var hsSpringMap = new Dictionary<HorizontalSoilSpring, HorizontalSoilSpring>(ReferenceEqualityComparer.Instance);
-            for (int i = 0; i < this.HorizontalSoilSprings.Count; i++)
-                hsSpringMap[this.HorizontalSoilSprings[i]] = horizontalSoilSprings[i];
-            if (this.PenaltySprings != null && copy.PenaltySprings != null)
-            {
-                int n = Math.Min(this.PenaltySprings.Count, copy.PenaltySprings.Count);
-                for (int i = 0; i < n; i++)
-                    hsSpringMap[this.PenaltySprings[i]] = copy.PenaltySprings[i];
-            }
-            var rsSpringMap = new Dictionary<RotationalSpring, RotationalSpring>(ReferenceEqualityComparer.Instance);
-            for (int i = 0; i < this.RotationalSprings.Count; i++)
-                rsSpringMap[this.RotationalSprings[i]] = rotationalSprings[i];
-            var beamMap = new Dictionary<Beam, Beam>(ReferenceEqualityComparer.Instance);
-            for (int i = 0; i < this.Beams.Count; i++)
-                beamMap[this.Beams[i]] = beams[i];
+            // beamMap / hsSpringMap / rsSpringMap は Step 3 の要素ループ内で構築済み
+            // (旧実装ではここで再 iterate して構築していたが冗長のため削除)
 
             if (_inputModel?.PileLayoutItems != null)
             {
