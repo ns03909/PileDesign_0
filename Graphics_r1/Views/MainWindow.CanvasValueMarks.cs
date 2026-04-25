@@ -344,12 +344,25 @@ namespace PileDesign.Views
 
         private Image _textLayerImage;
 
+        // 直前のフレームでテキスト層が空だったかを記憶 (連続して空フレームを描く時に
+        // RenderTargetBitmap の確保を避けるため)。
+        private bool _textLayerEmpty = true;
+
         private void RenderTextBlocksWithDrawingVisual()
         {
             if (Canvas3DLayout == null)
                 return;
             if ((int)Canvas3DLayout.ActualWidth > 0 && (int)Canvas3DLayout.ActualHeight > 0)
             {
+                // テキストが空の場合: 既に空状態ならスキップ。1 度だけクリアして空状態を記録。
+                if (TextBlockInfos.Count == 0)
+                {
+                    if (_textLayerEmpty) return;
+                    if (_textLayerImage != null) _textLayerImage.Source = null;
+                    _textLayerEmpty = true;
+                    return;
+                }
+
                 DrawingVisual drawingVisual = new();
                 using (DrawingContext dc = drawingVisual.RenderOpen())
                 {
@@ -393,6 +406,7 @@ namespace PileDesign.Views
                 }
                 _textLayerImage.Source = renderBitmap;
 
+                _textLayerEmpty = false;
                 TextBlockInfos.Clear();
             }
         }

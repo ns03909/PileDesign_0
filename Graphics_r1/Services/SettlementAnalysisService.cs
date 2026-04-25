@@ -3,6 +3,7 @@ using PileDesign.Models.InputData;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace PileDesign.Services
@@ -195,18 +196,27 @@ namespace PileDesign.Services
         }
 
         /// <summary>
-        /// 各杭位置での沈下量を計算
+        /// 各杭位置での沈下量を計算 (杭ごと独立 — 並列化)
         /// </summary>
         private void CalculatePileSettlements(
             ObservableCollection<PileLayoutDataItem> pileLayoutItems,
             ObservableCollection<RectLoad> rectLoads,
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers)
         {
-            foreach (PileLayoutDataItem pileLayoutDataItem in pileLayoutItems)
+            // 結果は double 配列に書き出し、UI スレッドで PileLayoutDataItem に反映
+            int n = pileLayoutItems.Count;
+            var pilesArr = pileLayoutItems.ToArray();
+            var settlementsMm = new double[n];
+
+            Parallel.For(0, n, i =>
             {
-                Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
-                pileLayoutDataItem.GroupPileSettlement = Steinnbrener.CalcSettlement(
-                    point, rectLoads, settlementSoilLayers) * 1000;
+                Point point = new() { X = pilesArr[i].Point3D.X, Y = pilesArr[i].Point3D.Y };
+                settlementsMm[i] = Steinnbrener.CalcSettlement(point, rectLoads, settlementSoilLayers) * 1000;
+            });
+
+            for (int i = 0; i < n; i++)
+            {
+                pilesArr[i].GroupPileSettlement = settlementsMm[i];
             }
         }
 
@@ -219,25 +229,36 @@ namespace PileDesign.Services
             ObservableCollection<RectLoad> rectLoads,
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers)
         {
-            var settlementGridData = new ObservableCollection<SettlementGridDataItem>();
+            // グリッド点ごとの計算は独立 (Steinnbrener.CalcSettlement は static で外部状態を変更しない)。
+            // 30×30 グリッド × 90 矩形荷重 × 10 層程度になると ~1M Steinbrenner 呼び出しになるため並列化。
+            int nx = xs.Count;
+            int ny = ys.Count;
+            var xArray = xs.ToArray();
+            var yArray = ys.ToArray();
+            var settlementsM = new double[nx * ny];
 
-            foreach (var x in xs)
+            Parallel.For(0, nx * ny, idx =>
             {
-                foreach (var y in ys)
-                {
-                    Point point = new() { X = x, Y = y };
-                    var settlement = Steinnbrener.CalcSettlement(
-                        point, rectLoads, settlementSoilLayers) * 1000;
+                int ix = idx / ny;
+                int iy = idx % ny;
+                Point point = new() { X = xArray[ix], Y = yArray[iy] };
+                settlementsM[idx] = Steinnbrener.CalcSettlement(point, rectLoads, settlementSoilLayers) * 1000;
+            });
 
+            // ObservableCollection は thread-safe ではないため UI スレッドで構築
+            var settlementGridData = new ObservableCollection<SettlementGridDataItem>();
+            for (int ix = 0; ix < nx; ix++)
+            {
+                for (int iy = 0; iy < ny; iy++)
+                {
                     settlementGridData.Add(new SettlementGridDataItem
                     {
-                        X = x,
-                        Y = y,
-                        Settlement = settlement
+                        X = xArray[ix],
+                        Y = yArray[iy],
+                        Settlement = settlementsM[ix * ny + iy]
                     });
                 }
             }
-
             return settlementGridData;
         }
     }

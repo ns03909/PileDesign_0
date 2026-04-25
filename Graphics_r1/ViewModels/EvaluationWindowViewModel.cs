@@ -4,10 +4,12 @@ using Microsoft.Win32;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace PileDesign.ViewModels
@@ -109,8 +111,9 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // NM曲線キャッシュ: (PileBodyNo, SegmentIndex, factored, isDamageLimit) → (Ns, Ms)
-            var nmCache = new Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)>();
+            // NM曲線キャッシュ: (PileBodyNo, SegmentIndex, factored, isDamageLimit, level) → (Ns, Ms)
+            // Parallel.ForEach から共有アクセスするため ConcurrentDictionary を使用
+            var nmCache = new ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)>();
 
             // 全ての解析結果の組み合わせ（LoadCase, LoadCombination, IsLiquefaction）を取得
             var uniqueCombinations = model.AnalysisStepResults
@@ -179,7 +182,7 @@ namespace PileDesign.ViewModels
         private (int ng, int ok) EvaluateLevel1(StringBuilder sb, AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
-            Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
+            ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             List<AnalysisStepResult> results, bool factored)
         {
             int ngCount = 0, okCount = 0;
@@ -221,7 +224,7 @@ namespace PileDesign.ViewModels
         private (int ng, int ok) EvaluateLevel2(StringBuilder sb, AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
-            Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
+            ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             List<AnalysisStepResult> results, bool factored, string seismicGrade)
         {
             int ngCount = 0, okCount = 0;
@@ -263,19 +266,28 @@ namespace PileDesign.ViewModels
         private (int ng, int ok) CheckMPhiLimitForBeams(StringBuilder sb, AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
-            Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
+            ConcurrentDictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             AnalysisStepResult stepResult, bool factored, bool isDamageLimit,
             string lcName, string combName, string liqLabel)
         {
-            int ngCount = 0, okCount = 0;
             string limitName = isDamageLimit ? "損傷限界" : "安全限界";
             bool showNg = DisplayFilter == 0 || DisplayFilter == 2;
             bool showOk = DisplayFilter == 1 || DisplayFilter == 2;
 
-            foreach (var beam in model.Beams)
+            // Beam ごとに独立。並列で (ngLocal, okLocal, message) を produce、最後に順序通り集約
+            var beamsArr = model.Beams.ToArray();
+            var perBeamResults = new (int ng, int ok, string text)[beamsArr.Length];
+
+            Parallel.For(0, beamsArr.Length, idx =>
             {
+                var beam = beamsArr[idx];
+                int ngL = 0, okL = 0;
+                var msg = new StringBuilder();
+
                 if (beam.PileBodyNo is not int pb || beam.SegmentIndex is not int seg)
-                    continue;
+                {
+                    perBeamResults[idx] = (0, 0, ""); return;
+                }
 
                 // BeamResultを検索
                 var result = beam.BeamResults?.FirstOrDefault(r =>
@@ -284,13 +296,13 @@ namespace PileDesign.ViewModels
                     (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
-                if (result?.CumulativeForce == null) continue;
+                if (result?.CumulativeForce == null) { perBeamResults[idx] = (0, 0, ""); return; }
 
                 // SoilPileからPileSectionを取得
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;
-                if (soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count) continue;
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perBeamResults[idx] = (0, 0, ""); return; }
+                if (soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count) { perBeamResults[idx] = (0, 0, ""); return; }
                 var section = soilPile.PileBodySegments[seg].PileSection;
-                if (section == null) continue;
+                if (section == null) { perBeamResults[idx] = (0, 0, ""); return; }
 
                 // 軸力: 荷重ケースに応じたユーザー入力値 (kN)
                 double axialN_kN = 0.0;
@@ -309,19 +321,15 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                // NM相関曲線をキャッシュから取得（レベルも含める）
+                // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
                 var cacheKey = (pb, seg, factored, isDamageLimit, loadCaseLevel);
-                if (!nmCache.TryGetValue(cacheKey, out var nmCurve))
-                {
-                    nmCurve = GetNMCurve(section, factored, isDamageLimit, loadCaseLevel);
-                    nmCache[cacheKey] = nmCurve;
-                }
-                if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2) continue;
+                var nmCurve = nmCache.GetOrAdd(cacheKey, _ => GetNMCurve(section, factored, isDamageLimit, loadCaseLevel));
+                if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2) { perBeamResults[idx] = (0, 0, ""); return; }
 
                 // NM相関曲線から許容モーメントを補間
                 double allowableM = InterpolateAllowableMoment(nmCurve.Ns, nmCurve.Ms, axialN_kN);
-                if (allowableM <= 0) continue;
+                if (allowableM <= 0) { perBeamResults[idx] = (0, 0, ""); return; }
 
                 // i端モーメント |M| = √(Myi² + Mzi²)
                 double mI = Math.Sqrt(
@@ -336,50 +344,60 @@ namespace PileDesign.ViewModels
                 // i端チェック
                 if (mI > allowableM)
                 {
-                    ngCount++;
+                    ngL++;
                     if (showNg)
                     {
-                        sb.AppendLine($"  [NG] {limitName}超過（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mI:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        sb.AppendLine();
+                        msg.AppendLine($"  [NG] {limitName}超過（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       M={mI:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        msg.AppendLine();
                     }
                 }
                 else
                 {
-                    okCount++;
+                    okL++;
                     if (showOk)
                     {
-                        sb.AppendLine($"  [OK] {limitName}（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mI:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        sb.AppendLine();
+                        msg.AppendLine($"  [OK] {limitName}（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       M={mI:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        msg.AppendLine();
                     }
                 }
 
                 // j端チェック
                 if (mJ > allowableM)
                 {
-                    ngCount++;
+                    ngL++;
                     if (showNg)
                     {
-                        sb.AppendLine($"  [NG] {limitName}超過（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mJ:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        sb.AppendLine();
+                        msg.AppendLine($"  [NG] {limitName}超過（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       M={mJ:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        msg.AppendLine();
                     }
                 }
                 else
                 {
-                    okCount++;
+                    okL++;
                     if (showOk)
                     {
-                        sb.AppendLine($"  [OK] {limitName}（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
-                        sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mJ:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
-                        sb.AppendLine();
+                        msg.AppendLine($"  [OK] {limitName}（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       M={mJ:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        msg.AppendLine();
                     }
                 }
+                perBeamResults[idx] = (ngL, okL, msg.ToString());
+            });
+
+            // 順序通り集約
+            int ngCount = 0, okCount = 0;
+            for (int i = 0; i < perBeamResults.Length; i++)
+            {
+                ngCount += perBeamResults[i].ng;
+                okCount += perBeamResults[i].ok;
+                if (perBeamResults[i].text.Length > 0) sb.Append(perBeamResults[i].text);
             }
             return (ngCount, okCount);
         }
@@ -392,23 +410,29 @@ namespace PileDesign.ViewModels
             AnalysisStepResult stepResult,
             string lcName, string combName, string liqLabel)
         {
-            int ngCount = 0, okCount = 0;
             const double thetaLimit = 1.0 / 100.0; // 1/100 rad
             bool showNg = DisplayFilter == 0 || DisplayFilter == 2;
             bool showOk = DisplayFilter == 1 || DisplayFilter == 2;
 
-            foreach (var rs in model.RotationalSprings)
+            var rsArr = model.RotationalSprings.ToArray();
+            var perItem = new (int ng, int ok, string text)[rsArr.Length];
+
+            Parallel.For(0, rsArr.Length, idx =>
             {
+                var rs = rsArr[idx];
+                int ngL = 0, okL = 0;
+                var msg = new StringBuilder();
+
                 // 場所打ちRC杭かどうかを判定
                 int pb = (rs.PileBodyNo is int v && v > 0) ? v : 0;
-                if (pb <= 0) continue;
+                if (pb <= 0) { perItem[idx] = (0, 0, ""); return; }
 
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;
-                if (soilPile.PileBodySegments == null || soilPile.PileBodySegments.Count == 0) continue;
+                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perItem[idx] = (0, 0, ""); return; }
+                if (soilPile.PileBodySegments == null || soilPile.PileBodySegments.Count == 0) { perItem[idx] = (0, 0, ""); return; }
 
                 var section = soilPile.PileBodySegments[0].PileSection;
-                if (section == null) continue;
-                if (section.PileBodyType != "場所打ち鉄筋コンクリート杭") continue;
+                if (section == null) { perItem[idx] = (0, 0, ""); return; }
+                if (section.PileBodyType != "場所打ち鉄筋コンクリート杭") { perItem[idx] = (0, 0, ""); return; }
 
                 // RotationalSpringResultを検索
                 var rsResult = rs.RotationalSpringResults?.FirstOrDefault(r =>
@@ -417,7 +441,7 @@ namespace PileDesign.ViewModels
                     (stepResult.LoadCase == null || r.LoadCase?.LoadName == stepResult.LoadCase.LoadName) &&
                     (stepResult.LoadCombination == null || r.LoadCombination?.Name == stepResult.LoadCombination.Name));
 
-                if (rsResult?.CumulativeDisp == null) continue;
+                if (rsResult?.CumulativeDisp == null) { perItem[idx] = (0, 0, ""); return; }
 
                 // CombinedXY: θ = √(dRx² + dRy²)
                 double dRx = rsResult.CumulativeDisp.Rxi - rsResult.CumulativeDisp.Rxj;
@@ -426,26 +450,35 @@ namespace PileDesign.ViewModels
 
                 if (theta > thetaLimit)
                 {
-                    ngCount++;
+                    ngL++;
                     if (showNg)
                     {
-                        sb.AppendLine($"  [NG] θ超過（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
-                        sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       θ={theta:F5} rad > {thetaLimit:F2} rad");
-                        sb.AppendLine();
+                        msg.AppendLine($"  [NG] θ超過（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       θ={theta:F5} rad > {thetaLimit:F2} rad");
+                        msg.AppendLine();
                     }
                 }
                 else
                 {
-                    okCount++;
+                    okL++;
                     if (showOk)
                     {
-                        sb.AppendLine($"  [OK] θ（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
-                        sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       θ={theta:F5} rad ≤ {thetaLimit:F2} rad");
-                        sb.AppendLine();
+                        msg.AppendLine($"  [OK] θ（場所打ちRC杭）: {rs.Name}  杭配置No.{pb}");
+                        msg.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
+                        msg.AppendLine($"       θ={theta:F5} rad ≤ {thetaLimit:F2} rad");
+                        msg.AppendLine();
                     }
                 }
+                perItem[idx] = (ngL, okL, msg.ToString());
+            });
+
+            int ngCount = 0, okCount = 0;
+            for (int i = 0; i < perItem.Length; i++)
+            {
+                ngCount += perItem[i].ng;
+                okCount += perItem[i].ok;
+                if (perItem[i].text.Length > 0) sb.Append(perItem[i].text);
             }
             return (ngCount, okCount);
         }
