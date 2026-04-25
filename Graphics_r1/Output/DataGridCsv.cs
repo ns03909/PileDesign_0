@@ -165,7 +165,11 @@ namespace PileDesign.Output
                     return StripThousandSeparator(string.Format(binding.StringFormat, value));
                 return StripThousandSeparator(value.ToString() ?? string.Empty);
             }
-            catch { return string.Empty; }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DataGridCsv] Binding '{path}' eval failed: {ex.GetType().Name}: {ex.Message}");
+                return string.Empty;
+            }
         }
 
         private static string EvaluateMultiBinding(MultiBinding multi, object item)
@@ -189,7 +193,10 @@ namespace PileDesign.Output
                     return StripThousandSeparator(converted.ToString() ?? string.Empty);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DataGridCsv] MultiBinding converter '{multi.Converter?.GetType().Name ?? "<null>"}' failed: {ex.GetType().Name}: {ex.Message}");
+            }
             return string.Empty;
         }
 
@@ -206,7 +213,11 @@ namespace PileDesign.Output
                 }
                 return ResolveDottedPath(item, path);
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DataGridCsv] Path '{path}' resolve failed: {ex.GetType().Name}: {ex.Message}");
+                return null;
+            }
         }
 
         private static object? ResolveDottedPath(object? root, string path)
