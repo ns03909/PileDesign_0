@@ -1,7 +1,9 @@
 ﻿
 using Microsoft.Win32;
+using PileDesign;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -126,37 +128,99 @@ namespace PileDesign.Output
             if (column.GetCellContent(item) is TextBlock tb)
                 return StripThousandSeparator(tb.Text);
 
-            // バインディングパスからプロパティ値を直接取得（仮想化対応）
-            Binding? binding = null;
+            // バインディングを取得（仮想化対応）
+            BindingBase? bindingBase = null;
             if (column is DataGridBoundColumn boundColumn)
-                binding = boundColumn.Binding as Binding;
-            else if (column is DataGridTemplateColumn templateColumn)
+                bindingBase = boundColumn.Binding;
+            else if (column is DataGridTemplateColumn)
             {
                 // テンプレート列はバインディングが取れないのでスキップ
                 return string.Empty;
             }
 
-            if (binding?.Path?.Path is string path && !string.IsNullOrEmpty(path))
+            if (bindingBase is Binding binding)
             {
-                try
-                {
-                    var prop = item.GetType().GetProperty(path);
-                    if (prop != null)
-                    {
-                        var value = prop.GetValue(item);
-                        if (value == null) return string.Empty;
+                return EvaluateSingleBinding(binding, item);
+            }
+            if (bindingBase is MultiBinding multi)
+            {
+                return EvaluateMultiBinding(multi, item);
+            }
+            return string.Empty;
+        }
 
-                        // StringFormatがある場合は適用
-                        if (!string.IsNullOrEmpty(binding.StringFormat))
-                            return StripThousandSeparator(string.Format(binding.StringFormat, value));
+        private static string EvaluateSingleBinding(Binding binding, object item)
+        {
+            if (binding.Path?.Path is not string path || string.IsNullOrEmpty(path))
+                return string.Empty;
 
-                        return StripThousandSeparator(value.ToString() ?? string.Empty);
-                    }
-                }
-                catch { }
+            try
+            {
+                var prop = item.GetType().GetProperty(path);
+                if (prop == null) return string.Empty;
+                var value = prop.GetValue(item);
+                if (value == null) return string.Empty;
+
+                if (!string.IsNullOrEmpty(binding.StringFormat))
+                    return StripThousandSeparator(string.Format(binding.StringFormat, value));
+                return StripThousandSeparator(value.ToString() ?? string.Empty);
+            }
+            catch { return string.Empty; }
+        }
+
+        private static string EvaluateMultiBinding(MultiBinding multi, object item)
+        {
+            // 各子 Binding を解決: item の直接プロパティ または RelativeSource Window 経由 (App.InputModel)
+            var values = new object?[multi.Bindings.Count];
+            for (int i = 0; i < multi.Bindings.Count; i++)
+            {
+                if (multi.Bindings[i] is not Binding b || b.Path?.Path is not string p) { values[i] = null; continue; }
+                values[i] = ResolveBindingPath(b, p, item);
             }
 
+            try
+            {
+                if (multi.Converter is IMultiValueConverter conv)
+                {
+                    var converted = conv.Convert(values, typeof(string), multi.ConverterParameter, CultureInfo.CurrentCulture);
+                    if (converted == null) return string.Empty;
+                    if (!string.IsNullOrEmpty(multi.StringFormat))
+                        return StripThousandSeparator(string.Format(multi.StringFormat, converted));
+                    return StripThousandSeparator(converted.ToString() ?? string.Empty);
+                }
+            }
+            catch { }
             return string.Empty;
+        }
+
+        private static object? ResolveBindingPath(Binding b, string path, object item)
+        {
+            try
+            {
+                // RelativeSource Window 経由の DataContext.* パス → App.InputModel ベースで解決
+                if (b.RelativeSource != null && path.StartsWith("DataContext.", StringComparison.Ordinal))
+                {
+                    object? root = App.InputModel;
+                    if (root == null) return null;
+                    return ResolveDottedPath(root, path["DataContext.".Length..]);
+                }
+                return ResolveDottedPath(item, path);
+            }
+            catch { return null; }
+        }
+
+        private static object? ResolveDottedPath(object? root, string path)
+        {
+            if (root == null) return null;
+            object? cur = root;
+            foreach (var segment in path.Split('.'))
+            {
+                if (cur == null) return null;
+                var prop = cur.GetType().GetProperty(segment);
+                if (prop == null) return null;
+                cur = prop.GetValue(cur);
+            }
+            return cur;
         }
     }
 }
