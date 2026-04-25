@@ -163,6 +163,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[GroundExampleExport] エクスポート失敗: {ex.GetType().Name}: {ex.Message}");
             }
         }
 #endif

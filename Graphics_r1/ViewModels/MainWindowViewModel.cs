@@ -3719,9 +3719,6 @@ namespace PileDesign.ViewModels
             IsQuickHintVisible = true;
         }
 
-        // 再入防止フラグ（原子的に扱う）
-        private readonly int _isChangWindowOpeningFlag = 0;
-
         [RelayCommand]
         public void OpenChangWindow()
         {

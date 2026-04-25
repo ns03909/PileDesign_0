@@ -206,14 +206,14 @@ namespace PileDesign.ViewModels
                 _generateSoilPilesDebounceTimer?.Stop();
                 _generateSoilPilesDebounceTimer = null;
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] _generateSoilPilesDebounceTimer.Stop: {ex.GetType().Name}: {ex.Message}"); }
 
             try
             {
                 _updateWindowDebounceTimer?.Stop();
                 _updateWindowDebounceTimer = null;
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] _updateWindowDebounceTimer.Stop: {ex.GetType().Name}: {ex.Message}"); }
 
             try
             {
@@ -222,7 +222,7 @@ namespace PileDesign.ViewModels
                 _longOpCts?.Dispose();
                 _longOpCts = null;
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] _longOpCts.Cancel/Dispose: {ex.GetType().Name}: {ex.Message}"); }
 
             // イベントハンドラの解除
             try
@@ -233,7 +233,7 @@ namespace PileDesign.ViewModels
                     // CurrentInputModel 自体が GC されれば問題ないが、念のため参照をクリア。
                 }
             }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] CurrentInputModel cleanup: {ex.GetType().Name}: {ex.Message}"); }
 
             // Clear delegates to avoid leaks
             UpdateWindowAction = null;

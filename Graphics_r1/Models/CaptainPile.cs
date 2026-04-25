@@ -400,6 +400,7 @@ namespace PileDesign.Models
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[CaptainPile] CSV (square) 読み込み失敗: {ex.GetType().Name}: {ex.Message}");
                 }
             }
             string circlePath = Path.Combine(baseDir, "Models", "PileLibrary", "CaptainPileTensionBarPCD_circle.csv");
@@ -413,6 +414,7 @@ namespace PileDesign.Models
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[CaptainPile] CSV (circle) 読み込み失敗: {ex.GetType().Name}: {ex.Message}");
                 }
             }
             //CaptainPileTensionBarPCDsSquare = CaptainPileTensionBarPCDLoader.LoadFromCsv(squarePath);

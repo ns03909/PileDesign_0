@@ -260,7 +260,7 @@ namespace PileDesign.ViewModels
         // 解析制御モードが変位制御法かどうか
         public bool IsDisplacementControl
         {
-            get => _selectedAnalysisMode == AnalysisControlMode.DisplacementControl;
+            get => SelectedAnalysisMode == AnalysisControlMode.DisplacementControl;
             set
             {
                 SelectedAnalysisMode = value ? AnalysisControlMode.DisplacementControl : AnalysisControlMode.LoadControl;
@@ -321,12 +321,12 @@ namespace PileDesign.ViewModels
             var wpfToe = win.wpfPlotSettlementToe;
             if (wpf != null)
             {
-                wpf.Plot.Legend.IsVisible = _isSettlementLegendVisible;
+                wpf.Plot.Legend.IsVisible = IsSettlementLegendVisible;
                 wpf.Refresh();
             }
             if (wpfToe != null)
             {
-                wpfToe.Plot.Legend.IsVisible = _isSettlementLegendVisible;
+                wpfToe.Plot.Legend.IsVisible = IsSettlementLegendVisible;
                 wpfToe.Refresh();
             }
         }
@@ -639,8 +639,8 @@ namespace PileDesign.ViewModels
             ConfigurePlot(wpf, "荷重-杭頭沈下曲線", "杭頭沈下量(mm)", "荷重 (kN)");
             ConfigurePlot(wpfToe, "荷重-杭先端沈下曲線", "杭先端沈下量(mm)", "荷重 (kN)");
 
-            wpf.Plot.Legend.IsVisible = _isSettlementLegendVisible;
-            wpfToe.Plot.Legend.IsVisible = _isSettlementLegendVisible;
+            wpf.Plot.Legend.IsVisible = IsSettlementLegendVisible;
+            wpfToe.Plot.Legend.IsVisible = IsSettlementLegendVisible;
 
             // クロスヘアの初期化
             MyCrosshair_PileTopSettlement = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));

@@ -3278,7 +3278,8 @@ namespace PileDesign.Output
                 // Word 挿入
                 WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
 
-                try { if (File.Exists(tempFile)) File.Delete(tempFile); } catch { }
+                try { if (File.Exists(tempFile)) File.Delete(tempFile); }
+                catch (Exception delEx) { System.Diagnostics.Debug.WriteLine($"[WordDocument] tempFile delete failed: {delEx.GetType().Name}: {delEx.Message}"); }
             }
             catch (Exception ex)
             {
@@ -5748,25 +5749,19 @@ diameterSelector,
         }
 
 
-        readonly string a001 = "基礎部材の強度と変形性能";
-        readonly string a002 = "液状化危険度、地盤変形量と液状化程度の予測";
-        readonly string a003 = "沈下";
-
-        readonly string a0031 = "単杭の沈下：荷重伝達解析による荷重-沈下量関係の評価（「基礎指針'19」 6.3節、1(2)）を行う。";
-        readonly string a0032 = "群杭の沈下:杭ごとに等価荷重面を設定し、杭先端以深の地盤の圧縮量（沈下量）を直接基礎と" +
-            "同じくスタインブレナーの近似解（多層地盤の場合（「基礎指針'19」 5.3節、1(3)(iii)））を用いて求める。";
-        readonly string a004 = "鉛直支持力および引抜き抵抗力：";
-        readonly string a005 = "水平抵抗：「基礎指針'19」6.6節による。";
-
-
-        readonly string b001 = "場所打ちコンクリート杭の曲げモーメントと曲率の関係";
-
-        readonly string b002 = "断面の平面保持を仮定して、鉄筋とコンクリートの応力度-ひずみ度関係をモデル化し、断面の曲げ解析を行って、M-φ関係を計算する。" +
-            "鉄筋の応力度-ひずみ度関係は、規格降伏店を用いたバイリニアとする。コンクリートの応力度-ひずみ度関係にはe関数法を用いる";
-        readonly string b003 = "a.曲げひび割れモーメントおよび曲げひび割れ時の曲率##は以下による。";
-        readonly string b004 = "b.杭の主筋降伏発生時の曲げモーメント##とその時の曲率##は、断面の曲げ解析による。" +
-            "ただし、最外縁の杭主筋が引張降伏するとき（杭の主筋降伏発生時）の曲げモーメントと曲率とする。";
-        readonly string b005 = "c.安全限界曲げモーメント時の曲率";
+        // 仕様メモ (将来の docx セクション本文に組み込む予定の説明文。現状未使用):
+        //   a001: 基礎部材の強度と変形性能
+        //   a002: 液状化危険度、地盤変形量と液状化程度の予測
+        //   a003: 沈下
+        //   a0031: 単杭の沈下 — 荷重伝達解析による荷重-沈下量関係の評価
+        //   a0032: 群杭の沈下 — スタインブレナーの近似解 (多層地盤、基礎指針'19 5.3節 1(3)(iii))
+        //   a004: 鉛直支持力および引抜き抵抗力
+        //   a005: 水平抵抗 — 基礎指針'19 6.6節による
+        //   b001: 場所打ちコンクリート杭の曲げモーメントと曲率の関係
+        //   b002: 断面の平面保持仮定、鉄筋/コンクリート応力度-ひずみ度をモデル化
+        //   b003: 曲げひび割れモーメント・曲率
+        //   b004: 主筋降伏発生時のモーメント・曲率 (断面曲げ解析)
+        //   b005: 安全限界曲げモーメント時の曲率
 
 
 

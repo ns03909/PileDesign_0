@@ -2547,6 +2547,7 @@ namespace PileDesign.ViewModels
                                     }
                                     catch (Exception ex)
                                     {
+                                        System.Diagnostics.Debug.WriteLine($"[GraphViewModel] M-φ fallback 取得失敗: {ex.GetType().Name}: {ex.Message}");
                                     }
                                 }
                             }

@@ -1626,8 +1626,6 @@ namespace PileDesign.ViewModels
             //}
         }
 
-        private readonly bool initialSelection = true;
-
         public void GroundTextBox_LostFocus()
         {
             Update();

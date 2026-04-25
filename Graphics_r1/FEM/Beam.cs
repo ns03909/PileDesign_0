@@ -656,9 +656,6 @@ namespace PileDesign.FEM
             Curve = Vector<double>.Build.Dense(2, 0.0);
         }
 
-        // デバッグ用: ログ出力回数制限
-        private static int _getBeamResultLogCount = 0;
-
         // 梁要素の解析結果を取得する
         public BeamResult GetBeamResult(AnaModel anaModel, LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, int step = -1)
         {

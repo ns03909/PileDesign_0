@@ -754,6 +754,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[ChangViewModel.DrawGraphSafe] {ex.GetType().Name}: {ex.Message}");
             }
         }
 

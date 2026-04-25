@@ -88,7 +88,7 @@ namespace PileDesign.ViewModels
             }
 
             LogLines.Clear();
-            if (_selectedLogCategory != null && _logSources.TryGetValue(_selectedLogCategory, out var source))
+            if (SelectedLogCategory != null && _logSources.TryGetValue(SelectedLogCategory, out var source))
             {
                 foreach (var line in source) LogLines.Add(line);
                 StatusText = $"{LogLines.Count} log entries";

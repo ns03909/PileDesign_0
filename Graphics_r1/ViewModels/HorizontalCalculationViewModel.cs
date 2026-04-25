@@ -29,23 +29,27 @@ namespace PileDesign.ViewModels
             }
             catch (NotSupportedException nse)
             {
+                System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] BestProviders 不可 ({nse.Message}) → UseManaged フォールバック");
                 try
                 {
                     Control.UseManaged();
                 }
                 catch (Exception inner)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] UseManaged も失敗: {inner.GetType().Name}: {inner.Message}");
                 }
             }
             catch (Exception ex)
             {
                 // 想定外の例外も捕捉して管理実装にフォールバック
+                System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] 想定外 ({ex.GetType().Name}: {ex.Message}) → UseManaged フォールバック");
                 try
                 {
                     Control.UseManaged();
                 }
                 catch (Exception inner)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] UseManaged も失敗: {inner.GetType().Name}: {inner.Message}");
                 }
             }
 
@@ -1501,6 +1505,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[ExtractMPhiCurve] List プロパティ抽出失敗: {ex.GetType().Name}: {ex.Message}");
                 }
             }
 
