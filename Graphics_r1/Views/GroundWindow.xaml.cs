@@ -99,36 +99,46 @@ namespace PileDesign.Views
             // イベントを解除（1回だけ実行）
             ContentRendered -= GroundWindow_ContentRendered;
 
-            // さらに少し待って、すべてのコントロールが完全に初期化されるのを待つ
-            await System.Threading.Tasks.Task.Delay(50);
-
-            if (DataContext is GroundLayerViewModel viewModel)
+            try
             {
-                try
+                // さらに少し待って、すべてのコントロールが完全に初期化されるのを待つ
+                await System.Threading.Tasks.Task.Delay(50);
+
+                if (DataContext is GroundLayerViewModel viewModel)
                 {
-                    viewModel.Initialize();
-                }
-                catch (System.Runtime.InteropServices.COMException comEx) when (comEx.HResult == unchecked((int)0x80040206))
-                {
-                    // 初期化時の COMException は無視して再試行
-                    await System.Threading.Tasks.Task.Delay(100);
                     try
                     {
                         viewModel.Initialize();
                     }
-                    catch
+                    catch (System.Runtime.InteropServices.COMException comEx) when (comEx.HResult == unchecked((int)0x80040206))
                     {
-                        // 最終的に失敗しても続行
+                        // 初期化時の COMException は無視して再試行
+                        await System.Threading.Tasks.Task.Delay(100);
+                        try
+                        {
+                            viewModel.Initialize();
+                        }
+                        catch (Exception innerEx)
+                        {
+                            // 最終的に失敗しても続行
+                            System.Diagnostics.Debug.WriteLine($"[GroundWindow_ContentRendered] Initialize retry failed: {innerEx.GetType().Name}: {innerEx.Message}");
+                        }
                     }
-                }
 
-                // CSVエクスポートメニュー（兼・別ウィンドウで開くメニュー）を追加
-                PlotHelper.AddCsvExportMenu(wpfPlotNValue, "N値");
-                PlotHelper.AddCsvExportMenu(wpfPlotCu, "Cu");
-                PlotHelper.AddCsvExportMenu(wpfPlotVs, "Vs");
-                PlotHelper.AddCsvExportMenu(wpfPlotEs, "Es");
-                PlotHelper.AddCsvExportMenu(wpfPlotDisplacement, "地盤変位");
-                PlotHelper.AddCsvExportMenu(wpfPlotFL, "FL値");
+                    // CSVエクスポートメニュー（兼・別ウィンドウで開くメニュー）を追加
+                    PlotHelper.AddCsvExportMenu(wpfPlotNValue, "N値");
+                    PlotHelper.AddCsvExportMenu(wpfPlotCu, "Cu");
+                    PlotHelper.AddCsvExportMenu(wpfPlotVs, "Vs");
+                    PlotHelper.AddCsvExportMenu(wpfPlotEs, "Es");
+                    PlotHelper.AddCsvExportMenu(wpfPlotDisplacement, "地盤変位");
+                    PlotHelper.AddCsvExportMenu(wpfPlotFL, "FL値");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[GroundWindow_ContentRendered] {ex.GetType().Name}: {ex.Message}");
+                MessageBox.Show($"地盤ウィンドウの初期化でエラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

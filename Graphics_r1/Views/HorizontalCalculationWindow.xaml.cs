@@ -64,19 +64,28 @@ namespace PileDesign.Views
             if (_isClosingHandled) return;
             _isClosingHandled = true;  // 最初にフラグを立てて再入を防止
 
-            if (this.DataContext is HorizontalCalculationViewModel vm && vm.IsAnalysisRunning)
+            try
             {
-                // 解析中なら一旦閉じるのをキャンセルし、クリーンアップ後に再度閉じる
-                e.Cancel = true;
+                if (this.DataContext is HorizontalCalculationViewModel vm && vm.IsAnalysisRunning)
+                {
+                    // 解析中なら一旦閉じるのをキャンセルし、クリーンアップ後に再度閉じる
+                    e.Cancel = true;
 
-                // 解析をキャンセルして待機
-                await vm.CleanupAsync();
+                    // 解析をキャンセルして待機
+                    await vm.CleanupAsync();
 
-                // クリーンアップ完了後、ウィンドウを閉じる
-                // _isClosingHandledは既にtrueなので、再度Closingイベントが発生してもスキップされる
-                this.Close();
+                    // クリーンアップ完了後、ウィンドウを閉じる
+                    // _isClosingHandledは既にtrueなので、再度Closingイベントが発生してもスキップされる
+                    this.Close();
+                }
+                // 解析が実行中でない場合はそのまま閉じる（_isClosingHandledはtrueのまま）
             }
-            // 解析が実行中でない場合はそのまま閉じる（_isClosingHandledはtrueのまま）
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[HorizontalCalculationWindow_Closing] {ex.GetType().Name}: {ex.Message}");
+                MessageBox.Show($"ウィンドウ終了処理でエラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // ScrollToEnd の BeginInvoke coalesce 用フラグ (UI スレッドのみアクセスなので volatile 不要)
@@ -259,36 +268,45 @@ namespace PileDesign.Views
 
         private async void HorizontalCalculationWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // DataContext が ViewModel の場合はイベントを購読
-            if (this.DataContext is HorizontalCalculationViewModel vm)
+            try
             {
-                // イベントの多重購読を防ぐため、一度解除してから購読
-                vm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
-                vm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
+                // DataContext が ViewModel の場合はイベントを購読
+                if (this.DataContext is HorizontalCalculationViewModel vm)
+                {
+                    // イベントの多重購読を防ぐため、一度解除してから購読
+                    vm.RequestClearProgressAnimation -= Vm_RequestClearProgressAnimation;
+                    vm.RequestClearProgressAnimation += Vm_RequestClearProgressAnimation;
 
-                vm.RequestShowWarning -= OnRequestShowWarning;
-                vm.RequestShowWarning += OnRequestShowWarning;
+                    vm.RequestShowWarning -= OnRequestShowWarning;
+                    vm.RequestShowWarning += OnRequestShowWarning;
 
-                vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
-                vm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
-                // 既存ログがあれば初期表示 (通常は空)
-                PopulateLogTextBox(vm.CalculationLog);
+                    vm.CalculationLog.CollectionChanged -= CalculationLog_CollectionChanged;
+                    vm.CalculationLog.CollectionChanged += CalculationLog_CollectionChanged;
+                    // 既存ログがあれば初期表示 (通常は空)
+                    PopulateLogTextBox(vm.CalculationLog);
 
-                vm.RequestClose -= OnRequestClose;
-                vm.RequestClose += OnRequestClose;
+                    vm.RequestClose -= OnRequestClose;
+                    vm.RequestClose += OnRequestClose;
 
-                vm.RequestShowParallelMonitor -= OnRequestShowParallelMonitor;
-                vm.RequestShowParallelMonitor += OnRequestShowParallelMonitor;
-                vm.RequestHideParallelMonitor -= OnRequestHideParallelMonitor;
-                vm.RequestHideParallelMonitor += OnRequestHideParallelMonitor;
+                    vm.RequestShowParallelMonitor -= OnRequestShowParallelMonitor;
+                    vm.RequestShowParallelMonitor += OnRequestShowParallelMonitor;
+                    vm.RequestHideParallelMonitor -= OnRequestHideParallelMonitor;
+                    vm.RequestHideParallelMonitor += OnRequestHideParallelMonitor;
 
-                // ウィンドウ表示後にバックグラウンドでFEMモデルを作成
-                await vm.InitializeModelAsync();
+                    // ウィンドウ表示後にバックグラウンドでFEMモデルを作成
+                    await vm.InitializeModelAsync();
+                }
+                else
+                {
+                    // DataContext が後からセットされる可能性に備えて監視
+                    this.DataContextChanged += HorizontalCalculationWindow_DataContextChanged;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // DataContext が後からセットされる可能性に備えて監視
-                this.DataContextChanged += HorizontalCalculationWindow_DataContextChanged;
+                System.Diagnostics.Debug.WriteLine($"[HorizontalCalculationWindow_Loaded] {ex.GetType().Name}: {ex.Message}");
+                MessageBox.Show($"水平解析ウィンドウの初期化でエラーが発生しました: {ex.Message}",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
