@@ -8,6 +8,8 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
         Title="基礎梁入力" Height="650" Width="900"
+        MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
 

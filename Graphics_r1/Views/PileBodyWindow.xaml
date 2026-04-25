@@ -28,6 +28,7 @@
 
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
+        <conv:ZElevationConverter x:Key="ZElevationConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <conv:HeightToMaxHeightConverter x:Key="HeightToMaxHeightConverter" />
         <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
@@ -234,11 +235,13 @@
                                 Background="#62B0E2" Foreground="White"/>
                     </ToolBar>
 
-                    <common:EnhancedDataGrid x:Name="DataGridPileBody" Height="150" Width="500"
+                    <common:EnhancedDataGrid x:Name="DataGridPileBody" MinHeight="120" MaxHeight="240"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
                               Loaded="DataGrid_Loaded" AutoGenerateColumns="False"
                               CanUserAddRows="False" CanUserSortColumns="False"
                               ItemsSource="{Binding PileBody.PileBodySegments, UpdateSourceTrigger=LostFocus}"
-                              LoadingRow="DataGridPileBody_LoadingRow" HorizontalAlignment="Left"
+                              LoadingRow="DataGridPileBody_LoadingRow" HorizontalAlignment="Stretch"
                               CellEditEnding="DataGridPileBody_CellEditEnding"
                               CellStyle="{StaticResource CustomDataGridCellStyle}"
                               BeginningEdit="DataGrid_BeginningEdit"
@@ -599,15 +602,13 @@
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="地表Z" Width="50"/>
-                    <TextBlock Text="{Binding InputModel.FundamentalInput.RefLevel}"/>
                     <TextBlock Text="{Binding SelectedGroundInput.GroundTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}', UpdateSourceTrigger=LostFocus}" Width="50"/>
                     <TextBlock Text="m"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="杭頭Z" Width="50"/>
-                    <TextBlock Text="{Binding InputModel.FundamentalInput.RefLevel}"/>
-                    <TextBox Text="{Binding PileTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}" Width="50" 
+                    <TextBox Text="{Binding PileTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}" Width="50"
                              KeyDown="PileTopAltitude_KeyDown" 
                              PreviewKeyDown="TextBox_PreviewKeyDown"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
@@ -725,34 +726,58 @@
 
 
                         <TextBlock  Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2"
-                            Text="杭先端平均N値算定範囲上側レベル"/>
-                        <TextBox  Grid.Row="10" Grid.Column="2" 
-                             Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeUpperAltitude,
-                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-                        <TextBlock  Grid.Row="10" Grid.Column="3" 
+                            Text="平均N値算定範囲 上端" TextWrapping="Wrap"/>
+                        <StackPanel Grid.Row="10" Grid.Column="2" Orientation="Horizontal">
+                            <TextBlock Text="標高=" VerticalAlignment="Center"/>
+                            <TextBox Width="70" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                <TextBox.Text>
+                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                        <Binding Path="TemporarySoilPile.PileToeNValueAverageRangeUpperAltitude"/>
+                                        <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
+                                    </MultiBinding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            <TextBox Width="70" Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeUpperAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+                        <TextBlock  Grid.Row="10" Grid.Column="3"
                             Text="m"/>
 
 
                         <TextBlock  Grid.Row="11" Grid.Column="0" Grid.ColumnSpan="2"
-                            Text="杭先端レベル"/>
-                        <TextBox  Grid.Row="11" Grid.Column="2" 
-                             Text="{Binding TemporarySoilPile.PileBottomAltitude,
-                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-                        <TextBlock  Grid.Row="11" Grid.Column="3" 
+                            Text="杭先端" TextWrapping="Wrap"/>
+                        <StackPanel Grid.Row="11" Grid.Column="2" Orientation="Horizontal">
+                            <TextBlock Text="標高=" VerticalAlignment="Center"/>
+                            <TextBox Width="70" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                <TextBox.Text>
+                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                        <Binding Path="TemporarySoilPile.PileBottomAltitude"/>
+                                        <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
+                                    </MultiBinding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            <TextBox Width="70" Text="{Binding TemporarySoilPile.PileBottomAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+                        <TextBlock  Grid.Row="11" Grid.Column="3"
                             Text="m"/>
 
                         <TextBlock  Grid.Row="12" Grid.Column="0"  Grid.ColumnSpan="2"
-                            Text="杭先端平均N値算定範囲下側レベル"/>
-                        <TextBox  Grid.Row="12" Grid.Column="2" 
-                             Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeLowerAltitude, 
-                        Mode=OneWay, StringFormat=N3}" IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-                        <TextBlock  Grid.Row="12" Grid.Column="3" 
+                            Text="平均N値算定範囲 下端" TextWrapping="Wrap"/>
+                        <StackPanel Grid.Row="12" Grid.Column="2" Orientation="Horizontal">
+                            <TextBlock Text="標高=" VerticalAlignment="Center"/>
+                            <TextBox Width="70" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                <TextBox.Text>
+                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                        <Binding Path="TemporarySoilPile.PileToeNValueAverageRangeLowerAltitude"/>
+                                        <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
+                                    </MultiBinding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            <TextBox Width="70" Text="{Binding TemporarySoilPile.PileToeNValueAverageRangeLowerAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                        </StackPanel>
+                        <TextBlock  Grid.Row="12" Grid.Column="3"
                             Text="m"/>
 
                         <TextBlock  Grid.Row="13" Grid.Column="0" 

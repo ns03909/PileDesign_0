@@ -7,6 +7,8 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         Title="検定" Height="600" Width="900"
+        MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         WindowStartupLocation="CenterOwner"
         common:EscapeKeyBehavior.Enable="True">
     <Window.Resources>

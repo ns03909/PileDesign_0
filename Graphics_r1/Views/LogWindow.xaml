@@ -6,6 +6,8 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
         Title="解析ログ" Height="600" Width="900"
+        MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         WindowStartupLocation="CenterOwner"
         DataContextChanged="OnDataContextChanged"
         common:EscapeKeyBehavior.Enable="True">

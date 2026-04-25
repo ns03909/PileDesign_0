@@ -10,6 +10,8 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         Title="解析結果テーブル" Width="1150" Height="680"
+        MaxWidth="{x:Static SystemParameters.MaximizedPrimaryScreenWidth}"
+        MaxHeight="{x:Static SystemParameters.MaximizedPrimaryScreenHeight}"
         common:EscapeKeyBehavior.Enable="True">
     
     <Window.Resources>
