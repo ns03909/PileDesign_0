@@ -2251,25 +2251,35 @@ namespace PileDesign.ViewModels
         {
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
             {
-                double pl = 0.0;
-                foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
-                {
-                    if (!groundMassData.IsLiquefactionLayer) continue;
-                    if (groundMassData.FL[levelIndex] == null) continue;
-
-                    double z = -groundMassData.GLDepth; // 深さ (m, 正値)
-                    if (z < 0 || z > 20.0) continue;
-
-                    double fl = groundMassData.FL[levelIndex].GetValueOrDefault();
-                    double f = Math.Max(0.0, 1.0 - fl);
-                    if (f <= 0) continue;
-
-                    double w = Math.Max(0.0, 10.0 - 0.5 * z);
-                    double h = groundMassData.H.GetValueOrDefault();
-                    pl += f * w * h;
-                }
-                GroundInput.PL[levelIndex] = pl;
+                GroundInput.PL[levelIndex] = ComputeIwasakiPL(GroundInput.GroundMassesData, levelIndex);
             }
+        }
+
+        /// <summary>
+        /// 岩崎ら (1982) の液状化指標 PL を 1 レベル分計算する純粋関数。
+        /// テスト容易性とロジック分離のため static で公開。
+        /// </summary>
+        internal static double ComputeIwasakiPL(System.Collections.Generic.IEnumerable<GroundMassDataInput> masses, int levelIndex)
+        {
+            double pl = 0.0;
+            foreach (GroundMassDataInput groundMassData in masses)
+            {
+                if (!groundMassData.IsLiquefactionLayer) continue;
+                if (groundMassData.FL == null || groundMassData.FL.Count <= levelIndex) continue;
+                if (groundMassData.FL[levelIndex] == null) continue;
+
+                double z = -groundMassData.GLDepth; // 深さ (m, 正値)
+                if (z < 0 || z > 20.0) continue;
+
+                double fl = groundMassData.FL[levelIndex].GetValueOrDefault();
+                double f = Math.Max(0.0, 1.0 - fl);
+                if (f <= 0) continue;
+
+                double w = Math.Max(0.0, 10.0 - 0.5 * z);
+                double h = groundMassData.H.GetValueOrDefault();
+                pl += f * w * h;
+            }
+            return pl;
         }
 
         // γcy
