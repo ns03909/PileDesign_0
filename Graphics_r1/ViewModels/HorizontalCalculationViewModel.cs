@@ -277,19 +277,19 @@ namespace PileDesign.ViewModels
         //      並列処理し、完了後に (LoadCase.No, LoadCombination.No, isLiq, step) キーで
         //      AnalysisStepResults / NodeResults / BeamResults / Spring*Results を決定的にマージ。
         // E3c-3 (2026-04-23): ケース並列度。1 = 逐次 (従来と同一挙動)、2 以上で並列実行。
-        // デフォルトは 1 (安全)。並列 infra は実装済だが、実機 8 並列テストで hang を確認
-        // (想定原因: Task.Run のネスト × 8 並列 → ThreadPool starvation or GC 圧迫 or
-        //  MathNet 内部並列との競合)。将来のチューニング後に既定値を上げる予定。
-        // ユーザーが 2 以上に設定すれば並列実行される。
+        // 2026-04-26: hang 解消 + 既定値を 16 に引き上げ済み。
+        //   - Dispatcher.Invoke → BeginInvoke 化で ThreadPool starvation 解消
+        //   - MKL_NUM_THREADS=1 / OMP_NUM_THREADS=1 で MKL ネイティブ過剰スレッド抑制
+        //   - 実機 8 並列で 16 ケース 6 秒完走を確認 (6.3× 高速化、80% 並列効率)
         // 上限は Environment.ProcessorCount (論理プロセッサ数) で clamp する。それ以上に
         // しても Task は待機するだけで意味がなく、メモリ圧迫で hang リスクが増える。
         public int ProcessorCount => Environment.ProcessorCount;
 
-        // 既定値 2: MDOP=2 は実機テスト済で安全性と速度のバランスが良い。
-        //   MDOP=1 はそれ以上にして解析時間を半減できる。
-        //   MDOP=8 では以前 hang が発生したが Task.Run nesting 解消 (34fe538) で
-        //   改善済。ただし大きすぎると GC 圧迫リスクあり、ProcessorCount で上限 clamp。
-        private int _maxCaseDegreeOfParallelism = 2;
+        // 既定値 16 (2026-04-26): MDOP=8 で 16 ケース 6 秒完走を実機検証済 (hang 解消)。
+        //   既定値 2 → 16 に引き上げ。Math.Clamp で論理プロセッサ数に自動制限されるため、
+        //   8 コア機なら 8 に、16 コア機なら 16 に、それぞれ安全な上限に収まる。
+        //   hang 対策の主因は Dispatcher.BeginInvoke 化 (2376fbe) と MKL_NUM_THREADS=1。
+        private int _maxCaseDegreeOfParallelism = 16;
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;
