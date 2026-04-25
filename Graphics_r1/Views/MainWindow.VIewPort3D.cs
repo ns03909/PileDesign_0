@@ -25,9 +25,17 @@ namespace PileDesign.Views
         public InputModel? InputModel => _mainWindowViewModel.CurrentInputModel;
 
 
+        // 形状確認ビュー (HelixViewport3D) の機能凍結フラグ。
+        // true の間、UpdatePerspectiveView 以下の描画メソッドは早期リターンし、
+        // CPU/GPU コストを発生させない。再有効化時は false にすると同時に、
+        // MainWindow.xaml の LayoutDocument「形状確認ビュー」内の Grid の
+        // Visibility="Collapsed" を外すこと。
+        private const bool IsHelixViewFrozen = true;
+
         // Perspective Viewの更新メソッド
         private void UpdatePerspectiveView()
         {
+            if (IsHelixViewFrozen) return;
             if (HelixViewport == null) return;
 
             HelixViewport.Children.Clear();
@@ -581,9 +589,11 @@ namespace PileDesign.Views
         /// <summary>
         /// HelixViewport3Dの内蔵コンテキストメニューとCopyコマンドを上書きし、
         /// BitmapMetadata例外を回避するカスタム実装に差し替える。
+        /// 併せて右ドラッグ（回転操作）後にコンテキストメニューが開かないよう抑制する。
         /// </summary>
         private void SetupHelixViewportContextMenu()
         {
+            if (IsHelixViewFrozen) return;
             if (HelixViewport == null) return;
 
             // 内蔵のApplicationCommands.Copyハンドラを上書き
@@ -603,6 +613,44 @@ namespace PileDesign.Views
             menu.Items.Add(saveItem);
 
             HelixViewport.ContextMenu = menu;
+
+            // 右ドラッグ検出: ドラッグ後のマウス離しではメニューを開かない
+            HelixViewport.PreviewMouseRightButtonDown += HelixViewport_PreviewMouseRightButtonDown;
+            HelixViewport.PreviewMouseMove += HelixViewport_PreviewMouseMove_RightDragDetect;
+            HelixViewport.ContextMenuOpening += HelixViewport_ContextMenuOpening;
+        }
+
+        // 右ドラッグ検出用の状態
+        private Point _helixRightDownPoint;
+        private bool _helixIsRightDragging;
+        private const double HelixRightDragThresholdPx = 3.0;
+
+        private void HelixViewport_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _helixRightDownPoint = e.GetPosition(HelixViewport);
+            _helixIsRightDragging = false;
+        }
+
+        private void HelixViewport_PreviewMouseMove_RightDragDetect(object sender, MouseEventArgs e)
+        {
+            if (e.RightButton == MouseButtonState.Pressed && !_helixIsRightDragging)
+            {
+                var pt = e.GetPosition(HelixViewport);
+                if (Math.Abs(pt.X - _helixRightDownPoint.X) > HelixRightDragThresholdPx ||
+                    Math.Abs(pt.Y - _helixRightDownPoint.Y) > HelixRightDragThresholdPx)
+                {
+                    _helixIsRightDragging = true;
+                }
+            }
+        }
+
+        private void HelixViewport_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            if (_helixIsRightDragging)
+            {
+                e.Handled = true;       // コンテキストメニュー表示をキャンセル
+                _helixIsRightDragging = false; // フラグをリセット
+            }
         }
 
         // HelixViewport コンテキストメニュー: クリップボードにコピー

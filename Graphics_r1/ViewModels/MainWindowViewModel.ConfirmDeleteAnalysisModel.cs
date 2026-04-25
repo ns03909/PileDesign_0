@@ -61,6 +61,26 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 基本設定の Z=0 標高など、ジオメトリに影響する変更時に呼ぶ。
+        /// 解析結果と要素分割の両方がキャンセル対象。
+        /// 解析結果も要素分割も無ければダイアログなしで true。
+        /// </summary>
+        public bool ConfirmResetAllForGeometryChange(string reason)
+        {
+            bool hasResults = IsHorizontalAnalysisDone || IsVerticalAnalysisDone
+                              || IsGroupPileSettlementAnalysisDone || IsVerticalBeamAnalysisDone;
+            if (!hasResults && !IsElementSplit) return true;
+
+            string msg = $"{reason}により、";
+            if (hasResults && IsElementSplit) msg += "解析結果と要素分割が";
+            else if (hasResults) msg += "解析結果が";
+            else msg += "要素分割が";
+            msg += "キャンセルされます。\nよろしいですか？";
+
+            return ConfirmDeleteAnalysisModel(message: msg, caption: "確認", icon: MessageBoxImage.Warning, resetModel: true);
+        }
+
+        /// <summary>
         /// 荷重条件など、ジオメトリを変更しない編集で呼ぶ確認ヘルパ。
         /// 解析結果のみリセットし、要素分割 (IsElementSplit) は保持する。
         /// 解析結果がなければダイアログを出さず true を返す (編集続行)。

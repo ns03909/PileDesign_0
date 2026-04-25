@@ -3018,7 +3018,7 @@ namespace PileDesign.Views
         private static string BuildBeamForceTooltip(MainWindowViewModel viewModel, BeamResult beamResult, double t, double depth, Beam beam = null)
         {
             var bf = beamResult.CumulativeForce;
-            if (bf == null) return $"深度: {depth:F2} m";
+            if (bf == null) return $"Z: {depth:F2} m";
 
             string typeName = viewModel.AnalysisResultBeamForceType;
             bool isFoundationBeam = beam?.Name.StartsWith("FoundationBeam-") ?? false;
@@ -3033,7 +3033,7 @@ namespace PileDesign.Views
                 double interpMy = myI * (1 - t) + (-myJ) * t;
                 double interpMz = mzI * (1 - t) + (-mzJ) * t;
                 double interpMh = Math.Sqrt(interpMy * interpMy + interpMz * interpMz);
-                return $"Mh: {interpMh:F1} kNm\nMy: {interpMy:F1} kNm\nMz: {interpMz:F1} kNm\n深度: {depth:F2} m";
+                return $"Mh: {interpMh:F1} kNm\nMy: {interpMy:F1} kNm\nMz: {interpMz:F1} kNm\nZ: {depth:F2} m";
             }
 
             // Fh選択時の基礎梁: FyとFz両方を表示
@@ -3046,7 +3046,7 @@ namespace PileDesign.Views
                 double interpFy = fyI * (1 - t) + (-fyJ) * t;
                 double interpFz = fzI * (1 - t) + (-fzJ) * t;
                 double interpFh = Math.Sqrt(interpFy * interpFy + interpFz * interpFz);
-                return $"Fh: {interpFh:F1} kN\nFy: {interpFy:F1} kN\nFz: {interpFz:F1} kN\n深度: {depth:F2} m";
+                return $"Fh: {interpFh:F1} kN\nFy: {interpFy:F1} kN\nFz: {interpFz:F1} kN\nZ: {depth:F2} m";
             }
 
             // I端とJ端の値を取得して線形補間
@@ -3104,13 +3104,13 @@ namespace PileDesign.Views
                     unit = "kN";
                     break;
                 default:
-                    return $"深度: {depth:F2} m";
+                    return $"Z: {depth:F2} m";
             }
 
             // 線形補間
             double interpolatedValue = valueI * (1 - t) + (-valueJ) * t;
 
-            return $"{typeName}: {interpolatedValue:F1} {unit}\n深度: {depth:F2} m";
+            return $"{typeName}: {interpolatedValue:F1} {unit}\nZ: {depth:F2} m";
         }
 
         /// <summary>
@@ -3123,7 +3123,7 @@ namespace PileDesign.Views
             var nrI = beam.NodeI?.GetNodeResult(anaModel, loadCase, loadCombination, viewModel.IsLiquefaction);
             var nrJ = beam.NodeJ?.GetNodeResult(anaModel, loadCase, loadCombination, viewModel.IsLiquefaction);
             if (nrI?.CumulativeDisp == null || nrJ?.CumulativeDisp == null)
-                return $"深度: {depth:F2} m";
+                return $"Z: {depth:F2} m";
 
             var ndI = nrI.CumulativeDisp;
             var ndJ = nrJ.CumulativeDisp;
@@ -3180,13 +3180,13 @@ namespace PileDesign.Views
                     unit = "rad";
                     break;
                 default:
-                    return $"深度: {depth:F2} m";
+                    return $"Z: {depth:F2} m";
             }
 
             // 線形補間
             double interpolatedValue = (valueI * (1 - t) + valueJ * t) * multiplier;
 
-            return $"{typeName}: {interpolatedValue:F2} {unit}\n深度: {depth:F2} m";
+            return $"{typeName}: {interpolatedValue:F2} {unit}\nZ: {depth:F2} m";
         }
 
         /// <summary>

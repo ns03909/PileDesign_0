@@ -68,8 +68,10 @@ namespace PileDesign.Views
 
             if (values.Count > 0)
             {
-                // 直接 Colors.Black を使う
-                List<ColorBaredGeometry> colorBaredGeometries = GetMonoColorBarGeometries(Colors.Black, values);
+                // 慣性力・水平力の矢印と値ラベルは杭の解析結果ラベル（黒）と区別するため
+                // ダークオレンジ (#E65100) で表示する
+                var inertiaForceColor = Color.FromRgb(0xE6, 0x51, 0x00);
+                List<ColorBaredGeometry> colorBaredGeometries = GetMonoColorBarGeometries(inertiaForceColor, values);
                 Update3DValueArrows(points, valueVectors, colorBaredGeometries, 0, false);
             }
         }

@@ -166,8 +166,6 @@
                                                                             <StackPanel>
                                                                                 <TextBlock Text="下端" TextAlignment="Center"/>
                                                                                 <TextBlock Text="Z" TextAlignment="Center"/>
-                                                                                <TextBlock Text="{Binding DataContext.InputModel.FundamentalInput.RefLevel, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                                        TextAlignment="Center"/>
                                                                                 <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                                             </StackPanel>
                                                                         </DataGridTextColumn.Header>
@@ -300,10 +298,6 @@
                                                                                 <TextBlock Text="杭頭" TextAlignment="Center"/>
                                                                                 <TextBlock Text="Z" TextAlignment="Center"
                                                                             HorizontalAlignment="Center"/>
-                                                                                <TextBlock x:Name="TextBlockRefLevel"
-                                                                                      
-                                                                            Text="{Binding InputModel.FundamentalInput.RefLevel, UpdateSourceTrigger=LostFocus}"
-                                                                            TextAlignment="Center"/>
                                                                                 <TextBlock Text="(m)" TextAlignment="Center"
                                                                             HorizontalAlignment="Center"/>
                                                                             </StackPanel>

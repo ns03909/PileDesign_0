@@ -938,6 +938,46 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnAnalysisModeling() => TryCreateAnalysisModel();
 
+        /// <summary>
+        /// 各杭の Z 範囲と対応する地盤の Z 範囲が交差しているかを検証する。
+        /// 交差しない杭があれば、その位置情報を文字列リストで返す（空なら問題なし）。
+        /// 交差しない場合は水平土ばねの剛性がゼロになり、剛性マトリクスが特異になるため解析不可。
+        /// </summary>
+        private List<string> CheckPileGroundOverlap()
+        {
+            var errors = new List<string>();
+            if (InputModel?.PileLayoutItems == null || InputModel.GroundsInput == null || InputModel.PileBodies == null)
+                return errors;
+
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                int groundIdx = pile.GroundNo - 1;
+                int pileBodyIdx = pile.PileBodyNo - 1;
+                if (groundIdx < 0 || groundIdx >= InputModel.GroundsInput.Count) continue;
+                if (pileBodyIdx < 0 || pileBodyIdx >= InputModel.PileBodies.Count) continue;
+
+                var ground = InputModel.GroundsInput[groundIdx];
+                var pileBody = InputModel.PileBodies[pileBodyIdx];
+                if (ground?.GroundLayers == null || ground.GroundLayers.Count == 0) continue;
+                if (pileBody?.PileBodySegments == null || pileBody.PileBodySegments.Count == 0) continue;
+
+                double pileTopZ = pile.Point3D.Z;
+                double pileBottomZ = pileTopZ - pileBody.PileBodySegments[^1].SegmentDepth;
+                double groundTopZ = ground.GroundLayers[0].BottomAltitude + ground.GroundLayers[0].LayerThickness;
+                double groundBottomZ = ground.GroundLayers[^1].BottomAltitude;
+
+                // 杭が地盤範囲と全く交差しない (pile が完全に地盤より上 or 下)
+                bool noOverlap = pileBottomZ >= groundTopZ || pileTopZ <= groundBottomZ;
+                if (noOverlap)
+                {
+                    errors.Add($"杭No.{pile.No} (杭頭Z={pileTopZ:N3}, 杭底Z={pileBottomZ:N3}) と " +
+                               $"地盤No.{pile.GroundNo} (上端Z={groundTopZ:N3}, 下端Z={groundBottomZ:N3})");
+                }
+            }
+
+            return errors;
+        }
+
         // 水平解析の実行
         [RelayCommand]
         private async Task OnExecuteAnalysis()
@@ -949,6 +989,34 @@ namespace PileDesign.ViewModels
                     "既に水平解析の結果が存在します。\n再実行すると既存の結果は上書きされます。\n\n解析を実行しますか？",
                     "解析結果の上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result != MessageBoxResult.Yes)
+                    return;
+            }
+
+            // 杭と地盤の Z 範囲整合性チェック（杭がすべて地盤外の場合は解析不可）
+            var pileGroundErrors = CheckPileGroundOverlap();
+            if (pileGroundErrors.Count > 0)
+            {
+                var msg = "以下の杭は地盤と重なっていないため、水平解析を実行できません。\n" +
+                          "基本設定の「Z=0 の標高」を確認するか、杭頭 Z を見直してください。\n\n" +
+                          string.Join("\n", pileGroundErrors);
+                MessageBox.Show(msg, "杭-地盤位置の不整合", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 剛床仮定 (RigidFloor) で基礎梁の材料・断面が空の場合の警告
+            var fbInput = InputModel?.FoundationBeamInput;
+            if (fbInput != null
+                && fbInput.ConnectionMode == FoundationBeamConnectionMode.RigidFloor
+                && (fbInput.Materials.Count == 0 || fbInput.Sections.Count == 0))
+            {
+                var fbMsg = "剛床仮定（RigidFloor）で水平解析を実行しようとしていますが、基礎梁の" +
+                            (fbInput.Materials.Count == 0 && fbInput.Sections.Count == 0 ? "材料一覧・断面一覧"
+                             : fbInput.Materials.Count == 0 ? "材料一覧" : "断面一覧") +
+                            "が登録されていません。\n\n" +
+                            "このまま続行するとデフォルト値（FC30 / 0.8m×2.0m 矩形断面）で解析されます。\n" +
+                            "材料・断面を入力してから解析する場合はキャンセルを押してください。";
+                var fbResult = MessageBox.Show(fbMsg, "基礎梁 材料・断面 未登録", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+                if (fbResult != MessageBoxResult.OK)
                     return;
             }
 

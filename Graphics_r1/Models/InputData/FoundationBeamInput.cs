@@ -43,6 +43,37 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _beams, value);
         }
 
+        /// <summary>
+        /// Materials / Sections が空のとき、No.1 のデフォルトエントリを自動追加する。
+        /// 自動生成梁は MaterialNo=1 / SectionNo=1 を参照するが、ロード元（設計例 JSON 等）に
+        /// 材料・断面データが含まれない場合に参照先を保証するために使う。
+        /// 既にエントリが 1 件以上ある場合は何もしない。
+        /// </summary>
+        public void EnsureDefaultMaterialAndSection()
+        {
+            if (Materials.Count == 0)
+            {
+                Materials.Add(new BeamMaterial
+                {
+                    No = 1,
+                    Name = "FC30 (自動)",
+                });
+            }
+
+            if (Sections.Count == 0)
+            {
+                var section = new BeamSection
+                {
+                    No = 1,
+                    Name = "800×2000 (自動)",
+                    Width = 0.8,
+                    Height = 2.0,
+                };
+                section.RecalculateProperties();
+                Sections.Add(section);
+            }
+        }
+
         public FoundationBeamInput()
         {
             Materials = [];

@@ -133,6 +133,8 @@ namespace PileDesign.ViewModels
                 No = Beams.Count + 1,
                 NodeI_No = 1,
                 NodeJ_No = 2,
+                MaterialNo = 1,
+                SectionNo = 1,
                 SectionName = $"Beam-{Beams.Count + 1}",
                 Width = 0.5,
                 Height = 0.8,
@@ -140,6 +142,9 @@ namespace PileDesign.ViewModels
                 ShearModulus = 1.1079e7
             };
             Beams.Add(newBeam);
+
+            // MaterialNo=1 / SectionNo=1 の参照先を保証
+            InputModel.FoundationBeamInput?.EnsureDefaultMaterialAndSection();
         }
 
         public void DeleteSelectedBeam()

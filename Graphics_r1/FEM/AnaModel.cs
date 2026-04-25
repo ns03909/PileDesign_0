@@ -25,43 +25,43 @@ namespace PileDesign.FEM
     public sealed class CaseLocalSnapshot
     {
         /// <summary>PileLayoutItem → caseModel 側の PileNodes リスト</summary>
-        public Dictionary<PileLayoutDataItem, List<Node>> PileNodes { get; } = new();
+        public Dictionary<PileLayoutDataItem, List<Node>> PileNodes { get; } = [];
 
         /// <summary>PileLayoutItem → caseModel 側の SoilNodes リスト</summary>
-        public Dictionary<PileLayoutDataItem, List<Node>> SoilNodes { get; } = new();
+        public Dictionary<PileLayoutDataItem, List<Node>> SoilNodes { get; } = [];
 
         /// <summary>PileLayoutItem → 現在の AxialForce (ケース毎に更新可能)</summary>
-        public Dictionary<PileLayoutDataItem, double> AxialForces { get; } = new();
+        public Dictionary<PileLayoutDataItem, double> AxialForces { get; } = [];
 
         /// <summary>PileLayoutItem → 現在の AxialForceIncrement (ケース毎に計算)</summary>
-        public Dictionary<PileLayoutDataItem, double> AxialForceIncrements { get; } = new();
+        public Dictionary<PileLayoutDataItem, double> AxialForceIncrements { get; } = [];
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopSoilNode</summary>
-        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopSoilNodes { get; } = new();
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopSoilNodes { get; } = [];
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmSoilNode</summary>
-        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmSoilNodes { get; } = new();
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmSoilNodes { get; } = [];
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopEmbedmentNode</summary>
-        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopEmbedmentNodes { get; } = new();
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuTopEmbedmentNodes { get; } = [];
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmEmbedmentNode</summary>
-        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmEmbedmentNodes { get; } = new();
+        public Dictionary<DoatsuGoryokuBaneItem, Node> DoatsuBtmEmbedmentNodes { get; } = [];
 
         /// <summary>PileLayoutItem → caseModel 側の PileTopRotationalSpring (null の場合あり)</summary>
-        public Dictionary<PileLayoutDataItem, RotationalSpring?> PileTopRotationalSprings { get; } = new();
+        public Dictionary<PileLayoutDataItem, RotationalSpring?> PileTopRotationalSprings { get; } = [];
 
         /// <summary>PileLayoutItem → caseModel 側の HorizontalSoilSprings リスト</summary>
-        public Dictionary<PileLayoutDataItem, List<HorizontalSoilSpring>> PileHorizontalSoilSprings { get; } = new();
+        public Dictionary<PileLayoutDataItem, List<HorizontalSoilSpring>> PileHorizontalSoilSprings { get; } = [];
 
         /// <summary>PileLayoutItem → caseModel 側の Beams リスト</summary>
-        public Dictionary<PileLayoutDataItem, List<Beam>> PileBeams { get; } = new();
+        public Dictionary<PileLayoutDataItem, List<Beam>> PileBeams { get; } = [];
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の TopHorizontalSoilSpring</summary>
-        public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuTopHorizontalSoilSprings { get; } = new();
+        public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuTopHorizontalSoilSprings { get; } = [];
 
         /// <summary>DoatsuGoryokuBaneItem → caseModel 側の BtmHorizontalSoilSpring</summary>
-        public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuBtmHorizontalSoilSprings { get; } = new();
+        public Dictionary<DoatsuGoryokuBaneItem, HorizontalSoilSpring> DoatsuBtmHorizontalSoilSprings { get; } = [];
     }
 
     public class AnaModel
@@ -351,7 +351,7 @@ namespace PileDesign.FEM
 
             // primary term（coeff ≈ 1.0）を先頭に配置
             result.Sort((a, b) => Math.Abs(b.Coeff).CompareTo(Math.Abs(a.Coeff)));
-            return result.ToArray();
+            return [.. result];
         }
 
         // 全体剛性マトリクスの作成
@@ -897,7 +897,7 @@ namespace PileDesign.FEM
             _findRCallCount++;
             if (NormsROnNormsFint > 1e-4 && (_findRCallCount <= 3 || _findRCallCount % 10 == 0))
             {
-                string[] dofNames = { "Ux", "Uy", "Uz", "Rx", "Ry", "Rz" };
+                string[] dofNames = ["Ux", "Uy", "Uz", "Rx", "Ry", "Rz"];
                 var log = new System.Text.StringBuilder();
                 log.AppendLine($"=== FindR 診断 (呼び出し#{_findRCallCount}) ===");
                 log.AppendLine($"||R||²/||F||² = {NormsROnNormsFint:E3}");
@@ -1276,7 +1276,7 @@ namespace PileDesign.FEM
             {
                 var rbc = rb.DeepCopy();
                 rbc.MasterNode = MapNode(rb.MasterNode);
-                rbc.SlaveNodes = rb.SlaveNodes.Select(MapNode).ToList();
+                rbc.SlaveNodes = [.. rb.SlaveNodes.Select(MapNode)];
                 rigidBodies.Add(rbc);
             }
 
@@ -1670,8 +1670,8 @@ namespace PileDesign.FEM
             int[] snapHSpringResults,
             int[]? snapRotSpringResults)
         {
-            if (main == null) throw new ArgumentNullException(nameof(main));
-            if (caseModel == null) throw new ArgumentNullException(nameof(caseModel));
+            ArgumentNullException.ThrowIfNull(main);
+            ArgumentNullException.ThrowIfNull(caseModel);
 
             // AnalysisStepResults: caseModel[snap..] を main に append
             if (caseModel.AnalysisStepResults != null)

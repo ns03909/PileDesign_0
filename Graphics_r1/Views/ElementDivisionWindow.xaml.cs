@@ -160,6 +160,17 @@ namespace PileDesign.Views
                 }
                 e.Handled = true;
             }
+            else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control
+                     && Keyboard.FocusedElement is not TextBox)
+            {
+                // SelectionMode=Single の DataGrid 内蔵 SelectAll が NotSupportedException を投げるため、
+                // Window レベルで先取りして AutoZsAllPilesCommand を実行する
+                if (_viewModel?.AutoZsAllPilesCommand?.CanExecute(null) == true)
+                {
+                    _viewModel.AutoZsAllPilesCommand.Execute(null);
+                }
+                e.Handled = true;
+            }
         }
 
         private void ElementDivisionWindow_Loaded(object sender, RoutedEventArgs e)
