@@ -155,7 +155,7 @@ namespace PileDesign.ViewModels
 
         partial void OnSeismicLevelChanged(int value)
         {
-            // SeismicLevel 変更時に N-Q プロットを再描画する（UI スレッドで安全に呼ぶ）
+            // SeismicLevel 変更時に N-Q プロットと N-M プロット両方を再描画する
             try
             {
                 if (PileSection != null && PileSectionWindowInstance != null)
@@ -168,6 +168,7 @@ namespace PileDesign.ViewModels
                         Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                         {
                             DrawNQForCurrentPile(NMin, NMax, 10);
+                            ChartUpdate(); // N-M プロットも損傷限界曲線の L1/L2 切替のため再描画
                         }));
                     }
                     else
@@ -178,7 +179,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SeismicLevel change: failed to refresh NQ plot: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"SeismicLevel change: failed to refresh NQ/NM plot: {ex.Message}");
             }
         }
 
@@ -822,7 +823,7 @@ namespace PileDesign.ViewModels
                 var (damageN, damageM) = PileSection.UnfactoredDamageNM;
                 var (ultimateN, ultimateM) = PileSection.UnfactoredUltimateNM;
                 var (factoredServiceN, factoredServiceM) = PileSection.FactoredServiceNM;
-                var (factoredDamageN, factoredDamageM) = PileSection.FactoredDamageNM;
+                var (factoredDamageN, factoredDamageM) = PileSection.GetFactoredDamageNM(SeismicLevel);
                 var (factoredUltimateN, factoredUltimateM) = PileSection.FactoredUltimateNM;
 
                 // 追加: 鋼材降伏開始NM（GetYieldMomentベース）
@@ -889,7 +890,7 @@ namespace PileDesign.ViewModels
                 var (damageN, damageM) = PileSection.UnfactoredDamageNM;
                 var (ultimateN, ultimateM) = PileSection.UnfactoredUltimateNM;
                 var (factoredServiceN, factoredServiceM) = PileSection.FactoredServiceNM;
-                var (factoredDamageN, factoredDamageM) = PileSection.FactoredDamageNM;
+                var (factoredDamageN, factoredDamageM) = PileSection.GetFactoredDamageNM(SeismicLevel);
                 var (factoredUltimateN, factoredUltimateM) = PileSection.FactoredUltimateNM;
                 // 以降はReplaceSeries(...)でグラフ描画
                 ReplaceSeries(

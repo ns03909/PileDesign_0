@@ -110,7 +110,7 @@ namespace PileDesign.ViewModels
             }
 
             // NM曲線キャッシュ: (PileBodyNo, SegmentIndex, factored, isDamageLimit) → (Ns, Ms)
-            var nmCache = new Dictionary<(int, int, bool, bool), (List<double> Ns, List<double> Ms)>();
+            var nmCache = new Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)>();
 
             // 全ての解析結果の組み合わせ（LoadCase, LoadCombination, IsLiquefaction）を取得
             var uniqueCombinations = model.AnalysisStepResults
@@ -179,7 +179,7 @@ namespace PileDesign.ViewModels
         private (int ng, int ok) EvaluateLevel1(StringBuilder sb, AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
-            Dictionary<(int, int, bool, bool), (List<double> Ns, List<double> Ms)> nmCache,
+            Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             List<AnalysisStepResult> results, bool factored)
         {
             int ngCount = 0, okCount = 0;
@@ -215,17 +215,17 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// レベル2地震動の評価
-        /// 耐震グレードA: 終局限界 / 耐震グレードS: 損傷限界
+        /// 耐震グレードA: 安全限界 / 耐震グレードS: 損傷限界
         /// + 場所打ち鉄筋コンクリート杭で、θが1/100radを超える場合
         /// </summary>
         private (int ng, int ok) EvaluateLevel2(StringBuilder sb, AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
-            Dictionary<(int, int, bool, bool), (List<double> Ns, List<double> Ms)> nmCache,
+            Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             List<AnalysisStepResult> results, bool factored, string seismicGrade)
         {
             int ngCount = 0, okCount = 0;
-            bool isDamageLimit = seismicGrade == "S"; // S→損傷限界、A→終局限界
+            bool isDamageLimit = seismicGrade == "S"; // S→損傷限界、A→安全限界
 
             foreach (var stepResult in results)
             {
@@ -263,12 +263,12 @@ namespace PileDesign.ViewModels
         private (int ng, int ok) CheckMPhiLimitForBeams(StringBuilder sb, AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
             Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
-            Dictionary<(int, int, bool, bool), (List<double> Ns, List<double> Ms)> nmCache,
+            Dictionary<(int, int, bool, bool, int), (List<double> Ns, List<double> Ms)> nmCache,
             AnalysisStepResult stepResult, bool factored, bool isDamageLimit,
             string lcName, string combName, string liqLabel)
         {
             int ngCount = 0, okCount = 0;
-            string limitName = isDamageLimit ? "損傷限界" : "終局限界";
+            string limitName = isDamageLimit ? "損傷限界" : "安全限界";
             bool showNg = DisplayFilter == 0 || DisplayFilter == 2;
             bool showOk = DisplayFilter == 1 || DisplayFilter == 2;
 
@@ -309,11 +309,12 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                // NM相関曲線をキャッシュから取得
-                var cacheKey = (pb, seg, factored, isDamageLimit);
+                // NM相関曲線をキャッシュから取得（レベルも含める）
+                int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
+                var cacheKey = (pb, seg, factored, isDamageLimit, loadCaseLevel);
                 if (!nmCache.TryGetValue(cacheKey, out var nmCurve))
                 {
-                    nmCurve = GetNMCurve(section, factored, isDamageLimit);
+                    nmCurve = GetNMCurve(section, factored, isDamageLimit, loadCaseLevel);
                     nmCache[cacheKey] = nmCurve;
                 }
                 if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2) continue;
@@ -340,7 +341,7 @@ namespace PileDesign.ViewModels
                     {
                         sb.AppendLine($"  [NG] {limitName}超過（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
                         sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mI:F1} kNm > 許容M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        sb.AppendLine($"       M={mI:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         sb.AppendLine();
                     }
                 }
@@ -351,7 +352,7 @@ namespace PileDesign.ViewModels
                     {
                         sb.AppendLine($"  [OK] {limitName}（i端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
                         sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mI:F1} kNm ≤ 許容M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        sb.AppendLine($"       M={mI:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         sb.AppendLine();
                     }
                 }
@@ -364,7 +365,7 @@ namespace PileDesign.ViewModels
                     {
                         sb.AppendLine($"  [NG] {limitName}超過（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
                         sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mJ:F1} kNm > 許容M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        sb.AppendLine($"       M={mJ:F1} kNm > {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         sb.AppendLine();
                     }
                 }
@@ -375,7 +376,7 @@ namespace PileDesign.ViewModels
                     {
                         sb.AppendLine($"  [OK] {limitName}（j端）: {beam.Name}  杭配置No.{pb} / 要素{seg}");
                         sb.AppendLine($"       荷重ケース: {lcName} / 組み合わせ: {combName} / {liqLabel}");
-                        sb.AppendLine($"       M={mJ:F1} kNm ≤ 許容M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
+                        sb.AppendLine($"       M={mJ:F1} kNm ≤ {limitName}M={allowableM:F1} kNm (N={axialN_kN:F1} kN)");
                         sb.AppendLine();
                     }
                 }
@@ -450,18 +451,23 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// NM相関曲線を取得（低減前/低減後、損傷限界/終局限界）
+        /// NM相関曲線を取得（低減前/低減後、損傷限界/安全限界）
         /// PileSection のプロパティは (List N[kN], List M[kNm]) を返す
         /// </summary>
-        private static (List<double> Ns, List<double> Ms) GetNMCurve(PileSection section, bool factored, bool isDamageLimit)
+        private static (List<double> Ns, List<double> Ms) GetNMCurve(PileSection section, bool factored, bool isDamageLimit, int level)
         {
             try
             {
                 (List<double> N, List<double> M) nm;
                 if (factored)
-                    nm = isDamageLimit ? section.FactoredDamageNM : section.FactoredUltimateNM;
+                {
+                    // 損傷限界はレベル依存（L1: β2 なし、L2: β1×β2）
+                    nm = isDamageLimit ? section.GetFactoredDamageNM(level) : section.FactoredUltimateNM;
+                }
                 else
+                {
                     nm = isDamageLimit ? section.UnfactoredDamageNM : section.UnfactoredUltimateNM;
+                }
 
                 return (nm.N, nm.M);
             }

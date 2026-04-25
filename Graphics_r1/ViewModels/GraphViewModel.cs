@@ -663,6 +663,43 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isLimitStateOptionVisible, value);
         }
 
+        // 性能グレード（NMINT/QNINT グラフで限界曲線の選択に使用）
+        // "A": レベル1 損傷限界 + レベル2 安全限界
+        // "S": レベル2 損傷限界（安全限界は描画しない）
+        private string _selectedSeismicGrade = "A";
+        public string SelectedSeismicGrade
+        {
+            get => _selectedSeismicGrade;
+            set
+            {
+                if (SetProperty(ref _selectedSeismicGrade, value))
+                {
+                    OnPropertyChanged(nameof(IsSeismicGradeA));
+                    OnPropertyChanged(nameof(IsSeismicGradeS));
+                    UpdateGraph();
+                }
+            }
+        }
+        // RadioButton 用ヘルパー
+        public bool IsSeismicGradeA
+        {
+            get => SelectedSeismicGrade == "A";
+            set { if (value) SelectedSeismicGrade = "A"; }
+        }
+        public bool IsSeismicGradeS
+        {
+            get => SelectedSeismicGrade == "S";
+            set { if (value) SelectedSeismicGrade = "S"; }
+        }
+
+        // 性能グレードオプション表示（NMINT/QNINT 時のみ）
+        private bool _isSeismicGradeOptionVisible;
+        public bool IsSeismicGradeOptionVisible
+        {
+            get => _isSeismicGradeOptionVisible;
+            set => SetProperty(ref _isSeismicGradeOptionVisible, value);
+        }
+
         // レジェンド描画
         private bool _isLegendVisible = true;
         public bool IsLegendVisible
@@ -1161,6 +1198,7 @@ namespace PileDesign.ViewModels
             // 限界状態オプションをデフォルトで非表示
             IsLimitStateOptionVisible = false;
             IsMonQdSliderVisible = false;
+            IsSeismicGradeOptionVisible = false;
 
             if (SelectedGraphOption.StartsWith("杭頭応力変形関係"))
             {
@@ -1461,6 +1499,7 @@ namespace PileDesign.ViewModels
                 IsPileSegmentOptionVisible = true;
                 IsLiquefactionOptionVisible = false;
                 IsGridOptionVisible = false;
+                IsSeismicGradeOptionVisible = true;
 
                 WpfPlot.Plot.Clear();
                 _graphHoverMap.Clear();
@@ -1491,68 +1530,54 @@ namespace PileDesign.ViewModels
                     $"杭径 D: {pileSection.PileDiameter:F0} mm\n" +
                     $"杭断面: {pileSection.PileDescription}";
 
-                // NM曲線データが有効な場合のみ描画
-                // 低減後（実線）を先に描画、低減前（破線）に同じ色を適用
-                // 限界ごとに指定色を付ける: 使用=DeepBlue, 損傷=Green, 安全=PaleRed
-                var serviceColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x32 << 16) | (0x71 << 8) | 0xAD))); // NikkenDeepBlue #3271AD
+                // 性能グレードに応じた限界曲線の選択:
+                //   グレードA: レベル1 損傷限界 (NikkenGreen) + レベル2 安全限界 (NikkenPaleRed)
+                //   グレードS: レベル2 損傷限界 (NikkenGreen)
                 var damageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
                 var ultimateColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0xE9 << 16) | (0x55 << 8) | 0x41))); // NikkenPaleRed #E95541
 
-                // 使用限界
-                if (pileSection.FactoredServiceNM.N?.Count > 0 && pileSection.FactoredServiceNM.M?.Count > 0)
-                {
-                    var scatterFaService = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.FactoredServiceNM.N.ToArray(), pileSection.FactoredServiceNM.M.ToArray());
-                    scatterFaService.LegendText = "低減後使用限界";
-                    scatterFaService.LineStyle.Color = serviceColor;
-                    _graphHoverMap[scatterFaService] = "低減後使用限界\n" + nmSectionDetails;
-                }
-                if (pileSection.UnfactoredServiceNM.N?.Count > 0 && pileSection.UnfactoredServiceNM.M?.Count > 0)
-                {
-                    var scatterUnService = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.UnfactoredServiceNM.N.ToArray(), pileSection.UnfactoredServiceNM.M.ToArray());
-                    scatterUnService.LegendText = "低減前使用限界";
-                    scatterUnService.LineStyle.Pattern = LinePattern.Dashed;
-                    scatterUnService.LineStyle.Color = serviceColor;
-                    _graphHoverMap[scatterUnService] = "低減前使用限界\n" + nmSectionDetails;
-                }
+                bool isGradeA = SelectedSeismicGrade == "A";
+                int damageLevel = isGradeA ? 1 : 2;
+                string damageLabel = isGradeA ? "レベル1 損傷限界" : "レベル2 損傷限界";
 
-                // 損傷限界
-                if (pileSection.FactoredDamageNM.N?.Count > 0 && pileSection.FactoredDamageNM.M?.Count > 0)
+                var (factoredDmgN, factoredDmgM) = pileSection.GetFactoredDamageNM(damageLevel);
+                if (factoredDmgN?.Count > 0 && factoredDmgM?.Count > 0)
                 {
-                    var scatterFaDamage = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.FactoredDamageNM.N.ToArray(), pileSection.FactoredDamageNM.M.ToArray());
-                    scatterFaDamage.LegendText = "低減後損傷限界";
+                    var scatterFaDamage = WpfPlot.Plot.Add.ScatterLine(factoredDmgN.ToArray(), factoredDmgM.ToArray());
+                    scatterFaDamage.LegendText = $"低減後{damageLabel}";
                     scatterFaDamage.LineStyle.Color = damageColor;
-                    _graphHoverMap[scatterFaDamage] = "低減後損傷限界\n" + nmSectionDetails;
+                    _graphHoverMap[scatterFaDamage] = $"低減後{damageLabel}\n" + nmSectionDetails;
                 }
                 if (pileSection.UnfactoredDamageNM.N?.Count > 0 && pileSection.UnfactoredDamageNM.M?.Count > 0)
                 {
                     var scatterUnDamage = WpfPlot.Plot.Add.ScatterLine(
                         pileSection.UnfactoredDamageNM.N.ToArray(), pileSection.UnfactoredDamageNM.M.ToArray());
-                    scatterUnDamage.LegendText = "低減前損傷限界";
+                    scatterUnDamage.LegendText = $"低減前{damageLabel}";
                     scatterUnDamage.LineStyle.Pattern = LinePattern.Dashed;
                     scatterUnDamage.LineStyle.Color = damageColor;
-                    _graphHoverMap[scatterUnDamage] = "低減前損傷限界\n" + nmSectionDetails;
+                    _graphHoverMap[scatterUnDamage] = $"低減前{damageLabel}\n" + nmSectionDetails;
                 }
 
-                // 安全限界
-                if (pileSection.FactoredUltimateNM.N?.Count > 0 && pileSection.FactoredUltimateNM.M?.Count > 0)
+                // グレードAのみ安全限界（レベル2用）を描画
+                if (isGradeA)
                 {
-                    var scatterFaUltimate = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.FactoredUltimateNM.N.ToArray(), pileSection.FactoredUltimateNM.M.ToArray());
-                    scatterFaUltimate.LegendText = "低減後安全限界";
-                    scatterFaUltimate.LineStyle.Color = ultimateColor;
-                    _graphHoverMap[scatterFaUltimate] = "低減後安全限界\n" + nmSectionDetails;
-                }
-                if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
-                {
-                    var scatterUnUltimate = WpfPlot.Plot.Add.ScatterLine(
-                        pileSection.UnfactoredUltimateNM.N.ToArray(), pileSection.UnfactoredUltimateNM.M.ToArray());
-                    scatterUnUltimate.LegendText = "低減前安全限界";
-                    scatterUnUltimate.LineStyle.Pattern = LinePattern.Dashed;
-                    scatterUnUltimate.LineStyle.Color = ultimateColor;
-                    _graphHoverMap[scatterUnUltimate] = "低減前安全限界\n" + nmSectionDetails;
+                    if (pileSection.FactoredUltimateNM.N?.Count > 0 && pileSection.FactoredUltimateNM.M?.Count > 0)
+                    {
+                        var scatterFaUltimate = WpfPlot.Plot.Add.ScatterLine(
+                            pileSection.FactoredUltimateNM.N.ToArray(), pileSection.FactoredUltimateNM.M.ToArray());
+                        scatterFaUltimate.LegendText = "低減後レベル2 安全限界";
+                        scatterFaUltimate.LineStyle.Color = ultimateColor;
+                        _graphHoverMap[scatterFaUltimate] = "低減後レベル2 安全限界\n" + nmSectionDetails;
+                    }
+                    if (pileSection.UnfactoredUltimateNM.N?.Count > 0 && pileSection.UnfactoredUltimateNM.M?.Count > 0)
+                    {
+                        var scatterUnUltimate = WpfPlot.Plot.Add.ScatterLine(
+                            pileSection.UnfactoredUltimateNM.N.ToArray(), pileSection.UnfactoredUltimateNM.M.ToArray());
+                        scatterUnUltimate.LegendText = "低減前レベル2 安全限界";
+                        scatterUnUltimate.LineStyle.Pattern = LinePattern.Dashed;
+                        scatterUnUltimate.LineStyle.Color = ultimateColor;
+                        _graphHoverMap[scatterUnUltimate] = "低減前レベル2 安全限界\n" + nmSectionDetails;
+                    }
                 }
 
                 List<double> axialForceResultsVL = [];
@@ -1671,17 +1696,22 @@ namespace PileDesign.ViewModels
                     }
 
                     // 全杭分のデータを 2 系列（Level1/Level2）にまとめて一度だけ描画
+                    // レベル1: NikkenGreen, レベル2: NikkenPaleRed
                     if (axialForceResultsLevel1.Count > 0)
                     {
                         var scatterResultLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1.ToArray(), [.. momentResultsLevel1]);
                         scatterResultLevel1.LegendText = "レベル1地震時";
                         scatterResultLevel1.LineStyle.Width = 0;
+                        scatterResultLevel1.MarkerStyle.FillColor = damageColor;       // NikkenGreen
+                        scatterResultLevel1.MarkerStyle.OutlineColor = damageColor;
                     }
                     if (axialForceResultsLevel2.Count > 0)
                     {
                         var scatterResultLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2.ToArray(), [.. momentResultsLevel2]);
                         scatterResultLevel2.LegendText = "レベル2地震時";
                         scatterResultLevel2.LineStyle.Width = 0;
+                        scatterResultLevel2.MarkerStyle.FillColor = ultimateColor;     // NikkenPaleRed
+                        scatterResultLevel2.MarkerStyle.OutlineColor = ultimateColor;
                     }
 
                     ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
@@ -1824,6 +1854,7 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = false;
                 IsGridOptionVisible = false;
                 IsMonQdSliderVisible = true;
+                IsSeismicGradeOptionVisible = true;
 
                 WpfPlot.Plot.Clear();
                 _graphHoverMap.Clear();
@@ -1854,9 +1885,13 @@ namespace PileDesign.ViewModels
                     $"杭断面: {pileSection.PileDescription}\n" +
                     $"M/(Q·d): {MonQd:N2}";
 
-                // QN曲線データ描画（MonQdスライダー値で再計算、低減後=実線、低減前=同色破線）
-                var qnCurves = pileSection.ComputeQNForMonQd(MonQd);
-                // 既製杭でない場合はキャッシュ値にフォールバック
+                // 性能グレードに応じた限界曲線の選択（NMINT と同じ規則）
+                bool isGradeAQ = SelectedSeismicGrade == "A";
+                int qDamageLevel = isGradeAQ ? 1 : 2;
+                string qDamageLabel = isGradeAQ ? "レベル1 損傷限界" : "レベル2 損傷限界";
+
+                // 損傷限界はレベル別に再計算
+                var qnCurves = pileSection.ComputeQNForMonQd(MonQd, damageLevel: qDamageLevel);
                 if (qnCurves.UnfactoredService.N == null)
                 {
                     qnCurves = (
@@ -1866,8 +1901,7 @@ namespace PileDesign.ViewModels
                     );
                 }
 
-                // 限界ごとの色: 使用=DeepBlue, 損傷=Green, 安全=PaleRed
-                var qnServiceColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x32 << 16) | (0x71 << 8) | 0xAD))); // NikkenDeepBlue #3271AD
+                // 限界ごとの色: 損傷=NikkenGreen, 安全=NikkenPaleRed
                 var qnDamageColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0x23 << 16) | (0x89 << 8) | 0x66))); // NikkenGreen #238966
                 var qnUltimateColor = ScottPlot.Color.FromARGB(unchecked((uint)(0xFF << 24 | (0xE9 << 16) | (0x55 << 8) | 0x41))); // NikkenPaleRed #E95541
 
@@ -1894,9 +1928,13 @@ namespace PileDesign.ViewModels
                     }
                 }
 
-                DrawQNCurvePair(qnCurves.FactoredService, qnCurves.UnfactoredService, "使用限界", qnServiceColor);
-                DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, "損傷限界", qnDamageColor);
-                DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "安全限界", qnUltimateColor);
+                // 損傷限界（指定レベル）を描画
+                DrawQNCurvePair(qnCurves.FactoredDamage, qnCurves.UnfactoredDamage, qDamageLabel, qnDamageColor);
+                // グレードAのみ安全限界を描画
+                if (isGradeAQ)
+                {
+                    DrawQNCurvePair(qnCurves.FactoredUltimate, qnCurves.UnfactoredUltimate, "レベル2 安全限界", qnUltimateColor);
+                }
 
                 // 解析結果プロット
                 List<double> axialForceResultsLevel1Q = [];
@@ -1996,17 +2034,22 @@ namespace PileDesign.ViewModels
                     }
 
                     // 全杭分のデータを 2 系列（Level1/Level2）にまとめて一度だけ描画
+                    // レベル1: NikkenGreen, レベル2: NikkenPaleRed
                     if (axialForceResultsLevel1Q.Count > 0)
                     {
                         var scatterLevel1 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel1Q.ToArray(), [.. shearResultsLevel1]);
                         scatterLevel1.LegendText = "レベル1地震時";
                         scatterLevel1.LineStyle.Width = 0;
+                        scatterLevel1.MarkerStyle.FillColor = qnDamageColor;
+                        scatterLevel1.MarkerStyle.OutlineColor = qnDamageColor;
                     }
                     if (axialForceResultsLevel2Q.Count > 0)
                     {
                         var scatterLevel2 = WpfPlot.Plot.Add.Scatter(axialForceResultsLevel2Q.ToArray(), [.. shearResultsLevel2]);
                         scatterLevel2.LegendText = "レベル2地震時";
                         scatterLevel2.LineStyle.Width = 0;
+                        scatterLevel2.MarkerStyle.FillColor = qnUltimateColor;
+                        scatterLevel2.MarkerStyle.OutlineColor = qnUltimateColor;
                     }
 
                     // MonQd 参照値

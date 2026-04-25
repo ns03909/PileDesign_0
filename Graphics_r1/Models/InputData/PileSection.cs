@@ -100,6 +100,7 @@ namespace PileDesign.Models.InputData
         private (List<double> N, List<double> M)? _unfactoredUltimateNMCache;
         private (List<double> N, List<double> M)? _factoredServiceNMCache;
         private (List<double> N, List<double> M)? _factoredDamageNMCache;
+        private (List<double> N, List<double> M)? _factoredDamageNMLevel1Cache;
         private (List<double> N, List<double> M)? _factoredUltimateNMCache;
 
         // --- 追加: M-φキャッシュ（同一断面・同一軸力での再計算を抑制） ---
@@ -125,6 +126,7 @@ namespace PileDesign.Models.InputData
             _unfactoredUltimateNMCache = null;
             _factoredServiceNMCache = null;
             _factoredDamageNMCache = null;
+            _factoredDamageNMLevel1Cache = null;
             _factoredUltimateNMCache = null;
         }
 
@@ -189,6 +191,7 @@ namespace PileDesign.Models.InputData
 
         public (List<double> N, List<double> M) FactoredServiceNMRaw => GetNMRaw(nameof(FactoredServiceNM));
         public (List<double> N, List<double> M) FactoredDamageNMRaw => GetNMRaw(nameof(FactoredDamageNM));
+        public (List<double> N, List<double> M) FactoredDamageNMLevel1Raw => GetNMRaw(nameof(FactoredDamageNMLevel1));
         public (List<double> N, List<double> M) FactoredUltimateNMRaw => GetNMRaw(nameof(FactoredUltimateNM));
 
         // --- 変更: NMプロパティをキャッシュ ---
@@ -221,6 +224,20 @@ namespace PileDesign.Models.InputData
                 GetMultipliedListValues(FactoredDamageNMRaw.N, 1e-3),
                 GetMultipliedListValues(FactoredDamageNMRaw.M, 1e-6)
             );
+
+        public (List<double> N, List<double> M) FactoredDamageNMLevel1 =>
+            _factoredDamageNMLevel1Cache ??= (
+                GetMultipliedListValues(FactoredDamageNMLevel1Raw.N, 1e-3),
+                GetMultipliedListValues(FactoredDamageNMLevel1Raw.M, 1e-6)
+            );
+
+        /// <summary>
+        /// レベル別の損傷限界 NM 曲線を返す。
+        /// level == 1: β2 なし（β1 のみ）
+        /// level == 2（デフォルト）: β1×β2
+        /// </summary>
+        public (List<double> N, List<double> M) GetFactoredDamageNM(int level)
+            => level == 1 ? FactoredDamageNMLevel1 : FactoredDamageNM;
 
         public (List<double> N, List<double> M) FactoredUltimateNM =>
             _factoredUltimateNMCache ??= (
@@ -1765,6 +1782,7 @@ namespace PileDesign.Models.InputData
                 nameof(UnfactoredUltimateNM) => section.UnfactoredUltimateNM,
                 nameof(FactoredServiceNM) => section.FactoredServiceNM,
                 nameof(FactoredDamageNM) => section.FactoredDamageNM,
+                nameof(FactoredDamageNMLevel1) => section.FactoredDamageNMLevel1,
                 nameof(FactoredUltimateNM) => section.FactoredUltimateNM,
                 _ => (new List<double>(), new List<double>(), new List<double>(), new List<double>())
             };
@@ -1832,7 +1850,7 @@ namespace PileDesign.Models.InputData
             (List<double> N, List<double> Q) FactoredDamage,
             (List<double> N, List<double> Q) UnfactoredUltimate,
             (List<double> N, List<double> Q) FactoredUltimate
-        ) ComputeQNForMonQd(double monQd)
+        ) ComputeQNForMonQd(double monQd, int damageLevel = 2)
         {
             var section = CreateSectionCalculator();
             if (section is not AbstractPileSection absSection)
@@ -1847,7 +1865,7 @@ namespace PileDesign.Models.InputData
                 );
             }
 
-            // 場所打ち鋼管コンクリート杭はmonQd非依存のQN（引数なし版）を使用
+            // 場所打ち鋼管コンクリート杭はmonQd非依存のQN（引数なし版）を使用、damageLevel も無視（β=1.0）
             if (absSection is InsituSteelPipeReinforcedConcreteSection sprc)
             {
                 return (
@@ -1868,8 +1886,8 @@ namespace PileDesign.Models.InputData
                 return (
                     Scale(rcSec.GetServiceLimitQNInteraction(monQd, false)),
                     Scale(rcSec.GetServiceLimitQNInteraction(monQd, true)),
-                    Scale(rcSec.GetDamageLimitQNInteraction(monQd, false)),
-                    Scale(rcSec.GetDamageLimitQNInteraction(monQd, true)),
+                    Scale(rcSec.GetDamageLimitQNInteraction(monQd, false, damageLevel)),
+                    Scale(rcSec.GetDamageLimitQNInteraction(monQd, true, damageLevel)),
                     Scale(rcSec.GetUltimateQNInteraction(monQd, pw, sigmaWy, false)),
                     Scale(rcSec.GetUltimateQNInteraction(monQd, pw, sigmaWy, true))
                 );
@@ -1882,8 +1900,8 @@ namespace PileDesign.Models.InputData
                 return (
                     Scale(d.GetServiceLimitQNInteraction(monQd, false)),
                     Scale(d.GetServiceLimitQNInteraction(monQd, true)),
-                    Scale(d.GetDamageLimitQNInteraction(monQd, false)),
-                    Scale(d.GetDamageLimitQNInteraction(monQd, true)),
+                    Scale(d.GetDamageLimitQNInteraction(monQd, false, damageLevel)),
+                    Scale(d.GetDamageLimitQNInteraction(monQd, true, damageLevel)),
                     Scale(d.GetUltimateQNInteraction(monQd, false)),
                     Scale(d.GetUltimateQNInteraction(monQd, true))
                 );

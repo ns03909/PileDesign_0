@@ -210,7 +210,9 @@ namespace PileDesign.Models.InputData
             FactoredServiceNM = GetFactoredServiceLimitMNInteraction();
 
             // 低減後損傷限界NMインタラクション
-            FactoredDamageNM = GetFactoredDamageLimitMNInteraction();
+            FactoredDamageNM = GetFactoredDamageLimitMNInteraction(level: 2);
+            FactoredDamageNMLevel1 = GetFactoredDamageLimitMNInteraction(level: 1);
+            // PHC 杭 損傷限界: β1=1.0 なので L1 は β2=1.0（低減前と同じ）に等しい
 
             // 損傷限界軸力閾値
             DamageLimitAxialForceThresholds =
@@ -281,11 +283,12 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 損傷限界せん断力を返す。
         /// </summary>
-        private double GetDamageLimitShear(double MonQd, bool isFactored)
+        private double GetDamageLimitShear(double MonQd, bool isFactored, int level = 2)
         {
             double beta1 = 1.0;
             double beta2 = 0.65;
-            double beta = beta1 * beta2;
+            // L1: β2 を乗じない、L2: β1×β2
+            double beta = level == 1 ? beta1 : beta1 * beta2;
             double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
             double t = (Ro - Ri) / 2.0;
             double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
@@ -361,7 +364,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(MonQd, isFactored);
+                double q = GetDamageLimitShear(MonQd, isFactored, level);
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -770,8 +773,13 @@ namespace PileDesign.Models.InputData
             return (Ns, Ms, epsilonCs, curvatures);
         }
 
-        internal (List<double>, List<double>, List<double>, List<double>) GetFactoredDamageLimitMNInteraction()
+        internal (List<double>, List<double>, List<double>, List<double>) GetFactoredDamageLimitMNInteraction(int level = 2)
         {
+            // level==1: β2=1.0（β2 を乗じない、L1）
+            // level==2: β2={0.75, 0.65}（L2）
+            double beta2Low = level == 1 ? 1.0 : 0.75;   // 10N/mm² 未満
+            double beta2High = level == 1 ? 1.0 : 0.65;  // 10N/mm² 以上
+
             List<double> Ns = [];
             List<double> Ms = [];
             List<double> epsilonCs = [];
@@ -786,11 +794,11 @@ namespace PileDesign.Models.InputData
             Ns.Add((35.0 - SigmaE) * Ae);
 
             Ms.Add(0.0);
-            Ms.Add(GetDamageLimitMoment(0.75, 4.0 - SigmaE));       // 10未満: β2=0.75
-            Ms.Add(GetDamageLimitMoment(0.75, 10.0 - SigmaE));      // 10未満: β2=0.75
-            Ms.Add(GetDamageLimitMoment(0.65, 10.0 - SigmaE));      // 10以上: β2=0.65
-            Ms.Add(GetDamageLimitMoment(0.65, (Fcd + Ftd) * 0.5 - SigmaE)); // 10以上: β2=0.65
-            Ms.Add(GetDamageLimitMoment(0.65, 35.0 - SigmaE));      // 10以上: β2=0.65
+            Ms.Add(GetDamageLimitMoment(beta2Low, 4.0 - SigmaE));       // 10未満
+            Ms.Add(GetDamageLimitMoment(beta2Low, 10.0 - SigmaE));      // 10未満
+            Ms.Add(GetDamageLimitMoment(beta2High, 10.0 - SigmaE));     // 10以上
+            Ms.Add(GetDamageLimitMoment(beta2High, (Fcd + Ftd) * 0.5 - SigmaE)); // 10以上
+            Ms.Add(GetDamageLimitMoment(beta2High, 35.0 - SigmaE));     // 10以上
             Ms.Add(0.0);
 
             for (int i = 0; i < Ns.Count; i++)
@@ -941,10 +949,12 @@ namespace PileDesign.Models.InputData
             DamageLimitBendingMomentThresholds = GetDamageLimitBendingMomentThresholds();
 
             // 損傷限界曲げモーメント低減率（10N/mm²未満: β2=0.75、10N/mm²以上: β2=0.65）
-            DamageLimitBeta = [0.0, 0.8 * 0.75, 0.80 * 0.65, 0.0];
+            DamageLimitBeta = [0.0, 0.8 * 0.75, 0.80 * 0.65, 0.0];   // L2: β1=0.8, β2={0.75, 0.65}
+            DamageLimitBetaL1 = [0.0, 0.8, 0.80, 0.0];               // L1: β2 を乗じない（β1=0.8 のみ）
 
-            // 低減後損傷限界NMインタラクション
+            // 低減後損傷限界NMインタラクション（L2 / L1）
             FactoredDamageNM = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBeta);
+            FactoredDamageNMLevel1 = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBetaL1);
 
             // 安全限界軸力低減率
             UltimateLimitAxialForceThresholds =
@@ -1008,11 +1018,12 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 損傷限界せん断力を返す。
         /// </summary>
-        private double GetDamageLimitShear(double MonQd, bool isFactored)
+        private double GetDamageLimitShear(double MonQd, bool isFactored, int level = 2)
         {
             double beta1 = 1.0;
             double beta2 = 0.65;
-            double beta = beta1 * beta2;
+            // L1: β2 を乗じない、L2: β1×β2
+            double beta = level == 1 ? beta1 : beta1 * beta2;
             double s0 = 2.0 * (Math.Pow(Ro, 3) - Math.Pow(Ri, 3)) / 3.0;
             double t = (Ro - Ri) / 2.0;
             double alpha = Math.Min(Math.Max(4.0 / (MonQd + 1.0), 1.0), 2.0);
@@ -1086,7 +1097,7 @@ namespace PileDesign.Models.InputData
             for (int i = 0; i < iCount; i++)
             {
                 double n = (NMin * (iCount - i) + NMax * i) / iCount;
-                double q = GetDamageLimitShear(MonQd, isFactored);
+                double q = GetDamageLimitShear(MonQd, isFactored, level);
                 ns.Add(n);
                 qs.Add(q);
             }
@@ -1695,8 +1706,9 @@ namespace PileDesign.Models.InputData
             // 低減後使用限界NMインタラクション（曲げ制限値外ゼロ）
             FactoredServiceNM = ApplyAxialForceLimitsToNM(UnfactoredServiceNM, nBendMin, nBendMax);
 
-            // 低減後損傷限界NMインタラクション（曲げ制限値外ゼロ）
+            // 低減後損傷限界NMインタラクション（SC杭は β1=β2=1.0、L1/L2 同値）
             FactoredDamageNM = ApplyAxialForceLimitsToNM(UnfactoredDamageNM, nBendMin, nBendMax);
+            FactoredDamageNMLevel1 = FactoredDamageNM;
 
             // 安全限界曲げモーメント低減率
             UltimateLimitBeta = [0.0, 1.0, 0.0];

@@ -80,7 +80,8 @@ namespace PileDesign.Models.InputData
             ];
 
             // 損傷限界曲げモーメント低減率
-            DamageLimitBeta = [0.0, 1.0, 0.65, 0.0];
+            DamageLimitBeta = [0.0, 1.0, 0.65, 0.0];        // L2: β1=1.0, β2={1.0, 0.65}
+            DamageLimitBetaL1 = [0.0, 1.0, 1.0, 0.0];       // L1: β2 を乗じない（β1=1.0 のみ）
 
             // 安全限界軸力低減率
             UltimateLimitAxialForceThresholds =
@@ -115,8 +116,10 @@ namespace PileDesign.Models.InputData
             // 低減後使用限界NMインタラクション
             FactoredServiceNM = GetFactoredMNInteraction(UnfactoredServiceNM, (ServiceLimitAxialForceThresholds, ServiceLimitBendingMomentThresholds), ServiceLimitBeta);
 
-            // 低減後損傷限界NMインタラクション
+            // 低減後損傷限界NMインタラクション（レベル2: β1×β2）
             FactoredDamageNM = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBeta);
+            // レベル1: β2 を乗じない（β1 のみ）
+            FactoredDamageNMLevel1 = GetFactoredMNInteraction(UnfactoredDamageNM, (DamageLimitAxialForceThresholds, DamageLimitBendingMomentThresholds), DamageLimitBetaL1);
 
             // 低減後安全限界NMインタラクション
             FactoredUltimateNM = GetFactoredMNInteraction(UnfactoredUltimateNM, (UltimateLimitAxialForceThresholds, UltimateLimitBendingMomentThresholds), UltimateLimitBeta);

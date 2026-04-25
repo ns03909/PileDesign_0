@@ -213,6 +213,20 @@
                 <ComboBox ItemsSource="{Binding LimitStateOptions}" SelectedItem="{Binding SelectedLimitState}"/>
             </StackPanel>
 
+            <StackPanel Visibility="{Binding IsSeismicGradeOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock Text="性能グレード:" VerticalAlignment="Center" Margin="0,4,0,0"/>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton GroupName="SeismicGrade" Content="グレードA"
+                                 IsChecked="{Binding IsSeismicGradeA, Mode=TwoWay}"
+                                 Margin="0,0,8,0" VerticalAlignment="Center"
+                                 ToolTip="レベル1: 損傷限界 / レベル2: 安全限界"/>
+                    <RadioButton GroupName="SeismicGrade" Content="グレードS"
+                                 IsChecked="{Binding IsSeismicGradeS, Mode=TwoWay}"
+                                 VerticalAlignment="Center"
+                                 ToolTip="レベル1: 損傷限界 / レベル2: 損傷限界（安全限界曲線なし）"/>
+                </StackPanel>
+            </StackPanel>
+
             <Button Content="レジェンド表示切替" Command="{Binding ToggleLegendCommand}" />
 
             <!-- 案 C v2 (2026-04-24): 「杭周地盤変位反力」グラフで地盤反力度 / 反力係数に切替 -->

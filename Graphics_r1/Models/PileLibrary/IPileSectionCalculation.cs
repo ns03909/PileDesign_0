@@ -16,7 +16,8 @@ namespace PileDesign.Models.PileLibrary
         (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) UnfactoredDamageNM { get; }
         (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) UnfactoredUltimateNM { get; }
         (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) FactoredServiceNM { get; }
-        (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) FactoredDamageNM { get; }
+        (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) FactoredDamageNM { get; }        // レベル2（β1×β2）
+        (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) FactoredDamageNMLevel1 { get; }  // レベル1（β1のみ）
         (List<double> N, List<double> M, List<double> Phi, List<double> Epsilon) FactoredUltimateNM { get; }
 
         // M-φ 関係

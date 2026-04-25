@@ -783,7 +783,8 @@ namespace PileDesign.Models.InputData
 
         public List<double> DamageLimitAxialForceThresholds { get; protected set; }
         public List<double> DamageLimitBendingMomentThresholds { get; protected set; }
-        public List<double> DamageLimitBeta { get; protected set; }
+        public List<double> DamageLimitBeta { get; protected set; }  // レベル2（β1×β2）
+        public List<double> DamageLimitBetaL1 { get; protected set; }  // レベル1（β2=1.0、β1のみ）
 
         public List<double> UltimateLimitAxialForceThresholds { get; protected set; }
         public List<double> UltimateLimitBendingMomentThresholds { get; protected set; }
@@ -797,8 +798,19 @@ namespace PileDesign.Models.InputData
         public (List<double>, List<double>, List<double>, List<double>) UnfactoredUltimateNM { get; protected set; }
 
         public (List<double>, List<double>, List<double>, List<double>) FactoredServiceNM { get; protected set; }
-        public (List<double>, List<double>, List<double>, List<double>) FactoredDamageNM { get; protected set; }
+        public (List<double>, List<double>, List<double>, List<double>) FactoredDamageNM { get; protected set; }  // レベル2（β1×β2）
+        public (List<double>, List<double>, List<double>, List<double>) FactoredDamageNMLevel1 { get; protected set; }  // レベル1（β1のみ）
         public (List<double>, List<double>, List<double>, List<double>) FactoredUltimateNM { get; protected set; }
+
+        /// <summary>
+        /// レベル別の損傷限界 NM インタラクションを返す。
+        /// level == 1: β2 を乗じない（β1 のみ）
+        /// level == 2: β2 も乗じる（デフォルト、既存 FactoredDamageNM）
+        /// </summary>
+        public virtual (List<double>, List<double>, List<double>, List<double>) GetFactoredDamageNM(int level)
+        {
+            return level == 1 ? FactoredDamageNMLevel1 : FactoredDamageNM;
+        }
 
         public (List<double>, List<double>, List<double>, List<double>) SteelYieldNM { get; protected set; }
 
