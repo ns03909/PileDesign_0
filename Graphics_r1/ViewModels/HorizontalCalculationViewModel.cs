@@ -81,7 +81,12 @@ namespace PileDesign.ViewModels
                 newLines.Add(line);
             if (newLines.Count == 0) return;
 
-            Application.Current?.Dispatcher.Invoke(() =>
+            // E3c-3 hang 対策 (2026-04-26): Dispatcher.Invoke (sync) → BeginInvoke (async)。
+            // System.Timers.Timer の Elapsed は ThreadPool worker で発火するため、ここで
+            // sync Dispatcher.Invoke すると UI thread を待つ間 ThreadPool worker を 1 本ブロック。
+            // 8 並列時はワーカー枯渇 → ケース worker と starvation 競合。BeginInvoke なら
+            // キューに積むだけで即時 return、ThreadPool 圧迫を回避。
+            Application.Current?.Dispatcher.BeginInvoke(() =>
             {
                 foreach (var line in newLines)
                 {
@@ -1796,9 +1801,18 @@ namespace PileDesign.ViewModels
             // 並列ケース × 並列 MathNet の掛け算でスレッド過剰を防ぐ。MDOP=1 (逐次) では clamp 不要。
             int _caseMDOP = Math.Max(1, MaxCaseDegreeOfParallelism);
             int _origMathNetMDOP = MathNet.Numerics.Control.MaxDegreeOfParallelism;
+            // 元の MKL/OMP 環境変数を退避 (try/finally で復元)
+            string? _origMklNumThreads = Environment.GetEnvironmentVariable("MKL_NUM_THREADS");
+            string? _origOmpNumThreads = Environment.GetEnvironmentVariable("OMP_NUM_THREADS");
             if (_caseMDOP > 1)
             {
                 MathNet.Numerics.Control.MaxDegreeOfParallelism = 1;
+                // hang 対策 (2026-04-26): MKL/OMP ネイティブ層の並列度を強制 1 に。
+                // MathNet.Numerics.Control の clamp は managed 層のみで、MKL ネイティブが
+                // 内部スレッドプールを別途持つ場合 oversubscription が起き ThreadPool starvation
+                // → hang の一因。環境変数で強制クランプしておく。
+                Environment.SetEnvironmentVariable("MKL_NUM_THREADS", "1");
+                Environment.SetEnvironmentVariable("OMP_NUM_THREADS", "1");
             }
 
             // E3c-3-enable: MDOP > 1 のとき、ケースを Task.Run で並行実行し SemaphoreSlim で
@@ -1871,6 +1885,14 @@ namespace PileDesign.ViewModels
                             ActiveCasesCount = ActiveCases.Count;
                             OnPropertyChanged(nameof(PendingCaseCount));
                         });
+                        // 診断ログ (hang 調査用、2026-04-26): ケース開始時刻と thread id を記録。
+                        // MDOP > 1 時のみ。完了せず固まった場合、最後に開始したケースが特定可能。
+                        var _diagCaseStartUtc = DateTime.UtcNow;
+                        if (_caseMDOP > 1)
+                        {
+                            int tid = System.Threading.Thread.CurrentThread.ManagedThreadId;
+                            await AddLogAsync($"{caseTag} 🟢 開始 (Tid={tid}, ActiveCases={ActiveCasesCount})");
+                        }
                         try
                         {
 
@@ -1943,10 +1965,10 @@ namespace PileDesign.ViewModels
                         int bisectionAttempt = 0;
                         bool caseConverged = false;
 
-                        // 並列モニタ: 初期 nStep 確定後に TotalSteps を更新
+                        // 並列モニタ: 初期 nStep 確定後に TotalSteps を更新 (BeginInvoke で fire-and-forget)
                         {
                             int initialNStep = nStep;
-                            System.Windows.Application.Current?.Dispatcher.Invoke(() => monitorItem.TotalSteps = initialNStep);
+                            System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => monitorItem.TotalSteps = initialNStep);
                         }
 
                         // v28 (2026-04-23) 改善ゲート: 前 attempt の平均反復数を保持し、
@@ -2491,9 +2513,9 @@ namespace PileDesign.ViewModels
                                     // ログに残す
                                     await AddLogAsync($"解析中止: 代表変位が閾値を超えました max|d|={dispMaxAbs:E3} > threshold={MaxAllowedDisplacement:E3}");
 
-                                    // View に警告表示を依頼（UI スレッドでイベントを発火）
+                                    // View に警告表示を依頼（UI スレッドでイベントを発火、BeginInvoke で worker をブロックしない）
                                     string warnMsg = $"解析を中止しました。\n代表変位が閾値 {MaxAllowedDisplacement} m を超えました（{dispMaxAbs:E3}）。";
-                                    Application.Current?.Dispatcher.Invoke(() => RequestShowWarning?.Invoke(warnMsg));
+                                    Application.Current?.Dispatcher.BeginInvoke(() => RequestShowWarning?.Invoke(warnMsg));
 
                                     // キャンセルを発行して呼び出し側で OperationCanceledException を処理させる
                                     _cancellationTokenSource?.Cancel();
@@ -3047,6 +3069,13 @@ namespace PileDesign.ViewModels
                                 ActiveCasesCount = ActiveCases.Count;
                                 CompletedCaseCount++;  // setter 内で PendingCaseCount PropertyChanged も発火
                             });
+                            // 診断ログ (hang 調査用): ケース完了時刻と所要時間を記録
+                            if (_caseMDOP > 1)
+                            {
+                                double elapsedSec = (DateTime.UtcNow - _diagCaseStartUtc).TotalSeconds;
+                                int tid = System.Threading.Thread.CurrentThread.ManagedThreadId;
+                                await AddLogAsync($"{caseTag} ⚪ 完了 (Tid={tid}, {elapsedSec:F1}s, Active={ActiveCasesCount - 1})");
+                            }
                         }
                         } // end local function RunThisCaseAsync
 
@@ -3080,6 +3109,12 @@ namespace PileDesign.ViewModels
                 // E3c-3: MathNet 並列度を元に戻す + semaphore 解放
                 MathNet.Numerics.Control.MaxDegreeOfParallelism = _origMathNetMDOP;
                 _caseSemaphore?.Dispose();
+                // hang 対策 (2026-04-26): MKL/OMP 環境変数を元に戻す
+                if (_caseMDOP > 1)
+                {
+                    Environment.SetEnvironmentVariable("MKL_NUM_THREADS", _origMklNumThreads);
+                    Environment.SetEnvironmentVariable("OMP_NUM_THREADS", _origOmpNumThreads);
+                }
             }
 
             token.ThrowIfCancellationRequested();
