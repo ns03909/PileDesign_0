@@ -217,6 +217,28 @@ namespace PileDesign.Services
             });
         }
 
+        // 空 PathGeometry の Path 追加をスキップするヘルパー (描画コスト削減)。
+        // PathGeometry.Figures.Count == 0 の場合は WPF が見えない Path をレイアウト/描画
+        // パスに通すコストが無駄。図形が無いセクション (例: 根入れ非表示時の PathGeoEmbedment*)
+        // はそのまま追加すらしない。
+        private static void AddPath(Canvas canvas, PathGeometry data, Brush stroke,
+            double thickness, string name = "Path", DoubleCollection dashArray = null,
+            Brush fill = null, bool isHitTestVisible = true)
+        {
+            if (data == null || data.Figures.Count == 0) return;
+            var p = new Path
+            {
+                Stroke = stroke,
+                StrokeThickness = thickness,
+                Data = data,
+                Name = name,
+            };
+            if (dashArray != null) p.StrokeDashArray = dashArray;
+            if (fill != null) p.Fill = fill;
+            if (!isHitTestVisible) p.IsHitTestVisible = false;
+            canvas.Children.Add(p);
+        }
+
         public void DrawAllPaths(Canvas canvas, double pileStrokeThickness, double soilStrokeThickness)
         {
             if (canvas == null)
@@ -289,14 +311,8 @@ namespace PileDesign.Services
                 Name = "Node"
             });
 
-            // 土圧合力節点（根入れ部上下面）
-            canvas.Children.Add(new Path()
-            {
-                Stroke = NikkenBrush.SkyBlue,
-                StrokeThickness = 0.5,
-                Data = PathGeoEmbedmentNodes,
-                Name = "EmbedmentNode"
-            });
+            // 土圧合力節点（根入れ部上下面）: 根入れ非表示時に空 → AddPath で skip
+            AddPath(canvas, PathGeoEmbedmentNodes, NikkenBrush.SkyBlue, 0.5, "EmbedmentNode");
 
             // 杭要素
             canvas.Children.Add(new Path()
@@ -316,25 +332,11 @@ namespace PileDesign.Services
                 Name = "Node"
             });
 
-            // 根入部の対角線
-            canvas.Children.Add(new Path()
-            {
-                Stroke = NikkenBrush.Yellow,
-                StrokeThickness = 0.5,
-                Data = PathGeoEmbedmentDiagonals,
-                Name = "EmbedmentDiagonal",
-                StrokeDashArray = [4, 2] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
-            });
-
-            // 分割後根入部の対角線
-            canvas.Children.Add(new Path()
-            {
-                Stroke = NikkenBrush.SkyBlue,
-                StrokeThickness = 0.5,
-                Data = PathGeoDividedEmbedmentDiagonals,
-                Name = "EmbedmentDiagonal",
-                StrokeDashArray = [4, 2] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
-            });
+            // 根入部の対角線 (根入れ非表示時に空)
+            AddPath(canvas, PathGeoEmbedmentDiagonals, NikkenBrush.Yellow, 0.5,
+                "EmbedmentDiagonal", dashArray: new DoubleCollection { 4, 2 });
+            AddPath(canvas, PathGeoDividedEmbedmentDiagonals, NikkenBrush.SkyBlue, 0.5,
+                "EmbedmentDiagonal", dashArray: new DoubleCollection { 4, 2 });
 
             // 杭径
             canvas.Children.Add(new Path()
@@ -472,25 +474,12 @@ namespace PileDesign.Services
             //    StrokeDashArray = [4, 2] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
             //});
 
-            // 矩形荷重
-            canvas.Children.Add(new Path()
-            {
-                Stroke = Brushes.DarkGreen,
-                StrokeThickness = 0.5,
-                Data = PathGeoRectLoads,
-                Name = "RectLoads",
-            });
+            // 矩形荷重 (沈下解析未設定時に空)
+            AddPath(canvas, PathGeoRectLoads, Brushes.DarkGreen, 0.5, "RectLoads");
 
-
-            // 沈下グリッド
-            canvas.Children.Add(new Path()
-            {
-                Stroke = Brushes.Gray,
-                StrokeThickness = 0.51,
-                Data = PathGeoSettlementGrid,
-                Name = "SettlementGrid",
-                StrokeDashArray = [8, 4] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
-            });
+            // 沈下グリッド (沈下解析未設定時に空)
+            AddPath(canvas, PathGeoSettlementGrid, Brushes.Gray, 0.51, "SettlementGrid",
+                dashArray: new DoubleCollection { 8, 4 });
 
 
             // 要素
@@ -502,33 +491,16 @@ namespace PileDesign.Services
                 Name = "Elements",
             });
 
-            // 基礎梁要素
-            canvas.Children.Add(new Path()
-            {
-                Stroke = Brushes.DarkOrange,
-                StrokeThickness = 1.0,
-                Data = PathGeoFoundationBeams,
-                Name = "FoundationBeam"
-            });
+            // 基礎梁要素 (基礎梁未定義時に空)
+            AddPath(canvas, PathGeoFoundationBeams, Brushes.DarkOrange, 1.0, "FoundationBeam");
 
             // 梁要素断面形状
-            canvas.Children.Add(new Path()
-            {
-                Stroke = new SolidColorBrush(Color.FromArgb(180, 139, 69, 19)), // 半透明の茶色
-                StrokeThickness = 0.8,
-                Data = PathGeoBeamSections,
-                Name = "BeamSection"
-            });
+            AddPath(canvas, PathGeoBeamSections,
+                new SolidColorBrush(Color.FromArgb(180, 139, 69, 19)), 0.8, "BeamSection");
 
             // 基礎梁節点
-            canvas.Children.Add(new Path()
-            {
-                Stroke = Brushes.Orange,
-                Fill = Brushes.Orange,
-                StrokeThickness = 0.5,
-                Data = PathGeoFoundationNodes,
-                Name = "FoundationNode"
-            });
+            AddPath(canvas, PathGeoFoundationNodes, Brushes.Orange, 0.5,
+                "FoundationNode", fill: Brushes.Orange);
 
             // 接続用節点（杭頭+ΔZc位置）
             canvas.Children.Add(new Path()
@@ -684,26 +656,20 @@ namespace PileDesign.Services
                 Name = "AxisZM"
             });
 
-            // ホバーハイライト（節点）
-            canvas.Children.Add(new Path()
-            {
-                Stroke = new SolidColorBrush(Color.FromArgb(200, 0, 120, 215)),
-                Fill = new SolidColorBrush(Color.FromArgb(40, 0, 120, 215)),
-                StrokeThickness = 1.5,
-                Data = PathGeoHoverNode,
-                IsHitTestVisible = false,
-                Name = "HoverNode"
-            });
+            // ホバーハイライト (節点 / 要素): 通常空、マウスオーバー時のみ figure あり。
+            // AddPath で空時の追加をスキップ → 通常時は不要な Path 2 件分の追加コスト削減
+            AddPath(canvas, PathGeoHoverNode,
+                stroke: new SolidColorBrush(Color.FromArgb(200, 0, 120, 215)),
+                thickness: 1.5,
+                fill: new SolidColorBrush(Color.FromArgb(40, 0, 120, 215)),
+                isHitTestVisible: false,
+                name: "HoverNode");
 
-            // ホバーハイライト（要素）
-            canvas.Children.Add(new Path()
-            {
-                Stroke = new SolidColorBrush(Color.FromArgb(200, 0, 120, 215)),
-                StrokeThickness = 2.5,
-                Data = PathGeoHoverElement,
-                IsHitTestVisible = false,
-                Name = "HoverElement"
-            });
+            AddPath(canvas, PathGeoHoverElement,
+                stroke: new SolidColorBrush(Color.FromArgb(200, 0, 120, 215)),
+                thickness: 2.5,
+                isHitTestVisible: false,
+                name: "HoverElement");
         }
     }
 

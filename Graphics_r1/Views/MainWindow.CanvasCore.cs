@@ -42,12 +42,19 @@ namespace PileDesign.Views
             // 既存のラベル画像を即時消す
             if (_textLayerImage != null) _textLayerImage.Source = null;
             TextBlockInfos.Clear();
+            // EdgeMode.Aliased: 操作中はアンチエイリアスを切ってラスタライズ高速化
+            // (回転/ズーム時の描画 fps 向上、操作終了で Unspecified に戻して鮮明化)
+            if (Canvas3DLayout != null)
+                System.Windows.Media.RenderOptions.SetEdgeMode(Canvas3DLayout, System.Windows.Media.EdgeMode.Aliased);
         }
 
         private void EndViewInteraction()
         {
             _isViewInteracting = false;
             isLightweightDrawing = false;
+            // 通常モードに戻して滑らかに描画
+            if (Canvas3DLayout != null)
+                System.Windows.Media.RenderOptions.SetEdgeMode(Canvas3DLayout, System.Windows.Media.EdgeMode.Unspecified);
             RequestUpdateCanvas3D(); // 最終状態をフル描画
         }
 
