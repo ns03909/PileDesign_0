@@ -18,6 +18,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _loadingPlaneAltitude, value);
         }
 
+        // 土層上端 (ボーリング孔口レベル相当)。SettlementSoilLayers の第1層上端として使う
+        private double _soilLayersTopAltitude;
+        public double SoilLayersTopAltitude
+        {
+            get => _soilLayersTopAltitude;
+            set => SetProperty(ref _soilLayersTopAltitude, value);
+        }
+
         public List<string> LoadingTypeOptions { get; set; } = ["任意矩形", "個別十字", "個別十字（基礎梁考慮）", "なし"];
 
         private string _loadingType;
@@ -70,10 +78,62 @@ namespace PileDesign.Models.InputData
         public PileGroupSettlement()
         {
             LoadingPlaneAltitude = -5.0; /// 5m
+            SoilLayersTopAltitude = 0.0;
             LoadingType = "任意矩形";
             RectLoads = [];
             SettlementSoilLayers = [];
             SettlementGridData = [];
+        }
+
+        /// <summary>
+        /// 解析用に荷重面以下の有効な土層を返す。
+        /// 荷重面が土層内にある場合、荷重面が属する層の上端を荷重面まで切り詰めた
+        /// 新規 SettlementSoilLayer として最上層を作り、その下の層は元の参照のまま返す。
+        /// 荷重面が土層上端と一致する場合は元のコレクションを返す。
+        /// </summary>
+        public static ObservableCollection<SettlementSoilLayer> GetEffectiveLayersForAnalysis(
+            double soilLayersTopAltitude,
+            double loadingPlaneAltitude,
+            ObservableCollection<SettlementSoilLayer> layers)
+        {
+            if (layers == null || layers.Count == 0) return layers;
+
+            // 荷重面が土層上端と等しい (許容誤差) → そのまま
+            if (Math.Abs(loadingPlaneAltitude - soilLayersTopAltitude) < NumericalConstants.NEAR_ZERO_EPSILON)
+                return layers;
+
+            // 荷重面が含まれる最上層を見つけて、それより下の層だけを残す
+            // 最初の層の上端は soilLayersTopAltitude、以降は前の層の BottomAltitude
+            double prevTop = soilLayersTopAltitude;
+            int startIndex = -1;
+            for (int i = 0; i < layers.Count; i++)
+            {
+                double bottom = layers[i].BottomAltitude;
+                // 荷重面がこの層内 (top >= load > bottom) にあるか
+                if (loadingPlaneAltitude <= prevTop && loadingPlaneAltitude > bottom)
+                {
+                    startIndex = i;
+                    break;
+                }
+                prevTop = bottom;
+            }
+            if (startIndex < 0) return layers; // 想定外: 入力外
+
+            var trimmed = new ObservableCollection<SettlementSoilLayer>();
+            // 切り詰めた最上層 (新規インスタンスで Thickness を上書き)
+            var first = layers[startIndex];
+            trimmed.Add(new SettlementSoilLayer
+            {
+                BottomAltitude = first.BottomAltitude,
+                Thickness = loadingPlaneAltitude - first.BottomAltitude,
+                PoissonsRatio = first.PoissonsRatio,
+                Ek = first.Ek
+            });
+            // 以降は元の参照を流用
+            for (int i = startIndex + 1; i < layers.Count; i++)
+                trimmed.Add(layers[i]);
+
+            return trimmed;
         }
 
         // SettlementGridDataから特定のXまたはYのデータを返す
@@ -369,6 +429,14 @@ namespace PileDesign.Models.InputData
         {
             get => _ek;
             set => SetProperty(ref _ek, value);
+        }
+
+        // 備考 (土層コピー時に土層名・分類・Vs を自動記載)
+        private string _note;
+        public string Note
+        {
+            get => _note;
+            set => SetProperty(ref _note, value);
         }
     }
 

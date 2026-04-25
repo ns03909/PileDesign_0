@@ -74,8 +74,14 @@ namespace PileDesign.Services
                 soilPiles,
                 verticalBeamCaseResults);
 
+            // 荷重面が土層内にある場合は、最上層を荷重面で切り詰めた解析用レイヤを使用
+            var effectiveLayers = PileGroupSettlement.GetEffectiveLayersForAnalysis(
+                pileGroupSettlement.SoilLayersTopAltitude,
+                pileGroupSettlement.LoadingPlaneAltitude,
+                pileGroupSettlement.SettlementSoilLayers);
+
             // 各杭位置での沈下量を計算
-            CalculatePileSettlements(pileLayoutItems, rectLoads, pileGroupSettlement.SettlementSoilLayers);
+            CalculatePileSettlements(pileLayoutItems, rectLoads, effectiveLayers);
 
             // グリッドの設定
             pileGroupSettlement.SetGridX(xMin, xMax, xOffset, xSpacing, gridXItems);
@@ -86,7 +92,7 @@ namespace PileDesign.Services
                 pileGroupSettlement.SettlementGridX,
                 pileGroupSettlement.SettlementGridY,
                 rectLoads,
-                pileGroupSettlement.SettlementSoilLayers);
+                effectiveLayers);
 
             return new SettlementAnalysisResult
             {
@@ -138,6 +144,7 @@ namespace PileDesign.Services
                 {
                     SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
                     double radius = soilPile.GroupPileLoadDia * 0.5;
+                    if (radius <= 0) continue; // 荷重面等価径未入力の杭はスキップ（NaN/重複点回避）
                     Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
                     double qa = pileLayoutDataItem.AxialForceVL0 + pileLayoutDataItem.AxialForceVLAdditional;
 
@@ -158,6 +165,7 @@ namespace PileDesign.Services
                 {
                     SoilPile soilPile = soilPiles[pileLayoutDataItem.SoilPileAltNo - 1];
                     double radius = soilPile.GroupPileLoadDia * 0.5;
+                    if (radius <= 0) continue; // 荷重面等価径未入力の杭はスキップ
                     Point point = new() { X = pileLayoutDataItem.Point3D.X, Y = pileLayoutDataItem.Point3D.Y };
                     // 反力が存在しない杭は 0 として扱う
                     double qa = reactionByPileNo.TryGetValue(pileLayoutDataItem.PileNo, out double r) ? r : 0.0;

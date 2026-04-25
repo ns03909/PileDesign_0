@@ -21,7 +21,6 @@
     <Window.Resources>
         <conv:BooleanToContentConverter x:Key="BooleanToContentConverter"/>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
-        <conv:PileTopAltitudeConverter x:Key="PileTopAltitudeConverterInstance" />
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
         <conv:SubscriptConverter x:Key="SubscriptConverter" />
@@ -56,6 +55,11 @@
         <Style x:Key="RightAlignedTextBlockStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+
+        <Style x:Key="CenterAlignedTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
@@ -217,7 +221,6 @@
                                                   Width="150"
                                                   SelectionChanged="ComboBoxLoadingType_SelectionChanged"/>
                                         <TextBlock Text="荷重面Z"/>
-                                        <TextBox Text="{Binding CurrentInputModel.FundamentalInput.RefLevel}" IsReadOnly="True" Foreground="Gray"/>
                                         <TextBox x:Name="TextBoxGroupPileLoadingPlaneAltitude"
                                                  Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude, StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
                                                  GotFocus="TextBox_GotFocus"
@@ -607,6 +610,7 @@
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="変形係数"   TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="Esk" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
@@ -618,7 +622,17 @@
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="ポアソン比"   TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                            <TextBlock Text=""  TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="νsk" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Note, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                Width="2*" MinWidth="100"
+                                                                ElementStyle="{StaticResource CenterAlignedTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="備考" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                         </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>

@@ -21,15 +21,22 @@ namespace PileDesign.ViewModels
 {
     public enum PropertyInputType { ReadOnly, Number, ComboBox }
 
-    public class PropertyPanelItem : INotifyPropertyChanged
+    public class PropertyPanelItem(
+        string name,
+        string value,
+        string unit = "",
+        PropertyInputType inputType = PropertyInputType.ReadOnly,
+        Action<PropertyPanelItem, string>? commitAction = null,
+        IReadOnlyList<string>? options = null,
+        string nameColor = null) : INotifyPropertyChanged
     {
-        public string Name { get; }
-        public string Unit { get; }
-        public string NameColor { get; }
-        public PropertyInputType InputType { get; }
-        public IReadOnlyList<string>? Options { get; }
+        public string Name { get; } = name;
+        public string Unit { get; } = unit;
+        public string NameColor { get; } = nameColor;
+        public PropertyInputType InputType { get; } = inputType;
+        public IReadOnlyList<string>? Options { get; } = options;
 
-        private string _value;
+        private string _value = value;
         public string Value
         {
             get => _value;
@@ -53,25 +60,7 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>値が確定したときに呼ばれるコールバック。引数は (this, rawValue)。</summary>
-        public Action<PropertyPanelItem, string>? CommitAction { get; }
-
-        public PropertyPanelItem(
-            string name,
-            string value,
-            string unit = "",
-            PropertyInputType inputType = PropertyInputType.ReadOnly,
-            Action<PropertyPanelItem, string>? commitAction = null,
-            IReadOnlyList<string>? options = null,
-            string nameColor = null)
-        {
-            Name = name;
-            _value = value;
-            Unit = unit;
-            InputType = inputType;
-            CommitAction = commitAction;
-            Options = options;
-            NameColor = nameColor;
-        }
+        public Action<PropertyPanelItem, string>? CommitAction { get; } = commitAction;
 
         public event PropertyChangedEventHandler? PropertyChanged;
     }
@@ -157,7 +146,7 @@ namespace PileDesign.ViewModels
         }
 
         // MRUリスト
-        public ObservableCollection<MruItem> MruItems { get; } = new();
+        public ObservableCollection<MruItem> MruItems { get; } = [];
 
         // Undo/Redo状態表示
         public string UndoRedoStatusText => _undoManager != null
@@ -2703,7 +2692,7 @@ namespace PileDesign.ViewModels
                 var all = CurrentInputModel?.PileGroupSettlement?.LoadingTypeOptions;
                 if (all == null) return [];
                 if (!IsVerticalBeamAnalysisDone)
-                    return all.Where(o => o != "個別十字（基礎梁考慮）").ToList();
+                    return [.. all.Where(o => o != "個別十字（基礎梁考慮）")];
                 return [.. all];
             }
         }
@@ -3103,8 +3092,8 @@ namespace PileDesign.ViewModels
         /// 解析結果コンテンツの正規並び順（水平解析→沈下解析）。
         /// AnalysisResultContentOption はこの順で並ぶように CollectionChanged で自動整列する。
         /// </summary>
-        private static readonly List<string> CanonicalAnalysisContentOrder = new()
-        {
+        private static readonly List<string> CanonicalAnalysisContentOrder =
+        [
             // 水平解析結果
             "梁応力（水平）",
             "節点変位（水平）",
@@ -3119,7 +3108,7 @@ namespace PileDesign.ViewModels
             "沈下反力（地盤）",
             "沈下反力（杭頭集約）",
             "沈下応力",
-        };
+        ];
 
         private bool _reorderingAnalysisContentOption;
 
@@ -3224,6 +3213,12 @@ namespace PileDesign.ViewModels
                     e.PropertyName == nameof(PileGroupSettlement.SettlementGridData))
                 {
                     IsSettlementGridCacheValid = false;
+                }
+
+                // 土層上端 が変わったら 各層の Thickness を再計算
+                if (e.PropertyName == nameof(PileGroupSettlement.SoilLayersTopAltitude))
+                {
+                    UpdateSettlementSoilLayer();
                 }
             };
 

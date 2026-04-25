@@ -28,6 +28,7 @@
         <local:DoubleLessThanConverter x:Key="DoubleLessThanConverter"/>
         <conv:IntToZeroBasedIndexConverter x:Key="IntToZeroBasedIndexConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <conv:ZElevationConverter x:Key="ZElevationConverter"/>
 
         <!-- 共通フォームスタイル（Window.Resources に追加） -->
         <Style x:Key="FormLabelStyle" TargetType="TextBlock">
@@ -570,11 +571,9 @@
                     <TabItem Header="孔口レベル・地下水位">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="孔口標高Z" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="孔口標高" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
                                     Width="100"/>
-                                <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50" HorizontalContentAlignment="Right" IsEnabled="False"/>
-                                <TextBox x:Name="TextBoxGroundTopAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                     Text ="{Binding GroundInput.GroundTopAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                <TextBox x:Name="TextBoxGroundTopAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="70" HorizontalContentAlignment="Right"
                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                      KeyDown="TextBox_Common_KeyDown"
                                      PreviewKeyDown="TextBox_PreviewKeyDown"
@@ -583,13 +582,18 @@
                                      common:TextBoxNavigationBehavior.Enable="True"
                                      common:NumericUpDownBehavior.Enable="True"
                                      common:NumericUpDownBehavior.Increment="0.01"
-                                     common:NumericUpDownBehavior.LargeIncrement="0.1"/>
+                                     common:NumericUpDownBehavior.LargeIncrement="0.1">
+                                    <TextBox.Text>
+                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}">
+                                            <Binding Path="GroundInput.GroundTopAltitude"/>
+                                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude" Mode="OneWay"/>
+                                        </MultiBinding>
+                                    </TextBox.Text>
+                                </TextBox>
 
-                                <TextBlock Text="地下水位Z" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="地下水位標高" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
                                     Width="100"/>
-                                <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50" HorizontalContentAlignment="Right"  IsEnabled="False"/>
-                                <TextBox x:Name="TextBoxGroundWaterTableAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                         Text="{Binding GroundInput.GroundWaterTableAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                <TextBox x:Name="TextBoxGroundWaterTableAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="70" HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
                                          LostFocus="TextBox_Common_LostFocus"
@@ -597,6 +601,12 @@
                                          common:NumericUpDownBehavior.Enable="True"
                                          common:NumericUpDownBehavior.Increment="0.01"
                                          common:NumericUpDownBehavior.LargeIncrement="0.1">
+                                    <TextBox.Text>
+                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}">
+                                            <Binding Path="GroundInput.GroundWaterTableAltitude"/>
+                                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude" Mode="OneWay"/>
+                                        </MultiBinding>
+                                    </TextBox.Text>
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -609,11 +619,9 @@
                                     </TextBox.Style>
                                 </TextBox>
 
-                                <TextBlock Text="地中応力計算用Z" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25"
+                                <TextBlock Text="地中応力計算用標高" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25"
                                     Width="150"/>
-                                <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50"  HorizontalContentAlignment="Right" IsEnabled="False"/>
-                                <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                         Text="{Binding GroundInput.StressAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}"
+                                <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="70" HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
                                          LostFocus="TextBox_Common_LostFocus"
@@ -621,6 +629,12 @@
                                          common:NumericUpDownBehavior.Enable="True"
                                          common:NumericUpDownBehavior.Increment="0.01"
                                          common:NumericUpDownBehavior.LargeIncrement="0.1">
+                                    <TextBox.Text>
+                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}">
+                                            <Binding Path="GroundInput.StressAltitude"/>
+                                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude" Mode="OneWay"/>
+                                        </MultiBinding>
+                                    </TextBox.Text>
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -683,18 +697,67 @@
                                        Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
                                          Text="{Binding GroundInput.GroundAcceleration1, StringFormat='{}{0:0.000}'}"
-                                          HorizontalContentAlignment="Right" 
+                                          HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
+                                <TextBlock Text="液状化指標 PL" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="20,0,8,0"/>
+                                <TextBox HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="60"
+                                         Text="{Binding GroundInput.PL[0], StringFormat='{}{0:0.00}', Mode=OneWay}"
+                                         IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                    <TextBox.ToolTip>
+                                        <StackPanel MaxWidth="500">
+                                            <TextBlock FontWeight="Bold" Text="液状化指標 PL (岩崎ら 1982)"/>
+                                            <TextBlock Margin="0,4,0,0">
+                                                <Run Text="PL = Σ F(z)·W(z)·H"/><LineBreak/>
+                                                <Run Text="  F(z) = max(0, 1 − FL)　液状化危険度の重み"/><LineBreak/>
+                                                <Run Text="  W(z) = max(0, 10 − 0.5z)　深さの重み (z はGL深さ m)"/><LineBreak/>
+                                                <Run Text="  H    = 土質点の有効厚 (m)"/><LineBreak/>
+                                                <Run Text="  深さ z ∈ [0, 20m] のみ算入"/>
+                                            </TextBlock>
+                                            <TextBlock Margin="0,8,0,0" FontWeight="Bold" Text="判定目安"/>
+                                            <TextBlock>
+                                                <Run Text="PL = 0       液状化危険度なし"/><LineBreak/>
+                                                <Run Text="0 &lt; PL ≤ 5   軽微"/><LineBreak/>
+                                                <Run Text="5 &lt; PL ≤ 15  中程度"/><LineBreak/>
+                                                <Run Text="15 &lt; PL      大"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="レベル2荷重検討用地表面加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="250" />
-                                <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25" 
+                                <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
                                     Text="{Binding GroundInput.GroundAcceleration2, StringFormat='{}{0:0.000}'}"
-                                       
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
+                                <TextBlock Text="液状化指標 PL" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="20,0,8,0"/>
+                                <TextBox HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="60"
+                                         Text="{Binding GroundInput.PL[1], StringFormat='{}{0:0.00}', Mode=OneWay}"
+                                         IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                    <TextBox.ToolTip>
+                                        <StackPanel MaxWidth="500">
+                                            <TextBlock FontWeight="Bold" Text="液状化指標 PL (岩崎ら 1982)"/>
+                                            <TextBlock Margin="0,4,0,0">
+                                                <Run Text="PL = Σ F(z)·W(z)·H"/><LineBreak/>
+                                                <Run Text="  F(z) = max(0, 1 − FL)　液状化危険度の重み"/><LineBreak/>
+                                                <Run Text="  W(z) = max(0, 10 − 0.5z)　深さの重み (z はGL深さ m)"/><LineBreak/>
+                                                <Run Text="  H    = 土質点の有効厚 (m)"/><LineBreak/>
+                                                <Run Text="  深さ z ∈ [0, 20m] のみ算入"/>
+                                            </TextBlock>
+                                            <TextBlock Margin="0,8,0,0" FontWeight="Bold" Text="判定目安"/>
+                                            <TextBlock>
+                                                <Run Text="PL = 0       液状化危険度なし"/><LineBreak/>
+                                                <Run Text="0 &lt; PL ≤ 5   軽微"/><LineBreak/>
+                                                <Run Text="5 &lt; PL ≤ 15  中程度"/><LineBreak/>
+                                                <Run Text="15 &lt; PL      大"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </TextBox.ToolTip>
+                                </TextBox>
                             </StackPanel>
+                            <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                       Text="PL = Σ (1−FL)·(10−0.5z)·H ｜ 岩崎ら(1982)。判定目安: PL=0 危険度なし、0&lt;PL≤5 軽微、5&lt;PL≤15 中程度、PL&gt;15 大"/>
                         </StackPanel>
                     </TabItem>
                     <TabItem Header="地盤変位">
@@ -990,22 +1053,25 @@
                     <GroupBox Header="孔口レベル・地下水位" Grid.Column="0">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="孔口標高Z" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="孔口標高" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
                                         Width="100"/>
-                                <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50" HorizontalContentAlignment="Right" IsEnabled="False"/>
-                                <TextBox x:Name="TextBoxGroundTopAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                         Text ="{Binding GroundInput.GroundTopAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                <TextBox x:Name="TextBoxGroundTopAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="70" HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
                                          PreviewKeyDown="TextBox_PreviewKeyDown"
                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
-                                         LostFocus="TextBox_Common_LostFocus"/>
+                                         LostFocus="TextBox_Common_LostFocus">
+                                    <TextBox.Text>
+                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}">
+                                            <Binding Path="GroundInput.GroundTopAltitude"/>
+                                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude" Mode="OneWay"/>
+                                        </MultiBinding>
+                                    </TextBox.Text>
+                                </TextBox>
 
-                                <TextBlock Text="地下水位Z" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="地下水位標高" HorizontalAlignment="Right" Height="25" VerticalAlignment="Center"
                                         Width="100"/>
-                                <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50" HorizontalContentAlignment="Right"  IsEnabled="False"/>
-                                <TextBox x:Name="TextBoxGroundWaterTableAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                         Text="{Binding GroundInput.GroundWaterTableAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
+                                <TextBox x:Name="TextBoxGroundWaterTableAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="70" HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
                                          LostFocus="TextBox_Common_LostFocus"
@@ -1013,6 +1079,12 @@
                                          common:NumericUpDownBehavior.Enable="True"
                                          common:NumericUpDownBehavior.Increment="0.01"
                                          common:NumericUpDownBehavior.LargeIncrement="0.1">
+                                    <TextBox.Text>
+                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}">
+                                            <Binding Path="GroundInput.GroundWaterTableAltitude"/>
+                                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude" Mode="OneWay"/>
+                                        </MultiBinding>
+                                    </TextBox.Text>
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -1025,11 +1097,9 @@
                                     </TextBox.Style>
                                 </TextBox>
 
-                                <TextBlock Text="地中応力計算用Z" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25"
+                                <TextBlock Text="地中応力計算用標高" HorizontalAlignment="Right" VerticalAlignment="Center" Height="25"
                                         Width="150"/>
-                                <TextBox Text="{Binding InputModel.FundamentalInput.RefLevel}" Width="50"  HorizontalContentAlignment="Right" IsEnabled="False"/>
-                                <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                         Text="{Binding GroundInput.StressAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}"
+                                <TextBox x:Name="TextBoxGroundStressAltitude" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="70" HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                          KeyDown="TextBox_Common_KeyDown"
                                          LostFocus="TextBox_Common_LostFocus"
@@ -1037,6 +1107,12 @@
                                          common:NumericUpDownBehavior.Enable="True"
                                          common:NumericUpDownBehavior.Increment="0.01"
                                          common:NumericUpDownBehavior.LargeIncrement="0.1">
+                                    <TextBox.Text>
+                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}">
+                                            <Binding Path="GroundInput.StressAltitude"/>
+                                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude" Mode="OneWay"/>
+                                        </MultiBinding>
+                                    </TextBox.Text>
                                     <TextBox.Style>
                                         <Style TargetType="TextBox">
                                             <Style.Triggers>
@@ -1444,13 +1520,15 @@
                                         <!--<StackPanel Orientation="Horizontal">-->
                                         <common:EnhancedDataGrid x:Name="DataGridGroundLayer"
                                                 AutoGenerateColumns="False"
-                                                HorizontalAlignment="Left"
+                                                HorizontalAlignment="Stretch"
                                                 CanUserAddRows="False"
                                                 CanUserSortColumns="False"
                                                 FrozenColumnCount="6"
+                                                HorizontalScrollBarVisibility="Auto"
+                                                VerticalScrollBarVisibility="Auto"
 
                                                 EnableRowVirtualization="True"
-                                                EnableColumnVirtualization="True"
+                                                EnableColumnVirtualization="False"
                                                 VirtualizingPanel.IsVirtualizing="True"
                                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                                 ScrollViewer.CanContentScroll="True"
@@ -1525,15 +1603,29 @@
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
+                                                <DataGridTextColumn IsReadOnly="True" Foreground="Gray"
+                                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                    <DataGridTextColumn.Binding>
+                                                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                                            <Binding Path="BottomAltitude"/>
+                                                            <Binding Path="DataContext.InputModel.FundamentalInput.ReferenceAltitude" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                        </MultiBinding>
+                                                    </DataGridTextColumn.Binding>
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="下端" TextAlignment="Center"/>
+                                                            <TextBlock Text="標高" TextAlignment="Center"/>
+                                                            <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
                                                 <DataGridTextColumn Binding="{Binding BottomAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                                                     IsReadOnly="True" Foreground="Gray"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="下端" TextAlignment="Center"  />
-                                                            <!--<TextBlock Text="標高" TextAlignment="Center"/>-->
-                                                            <!--<TextBlock Text="{Binding DataContext.InputModel.FundamentalInput.RefLevel, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        TextAlignment="Center"/>-->
                                                             <TextBlock Text="Z" TextAlignment="Center"/>
                                                             <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                         </StackPanel>
@@ -1691,6 +1783,41 @@
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
+                                                <DataGridTextColumn Binding="{Binding PoissonsRatio, StringFormat=N2}"
+                                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="ポアソン" TextAlignment="Center"/>
+                                                            <TextBlock Text="比" TextAlignment="Center"/>
+                                                            <TextBlock Text="νs" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Gs0, StringFormat=N0, Mode=OneWay}"
+                                                                    IsReadOnly="True" Foreground="Gray"
+                                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="初期せん断" TextAlignment="Center"/>
+                                                            <TextBlock Text="剛性 Gs0" TextAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
+                                                <DataGridTextColumn Binding="{Binding Es0, StringFormat=N0, Mode=OneWay}"
+                                                                    IsReadOnly="True" Foreground="Gray"
+                                                                    ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                    <DataGridTextColumn.Header>
+                                                        <StackPanel>
+                                                            <TextBlock Text="初期変形" TextAlignment="Center"/>
+                                                            <TextBlock Text="係数 Es0" TextAlignment="Center"/>
+                                                            <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
+                                                        </StackPanel>
+                                                    </DataGridTextColumn.Header>
+                                                </DataGridTextColumn>
+
                                                 <DataGridCheckBoxColumn Binding="{Binding IsPositiveCircumResistance}">
                                                     <DataGridCheckBoxColumn.Header>
                                                         <StackPanel>
@@ -1812,7 +1939,7 @@
 
 
                                                 EnableRowVirtualization="True"
-                                                EnableColumnVirtualization="True"
+                                                EnableColumnVirtualization="False"
                                                 VirtualizingPanel.IsVirtualizing="True"
                                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                                 ScrollViewer.CanContentScroll="True"
@@ -1872,13 +1999,30 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
+                                            <DataGridTextColumn ElementStyle="{StaticResource RightAlignTextBlockStyle}"
+                                                    IsReadOnly="True" Foreground="Gray">
+                                                <DataGridTextColumn.Binding>
+                                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                                        <Binding Path="LayerBottomZ"/>
+                                                        <Binding Path="DataContext.InputModel.FundamentalInput.ReferenceAltitude" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                    </MultiBinding>
+                                                </DataGridTextColumn.Binding>
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="層下面" TextAlignment="Center"/>
+                                                        <TextBlock Text="標高" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
                                             <DataGridTextColumn Binding="{Binding LayerBottomZ, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                     IsReadOnly="True" Foreground="Gray">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="層下面" TextAlignment="Center"/>
-                                                        <TextBlock Text="標高Z" TextAlignment="Center"/>
+                                                        <TextBlock Text="Z" TextAlignment="Center"/>
                                                         <TextBlock Text="(m)" TextAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
@@ -1973,23 +2117,38 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
+                                            <DataGridTextColumn IsReadOnly="True" Foreground="Gray"
+                                                        ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Binding>
+                                                    <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                                                        <Binding Path="AltitudeDepth"/>
+                                                        <Binding Path="DataContext.InputModel.FundamentalInput.ReferenceAltitude" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                    </MultiBinding>
+                                                </DataGridTextColumn.Binding>
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="参考" TextAlignment="Center"/>
+                                                        <TextBlock Text="NPT" TextAlignment="Center"/>
+                                                        <TextBlock Text="標高" TextAlignment="Center"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
                                             <DataGridTextColumn Binding="{Binding AltitudeDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                                         IsReadOnly="True" Foreground="Gray"
                                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
-                                                        <!--<TextBlock Text="標高" TextAlignment="Center"/>-->
-                                                        <!--<TextBlock Text="{Binding DataContext.InputModel.FundamentalInput.RefLevel, RelativeSource={RelativeSource AncestorType=Window}}" TextAlignment="Center"/>-->
                                                         <TextBlock Text="参考" TextAlignment="Center"/>
                                                         <TextBlock Text="NPT" TextAlignment="Center"/>
-                                                        <TextBlock Text="標高" TextAlignment="Center"/>
                                                         <TextBlock Text="Z" TextAlignment="Center"/>
                                                         <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
                                             
-                                            <DataGridTextColumn  Header="N値" Binding="{Binding NValue, StringFormat='{}{0:0.0}'}">
+                                            <DataGridTextColumn Binding="{Binding NValue, StringFormat='{}{0:0.0}'}">
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignTextBlockStyle}">
                                                         <Style.Triggers>
@@ -2002,6 +2161,11 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </DataGridTextColumn.ElementStyle>
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="N値" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
                                             <DataGridTextColumn Binding="{Binding Mass, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"

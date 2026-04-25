@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
+using PileDesign.Constants;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
@@ -294,21 +295,6 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// 粒度区分からポアソン比を決定
-        /// </summary>
-        /// <param name="granularityClass">粒度区分</param>
-        /// <returns>ポアソン比</returns>
-        private static double DeterminePoissonsRatio(string granularityClass)
-        {
-            return granularityClass switch
-            {
-                "粘性土" => 0.4,
-                "砂質土" or "礫質土" => 0.3,
-                _ => 0.33
-            };
         }
 
         /// <summary>
@@ -767,7 +753,11 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void DataGridSoilPile_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
-            HandleDataGridCellEditEnding(e, updateTree: false);
+            HandleDataGridCellEditEnding(e, () =>
+            {
+                // GroupPileLoadDia 等の編集後、個別十字系なら矩形荷重を再生成
+                RebuildAutoCrossRectLoadsIfNeeded();
+            }, updateTree: false);
         }
 
         // 根入部データグリッド更新メソッド
@@ -1072,15 +1062,15 @@ namespace PileDesign.ViewModels
         // 群杭沈下検討用検討用土層データグリッド更新メソッド
         private void UpdateSettlementSoilLayer()
         {
-            // SettlementCollection の更新
-            double loadingPlaneAltitude = CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            // 厚さは「土層上端 (SoilLayersTopAltitude)」基準で算出
+            double topAltitude = CurrentInputModel.PileGroupSettlement.SoilLayersTopAltitude;
             ObservableCollection<SettlementSoilLayer> settlementSoilLayers = CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
             for (int i = 0; i < settlementSoilLayers.Count; i++)
             {
                 if (i == 0)
-                    settlementSoilLayers[i].Thickness = loadingPlaneAltitude - settlementSoilLayers[i].BottomAltitude;
+                    settlementSoilLayers[i].Thickness = topAltitude - settlementSoilLayers[i].BottomAltitude;
                 else
-                    settlementSoilLayers[i].Thickness = settlementSoilLayers[i - 1].BottomAltitude - settlementSoilLayers[i].BottomAltitude; ;
+                    settlementSoilLayers[i].Thickness = settlementSoilLayers[i - 1].BottomAltitude - settlementSoilLayers[i].BottomAltitude;
             }
         }
 
@@ -2215,6 +2205,12 @@ namespace PileDesign.ViewModels
             var allBeams = new ObservableCollection<FoundationBeamElement>(beams.Concat(newBeams));
             CurrentInputModel.FoundationBeamInput.Beams = allBeams;
 
+            // 自動生成梁は MaterialNo=1 / SectionNo=1 を参照するため、参照先のデフォルトを保証
+            if (addedCount > 0)
+            {
+                CurrentInputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
+            }
+
             RenumberFoundationBeams();
             RequestUpdateWindow();
 
@@ -2476,6 +2472,30 @@ namespace PileDesign.ViewModels
                 return;
             }
 
+            // 荷重面位置と土層プロファイルの整合性チェック
+            var pgs = CurrentInputModel.PileGroupSettlement;
+            if (pgs.SettlementSoilLayers == null || pgs.SettlementSoilLayers.Count == 0)
+            {
+                MessageBox.Show("群杭沈下解析用の土層が1層以上必要です。\n土層タブで土層を追加してください。",
+                    "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            double topAlt = pgs.SoilLayersTopAltitude;
+            double loadAlt = pgs.LoadingPlaneAltitude;
+            double bottomAlt = pgs.SettlementSoilLayers[^1].BottomAltitude;
+            if (loadAlt > topAlt + NumericalConstants.NEAR_ZERO_EPSILON)
+            {
+                MessageBox.Show($"荷重面 Z ({loadAlt:N3} m) が土層上端 Z ({topAlt:N3} m) より高くなっています。\n荷重面を土層上端以下に設定してください。",
+                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            if (loadAlt < bottomAlt - NumericalConstants.NEAR_ZERO_EPSILON)
+            {
+                MessageBox.Show($"荷重面 Z ({loadAlt:N3} m) が最下層下端 Z ({bottomAlt:N3} m) より低くなっています。\n荷重面を最下層下端以上に設定してください。",
+                    "入力エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             var result = _settlementAnalysisService.PerformSettlementAnalysis(
                 CurrentInputModel.PileGroupSettlement,
                 CurrentInputModel.PileLayoutItems,
@@ -2507,7 +2527,7 @@ namespace PileDesign.ViewModels
             //IsAnalysisResultVisible = true;
             IsBubbleVisible = true;
             IsArrowVisible = true;
-            DisplacementDiagramRatio = 0.01;
+            DisplacementDiagramRatio = 0.3;
         }
 
         // 自動前方杭設定の処理メソッド
@@ -4330,9 +4350,21 @@ namespace PileDesign.ViewModels
                 if (groundInput.GroundLayers != null && groundInput.GroundLayers.Count > 0)
                 {
                     double groundBottomAltitude = groundInput.GroundLayers.Min(layer => layer.BottomAltitude);
+                    double groundTopAltitude = groundInput.GroundLayers.Max(layer => layer.BottomAltitude + layer.LayerThickness);
+
                     if (pileBottomAltitude < groundBottomAltitude)
                     {
-                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭下端標高({pileBottomAltitude:F2}m)が土層の最下層標高({groundBottomAltitude:F2}m)より下にあります。");
+                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭下端Z({pileBottomAltitude:F2}m)が土層の最下層Z({groundBottomAltitude:F2}m)より下にあります。");
+                    }
+                    // 杭頭が地盤上端より上に浮いているケース（水平土ばねが効かなくなる）
+                    if (pileTopAltitude > groundTopAltitude)
+                    {
+                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭頭Z({pileTopAltitude:F2}m)が土層の最上層Z({groundTopAltitude:F2}m)より上にあります。");
+                    }
+                    // 完全に交差しない場合（杭が地盤の完全に上 or 下）
+                    if (pileBottomAltitude >= groundTopAltitude || pileTopAltitude <= groundBottomAltitude)
+                    {
+                        errors.AppendLine($"杭配置No.{pileLayout.PileNo}: 杭 Z 範囲 [{pileBottomAltitude:F2}〜{pileTopAltitude:F2}] が地盤 Z 範囲 [{groundBottomAltitude:F2}〜{groundTopAltitude:F2}] と全く重なっていません。基本設定の「Z=0 の標高」を確認してください。");
                     }
                 }
                 else
@@ -4611,9 +4643,10 @@ namespace PileDesign.ViewModels
                     list.Add(new SettlementSoilLayer
                     {
                         BottomAltitude = layer.BottomAltitude,
-                        Ek = layer.Es,
-                        PoissonsRatio = DeterminePoissonsRatio(layer.GranularityClass),
-                        Thickness = 0
+                        Ek = layer.Es0,                  // 初期変形係数 Es0 = 2(1+νs)×Gs0
+                        PoissonsRatio = layer.PoissonsRatio,
+                        Thickness = 0,
+                        Note = BuildSoilLayerNote(layer)
                     });
                 }
             }
@@ -4632,6 +4665,15 @@ namespace PileDesign.ViewModels
 
             // 変更: 即時実行
             UpdateWindowImmediate();
+        }
+
+        // 備考文字列: 元地盤層の Es0 と νs を記載
+        private static string BuildSoilLayerNote(GroundLayerInput layer)
+        {
+            var parts = new List<string>(2);
+            if (layer.Es0 > 0) parts.Add($"Es0={layer.Es0:N0} kN/m²");
+            if (layer.PoissonsRatio > 0) parts.Add($"νs={layer.PoissonsRatio:N2}");
+            return string.Join(" / ", parts);
         }
 
         // AutoOverturningMomentCommand - 転倒モーメント自動計算

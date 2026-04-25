@@ -206,6 +206,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _naturalPeriods, value);
         }
 
+        // 液状化指標 PL 値 (岩崎ら 1982): PL = Σ (1-FL)·(10-0.5z)·H, FLが1超のときF=0, 深さは0~20m対象
+        private ObservableCollection<double> _pl = [0.0, 0.0];
+        public ObservableCollection<double> PL
+        {
+            get => _pl;
+            set => SetProperty(ref _pl, value);
+        }
+
         // コンストラクタ
         public GroundInput()
         {

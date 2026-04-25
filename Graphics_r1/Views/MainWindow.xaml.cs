@@ -2350,6 +2350,9 @@ namespace PileDesign.Views
             // 個別十字系に切り替わった場合は RectLoads を自動生成で置換
             if (vm != null && (selectedItem == "個別十字" || selectedItem == "個別十字（基礎梁考慮）"))
             {
+                // UpdateSourceTrigger=LostFocus のためモデル側 LoadingType が
+                // まだ古い値の可能性 → 先にソース更新してから再生成
+                comboBox?.GetBindingExpression(ComboBox.SelectedItemProperty)?.UpdateSource();
                 vm.RebuildAutoCrossRectLoadsIfNeeded();
             }
 
@@ -3083,8 +3086,9 @@ namespace PileDesign.Views
         private void ButtonGroupPileSettlement_Click(object sender, RoutedEventArgs e)
         {
             ActivateGroupPileLoadTab();
-            MessageBox.Show("群杭沈下解析は、（初期状態で左側にある）「群杭荷重」タブで行います。" +
-                "「荷重」、「土層」、「グリッド」を設定し、最下段の「群杭沈下解析実行」ボタンを押してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("（初期状態で左側にある）「群杭荷重」タブで「荷重」、「土層」、「グリッド」を設定し、" +
+                "最下段の「群杭沈下解析実行」ボタンを押してください。\n\n" +
+                "群杭沈下解析は「群杭荷重」で行ってください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ActivateGroupPileLoadTab()
@@ -3596,6 +3600,9 @@ namespace PileDesign.Views
                 };
 
                 beams.Add(newBeam);
+
+                // 参照先 (MaterialNo / SectionNo) のデフォルトを保証
+                vm.CurrentInputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
 
                 // リセット
                 vm.TempStartNode = null;

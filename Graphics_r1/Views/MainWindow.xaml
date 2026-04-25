@@ -41,7 +41,6 @@
     <Window.Resources>
         <conv:BooleanToContentConverter x:Key="BooleanToContentConverter"/>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
-        <conv:PileTopAltitudeConverter x:Key="PileTopAltitudeConverterInstance" />
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:BooleanNegationConverter x:Key="BooleanNegationConverter" />
         <conv:SubscriptConverter x:Key="SubscriptConverter" />
@@ -115,6 +114,11 @@
             <Setter Property="HorizontalAlignment" Value="Right"/>
             <Setter Property="TextAlignment" Value="Right"/>
             <Setter Property="Foreground" Value="Gray"/>
+        </Style>
+
+        <Style x:Key="CenterAlignedTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="RightAlignedDataCellStyle" TargetType="DataGridCell">
@@ -2075,7 +2079,7 @@
                                               BeginningEdit="DataGridInputNodes_BeginningEdit"
                                               common:DataGridNavigationBehavior.Enable="True"
                                               EnableRowVirtualization="True"
-                                              EnableColumnVirtualization="True"
+                                              EnableColumnVirtualization="False"
                                               VirtualizingPanel.IsVirtualizing="True"
                                               VirtualizingPanel.VirtualizationMode="Recycling"
                                               ScrollViewer.CanContentScroll="True"
@@ -2512,7 +2516,7 @@
                                                 BeginningEdit="DataGridFoundationBeams_BeginningEdit"
                                                 CellEditEnding="DataGridFoundationBeams_CellEditEnding"
                                                 EnableRowVirtualization="True"
-                                                EnableColumnVirtualization="True"
+                                                EnableColumnVirtualization="False"
                                                 VirtualizingPanel.IsVirtualizing="True"
                                                 VirtualizingPanel.VirtualizationMode="Recycling"
                                                 ScrollViewer.CanContentScroll="True"
@@ -2757,7 +2761,7 @@
                                                     BeginningEdit="DataGridPileLayout_BeginningEdit"
                                                     common:DataGridNavigationBehavior.Enable="True"
                                                     EnableRowVirtualization="True"
-                                                    EnableColumnVirtualization="True"
+                                                    EnableColumnVirtualization="False"
                                                     VirtualizingPanel.IsVirtualizing="True"
                                                     VirtualizingPanel.VirtualizationMode="Recycling"
                                                     ScrollViewer.CanContentScroll="True"
@@ -2817,14 +2821,8 @@
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="杭頭" TextAlignment="Center"/>
-                                                                <!--<TextBlock Text="標高" TextAlignment="Center"
-                                                                   HorizontalAlignment="Center"/>-->
                                                                 <TextBlock Text="Z" TextAlignment="Center"
                                                                     HorizontalAlignment="Center"/>
-                                                                <!--<TextBlock x:Name="TextBlockRefLevel"/>-->
-                                                                <!--DataContext="{Binding Source={StaticResource ProxyElement}}"
-                                                                    Text="{Binding DataContext.CurrentInputModel.FundamentalInput.RefLevel, UpdateSourceTrigger=LostFocus}"-->
-                                                                <!--TextAlignment="Center"/>-->
                                                                 <TextBlock Text="(m)" TextAlignment="Center"
                                                                    HorizontalAlignment="Center"/>
                                                             </StackPanel>
@@ -3258,7 +3256,7 @@
                                                     PasteCompleted="DataGridPileAxialForce_PasteCompleted"
                                                     common:DataGridNavigationBehavior.Enable="True"
                                                     EnableRowVirtualization="True"
-                                                    EnableColumnVirtualization="True"
+                                                    EnableColumnVirtualization="False"
                                                     VirtualizingPanel.IsVirtualizing="True"
                                                     VirtualizingPanel.VirtualizationMode="Recycling"
                                                     ScrollViewer.CanContentScroll="True"
@@ -3697,7 +3695,7 @@
                                                                     CellEditEnding="DataGridIsFrontPile_CellEditEnding"
                                                                     BeginningEdit="DataGridIsFrontPile_BeginningEdit"
                                                                     EnableRowVirtualization="True"
-                                                                    EnableColumnVirtualization="True"
+                                                                    EnableColumnVirtualization="False"
                                                                     VirtualizingPanel.IsVirtualizing="True"
                                                                     VirtualizingPanel.VirtualizationMode="Recycling"
                                                                     ScrollViewer.CanContentScroll="True"
@@ -3874,7 +3872,7 @@
                                         CellEditEnding="DataGridEmbedment_CellEditEnding"
                                         BeginningEdit="DataGridEmbedment_BeginningEdit"
                                         EnableRowVirtualization="True"
-                                        EnableColumnVirtualization="True"
+                                        EnableColumnVirtualization="False"
                                         VirtualizingPanel.IsVirtualizing="True"
                                         VirtualizingPanel.VirtualizationMode="Recycling"
                                         ScrollViewer.CanContentScroll="True"
@@ -4058,7 +4056,7 @@
                                               CellEditEnding="DataGridGrid_CellEditEnding"
                                               BeginningEdit="DataGridGrid_BeginningEdit"
                                               EnableRowVirtualization="True"
-                                              EnableColumnVirtualization="True"
+                                              EnableColumnVirtualization="False"
                                               VirtualizingPanel.IsVirtualizing="True"
                                               VirtualizingPanel.VirtualizationMode="Recycling"
                                               ScrollViewer.CanContentScroll="True"
@@ -4178,7 +4176,7 @@
                                         CellEditEnding="DataGridGrid_CellEditEnding"
                                         BeginningEdit="DataGridGrid_BeginningEdit"
                                         EnableRowVirtualization="True"
-                                        EnableColumnVirtualization="True"
+                                        EnableColumnVirtualization="False"
                                         VirtualizingPanel.IsVirtualizing="True"
                                         VirtualizingPanel.VirtualizationMode="Recycling"
                                         ScrollViewer.CanContentScroll="True"
@@ -4294,22 +4292,20 @@
 
                                     <!--<StackPanel Orientation="Horizontal" Grid.Row="0">-->
                                     <Grid Grid.Row="0">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="荷重面 = 土層上端 Z(m) " Grid.Row="1" Grid.Column="0"/>
+                                        <TextBlock Text="荷重面 Z (m)" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
                                         <TextBox x:Name="TextBoxGroupPileLoadingPlaneAltitude"
                                                     Text="{Binding CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude,
                                                     StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
-                                                    Grid.Row="1" Grid.Column="1"
-                                                    HorizontalContentAlignment="Right"
+                                                    Grid.Column="1"
+                                                    HorizontalContentAlignment="Right" Margin="0,2"
                                                     GotFocus="TextBox_GotFocus"
-                                                    PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
+                                                    PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                     TextChanged="TextBoxAltitude_TextChanged"
                                                     PreviewMouseDown="TextBoxBottomAltitude_PreviewMouseDown"
                                                     KeyDown="TextBox_KeyDown">
@@ -4322,6 +4318,19 @@
                                                     <Run Text="(基礎指針'19 図6.3.11 p230)"/>
                                                 </TextBlock>
                                             </TextBox.ToolTip>
+                                        </TextBox>
+                                        <TextBlock Text="標高 (m)" Grid.Column="2" VerticalAlignment="Center" Margin="8,2,4,2"/>
+                                        <TextBox Grid.Column="3" IsReadOnly="True" Foreground="Gray"
+                                                 HorizontalContentAlignment="Right" Margin="0,2">
+                                            <TextBox.Text>
+                                                <MultiBinding StringFormat="{}{0:+0.00;-0.00;+0.00}" Mode="OneWay">
+                                                    <Binding Path="CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude"/>
+                                                    <Binding Path="CurrentInputModel.FundamentalInput.ReferenceAltitude"/>
+                                                    <MultiBinding.Converter>
+                                                        <conv:SumConverter/>
+                                                    </MultiBinding.Converter>
+                                                </MultiBinding>
+                                            </TextBox.Text>
                                         </TextBox>
                                     </Grid>
                                     <!--</StackPanel>-->
@@ -4336,8 +4345,8 @@
 
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="*"/>
-
                                                 </Grid.RowDefinitions>
 
 
@@ -4386,66 +4395,59 @@
                                                     <Separator Grid.Row="2" Grid.ColumnSpan="2"/>
                                                 </Grid>
 
-                                                <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
+                                                <Grid Grid.Row="2" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                                         Converter={StaticResource VisibilityConverter},
                                                         ConverterParameter='任意矩形,個別十字,個別十字（基礎梁考慮）'}">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="*"/>
-                                                        </Grid.RowDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="*"/>
+                                                    </Grid.RowDefinitions>
 
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                        </Grid.ColumnDefinitions>
+                                                    <GroupBox Grid.Row="0" Header="建物下面全体矩形荷重自動生成" >
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto"/>
+                                                            </Grid.RowDefinitions>
 
-                                                        <GroupBox Header="建物下面全体矩形荷重自動生成" Grid.Row="0" Grid.Column="0" >
-                                                            <Grid>
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto"/>
-                                                                </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
 
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="杭心～矩形荷重境界(m)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
+                                                            <TextBox Text="{Binding RectLoadPileDistance}" Grid.Row="0" Grid.Column="1" Margin="4,0"
+                                                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                     KeyDown="TextBox_KeyDown"
+                                                                     HorizontalContentAlignment="Right"/>
 
-                                                                <TextBlock Text="杭心～矩形荷重境界(m)" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
-                                                                <TextBox Text="{Binding RectLoadPileDistance}" Grid.Row="0" Grid.Column="1" Margin="4,0"
-                                                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                                         KeyDown="TextBox_KeyDown"
-                                                                         HorizontalContentAlignment="Right"/>
-
-                                                                <Button Grid.Row="0" Grid.Column="2"
-                                                                        Padding="0"
-                                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                                        Tag="自動生成"
-                                                                        Command="{Binding AdjustRectLoadPlanCommand}">
-                                                                    <svgc:SvgViewbox Source="/Icons/CreateAutoUniformlyDistributedLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
-                                                                </Button>
-
-                                                            </Grid>
-                                                        </GroupBox>
-
-                                                        <StackPanel Grid.Row="1" Grid.Column="0">
-                                                            <Button Padding="0" HorizontalAlignment="Left"
-                                                                Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                                Tag="矩形荷重面追加"
-                                                                Command="{Binding AddRectLoadCommand}">
-                                                                <svgc:SvgViewbox Source="/Icons/AddRectLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                            <Button Grid.Row="0" Grid.Column="2"
+                                                                    Padding="0"
+                                                                    Style="{StaticResource LargeIconToolTipButtonStyle}"
+                                                                    Tag="自動生成"
+                                                                    Command="{Binding AdjustRectLoadPlanCommand}">
+                                                                <svgc:SvgViewbox Source="/Icons/CreateAutoUniformlyDistributedLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             </Button>
-                                                        </StackPanel>
-                                                    </Grid>
 
-                                                    <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
+                                                        </Grid>
+                                                    </GroupBox>
+
+                                                    <Button Grid.Row="1" Padding="0" HorizontalAlignment="Left"
+                                                        Style="{StaticResource LargeIconToolTipButtonStyle}"
+                                                        Tag="矩形荷重面追加"
+                                                        Command="{Binding AddRectLoadCommand}">
+                                                        <svgc:SvgViewbox Source="/Icons/AddRectLoad.svg" Style="{StaticResource SvgIconStyle24}"/>
+                                                    </Button>
+
+                                                    <common:EnhancedDataGrid Grid.Row="2" ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.RectLoads, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
                                                         AutoGenerateColumns="False"
                                                         CanUserAddRows="False"
                                                         CanUserSortColumns="True"
                                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                                         CellEditEnding="DataGridRectLoads_CellEditEnding"
                                                         EnableRowVirtualization="True"
-                                                        EnableColumnVirtualization="True"
+                                                        EnableColumnVirtualization="False"
                                                         VirtualizingPanel.IsVirtualizing="True"
                                                         VirtualizingPanel.VirtualizationMode="Recycling"
                                                         ScrollViewer.CanContentScroll="True"
@@ -4605,7 +4607,7 @@
 
                                                         </DataGrid.Columns>
                                                     </common:EnhancedDataGrid>
-                                                </StackPanel>
+                                                </Grid>
 
                                                 <StackPanel Grid.Row="1" Visibility="{Binding CurrentInputModel.PileGroupSettlement.LoadingType,
                                                         Converter={StaticResource VisibilityConverter},
@@ -4619,7 +4621,7 @@
                                                             CellEditEnding="DataGridSoilPile_CellEditEnding"
                                                               BeginningEdit="DataGridGrid_BeginningEdit"
                                                               EnableRowVirtualization="True"
-                                                              EnableColumnVirtualization="True"
+                                                              EnableColumnVirtualization="False"
                                                               VirtualizingPanel.IsVirtualizing="True"
                                                               VirtualizingPanel.VirtualizationMode="Recycling"
                                                               ScrollViewer.CanContentScroll="True"
@@ -4743,6 +4745,37 @@
                                         <TabItem Header="土層">
                                             <Grid>
                                                 <StackPanel Grid.Row=" 2">
+                                                    <GroupBox Header="土層上端 (ボーリング孔口レベル)" Margin="0,0,0,4">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="土層上端 Z (m)" Grid.Column="0" VerticalAlignment="Center" Margin="0,2,4,2"/>
+                                                            <TextBox Text="{Binding CurrentInputModel.PileGroupSettlement.SoilLayersTopAltitude,
+                                                                            StringFormat={}{0:+0.00;-0.00;+0.00}, UpdateSourceTrigger=LostFocus}"
+                                                                     Grid.Column="1" HorizontalContentAlignment="Right" Margin="0,2"
+                                                                     GotFocus="TextBox_GotFocus"
+                                                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                     KeyDown="TextBox_KeyDown"/>
+                                                            <TextBlock Text="標高 (m)" Grid.Column="2" VerticalAlignment="Center" Margin="8,2,4,2"/>
+                                                            <TextBox Grid.Column="3" IsReadOnly="True" Foreground="Gray"
+                                                                     HorizontalContentAlignment="Right" Margin="0,2">
+                                                                <TextBox.Text>
+                                                                    <MultiBinding StringFormat="{}{0:+0.00;-0.00;+0.00}" Mode="OneWay">
+                                                                        <Binding Path="CurrentInputModel.PileGroupSettlement.SoilLayersTopAltitude"/>
+                                                                        <Binding Path="CurrentInputModel.FundamentalInput.ReferenceAltitude"/>
+                                                                        <MultiBinding.Converter>
+                                                                            <conv:SumConverter/>
+                                                                        </MultiBinding.Converter>
+                                                                    </MultiBinding>
+                                                                </TextBox.Text>
+                                                            </TextBox>
+                                                        </Grid>
+                                                    </GroupBox>
+
                                                     <GroupBox Header="登録済みの土層の仮値のコピー">
                                                         <GroupBox.ToolTip>
                                                             <StackPanel>
@@ -4799,7 +4832,7 @@
 
                                                     <common:EnhancedDataGrid ItemsSource="{Binding CurrentInputModel.PileGroupSettlement.SettlementSoilLayers, Mode=TwoWay,
                                                             UpdateSourceTrigger=LostFocus}"
-                                                            HorizontalAlignment="Left"
+                                                            HorizontalAlignment="Stretch"
                                                             AutoGenerateColumns="False"
                                                             CanUserAddRows="False"
                                                             CanUserSortColumns="True"
@@ -4809,7 +4842,7 @@
                                                             CellEditEnding="DataGridSettlementSoilLayers_CellEditEnding"
                                                             BeginningEdit="DataGridGrid_BeginningEdit"
                                                             EnableRowVirtualization="True"
-                                                            EnableColumnVirtualization="True"
+                                                            EnableColumnVirtualization="False"
                                                             VirtualizingPanel.IsVirtualizing="True"
                                                             VirtualizingPanel.VirtualizationMode="Recycling"
                                                             ScrollViewer.CanContentScroll="True"
@@ -4836,12 +4869,13 @@
 
                                                         <DataGrid.Columns>
 
-                                                            <DataGridTemplateColumn Width="*" Header="削除" MinWidth="50">
+                                                            <DataGridTemplateColumn Width="Auto" Header="削除" MinWidth="40">
                                                                 <DataGridTemplateColumn.CellTemplate>
                                                                     <DataTemplate>
                                                                         <Button
                                                                             x:Name="ButtonRectLoadDelete"
                                                                             Content="削除"
+                                                                            Padding="2,0"
                                                                             Tag="{Binding}"
                                                                             Command="{Binding DataContext.DeleteSettlementSoilLayerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                             CommandParameter="{Binding}" />
@@ -4851,20 +4885,45 @@
 
                                                             <DataGridTextColumn Binding="{Binding BottomAltitude, StringFormat={}{0:+0.00;-0.00;+0.00}, Mode=TwoWay,
                                                                     UpdateSourceTrigger=LostFocus}"
-                                                                    Width="*"  ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="60" >
+                                                                    Width="*"  ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="40" >
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
-                                                                        <TextBlock Text="下端Z"   TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                        <TextBlock Text="(m)"  TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock Text="下端"   TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock Text="Z"  TextAlignment="Center" HorizontalAlignment="Center"/>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
 
+                                                            <DataGridTemplateColumn Width="*" MinWidth="40" IsReadOnly="True">
+                                                                <DataGridTemplateColumn.Header>
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="下端" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock Text="標高" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                </DataGridTemplateColumn.Header>
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock HorizontalAlignment="Right" Foreground="Gray">
+                                                                            <TextBlock.Text>
+                                                                                <MultiBinding StringFormat="{}{0:+0.00;-0.00;+0.00}" Mode="OneWay">
+                                                                                    <Binding Path="BottomAltitude"/>
+                                                                                    <Binding Path="DataContext.CurrentInputModel.FundamentalInput.ReferenceAltitude"
+                                                                                             RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                                                    <MultiBinding.Converter>
+                                                                                        <conv:SumConverter/>
+                                                                                    </MultiBinding.Converter>
+                                                                                </MultiBinding>
+                                                                            </TextBlock.Text>
+                                                                        </TextBlock>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+
                                                             <DataGridTextColumn Binding="{Binding Thickness, StringFormat=N3,
                                                                     UpdateSourceTrigger=LostFocus}"
-                                                                    Width="*"  
-                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" 
-                                                                    MinWidth="60" 
+                                                                    Width="*"
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                    MinWidth="40"
                                                                     IsReadOnly="true"
                                                                     Foreground="Gray">
                                                                 <DataGridTextColumn.Header>
@@ -4881,6 +4940,7 @@
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
                                                                         <TextBlock Text="変形係数"   TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock Text="Esk" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                                         <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="(kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
@@ -4888,11 +4948,21 @@
 
                                                             <DataGridTextColumn Binding="{Binding PoissonsRatio, StringFormat=N2, Mode=TwoWay,
                                                                     UpdateSourceTrigger=LostFocus}"
-                                                                    Width="*"  ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="60" >
+                                                                    Width="*"  ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="40" >
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
-                                                                        <TextBlock Text="ポアソン比" TextAlignment="Center" HorizontalAlignment="Center"/>
-                                                                        <TextBlock Text=""  TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock Text="ポアソン" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                        <TextBlock Text="比" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                </DataGridTextColumn.Header>
+                                                            </DataGridTextColumn>
+
+                                                            <DataGridTextColumn Binding="{Binding Note, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                    Width="2*" MinWidth="100"
+                                                                    ElementStyle="{StaticResource CenterAlignedTextBlockStyle}">
+                                                                <DataGridTextColumn.Header>
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="備考" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                                     </StackPanel>
                                                                 </DataGridTextColumn.Header>
                                                             </DataGridTextColumn>
@@ -5006,7 +5076,7 @@
                                                         MouseRightButtonDown="DataGridPileLayout_MouseRightButtonDown"
                                                         AutoGeneratingColumn="DataGridPileLayout_AutoGeneratingColumn"
                                                         EnableRowVirtualization="True"
-                                                        EnableColumnVirtualization="True"
+                                                        EnableColumnVirtualization="False"
                                                         VirtualizingPanel.IsVirtualizing="True"
                                                         VirtualizingPanel.VirtualizationMode="Recycling"
                                                         ScrollViewer.CanContentScroll="True"
@@ -5599,8 +5669,13 @@
                                 </Grid>
                             </avalonDock:LayoutDocument>
 
-                            <avalonDock:LayoutDocument Title="形状確認ビュー" CanClose="False">
-                                <Grid>
+                            <!--
+                                形状確認ビュー（HelixViewport3D）は一時的に機能凍結中。
+                                名前付きフィールドは維持したまま、UpdatePerspectiveView 側のフラグ (IsHelixViewFrozen) で描画をスキップしています。
+                                再有効化する場合: Grid の Visibility を Visible に戻し、MainWindow.VIewPort3D.cs の IsHelixViewFrozen を false にしてください。
+                            -->
+                            <avalonDock:LayoutDocument Title="形状確認ビュー（凍結中）" CanClose="False">
+                                <Grid Visibility="Collapsed">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
@@ -5629,6 +5704,7 @@
                                                        MouseLeftButtonDown="HelixViewport_MouseLeftButtonDown" />
                                 </Grid>
                             </avalonDock:LayoutDocument>
+
                         </avalonDock:LayoutDocumentPane>
                     </avalonDock:LayoutDocumentPaneGroup>
 

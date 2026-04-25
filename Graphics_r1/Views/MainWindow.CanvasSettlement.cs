@@ -260,6 +260,13 @@ namespace PileDesign.Views
             bool needRebuild = viewModel.SettlementWorldCache.Fingerprint == null ||
                                !viewModel.SettlementWorldCache.Fingerprint.Equals(fp);
 
+            // 沈下値をモデル座標オフセットへ変換するスケール (m offset / mm settlement)。
+            // 杭・地盤変位と同じ正規化方式: dispRatio × ModelExtent / maxAbsDisp
+            double maxAbsSettlementMm = Math.Max(Math.Abs(minS), Math.Abs(maxS));
+            double dispScaleMperMm = maxAbsSettlementMm > 1e-15
+                ? viewModel.DisplacementDiagramRatio * viewModel.ModelExtent / maxAbsSettlementMm
+                : 0.0;
+
             if (needRebuild)
             {
                 // 再構築
@@ -291,8 +298,8 @@ namespace PileDesign.Views
                     {
                         var p1 = grid[ix, iy];
                         var p2 = grid[ix, iy + 1];
-                        var s1 = z - p1.Settlement * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
-                        var s2 = z - p2.Settlement * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
+                        var s1 = z - p1.Settlement * dispScaleMperMm;
+                        var s2 = z - p2.Settlement * dispScaleMperMm;
                         cache.GridSegments3D.Add((new Point3D(p1.X, p1.Y, s1), new Point3D(p2.X, p2.Y, s2)));
                     }
                 }
@@ -303,8 +310,8 @@ namespace PileDesign.Views
                     {
                         var p1 = grid[ix, iy];
                         var p2 = grid[ix + 1, iy];
-                        var s1 = z - p1.Settlement * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
-                        var s2 = z - p2.Settlement * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
+                        var s1 = z - p1.Settlement * dispScaleMperMm;
+                        var s2 = z - p2.Settlement * dispScaleMperMm;
                         cache.GridSegments3D.Add((new Point3D(p1.X, p1.Y, s1), new Point3D(p2.X, p2.Y, s2)));
                     }
                 }
@@ -339,7 +346,7 @@ namespace PileDesign.Views
                             {
                                 if (vals[v] >= minC && vals[v] <= maxC)
                                 {
-                                    double zz = z - cellPts[v].Settlement * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
+                                    double zz = z - cellPts[v].Settlement * dispScaleMperMm;
                                     regionPoints3D.Add(new Point3D(cellPts[v].X, cellPts[v].Y, zz));
                                 }
                             }
@@ -356,7 +363,7 @@ namespace PileDesign.Views
                                     int a = edges[e, 0], b = edges[e, 1];
                                     if (Cross(vals[a], vals[b], level))
                                     {
-                                        var p = Interpolate3D(cellPts[a], cellPts[b], level, z, viewModel);
+                                        var p = Interpolate3D(cellPts[a], cellPts[b], level, z, dispScaleMperMm);
                                         regionPoints3D.Add(p);
                                     }
                                 }
@@ -398,13 +405,13 @@ namespace PileDesign.Views
 
                             List<Point3D> contour3D = [];
                             if ((v00 - contour) * (v10 - contour) < 0)
-                                contour3D.Add(Interpolate3D(p00, p10, contour, z, viewModel));
+                                contour3D.Add(Interpolate3D(p00, p10, contour, z, dispScaleMperMm));
                             if ((v10 - contour) * (v11 - contour) < 0)
-                                contour3D.Add(Interpolate3D(p10, p11, contour, z, viewModel));
+                                contour3D.Add(Interpolate3D(p10, p11, contour, z, dispScaleMperMm));
                             if ((v11 - contour) * (v01 - contour) < 0)
-                                contour3D.Add(Interpolate3D(p11, p01, contour, z, viewModel));
+                                contour3D.Add(Interpolate3D(p11, p01, contour, z, dispScaleMperMm));
                             if ((v01 - contour) * (v00 - contour) < 0)
-                                contour3D.Add(Interpolate3D(p01, p00, contour, z, viewModel));
+                                contour3D.Add(Interpolate3D(p01, p00, contour, z, dispScaleMperMm));
 
                             if (contour3D.Count >= 2)
                             {
@@ -602,12 +609,12 @@ namespace PileDesign.Views
             }
 
             // 線形補間（3D座標生成）
-            static Point3D Interpolate3D(SettlementGridDataItem p1, SettlementGridDataItem p2, double contour, double z, MainWindowViewModel viewModel)
+            static Point3D Interpolate3D(SettlementGridDataItem p1, SettlementGridDataItem p2, double contour, double z, double dispScaleMperMm)
             {
                 double t = (contour - p1.Settlement) / (p2.Settlement - p1.Settlement);
                 double x = p1.X + t * (p2.X - p1.X);
                 double y = p1.Y + t * (p2.Y - p1.Y);
-                double zz = z - (p1.Settlement + t * (p2.Settlement - p1.Settlement)) * viewModel.DisplacementDiagramRatio * viewModel.ModelExtent;
+                double zz = z - (p1.Settlement + t * (p2.Settlement - p1.Settlement)) * dispScaleMperMm;
                 return new Point3D(x, y, zz);
             }
         }

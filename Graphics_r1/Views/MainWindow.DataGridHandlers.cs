@@ -176,13 +176,14 @@ namespace PileDesign.Views
             var settlementSoilLayers = viewModel.CurrentInputModel.PileGroupSettlement.SettlementSoilLayers;
             if (settlementSoilLayers == null || settlementSoilLayers.Count == 0) return;
 
-            double loadSurfaceAltitude = viewModel.CurrentInputModel.PileGroupSettlement.LoadingPlaneAltitude;
+            // 厚さは「土層上端 (SoilLayersTopAltitude)」基準で算出
+            double topAltitude = viewModel.CurrentInputModel.PileGroupSettlement.SoilLayersTopAltitude;
 
             for (int i = 0; i < settlementSoilLayers.Count; i++)
             {
                 if (i == 0)
                 {
-                    settlementSoilLayers[i].Thickness = loadSurfaceAltitude - settlementSoilLayers[i].BottomAltitude;
+                    settlementSoilLayers[i].Thickness = topAltitude - settlementSoilLayers[i].BottomAltitude;
                 }
                 else
                 {

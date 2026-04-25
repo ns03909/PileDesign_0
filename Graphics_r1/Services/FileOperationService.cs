@@ -213,6 +213,12 @@ namespace PileDesign.Services
                     EnsureObservableCollection(inputModel.FoundationBeamInput.Nodes);
                 inputModel.FoundationBeamInput.Beams =
                     EnsureObservableCollection(inputModel.FoundationBeamInput.Beams);
+
+                // 梁要素があるが材料・断面が空のとき、参照先を保証するためデフォルトエントリを追加
+                if (inputModel.FoundationBeamInput.Beams.Count > 0)
+                {
+                    inputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
+                }
             }
 
             // Null チェック・空コレクション初期化

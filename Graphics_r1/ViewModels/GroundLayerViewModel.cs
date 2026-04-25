@@ -309,14 +309,14 @@ namespace PileDesign.ViewModels
         [
             "DmaxU*(レベル1)",
             "DmaxU*(レベル2)",
-            "DmaxU*(レベル1,2)",
-            "DmaxU*+∑γcyH(レベル1)",
-            "DmaxU*+∑γcyH(レベル2)",
-            "DmaxU*+∑γcyH(レベル1,2)",
+            "DmaxU*(レベル1, 2)",
+            "DmaxU*, DmaxU*+∑γcyH(レベル1)",
+            "DmaxU*, DmaxU*+∑γcyH(レベル2)",
+            "DmaxU*, DmaxU*+∑γcyH(レベル1, 2)",
         ];
 
         public ObservableCollection<string> ChartDispContents { get; } = [];
-        private string _ChartDispContent = "DmaxU*(レベル1,2)";
+        private string _ChartDispContent = "DmaxU*(レベル1, 2)";
         public string ChartDispContent
         {
             get => _ChartDispContent;
@@ -718,7 +718,7 @@ namespace PileDesign.ViewModels
             }
             else if (GroundInput.GroundLayers.Count != 0)
             {
-                if (ChartDispContent.Contains("DmaxU*(レベル1)") || ChartDispContent.Contains("DmaxU*(レベル1,2)"))
+                if (ChartDispContent.Contains("(レベル1)") || ChartDispContent.Contains("(レベル1, 2)"))
                 {
                     List<double> dMaxU1s = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -741,7 +741,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                if (ChartDispContent.Contains("DmaxU*(レベル2)") || ChartDispContent.Contains("DmaxU*(レベル1,2)"))
+                if (ChartDispContent.Contains("(レベル2)") || ChartDispContent.Contains("(レベル1, 2)"))
                 {
                     List<double> dMaxU2s = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -763,7 +763,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                if (ChartDispContent.Contains("DmaxU*+∑γcyH(レベル1)") || ChartDispContent.Contains("DmaxU*+∑γcyH(レベル1,2)"))
+                if (ChartDispContent.Contains("∑γcyH") && (ChartDispContent.Contains("(レベル1)") || ChartDispContent.Contains("(レベル1, 2)")))
                 {
                     List<double> dMaxU1Pluss = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -785,7 +785,7 @@ namespace PileDesign.ViewModels
                         }
                     }
                 }
-                if (ChartDispContent.Contains("DmaxU*+∑γcyH(レベル2)") || ChartDispContent.Contains("DmaxU*+∑γcyH(レベル1,2)"))
+                if (ChartDispContent.Contains("∑γcyH") && (ChartDispContent.Contains("(レベル2)") || ChartDispContent.Contains("(レベル1, 2)")))
                 {
                     List<double> dMaxU2Pluss = [];
                     foreach (var data in GroundInput.GroundMassesData)
@@ -1944,6 +1944,7 @@ namespace PileDesign.ViewModels
                 RecalculateTauLonSigmaZPrime();
                 RecalculateTauDonSigmaZprime();
                 RecalculateFL();
+                RecalculatePL();
                 RecalculateBetaL();
                 RecalculateGammaCy();
                 RecalculateSigmaGammaCyH();
@@ -2242,6 +2243,32 @@ namespace PileDesign.ViewModels
                         groundMassData.FL[levelIndex] = null;
                     }
                 }
+            }
+        }
+
+        // 液状化指標 PL (岩崎ら 1982): PL = Σ (1-FL)·W(z)·H, F=max(0,1-FL), W=max(0,10-0.5z), 深さ z∈[0, 20m]
+        internal void RecalculatePL()
+        {
+            for (int levelIndex = 0; levelIndex < 2; levelIndex++)
+            {
+                double pl = 0.0;
+                foreach (GroundMassDataInput groundMassData in GroundInput.GroundMassesData)
+                {
+                    if (!groundMassData.IsLiquefactionLayer) continue;
+                    if (groundMassData.FL[levelIndex] == null) continue;
+
+                    double z = -groundMassData.GLDepth; // 深さ (m, 正値)
+                    if (z < 0 || z > 20.0) continue;
+
+                    double fl = groundMassData.FL[levelIndex].GetValueOrDefault();
+                    double f = Math.Max(0.0, 1.0 - fl);
+                    if (f <= 0) continue;
+
+                    double w = Math.Max(0.0, 10.0 - 0.5 * z);
+                    double h = groundMassData.H.GetValueOrDefault();
+                    pl += f * w * h;
+                }
+                GroundInput.PL[levelIndex] = pl;
             }
         }
 

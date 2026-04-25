@@ -104,8 +104,35 @@ namespace PileDesign.Models.InputData
         public double Density
         {
             get => _density;
-            set => SetProperty(ref _density, value);
+            set
+            {
+                if (SetProperty(ref _density, value))
+                {
+                    OnPropertyChanged(nameof(Gs0));
+                    OnPropertyChanged(nameof(Es0));
+                }
+            }
         }
+
+        // ポアソン比 νs (沈下解析・初期変形係数算定用)
+        private double _poissonsRatio = 0.3;
+        public double PoissonsRatio
+        {
+            get => _poissonsRatio;
+            set
+            {
+                if (SetProperty(ref _poissonsRatio, value))
+                {
+                    OnPropertyChanged(nameof(Es0));
+                }
+            }
+        }
+
+        // 初期せん断剛性 Gs0 (kN/m^2) = γ × Vs^2 / 9.80665
+        public double Gs0 => _density * _vs * _vs / 9.80665;
+
+        // 初期変形係数 Es0 (kN/m^2) = 2(1 + νs) × Gs0
+        public double Es0 => 2.0 * (1.0 + _poissonsRatio) * Gs0;
 
         // 土層年代
         public static List<string> AgeCategoryOption { get; } =
@@ -159,7 +186,14 @@ namespace PileDesign.Models.InputData
         public double Vs
         {
             get => _vs;
-            set => SetProperty(ref _vs, value);
+            set
+            {
+                if (SetProperty(ref _vs, value))
+                {
+                    OnPropertyChanged(nameof(Gs0));
+                    OnPropertyChanged(nameof(Es0));
+                }
+            }
         }
 
         // 変形係数
@@ -247,6 +281,7 @@ namespace PileDesign.Models.InputData
             copy._cohesive = _cohesive;
             copy._vs = _vs;
             copy._es = _es;
+            copy._poissonsRatio = _poissonsRatio;
 
             copy._isPositiveCircumResistance = _isPositiveCircumResistance;
             copy._isNegativeCircumResistance = _isNegativeCircumResistance;

@@ -334,6 +334,9 @@ namespace PileDesign.Services
                     beamList.Add(beam);
                 }
                 inputModel.FoundationBeamInput.Beams = new ObservableCollection<FoundationBeamElement>(beamList);
+
+                // 材料・断面が空のとき、自動生成梁の参照先を保証するためデフォルトエントリを追加
+                inputModel.FoundationBeamInput.EnsureDefaultMaterialAndSection();
             }
             else
             {
