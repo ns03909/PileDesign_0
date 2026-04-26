@@ -203,28 +203,30 @@ namespace PileDesign.Services
                     }
 
                     // G 更新 + 層減衰 (per-layer γ0.5 / h_max)
+                    // 各層の履歴減衰 h_i = h0 + (h_max,i - h0)·γ/(γ_r,i + γ)
+                    //   γ=0 で h=h0=0.05 (材料減衰), γ→∞ で h=h_max,i
                     double[] Gnew = new double[n];
                     double[] xi = new double[n];
                     for (int i = 0; i < n; i++)
                     {
                         double r = gamma[i] / gamma05[i];
                         Gnew[i] = Math.Max(G0[i] / (1.0 + r), GReductionFloor * G0[i]);
-                        xi[i] = hMax[i] * r / (1.0 + r);
+                        xi[i] = XiInitial + (hMax[i] - XiInitial) * r / (1.0 + r);
                     }
 
-                    // モード減衰 (ひずみエネルギー重み): ξe = ξ0 + Σ(ξ_i - ξ0) w_i / Σ w_i
-                    // w_i = G_i (Δφ_i)² / H_i
-                    double xiDen = 0, xiWeighted = 0;
+                    // モード等価減衰 (論文式 10、ひずみエネルギー重み付き平均):
+                    //   ξe = Σ(h_i · w_i) / Σ(w_i),  w_i = G_i · (Δφ_i)² / (2·H_i)
+                    // (1/2 倍は分母分子で消えるので係数は無視可)
+                    double xiDen = 0, xiNumerator = 0;
                     for (int i = 0; i < n; i++)
                     {
                         double phiNext = (i + 1 < n) ? phi[i + 1] : 0.0;
                         double dphi = phi[i] - phiNext;
                         double w = G[i] * dphi * dphi / H[i];
                         xiDen += w;
-                        xiWeighted += (xi[i] - XiInitial) * w;
+                        xiNumerator += xi[i] * w;
                     }
-                    double xiEnew = (xiDen > 0) ? XiInitial + xiWeighted / xiDen : XiInitial;
-                    if (xiEnew < XiInitial) xiEnew = XiInitial;
+                    double xiEnew = (xiDen > 0) ? xiNumerator / xiDen : XiInitial;
 
                     // 収束判定
                     double maxRelChange = 0;
