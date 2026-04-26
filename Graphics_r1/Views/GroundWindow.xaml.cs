@@ -898,6 +898,12 @@ namespace PileDesign.Views
         private bool _isLeftMaximized;
         private WindowState _savedWindowState = WindowState.Normal;
 
+        // AnchorableTitleTemplate から呼ばれる: ツールバーボタンと同じトグル動作
+        private void ToggleMaximizeFromTitle_Click(object sender, RoutedEventArgs e)
+        {
+            ButtonToggleLeftMaximize_Click(sender, e);
+        }
+
         private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e)
         {
             var rightTabs = new[] {
