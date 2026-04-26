@@ -450,6 +450,13 @@ namespace PileDesign.Common
 
                 var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
 
+                // Excel ライク: クリップボードが 1×1 で複数セル選択中なら、選択全セルへ同じ値を流し込む
+                if (pasteRowCount == 1 && pasteColCount == 1
+                    && SelectedCells != null && SelectedCells.Count > 1)
+                {
+                    return TryFillSelectedCells(rows[0][0]);
+                }
+
                 // 行数不足時: ItemsSourceがObservableCollectionの場合は自動追加
                 if (startRowIndex + pasteRowCount > Items.Count)
                 {
@@ -533,6 +540,72 @@ namespace PileDesign.Common
             catch (Exception ex)
             {
                 MessageBox.Show(OwnerWindow, $"貼り付け中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Excel ライクな塗り潰しペースト: 単一値 (cellText) を SelectedCells 全てへ書き込む。
+        /// 読み取り専用列・型変換不可セルはスキップする (一括ペースト中の局所的失敗で操作全体を止めない)。
+        /// </summary>
+        private bool TryFillSelectedCells(string cellText)
+        {
+            try
+            {
+                // 同じ (Item, Column) ペアの重複を排除
+                var uniqueTargets = new HashSet<(object Item, DataGridColumn Column)>();
+                foreach (var sc in SelectedCells)
+                {
+                    if (sc.Item == null || sc.Column == null) continue;
+                    uniqueTargets.Add((sc.Item, sc.Column));
+                }
+                if (uniqueTargets.Count == 0) return false;
+
+                CommitEdit(DataGridEditingUnit.Cell, true);
+                CommitEdit(DataGridEditingUnit.Row, true);
+
+                // 1) 事前検証: 書き込み可能なターゲットがあるか、変換が成立するか
+                bool anyWritable = false;
+                foreach (var (item, col) in uniqueTargets)
+                {
+                    if (col.IsReadOnly) continue;
+                    if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
+                    if (!CanConvert(cellText, targetType, columnKind))
+                    {
+                        MessageBox.Show(OwnerWindow,
+                            $"値 '{cellText}' は列「{GetColumnHeaderText(col)}」の型 ({PrettyTypeName(targetType)}) に変換できません。",
+                            "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return false;
+                    }
+                    if (!TryNavigateForSet(item, path, out _, out _, out _)) continue;
+                    anyWritable = true;
+                }
+                if (!anyWritable)
+                {
+                    MessageBox.Show(OwnerWindow, "選択範囲に書き込み可能なセルがありません。",
+                        "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+
+                // 2) 反映
+                foreach (var (item, col) in uniqueTargets)
+                {
+                    if (col.IsReadOnly) continue;
+                    if (!TryGetBindingInfo(item, col, out var path, out var targetType, out var columnKind)) continue;
+                    object? converted = ConvertValue(cellText, targetType, columnKind);
+                    TrySetValueByPath(item, path, converted);
+                }
+
+                if (ItemsSource is ICollectionView view)
+                    view.Refresh();
+                else
+                    Items.Refresh();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(OwnerWindow, $"塗り潰しペースト中にエラーが発生しました。\n{ex.Message}", "貼り付けエラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
