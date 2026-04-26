@@ -898,12 +898,6 @@ namespace PileDesign.Views
         private bool _isLeftMaximized;
         private WindowState _savedWindowState = WindowState.Normal;
 
-        // AnchorableTitleTemplate から呼ばれる: ツールバーボタンと同じトグル動作
-        private void ToggleMaximizeFromTitle_Click(object sender, RoutedEventArgs e)
-        {
-            ButtonToggleLeftMaximize_Click(sender, e);
-        }
-
         private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e)
         {
             var rightTabs = new[] {
@@ -916,16 +910,22 @@ namespace PileDesign.Views
                 _savedWindowState = this.WindowState;
                 foreach (var t in rightTabs) t?.Hide();
                 this.WindowState = WindowState.Maximized;
-                ButtonToggleLeftMaximize.Content = "◀▶ 元に戻す";
+                SetMaximizeButtonContent("◀▶ 元に戻す");
                 _isLeftMaximized = true;
             }
             else
             {
                 foreach (var t in rightTabs) t?.Show();
                 this.WindowState = _savedWindowState;
-                ButtonToggleLeftMaximize.Content = "◀▶ 最大化";
+                SetMaximizeButtonContent("◀▶ 最大化");
                 _isLeftMaximized = false;
             }
+        }
+
+        private void SetMaximizeButtonContent(string text)
+        {
+            if (ButtonToggleLeftMaximize != null) ButtonToggleLeftMaximize.Content = text;
+            if (ButtonToggleLeftMaximize2 != null) ButtonToggleLeftMaximize2.Content = text;
         }
     }
 }

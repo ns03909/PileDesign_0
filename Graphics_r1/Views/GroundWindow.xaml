@@ -1463,22 +1463,6 @@
         </StackPanel>
 
         <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
-            <avalonDock:DockingManager.AnchorableTitleTemplate>
-                <DataTemplate>
-                    <DockPanel LastChildFill="True">
-                        <Button DockPanel.Dock="Right"
-                                Content="□"
-                                Click="ToggleMaximizeFromTitle_Click"
-                                Width="16" Height="16"
-                                Padding="0" Margin="6,0,2,0"
-                                Background="Transparent" BorderThickness="0"
-                                FontSize="12"
-                                ToolTip="ペイン最大化／元に戻す"
-                                Focusable="False"/>
-                        <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                    </DockPanel>
-                </DataTemplate>
-            </avalonDock:DockingManager.AnchorableTitleTemplate>
             <avalonDock:LayoutRoot>
                 <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
@@ -1911,6 +1895,10 @@
 
                                     <ToolBarTray Grid.Row="0">
                                         <ToolBar Band="1" BandIndex="1">
+                                            <Button x:Name="ButtonToggleLeftMaximize2" Content="◀▶ 最大化" Background="#888" Foreground="white" VerticalAlignment="top"
+                                                Click="ButtonToggleLeftMaximize_Click"
+                                                ToolTip="土層・土質点ペインを最大化／元に戻す (右側のグラフペインを開閉)"/>
+                                            <Separator/>
                                             <Button x:Name="ButtonAddGroundMass" Content="土質点追加" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding AddGroundMassCommand}">
                                                 <Button.ToolTip>
