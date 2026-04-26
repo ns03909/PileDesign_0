@@ -275,12 +275,13 @@ namespace PileDesign.Services
             return L * Z * Sa0(T);
         }
 
-        // 論文式 (2): 加速度応答スペクトル h=0.05 (m/s²)
+        // 告示 1457 / 論文式 (2): 加速度応答スペクトル h=0.05 (m/s²)
+        // T=0.16 で 3.2+30·0.16 = 8.0 = plateau, T=0.64 で 5.12/0.64 = 8.0 で連続
         internal static double Sa0(double T)
         {
-            if (T <= 0.16) return -3.2 + 30.0 * T;
-            if (T <= 0.64) return 5.12;
-            return 5.12 * 0.64 / T;
+            if (T <= 0.16) return 3.2 + 30.0 * T;
+            if (T <= 0.64) return 8.0;
+            return 5.12 / T;
         }
 
         // 論文式 (4): 減衰補正係数

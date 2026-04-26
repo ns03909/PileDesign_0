@@ -13,40 +13,40 @@ namespace TestProject1
     [TestClass]
     public class GroundResponseSpectrumCalcTests
     {
-        // ---------- Sa0(T) 境界値 (論文式 (2)) ----------
+        // ---------- Sa0(T) 境界値 (告示 1457 / 論文式 (2)) ----------
         [TestMethod]
-        public void Sa0_AtT0p10_Equals_Minus0p2()
+        public void Sa0_AtT0p10_Equals_6p2()
         {
-            // T=0.10 → -3.2 + 30·0.10 = -0.2
-            Assert.AreEqual(-0.2, GroundResponseSpectrumCalc.Sa0(0.10), 1e-9);
+            // T=0.10 → 3.2 + 30·0.10 = 6.2
+            Assert.AreEqual(6.2, GroundResponseSpectrumCalc.Sa0(0.10), 1e-9);
         }
 
         [TestMethod]
-        public void Sa0_AtT0p16_Equals_1p6()
+        public void Sa0_AtT0p16_Equals_8p0()
         {
-            // T=0.16 → -3.2 + 30·0.16 = 1.6 (slope 区間の上端)
-            Assert.AreEqual(1.6, GroundResponseSpectrumCalc.Sa0(0.16), 1e-9);
+            // T=0.16 → 3.2 + 30·0.16 = 8.0 (slope/plateau 連続境界)
+            Assert.AreEqual(8.0, GroundResponseSpectrumCalc.Sa0(0.16), 1e-9);
         }
 
         [TestMethod]
-        public void Sa0_AtT0p40_Equals_5p12()
+        public void Sa0_AtT0p40_Equals_8p0()
         {
-            // 0.16 ≤ T ≤ 0.64 → 5.12 (定数区間)
-            Assert.AreEqual(5.12, GroundResponseSpectrumCalc.Sa0(0.40), 1e-9);
+            // 0.16 ≤ T ≤ 0.64 → 8.0 (plateau)
+            Assert.AreEqual(8.0, GroundResponseSpectrumCalc.Sa0(0.40), 1e-9);
         }
 
         [TestMethod]
-        public void Sa0_AtT0p64_Equals_5p12()
+        public void Sa0_AtT0p64_Equals_8p0()
         {
-            // 境界: 定数区間の上端
-            Assert.AreEqual(5.12, GroundResponseSpectrumCalc.Sa0(0.64), 1e-9);
+            // T=0.64 → plateau の上端、5.12/0.64 = 8.0 で 1/T 区間と連続
+            Assert.AreEqual(8.0, GroundResponseSpectrumCalc.Sa0(0.64), 1e-9);
         }
 
         [TestMethod]
-        public void Sa0_AtT1p28_Equals_2p56()
+        public void Sa0_AtT1p28_Equals_4p0()
         {
-            // T>0.64 → 5.12·0.64/T = 5.12·0.64/1.28 = 2.56
-            Assert.AreEqual(2.56, GroundResponseSpectrumCalc.Sa0(1.28), 1e-9);
+            // T>0.64 → 5.12/T。T=1.28 → 5.12/1.28 = 4.0
+            Assert.AreEqual(4.0, GroundResponseSpectrumCalc.Sa0(1.28), 1e-9);
         }
 
         // ---------- Fh(ξ) (論文式 (4)) ----------
