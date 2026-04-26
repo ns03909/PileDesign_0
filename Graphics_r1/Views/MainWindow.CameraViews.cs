@@ -29,31 +29,59 @@ namespace PileDesign.Views
         // XY平面モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonXYPlane_Clicked(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainWindowViewModel vm)
-                vm.CanvasThreeDView.IsPerspective = false;
-            await AnimateToAnglesAsync(-90, 90);
+            try
+            {
+                if (DataContext is MainWindowViewModel vm)
+                    vm.CanvasThreeDView.IsPerspective = false;
+                await AnimateToAnglesAsync(-90, 90);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ButtonXYPlane_Clicked] {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         // YZ平面モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonYZPlane_Clicked(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainWindowViewModel vm)
-                vm.CanvasThreeDView.IsPerspective = false;
-            await AnimateToAnglesAsync(0, 0);
+            try
+            {
+                if (DataContext is MainWindowViewModel vm)
+                    vm.CanvasThreeDView.IsPerspective = false;
+                await AnimateToAnglesAsync(0, 0);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ButtonYZPlane_Clicked] {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         // XZ平面モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonXZPlane_Clicked(object sender, RoutedEventArgs e)
         {
-            if (DataContext is MainWindowViewModel vm)
-                vm.CanvasThreeDView.IsPerspective = false;
-            await AnimateToAnglesAsync(-90, 0);
+            try
+            {
+                if (DataContext is MainWindowViewModel vm)
+                    vm.CanvasThreeDView.IsPerspective = false;
+                await AnimateToAnglesAsync(-90, 0);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ButtonXZPlane_Clicked] {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         // 3D（アイソメ）モードに切り替えるボタンがクリックされた時のメソッド
         private async void ButtonIsometric_Clicked(object sender, RoutedEventArgs e)
         {
-            await AnimateToAnglesAsync(-45, 45);
+            try
+            {
+                await AnimateToAnglesAsync(-45, 45);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ButtonIsometric_Clicked] {ex.GetType().Name}: {ex.Message}");
+            }
         }
     }
 }

@@ -725,19 +725,26 @@ namespace PileDesign.Views
 
         private async void OrientViewToAnimated(Vector3D dir)
         {
-            if (DataContext is not MainWindowViewModel vm) return;
-            if (dir.Length == 0) return;
+            try
+            {
+                if (DataContext is not MainWindowViewModel vm) return;
+                if (dir.Length == 0) return;
 
-            var (tht, phi) = PickAnglesBestAlignedUsingCanvas(dir);
+                var (tht, phi) = PickAnglesBestAlignedUsingCanvas(dir);
 
-            _viewAnimationCts?.Cancel();
-            _viewAnimationCts = new CancellationTokenSource();
+                _viewAnimationCts?.Cancel();
+                _viewAnimationCts = new CancellationTokenSource();
 
-            // 回転量に応じて時間を可変（体感高速化）
-            double angDelta = Math.Max(Math.Abs(DeltaAngle(vm.CanvasThreeDView.Tht, tht)), Math.Abs(phi - vm.CanvasThreeDView.Phi));
-            int duration = (int)Math.Clamp(150 + angDelta * 4.0, 220, 700);
+                // 回転量に応じて時間を可変（体感高速化）
+                double angDelta = Math.Max(Math.Abs(DeltaAngle(vm.CanvasThreeDView.Tht, tht)), Math.Abs(phi - vm.CanvasThreeDView.Phi));
+                int duration = (int)Math.Clamp(150 + angDelta * 4.0, 220, 700);
 
-            await AnimateViewToAsync(tht, Math.Clamp(phi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle), duration, _viewAnimationCts.Token);
+                await AnimateViewToAsync(tht, Math.Clamp(phi, -CanvasThreeDView.MaxPhiAngle, CanvasThreeDView.MaxPhiAngle), duration, _viewAnimationCts.Token);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrientViewToAnimated] {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         // MainWindow クラス内（フィールド群）
