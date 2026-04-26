@@ -177,25 +177,31 @@ namespace PileDesign.Common
                 var displayOrderedCols = Columns.OrderBy(c => c.DisplayIndex).ToList();
 
                 // TSV形式で組み立て
+                // 注意: 行番号列は出力しない。
+                // 出力すると、自分自身への貼り付け時に行番号 "1", "2"... が
+                // データ行先頭セルへ列ズレして書き込まれる (TryPasteFromClipboard は
+                // 1 行目のみ非数値ヘッダー行として剥がし、データ行の行番号は剥がさない)。
                 var sb = new StringBuilder();
 
-                // ヘッダー行: 行番号列 + 各列のヘッダーテキスト
-                sb.Append("No.");
+                // ヘッダー行: 各列のヘッダーテキスト (タブ区切り)
+                bool first = true;
                 foreach (var colIdx in selectedColIndices)
                 {
-                    sb.Append('\t');
+                    if (!first) sb.Append('\t');
+                    first = false;
                     if (colIdx >= 0 && colIdx < displayOrderedCols.Count)
                         sb.Append(GetColumnHeaderText(displayOrderedCols[colIdx]));
                 }
                 sb.AppendLine();
 
-                // データ行: 行番号(1始まり) + セル値
-                foreach (var (rowIndex, rowData) in cellsByRow)
+                // データ行: セル値のみ (タブ区切り)
+                foreach (var (_, rowData) in cellsByRow)
                 {
-                    sb.Append(rowIndex + 1); // 1始まりの行番号
+                    first = true;
                     foreach (var colIdx in selectedColIndices)
                     {
-                        sb.Append('\t');
+                        if (!first) sb.Append('\t');
+                        first = false;
                         if (rowData.TryGetValue(colIdx, out var text))
                             sb.Append(text);
                     }
