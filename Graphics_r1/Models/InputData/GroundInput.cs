@@ -238,6 +238,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _impedanceLevels, value);
         }
 
+        // 応答スペクトル法: 2次卓越周期 T2 (レベル1/2) — Gs(T) 式 (8) で必要
+        private ObservableCollection<double> _t2Levels = [0.0, 0.0];
+        public ObservableCollection<double> T2Levels
+        {
+            get => _t2Levels;
+            set => SetProperty(ref _t2Levels, value);
+        }
+
         // コンストラクタ
         public GroundInput()
         {
@@ -295,6 +303,7 @@ namespace PileDesign.Models.InputData
             copy.Gs1Levels = new ObservableCollection<double>(this.Gs1Levels);
             copy.Gs2Levels = new ObservableCollection<double>(this.Gs2Levels);
             copy.ImpedanceLevels = new ObservableCollection<double>(this.ImpedanceLevels);
+            copy.T2Levels = new ObservableCollection<double>(this.T2Levels);
             return copy;
         }
 

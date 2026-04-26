@@ -304,21 +304,44 @@ namespace TestProject1
         }
 
         [TestMethod]
-        public void SaSurface_GreaterThanSaBedrock_WhenGsExceedsOne()
+        public void SaSurface_AtPeakPeriod_AmplifiedByGs1()
         {
-            // Gs > 1 の場合、地表 Sa は基盤 Sa より大きい
+            // ピーク域 (0.8·T1 ≤ T ≤ 1.2·T1) では Gs1 が適用される
             double Gs1 = 2.5, Gs2 = 1.8, L = 1.0;
-            double T = 0.4; // 加速度一定領域
-            double saB = GroundResponseSpectrumCalc.SaBedrock(T, L);
-            double saS = GroundResponseSpectrumCalc.SaSurface(T, Gs1, Gs2, L);
+            double T1 = 0.5, T2_period = 0.17;
+            double TPeak = T1; // ピーク中心 — Gs1 が適用される
+            double saB = GroundResponseSpectrumCalc.SaBedrock(TPeak, L);
+            double saS = GroundResponseSpectrumCalc.SaSurface(TPeak, T1, T2_period, Gs1, Gs2, L);
             Assert.IsTrue(saS > saB, $"saS={saS:F3} は saB={saB:F3} より大きいはず");
             Assert.AreEqual(Gs1 * saB, saS, 1e-9);
+        }
 
-            // 速度一定領域では Gs2 が適用される
-            double T2 = 1.0;
-            double saB2 = GroundResponseSpectrumCalc.SaBedrock(T2, L);
-            double saS2 = GroundResponseSpectrumCalc.SaSurface(T2, Gs1, Gs2, L);
-            Assert.AreEqual(Gs2 * saB2, saS2, 1e-9);
+        // ---------- Gs(T) 4 区分の連続性 ----------
+        [TestMethod]
+        public void Gs_PiecewiseFunction_IsContinuousAtBoundaries()
+        {
+            double Gs1 = 2.0, Gs2 = 1.5, T1 = 0.5, T2 = 0.17;
+            double tA = 0.8 * T2;  // 0.136
+            double tB = 0.8 * T1;  // 0.4
+            double tC = 1.2 * T1;  // 0.6
+
+            // 境界 tA: 区間1終端 = Gs2, 区間2始端 = Gs2
+            double gAleft = GroundResponseSpectrumCalc.Gs(tA - 1e-9, T1, T2, Gs1, Gs2);
+            double gAright = GroundResponseSpectrumCalc.Gs(tA + 1e-9, T1, T2, Gs1, Gs2);
+            Assert.AreEqual(Gs2, gAleft, 1e-6);
+            Assert.AreEqual(Gs2, gAright, 1e-6);
+
+            // 境界 tB: 区間2終端 = Gs1, 区間3始端 = Gs1
+            double gBleft = GroundResponseSpectrumCalc.Gs(tB - 1e-9, T1, T2, Gs1, Gs2);
+            double gBright = GroundResponseSpectrumCalc.Gs(tB + 1e-9, T1, T2, Gs1, Gs2);
+            Assert.AreEqual(Gs1, gBleft, 1e-6);
+            Assert.AreEqual(Gs1, gBright, 1e-6);
+
+            // 境界 tC: 区間3終端 = Gs1, 区間4始端 = Gs1
+            double gCleft = GroundResponseSpectrumCalc.Gs(tC - 1e-9, T1, T2, Gs1, Gs2);
+            double gCright = GroundResponseSpectrumCalc.Gs(tC + 1e-9, T1, T2, Gs1, Gs2);
+            Assert.AreEqual(Gs1, gCleft, 1e-6);
+            Assert.AreEqual(Gs1, gCright, 1e-6);
         }
 
         // ---------- 互換性: Gamma05==0 → ShallowSoilType フォールバック ----------

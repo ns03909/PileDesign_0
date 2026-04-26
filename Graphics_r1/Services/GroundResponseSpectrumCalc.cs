@@ -28,10 +28,11 @@ namespace PileDesign.Services
         internal const double HMaxDefault = 0.20;
 
         internal readonly record struct LevelResult(
-            double T1, double XiE, double Gamma,
+            double T1, double T2,  // 1次・2次卓越周期 (固有値解析の最小・第2小)
+            double XiE, double Gamma,
             double Impedance,  // e = Σ(ρVs h) / (ρb Vb ΣH) — 収束後の表層/基盤インピーダンス比
-            double Gs1,        // 加速度一定領域の地盤増幅率 1 / (e + 1.57·ξe)
-            double Gs2,        // 速度一定領域の地盤増幅率 1 / (e + 4.71·ξe)
+            double Gs1,        // 1次モード(T1)での地盤増幅率 1 / (e + 1.57·ξe)
+            double Gs2,        // 2次モード(T2)での地盤増幅率 1 / (e + 4.71·ξe)
             double[] G,        // 収束後 G_i [kPa] (アクティブ質点ぶんのみ)
             double[] PhiU0_1,  // U[0]=1 正規化済モード形 (アクティブ質点ぶんのみ)
             double[] DispMm    // u_i [mm] (アクティブ質点ぶんのみ)
@@ -60,7 +61,7 @@ namespace PileDesign.Services
                 }
                 int n = firstBedrockIdx; // active mass points: [0, n-1]
                 if (n <= 0)
-                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
 
                 // ShallowSoilType ベースの γ0.5 デフォルト (per-layer 値が 0 のときのフォールバック)
                 double gamma05Fallback = (shallowSoilType == "粘性土") ? Gamma05DefaultClay : Gamma05DefaultSand;
@@ -77,13 +78,13 @@ namespace PileDesign.Services
                     var md = masses[i];
                     double h = md.H.GetValueOrDefault();
                     if (h <= 0)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
                     H[i] = h;
                     rhoMass[i] = md.Density / Gravity;
                     G0[i] = rhoMass[i] * md.VS0 * md.VS0;
                     m[i] = md.Mass;
                     if (m[i] <= 0 || G0[i] <= 0)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
                     // 0 以下なら ShallowSoilType デフォルト (旧データの互換性)
                     gamma05[i] = (md.Gamma05 > 0) ? md.Gamma05 : gamma05Fallback;
                     hMax[i] = (md.HMax > 0) ? md.HMax : HMaxDefault;
@@ -97,6 +98,7 @@ namespace PileDesign.Services
                 double[] phiU0 = new double[n];    // U[0]=1 正規化
                 double[] u = new double[n];        // 変位 [m]
                 double T1 = double.NaN;
+                double T2Period = double.NaN;
                 double Gamma = 0;
 
                 for (int iter = 0; iter < MaxIter; iter++)
@@ -134,19 +136,36 @@ namespace PileDesign.Services
                     var evd = A.Evd(Symmetricity.Symmetric);
                     var eigVals = evd.EigenValues.Real();
 
-                    // 最小正固有値を探す
-                    int minIdx = -1;
+                    // 最小・第2小の正固有値を探す (T1=1次, T2=2次卓越周期)
+                    int minIdx = -1, secondIdx = -1;
                     double minOmegaSq = double.PositiveInfinity;
+                    double secondOmegaSq = double.PositiveInfinity;
                     for (int i = 0; i < n; i++)
                     {
                         double ev = eigVals[i];
-                        if (ev > 1e-12 && ev < minOmegaSq) { minOmegaSq = ev; minIdx = i; }
+                        if (ev <= 1e-12) continue;
+                        if (ev < minOmegaSq)
+                        {
+                            secondOmegaSq = minOmegaSq;
+                            secondIdx = minIdx;
+                            minOmegaSq = ev;
+                            minIdx = i;
+                        }
+                        else if (ev < secondOmegaSq)
+                        {
+                            secondOmegaSq = ev;
+                            secondIdx = i;
+                        }
                     }
                     if (minIdx < 0 || double.IsNaN(minOmegaSq) || double.IsInfinity(minOmegaSq))
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
 
                     double omega1 = Math.Sqrt(minOmegaSq);
                     T1 = 2.0 * Math.PI / omega1;
+                    // 2次モードが取れなければ T1/3 で代用 (一様地盤の解析解)
+                    T2Period = (secondIdx >= 0 && !double.IsInfinity(secondOmegaSq))
+                        ? 2.0 * Math.PI / Math.Sqrt(secondOmegaSq)
+                        : T1 / 3.0;
 
                     // EigenVectors の minIdx 列を取り出して Φ = M^(-1/2) Ψ
                     var psi = evd.EigenVectors.Column(minIdx);
@@ -159,14 +178,14 @@ namespace PileDesign.Services
                     // U[0]=1 正規化
                     double phi0 = phi[0];
                     if (Math.Abs(phi0) < 1e-300)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
                     for (int i = 0; i < n; i++) phiU0[i] = phi[i] / phi0;
 
                     // 参加係数 Γ = (φ^T M 1) / (φ^T M φ)
                     double num = 0, den = 0;
                     for (int i = 0; i < n; i++) { num += phi[i] * m[i]; den += phi[i] * phi[i] * m[i]; }
                     if (den < 1e-300)
-                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
                     Gamma = num / den;
 
                     // 変位 u_i = |Γ φ_i| · (T₁/2π)² · Sa0(T₁) · Fh(ξe) · L · Z
@@ -222,7 +241,7 @@ namespace PileDesign.Services
                 }
 
                 if (double.IsNaN(T1))
-                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
 
                 double[] dispMm = new double[n];
                 for (int i = 0; i < n; i++) dispMm[i] = u[i] * 1000.0;
@@ -247,24 +266,51 @@ namespace PileDesign.Services
                 double Gs1 = (e + 1.57 * xiE > 0) ? 1.0 / (e + 1.57 * xiE) : 0.0;
                 double Gs2 = (e + 4.71 * xiE > 0) ? 1.0 / (e + 4.71 * xiE) : 0.0;
 
-                return new LevelResult(T1, xiE, Gamma, e, Gs1, Gs2, G, phiU0, dispMm);
+                return new LevelResult(T1, T2Period, xiE, Gamma, e, Gs1, Gs2, G, phiU0, dispMm);
             }
             catch (Exception)
             {
-                return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
+                return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
             }
+        }
+
+        /// <summary>
+        /// 周期依存の地盤増幅率 Gs(T) (論文式 (8))。T1=1次卓越周期, T2=2次卓越周期。
+        /// 4 区分:
+        ///   0 &lt; T ≤ 0.8·T2:        Gs2·T/(0.8·T2) — 短周期側で線形上昇
+        ///   0.8·T2 ≤ T ≤ 0.8·T1:    Gs2 から Gs1 へ線形遷移
+        ///   0.8·T1 ≤ T ≤ 1.2·T1:    Gs1 (ピーク域)
+        ///   T > 1.2·T1:             長周期側で 1 へ漸近的に減衰 (式 (8) 第 4 区分)
+        /// </summary>
+        internal static double Gs(double T, double T1, double T2, double Gs1, double Gs2)
+        {
+            if (T1 <= 0 || T2 <= 0 || T <= 0) return 1.0;
+            double tA = 0.8 * T2;
+            double tB = 0.8 * T1;
+            double tC = 1.2 * T1;
+            // T2 ≥ T1 のような不自然なケースは clamp
+            if (tA >= tB) tA = tB * 0.5;
+
+            if (T <= tA) return Gs2 * T / tA;
+            if (T <= tB) return Gs2 + (Gs1 - Gs2) * (T - tA) / (tB - tA);
+            if (T <= tC) return Gs1;
+            // 第 4 区分: 1.2·T1 で Gs1, T→∞ で 1 (clamp で発散回避)
+            double denomFactor = 1.0 / tC - 0.1;
+            if (denomFactor <= 0)
+            {
+                // 数値特異点回避: シンプルな 1/T 漸近
+                return 1.0 + (Gs1 - 1.0) * tC / T;
+            }
+            return (Gs1 - 1.0) / (denomFactor * T) + Gs1 - (Gs1 - 1.0) / (denomFactor * tC);
         }
 
         /// <summary>
         /// 収束後の地盤増幅率を加味した「地表」加速度応答スペクトル Sa_surface(T) [m/s²]。
         /// Sa_surface = Gs(T) · L · Z · Sa0(T)
-        ///   T ≤ 0.64: Gs1 (加速度一定領域)
-        ///   T > 0.64: Gs2 (速度一定領域)
         /// </summary>
-        internal static double SaSurface(double T, double Gs1, double Gs2, double L, double Z = 1.0)
+        internal static double SaSurface(double T, double T1, double T2, double Gs1, double Gs2, double L, double Z = 1.0)
         {
-            double gs = (T <= 0.64) ? Gs1 : Gs2;
-            return gs * L * Z * Sa0(T);
+            return Gs(T, T1, T2, Gs1, Gs2) * L * Z * Sa0(T);
         }
 
         /// <summary>

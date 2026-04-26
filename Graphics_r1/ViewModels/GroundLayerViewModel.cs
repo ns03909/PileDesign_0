@@ -1008,23 +1008,27 @@ namespace PileDesign.ViewModels
                 {
                     double gs1 = GroundInput.Gs1Levels[0];
                     double gs2 = GroundInput.Gs2Levels[0];
+                    double t1 = GroundInput.NaturalPeriods[0];
+                    double t2 = GroundInput.T2Levels[0];
                     double[] sa = new double[nPts];
-                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], gs1, gs2, 0.2);
+                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], t1, t2, gs1, gs2, 0.2);
                     var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                     s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                     s.LineWidth = 2.5f;
-                    s.LegendText = $"L1 地表 (Gs1={gs1:F2}, Gs2={gs2:F2})";
+                    s.LegendText = $"L1 地表 (Gs1={gs1:F2}, Gs2={gs2:F2}, T1={t1:F2}s)";
                 }
                 // Level 2 地表
                 {
                     double gs1 = GroundInput.Gs1Levels[1];
                     double gs2 = GroundInput.Gs2Levels[1];
+                    double t1 = GroundInput.NaturalPeriods[1];
+                    double t2 = GroundInput.T2Levels[1];
                     double[] sa = new double[nPts];
-                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], gs1, gs2, 1.0);
+                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], t1, t2, gs1, gs2, 1.0);
                     var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                     s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                     s.LineWidth = 2.5f;
-                    s.LegendText = $"L2 地表 (Gs1={gs1:F2}, Gs2={gs2:F2})";
+                    s.LegendText = $"L2 地表 (Gs1={gs1:F2}, Gs2={gs2:F2}, T1={t1:F2}s)";
                 }
             }
 
@@ -2694,10 +2698,11 @@ namespace PileDesign.ViewModels
                 // 地域係数
                 double Z = 1.0;
 
-                // Gs1/Gs2/Impedance は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
+                // Gs1/Gs2/Impedance/T2 は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
                 GroundInput.Gs1Levels[levelIndex] = 0.0;
                 GroundInput.Gs2Levels[levelIndex] = 0.0;
                 GroundInput.ImpedanceLevels[levelIndex] = 0.0;
+                GroundInput.T2Levels[levelIndex] = 0.0;
 
                 // 応答スペクトル法 (MDOF + 等価線形化反復)
                 if (calculationMethod == "応答スペクトル法")
@@ -2721,6 +2726,7 @@ namespace PileDesign.ViewModels
                         GroundInput.Gs1Levels[levelIndex] = rs.Gs1;
                         GroundInput.Gs2Levels[levelIndex] = rs.Gs2;
                         GroundInput.ImpedanceLevels[levelIndex] = rs.Impedance;
+                        GroundInput.T2Levels[levelIndex] = rs.T2;
 
                         // フィールド書き戻し
                         for (int i = 0; i < groundMassesData.Count; i++)
