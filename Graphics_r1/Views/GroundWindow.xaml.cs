@@ -892,28 +892,30 @@ namespace PileDesign.Views
         }
 
         // 左ペイン (土層+土質点) の最大化トグル:
-        // 1) 右グラフペイングループの DockWidth を 0 にして横方向の領域を全て左に
-        // 2) Window 自体も WindowState.Maximized にして画面いっぱいに広げる
-        // 元に戻すときは両方を復元
+        // 右側のアンカラブルを個別に Hide() して左ペインを横方向に拡大、
+        // さらに Window 自体を WindowState.Maximized にして画面いっぱいに広げる。
+        // 元に戻すときは両方を復元。
         private bool _isLeftMaximized;
-        private static readonly System.Windows.GridLength _leftMaximizedRightWidth = new(0, System.Windows.GridUnitType.Star);
-        private static readonly System.Windows.GridLength _restoredRightWidth = new(0.5, System.Windows.GridUnitType.Star);
         private WindowState _savedWindowState = WindowState.Normal;
 
         private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e)
         {
-            if (RightChartsPaneGroup == null) return;
+            var rightTabs = new[] {
+                NValueTab, CuValueTab, VsValueTab, EsValueTab, CustomDispTab,
+                DefTab, FsTab, SaTab
+            };
+
             if (!_isLeftMaximized)
             {
                 _savedWindowState = this.WindowState;
-                RightChartsPaneGroup.DockWidth = _leftMaximizedRightWidth;
+                foreach (var t in rightTabs) t?.Hide();
                 this.WindowState = WindowState.Maximized;
                 ButtonToggleLeftMaximize.Content = "◀▶ 元に戻す";
                 _isLeftMaximized = true;
             }
             else
             {
-                RightChartsPaneGroup.DockWidth = _restoredRightWidth;
+                foreach (var t in rightTabs) t?.Show();
                 this.WindowState = _savedWindowState;
                 ButtonToggleLeftMaximize.Content = "◀▶ 最大化";
                 _isLeftMaximized = false;
