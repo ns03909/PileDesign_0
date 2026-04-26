@@ -2945,23 +2945,37 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- Gs1, Gs2, インピーダンス比 e (収束後) -->
-                                    <ToolBar Grid.Row="0">
+                                    <!-- T1, T2, Gs1, Gs2, αE (収束後) — レベルごと 2 行表示 -->
+                                    <StackPanel Grid.Row="0" Orientation="Vertical" Margin="4,2">
+                                        <!-- Level 1 -->
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="L1: Gs1=" VerticalAlignment="Center" Margin="2,0"/>
+                                            <TextBlock Text="L1: " VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="2,0"><Run Text="T"/><Run Text="1" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.NaturalPeriods[0], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text="T"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.T2Levels[0], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text="  Gs1=" VerticalAlignment="Center" Margin="6,0,2,0"/>
                                             <TextBlock Text="{Binding GroundInput.Gs1Levels[0], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text=", Gs2=" VerticalAlignment="Center" Margin="2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[1], FallbackValue=0, TargetNullValue=0}" Visibility="Collapsed"/>
+                                            <TextBlock Text="  Gs2=" VerticalAlignment="Center" Margin="6,0,2,0"/>
                                             <TextBlock Text="{Binding GroundInput.Gs2Levels[0], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text=" |  L2: Gs1=" VerticalAlignment="Center" Margin="8,0,2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text=", Gs2=" VerticalAlignment="Center" Margin="2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs2Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock VerticalAlignment="Center" Margin="8,0,2,0"><Run Text=" | α"/><Run Text="E" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
-                                            <TextBlock Text="{Binding GroundInput.ImpedanceLevels[1], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text=" (応答スペクトル法選択時のみ更新)" VerticalAlignment="Center" Margin="8,0" Foreground="Gray" FontSize="11"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text=" α"/><Run Text="E" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.ImpedanceLevels[0], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                         </StackPanel>
-                                    </ToolBar>
+                                        <!-- Level 2 -->
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="L2: " VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="2,0"><Run Text="T"/><Run Text="1" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.NaturalPeriods[1], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text="T"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.T2Levels[1], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text="  Gs1=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text="  Gs2=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.Gs2Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text=" α"/><Run Text="E" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.ImpedanceLevels[1], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
 
                                     <ScottPlot:WpfPlot x:Name="wpfPlotResponseSpectrum" Grid.Row="1"/>
                                     <TextBlock Text="{Binding CrosshairPositionText_Sa}" Margin="10" FontSize="14" Grid.Row="2" Grid.Column="0"/>
