@@ -776,7 +776,7 @@
                                 <ComboBox x:Name="ComboBoxCalculationMethod"
                                           SelectedValue="{Binding GroundInput.CalculationMethod, UpdateSourceTrigger=PropertyChanged}"
                                           ItemsSource ="{Binding CalculationMethodOption}"
-                                          VerticalAlignment="Center" Height="25" Width="100"
+                                          VerticalAlignment="Center" Height="25" MinWidth="130"
                                           SelectionChanged="GroundComboBox_SelectionChanged">
                                     <ComboBox.ToolTip>
                                         <ScrollViewer MaxHeight="400" MaxWidth="600">
@@ -1207,7 +1207,7 @@
                                 <ComboBox x:Name="ComboBoxCalculationMethod"
                                           SelectedValue="{Binding GroundInput.CalculationMethod, UpdateSourceTrigger=PropertyChanged}"
                                           ItemsSource ="{Binding CalculationMethodOption}"
-                                          VerticalAlignment="Center" Height="25" Width="100"
+                                          VerticalAlignment="Center" Height="25" MinWidth="130"
                                           SelectionChanged="GroundComboBox_SelectionChanged">
                                     <ComboBox.ToolTip>
                                         <ScrollViewer MaxHeight="400" MaxWidth="600">

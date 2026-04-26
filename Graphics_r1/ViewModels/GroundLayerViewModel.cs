@@ -302,7 +302,8 @@ namespace PileDesign.ViewModels
         public string[] CalculationMethodOption { get; } =
         [
             "a1(b1)",
-            "a2(b2)"
+            "a2(b2)",
+            "応答スペクトル法"
         ];
 
         public string[] ChartDispContentOption { get; } =
@@ -2512,6 +2513,55 @@ namespace PileDesign.ViewModels
                 // 地域係数
                 double Z = 1.0;
 
+                // 応答スペクトル法 (MDOF + 等価線形化反復)
+                if (calculationMethod == "応答スペクトル法")
+                {
+                    var rs = PileDesign.Services.GroundResponseSpectrumCalc.Compute(
+                        groundMassesData, bedrockDensity, bedrockShearWaveVelocity,
+                        shallowSoilType, L, Z);
+                    if (!double.IsNaN(rs.T1))
+                    {
+                        // T0 (初期周期) は UI 互換のため別途計算
+                        double T0Init = 0.0;
+                        double SigmaHInit = 0.0;
+                        foreach (var gmd in groundMassesData)
+                        {
+                            if (gmd.IsEngineeringBedrock) break;
+                            T0Init += 4.0 * gmd.H.GetValueOrDefault() / gmd.VS0;
+                            SigmaHInit += gmd.H.GetValueOrDefault();
+                        }
+                        GroundInput.NaturalPeriod = T0Init;
+                        GroundInput.NaturalPeriods[levelIndex] = rs.T1;
+
+                        // フィールド書き戻し
+                        for (int i = 0; i < groundMassesData.Count; i++)
+                        {
+                            if (i < rs.G.Length)
+                            {
+                                var gmd = groundMassesData[i];
+                                double rho = gmd.Density;
+                                double h = gmd.H.GetValueOrDefault();
+                                double vse = Math.Sqrt(rs.G[i] * 9.80665 / rho);
+                                gmd.VSE[levelIndex] = vse;
+                                gmd.K[levelIndex] = (h > 0) ? rho / 9.80665 * vse * vse / h : 0.0;
+                                gmd.U[levelIndex] = rs.PhiU0_1[i];
+                                gmd.UStar[levelIndex] = rs.PhiU0_1[i]; // U[0]=1, U_bedrock=0 → UStar=U
+                                gmd.DmaxUStar[levelIndex] = rs.DispMm[i];
+                                gmd.DmaxUStarSigmaGammaCyH[levelIndex] = gmd.DmaxUStar[levelIndex] + gmd.SigmaGammaCyH[levelIndex];
+                            }
+                            else
+                            {
+                                groundMassesData[i].U[levelIndex] = 0.0;
+                                groundMassesData[i].UStar[levelIndex] = 0.0;
+                                groundMassesData[i].DmaxUStar[levelIndex] = 0.0;
+                                groundMassesData[i].DmaxUStarSigmaGammaCyH[levelIndex] = groundMassesData[i].SigmaGammaCyH[levelIndex];
+                            }
+                        }
+                        continue; // 次レベルへ
+                    }
+                    System.Diagnostics.Debug.WriteLine($"[ResponseSpectrum] Level {levelIndex + 1} 計算失敗。a2(b2) にフォールバック。");
+                }
+
                 // 表層の土質の動的変形特性から決まる定数
                 double CAlpha = (shallowSoilType == "粘性土") ? 25.0 : 40.0;
 
@@ -2604,8 +2654,9 @@ namespace PileDesign.ViewModels
                 {
                     Dmax = C1 * (Math.Pow(alpha, 2.0) - 1.0) * fA * SigmaH * (C2 * (1 - 1 / Math.Pow(alpha, 2.0)) + 2.0 * Rz0 / alpha);
                 }
-                else if (calculationMethod == "a2(b2)")
+                else if (calculationMethod == "a2(b2)" || calculationMethod == "応答スペクトル法")
                 {
+                    // 応答スペクトル法の計算が失敗した場合は a2(b2) と同じ式でフォールバック
                     Dmax = C1 * (Math.Pow(alpha, 2.0) - 1.0) * fA * SigmaH;
                 }
 
