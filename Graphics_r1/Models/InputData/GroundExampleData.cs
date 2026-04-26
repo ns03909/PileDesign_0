@@ -180,12 +180,19 @@ namespace PileDesign.Models.InputData
         [JsonPropertyName("h")]
         public double? H { get; set; }
 
+        // 応答スペクトル法 (Hardin-Drnevich) パラメータ
+        [JsonPropertyName("gamma05")]
+        public double? Gamma05 { get; set; }
+
+        [JsonPropertyName("hMax")]
+        public double? HMax { get; set; }
+
         /// <summary>
         /// DTOからGroundMassDataInputへ変換
         /// </summary>
         public GroundMassDataInput ToGroundMassDataInput()
         {
-            return new GroundMassDataInput
+            var input = new GroundMassDataInput
             {
                 GLDepth = GLDepth,
                 NValue = NValue,
@@ -194,6 +201,10 @@ namespace PileDesign.Models.InputData
                 VS0 = VS0,
                 H = H  // JSONに "h" がある場合はそのまま使用、なければnull→RecalculateH()でSpacingをデフォルト設定
             };
+            // JSON に gamma05 / hMax があれば上書き (なければコンストラクタの既定値 7e-4 / 0.20 を維持)
+            if (Gamma05.HasValue) input.Gamma05 = Gamma05.Value;
+            if (HMax.HasValue) input.HMax = HMax.Value;
+            return input;
         }
     }
 }
