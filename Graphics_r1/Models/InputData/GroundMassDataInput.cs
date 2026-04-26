@@ -250,6 +250,24 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _vs0, value);
         }
 
+        // Hardin-Drnevich モデル: 基準せん断ひずみ γ₀.₅ (G/G0=0.5 となる γ)
+        // 応答スペクトル法選択時のみ参照される。a1/a2 では使われない。
+        private double _gamma05;
+        public double Gamma05
+        {
+            get => _gamma05;
+            set => SetProperty(ref _gamma05, value);
+        }
+
+        // Hardin-Drnevich モデル: 履歴減衰の上限 h_max
+        // 応答スペクトル法選択時のみ参照される。a1/a2 では使われない。
+        private double _hMax;
+        public double HMax
+        {
+            get => _hMax;
+            set => SetProperty(ref _hMax, value);
+        }
+
         // 等価S波速度
         private ObservableCollection<double> _vSE;
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
@@ -339,6 +357,8 @@ namespace PileDesign.Models.InputData
             Density = 0.0;
             Mass = 0.0;
             VS0 = 250.0;
+            Gamma05 = 7e-4;  // 砂質土相当のデフォルト (応答スペクトル法用)
+            HMax = 0.20;     // h_max デフォルト
             VSE = [0.0, 0.0];
             K = [0.0, 0.0];
             U = [0.0, 0.0];

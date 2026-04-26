@@ -267,26 +267,60 @@ namespace TestProject1
             Assert.IsTrue(double.IsNaN(result.T1));
         }
 
-        // ---------- γr ソイルタイプ切替 ----------
+        // ---------- per-layer Gamma05 オーバーライド ----------
         [TestMethod]
-        public void Compute_ClaySoilGivesLargerGReduction()
+        public void Compute_HigherGamma05_GivesLessGReduction()
         {
-            // 同条件で粘性土 (γr=2e-3) > 砂質土 (γr=7e-4) → 粘性土の方が G が下がりにくい
-            // (γr が大きいほど G/G0 = 1/(1+γ/γr) が大きい)
-            var massesSand = BuildHighStrainMasses();
-            var massesClay = BuildHighStrainMasses();
+            // 同条件で Gamma05 を per-layer で 2e-3 (大) と 7e-4 (小) に設定 → 大きい方が G 低下少
+            var massesLow = BuildHighStrainMasses(7e-4);
+            var massesHigh = BuildHighStrainMasses(2e-3);
+
+            var rLow = GroundResponseSpectrumCalc.Compute(massesLow, 20.0, 400.0, "砂質土", 1.0);
+            var rHigh = GroundResponseSpectrumCalc.Compute(massesHigh, 20.0, 400.0, "砂質土", 1.0);
+
+            Assert.IsFalse(double.IsNaN(rLow.T1));
+            Assert.IsFalse(double.IsNaN(rHigh.T1));
+            Assert.IsTrue(rHigh.G[0] > rLow.G[0],
+                $"Gamma05=2e-3 の G[0]={rHigh.G[0]:F1} は Gamma05=7e-4 の G[0]={rLow.G[0]:F1} より大きいべき");
+        }
+
+        // ---------- 互換性: Gamma05==0 → ShallowSoilType フォールバック ----------
+        [TestMethod]
+        public void Compute_ZeroGamma05_FallsBackToShallowSoilTypeDefault()
+        {
+            // 旧データ (Gamma05=0) を読み込んだケース → ShallowSoilType に基づくフォールバック
+            // 砂質土→γ0.5=7e-4, 粘性土→γ0.5=2e-3
+            var massesSand = BuildHighStrainMasses(0.0);  // 0 → fallback
+            var massesClay = BuildHighStrainMasses(0.0);
 
             var rSand = GroundResponseSpectrumCalc.Compute(massesSand, 20.0, 400.0, "砂質土", 1.0);
             var rClay = GroundResponseSpectrumCalc.Compute(massesClay, 20.0, 400.0, "粘性土", 1.0);
 
             Assert.IsFalse(double.IsNaN(rSand.T1));
             Assert.IsFalse(double.IsNaN(rClay.T1));
-            // 粘性土 (大きい γr) の方が G は高めに残る
-            Assert.IsTrue(rClay.G[0] >= rSand.G[0],
-                $"粘性土の G[0]={rClay.G[0]:F1} は砂質土 G[0]={rSand.G[0]:F1} 以上であるべき");
+            // 粘性土の方が G の低下が少ない (γ0.5 が大きい)
+            Assert.IsTrue(rClay.G[0] > rSand.G[0],
+                $"粘性土フォールバック (γ0.5=2e-3) の G[0]={rClay.G[0]:F1} は砂質土フォールバック (γ0.5=7e-4) の G[0]={rSand.G[0]:F1} より大きいべき");
         }
 
-        private static ObservableCollection<GroundMassDataInput> BuildHighStrainMasses()
+        // ---------- per-layer HMax ----------
+        [TestMethod]
+        public void Compute_HigherHMax_GivesHigherDamping()
+        {
+            // 同条件で h_max を 0.10 と 0.30 に変えて、xiE が h_max=0.30 で大きいことを確認
+            var massesLowH = BuildHighStrainMasses(0.0, 0.10);
+            var massesHighH = BuildHighStrainMasses(0.0, 0.30);
+
+            var rLow = GroundResponseSpectrumCalc.Compute(massesLowH, 20.0, 400.0, "砂質土", 1.0);
+            var rHigh = GroundResponseSpectrumCalc.Compute(massesHighH, 20.0, 400.0, "砂質土", 1.0);
+
+            Assert.IsFalse(double.IsNaN(rLow.T1));
+            Assert.IsFalse(double.IsNaN(rHigh.T1));
+            Assert.IsTrue(rHigh.XiE > rLow.XiE,
+                $"h_max=0.30 の XiE={rHigh.XiE:F4} は h_max=0.10 の XiE={rLow.XiE:F4} より大きいべき");
+        }
+
+        private static ObservableCollection<GroundMassDataInput> BuildHighStrainMasses(double gamma05 = 0.0, double hMax = 0.0)
         {
             var masses = new ObservableCollection<GroundMassDataInput>();
             for (int i = 0; i < 4; i++)
@@ -294,7 +328,8 @@ namespace TestProject1
                 masses.Add(new GroundMassDataInput
                 {
                     H = 5.0, Density = 17.0, VS0 = 150.0,
-                    Mass = 17.0 / 9.80665 * 5.0, IsEngineeringBedrock = false
+                    Mass = 17.0 / 9.80665 * 5.0, IsEngineeringBedrock = false,
+                    Gamma05 = gamma05, HMax = hMax
                 });
             }
             masses.Add(new GroundMassDataInput

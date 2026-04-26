@@ -2201,6 +2201,32 @@
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
+
+                                            <!-- Hardin-Drnevich モデル: 基準せん断ひずみ γ0.5 (応答スペクトル法用) -->
+                                            <DataGridTextColumn Binding="{Binding Gamma05, StringFormat='{}{0:0.00E+00}'}"
+                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="基準" TextAlignment="Center"/>
+                                                        <TextBlock Text="せん断" TextAlignment="Center"/>
+                                                        <TextBlock Text="ひずみ" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="γ"/><Run Text="0.5" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
+                                            <!-- Hardin-Drnevich モデル: 履歴減衰上限 h_max (応答スペクトル法用) -->
+                                            <DataGridTextColumn Binding="{Binding HMax, StringFormat='{}{0:0.00}'}"
+                                                                ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                                <DataGridTextColumn.Header>
+                                                    <StackPanel>
+                                                        <TextBlock Text="減衰" TextAlignment="Center"/>
+                                                        <TextBlock Text="上限" TextAlignment="Center"/>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="h"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                                    </StackPanel>
+                                                </DataGridTextColumn.Header>
+                                            </DataGridTextColumn>
+
                                             <DataGridTextColumn Binding="{Binding Fc}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>

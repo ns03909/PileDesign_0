@@ -18,10 +18,14 @@ namespace PileDesign.Services
         private const int MaxIter = 20;
         private const double Tol = 1e-3;
         private const double GReductionFloor = 0.05;       // G/G0 下限
-        private const double XiMax = 0.20;                 // ヒステリシス減衰最大
         private const double EffectiveStrainCoeff = 0.65;  // γeff = 0.65 γmax (SHAKE 慣行)
         private const double XiInitial = 0.05;             // 材料減衰
         private const double Gravity = 9.80665;            // m/s²
+
+        // Gamma05/HMax が未設定 (= 0) の場合のフォールバック (ShallowSoilType ベース)
+        internal const double Gamma05DefaultSand = 7e-4;
+        internal const double Gamma05DefaultClay = 2e-3;
+        internal const double HMaxDefault = 0.20;
 
         internal readonly record struct LevelResult(
             double T1, double XiE, double Gamma,
@@ -36,7 +40,7 @@ namespace PileDesign.Services
         /// <param name="masses">表層から順 (i=0 地表)。bedrock 判定は IsEngineeringBedrock。</param>
         /// <param name="bedrockDensity">工学的基盤の重量密度 [kN/m³]</param>
         /// <param name="bedrockVs">工学的基盤 VS [m/s]</param>
-        /// <param name="shallowSoilType">"砂質土" or "粘性土" → γr 切替</param>
+        /// <param name="shallowSoilType">"砂質土" or "粘性土" → 層 Gamma05 が 0 のときのフォールバック値選択</param>
         /// <param name="L">レベル係数 (Level1=0.2, Level2=1.0)</param>
         /// <param name="Z">地域係数 (既定 1.0)</param>
         internal static LevelResult Compute(
@@ -55,13 +59,16 @@ namespace PileDesign.Services
                 if (n <= 0)
                     return new LevelResult(double.NaN, 0, 0, [], [], []);
 
-                double gammaR = (shallowSoilType == "粘性土") ? 2e-3 : 7e-4;
+                // ShallowSoilType ベースの γ0.5 デフォルト (per-layer 値が 0 のときのフォールバック)
+                double gamma05Fallback = (shallowSoilType == "粘性土") ? Gamma05DefaultClay : Gamma05DefaultSand;
 
-                // 入力配列を作成（H, mass density, G0）
+                // 入力配列を作成（H, mass density, G0, per-layer Gamma05/HMax）
                 double[] H = new double[n];
                 double[] rhoMass = new double[n]; // [t/m³]
                 double[] G0 = new double[n];      // [kPa]
                 double[] m = new double[n];       // mass [t] (Mass プロパティ)
+                double[] gamma05 = new double[n]; // per-layer 基準せん断ひずみ
+                double[] hMax = new double[n];    // per-layer h_max
                 for (int i = 0; i < n; i++)
                 {
                     var md = masses[i];
@@ -74,6 +81,9 @@ namespace PileDesign.Services
                     m[i] = md.Mass;
                     if (m[i] <= 0 || G0[i] <= 0)
                         return new LevelResult(double.NaN, 0, 0, [], [], []);
+                    // 0 以下なら ShallowSoilType デフォルト (旧データの互換性)
+                    gamma05[i] = (md.Gamma05 > 0) ? md.Gamma05 : gamma05Fallback;
+                    hMax[i] = (md.HMax > 0) ? md.HMax : HMaxDefault;
                 }
 
                 // 反復ループ初期値
@@ -170,14 +180,14 @@ namespace PileDesign.Services
                         gamma[i] = EffectiveStrainCoeff * Math.Abs(u[i] - uNext) / H[i];
                     }
 
-                    // G 更新 + 層減衰
+                    // G 更新 + 層減衰 (per-layer γ0.5 / h_max)
                     double[] Gnew = new double[n];
                     double[] xi = new double[n];
                     for (int i = 0; i < n; i++)
                     {
-                        double r = gamma[i] / gammaR;
+                        double r = gamma[i] / gamma05[i];
                         Gnew[i] = Math.Max(G0[i] / (1.0 + r), GReductionFloor * G0[i]);
-                        xi[i] = XiMax * r / (1.0 + r);
+                        xi[i] = hMax[i] * r / (1.0 + r);
                     }
 
                     // モード減衰 (ひずみエネルギー重み): ξe = ξ0 + Σ(ξ_i - ξ0) w_i / Σ w_i
