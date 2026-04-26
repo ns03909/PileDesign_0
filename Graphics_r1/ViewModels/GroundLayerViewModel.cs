@@ -963,11 +963,19 @@ namespace PileDesign.ViewModels
             if (wpf == null) return;
             wpf.Plot.Clear();
 
-            // 周期サンプリング (0〜5s, 200 点)
+            // 周期サンプリング (0.02〜5s, 対数等間隔 200 点) — X 軸を log10 表示するため
+            const double tMin = 0.02;
             const double tMax = 5.0;
             const int nPts = 200;
+            double logTMin = Math.Log10(tMin);
+            double logTMax = Math.Log10(tMax);
             double[] Ts = new double[nPts];
-            for (int i = 0; i < nPts; i++) Ts[i] = (i + 1) * tMax / nPts;
+            double[] logTs = new double[nPts];
+            for (int i = 0; i < nPts; i++)
+            {
+                logTs[i] = logTMin + (logTMax - logTMin) * i / (nPts - 1);
+                Ts[i] = Math.Pow(10, logTs[i]);
+            }
 
             // 算定法が応答スペクトル法以外のときは Gs1=Gs2=0 のため地表は描けない。
             // その場合は基盤 Sa0 のみ表示。
@@ -977,7 +985,7 @@ namespace PileDesign.ViewModels
             {
                 double[] sa = new double[nPts];
                 for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 0.2);
-                var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                 s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                 s.LineWidth = 1.5f;
                 s.LineStyle.Pattern = LinePattern.Dashed;
@@ -987,7 +995,7 @@ namespace PileDesign.ViewModels
             {
                 double[] sa = new double[nPts];
                 for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 1.0);
-                var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                 s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                 s.LineWidth = 1.5f;
                 s.LineStyle.Pattern = LinePattern.Dashed;
@@ -1002,7 +1010,7 @@ namespace PileDesign.ViewModels
                     double gs2 = GroundInput.Gs2Levels[0];
                     double[] sa = new double[nPts];
                     for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], gs1, gs2, 0.2);
-                    var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                    var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                     s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                     s.LineWidth = 2.5f;
                     s.LegendText = $"L1 地表 (Gs1={gs1:F2}, Gs2={gs2:F2})";
@@ -1013,7 +1021,7 @@ namespace PileDesign.ViewModels
                     double gs2 = GroundInput.Gs2Levels[1];
                     double[] sa = new double[nPts];
                     for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], gs1, gs2, 1.0);
-                    var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                    var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                     s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                     s.LineWidth = 2.5f;
                     s.LegendText = $"L2 地表 (Gs1={gs1:F2}, Gs2={gs2:F2})";
@@ -1032,20 +1040,86 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
+            // X 軸を log10 表示: 値は log10(T) でプロットし、目盛は実周期で表示
+            var minorTickGen = new ScottPlot.TickGenerators.LogMinorTickGenerator();
+            var tickGen = new ScottPlot.TickGenerators.NumericAutomatic
+            {
+                MinorTickGenerator = minorTickGen,
+                IntegerTicksOnly = true,
+                LabelFormatter = (y) =>
+                {
+                    double t = Math.Pow(10, y);
+                    if (t >= 1) return t.ToString("0.##");
+                    if (t >= 0.1) return t.ToString("0.0");
+                    return t.ToString("0.00");
+                }
+            };
+            wpf.Plot.Axes.Bottom.TickGenerator = tickGen;
+
             wpf.Plot.ShowLegend();
             wpf.Plot.Legend.FontName = Fonts.Detect("凡例");
             wpf.Plot.Axes.AutoScale();
-            wpf.Plot.Axes.Bottom.Min = 0.0;
+            wpf.Plot.Axes.Bottom.Min = logTMin;
+            wpf.Plot.Axes.Bottom.Max = logTMax;
             wpf.Plot.Axes.Left.Min = 0.0;
 
             MyCrosshair_Sa ??= PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             if (!_hookedSaMouseMove)
             {
-                wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Sa", "T(s)", "Sa(m/s²)", 3, 3);
+                // X 軸が log10(T) なので、Crosshair 表示用に実 T へ逆変換するインライン版を使用
+                wpf.MouseMove += (s, e) => HandleResponseSpectrumMouseMove(s, e);
                 _hookedSaMouseMove = true;
             }
 
             wpf.Refresh();
+        }
+
+        private void HandleResponseSpectrumMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (sender is not ScottPlot.WPF.WpfPlot wpfPlot) return;
+
+            var scatters = wpfPlot.Plot.GetPlottables().OfType<ScottPlot.Plottables.Scatter>().ToList();
+            if (scatters.Count == 0) return;
+
+            var p = e.GetPosition(wpfPlot);
+            var mousePixel = new ScottPlot.Pixel(p.X * wpfPlot.DisplayScale, p.Y * wpfPlot.DisplayScale);
+            var mouseLocation = wpfPlot.Plot.GetCoordinates(mousePixel);
+
+            double minDist = double.MaxValue;
+            ScottPlot.DataPoint? nearest = null;
+            ScottPlot.Plottables.Scatter? nearestScatter = null;
+            foreach (var sc in scatters)
+            {
+                var pt = sc.Data.GetNearest(mouseLocation, wpfPlot.Plot.LastRender);
+                double dx = pt.Coordinates.X - mouseLocation.X;
+                double dy = pt.Coordinates.Y - mouseLocation.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+                if (pt.IsReal && dist < minDist)
+                {
+                    minDist = dist;
+                    nearest = pt;
+                    nearestScatter = sc;
+                }
+            }
+
+            if (wpfPlot.Plot.GetPlottables().OfType<ScottPlot.Plottables.Crosshair>().FirstOrDefault() is ScottPlot.Plottables.Crosshair crosshair)
+            {
+                if (nearest is { IsReal: true })
+                {
+                    crosshair.IsVisible = true;
+                    crosshair.Position = nearest.Value.Coordinates;
+                    wpfPlot.Refresh();
+                    // X 軸は log10(T) なので 10^x で実周期を求める
+                    double tActual = Math.Pow(10, nearest.Value.Coordinates.X);
+                    string legend = nearestScatter?.LegendText ?? "";
+                    CrosshairPositionText_Sa = $"{legend} || T(s)={tActual:F3}, Sa(m/s²)={nearest.Value.Coordinates.Y:F3}";
+                }
+                else if (crosshair.IsVisible)
+                {
+                    crosshair.IsVisible = false;
+                    wpfPlot.Refresh();
+                }
+            }
         }
 
         // N値グラフ描画メソッド
