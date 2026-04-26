@@ -1476,6 +1476,10 @@
 
                                     <StackPanel Grid.Row="0">
                                         <ToolBar>
+                                            <Button x:Name="ButtonToggleLeftMaximize" Content="◀▶ 最大化" Background="#888" Foreground="white" VerticalAlignment="top"
+                                                Click="ButtonToggleLeftMaximize_Click"
+                                                ToolTip="土層・土質点ペインを最大化／元に戻す (右側のグラフペインを開閉)"/>
+                                            <Separator/>
                                             <Button x:Name="ButtonAddGroundLayer" Content="土層追加" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding AddGroundLayerCommand}">
                                                 <Button.ToolTip>
@@ -2689,7 +2693,7 @@
                         </avalonDock:LayoutDocumentPane>
                     </avalonDock:LayoutDocumentPaneGroup>
 
-                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.5*">
+                    <avalonDock:LayoutDocumentPaneGroup x:Name="RightChartsPaneGroup" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="NValueTab" Title="N値" CanClose="False" CanHide="False">
                                 <Grid>
