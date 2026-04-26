@@ -652,7 +652,7 @@ namespace PileDesign.ViewModels
 
             // 基礎梁入力がない、または梁要素が定義されていない場合は剛体連結に自動切替
             bool hasBeams = fbInput?.Beams != null && fbInput.Beams.Count > 0;
-            if (!hasBeams)
+            if (!hasBeams || fbInput == null)
             {
                 ConnectionMode = FoundationBeamConnectionMode.RigidBody;
                 return true;
@@ -660,7 +660,7 @@ namespace PileDesign.ViewModels
 
             // 基礎梁はあるが節点参照が不正な場合はエラー
             bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
-            bool hasPileReferences = fbInput.Beams.Any(b =>
+            bool hasPileReferences = fbInput.Beams!.Any(b =>
                 b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
             if (!hasFoundationNodes && !hasPileReferences)
             {
@@ -882,11 +882,11 @@ namespace PileDesign.ViewModels
                     MessageBox.Show("基礎梁要素が定義されていないため、剛体連結モードに切り替えて解析を実行します。",
                         "接続モード変更", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-                else
+                else if (fbInput != null)
                 {
                     // 基礎梁はあるが節点参照が不正な場合はエラー
                     bool hasFoundationNodes = fbInput.Nodes != null && fbInput.Nodes.Count > 0;
-                    bool hasPileReferences = fbInput.Beams.Any(b =>
+                    bool hasPileReferences = fbInput.Beams!.Any(b =>
                         b.NodeI_Type == NodeReferenceType.PileLayout || b.NodeJ_Type == NodeReferenceType.PileLayout);
                     if (!hasFoundationNodes && !hasPileReferences)
                     {

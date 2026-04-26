@@ -97,7 +97,7 @@ namespace PileDesign.Services
             colorBarCanvas.RenderTransform = Transform.Identity;
 
             int numberOfColors = colorBaredGeometries?.Count ?? 0;
-            if (numberOfColors == 0)
+            if (numberOfColors == 0 || colorBaredGeometries == null)
             {
                 colorBarCanvas.Children.Clear();
                 return;

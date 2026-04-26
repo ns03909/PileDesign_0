@@ -362,7 +362,7 @@ namespace PileDesign.Output
                 AddLoadCombinationTable(mainPart, body);
 
                 // 水平解析済みかつ根入れ部（土圧合力ばね）が存在する場合、レベル1／レベル2の反力合計表を追加
-                if (mainWindowViewModel?.IsHorizontalAnalysisDone == true
+                if (mainWindowViewModel.IsHorizontalAnalysisDone
                     && anaModel?.HorizontalSoilSprings != null
                     && anaModel.HorizontalSoilSprings.Any(s => s.NodeI?.Name == "根入部節点"))
                 {
@@ -382,7 +382,7 @@ namespace PileDesign.Output
                     AddPileForceDiagramByMm(mainPart, body, widthMm: 150, heightMm: pileElevationH, soilPile, "horizontal");
                     AddAutoFigureCaption(body, "水平抵抗解析杭モデル", "図");
 
-                    if (mainWindowViewModel?.IsHorizontalAnalysisDone == true)
+                    if (mainWindowViewModel.IsHorizontalAnalysisDone)
                     {
                         AddPileForceSummaryTable(mainPart, body);
                         AddNMinT(mainPart, body);
@@ -409,7 +409,7 @@ namespace PileDesign.Output
             }
             // 全杭の応力ダイアグラム出力（曲げモーメント・せん断力）
             if ((mainWindowViewModel.IncludeHorizontal_Bending || mainWindowViewModel.IncludeHorizontal_Shear)
-                && mainWindowViewModel?.IsHorizontalAnalysisDone == true && anaModel != null)
+                && mainWindowViewModel.IsHorizontalAnalysisDone && anaModel != null)
             {
                 AddAllPileStressDiagrams(mainPart, body,
                     mainWindowViewModel.IncludeHorizontal_Bending,
@@ -447,7 +447,7 @@ namespace PileDesign.Output
             }
             // 水平解析 検定（NGのみ）
             if (mainWindowViewModel.IncludeHorizontal_NGReport
-                && mainWindowViewModel?.IsHorizontalAnalysisDone == true
+                && mainWindowViewModel.IsHorizontalAnalysisDone
                 && anaModel != null)
             {
                 AddHorizontalEvaluationReport(body, factored: true);
@@ -1874,7 +1874,8 @@ namespace PileDesign.Output
                     for (int segIdx = 0; segIdx < pileBody.PileBodySegments.Count; segIdx++)
                     {
                         var seg = pileBody.PileBodySegments[segIdx];
-                        var section = seg?.PileSection;
+                        if (seg == null) continue;
+                        var section = seg.PileSection;
 
                         var row = new TableRow();
                         row.Append(CreateTableCell([pileBody.PileBodyRef], fontSize, "center"));
@@ -2711,7 +2712,7 @@ namespace PileDesign.Output
                 // 不足レベル追加
                 var existing = new HashSet<int>(abstractNum.Elements<Level>()
                     .Where(l => l.LevelIndex != null)
-                    .Select(l => l.LevelIndex.Value));
+                    .Select(l => l.LevelIndex!.Value));
 
                 for (int lvl = 0; lvl <= 5; lvl++)
                 {
@@ -3000,7 +3001,7 @@ namespace PileDesign.Output
         {
             ScottPlot.Multiplot multiplot = new();
             int panelCount = xsByPanelBySeries?.Count ?? 0;
-            if (panelCount == 0) return;
+            if (panelCount == 0 || xsByPanelBySeries == null) return;
             multiplot.AddPlots(panelCount);
 
             for (int p = 0; p < panelCount; p++)
@@ -3064,6 +3065,7 @@ namespace PileDesign.Output
             ScottPlot.Multiplot multiplot = new();
 
             int count = Math.Min(3, Math.Min(xsLists?.Count ?? 0, ysLists?.Count ?? 0));
+            if (count == 0 || xsLists == null || ysLists == null) return;
             multiplot.AddPlots(count);
 
             List<Plot> plots = [];
@@ -4283,7 +4285,8 @@ diameterSelector,
                 var beam = pileLayoutItem.Beams[0];
                 if (beam?.BeamResults == null) return;
 
-                int cnt = Math.Min(beam.BeamResults.Count, loadCases?.Count ?? 0);
+                if (loadCases == null) return;
+                int cnt = Math.Min(beam.BeamResults.Count, loadCases.Count);
                 for (int i = 0; i < cnt; i++)
                 {
                     var lc = loadCases[i];
@@ -4507,7 +4510,8 @@ diameterSelector,
 
             void AddLoads(ObservableCollection<LoadCase> loadCases, ObservableCollection<double> axialLoads)
             {
-                int cnt = Math.Min(loadCases?.Count ?? 0, axialLoads?.Count ?? 0);
+                if (loadCases == null || axialLoads == null) return;
+                int cnt = Math.Min(loadCases.Count, axialLoads.Count);
                 for (int i = 0; i < cnt; i++)
                 {
                     var lc = loadCases[i];
@@ -4530,7 +4534,8 @@ diameterSelector,
 
             void AddIsFronts(ObservableCollection<LoadCase> loadCases)
             {
-                int cnt = Math.Min(pileLayoutItem.IsFrontPiles?.Count ?? 0, loadCases?.Count ?? 0);
+                if (loadCases == null || pileLayoutItem.IsFrontPiles == null) return;
+                int cnt = Math.Min(pileLayoutItem.IsFrontPiles.Count, loadCases.Count);
                 for (int i = 0; i < cnt; i++)
                 {
                     var lc = loadCases[i];
@@ -5068,10 +5073,11 @@ diameterSelector,
                     toeNode, nodeRadius, nodeRadius);
 
                 // 地盤層描画（null安全）
-                var groundLayers = soilPile.GroundInput?.GroundLayers;
-                if (groundLayers != null)
+                var groundInput = soilPile.GroundInput;
+                var groundLayers = groundInput?.GroundLayers;
+                if (groundInput != null && groundLayers != null)
                 {
-                    double groundTop = soilPile.GroundInput.GroundTopAltitude - soilPile.Z;
+                    double groundTop = groundInput.GroundTopAltitude - soilPile.Z;
                     double groundTopPx = -groundTop * scale + ToImagePoint(0, 0).Y;
                     if (0 <= groundTopPx && groundTopPx <= heightPx)
                         dc.DrawLine(new Pen(Brushes.Black, lineWidthThin),

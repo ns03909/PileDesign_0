@@ -454,7 +454,7 @@ namespace PileDesign.ViewModels
             );
 
             newChang.SelectedSoilPileIndex = ChangSoilPiles != null && ChangSoilPiles.Count >= 1 ? 1 : 0;
-            if (newChang.SelectedSoilPileIndex >= 1 && ChangSoilPiles.Count >= newChang.SelectedSoilPileIndex)
+            if (newChang.SelectedSoilPileIndex >= 1 && ChangSoilPiles != null && ChangSoilPiles.Count >= newChang.SelectedSoilPileIndex)
             {
                 newChang.AssignedSoilPile = ChangSoilPiles[newChang.SelectedSoilPileIndex - 1];
             }

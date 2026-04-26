@@ -185,7 +185,7 @@ namespace PileDesign.Output
             try
             {
                 // SavePng は環境によって内部実装が異なるため例外をキャッチして報告する
-                wpf.Plot.SavePng(tempFile, wpx, hpx);
+                wpf.Plot?.SavePng(tempFile, wpx, hpx);
                 return File.ReadAllBytes(tempFile);
             }
             finally

@@ -114,10 +114,10 @@ namespace PileDesign.ViewModels
 
         public ObservableCollection<RectLoad> RectLoads
         {
-            get => CurrentInputModel.PileGroupSettlement.RectLoads;
+            get => CurrentInputModel!.PileGroupSettlement.RectLoads;
             set
             {
-                if (!ReferenceEquals(CurrentInputModel.PileGroupSettlement.RectLoads, value))
+                if (!ReferenceEquals(CurrentInputModel!.PileGroupSettlement.RectLoads, value))
                 {
                     CurrentInputModel.PileGroupSettlement.RectLoads = value ?? [];
                     OnPropertyChanged(nameof(RectLoads));
@@ -206,7 +206,7 @@ namespace PileDesign.ViewModels
             get
             {
                 var piles = CurrentInputModel?.PileLayoutItems?.Where(p => p.IsSelected).ToList();
-                if (piles?.Count == 1) return $"杭 #{CurrentInputModel.PileLayoutItems.IndexOf(piles[0]) + 1}";
+                if (piles?.Count == 1) return $"杭 #{CurrentInputModel!.PileLayoutItems.IndexOf(piles[0]) + 1}";
                 if (piles?.Count > 1) return $"杭 ×{piles.Count}";
 
                 var beams = CurrentInputModel?.FoundationBeamInput?.Beams?.Where(b => b.IsSelected).ToList();
@@ -366,6 +366,7 @@ namespace PileDesign.ViewModels
 
         private void BuildPileProperties(PileLayoutDataItem pile)
         {
+            if (CurrentInputModel == null) return;
             var pileBodyOptions = CurrentInputModel.PileBodiesCountList.Select(x => x.ToString()).ToList();
             var groundOptions   = CurrentInputModel.GroundsInputCountList.Select(x => x.ToString()).ToList();
 
@@ -436,6 +437,7 @@ namespace PileDesign.ViewModels
 
         private void BuildBeamProperties(FoundationBeamElement beam)
         {
+            if (CurrentInputModel == null) return;
             SelectedItemProperties.Add(new("要素No",    $"{beam.No}"));
             SelectedItemProperties.Add(new("I端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeI_Type, beam.NodeI_Id)));
             SelectedItemProperties.Add(new("J端節点No", CurrentInputModel.GetNodeReferenceDisplayString(beam.NodeJ_Type, beam.NodeJ_Id)));
@@ -459,6 +461,7 @@ namespace PileDesign.ViewModels
         private double? CalcBeamLength(FoundationBeamElement beam)
         {
             if (beam.NodeI_Id == Guid.Empty || beam.NodeJ_Id == Guid.Empty) return null;
+            if (CurrentInputModel == null) return null;
             var ci = CurrentInputModel.GetNodeCoordinates(beam.NodeI_Type, beam.NodeI_Id);
             var cj = CurrentInputModel.GetNodeCoordinates(beam.NodeJ_Type, beam.NodeJ_Id);
             if (ci == null || cj == null) return null;
@@ -471,7 +474,7 @@ namespace PileDesign.ViewModels
         private double? CalcPileLength(PileLayoutDataItem pile)
         {
             int idx = pile.PileBodyNo - 1;
-            if (idx < 0 || CurrentInputModel.PileBodies == null || idx >= CurrentInputModel.PileBodies.Count)
+            if (idx < 0 || CurrentInputModel?.PileBodies == null || idx >= CurrentInputModel.PileBodies.Count)
                 return null;
             var pileBody = CurrentInputModel.PileBodies[idx];
             if (pileBody.PileBodySegments == null || pileBody.PileBodySegments.Count == 0)
@@ -520,6 +523,7 @@ namespace PileDesign.ViewModels
 
         private void BuildMultiPileProperties(List<PileLayoutDataItem> piles)
         {
+            if (CurrentInputModel == null) return;
             var pileBodyOptions = CurrentInputModel.PileBodiesCountList.Select(x => x.ToString()).ToList();
             var groundOptions   = CurrentInputModel.GroundsInputCountList.Select(x => x.ToString()).ToList();
 
@@ -947,6 +951,7 @@ namespace PileDesign.ViewModels
             // CurrentModelが存在しない場合は何もしない
             if (CurrentModel?.AnalysisStepResults == null || CurrentModel.AnalysisStepResults.Count == 0)
                 return;
+            if (CurrentInputModel == null) return;
 
             // 選択されたLoadCaseを取得
             var selectedLoadCase = CurrentInputModel.LoadCasesInput.AllLoadCases
@@ -992,6 +997,7 @@ namespace PileDesign.ViewModels
 
         private void UpdateDirectionOption()
         {
+            if (CurrentInputModel == null) { DirectionOption = []; return; }
             var selectedLoadCase = CurrentInputModel.LoadCasesInput.AllLoadCases
                 .FirstOrDefault(lc => lc.LoadName == SelectedLoadCaseName);
 

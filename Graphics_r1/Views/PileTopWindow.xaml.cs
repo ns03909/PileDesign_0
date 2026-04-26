@@ -211,32 +211,32 @@ namespace PileDesign.Views
         {
             PileTopViewModel viewModel = (PileTopViewModel)DataContext;
 
-            if (viewModel?.PileTopType == "キャプテンパイル工法")
+            if (viewModel == null) return;
+            if (viewModel.PileTopType == "キャプテンパイル工法")
             {
                 if (ComboBoxPCRing.SelectedItem != null)
                 {
-                    string selectedPCRingName = ComboBoxPCRing.SelectedItem.ToString();
-                    PCRing selectedPCRing = viewModel?.PileTop.CaptainPile.PCRings.FirstOrDefault(p => p.Name == selectedPCRingName);
+                    string selectedPCRingName = ComboBoxPCRing.SelectedItem.ToString() ?? string.Empty;
+                    PCRing? selectedPCRing = viewModel.PileTop.CaptainPile.PCRings.FirstOrDefault(p => p.Name == selectedPCRingName);
                     viewModel.PileTop.CaptainPile.PCRing = selectedPCRing;
 
                     if (selectedPCRing != null)
                     {
                         viewModel.PileTop.SelectedPileTopSpecification = selectedPCRing.GetSpecs();
+                        viewModel.PileTop.CaptainPile.D = selectedPCRing.D;
                     }
 
-                    viewModel.PileTop.CaptainPile.D = selectedPCRing.D;
-
-                    viewModel?.PileTop.CaptainPile.UpdateTDorTB();
-                    viewModel?.PileTop.CaptainPile.Update();
-                    viewModel?.RedrawShapes();
-                    viewModel?.ChartUpdate();
+                    viewModel.PileTop.CaptainPile.UpdateTDorTB();
+                    viewModel.PileTop.CaptainPile.Update();
+                    viewModel.RedrawShapes();
+                    viewModel.ChartUpdate();
                 }
             }
-            else if (viewModel?.PileTopType == "FT-Pile構法")
+            else if (viewModel.PileTopType == "FT-Pile構法")
             {
-                viewModel?.PileTop.FTPile.Update();
-                viewModel?.RedrawShapes();
-                viewModel?.ChartUpdate();
+                viewModel.PileTop.FTPile.Update();
+                viewModel.RedrawShapes();
+                viewModel.ChartUpdate();
             }
         }
 
@@ -300,7 +300,7 @@ namespace PileDesign.Views
             PileTopViewModel viewModel = (PileTopViewModel)DataContext;
             if (sender == RadioButtonSquare)
             {
-                if (ComboBoxBarNumberSquare != null || ComboBoxBarNumberCircle != null)
+                if (ComboBoxBarNumberSquare != null && ComboBoxBarNumberCircle != null)
                 {
                     ComboBoxBarNumberSquare.Visibility = Visibility.Visible;
                     ComboBoxBarNumberCircle.Visibility = Visibility.Collapsed;
@@ -310,7 +310,7 @@ namespace PileDesign.Views
             }
             else if (sender == RadioButtonCircle)
             {
-                if (ComboBoxBarNumberSquare != null || ComboBoxBarNumberCircle != null)
+                if (ComboBoxBarNumberSquare != null && ComboBoxBarNumberCircle != null)
                 {
                     ComboBoxBarNumberSquare.Visibility = Visibility.Collapsed;
                     ComboBoxBarNumberCircle.Visibility = Visibility.Visible;
@@ -504,7 +504,7 @@ namespace PileDesign.Views
                 targetFTCap = ftPile.FTCaps.OrderByDescending(c => c.Phi).FirstOrDefault();
             }
 
-            if (targetFTCap != null)
+            if (targetFTCap != null && viewModel.PileTop != null)
             {
                 // FTCapを設定
                 ftPile.FTCap = targetFTCap;

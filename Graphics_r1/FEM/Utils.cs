@@ -293,10 +293,10 @@ namespace PileDesign.FEM
                 return;
             }
 
-            // 12 DOF の ResolvedDofMap を結合
+            // 12 DOF の ResolvedDofMap を結合 (useResolvedMap で non-null 保証済)
             DofTerm[][] maps = new DofTerm[12][];
-            for (int d = 0; d < 6; d++) maps[d] = nodeI.ResolvedDofMap[d] ?? [];
-            for (int d = 0; d < 6; d++) maps[6 + d] = nodeJ.ResolvedDofMap[d] ?? [];
+            for (int d = 0; d < 6; d++) maps[d] = nodeI.ResolvedDofMap![d] ?? [];
+            for (int d = 0; d < 6; d++) maps[6 + d] = nodeJ.ResolvedDofMap![d] ?? [];
 
             // Scatter: ke[i,j] を全 term ペアに分配
             for (int i = 0; i < 12; i++)
@@ -345,9 +345,10 @@ namespace PileDesign.FEM
                 return;
             }
 
+            // useResolvedMap で nodeI/nodeJ.ResolvedDofMap は non-null 保証済
             DofTerm[][] maps = new DofTerm[12][];
-            for (int d = 0; d < 6; d++) maps[d] = nodeI.ResolvedDofMap[d] ?? [];
-            for (int d = 0; d < 6; d++) maps[6 + d] = nodeJ.ResolvedDofMap[d] ?? [];
+            for (int d = 0; d < 6; d++) maps[d] = nodeI.ResolvedDofMap![d] ?? [];
+            for (int d = 0; d < 6; d++) maps[6 + d] = nodeJ.ResolvedDofMap![d] ?? [];
 
             for (int i = 0; i < 12; i++)
             {

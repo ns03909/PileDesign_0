@@ -134,7 +134,7 @@ namespace PileDesign.Common
                 DrawElementDivision(canvas, zs, ratio, topMargin);
             }
 
-            if (selectedZ != null)
+            if (selectedZ != null && zs != null && zs.Count > 0)
             {
                 DrawSelectedZ(canvas, zs[0], selectedZ, ratio, topMargin);
             }
@@ -418,6 +418,7 @@ namespace PileDesign.Common
         private static void DrawElementDivision(
             Canvas canvas, List<double>? zs, double ratio, double topMargin)
         {
+            if (zs == null || zs.Count == 0) return;
             double canvasWidth = canvas.ActualWidth;
             //double canvasHeight = canvas.ActualHeight;
 

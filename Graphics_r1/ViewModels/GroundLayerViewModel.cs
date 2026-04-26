@@ -375,6 +375,7 @@ namespace PileDesign.ViewModels
         [RelayCommand]
         private void OnSliderEngineeringBedrockValueChanged(double value)
         {
+            if (GroundInput?.GroundLayers == null) return;
             int intValue = (int)value;
             int n = GroundInput.GroundLayers.Count;
 
@@ -397,6 +398,7 @@ namespace PileDesign.ViewModels
         // はじめて工学的基盤となる層以下の層をすべて工学的基盤に変えるメソッド
         public void UpdateBedrockChecks()
         {
+            if (GroundInput?.GroundLayers == null) return;
             bool isEngineeringBedrock = false;
             foreach (var groundLayer in GroundInput.GroundLayers)
             {
@@ -418,6 +420,7 @@ namespace PileDesign.ViewModels
         {
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
             if (sender is not GroundLayerInput itemToDelete) return;
+            if (GroundInput?.GroundLayers == null) return;
             GroundInput.GroundLayers.Remove(itemToDelete);
 
             SafeRefreshDataGrid(GroundWindowInstance?.DataGridGroundLayer);
@@ -432,6 +435,7 @@ namespace PileDesign.ViewModels
         {
             _undoManager.PushState(GroundsInput.Select(x => x.DeepCopy()).ToList());
             if (sender is not GroundMassDataInput itemToDelete) return;
+            if (GroundInput?.GroundMassesData == null) return;
             GroundInput.GroundMassesData.Remove(itemToDelete);
 
             SafeRefreshDataGrid(GroundWindowInstance?.DataGridGroundMass);
@@ -515,6 +519,7 @@ namespace PileDesign.ViewModels
         public void ShowGroundInputErrorAlert()
         {
             var gi = GroundInput;
+            if (gi == null) return;
             var errors = new List<string>();
             if (gi.IsErrorGroundWaterTableAltitude)
                 errors.Add("地下水位Zは孔口標高Z以下にしてください。");
@@ -671,6 +676,7 @@ namespace PileDesign.ViewModels
         {
             if (GroundWindowInstance == null)
             { return; }
+            if (GroundInput?.GroundMassesData == null) return;
 
             List<double> gLDepths = [];
 
@@ -841,6 +847,7 @@ namespace PileDesign.ViewModels
 
         private void DrawFLScatter(List<double> gLDepths, int index, WpfPlot wpf, SKColor skColor)
         {
+            if (GroundInput?.GroundMassesData == null) return;
             List<List<double>> fL1ss = [];
             List<double> fL1s = [];
             List<List<double>> gLDepth1ss = [];
@@ -884,6 +891,7 @@ namespace PileDesign.ViewModels
         private void DrawFLGraph()
         {
             if (GroundWindowInstance == null) return;
+            if (GroundInput?.GroundMassesData == null) return;
 
             List<double> gLDepths = [];
             foreach (var data in GroundInput.GroundMassesData)
@@ -937,6 +945,7 @@ namespace PileDesign.ViewModels
         private void DrawNValueGraph()
         {
             if (GroundWindowInstance == null) return;
+            if (GroundInput?.GroundMassesData == null) return;
 
             List<double> ns = [];
             List<double> _bottomGLDepths = [];

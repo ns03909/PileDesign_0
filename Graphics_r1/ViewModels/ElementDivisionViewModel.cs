@@ -1661,7 +1661,7 @@ namespace PileDesign.ViewModels
                             MessageBox.Show("この値は変更できません。", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                             e.Cancel = true;
                         }
-                        else
+                        else if (editedElement != null)
                         {
                             // 元の値を保存
                             originalValue = editedElement.Z;

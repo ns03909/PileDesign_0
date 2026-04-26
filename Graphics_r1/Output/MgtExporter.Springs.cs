@@ -93,7 +93,7 @@ namespace PileDesign.Output
             int linkId = 1;
 
             // 水平地盤ばね: MULTI LINEAR（X方向リンク、Y方向リンク（Y解析済みの場合））
-            if (hasHorizontal)
+            if (hasHorizontal && _anaModel.HorizontalSoilSprings != null)
             {
                 // X方向リンク（軸方向=DIR 0、既存のNodeJはX方向にオフセット済み）
                 foreach (var spring in _anaModel.HorizontalSoilSprings)
@@ -120,7 +120,7 @@ namespace PileDesign.Output
             }
 
             // ペナルティばね: RIGID（同位置接続を許容、杭頭の剛体連結用）
-            if (hasPenalty)
+            if (hasPenalty && _anaModel.PenaltySprings != null)
             {
                 foreach (var spring in _anaModel.PenaltySprings)
                 {

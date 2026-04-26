@@ -230,7 +230,8 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _selectedPileBodyRef, value))
                 {
                     UpdateGraph();
-                    int segmentsCount = InputModel.GetPileBodyByPileBodyRef(_selectedPileBodyRef).PileBodySegments.Count;
+                    var pileBody = InputModel.GetPileBodyByPileBodyRef(_selectedPileBodyRef);
+                    int segmentsCount = pileBody?.PileBodySegments?.Count ?? 0;
                     var options = new ObservableCollection<string> { "All" };
                     foreach (int i in Enumerable.Range(1, segmentsCount)) options.Add(i.ToString());
                     PileSegmentOptions = options;

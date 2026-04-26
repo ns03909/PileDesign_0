@@ -960,7 +960,7 @@ namespace PileDesign.ViewModels
                 targetFTCap = ftPile.FTCaps.OrderByDescending(c => c.Phi).FirstOrDefault();
             }
 
-            if (targetFTCap != null)
+            if (targetFTCap != null && pileBody.PileTop != null)
             {
                 // FTCapを設定
                 ftPile.FTCap = targetFTCap;

@@ -10,8 +10,8 @@ namespace PileDesign.Converters
         {
             if (value == null || parameter == null)
                 return false;
-            string enumValue = value.ToString();
-            string targetValue = parameter.ToString();
+            string enumValue = value.ToString() ?? "";
+            string targetValue = parameter.ToString() ?? "";
             return enumValue.Equals(targetValue, StringComparison.InvariantCultureIgnoreCase);
         }
 

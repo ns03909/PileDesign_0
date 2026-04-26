@@ -238,7 +238,7 @@ namespace PileDesign.Views
         private void ComboBox_PileSectionSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // senderをComboBoxにキャスト
-            ComboBox comboBox = sender as ComboBox;
+            if (sender is not ComboBox comboBox) return;
 
             // 選択された項目を取得
             var selectedItem = comboBox.SelectedItem;

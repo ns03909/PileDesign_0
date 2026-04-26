@@ -19,7 +19,7 @@ namespace PileDesign.Models
         {
             if (canvas != null)
             {
-                canvas.Children?.Clear();
+                canvas.Children.Clear(); // Canvas.Children は never null (defensive ? を削除して analyzer の non-null 推論を回復)
 
                 // Canvas上に図形を描画するためのサイズと位置を定義します。
                 double canvasWidth = canvas.ActualWidth;

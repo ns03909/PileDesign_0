@@ -18,7 +18,7 @@ namespace PileDesign.Converters
             string format = null;
             if (parameter != null)
             {
-                string paramStr = System.Convert.ToString(parameter, culture);
+                string paramStr = System.Convert.ToString(parameter, culture) ?? "";
                 if (paramStr.Contains('|'))
                 {
                     var parts = paramStr.Split('|');

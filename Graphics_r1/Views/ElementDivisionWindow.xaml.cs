@@ -40,7 +40,7 @@ namespace PileDesign.Views
             if (_viewModel != null && !_viewModel.IsOkPressed && _wasElementSplitBeforeOpen)
             {
                 // 分割データを復元（GenerateSoilPilesImmediate()で最小分割に上書きされたため）
-                var ed = _mainWindowViewModel.CurrentInputModel.ElementDivision;
+                var ed = _mainWindowViewModel.CurrentInputModel?.ElementDivision;
                 if (ed != null && _savedSoilPiles != null)
                 {
                     ed.SoilPiles = new ObservableCollection<SoilPile>(_savedSoilPiles);

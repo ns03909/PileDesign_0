@@ -45,7 +45,7 @@ namespace PileDesign.Output
                     var textBlocks = stackPanel.Children.OfType<TextBlock>().Select(tb => tb.Text);
                     return string.Join(" ", textBlocks);
                 }
-                return column.Header.ToString().Trim();
+                return column.Header?.ToString()?.Trim() ?? "";
             }).ToArray();
             sb.AppendLine(string.Join(",", headers));
 

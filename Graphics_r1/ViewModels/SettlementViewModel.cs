@@ -858,7 +858,8 @@ namespace PileDesign.ViewModels
                 }
             }
             // ユーザーが手動で選択したので初期化済みマーク
-            if (SoilPile != null) SoilPile.IsSettlementPresetInitialized = true;
+            if (SoilPile == null) return;
+            SoilPile.IsSettlementPresetInitialized = true;
             AddComponent(InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleAlpha, InputModel.PileBodies[SoilPile.PileBodyNo - 1].SettleN);
             // プリセット変更時に自動で解析実行
             ExecuteAnalysis();

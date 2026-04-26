@@ -87,7 +87,7 @@ namespace PileDesign.Common
                     // Legend取得
                     //string legend = "";
                     //if (nearestScatter is ILegendItem legendItem)
-                    string legend = nearestScatter.LegendText ?? "";
+                    string legend = nearestScatter?.LegendText ?? "";
 
                     // DataContextのプロパティに座標＋Legendをセット
                     var dc = wpfPlot.DataContext;
@@ -201,17 +201,19 @@ namespace PileDesign.Common
 
         public static void AddCsvExportMenu(WpfPlot wpfPlot, string defaultFileName = "data")
         {
+            var menu = wpfPlot.Menu;
+            if (menu == null) return;
             // ScottPlotデフォルトの「Copy Image」はClipboard.SetImage(BitmapImage)を使い
             // BitmapMetadata例外が発生するため、デフォルトメニューをクリアして安全な実装に差し替え
-            wpfPlot.Menu.Clear();
-            wpfPlot.Menu.Add("画像をコピー", plot => SafeCopyImageToClipboard(wpfPlot));
-            wpfPlot.Menu.Add("画像を保存...", plot => SafeSavePlotImage(wpfPlot, defaultFileName));
-            wpfPlot.Menu.AddSeparator();
-            wpfPlot.Menu.Add("CSVコピー", plot => CopyCsvToClipboard(plot));
-            wpfPlot.Menu.Add("CSVとして保存...", plot => ExportToCsv(plot, defaultFileName));
+            menu.Clear();
+            menu.Add("画像をコピー", plot => SafeCopyImageToClipboard(wpfPlot));
+            menu.Add("画像を保存...", plot => SafeSavePlotImage(wpfPlot, defaultFileName));
+            menu.AddSeparator();
+            menu.Add("CSVコピー", plot => CopyCsvToClipboard(plot));
+            menu.Add("CSVとして保存...", plot => ExportToCsv(plot, defaultFileName));
             // 全プロット共通で「別ウィンドウで開く」を追加（モーダル中でも他プロットと独立してリサイズ閲覧可能）
-            wpfPlot.Menu.AddSeparator();
-            wpfPlot.Menu.Add("別ウィンドウで開く", _ => DetachToSeparateWindow(wpfPlot, defaultFileName));
+            menu.AddSeparator();
+            menu.Add("別ウィンドウで開く", _ => DetachToSeparateWindow(wpfPlot, defaultFileName));
         }
 
         // 分離したウィンドウを追跡し、重複生成を防ぐ
@@ -224,8 +226,10 @@ namespace PileDesign.Common
         /// </summary>
         public static void AddPopoutMenu(WpfPlot wpfPlot, string title)
         {
-            wpfPlot.Menu.AddSeparator();
-            wpfPlot.Menu.Add("別ウィンドウで開く", _ => DetachToSeparateWindow(wpfPlot, title));
+            var menu = wpfPlot.Menu;
+            if (menu == null) return;
+            menu.AddSeparator();
+            menu.Add("別ウィンドウで開く", _ => DetachToSeparateWindow(wpfPlot, title));
         }
 
         private static void DetachToSeparateWindow(WpfPlot wpfPlot, string title)

@@ -55,8 +55,8 @@ namespace PileDesign.FEM
 
             SlaveNodes.Add(slaveNode);
 
-            // 自由度 => 固定度を設定
-            slaveNode.Boundary.Set(Dofs[0], Dofs[1], Dofs[2], Dofs[3], Dofs[4], Dofs[5]);
+            // 自由度 => 固定度を設定 (line 38 で null チェック済、Boundary も line 44 で確認済)
+            slaveNode.Boundary?.Set(Dofs[0], Dofs[1], Dofs[2], Dofs[3], Dofs[4], Dofs[5]);
 
             // master/slave 関係は SetSlaveNodeRelations()/AnaModel.SetSlaveNodes() で構築される想定だが、
             // ここでも一次的にセットしておく（念のため）

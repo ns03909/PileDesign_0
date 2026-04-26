@@ -817,7 +817,10 @@ namespace PileDesign.FEM
         /// </summary>
         private void ScatterForceToGlobal(Vector<double> f, Node nodeI, Node nodeJ)
         {
-            bool useResolvedMap = nodeI?.ResolvedDofMap != null && nodeJ?.ResolvedDofMap != null;
+            // 呼び出し側保証: nodeI/nodeJ は通常 non-null。null の場合は何もせず帰る。
+            if (nodeI == null || nodeJ == null) return;
+
+            bool useResolvedMap = nodeI.ResolvedDofMap != null && nodeJ.ResolvedDofMap != null;
             if (useResolvedMap)
             {
                 for (int i = 0; i < 12; i++)
@@ -826,7 +829,7 @@ namespace PileDesign.FEM
                     if (fval == 0.0) continue;
                     int dof = i % 6;
                     var node = i < 6 ? nodeI : nodeJ;
-                    var terms = node.ResolvedDofMap[dof];
+                    var terms = node.ResolvedDofMap![dof]; // useResolvedMap で non-null 確認済
                     if (terms == null) continue;
                     foreach (var term in terms)
                     {

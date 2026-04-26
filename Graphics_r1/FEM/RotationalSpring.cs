@@ -338,8 +338,8 @@ namespace PileDesign.FEM
             if (useResolvedMap)
             {
                 DofTerm[][] maps = new DofTerm[12][];
-                for (int d = 0; d < 6; d++) maps[d] = NodeI.ResolvedDofMap[d] ?? [];
-                for (int d = 0; d < 6; d++) maps[6 + d] = NodeJ.ResolvedDofMap[d] ?? [];
+                for (int d = 0; d < 6; d++) maps[d] = NodeI!.ResolvedDofMap![d] ?? [];
+                for (int d = 0; d < 6; d++) maps[6 + d] = NodeJ!.ResolvedDofMap![d] ?? [];
 
                 for (int i = 0; i < 12; i++)
                 {
@@ -454,7 +454,7 @@ namespace PileDesign.FEM
                     if (fval == 0.0) continue;
                     int dof = i % 6;
                     var node = i < 6 ? NodeI : NodeJ;
-                    var terms = node.ResolvedDofMap[dof];
+                    var terms = node!.ResolvedDofMap![dof]; // useResolvedMap で non-null 保証済
                     if (terms == null) continue;
                     foreach (var term in terms)
                     {
