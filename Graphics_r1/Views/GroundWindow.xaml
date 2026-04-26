@@ -536,7 +536,13 @@
 
                 <!-- セパレータ -->
                 <Border Grid.Column="5" Style="{StaticResource VerticalSeparatorStyle}"/>
-                <Button Grid.Column="6" Content="削除" Command="{Binding GroundDeleteCommand}" Style="{StaticResource FormButtonStyle}"/>
+                <StackPanel Grid.Column="6" Orientation="Horizontal">
+                    <Button Content="削除" Command="{Binding GroundDeleteCommand}" Style="{StaticResource FormButtonStyle}"/>
+                    <Button x:Name="ButtonToggleLeftMaximize" Content="◀▶ 左ペイン最大化" Background="#888" Foreground="White"
+                            Margin="8,0,0,0" Padding="8,2"
+                            Click="ButtonToggleLeftMaximize_Click"
+                            ToolTip="土層・土質点ペインを最大化／元に戻す (右側のグラフペインを開閉)"/>
+                </StackPanel>
                 <!-- セパレータ -->
                 <!--<Border Grid.Column="7" Style="{StaticResource VerticalSeparatorStyle}"/>-->
                 
@@ -1476,10 +1482,6 @@
 
                                     <StackPanel Grid.Row="0">
                                         <ToolBar>
-                                            <Button x:Name="ButtonToggleLeftMaximize" Content="◀▶ 最大化" Background="#888" Foreground="white" VerticalAlignment="top"
-                                                Click="ButtonToggleLeftMaximize_Click"
-                                                ToolTip="土層・土質点ペインを最大化／元に戻す (右側のグラフペインを開閉)"/>
-                                            <Separator/>
                                             <Button x:Name="ButtonAddGroundLayer" Content="土層追加" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding AddGroundLayerCommand}">
                                                 <Button.ToolTip>
@@ -1895,10 +1897,6 @@
 
                                     <ToolBarTray Grid.Row="0">
                                         <ToolBar Band="1" BandIndex="1">
-                                            <Button x:Name="ButtonToggleLeftMaximize2" Content="◀▶ 最大化" Background="#888" Foreground="white" VerticalAlignment="top"
-                                                Click="ButtonToggleLeftMaximize_Click"
-                                                ToolTip="土層・土質点ペインを最大化／元に戻す (右側のグラフペインを開閉)"/>
-                                            <Separator/>
                                             <Button x:Name="ButtonAddGroundMass" Content="土質点追加" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding AddGroundMassCommand}">
                                                 <Button.ToolTip>

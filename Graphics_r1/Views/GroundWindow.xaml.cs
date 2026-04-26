@@ -923,11 +923,10 @@ namespace PileDesign.Views
             else
             {
                 foreach (var t in rightTabs) t?.Show();
-                // 元の 0.5*/0.5* に復元
                 if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _restoredHalfWidth;
                 if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _restoredHalfWidth;
                 this.WindowState = _savedWindowState;
-                SetMaximizeButtonContent("◀▶ 最大化");
+                SetMaximizeButtonContent("◀▶ 左ペイン最大化");
                 _isLeftMaximized = false;
             }
         }
@@ -935,7 +934,6 @@ namespace PileDesign.Views
         private void SetMaximizeButtonContent(string text)
         {
             if (ButtonToggleLeftMaximize != null) ButtonToggleLeftMaximize.Content = text;
-            if (ButtonToggleLeftMaximize2 != null) ButtonToggleLeftMaximize2.Content = text;
         }
     }
 }
