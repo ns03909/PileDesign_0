@@ -1465,7 +1465,7 @@
         <avalonDock:DockingManager x:Name="dockingManager" Grid.Row="1">
             <avalonDock:LayoutRoot>
                 <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
-                    <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
+                    <avalonDock:LayoutDocumentPaneGroup x:Name="LeftPaneGroup" Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable Title="土層入力" CanClose="False" CanHide="False">
                                 <Grid>

@@ -898,6 +898,10 @@ namespace PileDesign.Views
         private bool _isLeftMaximized;
         private WindowState _savedWindowState = WindowState.Normal;
 
+        private static readonly System.Windows.GridLength _leftMaximizedWidth = new(0.999, System.Windows.GridUnitType.Star);
+        private static readonly System.Windows.GridLength _rightMinimizedWidth = new(0.001, System.Windows.GridUnitType.Star);
+        private static readonly System.Windows.GridLength _restoredHalfWidth = new(0.5, System.Windows.GridUnitType.Star);
+
         private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e)
         {
             var rightTabs = new[] {
@@ -909,6 +913,9 @@ namespace PileDesign.Views
             {
                 _savedWindowState = this.WindowState;
                 foreach (var t in rightTabs) t?.Hide();
+                // 左ペインを横方向に拡大: 左の DockWidth を大、右を極小に
+                if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _leftMaximizedWidth;
+                if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _rightMinimizedWidth;
                 this.WindowState = WindowState.Maximized;
                 SetMaximizeButtonContent("◀▶ 元に戻す");
                 _isLeftMaximized = true;
@@ -916,6 +923,9 @@ namespace PileDesign.Views
             else
             {
                 foreach (var t in rightTabs) t?.Show();
+                // 元の 0.5*/0.5* に復元
+                if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _restoredHalfWidth;
+                if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _restoredHalfWidth;
                 this.WindowState = _savedWindowState;
                 SetMaximizeButtonContent("◀▶ 最大化");
                 _isLeftMaximized = false;
