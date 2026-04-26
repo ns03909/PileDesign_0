@@ -403,6 +403,55 @@ namespace PileDesign.Output
             body.Append(table0);
             body.Append(new Paragraph());
 
+            // 応答スペクトル法選択時の固有値解析結果サマリー
+            if (groundInput.CalculationMethod == "応答スペクトル法")
+            {
+                AddText(body, "応答スペクトル法 固有値解析結果 (収束後)");
+                Table tableRsSummary = CreateTableWithBorders();
+                tableRsSummary.Append(new TableRow(
+                    CreateTableCell([""], fontSize, "center"),
+                    CreateTableCell(["T<_1>", "[s]"], fontSize, "center"),
+                    CreateTableCell(["T<_2>", "[s]"], fontSize, "center"),
+                    CreateTableCell(["β", "(参加係数)"], fontSize, "center"),
+                    CreateTableCell(["ξ<_e>", "(等価減衰)"], fontSize, "center"),
+                    CreateTableCell(["α<_E>", "(ｲﾝﾋﾟｰﾀﾞﾝｽ比)"], fontSize, "center"),
+                    CreateTableCell(["Gs<_1>"], fontSize, "center"),
+                    CreateTableCell(["Gs<_2>"], fontSize, "center")));
+                for (int lv = 0; lv < 2; lv++)
+                {
+                    tableRsSummary.Append(new TableRow(
+                        CreateTableCell([$"レベル{lv + 1}"], fontSize, "center"),
+                        CreateTableCell([$"{groundInput.NaturalPeriods[lv]:N3}"], fontSize, "right"),
+                        CreateTableCell([$"{groundInput.T2Levels[lv]:N3}"], fontSize, "right"),
+                        CreateTableCell([$"{groundInput.BetaLevels[lv]:N3}"], fontSize, "right"),
+                        CreateTableCell([$"{groundInput.XiELevels[lv]:N3}"], fontSize, "right"),
+                        CreateTableCell([$"{groundInput.ImpedanceLevels[lv]:N3}"], fontSize, "right"),
+                        CreateTableCell([$"{groundInput.Gs1Levels[lv]:N2}"], fontSize, "right"),
+                        CreateTableCell([$"{groundInput.Gs2Levels[lv]:N2}"], fontSize, "right")));
+                }
+                body.Append(tableRsSummary);
+                body.Append(new Paragraph());
+
+                AddText(body, "土質点別 Hardin-Drnevich パラメータ");
+                Table tableHd = CreateTableWithBorders();
+                tableHd.Append(CreateHeaderRow(
+                    CreateTableCell(["深度", "[m]"], fontSize, "center"),
+                    CreateTableCell(["土層名"], fontSize, "center"),
+                    CreateTableCell(["基準せん断", "ひずみ", "γ<_0.5>"], fontSize, "center"),
+                    CreateTableCell(["減衰上限", "h<_max>"], fontSize, "center")));
+                foreach (GroundMassDataInput gm in groundMasses)
+                {
+                    tableHd.Append(new TableRow(
+                        CreateTableCell([$"{gm.GLDepth:N3}"], fontSize, "right"),
+                        CreateTableCell([$"{gm.Name}"], fontSize, "center"),
+                        CreateTableCell([$"{gm.Gamma05:0.00E+00}"], fontSize, "right"),
+                        CreateTableCell([$"{gm.HMax:N2}"], fontSize, "right")));
+                    if (gm.IsEngineeringBedrock) break;
+                }
+                body.Append(tableHd);
+                body.Append(new Paragraph());
+            }
+
             for (int i = 0; i < 2; i++)
             {
                 AddText(body, $"レベル{i + 1}地震");

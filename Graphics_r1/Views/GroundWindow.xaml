@@ -540,8 +540,17 @@
                     <Button Content="削除" Command="{Binding GroundDeleteCommand}" Style="{StaticResource FormButtonStyle}"/>
                     <Button x:Name="ButtonToggleLeftMaximize" Content="◀▶ 左ペイン最大化" Background="#888" Foreground="White"
                             Margin="8,0,0,0" Padding="8,2"
-                            Click="ButtonToggleLeftMaximize_Click"
-                            ToolTip="土層・土質点ペインを最大化／元に戻す (右側のグラフペインを開閉)"/>
+                            Click="ButtonToggleLeftMaximize_Click">
+                        <Button.ToolTip>
+                            <TextBlock>
+                                <Run Text="土層・土質点ペインを最大化／元に戻す。"/><LineBreak/>
+                                <Run Text="クリックで右側のグラフペイン (N値・粘着力・S波速度・変形係数・"/>
+                                <Run Text="任意地盤変位・地盤変位・液状化安全率・応答スペクトル) を一括非表示にし、"/>
+                                <Run Text="ウィンドウ自体も最大化して画面いっぱいに広げる。"/><LineBreak/>
+                                <Run Text="再クリックで元の表示に戻る。"/>
+                            </TextBlock>
+                        </Button.ToolTip>
+                    </Button>
                 </StackPanel>
                 <!-- セパレータ -->
                 <!--<Border Grid.Column="7" Style="{StaticResource VerticalSeparatorStyle}"/>-->
@@ -1010,6 +1019,26 @@
                                                         <TextBlock Text="時刻歴波形" Padding="4"/>
                                                     </Border>
                                                 </Grid>
+
+                                                <TextBlock Text="応答スペクトル法 (本実装独自オプション)"
+                                                           FontWeight="Bold" Margin="0,8,0,4" HorizontalAlignment="Center"/>
+                                                <TextBlock TextWrapping="Wrap" MaxWidth="580">
+                                                    <Run Text="出典: Inoue/Hayashi 他「表層地盤による地震動増幅率評価法に関する研究」"/><LineBreak/>
+                                                    <Run Text="(日本建築学会技術報告集 Vol.32 No.107, 2026)"/><LineBreak/><LineBreak/>
+                                                    <Run Text="多層地盤を多質点系に離散化し、固有値解析で 1 次・2 次卓越周期 T1, T2 と"/>
+                                                    <Run Text="モード形 {U} を求め、加速度応答スペクトル Sa0(T) と減衰補正 Fh(ξ) で"/>
+                                                    <Run Text="各層の地盤変位 u_i を算定する手法。"/><LineBreak/><LineBreak/>
+                                                    <Run Text="Hardin-Drnevich モデルで G(γ)/G0 と h(γ) の歪み依存性を表現し、"/>
+                                                    <Run Text="土質点ごとに 基準せん断ひずみ γ"/><Run Text="0.5" BaselineAlignment="Subscript" FontSize="9"/>
+                                                    <Run Text=" と 履歴減衰の上限 h"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/>
+                                                    <Run Text=" を入力する。"/><LineBreak/><LineBreak/>
+                                                    <Run Text="等価線形化を反復して収束した G_i から:"/><LineBreak/>
+                                                    <Run Text="  ・モード等価減衰 ξe (ひずみエネルギー重み付き平均)"/><LineBreak/>
+                                                    <Run Text="  ・表層代表インピーダンス比 αE = (ρE·VsE) / (ρN·VsN)"/><LineBreak/>
+                                                    <Run Text="  ・地盤増幅率 Gs1 = 1/(αE + 1.57·ξe), Gs2 = 1/(αE + 4.71·ξe)"/><LineBreak/>
+                                                    <Run Text="を求め、4 区分の Gs(T) を構成して地表応答スペクトル Sa(T) = Gs(T)·Sa0(T) を導く。"/><LineBreak/><LineBreak/>
+                                                    <Run Text="結果は 応答スペクトル タブで確認できる (β, ξe, αE, Gs1, Gs2 を併記)。"/>
+                                                </TextBlock>
                                             </StackPanel>
                                         </ScrollViewer>
                                     </ComboBox.ToolTip>
@@ -1441,6 +1470,26 @@
                                                         <TextBlock Text="時刻歴波形" Padding="4"/>
                                                     </Border>
                                                 </Grid>
+
+                                                <TextBlock Text="応答スペクトル法 (本実装独自オプション)"
+                                                           FontWeight="Bold" Margin="0,8,0,4" HorizontalAlignment="Center"/>
+                                                <TextBlock TextWrapping="Wrap" MaxWidth="580">
+                                                    <Run Text="出典: Inoue/Hayashi 他「表層地盤による地震動増幅率評価法に関する研究」"/><LineBreak/>
+                                                    <Run Text="(日本建築学会技術報告集 Vol.32 No.107, 2026)"/><LineBreak/><LineBreak/>
+                                                    <Run Text="多層地盤を多質点系に離散化し、固有値解析で 1 次・2 次卓越周期 T1, T2 と"/>
+                                                    <Run Text="モード形 {U} を求め、加速度応答スペクトル Sa0(T) と減衰補正 Fh(ξ) で"/>
+                                                    <Run Text="各層の地盤変位 u_i を算定する手法。"/><LineBreak/><LineBreak/>
+                                                    <Run Text="Hardin-Drnevich モデルで G(γ)/G0 と h(γ) の歪み依存性を表現し、"/>
+                                                    <Run Text="土質点ごとに 基準せん断ひずみ γ"/><Run Text="0.5" BaselineAlignment="Subscript" FontSize="9"/>
+                                                    <Run Text=" と 履歴減衰の上限 h"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/>
+                                                    <Run Text=" を入力する。"/><LineBreak/><LineBreak/>
+                                                    <Run Text="等価線形化を反復して収束した G_i から:"/><LineBreak/>
+                                                    <Run Text="  ・モード等価減衰 ξe (ひずみエネルギー重み付き平均)"/><LineBreak/>
+                                                    <Run Text="  ・表層代表インピーダンス比 αE = (ρE·VsE) / (ρN·VsN)"/><LineBreak/>
+                                                    <Run Text="  ・地盤増幅率 Gs1 = 1/(αE + 1.57·ξe), Gs2 = 1/(αE + 4.71·ξe)"/><LineBreak/>
+                                                    <Run Text="を求め、4 区分の Gs(T) を構成して地表応答スペクトル Sa(T) = Gs(T)·Sa0(T) を導く。"/><LineBreak/><LineBreak/>
+                                                    <Run Text="結果は 応答スペクトル タブで確認できる (β, ξe, αE, Gs1, Gs2 を併記)。"/>
+                                                </TextBlock>
                                             </StackPanel>
                                         </ScrollViewer>
                                     </ComboBox.ToolTip>
@@ -2212,7 +2261,7 @@
                                             <DataGridTextColumn Binding="{Binding Gamma05, StringFormat='{}{0:0.00E+00}'}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
-                                                    <StackPanel>
+                                                    <StackPanel ToolTip="基準せん断ひずみ γ0.5 (Hardin-Drnevich モデル)&#x0a;G/G0 = 1/(1 + γ/γ0.5) で歪み依存性を表現。&#x0a;砂質土の典型値 7e-4、粘性土の典型値 2e-3。&#x0a;応答スペクトル法選択時のみ参照される。">
                                                         <TextBlock Text="基準" TextAlignment="Center"/>
                                                         <TextBlock Text="せん断" TextAlignment="Center"/>
                                                         <TextBlock Text="ひずみ" TextAlignment="Center" HorizontalAlignment="Center"/>
@@ -2225,7 +2274,7 @@
                                             <DataGridTextColumn Binding="{Binding HMax, StringFormat='{}{0:0.00}'}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
-                                                    <StackPanel>
+                                                    <StackPanel ToolTip="履歴減衰上限 h_max (Hardin-Drnevich モデル)&#x0a;h(γ) = h0 + (h_max - h0)·γ/(γ0.5 + γ)、h0 = 5% (材料減衰)。&#x0a;γ→∞ で h = h_max に漸近。典型値 0.17〜0.25。&#x0a;応答スペクトル法選択時のみ参照される。">
                                                         <TextBlock Text="減衰" TextAlignment="Center"/>
                                                         <TextBlock Text="上限" TextAlignment="Center"/>
                                                         <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="h"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>

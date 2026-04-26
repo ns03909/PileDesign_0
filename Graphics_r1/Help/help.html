@@ -1288,7 +1288,23 @@
                 ただし、貼り付け範囲の各セルで入力可能な値でなければエラーメッセージが表示されます。
             </p>
             <p>
+                <strong>1×1 → 多セル塗り潰しペースト (Excel ライク)</strong>: クリップボードに 1 セル分しかなく、
+                ペースト先で複数セルを選択している場合は、選択中の全セルへ同じ値を一括書き込みする。
+                読み取り専用列はスキップ、型変換不可なら全体エラー。
+            </p>
+            <p>
                 データグリッド上のデータは、セルを選択して[Ctrl]+[C]を押すことでコピーすることができます。
+                コピー出力は TSV (タブ区切り) でクリップボードに格納される。<br>
+                列ヘッダーをクリックすると、その列を基準にデータを昇順・降順でソートできます。
+                ソートはあくまで表示順序の変更であり、データ自体の並びには影響しません。
+            </p>
+
+            <h4>地盤ウィンドウ: 左ペイン最大化</h4>
+            <p>
+                地盤ウィンドウ最上段の「◀▶ 左ペイン最大化」ボタンを押すと、右側のグラフペイン
+                (N値・粘着力・S波速度・変形係数・任意地盤変位・地盤変位・液状化安全率・応答スペクトル)
+                が一括非表示になり、土層・土質点入力ペインが画面いっぱいに広がる。
+                ウィンドウ自体も最大化される。再クリックで元の表示に戻る。
             </p>
             <p>
                 列ヘッダーをクリックすると、その列を基準にデータを昇順・降順でソートできます。
@@ -2433,9 +2449,14 @@
                     <tr>
                         <td>地盤変位算定法</td>
                         <td>
-                            「a1(b1)」または「a2(b2)」から選択します。<br>
-                            基礎指針'19 表4.5.1に基づく液状化しない地盤における水平変位の算定法です。
-                            算定法により地震動の設定位置・形態、解析手法が異なります。
+                            「a1(b1)」「a2(b2)」「応答スペクトル法」から選択します。<br>
+                            <strong>a1(b1) / a2(b2)</strong>: 基礎指針'19 表4.5.1に基づく液状化しない地盤における水平変位の算定法。
+                            周期のび係数 α で 1 次モードを近似する閉形式の簡易手法。<br>
+                            <strong>応答スペクトル法</strong>: 多層地盤を多質点系に離散化し、固有値解析で 1 次・2 次卓越周期 $T_1$, $T_2$ と
+                            モード形 $\{U\}$ を求め、加速度応答スペクトル $S_{a0}(T)$ と減衰補正 $F_h(\xi)$ を介して各層変位 $u_i$ を算定する。
+                            Hardin-Drnevich モデルで歪み依存性を表現し、等価線形化を反復収束させる。
+                            出典: Inoue/Hayashi 他「表層地盤による地震動増幅率評価法に関する研究」(日本建築学会技術報告集 Vol.32 No.107, 2026)。
+                            選択時は 土質点 グリッドで層ごとに 基準せん断ひずみ $\gamma_{0.5}$ と 履歴減衰の上限 $h_{max}$ を入力する。
                         </td>
                     </tr>
                     <tr>
@@ -2624,6 +2645,24 @@
                     <tr>
                         <td>初期S波速度 (m/s)</td>
                         <td>初期せん断弾性波速度 $V_{S0}$。地盤変位計算に使用</td>
+                    </tr>
+                    <tr>
+                        <td>基準せん断ひずみ $\gamma_{0.5}$</td>
+                        <td>
+                            Hardin-Drnevich モデルの基準せん断ひずみ。<br>
+                            $G/G_0 = 1 / (1 + \gamma/\gamma_{0.5})$ で歪み依存の剛性低下を表現。<br>
+                            砂質土の典型値 $7\times10^{-4}$、粘性土の典型値 $2\times10^{-3}$。<br>
+                            <strong>応答スペクトル法選択時のみ参照される</strong>。
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>減衰上限 $h_{max}$</td>
+                        <td>
+                            Hardin-Drnevich モデルの履歴減衰上限。<br>
+                            $h(\gamma) = h_0 + (h_{max} - h_0)\cdot\gamma/(\gamma_{0.5} + \gamma)$、$h_0 = 5\%$ (材料減衰)。<br>
+                            $\gamma\to\infty$ で $h\to h_{max}$ に漸近。典型値 0.17〜0.25。<br>
+                            <strong>応答スペクトル法選択時のみ参照される</strong>。
+                        </td>
                     </tr>
                     <tr>
                         <td>細粒分含有率 F<sub>c</sub> (%)</td>
@@ -3781,6 +3820,88 @@
                 </div>
                 <div class="formula-right">基礎指針'19(4.5.10)</div>
             </div>
+
+            <h3 style="font-weight: bold;">応答スペクトル法 (MDOF + 等価線形化)</h3>
+            <p>
+                出典: Inoue/Hayashi 他「表層地盤による地震動増幅率評価法に関する研究」(日本建築学会技術報告集 Vol.32 No.107, 2026)。
+                a1/a2 の閉形式に対し、固有値解析を直接実行して 1次・2次卓越周期 $T_1$, $T_2$ と
+                モード形 $\{U\}$ を厳密に求め、応答スペクトル $S_{a0}(T)$ を介して各層変位を算定する。
+            </p>
+
+            <h4>加速度応答スペクトル (告示 1457 / 論文式 2)</h4>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$S_{a0}(T,h{=}0.05) = \begin{cases} 3.2 + 30T & (T \le 0.16) \\ 8.0 & (0.16 \le T \le 0.64) \\ 5.12/T & (0.64 \le T) \end{cases} \,[\text{m/s}^2]$$
+                </div>
+                <div class="formula-right">論文(2)</div>
+            </div>
+
+            <h4>減衰補正係数 (論文式 4)</h4>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$F_h(\xi) = \frac{1.5}{1 + 10\xi}$$
+                </div>
+                <div class="formula-right">論文(4)</div>
+            </div>
+
+            <h4>各層変位 (論文式 1)</h4>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$u_i = \left(\frac{T_1}{2\pi}\right)^2 S_{a0}(T_1) F_h(\xi_e) \beta U_i$$
+                </div>
+                <div class="formula-right">論文(1)</div>
+            </div>
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$T_1$</span>1 次卓越周期 (固有値解析の最小固有値より)</li>
+                <li><span class="symbol-label">$\beta$</span>1 次モード参加係数 $= \{U\}^T[M]\{1\} / \{U\}^T[M]\{U\}$ (論文式 3)</li>
+                <li><span class="symbol-label">$U_i$</span>1 次モード形の質点 $i$ における値</li>
+                <li><span class="symbol-label">$\xi_e$</span>等価減衰定数 (論文式 10、ひずみエネルギー重み付き平均)</li>
+            </ul>
+
+            <h4>地盤増幅率 (論文式 9)</h4>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$Gs_1 = \frac{1}{\alpha_E + 1.57\xi_e}, \quad Gs_2 = \frac{1}{\alpha_E + 4.71\xi_e}$$
+                </div>
+                <div class="formula-right">論文(9)</div>
+            </div>
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$\alpha_E$</span>表層代表/基盤インピーダンス比 $= \rho_E V_{sE} / (\rho_N V_{sN})$</li>
+                <li><span class="symbol-label">$\rho_E$</span>表層代表密度 $= \sum(\rho_i h_i)/\sum H$ (深さ重み平均)</li>
+                <li><span class="symbol-label">$V_{sE}$</span>表層代表 S 波速度 $= \sum H / \sum(h_i/V_{si})$ (走時平均、収束後)</li>
+            </ul>
+
+            <h4>周期依存増幅率 Gs(T) (論文式 8) - 4 区分</h4>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$Gs(T) = \begin{cases} Gs_2 \cdot T/(0.8 T_2) & (T \le 0.8 T_2) \\ Gs_2 + (Gs_1 - Gs_2) \cdot \frac{T - 0.8 T_2}{0.8 T_1 - 0.8 T_2} & (0.8 T_2 \le T \le 0.8 T_1) \\ Gs_1 & (0.8 T_1 \le T \le 1.2 T_1) \\ \text{(} T_1\text{に従い 1 へ漸近)} & (1.2 T_1 \le T) \end{cases}$$
+                </div>
+                <div class="formula-right">論文(8)</div>
+            </div>
+
+            <p>地表応答スペクトル: $S_a(T) = Gs(T) \cdot S_{a0}(T)$</p>
+
+            <h4>Hardin-Drnevich モデル (歪み依存性)</h4>
+            <div class="formula-block">
+                <div class="formula-left">
+                    $$\frac{G(\gamma)}{G_0} = \frac{1}{1 + \gamma/\gamma_{0.5}}, \quad h(\gamma) = h_0 + (h_{max} - h_0)\frac{\gamma}{\gamma_{0.5} + \gamma}$$
+                </div>
+            </div>
+            <ul class="symbol-list">
+                <li class="symbol-intro">ここに、</li>
+                <li><span class="symbol-label">$\gamma_{0.5}$</span>基準せん断ひずみ ($G/G_0 = 0.5$ となる $\gamma$ )。土質点ごとに入力</li>
+                <li><span class="symbol-label">$h_{max}$</span>履歴減衰の上限 ($\gamma\to\infty$ で漸近)</li>
+                <li><span class="symbol-label">$h_0$</span>材料減衰 (= 0.05 固定)</li>
+                <li><span class="symbol-label">$\gamma$</span>各層の有効せん断ひずみ $= 0.65 \cdot |u_i - u_{i+1}|/H_i$</li>
+            </ul>
+
+            <p>
+                収束計算は最大反復 20 回 / 相対許容誤差 $10^{-3}$。$G/G_0$ の下限は 0.05 でクランプ。
+                収束後の $T_1$, $T_2$, $\beta$, $\xi_e$, $\alpha_E$, $Gs_1$, $Gs_2$ は
+                応答スペクトル タブのヘッダーに表示される。
+            </p>
 
             <section>
                 <h3>根入部の水平土圧合力ばね</h3>
