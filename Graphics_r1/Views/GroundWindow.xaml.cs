@@ -132,6 +132,7 @@ namespace PileDesign.Views
                     PlotHelper.AddCsvExportMenu(wpfPlotEs, "Es");
                     PlotHelper.AddCsvExportMenu(wpfPlotDisplacement, "地盤変位");
                     PlotHelper.AddCsvExportMenu(wpfPlotFL, "FL値");
+                    PlotHelper.AddCsvExportMenu(wpfPlotResponseSpectrum, "加速度応答スペクトル");
                 }
             }
             catch (Exception ex)

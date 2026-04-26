@@ -214,6 +214,30 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _pl, value);
         }
 
+        // 応答スペクトル法: 地盤増幅率 Gs1 (加速度一定領域、レベル1/2)
+        private ObservableCollection<double> _gs1Levels = [0.0, 0.0];
+        public ObservableCollection<double> Gs1Levels
+        {
+            get => _gs1Levels;
+            set => SetProperty(ref _gs1Levels, value);
+        }
+
+        // 応答スペクトル法: 地盤増幅率 Gs2 (速度一定領域、レベル1/2)
+        private ObservableCollection<double> _gs2Levels = [0.0, 0.0];
+        public ObservableCollection<double> Gs2Levels
+        {
+            get => _gs2Levels;
+            set => SetProperty(ref _gs2Levels, value);
+        }
+
+        // 応答スペクトル法: 収束後の表層/基盤インピーダンス比 e (レベル1/2)
+        private ObservableCollection<double> _impedanceLevels = [0.0, 0.0];
+        public ObservableCollection<double> ImpedanceLevels
+        {
+            get => _impedanceLevels;
+            set => SetProperty(ref _impedanceLevels, value);
+        }
+
         // コンストラクタ
         public GroundInput()
         {
@@ -268,6 +292,9 @@ namespace PileDesign.Models.InputData
             copy.GroundLayers = new ObservableCollection<GroundLayerInput>(this.GroundLayers.Select(layer => layer.DeepCopy()));
             copy.GroundMassesData = new ObservableCollection<GroundMassDataInput>(this.GroundMassesData.Select(mass => mass.DeepCopy()));
             copy.CustomDisplacementProfile = this.CustomDisplacementProfile?.DeepCopy() ?? new CustomDisplacementProfile();
+            copy.Gs1Levels = new ObservableCollection<double>(this.Gs1Levels);
+            copy.Gs2Levels = new ObservableCollection<double>(this.Gs2Levels);
+            copy.ImpedanceLevels = new ObservableCollection<double>(this.ImpedanceLevels);
             return copy;
         }
 

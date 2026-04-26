@@ -29,6 +29,9 @@ namespace PileDesign.Services
 
         internal readonly record struct LevelResult(
             double T1, double XiE, double Gamma,
+            double Impedance,  // e = Σ(ρVs h) / (ρb Vb ΣH) — 収束後の表層/基盤インピーダンス比
+            double Gs1,        // 加速度一定領域の地盤増幅率 1 / (e + 1.57·ξe)
+            double Gs2,        // 速度一定領域の地盤増幅率 1 / (e + 4.71·ξe)
             double[] G,        // 収束後 G_i [kPa] (アクティブ質点ぶんのみ)
             double[] PhiU0_1,  // U[0]=1 正規化済モード形 (アクティブ質点ぶんのみ)
             double[] DispMm    // u_i [mm] (アクティブ質点ぶんのみ)
@@ -57,7 +60,7 @@ namespace PileDesign.Services
                 }
                 int n = firstBedrockIdx; // active mass points: [0, n-1]
                 if (n <= 0)
-                    return new LevelResult(double.NaN, 0, 0, [], [], []);
+                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
 
                 // ShallowSoilType ベースの γ0.5 デフォルト (per-layer 値が 0 のときのフォールバック)
                 double gamma05Fallback = (shallowSoilType == "粘性土") ? Gamma05DefaultClay : Gamma05DefaultSand;
@@ -74,13 +77,13 @@ namespace PileDesign.Services
                     var md = masses[i];
                     double h = md.H.GetValueOrDefault();
                     if (h <= 0)
-                        return new LevelResult(double.NaN, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
                     H[i] = h;
                     rhoMass[i] = md.Density / Gravity;
                     G0[i] = rhoMass[i] * md.VS0 * md.VS0;
                     m[i] = md.Mass;
                     if (m[i] <= 0 || G0[i] <= 0)
-                        return new LevelResult(double.NaN, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
                     // 0 以下なら ShallowSoilType デフォルト (旧データの互換性)
                     gamma05[i] = (md.Gamma05 > 0) ? md.Gamma05 : gamma05Fallback;
                     hMax[i] = (md.HMax > 0) ? md.HMax : HMaxDefault;
@@ -140,7 +143,7 @@ namespace PileDesign.Services
                         if (ev > 1e-12 && ev < minOmegaSq) { minOmegaSq = ev; minIdx = i; }
                     }
                     if (minIdx < 0 || double.IsNaN(minOmegaSq) || double.IsInfinity(minOmegaSq))
-                        return new LevelResult(double.NaN, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
 
                     double omega1 = Math.Sqrt(minOmegaSq);
                     T1 = 2.0 * Math.PI / omega1;
@@ -156,14 +159,14 @@ namespace PileDesign.Services
                     // U[0]=1 正規化
                     double phi0 = phi[0];
                     if (Math.Abs(phi0) < 1e-300)
-                        return new LevelResult(double.NaN, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
                     for (int i = 0; i < n; i++) phiU0[i] = phi[i] / phi0;
 
                     // 参加係数 Γ = (φ^T M 1) / (φ^T M φ)
                     double num = 0, den = 0;
                     for (int i = 0; i < n; i++) { num += phi[i] * m[i]; den += phi[i] * phi[i] * m[i]; }
                     if (den < 1e-300)
-                        return new LevelResult(double.NaN, 0, 0, [], [], []);
+                        return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
                     Gamma = num / den;
 
                     // 変位 u_i = |Γ φ_i| · (T₁/2π)² · Sa0(T₁) · Fh(ξe) · L · Z
@@ -219,17 +222,57 @@ namespace PileDesign.Services
                 }
 
                 if (double.IsNaN(T1))
-                    return new LevelResult(double.NaN, 0, 0, [], [], []);
+                    return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
 
                 double[] dispMm = new double[n];
                 for (int i = 0; i < n; i++) dispMm[i] = u[i] * 1000.0;
 
-                return new LevelResult(T1, xiE, Gamma, G, phiU0, dispMm);
+                // 収束後インピーダンス比 e = Σ(ρ_i Vs_i h_i) / (ρ_b V_b ΣH)
+                // 質量密度ベース ρ_mass [t/m³] と等価 S 波速度 VSE_i = √(G_i/ρ_mass) で計算
+                double sumNum = 0, sumH = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    double vse = Math.Sqrt(G[i] / rhoMass[i]);
+                    sumNum += rhoMass[i] * vse * H[i];
+                    sumH += H[i];
+                }
+                double bedrockRhoMass = bedrockDensity / Gravity;
+                double e = (sumH > 0 && bedrockRhoMass * bedrockVs > 0)
+                    ? sumNum / (bedrockRhoMass * bedrockVs * sumH)
+                    : 0.0;
+
+                // 地盤増幅率 (論文式 9, 11):
+                //   Gs1 = 1 / (e + 1.57·ξe) — 加速度一定領域 (0.16 ≤ T ≤ 0.64)
+                //   Gs2 = 1 / (e + 4.71·ξe) — 速度一定領域 (T > 0.64)
+                double Gs1 = (e + 1.57 * xiE > 0) ? 1.0 / (e + 1.57 * xiE) : 0.0;
+                double Gs2 = (e + 4.71 * xiE > 0) ? 1.0 / (e + 4.71 * xiE) : 0.0;
+
+                return new LevelResult(T1, xiE, Gamma, e, Gs1, Gs2, G, phiU0, dispMm);
             }
             catch (Exception)
             {
-                return new LevelResult(double.NaN, 0, 0, [], [], []);
+                return new LevelResult(double.NaN, 0, 0, 0, 0, 0, [], [], []);
             }
+        }
+
+        /// <summary>
+        /// 収束後の地盤増幅率を加味した「地表」加速度応答スペクトル Sa_surface(T) [m/s²]。
+        /// Sa_surface = Gs(T) · L · Z · Sa0(T)
+        ///   T ≤ 0.64: Gs1 (加速度一定領域)
+        ///   T > 0.64: Gs2 (速度一定領域)
+        /// </summary>
+        internal static double SaSurface(double T, double Gs1, double Gs2, double L, double Z = 1.0)
+        {
+            double gs = (T <= 0.64) ? Gs1 : Gs2;
+            return gs * L * Z * Sa0(T);
+        }
+
+        /// <summary>
+        /// 「基盤」加速度応答スペクトル Sa_bedrock(T) = L · Z · Sa0(T) [m/s²]。
+        /// </summary>
+        internal static double SaBedrock(double T, double L, double Z = 1.0)
+        {
+            return L * Z * Sa0(T);
         }
 
         // 論文式 (2): 加速度応答スペクトル h=0.05 (m/s²)

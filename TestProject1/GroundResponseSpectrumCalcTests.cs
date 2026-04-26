@@ -284,6 +284,43 @@ namespace TestProject1
                 $"Gamma05=2e-3 の G[0]={rHigh.G[0]:F1} は Gamma05=7e-4 の G[0]={rLow.G[0]:F1} より大きいべき");
         }
 
+        // ---------- 増幅率 Gs1, Gs2 ----------
+        [TestMethod]
+        public void Compute_ReturnsValidGs1Gs2AndImpedance()
+        {
+            var masses = BuildHighStrainMasses();
+            var result = GroundResponseSpectrumCalc.Compute(masses, 20.0, 400.0, "砂質土", 1.0);
+
+            Assert.IsFalse(double.IsNaN(result.T1));
+            // インピーダンス比 e は 0 < e < 1 の範囲 (表層が基盤より柔らかい場合)
+            Assert.IsTrue(result.Impedance > 0 && result.Impedance < 1.0,
+                $"Impedance={result.Impedance:F3} は (0, 1) 範囲外");
+            // Gs1 = 1/(e+1.57·ξe) は正の値、典型 1〜5
+            Assert.IsTrue(result.Gs1 > 0 && result.Gs1 < 100,
+                $"Gs1={result.Gs1:F3} は妥当範囲外");
+            // Gs2 = 1/(e+4.71·ξe) は Gs1 より小さい (4.71 > 1.57 で分母が大きい)
+            Assert.IsTrue(result.Gs2 > 0 && result.Gs2 <= result.Gs1,
+                $"Gs2={result.Gs2:F3} は Gs1={result.Gs1:F3} 以下のはず");
+        }
+
+        [TestMethod]
+        public void SaSurface_GreaterThanSaBedrock_WhenGsExceedsOne()
+        {
+            // Gs > 1 の場合、地表 Sa は基盤 Sa より大きい
+            double Gs1 = 2.5, Gs2 = 1.8, L = 1.0;
+            double T = 0.4; // 加速度一定領域
+            double saB = GroundResponseSpectrumCalc.SaBedrock(T, L);
+            double saS = GroundResponseSpectrumCalc.SaSurface(T, Gs1, Gs2, L);
+            Assert.IsTrue(saS > saB, $"saS={saS:F3} は saB={saB:F3} より大きいはず");
+            Assert.AreEqual(Gs1 * saB, saS, 1e-9);
+
+            // 速度一定領域では Gs2 が適用される
+            double T2 = 1.0;
+            double saB2 = GroundResponseSpectrumCalc.SaBedrock(T2, L);
+            double saS2 = GroundResponseSpectrumCalc.SaSurface(T2, Gs1, Gs2, L);
+            Assert.AreEqual(Gs2 * saB2, saS2, 1e-9);
+        }
+
         // ---------- 互換性: Gamma05==0 → ShallowSoilType フォールバック ----------
         [TestMethod]
         public void Compute_ZeroGamma05_FallsBackToShallowSoilTypeDefault()

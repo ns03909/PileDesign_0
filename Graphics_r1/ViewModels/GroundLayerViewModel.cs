@@ -511,6 +511,15 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _crosshairPositionText_FL, value);
         }
 
+        public static Crosshair? MyCrosshair_Sa { get; private set; }
+
+        private string _crosshairPositionText_Sa;
+        public string CrosshairPositionText_Sa
+        {
+            get => _crosshairPositionText_Sa;
+            set => SetProperty(ref _crosshairPositionText_Sa, value);
+        }
+
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
         private readonly ObservableCollection<GroundInput> PrevGroundsInput;
@@ -937,6 +946,103 @@ namespace PileDesign.ViewModels
             {
                 wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_FL", "FL", "GL基準深さ(m)", 1, 3);
                 _hookedFLMouseMove = true;
+            }
+
+            wpf.Refresh();
+        }
+
+        // 応答スペクトル法のための加速度応答スペクトル描画メソッド
+        // 基盤 Sa_b(T) = L·Sa0(T) と地表 Sa_s(T) = Gs(T)·L·Sa0(T) を Level1/Level2 ずつ表示
+        private bool _hookedSaMouseMove;
+        private void DrawResponseSpectrumGraph()
+        {
+            if (GroundWindowInstance == null) return;
+            if (GroundInput == null) return;
+
+            var wpf = GroundWindowInstance.wpfPlotResponseSpectrum;
+            if (wpf == null) return;
+            wpf.Plot.Clear();
+
+            // 周期サンプリング (0〜5s, 200 点)
+            const double tMax = 5.0;
+            const int nPts = 200;
+            double[] Ts = new double[nPts];
+            for (int i = 0; i < nPts; i++) Ts[i] = (i + 1) * tMax / nPts;
+
+            // 算定法が応答スペクトル法以外のときは Gs1=Gs2=0 のため地表は描けない。
+            // その場合は基盤 Sa0 のみ表示。
+            bool hasSurface = GroundInput.Gs1Levels[0] > 0 || GroundInput.Gs1Levels[1] > 0;
+
+            // Level 1 基盤 (薄水色)
+            {
+                double[] sa = new double[nPts];
+                for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 0.2);
+                var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
+                s.LineWidth = 1.5f;
+                s.LineStyle.Pattern = LinePattern.Dashed;
+                s.LegendText = "L1 基盤";
+            }
+            // Level 2 基盤 (濃水色)
+            {
+                double[] sa = new double[nPts];
+                for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 1.0);
+                var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
+                s.LineWidth = 1.5f;
+                s.LineStyle.Pattern = LinePattern.Dashed;
+                s.LegendText = "L2 基盤";
+            }
+
+            if (hasSurface)
+            {
+                // Level 1 地表
+                {
+                    double gs1 = GroundInput.Gs1Levels[0];
+                    double gs2 = GroundInput.Gs2Levels[0];
+                    double[] sa = new double[nPts];
+                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], gs1, gs2, 0.2);
+                    var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                    s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
+                    s.LineWidth = 2.5f;
+                    s.LegendText = $"L1 地表 (Gs1={gs1:F2}, Gs2={gs2:F2})";
+                }
+                // Level 2 地表
+                {
+                    double gs1 = GroundInput.Gs1Levels[1];
+                    double gs2 = GroundInput.Gs2Levels[1];
+                    double[] sa = new double[nPts];
+                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], gs1, gs2, 1.0);
+                    var s = wpf.Plot.Add.ScatterLine(Ts, sa);
+                    s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
+                    s.LineWidth = 2.5f;
+                    s.LegendText = $"L2 地表 (Gs1={gs1:F2}, Gs2={gs2:F2})";
+                }
+            }
+
+            string title = "加速度応答スペクトル (h=0.05)";
+            wpf.Plot.Axes.Title.Label.Text = title;
+            wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
+
+            string xLabel = "周期 T (s)";
+            wpf.Plot.Axes.Bottom.Label.Text = xLabel;
+            wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
+
+            string yLabel = "Sa (m/s²)";
+            wpf.Plot.Axes.Left.Label.Text = yLabel;
+            wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
+
+            wpf.Plot.ShowLegend();
+            wpf.Plot.Legend.FontName = Fonts.Detect("凡例");
+            wpf.Plot.Axes.AutoScale();
+            wpf.Plot.Axes.Bottom.Min = 0.0;
+            wpf.Plot.Axes.Left.Min = 0.0;
+
+            MyCrosshair_Sa ??= PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
+            if (!_hookedSaMouseMove)
+            {
+                wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_Sa", "T(s)", "Sa(m/s²)", 3, 3);
+                _hookedSaMouseMove = true;
             }
 
             wpf.Refresh();
@@ -1969,6 +2075,7 @@ namespace PileDesign.ViewModels
                 DrawEsGraph();
                 DrawGroundDisplacementGraph();
                 DrawFLGraph();
+                DrawResponseSpectrumGraph();
             }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
@@ -2513,6 +2620,11 @@ namespace PileDesign.ViewModels
                 // 地域係数
                 double Z = 1.0;
 
+                // Gs1/Gs2/Impedance は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
+                GroundInput.Gs1Levels[levelIndex] = 0.0;
+                GroundInput.Gs2Levels[levelIndex] = 0.0;
+                GroundInput.ImpedanceLevels[levelIndex] = 0.0;
+
                 // 応答スペクトル法 (MDOF + 等価線形化反復)
                 if (calculationMethod == "応答スペクトル法")
                 {
@@ -2532,6 +2644,9 @@ namespace PileDesign.ViewModels
                         }
                         GroundInput.NaturalPeriod = T0Init;
                         GroundInput.NaturalPeriods[levelIndex] = rs.T1;
+                        GroundInput.Gs1Levels[levelIndex] = rs.Gs1;
+                        GroundInput.Gs2Levels[levelIndex] = rs.Gs2;
+                        GroundInput.ImpedanceLevels[levelIndex] = rs.Impedance;
 
                         // フィールド書き戻し
                         for (int i = 0; i < groundMassesData.Count; i++)
