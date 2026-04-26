@@ -2248,13 +2248,14 @@ namespace PileDesign.ViewModels
             var groundMassesData = GroundInput.GroundMassesData;
             int count = groundMassesData.Count;
 
-            // H の設定：工学的基盤はnull、それ以外はユーザー入力を保持（未入力の場合のみ間隔をデフォルト値として設定）
+            // H の設定：ユーザー入力 (JSON 含む) を最優先で保持。
+            // 未入力 (null) の場合のみ間隔 (Spacing) をデフォルト値として設定。
+            // 工学的基盤質点も応答スペクトル法の固有値解析等から除外されるが、表示用に
+            // H は保持する (旧実装は強制 null にしていたが、ユーザー入力を尊重する方向に変更)。
             for (int i = 0; i < count; i++)
             {
                 var current = groundMassesData[i];
-                if (current.IsEngineeringBedrock)
-                    current.H = null;
-                else if (!current.H.HasValue)
+                if (!current.H.HasValue)
                     current.H = current.Spacing; // 未入力時のデフォルト：間隔
             }
 
@@ -2698,11 +2699,13 @@ namespace PileDesign.ViewModels
                 // 地域係数
                 double Z = 1.0;
 
-                // Gs1/Gs2/Impedance/T2 は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
+                // Gs1/Gs2/Impedance/T2/XiE/Beta は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
                 GroundInput.Gs1Levels[levelIndex] = 0.0;
                 GroundInput.Gs2Levels[levelIndex] = 0.0;
                 GroundInput.ImpedanceLevels[levelIndex] = 0.0;
                 GroundInput.T2Levels[levelIndex] = 0.0;
+                GroundInput.XiELevels[levelIndex] = 0.0;
+                GroundInput.BetaLevels[levelIndex] = 0.0;
 
                 // 応答スペクトル法 (MDOF + 等価線形化反復)
                 if (calculationMethod == "応答スペクトル法")
@@ -2727,6 +2730,8 @@ namespace PileDesign.ViewModels
                         GroundInput.Gs2Levels[levelIndex] = rs.Gs2;
                         GroundInput.ImpedanceLevels[levelIndex] = rs.Impedance;
                         GroundInput.T2Levels[levelIndex] = rs.T2;
+                        GroundInput.XiELevels[levelIndex] = rs.XiE;
+                        GroundInput.BetaLevels[levelIndex] = rs.Beta;
 
                         // フィールド書き戻し
                         for (int i = 0; i < groundMassesData.Count; i++)

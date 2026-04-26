@@ -2951,7 +2951,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <!-- T1, T2, Gs1, Gs2, αE (収束後) — レベルごと 2 行表示 -->
+                                    <!-- 固有値解析結果: T1, T2, β, ξe, αE, Gs1, Gs2 (収束後) — レベルごと 2 行表示 -->
                                     <StackPanel Grid.Row="0" Orientation="Vertical" Margin="4,2">
                                         <!-- Level 1 -->
                                         <StackPanel Orientation="Horizontal">
@@ -2960,12 +2960,16 @@
                                             <TextBlock Text="{Binding GroundInput.NaturalPeriods[0], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                             <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text="T"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
                                             <TextBlock Text="{Binding GroundInput.T2Levels[0], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text="  Gs1=" VerticalAlignment="Center" Margin="6,0,2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[0], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text="  Gs2=" VerticalAlignment="Center" Margin="6,0,2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs2Levels[0], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text=" β=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.BetaLevels[0], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text=" ξ"/><Run Text="e" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.XiELevels[0], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                             <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text=" α"/><Run Text="E" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
                                             <TextBlock Text="{Binding GroundInput.ImpedanceLevels[0], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text=" Gs1=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[0], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text=" Gs2=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.Gs2Levels[0], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                         </StackPanel>
                                         <!-- Level 2 -->
                                         <StackPanel Orientation="Horizontal">
@@ -2974,12 +2978,16 @@
                                             <TextBlock Text="{Binding GroundInput.NaturalPeriods[1], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                             <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text="T"/><Run Text="2" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
                                             <TextBlock Text="{Binding GroundInput.T2Levels[1], StringFormat='{}{0:F3}s'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text="  Gs1=" VerticalAlignment="Center" Margin="6,0,2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
-                                            <TextBlock Text="  Gs2=" VerticalAlignment="Center" Margin="6,0,2,0"/>
-                                            <TextBlock Text="{Binding GroundInput.Gs2Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text=" β=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.BetaLevels[1], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text=" ξ"/><Run Text="e" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
+                                            <TextBlock Text="{Binding GroundInput.XiELevels[1], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                             <TextBlock VerticalAlignment="Center" Margin="6,0,2,0"><Run Text=" α"/><Run Text="E" BaselineAlignment="Subscript" FontSize="9"/><Run Text="="/></TextBlock>
                                             <TextBlock Text="{Binding GroundInput.ImpedanceLevels[1], StringFormat='{}{0:F3}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text=" Gs1=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.Gs1Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
+                                            <TextBlock Text=" Gs2=" VerticalAlignment="Center" Margin="6,0,2,0"/>
+                                            <TextBlock Text="{Binding GroundInput.Gs2Levels[1], StringFormat='{}{0:F2}'}" VerticalAlignment="Center" FontWeight="Bold" Margin="2,0"/>
                                         </StackPanel>
                                     </StackPanel>
 

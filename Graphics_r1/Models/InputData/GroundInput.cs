@@ -246,6 +246,22 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _t2Levels, value);
         }
 
+        // 応答スペクトル法: モード等価減衰 ξe (レベル1/2)
+        private ObservableCollection<double> _xiELevels = [0.0, 0.0];
+        public ObservableCollection<double> XiELevels
+        {
+            get => _xiELevels;
+            set => SetProperty(ref _xiELevels, value);
+        }
+
+        // 応答スペクトル法: 1次モード参加係数 β (レベル1/2)
+        private ObservableCollection<double> _betaLevels = [0.0, 0.0];
+        public ObservableCollection<double> BetaLevels
+        {
+            get => _betaLevels;
+            set => SetProperty(ref _betaLevels, value);
+        }
+
         // コンストラクタ
         public GroundInput()
         {
@@ -304,6 +320,8 @@ namespace PileDesign.Models.InputData
             copy.Gs2Levels = new ObservableCollection<double>(this.Gs2Levels);
             copy.ImpedanceLevels = new ObservableCollection<double>(this.ImpedanceLevels);
             copy.T2Levels = new ObservableCollection<double>(this.T2Levels);
+            copy.XiELevels = new ObservableCollection<double>(this.XiELevels);
+            copy.BetaLevels = new ObservableCollection<double>(this.BetaLevels);
             return copy;
         }
 
