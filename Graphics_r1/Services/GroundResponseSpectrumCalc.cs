@@ -30,9 +30,9 @@ namespace PileDesign.Services
         internal readonly record struct LevelResult(
             double T1, double T2,  // 1次・2次卓越周期 (固有値解析の最小・第2小)
             double XiE, double Gamma,
-            double Impedance,  // e = Σ(ρVs h) / (ρb Vb ΣH) — 収束後の表層/基盤インピーダンス比
-            double Gs1,        // 1次モード(T1)での地盤増幅率 1 / (e + 1.57·ξe)
-            double Gs2,        // 2次モード(T2)での地盤増幅率 1 / (e + 4.71·ξe)
+            double Impedance,  // αE = ρ_E·Vs_E / (ρ_N·Vs_N) — 表層/基盤インピーダンス比
+            double Gs1,        // 1次モード(T1)での地盤増幅率 1 / (αE + 1.57·ξe)
+            double Gs2,        // 2次モード(T2)での地盤増幅率 1 / (αE + 4.71·ξe)
             double[] G,        // 収束後 G_i [kPa] (アクティブ質点ぶんのみ)
             double[] PhiU0_1,  // U[0]=1 正規化済モード形 (アクティブ質点ぶんのみ)
             double[] DispMm    // u_i [mm] (アクティブ質点ぶんのみ)
@@ -246,27 +246,31 @@ namespace PileDesign.Services
                 double[] dispMm = new double[n];
                 for (int i = 0; i < n; i++) dispMm[i] = u[i] * 1000.0;
 
-                // 収束後インピーダンス比 e = Σ(ρ_i Vs_i h_i) / (ρ_b V_b ΣH)
-                // 質量密度ベース ρ_mass [t/m³] と等価 S 波速度 VSE_i = √(G_i/ρ_mass) で計算
-                double sumNum = 0, sumH = 0;
+                // 表層代表インピーダンス比 αE = (ρ_E · Vs_E) / (ρ_N · Vs_N)
+                //   ρ_E = Σ(ρ_i·h_i) / ΣH         (深さ重み平均密度)
+                //   Vs_E = ΣH / Σ(h_i/Vs_i)         (走時平均 — T0 = 4ΣH/Vs_E が正しく出る)
+                // 収束後の等価 Vs (= √(G_i/ρ_mass_i)) を用いる
+                double sumRhoH = 0, sumH = 0, sumHoverVs = 0;
                 for (int i = 0; i < n; i++)
                 {
                     double vse = Math.Sqrt(G[i] / rhoMass[i]);
-                    sumNum += rhoMass[i] * vse * H[i];
+                    sumRhoH += rhoMass[i] * H[i];
                     sumH += H[i];
+                    if (vse > 1e-12) sumHoverVs += H[i] / vse;
                 }
                 double bedrockRhoMass = bedrockDensity / Gravity;
-                double e = (sumH > 0 && bedrockRhoMass * bedrockVs > 0)
-                    ? sumNum / (bedrockRhoMass * bedrockVs * sumH)
-                    : 0.0;
+                double rhoE = (sumH > 0) ? sumRhoH / sumH : 0.0;
+                double VsE = (sumHoverVs > 1e-12) ? sumH / sumHoverVs : 0.0;
+                double bedrockImpedance = bedrockRhoMass * bedrockVs;
+                double alphaE = (bedrockImpedance > 1e-12) ? rhoE * VsE / bedrockImpedance : 0.0;
 
-                // 地盤増幅率 (論文式 9, 11):
-                //   Gs1 = 1 / (e + 1.57·ξe) — 加速度一定領域 (0.16 ≤ T ≤ 0.64)
-                //   Gs2 = 1 / (e + 4.71·ξe) — 速度一定領域 (T > 0.64)
-                double Gs1 = (e + 1.57 * xiE > 0) ? 1.0 / (e + 1.57 * xiE) : 0.0;
-                double Gs2 = (e + 4.71 * xiE > 0) ? 1.0 / (e + 4.71 * xiE) : 0.0;
+                // 地盤増幅率 (論文式 (9)):
+                //   Gs1 = 1 / (αE + 1.57·ξe) — 1 次モード (T1 近傍) の増幅率
+                //   Gs2 = 1 / (αE + 4.71·ξe) — 2 次モード (T2 近傍) の増幅率
+                double Gs1 = (alphaE + 1.57 * xiE > 0) ? 1.0 / (alphaE + 1.57 * xiE) : 0.0;
+                double Gs2 = (alphaE + 4.71 * xiE > 0) ? 1.0 / (alphaE + 4.71 * xiE) : 0.0;
 
-                return new LevelResult(T1, T2Period, xiE, Gamma, e, Gs1, Gs2, G, phiU0, dispMm);
+                return new LevelResult(T1, T2Period, xiE, Gamma, alphaE, Gs1, Gs2, G, phiU0, dispMm);
             }
             catch (Exception)
             {
