@@ -29,7 +29,7 @@ namespace PileDesign.Services
 
         internal readonly record struct LevelResult(
             double T1, double T2,  // 1次・2次卓越周期 (固有値解析の最小・第2小)
-            double XiE, double Gamma,
+            double XiE, double Beta,  // 参加係数 β = {U}ᵀ[M]{1} / {U}ᵀ[M]{U} (論文式 3)
             double Impedance,  // αE = ρ_E·Vs_E / (ρ_N·Vs_N) — 表層/基盤インピーダンス比
             double Gs1,        // 1次モード(T1)での地盤増幅率 1 / (αE + 1.57·ξe)
             double Gs2,        // 2次モード(T2)での地盤増幅率 1 / (αE + 4.71·ξe)
@@ -99,7 +99,7 @@ namespace PileDesign.Services
                 double[] u = new double[n];        // 変位 [m]
                 double T1 = double.NaN;
                 double T2Period = double.NaN;
-                double Gamma = 0;
+                double Beta = 0;
 
                 for (int iter = 0; iter < MaxIter; iter++)
                 {
@@ -181,18 +181,18 @@ namespace PileDesign.Services
                         return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
                     for (int i = 0; i < n; i++) phiU0[i] = phi[i] / phi0;
 
-                    // 参加係数 Γ = (φ^T M 1) / (φ^T M φ)
+                    // 参加係数 β = (φᵀ M 1) / (φᵀ M φ) — 論文式 (3)
                     double num = 0, den = 0;
                     for (int i = 0; i < n; i++) { num += phi[i] * m[i]; den += phi[i] * phi[i] * m[i]; }
                     if (den < 1e-300)
                         return new LevelResult(double.NaN, 0, 0, 0, 0, 0, 0, [], [], []);
-                    Gamma = num / den;
+                    Beta = num / den;
 
-                    // 変位 u_i = |Γ φ_i| · (T₁/2π)² · Sa0(T₁) · Fh(ξe) · L · Z
+                    // 変位 u_i = |β · φ_i| · (T₁/2π)² · Sa0(T₁) · Fh(ξe) · L · Z — 論文式 (1)
                     double sa = Sa0(T1);
                     double fh = Fh(xiE);
                     double sd = Math.Pow(T1 / (2.0 * Math.PI), 2.0) * sa * fh * L * Z;
-                    for (int i = 0; i < n; i++) u[i] = Math.Abs(Gamma * phi[i]) * sd;
+                    for (int i = 0; i < n; i++) u[i] = Math.Abs(Beta * phi[i]) * sd;
 
                     // 層せん断ひずみ γ_i (i 質点と i+1 質点間の層) と下端 (基盤位置で u=0)
                     double[] gamma = new double[n];
@@ -272,7 +272,7 @@ namespace PileDesign.Services
                 double Gs1 = (alphaE + 1.57 * xiE > 0) ? 1.0 / (alphaE + 1.57 * xiE) : 0.0;
                 double Gs2 = (alphaE + 4.71 * xiE > 0) ? 1.0 / (alphaE + 4.71 * xiE) : 0.0;
 
-                return new LevelResult(T1, T2Period, xiE, Gamma, alphaE, Gs1, Gs2, G, phiU0, dispMm);
+                return new LevelResult(T1, T2Period, xiE, Beta, alphaE, Gs1, Gs2, G, phiU0, dispMm);
             }
             catch (Exception)
             {
