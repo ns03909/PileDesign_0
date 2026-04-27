@@ -249,7 +249,7 @@
                                                 </TextBox>
                                                 <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="縦弾性係数 (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox Text="{Binding PileSection.ConcreteE, StringFormat='{}{0:N0}'}" Width="50"
-                                                         TextAlignment="Right" Foreground="Gray" IsReadOnly="True"
+                                                         TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                          TextChanged="TextBox_TextChanged"
@@ -373,7 +373,7 @@
                                                     </TextBox>
                                                     <TextBlock Width="150"  HorizontalAlignment="Right"><Run Text="縦弾性係数 (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                     <TextBox Text="{Binding PileSection.ConcreteE, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                             TextAlignment="Right" Foreground="Gray" IsReadOnly="True"/>
+                                                             TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </GroupBox>
@@ -577,16 +577,16 @@
                                             </DataGrid.ContextMenu>
 
                                             <DataGrid.Columns>
-                                                <DataGridTextColumn Header="項目" Width="2*" Binding="{Binding Item}" IsReadOnly="True" Foreground="Gray"/>
-                                                <DataGridTextColumn Header="記号" Width="0.5*" Binding="{Binding Mark}" IsReadOnly="True" Foreground="Gray"/>
-                                                <DataGridTextColumn Header="値" Width="*" Binding="{Binding Value}" IsReadOnly="True" Foreground="Gray">
+                                                <DataGridTextColumn Header="項目" Width="2*" Binding="{Binding Item}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
+                                                <DataGridTextColumn Header="記号" Width="0.5*" Binding="{Binding Mark}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
+                                                <DataGridTextColumn Header="値" Width="*" Binding="{Binding Value}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="{x:Type TextBlock}">
                                                             <Setter Property="HorizontalAlignment" Value="Right" />
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
-                                                <DataGridTextColumn Header="単位" Width="0.5*" Binding="{Binding Unit}" IsReadOnly="True" Foreground="Gray"/>
+                                                <DataGridTextColumn Header="単位" Width="0.5*" Binding="{Binding Unit}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                                 <!-- 追加: 備考 -->
                                                 <DataGridTextColumn Header="備考" Width="2*" Binding="{Binding Note}" IsReadOnly="True" Foreground="red"/>
                                             </DataGrid.Columns>

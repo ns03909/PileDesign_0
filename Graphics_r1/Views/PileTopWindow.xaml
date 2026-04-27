@@ -58,7 +58,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="杭頭タイプ" Width="100"/>
                                         <TextBox Width="100" Text="{Binding PileTopType, UpdateSourceTrigger=PropertyChanged}"
-                                            IsReadOnly="True" Foreground="Gray"/>
+                                            IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                     </StackPanel>
 
                                     <GroupBox Header="パイルキャップ">
@@ -87,7 +87,7 @@
                                                 <TextBlock Width="100" HorizontalAlignment="Right"><Run Text="E"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox x:Name="TextBoxPileCapEc" Width="50"
                                                          Text="{Binding PileTop.PileCapEc, UpdateSourceTrigger=LostFocus, StringFormat='{}{0:N0}'}"
-                                                         IsReadOnly="True" Foreground="Gray" 
+                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" 
                                                          HorizontalContentAlignment="Right"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
@@ -112,15 +112,15 @@
                                                      ConverterParameter='場所打ち鋼管コンクリート杭'}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
-                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                         </StackPanel>
                                         
                                         <GroupBox Header="鋼管（最上部杭区間）">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="鋼管外径(mm)×鋼管厚(mm)：" VerticalAlignment="Center"/>
-                                                <TextBox Text="{Binding DisplayTopSectionPipeDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                                 <TextBlock Text="×" VerticalAlignment="Center"/>
-                                                <TextBox Text="{Binding DisplayTopSectionPipeTs, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeTs, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                             </StackPanel>
                                         </GroupBox>
 
@@ -129,7 +129,7 @@
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
                                                     <TextBox  Text="{Binding PileTop.MainBarNum2, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
-                                                               IsReadOnly="True" Foreground="Gray"
+                                                               IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
@@ -147,7 +147,7 @@
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
-                                                              IsReadOnly="True" Foreground="Gray"/>
+                                                              IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </GroupBox>
@@ -158,9 +158,9 @@
                                                      ConverterParameter='既製コンクリート杭'}">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
-                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                             <TextBlock Text="肉厚(mm)：" HorizontalAlignment="Right" Width="100"/>
-                                            <TextBox Text="{Binding PileTop.ConcreteThickness, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteThickness, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
 
@@ -353,7 +353,7 @@
                                                                 Converter={StaticResource BooleanToVisibilityConverter}}"><Run Text="配置直径tD"/><Run Text="max" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (mm)"/></TextBlock>
                                                         <TextBox x:Name="TextBoxTDorTBmax" Width="50"
                                                                  Text="{Binding PileTop.CaptainPile.CTPTensionRebars.TDorTBmax, UpdateSourceTrigger=PropertyChanged}"
-                                                                IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right" 
+                                                                IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalAlignment="Right" 
                                                                  PreviewKeyDown="TextBox_PreviewKeyDown"
                                                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"
                                                                  />
@@ -426,16 +426,16 @@
                                         </Style>
                                     </DataGrid.ColumnHeaderStyle>
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="項目" Width="2*" Binding="{Binding Item}" IsReadOnly="True" Foreground="Gray"/>
-                                        <DataGridTextColumn Header="記号" Width="*" Binding="{Binding Mark}" IsReadOnly="True" Foreground="Gray"/>
-                                        <DataGridTextColumn Header="値" Width="*" Binding="{Binding Value}" IsReadOnly="True" Foreground="Gray">
+                                        <DataGridTextColumn Header="項目" Width="2*" Binding="{Binding Item}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
+                                        <DataGridTextColumn Header="記号" Width="*" Binding="{Binding Mark}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
+                                        <DataGridTextColumn Header="値" Width="*" Binding="{Binding Value}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                             <DataGridTextColumn.ElementStyle>
                                                 <Style TargetType="{x:Type TextBlock}">
                                                     <Setter Property="HorizontalAlignment" Value="Right" />
                                                 </Style>
                                             </DataGridTextColumn.ElementStyle>
                                         </DataGridTextColumn>
-                                        <DataGridTextColumn Header="単位" Width="*" Binding="{Binding Unit}" IsReadOnly="True" Foreground="Gray"/>
+                                        <DataGridTextColumn Header="単位" Width="*" Binding="{Binding Unit}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                     </DataGrid.Columns>
                                 </common:EnhancedDataGrid>
                                 <!--</StackPanel>-->

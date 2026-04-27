@@ -149,7 +149,7 @@
 
                                                                 <common:EnhancedDataGrid.Columns>
                                                                     <DataGridTextColumn Binding="{Binding LayerThickness, StringFormat='{}{0:0.00}', UpdateSourceTrigger=LostFocus}"
-                                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="Gray">
+                                                                            ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
 
                                                                         <DataGridTextColumn.Header>
                                                                             <StackPanel>
@@ -160,7 +160,7 @@
                                                                     </DataGridTextColumn>
 
                                                                     <DataGridTextColumn Binding="{Binding BottomAltitude, StringFormat='{}{0:+0.00;-0.00;+0.00}'}"
-                                                                            IsReadOnly="True" Foreground="Gray"
+                                                                            IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                             ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                                         <DataGridTextColumn.Header>
                                                                             <StackPanel>
@@ -171,7 +171,7 @@
                                                                         </DataGridTextColumn.Header>
                                                                     </DataGridTextColumn>
 
-                                                                    <DataGridTextColumn Binding="{Binding Name}"  IsReadOnly="True" Foreground="Gray">
+                                                                    <DataGridTextColumn Binding="{Binding Name}"  IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                                         <DataGridTextColumn.Header>
                                                                             <StackPanel>
                                                                                 <TextBlock Text="土質" TextAlignment="Center"/>
@@ -190,12 +190,12 @@
                                                                         <DataGridTemplateColumn.CellTemplate>
                                                                             <DataTemplate>
                                                                                 <ComboBox SelectedItem="{Binding GranularityClass, UpdateSourceTrigger=LostFocus}"
-                                                                                        ItemsSource="{Binding GranularityClassOption}"  IsReadOnly="True" Foreground="Gray"/>
+                                                                                        ItemsSource="{Binding GranularityClassOption}"  IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                                                             </DataTemplate>
                                                                         </DataGridTemplateColumn.CellTemplate>
                                                                     </DataGridTemplateColumn>
 
-                                                                    <DataGridTextColumn Binding="{Binding NValue}" IsReadOnly="True" Foreground="Gray"
+                                                                    <DataGridTextColumn Binding="{Binding NValue}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                             ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                                         <DataGridTextColumn.Header>
                                                                             <StackPanel>
@@ -206,7 +206,7 @@
                                                                     </DataGridTextColumn>
 
                                                                     <DataGridTextColumn Binding="{Binding Cohesive, StringFormat='{}{0:0.0}'}"
-                                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="Gray">
+                                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                                         <DataGridTextColumn.Header>
                                                                             <StackPanel>
                                                                                 <TextBlock Text="粘着力" TextAlignment="Center"/>

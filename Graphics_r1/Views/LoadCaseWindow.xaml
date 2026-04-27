@@ -428,7 +428,7 @@
                             <DataGridCheckBoxColumn Binding="{Binding IsApplicable, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                                 Header="適用" Width="*" />
 
-                            <DataGridTextColumn Width="*" Binding="{Binding Alpha1, StringFormat=N1}" IsReadOnly="True" Foreground="Gray">
+                            <DataGridTextColumn Width="*" Binding="{Binding Alpha1, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
                                     <TextBlock>
                                     <Run Text="α"/>
@@ -443,7 +443,7 @@
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
-                            <DataGridTextColumn Width="*" Binding="{Binding Beta1, StringFormat=N1}" IsReadOnly="True" Foreground="Gray">
+                            <DataGridTextColumn Width="*" Binding="{Binding Beta1, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
                                     <TextBlock>
                                     <Run Text="β"/>
@@ -457,7 +457,7 @@
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
-                            <DataGridTextColumn Width="*" Binding="{Binding Beta2, StringFormat=N1}" IsReadOnly="True" Foreground="Gray">
+                            <DataGridTextColumn Width="*" Binding="{Binding Beta2, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
                                     <TextBlock>
                                     <Run Text="β"/>

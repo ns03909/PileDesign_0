@@ -717,7 +717,7 @@
                                 <TextBlock Text="液状化指標 PL" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="20,0,8,0"/>
                                 <TextBox HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="60"
                                          Text="{Binding GroundInput.PL[0], StringFormat='{}{0:0.00}', Mode=OneWay}"
-                                         IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right">
                                     <TextBox.ToolTip>
                                         <StackPanel MaxWidth="500">
                                             <TextBlock FontWeight="Bold" Text="液状化指標 PL (岩崎ら 1982)"/>
@@ -749,7 +749,7 @@
                                 <TextBlock Text="液状化指標 PL" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="20,0,8,0"/>
                                 <TextBox HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="60"
                                          Text="{Binding GroundInput.PL[1], StringFormat='{}{0:0.00}', Mode=OneWay}"
-                                         IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right">
                                     <TextBox.ToolTip>
                                         <StackPanel MaxWidth="500">
                                             <TextBlock FontWeight="Bold" Text="液状化指標 PL (岩崎ら 1982)"/>
@@ -1635,7 +1635,7 @@
 
                                                 <DataGridTextColumn Binding="{Binding LayerThickness, StringFormat='{}{0:0.000}'}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                                                    IsReadOnly="True" Foreground="Gray">
+                                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
 
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
@@ -1658,7 +1658,7 @@
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
-                                                <DataGridTextColumn IsReadOnly="True" Foreground="Gray"
+                                                <DataGridTextColumn IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                     <DataGridTextColumn.Binding>
                                                         <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
@@ -1676,7 +1676,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding BottomAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
-                                                                    IsReadOnly="True" Foreground="Gray"
+                                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
@@ -1850,7 +1850,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding Gs0, StringFormat=N0, Mode=OneWay}"
-                                                                    IsReadOnly="True" Foreground="Gray"
+                                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
@@ -1862,7 +1862,7 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding Es0, StringFormat=N0, Mode=OneWay}"
-                                                                    IsReadOnly="True" Foreground="Gray"
+                                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
@@ -1967,11 +1967,11 @@
                                             <TextBlock Text="微小ひずみ時固有周期(s)" ToolTip="T0 = 4Σ(Hi/Vsoi) 基礎指針[4.5.6]式">
 
                                             </TextBlock>
-                                            <TextBox Text="{Binding GroundInput.NaturalPeriod, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBox Text="{Binding GroundInput.NaturalPeriod, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                             <TextBlock Text="レベル1地震時固有周期(s)" ToolTip="T = α T0 基礎指針 4.5節"/>
-                                            <TextBox Text="{Binding GroundInput.NaturalPeriods[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBox Text="{Binding GroundInput.NaturalPeriods[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                             <TextBlock Text="レベル2時固有周期(s)" ToolTip="T = α T0 基礎指針 4.5節"/>
-                                            <TextBox Text="{Binding GroundInput.NaturalPeriods[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"/>
+                                            <TextBox Text="{Binding GroundInput.NaturalPeriods[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                         </ToolBar>
                                         <ToolBar Band="2" BandIndex="1">
                                             <!--<Expander>-->
@@ -2055,7 +2055,7 @@
                                             </DataGridTextColumn>
 
                                             <DataGridTextColumn ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                                    IsReadOnly="True" Foreground="Gray">
+                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                 <DataGridTextColumn.Binding>
                                                     <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
                                                         <Binding Path="LayerBottomZ"/>
@@ -2073,7 +2073,7 @@
 
                                             <DataGridTextColumn Binding="{Binding LayerBottomZ, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                                    IsReadOnly="True" Foreground="Gray">
+                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="層下面" TextAlignment="Center"/>
@@ -2084,7 +2084,7 @@
                                             </DataGridTextColumn>
 
 
-                                            <DataGridTextColumn Binding="{Binding LayerNo}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding LayerNo}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2094,7 +2094,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding Name}" IsReadOnly="True" Foreground="Gray">
+                                            <DataGridTextColumn Binding="{Binding Name}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="土層" TextAlignment="Center"/>
@@ -2114,7 +2114,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding Density, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding Density, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                    >
                                                 <DataGridTextColumn.ElementStyle>
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource RightAlignTextBlockStyle}">
@@ -2147,7 +2147,7 @@
 
                                             <DataGridTextColumn Binding="{Binding Spacing, StringFormat='{}{0:0.000}'}"
                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                                    IsReadOnly="True" Foreground="Gray">
+                                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="参考" TextAlignment="Center"/>
@@ -2172,7 +2172,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Binding>
                                                     <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
@@ -2191,7 +2191,7 @@
                                             </DataGridTextColumn>
 
                                             <DataGridTextColumn Binding="{Binding AltitudeDepth, StringFormat='{}{0:+0.000;-0.000;+0.000}'}"
-                                                        IsReadOnly="True" Foreground="Gray"
+                                                        IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2223,7 +2223,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding Mass, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding Mass, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2304,7 +2304,7 @@
                                                 </DataGridCheckBoxColumn.Header>
                                             </DataGridCheckBoxColumn>
 
-                                            <DataGridTextColumn Binding="{Binding SigmaZ, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding SigmaZ, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2314,7 +2314,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding SigmaZPrime, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding SigmaZPrime, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2325,7 +2325,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding H, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding H, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2349,7 +2349,7 @@
                                                 </DataGridCheckBoxColumn.Header>
                                             </DataGridCheckBoxColumn>
 
-                                            <DataGridTextColumn Binding="{Binding RD, StringFormat='{}{0:0.000}'}"  IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding RD, StringFormat='{}{0:0.000}'}"  IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2360,7 +2360,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding N1, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding N1, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2371,7 +2371,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding DeltaNf, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding DeltaNf, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2382,7 +2382,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding NL, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding NL, StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2393,7 +2393,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding TauLonSigmaZPrime, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding TauLonSigmaZPrime, StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2404,7 +2404,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding TauDonSigmaZPrime[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding TauDonSigmaZPrime[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2443,7 +2443,7 @@
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
 
-                                            <DataGridTextColumn Binding="{Binding BetaL[0], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding BetaL[0], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2456,7 +2456,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding GammaCy[0], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding GammaCy[0], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2469,7 +2469,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding SigmaGammaCyH[0], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding SigmaGammaCyH[0], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2487,7 +2487,7 @@
 
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding TauDonSigmaZPrime[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding TauDonSigmaZPrime[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2528,7 +2528,7 @@
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
 
-                                            <DataGridTextColumn Binding="{Binding BetaL[1], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding BetaL[1], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2542,7 +2542,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding GammaCy[1], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding GammaCy[1], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2556,7 +2556,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding SigmaGammaCyH[1], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding SigmaGammaCyH[1], StringFormat='{}{0:0.00}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2574,7 +2574,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding VSE[0], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding VSE[0], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2587,7 +2587,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding K[0], StringFormat='{}{0:N0}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding K[0], StringFormat='{}{0:N0}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2600,7 +2600,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding U[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding U[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2613,7 +2613,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding UStar[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding UStar[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2626,7 +2626,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding DmaxUStar[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding DmaxUStar[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2639,7 +2639,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding DmaxUStarSigmaGammaCyH[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding DmaxUStarSigmaGammaCyH[0], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
@@ -2653,7 +2653,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding VSE[1], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding VSE[1], StringFormat='{}{0:0.0}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2667,7 +2667,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding K[1], StringFormat='{}{0:N0}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding K[1], StringFormat='{}{0:N0}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2681,7 +2681,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding U[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding U[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2695,7 +2695,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding UStar[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding UStar[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2709,7 +2709,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding DmaxUStar[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding DmaxUStar[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>
@@ -2723,7 +2723,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Binding="{Binding DmaxUStarSigmaGammaCyH[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="Gray"
+                                            <DataGridTextColumn Binding="{Binding DmaxUStarSigmaGammaCyH[1], StringFormat='{}{0:0.000}'}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}"
                                                                 HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                 <DataGridTextColumn.Header>

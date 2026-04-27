@@ -29,19 +29,19 @@
                 <StackPanel Orientation="Horizontal">
                     <Label Content="ΣVL0 (kN)" Width="150" Foreground="Gray"/>
                     <TextBox Text="{Binding SumVL0, StringFormat=N0, Mode=OneWay}" Width="100"
-                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                             IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="ΣVLadd (kN)" Width="150" Foreground="Gray"/>
                     <TextBox Text="{Binding SumVLadd, StringFormat=N0, Mode=OneWay}" Width="100" 
-                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                             IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <Label Content="ΣVL (kN)" Width="150" Foreground="Gray"/>
                     <TextBox Text="{Binding SumVL, StringFormat=N0, Mode=OneWay}" Width="100"
-                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                             IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
@@ -70,7 +70,7 @@
                 <StackPanel Orientation="Horizontal">
                     <Label Content="転倒モーメント(MNm)" Width="150"/>
                     <TextBox Text="{Binding OverturningMoment1, StringFormat=N0, Mode=OneWay}" Width="100"
-                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                             IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>
@@ -86,7 +86,7 @@
                 <StackPanel Orientation="Horizontal">
                     <Label Content="転倒モーメント(MNm)" Width="150"/>
                     <TextBox Text="{Binding OverturningMoment2, StringFormat=N0, Mode=OneWay}" Width="100"
-                             IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                             IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
             </StackPanel>
         </GroupBox>

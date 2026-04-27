@@ -85,7 +85,7 @@
             <StackPanel Orientation="Horizontal">
                 <Label Content="群杭係数" Width="150" HorizontalContentAlignment="Right"/>
                 <controls:FormulaControl Formula="\xi" Style="{StaticResource FormulaControlStyle}" Width="30" HorizontalContentAlignment="Right"/>
-                <TextBox x:Name="TextBoxPileGroupFactor" IsReadOnly="True" Foreground="Gray"
+                <TextBox x:Name="TextBoxPileGroupFactor" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                          Text="{Binding PileGroupFactor, StringFormat=F2}"
                          HorizontalAlignment="Right" HorizontalContentAlignment="Right" Width="50" />
             </StackPanel>

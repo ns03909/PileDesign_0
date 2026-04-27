@@ -137,7 +137,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="節点数" Width="100" HorizontalAlignment="Left"/>
                 <TextBox Text="{Binding NodesCount, UpdateSourceTrigger=PropertyChanged}"
-                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
+                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalAlignment="Right"/>
             </Grid>
 
             <Grid >
@@ -147,7 +147,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="要素数" Width="100" HorizontalAlignment="Left"/>
                 <TextBox Text="{Binding BeamsCount, UpdateSourceTrigger=PropertyChanged}"
-                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="Gray" HorizontalAlignment="Right"/>
+                         Width="50" HorizontalContentAlignment="Right" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalAlignment="Right"/>
             </Grid>
 
             <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
@@ -303,39 +303,14 @@
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
 
-            <TextBlock Text="荷重組み合わせ">
-                <TextBlock.ToolTip>
-                    <ToolTip>
-                        <StackPanel>
-                            <TextBlock FontWeight="Bold" Text="荷重組み合わせ係数"/>
-                            <TextBlock Text="水平荷重を以下の重ね合わせで適用します:" Margin="0,4,0,4"/>
-                            <TextBlock Text="  αL × D  +  βU × Ps  +  βL × Pf" FontFamily="Consolas"/>
-                            <TextBlock Margin="0,6,0,0">
-                                <Run FontWeight="Bold">αL</Run>
-                                <Run>: 地盤水平変位 D の倍率</Run>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run FontWeight="Bold">βU</Run>
-                                <Run>: 上部構造慣性力 Ps の倍率</Run>
-                            </TextBlock>
-                            <TextBlock>
-                                <Run FontWeight="Bold">βL</Run>
-                                <Run>: 基礎部慣性力 Pf の倍率</Run>
-                            </TextBlock>
-                            <TextBlock Margin="0,6,0,0" FontStyle="Italic" Foreground="Gray"
-                                       Text="例: αL=1.00 / βU=1.00 / βL=1.00 は 全荷重を同符号で同時に作用させる組合せ"/>
-                            <TextBlock FontStyle="Italic" Foreground="Gray"
-                                       Text="    αL=-1.00 / βU=+1.00 / βL=+1.00 は逆方向地盤変位（counter-loading）"/>
-                        </StackPanel>
-                    </ToolTip>
-                </TextBlock.ToolTip>
-            </TextBlock>
+            <TextBlock Text="荷重組み合わせ"
+                       ToolTip="水平荷重 = αL×D + βU×Ps + βL×Pf  (D:地盤変位, Ps:上部慣性力, Pf:基礎慣性力)。詳細はヘルプ参照。"/>
 
             <common:EnhancedDataGrid ItemsSource="{Binding InputModel.LoadCasesInput.LoadCombinations}" AutoGenerateColumns="False" HeadersVisibility="None"
                       CanUserAddRows="False"
                       SelectionUnit="FullRow">
                 <common:EnhancedDataGrid.Columns>
-                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" Foreground="Gray"/>
+                    <DataGridTextColumn Binding="{Binding Name, Mode=OneWay}" Width="*" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                     <DataGridCheckBoxColumn Binding="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" />
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
@@ -349,40 +324,8 @@
                         <StackPanel Orientation="Vertical" Margin="2">
 
             <!-- ========== 荷重ステップ ========== -->
-            <TextBlock Text="■ 荷重ステップ" Style="{StaticResource SectionHeader}">
-                <TextBlock.ToolTip>
-                    <ToolTip>
-                        <StackPanel>
-                            <TextBlock FontWeight="Bold" Text="荷重ステップの動的調整ルール"/>
-                            <TextBlock Margin="0,4,0,0" Text="入力したステップ数は『初期値』であり、収束状況に応じて自動的に増加します。"/>
-
-                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="① 初期 nStep の決定"/>
-                            <TextBlock Text="  ・線形ケース (地盤・杭ともに線形)"/>
-                            <TextBlock Text="     → 1 ステップ固定"/>
-                            <TextBlock Text="  ・非線形・順方向組合せ (βU × βL ≥ 0)"/>
-                            <TextBlock Text="     → 入力した値をそのまま使用"/>
-                            <TextBlock Text="  ・非線形・逆方向組合せ (βU × βL &lt; 0, counter-loading)"/>
-                            <TextBlock Text="     → max(入力値 × 2, 12) を初期値に採用"/>
-
-                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="② 再試行（収束失敗時）"/>
-                            <TextBlock Text="  収束しない場合、nStep を 2 倍に増やして再計算します。"/>
-                            <TextBlock Text="  ・順方向組合せ: 最大 3 回まで再試行 (×2, ×4, ×8)"/>
-                            <TextBlock Text="  ・逆方向組合せ: 最大 2 回まで再試行"/>
-
-                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="③ 早期適応検出"/>
-                            <TextBlock Text="  最初の数ステップで平均反復数が過大 (おおむね 15 回以上) の場合、"/>
-                            <TextBlock Text="  最後まで計算せず即座に再試行に移行します。"/>
-
-                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="④ 改善ゲート"/>
-                            <TextBlock Text="  再試行で平均反復数がほとんど改善しない場合、"/>
-                            <TextBlock Text="  以降の再試行を打ち切り、計算時間を節約します。"/>
-
-                            <TextBlock Margin="0,8,0,0" FontStyle="Italic" Foreground="Gray"
-                                       Text="※「全解析ステップ数」は再試行で増えた分も含めて表示されます。"/>
-                        </StackPanel>
-                    </ToolTip>
-                </TextBlock.ToolTip>
-            </TextBlock>
+            <TextBlock Text="■ 荷重ステップ" Style="{StaticResource SectionHeader}"
+                       ToolTip="入力値は初期 nStep。収束失敗時は ×2 倍で最大 3 回再試行。逆方向組合せ (βU×βL&lt;0) は max(入力×2, 12) を初期値。詳細ルールはヘルプ参照。"/>
 
             <Grid>
                 <Grid.ColumnDefinitions>

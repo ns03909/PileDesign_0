@@ -309,7 +309,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding IsChangeable, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding IsChangeable, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -319,7 +319,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp1, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp1, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -329,7 +329,7 @@
                                                                 </StackPanel>
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp2, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp2, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -340,7 +340,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp1L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp1L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -352,7 +352,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp2L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp2L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                     ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -457,7 +457,7 @@
                                                             </DataGridTemplateColumn.CellTemplate>
                                                         </DataGridTemplateColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -477,7 +477,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding Gamma, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Gamma, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -488,7 +488,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding NValue, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding NValue, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -498,7 +498,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -508,7 +508,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding Cu, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Cu, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -519,7 +519,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding E0, StringFormat=N0, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding E0, StringFormat=N0, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -530,7 +530,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding B, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding B, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -541,7 +541,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Kh0, StringFormat=N0, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="auto">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -766,7 +766,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding IsChangeable, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding IsChangeable, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -776,7 +776,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp1, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp1, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -787,7 +787,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp2, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp2, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -798,7 +798,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp1L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp1L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -810,7 +810,7 @@
                                                             </DataGridTextColumn.Header>
                                                         </DataGridTextColumn>
 
-                                                        <DataGridTextColumn Binding="{Binding GroundDisp2L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding GroundDisp2L, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50" HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -903,7 +903,7 @@
                                                         </DataGridTemplateColumn>
 
                                                         <!-- Name表示 -->
-                                                        <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -914,7 +914,7 @@
                                                         </DataGridTextColumn>
 
                                                         <!-- Gamma表示 -->
-                                                        <DataGridTextColumn Binding="{Binding Gamma, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Gamma, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="75">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -926,7 +926,7 @@
                                                         </DataGridTextColumn>
 
                                                         <!-- Phi表示 -->
-                                                        <DataGridTextColumn Binding="{Binding Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -937,7 +937,7 @@
                                                         </DataGridTextColumn>
 
                                                         <!-- C表示 -->
-                                                        <DataGridTextColumn Binding="{Binding C, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding C, StringFormat=N2, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="50">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -969,7 +969,7 @@
                                                         </DataGridTemplateColumn>
 
                                                         <!-- K0 -->
-                                                        <DataGridTextColumn Binding="{Binding K0, StringFormat=N3, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding K0, StringFormat=N3, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="75">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>
@@ -981,7 +981,7 @@
                                                         </DataGridTextColumn>
 
                                                         <!-- Kp -->
-                                                        <DataGridTextColumn Binding="{Binding Kp, StringFormat=N3, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="Gray"
+                                                        <DataGridTextColumn Binding="{Binding Kp, StringFormat=N3, UpdateSourceTrigger=LostFocus}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                                 ElementStyle="{StaticResource RightAlignTextBlockStyle}" Width="75">
                                                             <DataGridTextColumn.Header>
                                                                 <StackPanel>

@@ -211,7 +211,7 @@
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="杭工法"/>
                 <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                          Text="{Binding SoilPile.PileConstructionType, Mode=OneWay}"
-                         IsReadOnly="True" Foreground="Gray"
+                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                          HorizontalContentAlignment="Right"/>
 
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="地盤番号"/>
@@ -338,7 +338,7 @@
                             Text="平均N値算定範囲 上端" TextWrapping="Wrap"/>
                 <StackPanel Grid.Row="14" Grid.Column="2" Orientation="Horizontal">
                     <TextBlock Text="標高=" VerticalAlignment="Center"/>
-                    <TextBox Width="70" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                    <TextBox Width="70" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right">
                         <TextBox.Text>
                             <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
                                 <Binding Path="SoilPile.PileToeNValueAverageRangeUpperAltitude"/>
@@ -347,7 +347,7 @@
                         </TextBox.Text>
                     </TextBox>
                     <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    <TextBox Width="70" Text="{Binding SoilPile.PileToeNValueAverageRangeUpperAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                    <TextBox Width="70" Text="{Binding SoilPile.PileToeNValueAverageRangeUpperAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
                 <TextBlock Grid.Row="14" Grid.Column="3"
                             Text="m"/>
@@ -374,7 +374,7 @@
                             Text="平均N値算定範囲 下端" TextWrapping="Wrap"/>
                 <StackPanel Grid.Row="16" Grid.Column="2" Orientation="Horizontal">
                     <TextBlock Text="標高=" VerticalAlignment="Center"/>
-                    <TextBox Width="70" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right">
+                    <TextBox Width="70" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right">
                         <TextBox.Text>
                             <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
                                 <Binding Path="SoilPile.PileToeNValueAverageRangeLowerAltitude"/>
@@ -383,7 +383,7 @@
                         </TextBox.Text>
                     </TextBox>
                     <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    <TextBox Width="70" Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="Gray" HorizontalContentAlignment="Right"/>
+                    <TextBox Width="70" Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
                 </StackPanel>
                 <TextBlock Grid.Row="16" Grid.Column="3"
                             Text="m"/>
@@ -589,7 +589,7 @@
                                 PreviewMouseDown="DataGridCircum_PreviewMouseDown"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                 common:DataGridNavigationBehavior.Enable="True"
-                                  ColumnHeaderStyle="{StaticResource CenterHeaderStyle}" IsReadOnly="True" Foreground="Gray">
+                                  ColumnHeaderStyle="{StaticResource CenterHeaderStyle}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                             <common:EnhancedDataGrid.AlternatingRowBackground>
                                 <ImageBrush/>
                             </common:EnhancedDataGrid.AlternatingRowBackground>
@@ -842,7 +842,7 @@
                                 PreviewMouseDown="DataGridLoadDisplacement_PreviewMouseDown"
                                 CellStyle="{StaticResource CustomDataGridCellStyle}"
                                    ColumnHeaderStyle="{StaticResource CenterHeaderStyle}"
-                                    IsReadOnly="True" Foreground="Gray">
+                                    IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                             <common:EnhancedDataGrid.AlternatingRowBackground>
                                 <ImageBrush/>
                             </common:EnhancedDataGrid.AlternatingRowBackground>
