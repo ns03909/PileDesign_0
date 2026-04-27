@@ -7,13 +7,56 @@ using System.Collections.Generic;
 namespace PileDesign.FEM
 {
     /// <summary>
+    /// Cholesky 因子のキャッシュ。AnaModel に保持し、K 行列が再構築されない反復で
+    /// CSC 構築 + Cholesky 分解をスキップして後退代入のみ行う。
+    /// MapOnKmat 呼出し時に Invalidate() を呼ぶ運用。
+    /// </summary>
+    internal sealed class CholeskySolverCache
+    {
+        private SparseCholesky? _factor;
+        private long _version;
+        private long _factorVersion = -1;
+
+        /// <summary>K 行列が変化したことを通知 (MapOnKmat 等の冒頭で呼ぶ)。</summary>
+        public void Invalidate()
+        {
+            _version++;
+            _factor = null; // 旧 factor は GC 任せ
+        }
+
+        public bool TryReuse(out SparseCholesky? factor)
+        {
+            if (_factor != null && _factorVersion == _version)
+            {
+                factor = _factor;
+                return true;
+            }
+            factor = null;
+            return false;
+        }
+
+        public void Store(SparseCholesky factor)
+        {
+            _factor = factor;
+            _factorVersion = _version;
+        }
+    }
+
+    /// <summary>
     /// 疎行列直接解法による K x = b の求解。
     /// v28 F-new (2026-04-23): Cholesky → LDL → LU → QR の段階フォールバックで高速化。
     ///   FEM 剛性行列は通常 SPD なので Cholesky が効き、QR 比 3〜5 倍高速になる。
     ///   分岐条件や塑性ヒンジ近傍で indefinite になっても LDL/LU で対応、最終 QR で救済。
+    /// v29 (2026-04-27): K が反復間で変化しない (Modified NR 後期, 線形ケース) 場合に
+    ///   Cholesky 因子を再利用する CholeskySolverCache 対応を追加。CSC 構築 + 分解をスキップし
+    ///   後退代入のみ実行。再利用ヒット数は CholeskyReuseCount で計測。
     /// </summary>
     internal static class CsparseLinearSolver
     {
+        /// <summary>Cholesky factor を再利用した回数 (ステップ局所で読み取り→リセット)。</summary>
+        public static long CholeskyReuseCount { get; private set; }
+        public static void ResetReuseCount() { CholeskyReuseCount = 0; }
+
         /// <summary>前回成功した solver 種別 (診断用)。</summary>
         public enum SolverKind { None, Cholesky, LDL, LU, QR }
         public static SolverKind LastSuccessfulSolver { get; private set; } = SolverKind.None;
@@ -27,12 +70,14 @@ namespace PileDesign.FEM
             CscBuildTicks = 0;
             FactorizeTicks = 0;
             SolveBackSubTicks = 0;
+            CholeskyReuseCount = 0;
         }
 
         // Kx = b を解く。
         public static double[] Solve(MathNet.Numerics.LinearAlgebra.Matrix<double> K,
                                      MathNet.Numerics.LinearAlgebra.Vector<double> b,
-                                     bool isSpd = true)
+                                     bool isSpd = true,
+                                     CholeskySolverCache? cache = null)
         {
             if (K.RowCount != K.ColumnCount)
                 throw new ArgumentException("Matrix K must be square.");
@@ -40,6 +85,27 @@ namespace PileDesign.FEM
                 throw new ArgumentException("Dimension mismatch between K and b.");
 
             int n = K.RowCount;
+
+            // --- キャッシュヒット: 後退代入のみ実行 (CSC + 分解をスキップ) ---
+            if (cache != null && cache.TryReuse(out var cachedFactor) && cachedFactor != null)
+            {
+                try
+                {
+                    var rhsCached = b.ToArray();
+                    var xCached = new double[n];
+                    long _tsSubReuse = System.Diagnostics.Stopwatch.GetTimestamp();
+                    cachedFactor.Solve(rhsCached, xCached);
+                    SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSubReuse;
+                    LastSuccessfulSolver = SolverKind.Cholesky;
+                    CholeskyReuseCount++;
+                    return xCached;
+                }
+                catch
+                {
+                    // 再利用に失敗した場合は通常パスにフォールスルー (cache は無効化される)
+                    cache.Invalidate();
+                }
+            }
 
             // --- 1. CSC 構築フェーズ (計測) ---
             long _tsCsc = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -104,6 +170,7 @@ namespace PileDesign.FEM
                 SolveBackSubTicks += System.Diagnostics.Stopwatch.GetTimestamp() - _tsSub;
 
                 LastSuccessfulSolver = SolverKind.Cholesky;
+                cache?.Store(chol); // 成功した Cholesky 因子のみキャッシュ
                 return x;
             }
             catch

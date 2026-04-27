@@ -19,6 +19,9 @@
         <KeyBinding Modifiers="Control" Key="C"
                     Command="{Binding CopyLogCommand}"
                     CommandParameter="{Binding SelectedItems, ElementName=LogListBox}"/>
+        <!-- Ctrl+Shift+C: 全件を高速コピー (選択不要、Ctrl+A→Ctrl+C より速い) -->
+        <KeyBinding Modifiers="Control+Shift" Key="C"
+                    Command="{Binding CopyAllLogCommand}"/>
     </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
@@ -33,6 +36,10 @@
                     Command="{Binding CopyLogCommand}"
                     CommandParameter="{Binding SelectedItems, ElementName=LogListBox}"
                     Padding="10,2"/>
+            <Button Content="全件コピー (Ctrl+Shift+C)"
+                    Command="{Binding CopyAllLogCommand}"
+                    Padding="10,2"
+                    ToolTip="選択不要で全行をコピー (Ctrl+A→Ctrl+C より高速)"/>
             <Separator/>
             <Button Content="ファイル出力" Command="{Binding ExportLogCommand}" Padding="10,2"/>
             <Separator/>

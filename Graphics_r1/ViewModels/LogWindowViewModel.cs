@@ -45,6 +45,10 @@ namespace PileDesign.ViewModels
 
         public event EventHandler? ScrollToEndRequested;
 
+        // ScrollIntoView を Add 毎に呼ぶと数千行で UI thread が飽和するため、
+        // Dispatcher.Background プライオリティで coalesce (UI idle 時に 1 回だけ実行)。
+        private bool _scrollPending;
+
         public LogWindowViewModel()
         {
         }
@@ -110,71 +114,125 @@ namespace PileDesign.ViewModels
 
         private void OnSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            // UI スレッドにマーシャリング
-            Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            // 既に UI スレッド上ならディスパッチ不要 (バッチ追加時の二重ホップを回避)。
+            // FlushLogsToUi 経由の Add は UI スレッドで発火するため、Dispatcher.BeginInvoke をスキップ。
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null) return;
+            if (dispatcher.CheckAccess())
             {
-                try
+                ApplyCollectionChange(sender, e);
+            }
+            else
+            {
+                dispatcher.BeginInvoke(new Action(() => ApplyCollectionChange(sender, e)));
+            }
+        }
+
+        private void ApplyCollectionChange(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            try
+            {
+                switch (e.Action)
                 {
-                    switch (e.Action)
-                    {
-                        case NotifyCollectionChangedAction.Add:
-                            if (e.NewItems != null)
-                                foreach (var x in e.NewItems)
-                                    if (x is string s) LogLines.Add(s);
-                            break;
-                        case NotifyCollectionChangedAction.Reset:
-                            LogLines.Clear();
-                            if (sender is IEnumerable<string> src)
-                                foreach (var s in src) LogLines.Add(s);
-                            break;
-                        default:
-                            // Remove / Replace 系は解析ログでは想定外。フル再構築でフォールバック。
-                            LogLines.Clear();
-                            if (sender is IEnumerable<string> src2)
-                                foreach (var s in src2) LogLines.Add(s);
-                            break;
-                    }
-                    StatusText = $"{LogLines.Count} log entries";
-                    if (AutoScroll) RequestScrollToEnd();
+                    case NotifyCollectionChangedAction.Add:
+                        if (e.NewItems != null)
+                            foreach (var x in e.NewItems)
+                                if (x is string s) LogLines.Add(s);
+                        break;
+                    case NotifyCollectionChangedAction.Reset:
+                        LogLines.Clear();
+                        if (sender is IEnumerable<string> src)
+                            foreach (var s in src) LogLines.Add(s);
+                        break;
+                    default:
+                        // Remove / Replace 系は解析ログでは想定外。フル再構築でフォールバック。
+                        LogLines.Clear();
+                        if (sender is IEnumerable<string> src2)
+                            foreach (var s in src2) LogLines.Add(s);
+                        break;
                 }
-                catch
-                {
-                    // UI 更新失敗は非致命
-                }
-            }));
+                StatusText = $"{LogLines.Count} log entries";
+                if (AutoScroll) RequestScrollToEnd();
+            }
+            catch
+            {
+                // UI 更新失敗は非致命
+            }
         }
 
         private void RequestScrollToEnd()
         {
-            if (AutoScroll)
+            if (!AutoScroll) return;
+            // 既に保留中ならスキップ。Background プライオリティで UI idle 時に 1 回だけ実行。
+            if (_scrollPending) return;
+            _scrollPending = true;
+            Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
             {
+                _scrollPending = false;
                 ScrollToEndRequested?.Invoke(this, EventArgs.Empty);
-            }
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         [RelayCommand]
         private void CopyLog(object? parameter)
         {
-            // 選択行があれば選択のみ、なければ全件をコピー
+            // 選択行があれば選択のみ、なければ全件をコピー。
+            // 全選択 (Ctrl+A 後) は SelectedItems の Cast 列挙が遅いので LogLines を直接使う。
             IEnumerable<string> source;
             int selectedCount = 0;
+            int totalCount = LogLines.Count;
             if (parameter is IList list && list.Count > 0)
             {
-                source = list.Cast<string>();
-                selectedCount = list.Count;
+                if (list.Count >= totalCount)
+                {
+                    source = LogLines;
+                    selectedCount = totalCount;
+                }
+                else
+                {
+                    source = list.Cast<string>();
+                    selectedCount = list.Count;
+                }
             }
             else
             {
                 source = LogLines;
             }
 
-            if (!source.Any()) return;
+            if (totalCount == 0) return;
 
-            var text = string.Join(Environment.NewLine, source);
-            Clipboard.SetText(text);
+            var sb = new StringBuilder();
+            bool first = true;
+            foreach (var s in source)
+            {
+                if (!first) sb.Append(Environment.NewLine);
+                sb.Append(s);
+                first = false;
+            }
+            if (sb.Length == 0) return;
+            Clipboard.SetText(sb.ToString());
             StatusText = selectedCount > 0
                 ? $"{selectedCount} 行をクリップボードにコピーしました"
                 : "ログをクリップボードにコピーしました";
+        }
+
+        /// <summary>
+        /// 全件コピー (選択不要)。Ctrl+Shift+C にバインド。Ctrl+A→Ctrl+C より高速。
+        /// </summary>
+        [RelayCommand]
+        private void CopyAllLog()
+        {
+            if (LogLines.Count == 0) return;
+            var sb = new StringBuilder();
+            bool first = true;
+            foreach (var s in LogLines)
+            {
+                if (!first) sb.Append(Environment.NewLine);
+                sb.Append(s);
+                first = false;
+            }
+            Clipboard.SetText(sb.ToString());
+            StatusText = $"全 {LogLines.Count} 行をクリップボードにコピーしました";
         }
 
         [RelayCommand]

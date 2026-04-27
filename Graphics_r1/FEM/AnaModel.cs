@@ -106,6 +106,14 @@ namespace PileDesign.FEM
         public Matrix<double> KAB_sec { get; private set; }
         public Matrix<double> KBB_sec { get; private set; }
 
+        /// <summary>
+        /// Cholesky factor の case-local キャッシュ。MapOnKmat 冒頭で Invalidate() を呼び、
+        /// K が変化しない反復 (Modified NR 後期 / 線形ケース) で因子を再利用して
+        /// CSC 構築 + 分解をスキップする。Solver.SolveDisp / SolveNewtonDirection に渡す。
+        /// </summary>
+        [JsonIgnore]
+        internal CholeskySolverCache SolverCache { get; } = new();
+
         [JsonIgnore]
         public List<bool> VectorDOFForcedDisp { get; private set; } = [];
 
@@ -377,6 +385,10 @@ namespace PileDesign.FEM
         //   Ke は PrepareKmat で既にセット済みのため serial loop で COO 追加。
         private void MapOnKmat(bool isTan)
         {
+            // K の数値が変わるので Cholesky 因子キャッシュを無効化。
+            // (本メソッドが呼ばれない反復では cache.TryReuse() がヒットして CSC 構築 + 分解をスキップ)
+            if (isTan) SolverCache.Invalidate();
+
             // Phase 1: Beams を並列組立 (thread-local COO → 集約)
             var cooBags = new System.Collections.Concurrent.ConcurrentBag<List<(int r, int c, double v)>>();
 

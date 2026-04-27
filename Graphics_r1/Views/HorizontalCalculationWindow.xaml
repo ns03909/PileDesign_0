@@ -522,8 +522,8 @@
                 <ProgressBar
                     x:Name="ProgressBarMain"
                     Minimum="0"
-                    Maximum="{Binding TotalCalculationCount}"
-                    Value="{Binding CurrentProgress}"
+                    Maximum="{Binding TotalLoadCaseCount}"
+                    Value="{Binding CompletedCaseCount}"
                     Height="18"
                     Width="200"
                     Margin="10,0,0,0" Foreground="#62B0E2"/>

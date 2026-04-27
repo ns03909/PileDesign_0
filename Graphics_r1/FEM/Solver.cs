@@ -24,7 +24,8 @@ namespace PileDesign.FEM
             try
             {
                 // SparseQR を用いるため一般行列として全成分を投入（isSpd: false）
-                var x = CsparseLinearSolver.Solve(anaModel.KAA_tan, anaModel.VectorR, isSpd: false);
+                // cache を渡すと K 不変な反復で Cholesky 因子を再利用 (CSC + 分解をスキップ)
+                var x = CsparseLinearSolver.Solve(anaModel.KAA_tan, anaModel.VectorR, isSpd: false, cache: anaModel.SolverCache);
                 incrementalDispVector = Vector<double>.Build.DenseOfArray(x);
             }
             catch (Exception csparseEx)

@@ -2277,23 +2277,68 @@ namespace PileDesign.ViewModels
         }
 
         // 密度、工学的基盤の再計算メソッド
+        // 土質点の担当範囲 (上隣の質点 GL ～ 自身の GL) と各土層の範囲との重複長を比較し、
+        // 最も多く含まれる土層のパラメータを採用する。範囲が縮退/異常データの場合や
+        // どの層とも重ならない場合は GLDepth 単点判定にフォールバック。
         internal void RecalculateDensityIsEngineeringBedrock()
         {
             var masses = GroundInput.GroundMassesData;
             var layers = GroundInput.GroundLayers;
+            if (layers.Count == 0) return;
 
-            foreach (var m in masses)
+            for (int i = 0; i < masses.Count; i++)
             {
-                foreach (var l in layers)
+                var m = masses[i];
+                // 土質点 i の担当範囲 (GL): 上端 = i-1 質点の GLDepth (i=0 のとき GL=0), 下端 = 自身の GLDepth
+                double massTop = (i == 0) ? 0.0 : masses[i - 1].GLDepth;
+                double massBot = m.GLDepth;
+
+                if (massTop <= massBot)
                 {
-                    if (m.GLDepth >= l.BottomGLDepth)
+                    AssignLayerByPoint(m, layers);
+                    continue;
+                }
+
+                int bestIdx = -1;
+                double bestOverlap = 0.0;
+                for (int j = 0; j < layers.Count; j++)
+                {
+                    double layerTop = (j == 0) ? 0.0 : layers[j - 1].BottomGLDepth;
+                    double layerBot = layers[j].BottomGLDepth;
+                    double overlap = Math.Min(massTop, layerTop) - Math.Max(massBot, layerBot);
+                    if (overlap > bestOverlap)
                     {
-                        m.Density = l.Density;
-                        m.GranularityClass = l.GranularityClass;
-                        m.AgeCategory = l.AgeCategory;
-                        m.IsEngineeringBedrock = l.IsEngineeringBedrock;
-                        break;
+                        bestOverlap = overlap;
+                        bestIdx = j;
                     }
+                }
+
+                if (bestIdx >= 0)
+                {
+                    var l = layers[bestIdx];
+                    m.Density = l.Density;
+                    m.GranularityClass = l.GranularityClass;
+                    m.AgeCategory = l.AgeCategory;
+                    m.IsEngineeringBedrock = l.IsEngineeringBedrock;
+                }
+                else
+                {
+                    AssignLayerByPoint(m, layers);
+                }
+            }
+        }
+
+        private static void AssignLayerByPoint(GroundMassDataInput m, ObservableCollection<GroundLayerInput> layers)
+        {
+            foreach (var l in layers)
+            {
+                if (m.GLDepth >= l.BottomGLDepth)
+                {
+                    m.Density = l.Density;
+                    m.GranularityClass = l.GranularityClass;
+                    m.AgeCategory = l.AgeCategory;
+                    m.IsEngineeringBedrock = l.IsEngineeringBedrock;
+                    break;
                 }
             }
         }
