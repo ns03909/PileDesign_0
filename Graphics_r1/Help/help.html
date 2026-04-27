@@ -3260,6 +3260,128 @@
                 並列実行は <strong>ケース単位</strong>（同じケースの中での要素並列ではない）で行われるため、ケース数 ≥ 同時実行ケース数の構成で効果を発揮します。
             </p>
 
+            <h4 style="font-weight: bold;">解析ログの読み方</h4>
+            <p>
+                水平解析の進行中、計算ログ画面に詳細な反復履歴・収束状況・診断情報が出力されます。
+                ここではログの各行・記号の意味を解説します。
+            </p>
+
+            <h5>共通プレフィックス</h5>
+            <p>各ログ行は以下のプレフィックスで始まります:</p>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+[2026/04/27 21:12:58] [L2-1.C1.Liq] iter  1  ω=0.50  ‖R‖²=2.73E-006>1.0E-005  ...
+└────────────────┬───┘ └─────┬───┘ └──────────────────┬──────────────────────
+   タイムスタンプ      ケースタグ          反復行 (詳細は次節)
+            </pre>
+            <ul>
+                <li><strong>タイムスタンプ</strong>: <code>[YYYY/MM/DD HH:MM:SS]</code> 形式。並列実行時に時刻順で混在することがあります。</li>
+                <li><strong>ケースタグ</strong>: <code>[L{level}-{loadCaseNo}.C{comboNo}.{Liq|Dry}]</code> 形式。例: <code>[L2-1.C1.Liq]</code> = レベル2 荷重ケース1 組合せC1 液状化考慮。タブ「[L2-1.C1.Liq]」を選ぶと該当ケースのログのみ表示できます。</li>
+            </ul>
+
+            <h5>反復ログ (1 行形式)</h5>
+            <p>各 Newton-Raphson 反復で 1 行出力されます。</p>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4E+15]  k=[2.2E+03,2.6E+05]  ▶CapNode-8:Uy=+4.44E-04
+            </pre>
+            <table class="table-doc">
+                <thead>
+                    <tr><th style="text-align: center">項目</th><th>意味</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>iter N</code></td><td>反復回数 (1 から開始)</td></tr>
+                    <tr><td><code>ω=0.50</code></td><td>緩和係数 (固定ω モード時)。$d_{new} = d_{old} + \omega \cdot \Delta d$</td></tr>
+                    <tr><td><code>α=0.27</code></td><td>ラインサーチによる最適ステップ長 (ラインサーチモード時、`ω` の代わりに表示)</td></tr>
+                    <tr><td><code>‖R‖²=X.XXE±NN</code></td><td>残差ノルム比 $\|R\|^2 / \|F_{int}\|^2$。値が小さいほど収束に近い</td></tr>
+                    <tr><td><code>&gt;1.0E-05</code></td><td>許容値との比較。<code>≦</code> なら収束、<code>&gt;</code> なら未収束で次反復へ</td></tr>
+                    <tr><td><code>✓Converged</code></td><td>このステップが収束した (残差 ≦ 許容値)</td></tr>
+                    <tr><td><code>max|δu|=X.XXE±NN</code></td><td>本反復での最大変位増分 (m / rad)。0 に近づくほど収束</td></tr>
+                    <tr><td><code>K=[min,max]</code></td><td>剛性マトリクス対角の最小値・最大値。極端に小さい min は不安定の兆候</td></tr>
+                    <tr><td><code>k=[min,max]</code></td><td>地盤ばね剛性の最小値・最大値。降伏で min が小さくなる</td></tr>
+                    <tr><td><code>▶ノード名:DOF=値</code></td><td>本反復で最大変位を示した自由度 (DOF)。収束停滞時の原因 DOF 特定に使用</td></tr>
+                    <tr><td><code>⚠flip#N</code></td><td>支配 DOF の符号反転を N 回連続検出。リミットサイクル (周期発散) の兆候</td></tr>
+                </tbody>
+            </table>
+
+            <h5>状態変化ログ (反復間)</h5>
+            <p>非線形要素の状態が変化したときに出力される情報行です。</p>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+▼ M-φ セグメント変化 924 件 (進行:924, 戻り:0): [beam[0]:0→1, beam[1]:0→1, ... 他 919 件] / 分布 [seg0:2688本, seg1:924本]
+▼ 土ばね p-y 降伏状態変化: 新規降伏 154 件 [1-1-btm, 1-1-top, ...], 降伏解除 0 件 [-] / 現時点降伏 154 件
+📌 杭頭 Mcr 到達 → クラック判定 84 本 (|M|=[1.096E+003, 1.096E+003] ≥ Mcr=3.485E+002 kNm)、以降 post-crack curve 使用
+            </pre>
+            <ul>
+                <li><strong>M-φ セグメント変化</strong>: 杭体の M-φ 曲線でセグメント (弾性 / 弾塑性 / 降伏) が変化した beam の数。<code>進行</code> = 高位セグメントへ移行、<code>戻り</code> = 低位へ戻り (除荷)。多数の同時変化は K 行列を急変させ、次反復で残差スパイクが起きやすい</li>
+                <li><strong>p-y 降伏状態変化</strong>: 杭周地盤水平ばねの塑性降伏。<code>新規降伏</code> / <code>降伏解除</code> の件数で進行を把握</li>
+                <li><strong>杭頭 Mcr 到達</strong>: 杭頭曲げモーメントがひび割れモーメント Mcr に到達 → 以降 post-crack 曲線 (剛性低下) を使用</li>
+            </ul>
+
+            <h5>ステップ収束ログ</h5>
+            <p>1 つの荷重ステップが収束または未収束で打ち切られた時に出力されます。</p>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+→ Converged in 20 iterations. Residual norm=8.185E-006, max|d|=8.384E-008m
+⏱ total 45.4s | K組立 2226ms×6 | Solve 905ms [Cholesky] (CSC=309 分解=273 代入=55 re=41) | LS 591ms×19 (avg 2.4)
+            </pre>
+            <ul>
+                <li><code>Converged in N iterations</code>: 収束まで N 反復要した</li>
+                <li><strong>プロファイル行</strong> ⏱:
+                    <ul>
+                        <li><code>total X.Xs</code>: ステップ全体の所要時間</li>
+                        <li><code>K組立 Xms×N</code>: 剛性マトリクス再構築 N 回の合計時間</li>
+                        <li><code>Solve [Cholesky]</code>: 連立方程式求解 (Cholesky / LDL / LU / QR の順にフォールバック)</li>
+                        <li><code>CSC / 分解 / 代入</code>: CSC 構築 / Cholesky 分解 / 後退代入の累積時間 (ms)</li>
+                        <li><code>re=N</code>: Cholesky 因子の再利用回数 (Modified NR の K 不変期間で発動。値が大きいほど高速化効果あり)</li>
+                        <li><code>LS Xms×N (avg M)</code>: ラインサーチ N 回、平均 M 回のα試行</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h5>未収束・再試行ログ</h5>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+→ 未収束: 最大反復回数 50 に到達。残差ノルム=2.341E-002 (許容値=1.000E-005), max|d|=1.234E-005m
+♻ ケース再試行 (1/3): ステップ数を 8 → 16 に増やして再計算
+⛔ 物理的未収束として確定（耐力超過の可能性）。このケースは再試行せず次へ進みます
+            </pre>
+            <ul>
+                <li><code>未収束</code>: 最大反復数到達。再試行ロジックで自動的にステップ数を倍増して再計算</li>
+                <li><code>♻ ケース再試行 (N/M)</code>: ステップ細分化による N 回目 / 最大 M 回までの再試行</li>
+                <li><code>⛔ 物理的未収束</code>: 緩和基準が極端 (>10) かつ再試行 1 回以上で改善なし → 耐力超過の可能性ありと判定し再試行を打ち切る</li>
+            </ul>
+
+            <h5>診断・警告ログ</h5>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+🔄 Aitken 平均化 #1/2 発動: 直近 3 反復の CumulativeDisp 平均で書換 → 残差=1.23E-002
+⚠ 長期未改善検出: 30反復で最小残差 1.5E-03 が更新されません。収束基準を緩和します (1.00E-05→1.50E-03)
+⚠ 緩やかな発散検出: 5回連続で残差が増加しています (最小:2.5E-04 → 現在:8.7E-04)
+⚠ 停滞検出: 7回連続で残差が改善しません。収束基準を緩和します (1.00E-05→2.34E-04)
+            </pre>
+            <ul>
+                <li><strong>🔄 Aitken 平均化</strong>: 支配 DOF が周期反転 (リミットサイクル) を続けた場合、直近反復の累積変位を平均化して周期の中心に「ジャンプ」させる収束加速手法。最大 2 回まで発動</li>
+                <li><strong>⚠ 長期未改善 / 停滞</strong>: 最小残差が更新されない反復数が一定値を超えた → 収束基準を現在の残差水準に合わせて自動緩和 (それでも未収束なら再試行へ)</li>
+                <li><strong>⚠ 緩やかな発散</strong>: 残差が連続的に増加 → ライン探索の自動切替を行う</li>
+            </ul>
+
+            <h5>解析サマリーレポート (解析終了時)</h5>
+            <p>すべてのケース・ステップが完了すると、テキスト表形式のサマリーレポートが出力されます。</p>
+            <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
+━━━━━━━━━━━━━━━━━━━━━━━ 解析サマリーレポート ━━━━━━━━━━━━━━━━━━━━━━━
+ステップ総数 32 (再試行含む)  ┃  合計時間 501.6s
+  ✓ 収束 32 件
+
+  ケース             | Step  | 試行 | 反復 | 残差      | α許容    | max|δu|   | 状態          | 時間
+  -------------------+-------+------+------+-----------+----------+-----------+---------------+--------
+  [L2-1.C1.Liq]      |  1/8  |   -  |   18 | 6.61E-006 | 1.0E-005 | 5.92E-08  | ✓ Converged   |  20.6s
+  [L2-1.C1.Liq]      |  2/8  |   -  |   12 | 6.94E-006 | 1.0E-005 | 1.29E-06  | ✓ Converged   |  17.0s
+  ...
+            </pre>
+            <ul>
+                <li>列: ケース / Step (現在/総数) / 試行 (再試行番号、無印は初回) / 反復 / 残差 / α許容 / max|δu| / 状態 / 時間</li>
+                <li>状態: <code>✓ Converged</code> / <code>✗ Unconverged</code> / <code>⛔ Phys.Unconv</code></li>
+                <li>未収束件数があれば、表の後に「未収束 / 物理的未収束のステップ一覧」が再掲されます</li>
+            </ul>
+            <p>
+                サマリーは画面下部の「<strong>サマリーをコピー</strong>」(TSV / Excel 貼付可)・「<strong>サマリーを CSV 出力</strong>」(UTF-8 BOM 付き) ボタンで外部出力できます。
+            </p>
+
             <h4 style="font-weight: bold;">「荷重沈下関係解析（単杭沈下）」（F6）</h4>
             <p>
                 要素分割済みの場合に有効になります。荷重沈下関係解析ウィンドウ（単杭沈下）を開きます。

@@ -3995,21 +3995,23 @@ namespace PileDesign.ViewModels
             => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "Dry")}] ";
 
         /// <summary>
-        /// Consolas 等幅フォント上での視覚幅を計算する (col 数)。
-        /// ASCII / Box Drawing / Greek 小文字 / 矢印類 → 1 col、
-        /// CJK (Hiragana / Katakana / 漢字 / 全角) → 2 col、
-        /// 一部の Emoji (⛔ 等) → 2 col。
+        /// MS Gothic 等幅フォント上での視覚幅を計算する (col 数)。
+        /// ASCII → 1 col、CJK (Hiragana / Katakana / 漢字 / 全角) → 2 col。
+        /// East Asian Ambiguous (Greek α β δ ω, ✓ ✗, Box Drawing, 矢印 等) は MS Gothic では
+        /// **全角 2 col** で描画されるため、VisualWidth でも 2 col として扱う。
+        /// 例外: '|' (ASCII vertical bar) と '-' (ASCII dash) は確実に半角なので ASCII 同様 1 col。
         /// </summary>
         private static int VisualWidth(string s)
         {
             int w = 0;
             foreach (char c in s)
             {
-                if (c < 0x0080) { w += 1; continue; }                       // ASCII
-                if (c >= 0x2500 && c <= 0x257F) { w += 1; continue; }       // Box Drawing
-                if (c >= 0x0370 && c <= 0x03FF) { w += 1; continue; }       // Greek (α β δ ω 等)
-                if (c == '‖' || c == '·' || c == '✓' || c == '✗' || c == '▶') { w += 1; continue; }
+                if (c < 0x0080) { w += 1; continue; }                       // ASCII (含 '|' '-' '+')
+                if (c >= 0x0370 && c <= 0x03FF) { w += 2; continue; }       // Greek → MS Gothic で全角
+                if (c == '‖' || c == '·') { w += 2; continue; }             // ‖ はサマリー外で使用
+                if (c == '✓' || c == '✗' || c == '▶') { w += 2; continue; } // チェック / 矢印 → 全角
                 if (c == '⛔' || c == '⏱' || c == '♻' || c == '⚠') { w += 2; continue; }
+                if (c >= 0x2500 && c <= 0x257F) { w += 2; continue; }       // Box Drawing → 全角
                 if ((c >= 0x3000 && c <= 0x9FFF) || (c >= 0xFF00 && c <= 0xFFEF)) { w += 2; continue; } // CJK / 全角
                 w += 1;
             }
@@ -4170,22 +4172,27 @@ namespace PileDesign.ViewModels
                 (retryCount > 0 ? $"  /  ♻ 再試行発生 {retryCount} 件" : ""));
             await AddLogAsync("");
 
-            // 列の視覚幅 (Consolas 上での col 数)
-            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wRes = 9, wAlpha = 7, wMaxD = 9, wStat = 13, wTime = 6;
+            // 列の視覚幅 (MS Gothic 上での col 数)。データの最大幅以上に確保すること:
+            //   wRes/wMaxD: "X.XXE-NNN" = 9 col 必要、wAlpha: "X.XE-NNN" = 8 col 必要
+            //   wTime: " XX.Xs" = 6 col、wIter: 3 桁反復まで = 4 col
+            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wRes = 9, wAlpha = 8, wMaxD = 9, wStat = 13, wTime = 6;
 
             // 表ヘッダ + 区切り行 (視覚幅でパディング)
+            // 区切り行は ASCII '-' '+' を使用。MS Gothic では Box Drawing '─' が全角 (2 col)
+            // で描画される一方、'│' は半角 (1 col) のため混在で約 2x のずれが発生する。
+            // ASCII は半角 1 col 固定で確実に揃う。
             await AddLogAsync(
-                "  " + VisualPad("ケース", wCase) + " │ " + VisualPad("Step", wStep) +
-                " │ " + VisualPad("試行", wRetry) + " │ " + VisualPad("反復", wIter) +
-                " │ " + VisualPad("残差", wRes) + " │ " + VisualPad("α許容", wAlpha) +
-                " │ " + VisualPad("max|δu|", wMaxD) + " │ " + VisualPad("状態", wStat) +
-                " │ " + VisualPad("時間", wTime));
+                "  " + VisualPad("ケース", wCase) + " | " + VisualPad("Step", wStep) +
+                " | " + VisualPad("試行", wRetry) + " | " + VisualPad("反復", wIter) +
+                " | " + VisualPad("残差", wRes) + " | " + VisualPad("α許容", wAlpha) +
+                " | " + VisualPad("max|δu|", wMaxD) + " | " + VisualPad("状態", wStat) +
+                " | " + VisualPad("時間", wTime));
             await AddLogAsync(
-                "  " + new string('─', wCase + 1) + "┼" + new string('─', wStep + 2) +
-                "┼" + new string('─', wRetry + 2) + "┼" + new string('─', wIter + 2) +
-                "┼" + new string('─', wRes + 2) + "┼" + new string('─', wAlpha + 2) +
-                "┼" + new string('─', wMaxD + 2) + "┼" + new string('─', wStat + 2) +
-                "┼" + new string('─', wTime + 1));
+                "  " + new string('-', wCase + 1) + "+" + new string('-', wStep + 2) +
+                "+" + new string('-', wRetry + 2) + "+" + new string('-', wIter + 2) +
+                "+" + new string('-', wRes + 2) + "+" + new string('-', wAlpha + 2) +
+                "+" + new string('-', wMaxD + 2) + "+" + new string('-', wStat + 2) +
+                "+" + new string('-', wTime + 1));
             foreach (var s in sorted)
             {
                 string statusStr = s.Status switch
@@ -4198,14 +4205,14 @@ namespace PileDesign.ViewModels
                 string retryTag = s.BisectionAttempt > 0 ? $"#{s.BisectionAttempt}" : "-";
                 string stepStr = $"{s.Step,2}/{s.NStep,-2}";
                 await AddLogAsync(
-                    "  " + VisualPad(s.CaseTag, wCase) + " │ " + VisualPad(stepStr, wStep) +
-                    " │ " + VisualPad(retryTag, wRetry, rightAlign: true) +
-                    " │ " + VisualPad(s.Iterations.ToString(), wIter, rightAlign: true) +
-                    " │ " + VisualPad(s.FinalResidual.ToString("E2"), wRes, rightAlign: true) +
-                    " │ " + VisualPad(s.EffectiveAlpha.ToString("E1"), wAlpha, rightAlign: true) +
-                    " │ " + VisualPad(s.MaxDisp.ToString("E2"), wMaxD, rightAlign: true) +
-                    " │ " + VisualPad(statusStr, wStat) +
-                    " │ " + VisualPad($"{s.ElapsedSec:F1}s", wTime, rightAlign: true));
+                    "  " + VisualPad(s.CaseTag, wCase) + " | " + VisualPad(stepStr, wStep) +
+                    " | " + VisualPad(retryTag, wRetry, rightAlign: true) +
+                    " | " + VisualPad(s.Iterations.ToString(), wIter, rightAlign: true) +
+                    " | " + VisualPad(s.FinalResidual.ToString("E2"), wRes, rightAlign: true) +
+                    " | " + VisualPad(s.EffectiveAlpha.ToString("E1"), wAlpha, rightAlign: true) +
+                    " | " + VisualPad(s.MaxDisp.ToString("E2"), wMaxD, rightAlign: true) +
+                    " | " + VisualPad(statusStr, wStat) +
+                    " | " + VisualPad($"{s.ElapsedSec:F1}s", wTime, rightAlign: true));
             }
 
             // 未収束ステップのみの再掲 (見落とし防止)
