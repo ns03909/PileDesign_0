@@ -132,10 +132,12 @@
             <avalonDock:LayoutRoot>
                 <avalonDock:LayoutPanel Orientation="Horizontal">
                     <!-- 杭体入力ペイン -->
-                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.5*">
+                    <avalonDock:LayoutDocumentPaneGroup x:Name="PileBodyInputPaneGroup" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable Title="杭体入力" CanClose="False" CanHide="False">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                                <!-- HorizontalScrollBarVisibility="Disabled" にすることで、内側の DataGrid の
+                                     Width="*" 列がペイン幅にフィットする (Auto だと幅が無限と解釈され Width=* が縮退)。-->
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
             <StackPanel Orientation="Horizontal">
                 <StackPanel.ToolTip>
@@ -583,7 +585,7 @@
                     </avalonDock:LayoutDocumentPaneGroup>
 
                     <!-- 杭姿図ペイン -->
-                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.25*">
+                    <avalonDock:LayoutDocumentPaneGroup x:Name="PileShapeImagePaneGroup" DockWidth="0.25*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable Title="杭姿図" CanClose="False" CanHide="False">
                                 <Canvas x:Name="Canvas"/>
@@ -592,7 +594,7 @@
                     </avalonDock:LayoutDocumentPaneGroup>
 
                     <!-- 計算結果ペイン -->
-                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.25*">
+                    <avalonDock:LayoutDocumentPaneGroup x:Name="ResultPaneGroup" DockWidth="0.25*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable Title="計算結果" CanClose="False" CanHide="False">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
@@ -927,12 +929,36 @@
             </avalonDock:LayoutRoot>
         </avalonDock:DockingManager>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="8">
-            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ペイン最大化ボタン (左側): 各ペインを画面幅いっぱいに拡張、再押下で元に戻す -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="ペイン最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
+                <Button x:Name="ButtonMaximizeInput" Content="杭体入力" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="杭体入力ペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Input"/>
+                <Button x:Name="ButtonMaximizeShape" Content="杭姿図" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="杭姿図ペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Shape"/>
+                <Button x:Name="ButtonMaximizeResult" Content="計算結果" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="計算結果ペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Result"/>
+            </StackPanel>
+
+            <!-- OK / キャンセルボタン (右側) -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
 
