@@ -1435,7 +1435,7 @@
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsVerticalBeamAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="基礎梁考慮沈下解析(済◎)"/>
+                                        <Setter Property="Label" Value="基礎梁考慮沈下解析 ✓"/>
                                         <Setter Property="Foreground" Value="#1565C0"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWithBeamWindowDone.png"/>
