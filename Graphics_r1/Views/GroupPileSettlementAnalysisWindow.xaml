@@ -12,7 +12,7 @@
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:common="clr-namespace:PileDesign.Common"
-        Title="GroupPileSettlementAnalysisWindow" Height="450" Width="800">
+        Title="群杭沈下解析" Height="450" Width="800">
 
     <Window.DataContext>
         <local:MainWindowViewModel/>

@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:PileDesign.Views"
         xmlns:common="clr-namespace:PileDesign.Common"
         mc:Ignorable="d"
-        Title="PileLibraryWindow" Height="450" Width="800"
+        Title="杭ライブラリ" Height="450" Width="800"
         common:EscapeKeyBehavior.Enable="True">
     <Grid>
         <TabControl x:Name="TabControlLibraries" Margin="6"/>

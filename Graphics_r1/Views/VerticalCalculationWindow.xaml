@@ -9,7 +9,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         d:DataContext="{d:DesignInstance Type=local:VerticalCalculationViewModel}"
         mc:Ignorable="d"
-        Title="VerticalCalculationWindow" Height="450" Width="800"
+        Title="荷重沈下関係解析 (単杭沈下)" Height="450" Width="800"
         x:Name="VerticalCalcWin"
         common:EscapeKeyBehavior.Enable="True">
     <Window.Resources>

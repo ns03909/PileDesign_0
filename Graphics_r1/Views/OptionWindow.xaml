@@ -10,7 +10,7 @@
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
-        Title="OptionWindow" Height="450" Width="400"
+        Title="表示設定" Height="450" Width="400"
         common:EscapeKeyBehavior.Enable="True">
 
     <Window.DataContext>

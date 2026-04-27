@@ -7,7 +7,7 @@
         xmlns:conv="clr-namespace:PileDesign.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MoveCopyViewModel}"
-        Title="MoveCopyWindow" Height="200" Width="450"
+        Title="移動・複製" Height="200" Width="450"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
