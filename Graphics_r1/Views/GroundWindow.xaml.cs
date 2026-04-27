@@ -892,48 +892,62 @@ namespace PileDesign.Views
         }
 
         // 左ペイン (土層+土質点) の最大化トグル:
-        // 右側のアンカラブルを個別に Hide() して左ペインを横方向に拡大、
-        // さらに Window 自体を WindowState.Maximized にして画面いっぱいに広げる。
-        // 元に戻すときは両方を復元。
-        private bool _isLeftMaximized;
+        // ペイン最大化トグル (左/右)。同じ DockWidth トグルで実装。
+        // _maximizedSide: null=通常, "Left"=左ペイン最大化中, "Right"=右ペイン最大化中
+        private string _maximizedSide;
         private WindowState _savedWindowState = WindowState.Normal;
 
-        private static readonly System.Windows.GridLength _leftMaximizedWidth = new(0.999, System.Windows.GridUnitType.Star);
-        private static readonly System.Windows.GridLength _rightMinimizedWidth = new(0.001, System.Windows.GridUnitType.Star);
+        private static readonly System.Windows.GridLength _maximizedWidth = new(0.999, System.Windows.GridUnitType.Star);
+        private static readonly System.Windows.GridLength _minimizedWidth = new(0.001, System.Windows.GridUnitType.Star);
         private static readonly System.Windows.GridLength _restoredHalfWidth = new(0.5, System.Windows.GridUnitType.Star);
 
-        private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e)
+        private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e) => ToggleMaximize("Left");
+        private void ButtonToggleRightMaximize_Click(object sender, RoutedEventArgs e) => ToggleMaximize("Right");
+
+        private void ToggleMaximize(string side)
         {
             var rightTabs = new[] {
                 NValueTab, CuValueTab, VsValueTab, EsValueTab, CustomDispTab,
                 DefTab, FsTab, SaTab
             };
 
-            if (!_isLeftMaximized)
+            if (_maximizedSide == side)
             {
-                _savedWindowState = this.WindowState;
-                foreach (var t in rightTabs) t?.Hide();
-                // 左ペインを横方向に拡大: 左の DockWidth を大、右を極小に
-                if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _leftMaximizedWidth;
-                if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _rightMinimizedWidth;
-                this.WindowState = WindowState.Maximized;
-                SetMaximizeButtonContent("◀▶ 元に戻す");
-                _isLeftMaximized = true;
-            }
-            else
-            {
+                // 同ボタン再押下 → 元に戻す
                 foreach (var t in rightTabs) t?.Show();
                 if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _restoredHalfWidth;
                 if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _restoredHalfWidth;
                 this.WindowState = _savedWindowState;
-                SetMaximizeButtonContent("◀▶ 左ペイン最大化");
-                _isLeftMaximized = false;
+                _maximizedSide = null;
+                UpdateMaximizeButtonLabels();
+            }
+            else
+            {
+                if (_maximizedSide == null) _savedWindowState = this.WindowState;
+                if (side == "Left")
+                {
+                    foreach (var t in rightTabs) t?.Hide();
+                    if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _maximizedWidth;
+                    if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _minimizedWidth;
+                }
+                else // Right
+                {
+                    foreach (var t in rightTabs) t?.Show();
+                    if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _minimizedWidth;
+                    if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _maximizedWidth;
+                }
+                this.WindowState = WindowState.Maximized;
+                _maximizedSide = side;
+                UpdateMaximizeButtonLabels();
             }
         }
 
-        private void SetMaximizeButtonContent(string text)
+        private void UpdateMaximizeButtonLabels()
         {
-            if (ButtonToggleLeftMaximize != null) ButtonToggleLeftMaximize.Content = text;
+            if (ButtonToggleLeftMaximize != null)
+                ButtonToggleLeftMaximize.Content = (_maximizedSide == "Left") ? "元に戻す" : "左ペイン";
+            if (ButtonToggleRightMaximize != null)
+                ButtonToggleRightMaximize.Content = (_maximizedSide == "Right") ? "元に戻す" : "右ペイン";
         }
     }
 }

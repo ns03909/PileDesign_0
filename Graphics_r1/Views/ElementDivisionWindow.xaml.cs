@@ -480,5 +480,48 @@ namespace PileDesign.Views
             }
             return null;
         }
+
+        // ペイン最大化トグル: 4 ペイン (要素分割 / 杭姿図 / 水平地盤反力 / グラフ) の中で 1 つを最大化、他を Hide。
+        // 同ボタン再押下で全ペインを Show して通常レイアウトに戻す。
+        // 「土層-杭セット」タブのペインのみ対象 (現状)。
+        private string _maximizedPaneTag;
+
+        private void ButtonMaximizePane_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || btn.Tag is not string tag) return;
+
+            var allTabs = new[] { YousoTab, ShapeTab, KhTab, GraphTab };
+            if (allTabs.Any(t => t == null)) return;
+
+            if (_maximizedPaneTag == tag)
+            {
+                foreach (var t in allTabs) t.Show();
+                _maximizedPaneTag = null;
+            }
+            else
+            {
+                AvalonDock.Layout.LayoutAnchorable target = tag switch
+                {
+                    "Youso" => YousoTab,
+                    "Shape" => ShapeTab,
+                    "Kh" => KhTab,
+                    "Graph" => GraphTab,
+                    _ => null
+                };
+                if (target == null) return;
+                foreach (var t in allTabs) t.Hide();
+                target.Show();
+                _maximizedPaneTag = tag;
+            }
+            UpdateMaximizeButtonLabels();
+        }
+
+        private void UpdateMaximizeButtonLabels()
+        {
+            if (ButtonMaximizeYouso != null) ButtonMaximizeYouso.Content = (_maximizedPaneTag == "Youso") ? "元に戻す" : "要素分割";
+            if (ButtonMaximizeShape != null) ButtonMaximizeShape.Content = (_maximizedPaneTag == "Shape") ? "元に戻す" : "杭姿図";
+            if (ButtonMaximizeKh != null) ButtonMaximizeKh.Content = (_maximizedPaneTag == "Kh") ? "元に戻す" : "水平地盤反力";
+            if (ButtonMaximizeGraph != null) ButtonMaximizeGraph.Content = (_maximizedPaneTag == "Graph") ? "元に戻す" : "グラフ";
+        }
     }
 }

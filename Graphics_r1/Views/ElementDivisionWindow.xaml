@@ -201,7 +201,7 @@
                         <avalonDock:LayoutPanel Orientation="Horizontal">
                             <avalonDock:LayoutDocumentPaneGroup DockWidth="*" Orientation="Horizontal">
                                 <avalonDock:LayoutDocumentPane DockWidth="*" DockMinWidth="350">
-                                    <avalonDock:LayoutAnchorable Title="要素分割"  CanClose="False" CanFloat="true" CanHide="False">
+                                    <avalonDock:LayoutAnchorable x:Name="YousoTab" Title="要素分割"  CanClose="False" CanFloat="true" CanHide="False">
                                         <ContentControl>
                                             <Grid>
                                                 <Grid.RowDefinitions>
@@ -371,7 +371,7 @@
                                 </avalonDock:LayoutDocumentPane>
                                 <avalonDock:LayoutDocumentPane DockWidth="*" DockMinWidth="200">
 
-                                    <avalonDock:LayoutAnchorable Title="杭姿図" CanClose="False" CanFloat="True" CanHide="False">
+                                    <avalonDock:LayoutAnchorable x:Name="ShapeTab" Title="杭姿図" CanClose="False" CanFloat="True" CanHide="False">
                                         <ContentControl>
                                             <Canvas x:Name="Canvas"/>
                                         </ContentControl>
@@ -381,7 +381,7 @@
                             </avalonDock:LayoutDocumentPaneGroup>
                             <avalonDock:LayoutDocumentPaneGroup DockWidth="*" Orientation="Vertical">
                                 <avalonDock:LayoutDocumentPane DockMinWidth="450">
-                                    <avalonDock:LayoutAnchorable Title="水平地盤反力" CanClose="False" CanFloat="True" CanHide="False">
+                                    <avalonDock:LayoutAnchorable x:Name="KhTab" Title="水平地盤反力" CanClose="False" CanFloat="True" CanHide="False">
                                         <ContentControl>
 
                                             <Grid>
@@ -602,7 +602,7 @@
                                     </avalonDock:LayoutAnchorable>
                                 </avalonDock:LayoutDocumentPane>
                                 <avalonDock:LayoutDocumentPane>
-                                    <avalonDock:LayoutAnchorable Title="グラフ" CanClose="False" CanFloat="True" CanHide="False">
+                                    <avalonDock:LayoutAnchorable x:Name="GraphTab" Title="グラフ" CanClose="False" CanFloat="True" CanHide="False">
                                         <TabControl>
                                             <TabItem Header="基準水平地盤反力係数kh0分布">
                                                 <Grid>
@@ -1089,14 +1089,41 @@
             </TabItem>
         </TabControl>
 
-        <!-- 既存の下部ボタン領域を Grid.Row=2 に移動 -->
-        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
-                    IsEnabled="{Binding AllLampsLit}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
-        </StackPanel>
+        <!-- 既存の下部ボタン領域を Grid.Row=2 に移動 + ペイン最大化ボタンを左側に配置 -->
+        <Grid Grid.Row="2" Margin="8,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ペイン最大化ボタン (左側) -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="ペイン最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
+                <Button x:Name="ButtonMaximizeYouso" Content="要素分割" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="要素分割ペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Youso"/>
+                <Button x:Name="ButtonMaximizeShape" Content="杭姿図" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="杭姿図ペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Shape"/>
+                <Button x:Name="ButtonMaximizeKh" Content="水平地盤反力" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="水平地盤反力ペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Kh"/>
+                <Button x:Name="ButtonMaximizeGraph" Content="グラフ" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="グラフペインを最大化 / 元に戻す"
+                        Click="ButtonMaximizePane_Click" Tag="Graph"/>
+            </StackPanel>
+
+            <!-- OK / キャンセルボタン (右側) -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"
+                        IsEnabled="{Binding AllLampsLit}"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </Grid>
 
         <!-- 読み込み中オーバーレイ -->
         <Grid x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#80FFFFFF" Visibility="Visible">

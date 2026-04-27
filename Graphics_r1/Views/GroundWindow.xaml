@@ -538,19 +538,6 @@
                 <Border Grid.Column="5" Style="{StaticResource VerticalSeparatorStyle}"/>
                 <StackPanel Grid.Column="6" Orientation="Horizontal">
                     <Button Content="削除" Command="{Binding GroundDeleteCommand}" Style="{StaticResource FormButtonStyle}"/>
-                    <Button x:Name="ButtonToggleLeftMaximize" Content="◀▶ 左ペイン最大化" Background="#888" Foreground="White"
-                            Margin="8,0,0,0" Padding="8,2"
-                            Click="ButtonToggleLeftMaximize_Click">
-                        <Button.ToolTip>
-                            <TextBlock>
-                                <Run Text="土層・土質点ペインを最大化／元に戻す。"/><LineBreak/>
-                                <Run Text="クリックで右側のグラフペイン (N値・粘着力・S波速度・変形係数・"/>
-                                <Run Text="任意地盤変位・地盤変位・液状化安全率・応答スペクトル) を一括非表示にし、"/>
-                                <Run Text="ウィンドウ自体も最大化して画面いっぱいに広げる。"/><LineBreak/>
-                                <Run Text="再クリックで元の表示に戻る。"/>
-                            </TextBlock>
-                        </Button.ToolTip>
-                    </Button>
                 </StackPanel>
                 <!-- セパレータ -->
                 <!--<Border Grid.Column="7" Style="{StaticResource VerticalSeparatorStyle}"/>-->
@@ -3050,11 +3037,32 @@
             </avalonDock:LayoutRoot>
         </avalonDock:DockingManager>
 
-        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="2" Margin="8,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ペイン最大化ボタン (左側): 各ペインを画面幅いっぱいに拡張、再押下で元に戻す -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="ペイン最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
+                <Button x:Name="ButtonToggleLeftMaximize" Content="左ペイン" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="土層・土質点入力ペインを最大化 / 元に戻す"
+                        Click="ButtonToggleLeftMaximize_Click"/>
+                <Button x:Name="ButtonToggleRightMaximize" Content="右ペイン" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="グラフペイン (N値 / 粘着力 / S波速度 / 変形係数 / 任意地盤変位 / 地盤変位 / 液状化安全率 / 応答スペクトル) を最大化 / 元に戻す"
+                        Click="ButtonToggleRightMaximize_Click"/>
+            </StackPanel>
+
+            <!-- OK / キャンセルボタン (右側) -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
