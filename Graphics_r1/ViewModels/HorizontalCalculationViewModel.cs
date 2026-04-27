@@ -4157,11 +4157,13 @@ namespace PileDesign.ViewModels
             int retryCount = sorted.Count(s => s.BisectionAttempt > 0);
             double totalElapsed = sorted.Sum(s => s.ElapsedSec);
 
-            // 罫線文字 (Box-Drawing) で表組み。LogWindow は Consolas 等幅フォント。
-            // 日本語 (CJK) は半角 ASCII の 2 倍幅で描画されるため、視覚幅 (visual cols) ベースで
-            // パディングしないと縦線がずれる。VisualPad ヘルパーで列を整列。
-            const string topRule    = "━━━━━━━━━━━━━━━━━━━━━━━ 解析サマリーレポート ━━━━━━━━━━━━━━━━━━━━━━━";
-            const string bottomRule = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            // 罫線文字 (Box-Drawing) で表組み。LogWindow は MS Gothic 等幅フォント。
+            // MS Gothic では ━ (U+2501) と CJK は全角 2 col、ASCII は半角 1 col。
+            // 表本体は 102 visual cols (2 leading + 各列 + " | " 区切り) なので、罫線も 102 cols に揃える:
+            //   topRule    = 20 ━ + "  解析サマリーレポート  " + 20 ━ = 40 + 22 + 40 = 102 cols
+            //   bottomRule = 51 ━ = 102 cols
+            const string topRule    = "━━━━━━━━━━━━━━━━━━━━  解析サマリーレポート  ━━━━━━━━━━━━━━━━━━━━";
+            const string bottomRule = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
             await AddLogAsync("");
             await AddLogAsync(topRule);
