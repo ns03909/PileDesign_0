@@ -6,6 +6,64 @@
                     xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
                     >
 
+    <!-- ═══════════════════════ デザイントークン (v29 集約) ═══════════════════════ -->
+    <!-- カラー定義: 全画面で参照する基本色。テーマ変更時はここを書き換えれば全反映 -->
+    <Color x:Key="PrimaryAccentColor">#62B0E2</Color>           <!-- ライトブルー (見出し / 強調 / 選択) -->
+    <Color x:Key="PrimaryAccentDarkColor">#FF62B0E2</Color>     <!-- 同 (アルファ付き) -->
+    <Color x:Key="ErrorColor">#E53935</Color>                   <!-- 赤 (エラー) -->
+    <Color x:Key="WarningColor">#F57C00</Color>                 <!-- 橙 (警告) -->
+    <Color x:Key="ReadOnlyColor">#999999</Color>                <!-- ダークグレー (読取専用) -->
+    <Color x:Key="MutedTextColor">#555555</Color>               <!-- 補足テキスト -->
+    <Color x:Key="LogBackgroundColor">#F5F5F5</Color>           <!-- ログ背景 -->
+    <Color x:Key="LogForegroundColor">#333333</Color>           <!-- ログ本文 -->
+    <Color x:Key="SubtleBackgroundColor">#FAFAFA</Color>        <!-- 微薄背景 -->
+
+    <!-- ブラシ定義 (Foreground / Background での参照用) -->
+    <SolidColorBrush x:Key="PrimaryAccentBrush" Color="{StaticResource PrimaryAccentColor}"/>
+    <SolidColorBrush x:Key="PrimaryAccentDarkBrush" Color="{StaticResource PrimaryAccentDarkColor}"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
+    <SolidColorBrush x:Key="ReadOnlyBrush" Color="{StaticResource ReadOnlyColor}"/>
+    <SolidColorBrush x:Key="MutedTextBrush" Color="{StaticResource MutedTextColor}"/>
+    <SolidColorBrush x:Key="LogBackgroundBrush" Color="{StaticResource LogBackgroundColor}"/>
+    <SolidColorBrush x:Key="LogForegroundBrush" Color="{StaticResource LogForegroundColor}"/>
+    <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="{StaticResource SubtleBackgroundColor}"/>
+
+    <!-- タイポグラフィ Style -->
+    <!-- セクション見出し (左ペインの見出し等)。
+         既存の HorizontalCalculationWindow のローカル "SectionHeader" と互換。-->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
+        <Setter Property="Margin" Value="0,10,0,4"/>
+        <Setter Property="Padding" Value="0,0,0,2"/>
+    </Style>
+
+    <Style x:Key="SectionSubHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource SectionHeaderStyle}">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Foreground" Value="Black"/>
+    </Style>
+
+    <Style x:Key="FormLabelStyle" TargetType="TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,2,8,2"/>
+    </Style>
+
+    <Style x:Key="MutedTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}"/>
+        <Setter Property="FontSize" Value="11"/>
+    </Style>
+
+    <Style x:Key="ErrorTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource ErrorBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="WarningTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+    </Style>
+
     <Style x:Key="SvgIconStyle" TargetType="svgc:SvgViewbox">
         <Setter Property="Width" Value="16"/>
         <Setter Property="Height" Value="16"/>
@@ -14,7 +72,7 @@
     <Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="#62B0E2"/>
+                <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderBrush" Value="White"/>
                 <Setter Property="BorderThickness" Value="0.75"/>

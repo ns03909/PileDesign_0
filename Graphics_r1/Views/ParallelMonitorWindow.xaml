@@ -35,7 +35,7 @@
                      Maximum="{Binding TotalPlannedCaseCount}"
                      Value="{Binding CompletedCaseCount, Mode=OneWay}"
                      Height="10" Margin="0,0,0,8"
-                     Foreground="#62B0E2"/>
+                     Foreground="{StaticResource PrimaryAccentBrush}"/>
 
         <!-- 実行中ケース一覧 -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">

@@ -256,7 +256,7 @@
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </DataGrid.ColumnHeaderStyle>
 
@@ -671,7 +671,7 @@
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </DataGrid.ColumnHeaderStyle>
 
@@ -1031,7 +1031,7 @@
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                 </Style>
                             </DataGrid.ColumnHeaderStyle>
 
@@ -1264,7 +1264,7 @@
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                 </Style>
                             </DataGrid.ColumnHeaderStyle>
 

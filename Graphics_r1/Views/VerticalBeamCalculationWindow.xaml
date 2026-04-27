@@ -82,7 +82,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8">
                     <Button Content="解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}"
                             Width="120" Height="32" Margin="0,0,8,0"
-                            FontWeight="Bold" Background="#FF62B0E2" Foreground="White">
+                            FontWeight="Bold" Background="{StaticResource PrimaryAccentDarkBrush}" Foreground="White">
                         <Button.Style>
                             <Style TargetType="Button">
                                 <Style.Triggers>

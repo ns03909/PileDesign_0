@@ -39,7 +39,7 @@
                                 <Setter TargetName="text" Property="TextDecorations" Value="Underline"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="text" Property="Foreground" Value="#62B0E2"/>
+                                <Setter TargetName="text" Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

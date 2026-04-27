@@ -111,7 +111,7 @@
                 <!-- セクションヘッダ (左ペインのセクション見出し) -->
                 <Style x:Key="SectionHeader" TargetType="TextBlock">
                     <Setter Property="FontWeight" Value="Bold"/>
-                    <Setter Property="Foreground" Value="#62B0E2"/>
+                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Margin" Value="0,10,0,4"/>
                     <Setter Property="Padding" Value="0,0,0,2"/>
                 </Style>
@@ -352,16 +352,16 @@
                             <TextBlock Text="  ・順方向組合せ: 最大 3 回まで再試行 (×2, ×4, ×8)"/>
                             <TextBlock Text="  ・逆方向組合せ: 最大 2 回まで再試行"/>
 
-                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="③ 早期適応検出 (v26)"/>
+                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="③ 早期適応検出"/>
                             <TextBlock Text="  最初の数ステップで平均反復数が過大 (おおむね 15 回以上) の場合、"/>
                             <TextBlock Text="  最後まで計算せず即座に再試行に移行します。"/>
 
-                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="④ 改善ゲート (v28)"/>
+                            <TextBlock Margin="0,8,0,2" FontWeight="Bold" Text="④ 改善ゲート"/>
                             <TextBlock Text="  再試行で平均反復数がほとんど改善しない場合、"/>
                             <TextBlock Text="  以降の再試行を打ち切り、計算時間を節約します。"/>
 
                             <TextBlock Margin="0,8,0,0" FontStyle="Italic" Foreground="Gray"
-                                       Text="※「全解析ケース数」は再試行で増えた分も含めて表示されます。"/>
+                                       Text="※「全解析ステップ数」は再試行で増えた分も含めて表示されます。"/>
                         </StackPanel>
                     </ToolTip>
                 </TextBlock.ToolTip>
@@ -389,10 +389,10 @@
             </Grid>
 
             <DockPanel Margin="0,6,0,0">
-                <TextBlock Text="全解析ケース数："/>
+                <TextBlock Text="全解析ステップ数："/>
                 <TextBlock Text="{Binding TotalCalculationCount}" FontWeight="Bold" FontSize="16" HorizontalAlignment="Right"/>
             </DockPanel>
-            <TextBlock Text="それぞれの解析ケースで収束計算を行います。" Foreground="Gray" FontSize="11"/>
+            <TextBlock Text="荷重ケース × 組合せ × 液状化 × ステップ数 の総数。各ステップで収束計算を行います。" Foreground="Gray" FontSize="11" TextWrapping="Wrap"/>
 
             <!-- ========== 設計条件 ========== -->
             <TextBlock Text="■ 設計条件" Style="{StaticResource SectionHeader}"/>
@@ -510,6 +510,13 @@
             <Button Content="再開" Command="{Binding ResumeAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />-->
             <Button Content="水平解析キャンセル (Esc)" Command="{Binding CancelAnalysisCommand}" IsEnabled="{Binding IsAnalysisRunning}" />
 
+            <Button Content="サマリーをコピー" Command="{Binding CopySummaryToClipboardCommand}"
+                    IsEnabled="{Binding IsAnalysisExecuted}" Margin="0,4,0,0"
+                    ToolTip="解析サマリーレポートを TSV (Excel 貼付可) でクリップボードにコピー"/>
+            <Button Content="サマリーを CSV 出力" Command="{Binding ExportSummaryToCsvCommand}"
+                    IsEnabled="{Binding IsAnalysisExecuted}" Margin="0,2,0,0"
+                    ToolTip="解析サマリーレポートを CSV ファイルに保存"/>
+
         </StackPanel>
         </ScrollViewer>
 
@@ -522,11 +529,11 @@
                 <ProgressBar
                     x:Name="ProgressBarMain"
                     Minimum="0"
-                    Maximum="{Binding TotalLoadCaseCount}"
-                    Value="{Binding CompletedCaseCount}"
+                    Maximum="{Binding TotalCalculationCount}"
+                    Value="{Binding CurrentProgress}"
                     Height="18"
                     Width="200"
-                    Margin="10,0,0,0" Foreground="#62B0E2"/>
+                    Margin="10,0,0,0" Foreground="{StaticResource PrimaryAccentBrush}"/>
             </StatusBarItem>
             <StatusBarItem>
                 <TextBlock Text="{Binding ProgressText}" Margin="10,0,0,0"/>
@@ -551,7 +558,7 @@
                              TextWrapping="NoWrap"
                              VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Auto"
-                             FontFamily="Consolas"
+                             FontFamily="MS Gothic"
                              FontSize="12"
                              Background="#FAFAFA"
                              AcceptsReturn="True">

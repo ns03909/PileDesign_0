@@ -110,7 +110,7 @@
 
                                                             <StackPanel Orientation="Vertical" Grid.Row="0" Grid.Column="0">
                                                                 <StackPanel Orientation="Horizontal">
-                                                                    <Label Content="地盤番号" HorizontalContentAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
+                                                                    <Label Content="地盤番号" HorizontalContentAlignment="Right" Background="{StaticResource PrimaryAccentBrush}" Height="25" VerticalAlignment="Top" Width="100"/>
                                                                     <ComboBox x:Name="ComboBoxGroundNo"
                                                                           HorizontalAlignment="Left"
                                                                           Height="25"
@@ -120,7 +120,7 @@
                                                                           ItemsSource="{Binding InputModel.GroundsInputCountList, UpdateSourceTrigger=LostFocus}"
                                                                           SelectionChanged="ComboBoxGroundNo_SelectionChanged">
                                                                     </ComboBox>
-                                                                    <Label Content="地盤符号" HorizontalContentAlignment="Right" Background="#62B0E2" Height="25" VerticalAlignment="Top" Width="100"/>
+                                                                    <Label Content="地盤符号" HorizontalContentAlignment="Right" Background="{StaticResource PrimaryAccentBrush}" Height="25" VerticalAlignment="Top" Width="100"/>
                                                                     <TextBox x:Name="TextBoxGroundRef" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center"
                                                                             Text="{Binding GroundRef, UpdateSourceTrigger = LostFocus}" IsReadOnly="true" Foreground="Gray"/>
                                                                 </StackPanel>
@@ -143,7 +143,7 @@
                                                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
                                                                     <Style TargetType="DataGridColumnHeader">
                                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                                     </Style>
                                                                 </common:EnhancedDataGrid.ColumnHeaderStyle>
 
@@ -265,7 +265,7 @@
                                                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
                                                                     <Style TargetType="DataGridColumnHeader">
                                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                                     </Style>
                                                                 </common:EnhancedDataGrid.ColumnHeaderStyle>
 

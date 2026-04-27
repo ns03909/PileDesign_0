@@ -18,7 +18,7 @@
 
         <!-- TableCellに罫線を適用するスタイルを定義 -->
         <Style TargetType="TableCell">
-            <Setter Property="Background" Value="#62B0E2"/>
+            <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
             <Setter Property="Foreground" Value =" white"/>
             <!--<Setter Property="BorderBrush" Value="Black"/>
             <Setter Property="BorderThickness" Value="0.5"/>-->

@@ -141,7 +141,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsElementSplit}" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
 
                 </DataTrigger>
@@ -174,7 +174,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsVerticalAnalysisDone}" Value="True"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
             </Style.Triggers>
@@ -202,7 +202,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsHorizontalAnalysisDone}" Value="True"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
             </Style.Triggers>
@@ -213,7 +213,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
 
                 </DataTrigger>
@@ -1500,7 +1500,7 @@
                             <GroupStyle>
                                 <GroupStyle.HeaderTemplate>
                                     <DataTemplate>
-                                        <Border Background="#FF62B0E2" Padding="6,3">
+                                        <Border Background="{StaticResource PrimaryAccentDarkBrush}" Padding="6,3">
                                             <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
                                         </Border>
                                     </DataTemplate>
@@ -2098,7 +2098,7 @@
                                         <DataGrid.ColumnHeaderStyle>
                                             <Style TargetType="DataGridColumnHeader">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
 
@@ -2199,7 +2199,7 @@
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </DataGrid.ColumnHeaderStyle>
 
@@ -2309,7 +2309,7 @@
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </DataGrid.ColumnHeaderStyle>
 
@@ -2530,7 +2530,7 @@
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </DataGrid.ColumnHeaderStyle>
 
@@ -2647,7 +2647,7 @@
                                                         <Button x:Name="ButtonAddPile"
                                                             ToolTip="杭配置追加"
                                                             Foreground="white"
-                                                            Background="#62B0E2"
+                                                            Background="{StaticResource PrimaryAccentBrush}"
                                                             Command="{Binding AddPileCommand}" VerticalAlignment="Top">
                                                             <svgc:SvgViewbox Source="/Icons/AddPileLoc.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                         </Button>
@@ -2784,7 +2784,7 @@
                                                 <DataGrid.ColumnHeaderStyle>
                                                     <Style TargetType="DataGridColumnHeader">
                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                     </Style>
                                                 </DataGrid.ColumnHeaderStyle>
 
@@ -3034,8 +3034,8 @@
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="2"/>
                                                             <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="3"/>
 
-                                                            <TextBlock Text="VL0" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="#62B0E2"/>
-                                                            <TextBlock Text="VLadd" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                            <TextBlock Text="VL0" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                                            <TextBlock Text="VLadd" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
                                                             <TextBlock Text="VL (VL0 + VLadd)" Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" Foreground="#3271AD"/>
 
                                                             <TextBlock Text="重心 (m)" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center"/>
@@ -3281,7 +3281,7 @@
                                                 <DataGrid.ColumnHeaderStyle>
                                                     <Style TargetType="DataGridColumnHeader">
                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                     </Style>
                                                 </DataGrid.ColumnHeaderStyle>
                                                 <DataGrid.Columns>
@@ -3719,7 +3719,7 @@
                                                 <DataGrid.ColumnHeaderStyle>
                                                     <Style TargetType="DataGridColumnHeader">
                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                     </Style>
                                                 </DataGrid.ColumnHeaderStyle>
                                                 <DataGrid.Columns>
@@ -3891,7 +3891,7 @@
                                         <DataGrid.ColumnHeaderStyle>
                                             <Style TargetType="DataGridColumnHeader">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
 
@@ -4034,7 +4034,7 @@
                                                    TextWrapping="Wrap" Foreground="Gray" FontSize="10" Margin="0,2,0,0"/>
                                     </StackPanel>
 
-                                    <!--<Button x:Name="ButtonAddGridX" ToolTip="Y軸平行通り心追加"  Background="#62B0E2" Foreground="white"
+                                    <!--<Button x:Name="ButtonAddGridX" ToolTip="Y軸平行通り心追加"  Background="{StaticResource PrimaryAccentBrush}" Foreground="white"
                                                 Command="{Binding AddGridXCommand}" Grid.Row="0" Grid.Column="0">
                                         <svgc:SvgViewbox Source="/Icons/AddXGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
                                     </Button>-->
@@ -4075,7 +4075,7 @@
                                         <DataGrid.ColumnHeaderStyle>
                                             <Style TargetType="DataGridColumnHeader">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
 
@@ -4157,7 +4157,7 @@
                                     </common:EnhancedDataGrid>
 
 
-                                    <!--<Button x:Name="ButtonAddGridY" ToolTip="X軸平行通り心追加"  Background="#62B0E2" Foreground="white"
+                                    <!--<Button x:Name="ButtonAddGridY" ToolTip="X軸平行通り心追加"  Background="{StaticResource PrimaryAccentBrush}" Foreground="white"
                                                 Command="{Binding AddGridYCommand}" Grid.Row="0" Grid.Column="1">
                                         <svgc:SvgViewbox Source="/Icons/AddYGrid.svg" Style="{StaticResource SvgIconStyle24}"/>
                                     </Button>-->
@@ -4197,7 +4197,7 @@
                                         <DataGrid.ColumnHeaderStyle>
                                             <Style TargetType="DataGridColumnHeader">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
 
@@ -4468,7 +4468,7 @@
                                                         <DataGrid.ColumnHeaderStyle>
                                                             <Style TargetType="DataGridColumnHeader">
                                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                             </Style>
                                                         </DataGrid.ColumnHeaderStyle>
 
@@ -4642,7 +4642,7 @@
                                                         <DataGrid.ColumnHeaderStyle>
                                                             <Style TargetType="DataGridColumnHeader">
                                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                             </Style>
                                                         </DataGrid.ColumnHeaderStyle>
 
@@ -4863,7 +4863,7 @@
                                                         <DataGrid.ColumnHeaderStyle>
                                                             <Style TargetType="DataGridColumnHeader">
                                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                             </Style>
                                                         </DataGrid.ColumnHeaderStyle>
 
@@ -5100,7 +5100,7 @@
                                                     <DataGrid.ColumnHeaderStyle>
                                                         <Style TargetType="DataGridColumnHeader">
                                                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                            <Setter Property="Foreground" Value="#62B0E2" />
+                                                            <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                         </Style>
                                                     </DataGrid.ColumnHeaderStyle>
                                                     <DataGrid.Columns>
@@ -5781,7 +5781,7 @@
                                                                      FontSize="12" FontWeight="Medium"
                                                                      HorizontalContentAlignment="Right"
                                                                      VerticalAlignment="Center"
-                                                                     BorderThickness="0,0,0,1" BorderBrush="#62B0E2"
+                                                                     BorderThickness="0,0,0,1" BorderBrush="{StaticResource PrimaryAccentBrush}"
                                                                      Background="Transparent" Padding="0"
                                                                      GotFocus="PropertyPanel_TextBox_GotFocus">
                                                                 <TextBox.Style>
@@ -5819,7 +5819,7 @@
                                                                       ItemsSource="{Binding Options}"
                                                                       FontSize="12" VerticalAlignment="Center"
                                                                       HorizontalContentAlignment="Right"
-                                                                      BorderThickness="0,0,0,1" BorderBrush="#62B0E2">
+                                                                      BorderThickness="0,0,0,1" BorderBrush="{StaticResource PrimaryAccentBrush}">
                                                                 <ComboBox.Style>
                                                                     <Style TargetType="ComboBox">
                                                                         <Setter Property="Visibility" Value="Collapsed"/>

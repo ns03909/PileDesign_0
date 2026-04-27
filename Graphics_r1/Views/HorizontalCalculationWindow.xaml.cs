@@ -137,7 +137,7 @@ namespace PileDesign.Views
                 TextWrapping = TextWrapping.NoWrap,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                FontFamily = new FontFamily("Consolas"),
+                FontFamily = new FontFamily("MS Gothic"),
                 FontSize = 12,
                 Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xFA)),
                 AcceptsReturn = true,

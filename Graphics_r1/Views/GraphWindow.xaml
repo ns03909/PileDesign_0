@@ -67,7 +67,7 @@
                     <GroupStyle>
                         <GroupStyle.HeaderTemplate>
                             <DataTemplate>
-                                <Border Background="#FF62B0E2" Padding="6,3">
+                                <Border Background="{StaticResource PrimaryAccentDarkBrush}" Padding="6,3">
                                     <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
                                 </Border>
                             </DataTemplate>

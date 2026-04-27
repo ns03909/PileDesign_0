@@ -82,7 +82,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsElementSplit}" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
 
                 </DataTrigger>
@@ -115,7 +115,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsVerticalAnalysisDone}" Value="True"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
             </Style.Triggers>
@@ -145,7 +145,7 @@
                         <Condition Binding="{Binding IsElementSplit}" Value="True"/>
                         <Condition Binding="{Binding IsHorizontalAnalysisDone}" Value="True"/>
                     </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                 </MultiDataTrigger>
             </Style.Triggers>
@@ -156,7 +156,7 @@
             <Setter Property="Foreground" Value="White"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
 
                 </DataTrigger>
@@ -271,7 +271,7 @@
                                             <common:EnhancedDataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </common:EnhancedDataGrid.ColumnHeaderStyle>
 
@@ -437,7 +437,7 @@
                                             <common:EnhancedDataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </common:EnhancedDataGrid.ColumnHeaderStyle>
 
@@ -559,7 +559,7 @@
                                             <common:EnhancedDataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </common:EnhancedDataGrid.ColumnHeaderStyle>
 
@@ -702,7 +702,7 @@
                                         <common:EnhancedDataGrid.ColumnHeaderStyle>
                                             <Style TargetType="DataGridColumnHeader">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
                                         </common:EnhancedDataGrid.ColumnHeaderStyle>
                                         <common:EnhancedDataGrid.Columns>

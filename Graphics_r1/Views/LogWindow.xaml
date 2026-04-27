@@ -58,7 +58,7 @@
         <ListBox Grid.Row="1" x:Name="LogListBox"
                  ItemsSource="{Binding LogLines}"
                  SelectionMode="Extended"
-                 FontFamily="Consolas"
+                 FontFamily="MS Gothic"
                  FontSize="12"
                  Background="#F5F5F5"
                  Foreground="#333333"

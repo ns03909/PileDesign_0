@@ -38,7 +38,7 @@
         <Style x:Key="FormLabelStyle" TargetType="TextBlock">
             <Setter Property="Width" Value="100"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Background" Value="#62B0E2"/>
+            <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="6,3"/>
             <Setter Property="TextAlignment" Value="Center"/>
@@ -145,7 +145,7 @@
                 </StackPanel.ToolTip>
 
 
-                <!--<TextBlock Text="杭体番号" Width="100" HorizontalAlignment="Left" Background="#62B0E2"/>-->
+                <!--<TextBlock Text="杭体番号" Width="100" HorizontalAlignment="Left" Background="{StaticResource PrimaryAccentBrush}"/>-->
                 <Label Content="_杭体番号" Target="{Binding ElementName=ComboBoxPileBodyNo}" 
                         HorizontalAlignment="Left"/>
                 <ComboBox x:Name="ComboBoxPileBodyNo"
@@ -232,7 +232,7 @@
                     <ToolBar>
                         <Button x:Name="ButtonAddGroundLayer" Content="区間追加" HorizontalAlignment="Left"
                                 Command="{Binding AddSegmentCommand}"
-                                Background="#62B0E2" Foreground="White"/>
+                                Background="{StaticResource PrimaryAccentBrush}" Foreground="White"/>
                     </ToolBar>
 
                     <common:EnhancedDataGrid x:Name="DataGridPileBody" MinHeight="120" MaxHeight="240"
@@ -250,7 +250,7 @@
                         <common:EnhancedDataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                <Setter Property="Foreground" Value="#62B0E2" />
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                             </Style>
                         </common:EnhancedDataGrid.ColumnHeaderStyle>
                         <common:EnhancedDataGrid.Columns>

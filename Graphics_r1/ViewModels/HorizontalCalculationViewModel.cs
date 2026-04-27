@@ -449,14 +449,7 @@ namespace PileDesign.ViewModels
         public int CompletedCaseCount
         {
             get => _completedCaseCount;
-            set
-            {
-                if (SetProperty(ref _completedCaseCount, value))
-                {
-                    OnPropertyChanged(nameof(PendingCaseCount));
-                    OnPropertyChanged(nameof(ProgressText));
-                }
-            }
+            set { if (SetProperty(ref _completedCaseCount, value)) OnPropertyChanged(nameof(PendingCaseCount)); }
         }
 
         private int _totalPlannedCaseCount;
@@ -597,10 +590,85 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _currentProgress, value);
                 OnPropertyChanged(nameof(ProgressText));
+                OnPropertyChanged(nameof(ElapsedTimeText));
+                OnPropertyChanged(nameof(EstimatedRemainingText));
+                OnPropertyChanged(nameof(ProgressText));
             }
         }
 
-        public string ProgressText => $"{CompletedCaseCount}/{TotalLoadCaseCount}";
+        public string ProgressText
+        {
+            get
+            {
+                string baseText = $"{CurrentProgress}/{TotalCalculationCount}";
+                string elapsed = ElapsedTimeText;
+                string remaining = EstimatedRemainingText;
+                if (string.IsNullOrEmpty(elapsed) && string.IsNullOrEmpty(remaining))
+                    return baseText;
+                if (string.IsNullOrEmpty(remaining))
+                    return $"{baseText}  ┃  {elapsed}";
+                return $"{baseText}  ┃  {elapsed} / {remaining}";
+            }
+        }
+
+        // v29 (2026-04-27): 解析開始時刻 (経過/残り時間表示用)。RunAsync 冒頭でセット。
+        private DateTime? _analysisStartUtc;
+        private System.Timers.Timer? _elapsedTimer;
+
+        private void StartElapsedTimer()
+        {
+            StopElapsedTimer();
+            _elapsedTimer = new System.Timers.Timer(1000) { AutoReset = true };
+            _elapsedTimer.Elapsed += (_, __) =>
+            {
+                Application.Current?.Dispatcher.BeginInvoke(() =>
+                {
+                    OnPropertyChanged(nameof(ElapsedTimeText));
+                    OnPropertyChanged(nameof(EstimatedRemainingText));
+                    OnPropertyChanged(nameof(ProgressText));
+                });
+            };
+            _elapsedTimer.Start();
+        }
+
+        private void StopElapsedTimer()
+        {
+            if (_elapsedTimer != null)
+            {
+                _elapsedTimer.Stop();
+                _elapsedTimer.Dispose();
+                _elapsedTimer = null;
+            }
+        }
+
+        /// <summary>解析開始からの経過時間 (mm:ss)。未開始時は空文字。</summary>
+        public string ElapsedTimeText
+        {
+            get
+            {
+                if (!_analysisStartUtc.HasValue) return string.Empty;
+                var elapsed = DateTime.UtcNow - _analysisStartUtc.Value;
+                return $"経過 {(int)elapsed.TotalMinutes:D2}:{elapsed.Seconds:D2}";
+            }
+        }
+
+        /// <summary>線形外挿による残り時間推定 (mm:ss)。進捗 0 / 完了時は空文字。</summary>
+        public string EstimatedRemainingText
+        {
+            get
+            {
+                if (!_analysisStartUtc.HasValue) return string.Empty;
+                int total = TotalCalculationCount;
+                int done = CurrentProgress;
+                if (done <= 0 || total <= 0 || done >= total) return string.Empty;
+                var elapsed = DateTime.UtcNow - _analysisStartUtc.Value;
+                double secPerStep = elapsed.TotalSeconds / done;
+                double remainingSec = secPerStep * (total - done);
+                int rm = (int)(remainingSec / 60);
+                int rs = (int)(remainingSec % 60);
+                return $"残り {rm:D2}:{rs:D2} (推定)";
+            }
+        }
 
         // コンストラクタ（軽量: UIが先に表示されるようにモデル作成は遅延）
         public HorizontalCalculationViewModel(MainWindowViewModel mainWindowViewModel)
@@ -1243,6 +1311,12 @@ namespace PileDesign.ViewModels
             {
                 IsAnalysisRunning = false;
 
+                // v29: 経過時間タイマーを停止 (キャンセル/エラー時の取りこぼし防止)
+                StopElapsedTimer();
+                OnPropertyChanged(nameof(ElapsedTimeText));
+                OnPropertyChanged(nameof(EstimatedRemainingText));
+                OnPropertyChanged(nameof(ProgressText));
+
                 // 並列モニタが開いていれば閉じる (正常終了/キャンセル/エラー全てで共通)
                 Application.Current?.Dispatcher.Invoke(() => RequestHideParallelMonitor?.Invoke());
 
@@ -1780,6 +1854,10 @@ namespace PileDesign.ViewModels
 
             // v29: ステップサマリーをリセット (前回解析の結果をクリア)
             _stepSummaries.Clear();
+
+            // v29: 経過/残り時間表示用に開始時刻記録 + 1 秒タイマーで定期更新
+            _analysisStartUtc = DateTime.UtcNow;
+            StartElapsedTimer();
 
             // 並列モニタ (案 B): 新解析のたびに Active/Completed をリセット
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
@@ -2597,30 +2675,23 @@ namespace PileDesign.ViewModels
                                 }
 
 
-                                // 残差ログ（ラインサーチ判定はステップ局所 flag を使用。旧 _useLineSearch 書き換え時と同じ挙動）
-                                string relaxInfo;
+                                // v29 (2026-04-27): 反復ログを 1 行に統合 (旧: 残差/診断/支配DOF の 3 行)。
+                                //   ‖R‖² / max|δu| / K range / spring k range / 支配 DOF を 1 行にまとめる。
+                                //   行数 1/3 化でログのスクロール量が大幅減、視認性向上。
+                                string stepSuffix;
                                 if (effectiveUseLineSearch && usedRelaxFactor < 0.99)
-                                    relaxInfo = $" (α={usedRelaxFactor:N2})";  // ラインサーチのステップ長
+                                    stepSuffix = $"α={usedRelaxFactor:N2}";
                                 else if (currentRelaxFactor < 0.99)
-                                    relaxInfo = $" (ω={currentRelaxFactor:N2})"; // 緩和係数
+                                    stepSuffix = $"ω={currentRelaxFactor:N2}";
                                 else
-                                    relaxInfo = "";
-                                if (caseModel.NormsROnNormsFint < alpha)
-                                {
-                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{caseModel.NormsROnNormsFint:E2}" + "≦" + $"{alpha:E2} Converged" + relaxInfo);
-                                }
-                                else
-                                {
-                                    await AddLogAsync(caseTag + "　　" + "||R||**2 / ||Fint||**2 = " + $"{caseModel.NormsROnNormsFint:E2}" + "＞" + $"{alpha:E2}" + relaxInfo);
-                                }
+                                    stepSuffix = "ω=1.00";
 
-                                // 診断ログ
-                                await AddLogAsync($"{caseTag}　　diag(K)[min,max]=[{diagKMin:E3}, {diagKMax:E3}], spring k[min,max]=[{springKMin:E3}, {springKMax:E3}], max|d|={dispMaxAbs:E3}");
+                                bool isConverged = caseModel.NormsROnNormsFint < alpha;
+                                string compareSym = isConverged ? "≦" : ">";
+                                string convergeFlag = isConverged ? " ✓Converged" : "";
 
-                                // v27: 振動診断 — 支配 DOF (上位 3) とフリップフロップ検出
-                                // リミットサイクル (残差が周期的に跳ね返って収束しない) の原因 DOF を特定する。
-                                // 前反復と同じ key が最大 |δu| を示し、かつ符号が逆転 → flip としてカウント。
-                                // |δu| < FLIP_THRESHOLD はノイズとみなして無視。
+                                // 支配 DOF (flip 検出を含む) — リミットサイクル原因 DOF の特定
+                                string dominantStr = "";
                                 if (dominantDofs != null && dominantDofs.Count > 0)
                                 {
                                     const double FLIP_THRESHOLD = 1e-10;
@@ -2633,21 +2704,26 @@ namespace PileDesign.ViewModels
                                         && curSign != prevDominantSign)
                                     {
                                         flipFlopCount++;
-                                        flipInfo = $" ⚠ flip#{flipFlopCount}";
+                                        flipInfo = $" ⚠flip#{flipFlopCount}";
                                     }
                                     else if (prevDominantDofKey != top.Key)
                                     {
-                                        // 支配 DOF が変わった → リセット
                                         flipFlopCount = 0;
                                     }
                                     prevDominantDofKey = top.Key;
                                     prevDominantSign = curSign;
 
                                     static string SignedExp(double v) => (v >= 0 ? "+" : "") + v.ToString("E2");
-                                    string topStr = string.Join(", ",
-                                        dominantDofs.Select(x => $"{x.Key}={SignedExp(x.Value)}"));
-                                    await AddLogAsync($"{caseTag}　　　dominant δu: {topStr}{flipInfo}");
+                                    dominantStr = $"  ▶{top.Key}={SignedExp(top.Value)}{flipInfo}";
                                 }
+
+                                await AddLogAsync(
+                                    $"{caseTag}iter {n_iteration,2}  {stepSuffix}  " +
+                                    $"‖R‖²={caseModel.NormsROnNormsFint:E2}{compareSym}{alpha:E1}{convergeFlag}  " +
+                                    $"max|δu|={dispMaxAbs:E2}  " +
+                                    $"K=[{diagKMin:E1},{diagKMax:E1}]  " +
+                                    $"k=[{springKMin:E1},{springKMax:E1}]" +
+                                    dominantStr);
 
                                 // v27: 案 A — リミットサイクル Aitken 平均化
                                 // 支配 DOF の flip が AITKEN_FLIP_TRIGGER 回連続検出されたら、
@@ -2889,11 +2965,14 @@ namespace PileDesign.ViewModels
                                 double _factMs = FEM.CsparseLinearSolver.FactorizeTicks * _tickToMs;
                                 double _backSubMs = FEM.CsparseLinearSolver.SolveBackSubTicks * _tickToMs;
                                 long _cholReuse = FEM.CsparseLinearSolver.CholeskyReuseCount;
-                                await AddLogAsync($"{caseTag}    ⏱ プロファイル: K組立={_findKMs:F0}ms×{profFindKCalls}, Solve={_solveMs:F0}ms {_solverTag} (CSC={_cscMs:F0} 分解={_factMs:F0} 代入={_backSubMs:F0} 再利用={_cholReuse}), " +
-                                    (profLineSearchCalls > 0
-                                        ? $"LS={_lsMs:F0}ms×{profLineSearchCalls} (avg trial={_lsTrialAvg:F1}), "
-                                        : $"FindT={_findTMs:F0}ms, ") +
-                                    $"total={_totalSec:F1}s");
+                                string lsOrFindT = profLineSearchCalls > 0
+                                    ? $"LS {_lsMs:F0}ms×{profLineSearchCalls} (avg {_lsTrialAvg:F1})"
+                                    : $"FindT {_findTMs:F0}ms";
+                                await AddLogAsync(
+                                    $"{caseTag}  ⏱ total {_totalSec:F1}s ┃ " +
+                                    $"K組立 {_findKMs:F0}ms×{profFindKCalls} ┃ " +
+                                    $"Solve {_solveMs:F0}ms {_solverTag} (CSC={_cscMs:F0} 分解={_factMs:F0} 代入={_backSubMs:F0} re={_cholReuse}) ┃ " +
+                                    lsOrFindT);
 
                                 // v19: 緩和基準が本来の許容値から大きく逸脱している場合は、再試行対象とする
                                 // （長期未改善／停滞検出で緩和はしたが、物理的にはまだ収束していない状態）
@@ -3218,6 +3297,11 @@ namespace PileDesign.ViewModels
 
             // v29: ステップ単位の収束サマリーをレポート出力
             await OutputStepSummaryReport();
+
+            // v29: 経過時間タイマー停止 (これ以降は最終値で固定表示)
+            StopElapsedTimer();
+            OnPropertyChanged(nameof(ElapsedTimeText));
+            OnPropertyChanged(nameof(EstimatedRemainingText));
 
             await AddLogAsync("計算終了");
 
@@ -3911,6 +3995,141 @@ namespace PileDesign.ViewModels
             => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "Dry")}] ";
 
         /// <summary>
+        /// Consolas 等幅フォント上での視覚幅を計算する (col 数)。
+        /// ASCII / Box Drawing / Greek 小文字 / 矢印類 → 1 col、
+        /// CJK (Hiragana / Katakana / 漢字 / 全角) → 2 col、
+        /// 一部の Emoji (⛔ 等) → 2 col。
+        /// </summary>
+        private static int VisualWidth(string s)
+        {
+            int w = 0;
+            foreach (char c in s)
+            {
+                if (c < 0x0080) { w += 1; continue; }                       // ASCII
+                if (c >= 0x2500 && c <= 0x257F) { w += 1; continue; }       // Box Drawing
+                if (c >= 0x0370 && c <= 0x03FF) { w += 1; continue; }       // Greek (α β δ ω 等)
+                if (c == '‖' || c == '·' || c == '✓' || c == '✗' || c == '▶') { w += 1; continue; }
+                if (c == '⛔' || c == '⏱' || c == '♻' || c == '⚠') { w += 2; continue; }
+                if ((c >= 0x3000 && c <= 0x9FFF) || (c >= 0xFF00 && c <= 0xFFEF)) { w += 2; continue; } // CJK / 全角
+                w += 1;
+            }
+            return w;
+        }
+
+        /// <summary>視覚幅ベースで指定列幅にパディングする (左寄せ既定、rightAlign で右寄せ)。</summary>
+        private static string VisualPad(string s, int targetVisualWidth, bool rightAlign = false)
+        {
+            int cur = VisualWidth(s);
+            int pad = Math.Max(0, targetVisualWidth - cur);
+            string padStr = new string(' ', pad);
+            return rightAlign ? padStr + s : s + padStr;
+        }
+
+        /// <summary>
+        /// v29: ステップサマリーを TSV / CSV 形式に整形して返す。
+        /// 集計サマリー (header) + 全ステップの 1 行 1 レコード形式。
+        /// </summary>
+        private string BuildStepSummaryText(string sep)
+        {
+            var snapshot = _stepSummaries.ToArray();
+            if (snapshot.Length == 0) return string.Empty;
+            var sorted = snapshot
+                .OrderBy(s => s.Level).ThenBy(s => s.LoadCaseNo).ThenBy(s => s.ComboNo)
+                .ThenBy(s => s.IsLiquefaction ? 1 : 0).ThenBy(s => s.Step).ThenBy(s => s.BisectionAttempt)
+                .ToList();
+
+            int convergedCount = sorted.Count(s => s.Status == StepStatus.Converged);
+            int unconvergedCount = sorted.Count(s => s.Status == StepStatus.Unconverged);
+            int physicallyUnconvergedCount = sorted.Count(s => s.Status == StepStatus.PhysicallyUnconverged);
+            int retryCount = sorted.Count(s => s.BisectionAttempt > 0);
+            double totalElapsed = sorted.Sum(s => s.ElapsedSec);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"# 解析サマリーレポート (生成: {DateTime.Now:yyyy-MM-dd HH:mm:ss})");
+            sb.AppendLine($"# ステップ総数 {sorted.Count} (再試行含む)、合計時間 {totalElapsed:F1}s");
+            sb.AppendLine($"# 収束 {convergedCount} 件 / 未収束 {unconvergedCount} 件 / 物理的未収束 {physicallyUnconvergedCount} 件 / 再試行発生 {retryCount} 件");
+            sb.AppendLine();
+            // ヘッダ行
+            sb.AppendLine(string.Join(sep, new[] {
+                "ケース", "Level", "荷重ケース", "組合せ", "液状化",
+                "Step", "NStep", "試行", "反復", "残差", "α許容", "max|d|", "状態", "時間(s)"
+            }));
+            foreach (var s in sorted)
+            {
+                string statusStr = s.Status switch
+                {
+                    StepStatus.Converged => "Converged",
+                    StepStatus.Unconverged => "Unconverged",
+                    StepStatus.PhysicallyUnconverged => "PhysUnconverged",
+                    _ => "?"
+                };
+                sb.AppendLine(string.Join(sep, new[] {
+                    s.CaseTag.Replace(",", " "),  // CSV 用にカンマ除去
+                    s.Level.ToString(),
+                    s.LoadCaseNo.ToString(),
+                    s.ComboNo.ToString(),
+                    s.IsLiquefaction ? "Liq" : "Dry",
+                    s.Step.ToString(),
+                    s.NStep.ToString(),
+                    s.BisectionAttempt.ToString(),
+                    s.Iterations.ToString(),
+                    s.FinalResidual.ToString("E3"),
+                    s.EffectiveAlpha.ToString("E2"),
+                    s.MaxDisp.ToString("E3"),
+                    statusStr,
+                    s.ElapsedSec.ToString("F1")
+                }));
+            }
+            return sb.ToString();
+        }
+
+        [RelayCommand]
+        private void CopySummaryToClipboard()
+        {
+            var text = BuildStepSummaryText("\t");
+            if (string.IsNullOrEmpty(text))
+            {
+                MessageBox.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            try { System.Windows.Clipboard.SetText(text); }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"クリップボードへのコピーに失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            StatusMessage = $"サマリー {_stepSummaries.Count} 行をクリップボードにコピーしました";
+        }
+
+        [RelayCommand]
+        private void ExportSummaryToCsv()
+        {
+            var text = BuildStepSummaryText(",");
+            if (string.IsNullOrEmpty(text))
+            {
+                MessageBox.Show("サマリーデータがありません。先に解析を実行してください。", "情報", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                DefaultExt = ".csv",
+                FileName = $"AnalysisSummary_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+            };
+            if (dialog.ShowDialog() != true) return;
+            try
+            {
+                // Excel での文字化け回避のため UTF-8 BOM 付きで保存
+                System.IO.File.WriteAllText(dialog.FileName, text, new System.Text.UTF8Encoding(true));
+                StatusMessage = $"サマリーを {System.IO.Path.GetFileName(dialog.FileName)} に保存しました";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"CSV 保存に失敗しました: {ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
         /// v29: 解析終了時にステップ単位の収束サマリーをレポート出力する。
         /// 全ステップ (再試行含む) を表形式で表示し、未収束件数を集計表示。
         /// </summary>
@@ -3936,19 +4155,37 @@ namespace PileDesign.ViewModels
             int retryCount = sorted.Count(s => s.BisectionAttempt > 0);
             double totalElapsed = sorted.Sum(s => s.ElapsedSec);
 
-            await AddLogAsync("");
-            await AddLogAsync("═══════════════════════ 解析サマリーレポート ═══════════════════════");
-            await AddLogAsync($"ステップ総数 {totalCount} (再試行含む)、合計時間 {totalElapsed:F1}s");
-            await AddLogAsync($"  ✓ 収束: {convergedCount} 件");
-            if (unconvergedCount > 0)
-                await AddLogAsync($"  ✗ 未収束 (反復上限到達): {unconvergedCount} 件");
-            if (physicallyUnconvergedCount > 0)
-                await AddLogAsync($"  ⛔ 物理的未収束 (耐力超過の可能性): {physicallyUnconvergedCount} 件");
-            if (retryCount > 0)
-                await AddLogAsync($"  ♻ 再試行発生: {retryCount} 件 (ステップ細分化)");
+            // 罫線文字 (Box-Drawing) で表組み。LogWindow は Consolas 等幅フォント。
+            // 日本語 (CJK) は半角 ASCII の 2 倍幅で描画されるため、視覚幅 (visual cols) ベースで
+            // パディングしないと縦線がずれる。VisualPad ヘルパーで列を整列。
+            const string topRule    = "━━━━━━━━━━━━━━━━━━━━━━━ 解析サマリーレポート ━━━━━━━━━━━━━━━━━━━━━━━";
+            const string bottomRule = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
             await AddLogAsync("");
-            await AddLogAsync("[ケース            ] [Step ] [試行] [反復] [残差        ] [α許容    ] [max|d|       ] [状態          ] [時間   ]");
+            await AddLogAsync(topRule);
+            await AddLogAsync($"ステップ総数 {totalCount} (再試行含む)  ┃  合計時間 {totalElapsed:F1}s");
+            await AddLogAsync($"  ✓ 収束 {convergedCount} 件" +
+                (unconvergedCount > 0 ? $"  /  ✗ 未収束 (反復上限到達) {unconvergedCount} 件" : "") +
+                (physicallyUnconvergedCount > 0 ? $"  /  ⛔ 物理的未収束 (耐力超過の可能性) {physicallyUnconvergedCount} 件" : "") +
+                (retryCount > 0 ? $"  /  ♻ 再試行発生 {retryCount} 件" : ""));
+            await AddLogAsync("");
+
+            // 列の視覚幅 (Consolas 上での col 数)
+            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wRes = 9, wAlpha = 7, wMaxD = 9, wStat = 13, wTime = 6;
+
+            // 表ヘッダ + 区切り行 (視覚幅でパディング)
+            await AddLogAsync(
+                "  " + VisualPad("ケース", wCase) + " │ " + VisualPad("Step", wStep) +
+                " │ " + VisualPad("試行", wRetry) + " │ " + VisualPad("反復", wIter) +
+                " │ " + VisualPad("残差", wRes) + " │ " + VisualPad("α許容", wAlpha) +
+                " │ " + VisualPad("max|δu|", wMaxD) + " │ " + VisualPad("状態", wStat) +
+                " │ " + VisualPad("時間", wTime));
+            await AddLogAsync(
+                "  " + new string('─', wCase + 1) + "┼" + new string('─', wStep + 2) +
+                "┼" + new string('─', wRetry + 2) + "┼" + new string('─', wIter + 2) +
+                "┼" + new string('─', wRes + 2) + "┼" + new string('─', wAlpha + 2) +
+                "┼" + new string('─', wMaxD + 2) + "┼" + new string('─', wStat + 2) +
+                "┼" + new string('─', wTime + 1));
             foreach (var s in sorted)
             {
                 string statusStr = s.Status switch
@@ -3958,19 +4195,25 @@ namespace PileDesign.ViewModels
                     StepStatus.PhysicallyUnconverged => "⛔ Phys.Unconv",
                     _ => "?"
                 };
-                string retryTag = s.BisectionAttempt > 0 ? $"#{s.BisectionAttempt}" : "  ";
+                string retryTag = s.BisectionAttempt > 0 ? $"#{s.BisectionAttempt}" : "-";
+                string stepStr = $"{s.Step,2}/{s.NStep,-2}";
                 await AddLogAsync(
-                    $"  {s.CaseTag,-18}  {s.Step,2}/{s.NStep,-2}   {retryTag,-3}   {s.Iterations,3}   " +
-                    $"{s.FinalResidual,10:E3}   {s.EffectiveAlpha,8:E2}   {s.MaxDisp,10:E3}   " +
-                    $"{statusStr,-14}  {s.ElapsedSec,6:F1}s");
+                    "  " + VisualPad(s.CaseTag, wCase) + " │ " + VisualPad(stepStr, wStep) +
+                    " │ " + VisualPad(retryTag, wRetry, rightAlign: true) +
+                    " │ " + VisualPad(s.Iterations.ToString(), wIter, rightAlign: true) +
+                    " │ " + VisualPad(s.FinalResidual.ToString("E2"), wRes, rightAlign: true) +
+                    " │ " + VisualPad(s.EffectiveAlpha.ToString("E1"), wAlpha, rightAlign: true) +
+                    " │ " + VisualPad(s.MaxDisp.ToString("E2"), wMaxD, rightAlign: true) +
+                    " │ " + VisualPad(statusStr, wStat) +
+                    " │ " + VisualPad($"{s.ElapsedSec:F1}s", wTime, rightAlign: true));
             }
 
-            // 未収束ケースのみのリストを再掲 (画面で見落とし防止)
+            // 未収束ステップのみの再掲 (見落とし防止)
             var failures = sorted.Where(s => s.Status != StepStatus.Converged).ToList();
             if (failures.Count > 0)
             {
                 await AddLogAsync("");
-                await AddLogAsync("─── 未収束 / 物理的未収束のステップ一覧 ───");
+                await AddLogAsync("  ─ 未収束 / 物理的未収束のステップ ─");
                 foreach (var s in failures)
                 {
                     string statusStr = s.Status switch
@@ -3979,10 +4222,10 @@ namespace PileDesign.ViewModels
                         StepStatus.PhysicallyUnconverged => "⛔ 物理的未収束",
                         _ => "?"
                     };
-                    await AddLogAsync($"  {s.CaseTag} ステップ {s.Step}/{s.NStep} (試行#{s.BisectionAttempt}): {statusStr}, 残差={s.FinalResidual:E3}, max|d|={s.MaxDisp:E3}m");
+                    await AddLogAsync($"    {s.CaseTag} step {s.Step}/{s.NStep} (試行#{s.BisectionAttempt})  {statusStr}  残差={s.FinalResidual:E2}  max|δu|={s.MaxDisp:E2}m");
                 }
             }
-            await AddLogAsync("════════════════════════════════════════════════════════════════════");
+            await AddLogAsync(bottomRule);
             await AddLogAsync("");
         }
 

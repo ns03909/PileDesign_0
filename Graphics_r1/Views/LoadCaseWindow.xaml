@@ -501,7 +501,7 @@
                                 <RowDefinition Height="auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="共通入力" Foreground="#62B0E2" Grid.Row="0" Grid.Column="0"/>
+                            <TextBlock Text="共通入力" Foreground="{StaticResource PrimaryAccentBrush}" Grid.Row="0" Grid.Column="0"/>
 
                             <common:EnhancedDataGrid x:Name="DataGridCommonLoadCase1"
                                 ItemsSource="{Binding LoadCasesLevel1Common, UpdateSourceTrigger=LostFocus}"
@@ -519,7 +519,7 @@
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
                                     <Style TargetType="DataGridColumnHeader">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                     </Style>
                                 </common:EnhancedDataGrid.ColumnHeaderStyle>
 
@@ -1158,7 +1158,7 @@
                             </Grid.RowDefinitions>
 
                             <!--<StackPanel Grid.Column="0">-->
-                            <TextBlock Text="共通入力" Foreground="#62B0E2" Grid.Row="0" Grid.Column="0"/>
+                            <TextBlock Text="共通入力" Foreground="{StaticResource PrimaryAccentBrush}" Grid.Row="0" Grid.Column="0"/>
                             <!-- 共通LoadCases2用のDataGridのColumns -->
                             <common:EnhancedDataGrid x:Name="DataGridCommonLoadCase2" ItemsSource="{Binding LoadCasesLevel2Common, UpdateSourceTrigger=LostFocus}"
                                 AutoGenerateColumns="False" CanUserAddRows="False"
@@ -1183,7 +1183,7 @@
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
                                     <Style TargetType="DataGridColumnHeader">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                        <Setter Property="Foreground" Value="#62B0E2" />
+                                        <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                     </Style>
                                 </common:EnhancedDataGrid.ColumnHeaderStyle>
 

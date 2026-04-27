@@ -34,7 +34,7 @@
         <Style x:Key="FormLabelStyle" TargetType="TextBlock">
           <Setter Property="Width" Value="100"/>
           <Setter Property="VerticalAlignment" Value="Center"/>
-          <Setter Property="Background" Value="#62B0E2"/>
+          <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
           <Setter Property="Foreground" Value="White"/>
           <Setter Property="Padding" Value="6,3"/>
           <Setter Property="TextAlignment" Value="Center"/>
@@ -1531,7 +1531,7 @@
 
                                     <StackPanel Grid.Row="0">
                                         <ToolBar>
-                                            <Button x:Name="ButtonAddGroundLayer" Content="土層追加" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
+                                            <Button x:Name="ButtonAddGroundLayer" Content="土層追加" Background="{StaticResource PrimaryAccentBrush}" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding AddGroundLayerCommand}">
                                                 <Button.ToolTip>
                                                     <TextBlock>
@@ -1541,7 +1541,7 @@
                                                 </Button.ToolTip>
                                             </Button>
 
-                                            <Button Content="全土層削除" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
+                                            <Button Content="全土層削除" Background="{StaticResource PrimaryAccentBrush}" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding DeleteAllGroundLayersCommand}">
                                                 <Button.ToolTip>
                                                     <TextBlock>
@@ -1613,7 +1613,7 @@
                                             <DataGrid.ColumnHeaderStyle>
                                                 <Style TargetType="DataGridColumnHeader">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                    <Setter Property="Foreground" Value="#62B0E2" />
+                                                    <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
                                             </DataGrid.ColumnHeaderStyle>
                                             <DataGrid.Columns>
@@ -1913,8 +1913,8 @@
 
                                             <Border BorderBrush="WhiteSmoke" Background="WhiteSmoke" BorderThickness="1" Grid.Row="0">
                                                 <StackPanel>
-                                                    <TextBlock Text="工学的" HorizontalAlignment="Center" Height="25" VerticalAlignment="Top" Foreground="#62B0E2"/>
-                                                    <TextBlock Text="基盤" HorizontalAlignment="Center" Height="25" VerticalAlignment="Top" Foreground="#62B0E2"/>
+                                                    <TextBlock Text="工学的" HorizontalAlignment="Center" Height="25" VerticalAlignment="Top" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                                    <TextBlock Text="基盤" HorizontalAlignment="Center" Height="25" VerticalAlignment="Top" Foreground="{StaticResource PrimaryAccentBrush}"/>
                                                 </StackPanel>
                                             </Border>
 
@@ -1946,7 +1946,7 @@
 
                                     <ToolBarTray Grid.Row="0">
                                         <ToolBar Band="1" BandIndex="1">
-                                            <Button x:Name="ButtonAddGroundMass" Content="土質点追加" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
+                                            <Button x:Name="ButtonAddGroundMass" Content="土質点追加" Background="{StaticResource PrimaryAccentBrush}" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding AddGroundMassCommand}">
                                                 <Button.ToolTip>
                                                     <TextBlock>
@@ -1956,11 +1956,11 @@
                                                 </Button.ToolTip>
                                             </Button>
 
-                                            <Button Content="全土質点削除" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
+                                            <Button Content="全土質点削除" Background="{StaticResource PrimaryAccentBrush}" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding DeleteAllGroundMassesCommand}">
                                             </Button>
 
-                                            <Button Content="以下1m間隔" Background="#62B0E2" Foreground="white" VerticalAlignment="top"
+                                            <Button Content="以下1m間隔" Background="{StaticResource PrimaryAccentBrush}" Foreground="white" VerticalAlignment="top"
                                                 Command="{Binding Make1mSpacingCommand}">
                                             </Button>
 
@@ -2024,7 +2024,7 @@
                                         <DataGrid.ColumnHeaderStyle>
                                             <Style TargetType="DataGridColumnHeader">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                                <Setter Property="Foreground" Value="#62B0E2" />
+                                                <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
                                         <DataGrid.Columns>
@@ -2880,8 +2880,8 @@
                                             <DataGridTextColumn Width="*" MinWidth="100">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
-                                                        <TextBlock Text="標高 Z" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
-                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                        <TextBlock Text="標高 Z" TextAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                                        <TextBlock Text="(m)" TextAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
                                                     </StackPanel>
                                                     
                                                 </DataGridTextColumn.Header>
@@ -2903,8 +2903,8 @@
                                             <DataGridTextColumn Width="*" MinWidth="100">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
-                                                        <TextBlock Text="変位" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
-                                                        <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center" Foreground="#62B0E2"/>
+                                                        <TextBlock Text="変位" TextAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                                                        <TextBlock Text="(mm)" TextAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource PrimaryAccentBrush}"/>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                                 <DataGridTextColumn.Binding>

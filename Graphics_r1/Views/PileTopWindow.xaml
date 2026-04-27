@@ -32,7 +32,7 @@
         <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#62B0E2"/>
+                    <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
                     <Setter Property="Foreground" Value="White"/>
                     <Setter Property="BorderBrush" Value="White"/>
                     <Setter Property="BorderThickness" Value="0.75"/>
@@ -422,7 +422,7 @@
                                     <DataGrid.ColumnHeaderStyle>
                                         <Style TargetType="DataGridColumnHeader">
                                             <Setter Property="HorizontalContentAlignment" Value="Center" />
-                                            <Setter Property="Foreground" Value="#62B0E2" />
+                                            <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                         </Style>
                                     </DataGrid.ColumnHeaderStyle>
                                     <DataGrid.Columns>
