@@ -96,8 +96,8 @@
 
         <StackPanel Orientation="Horizontal"  HorizontalAlignment="Right" Grid.Row="1">
 
-            <Button Content="保存して閉じる(Ctrl+Enter)" Width="150" Click="OkButton_Click"/>
-            <Button Content="破棄して閉じる(Esc)" Width="150" Click="CancelButton_Click"/>
+            <Button Content="保存 (Ctrl+Enter)" Width="150" Click="OkButton_Click"/>
+            <Button Content="キャンセル (Esc)" Width="150" Click="CancelButton_Click"/>
 
         </StackPanel>
     </Grid>

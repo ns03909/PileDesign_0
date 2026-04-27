@@ -285,10 +285,10 @@
         <!-- ═══ 下部ボタン ═══ -->
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                     Orientation="Horizontal" HorizontalAlignment="Right" Margin="8">
-            <Button Content="保存して閉じる (Ctrl+Enter)" Command="{Binding OkCommand}"
+            <Button Content="保存 (Ctrl+Enter)" Command="{Binding OkCommand}"
                     Width="180" Height="28" Margin="0,4,8,4"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BoolToVisConverter}}"/>
-            <Button Content="破棄して閉じる (Esc)" Command="{Binding CancelCommand}"
+            <Button Content="キャンセル (Esc)" Command="{Binding CancelCommand}"
                     Width="150" Height="28" Margin="0,4,8,4"/>
         </StackPanel>
     </Grid>

@@ -1088,12 +1088,12 @@
             <!--<Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding OkCommand}"/>
             <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding CancelCommand}"/>-->
             <Button x:Name="ButtonOk"
-            Content="保存して閉じる(Ctrl+Enter)"
+            Content="保存 (Ctrl+Enter)"
             HorizontalAlignment="Center"
             VerticalAlignment="Center" Height="30" Width="150"
             Command="{Binding OkCommand}" />
             <Button x:Name="ButtonCancel"
-            Content="破棄して閉じる(Esc)"
+            Content="キャンセル (Esc)"
             HorizontalAlignment="Center"
 VerticalAlignment="Center" Height="30" Width="150"
             Command="{Binding CancelCommand}" />

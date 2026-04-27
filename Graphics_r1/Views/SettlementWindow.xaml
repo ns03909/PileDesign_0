@@ -952,9 +952,9 @@
         </Grid>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="保存して閉じる(Ctrl+Enter)" HorizontalAlignment="Left"
+            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="破棄して閉じる(Esc)" HorizontalAlignment="Left"
+            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
         </StackPanel>
 

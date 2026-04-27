@@ -648,7 +648,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="水平解析(済●) (F5)"/>
+                    <Setter Property="Tag" Value="水平解析 ✓ (F5)"/>
                     <Setter Property="Foreground" Value="#2E7D32"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -673,7 +673,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="荷重沈下関係解析(済●) (F6)"/>
+                    <Setter Property="Tag" Value="荷重沈下関係解析 ✓ (F6)"/>
                     <Setter Property="Foreground" Value="#1565C0"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -698,7 +698,7 @@
                                              Style="{StaticResource SvgIconStyle24}"/>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Tag" Value="群杭沈下解析(済●) (F8)"/>
+                    <Setter Property="Tag" Value="群杭沈下解析 ✓ (F8)"/>
                     <Setter Property="Foreground" Value="#E65100"/>
                 </DataTrigger>
             </Style.Triggers>
@@ -1391,7 +1391,7 @@
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="水平解析(済●)"/>
+                                        <Setter Property="Label" Value="水平解析 ✓"/>
                                         <Setter Property="Foreground" Value="#2E7D32"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/LateralLoadAnalysisWindowDone.png"/>
@@ -1415,7 +1415,7 @@
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindow.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="荷重沈下関係解析(済●)"/>
+                                        <Setter Property="Label" Value="荷重沈下関係解析 ✓"/>
                                         <Setter Property="Foreground" Value="#1565C0"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/SettlementWindowDone.png"/>
@@ -1457,7 +1457,7 @@
                                 <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlement.png"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="True">
-                                        <Setter Property="Label" Value="群杭沈下解析(済●)"/>
+                                        <Setter Property="Label" Value="群杭沈下解析 ✓"/>
                                         <Setter Property="Foreground" Value="#E65100"/>
                                         <Setter Property="LargeImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>
                                         <Setter Property="SmallImageSource" Value="pack://application:,,,/Icons/GroupPileSettlementDone.png"/>

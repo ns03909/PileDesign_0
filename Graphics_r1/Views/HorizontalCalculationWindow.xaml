@@ -104,10 +104,8 @@
 
         <!-- 上部コントロール (ウィンドウが小さい時は縦スクロール) -->
 
-        <ScrollViewer Grid.Row="0" Grid.Column="0"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <ScrollViewer.Resources>
+        <Grid Grid.Row="0" Grid.Column="0">
+            <Grid.Resources>
                 <!-- セクションヘッダ (左ペインのセクション見出し) -->
                 <Style x:Key="SectionHeader" TargetType="TextBlock">
                     <Setter Property="FontWeight" Value="Bold"/>
@@ -115,8 +113,19 @@
                     <Setter Property="Margin" Value="0,10,0,4"/>
                     <Setter Property="Padding" Value="0,0,0,2"/>
                 </Style>
-            </ScrollViewer.Resources>
-        <StackPanel Orientation="Vertical">
+            </Grid.Resources>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- v29 (2026-04-27): 左ペインを 3 タブに分割し、情報密度過多 (40+ 要素縦並び) を緩和。
+                 タブ 1「荷重」: モデル情報 + 解析対象、タブ 2「解析設定」: 荷重ステップ + 設計条件 + 解析条件、
+                 タブ 3「収束・並列」: 収束計算 + 並列処理。■ 実行 はタブ外で常時表示 (Grid.Row=1)。-->
+            <TabControl Grid.Row="0" Padding="4">
+                <TabItem Header="荷重">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Vertical" Margin="2">
 
             <!-- ========== モデル情報 ========== -->
             <TextBlock Text="■ モデル情報" Style="{StaticResource SectionHeader}"/>
@@ -331,6 +340,14 @@
                 </common:EnhancedDataGrid.Columns>
             </common:EnhancedDataGrid>
 
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="解析設定">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Vertical" Margin="2">
+
             <!-- ========== 荷重ステップ ========== -->
             <TextBlock Text="■ 荷重ステップ" Style="{StaticResource SectionHeader}">
                 <TextBlock.ToolTip>
@@ -423,6 +440,14 @@
                      ToolTip="最大許容代表変位（m）。この値を超えると解析が停止します。"/>
             </StackPanel>
 
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <TabItem Header="収束・並列">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Vertical" Margin="2">
+
             <!-- ========== 収束計算 ========== -->
             <TextBlock Text="■ 収束計算" Style="{StaticResource SectionHeader}"/>
 
@@ -491,6 +516,14 @@
                        TextWrapping="Wrap"
                        Text="2 以上でケース単位の並列実行が有効。CPU コアを活用して解析時間を短縮します。"/>
 
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+
+            <!-- 実行はタブ外で常時表示 (どのタブからでもアクセス可能) -->
+            <StackPanel Grid.Row="1" Orientation="Vertical" Margin="2,4,2,2">
+
             <!-- ========== 実行 ========== -->
             <TextBlock Text="■ 実行" Style="{StaticResource SectionHeader}"/>
 
@@ -517,8 +550,8 @@
                     IsEnabled="{Binding IsAnalysisExecuted}" Margin="0,2,0,0"
                     ToolTip="解析サマリーレポートを CSV ファイルに保存"/>
 
-        </StackPanel>
-        </ScrollViewer>
+            </StackPanel>
+        </Grid>
 
         <!-- メイン表示部: TabControlでタブ切替 -->
         <StatusBar Grid.Row="2" Grid.ColumnSpan="2" Height="30"  VerticalAlignment="Bottom">
@@ -578,9 +611,9 @@
             <!--<Button x:Name="ButtonOk" Content="Ok 解析結果登録" Height="30" Width="200" Command="{Binding OkCommand}"
                     Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             <Button x:Name="ButtonCancel" Content="Cancel" Height="30" Width="100" Command="{Binding CancelCommand}"/>-->
-            <Button x:Name="ButtonOk" Content="保存して閉じる(Ctrl+Enter)" HorizontalAlignment="Left"
+            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}" Visibility="{Binding IsAnalysisExecuted, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-            <Button x:Name="ButtonCancel" Content="破棄して閉じる(Esc)" HorizontalAlignment="Left"
+            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
         </StackPanel>
     </Grid>
