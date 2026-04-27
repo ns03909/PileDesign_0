@@ -8,6 +8,7 @@
         xmlns:common="clr-namespace:PileDesign.Common"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
         d:DataContext="{d:DesignInstance Type=local:PileBodyViewModel}"
         mc:Ignorable="d"
         xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
@@ -118,12 +119,24 @@
     </Window.Resources>
 
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        <StackPanel Grid.Column="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- v29 (2026-04-27): GroundWindow と同じ AvalonDock 構造に統一。
+             3 ペイン (杭体入力 / 杭姿図 / 計算結果) を可変幅でドッキング、
+             ユーザーがドラッグで列幅調整・タブ化・アンドック可能。
+             固定 2:1:1 グリッドで右ペインの計算結果が見えなくなる問題を解消。-->
+        <avalonDock:DockingManager Grid.Row="0">
+            <avalonDock:LayoutRoot>
+                <avalonDock:LayoutPanel Orientation="Horizontal">
+                    <!-- 杭体入力ペイン -->
+                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.5*">
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="杭体入力" CanClose="False" CanHide="False">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <StackPanel>
             <StackPanel Orientation="Horizontal">
                 <StackPanel.ToolTip>
                     <Grid>
@@ -564,13 +577,26 @@
             </GroupBox>
 
         </StackPanel>
+                                </ScrollViewer>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
 
-        <GroupBox Header="杭姿図" Grid.Column="1">
-            <Canvas x:Name="Canvas" />
-        </GroupBox>
+                    <!-- 杭姿図ペイン -->
+                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.25*">
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="杭姿図" CanClose="False" CanHide="False">
+                                <Canvas x:Name="Canvas"/>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
 
-        <!--<GroupBox Header="確認用地盤描画">-->
-        <StackPanel Grid.Column="2">
+                    <!-- 計算結果ペイン -->
+                    <avalonDock:LayoutDocumentPaneGroup DockWidth="0.25*">
+                        <avalonDock:LayoutDocumentPane>
+                            <avalonDock:LayoutAnchorable Title="計算結果" CanClose="False" CanHide="False">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <StackPanel>
             <StackPanel Orientation="Horizontal">
                 
                 <ToggleButton ToolTip="地盤表示" IsChecked="{Binding IsGroundLayerOverwrapped}">
@@ -893,9 +919,15 @@
                 </StackPanel>
             </StackPanel>
         </StackPanel>
-        <!--</GroupBox>-->
+                                </ScrollViewer>
+                            </avalonDock:LayoutAnchorable>
+                        </avalonDock:LayoutDocumentPane>
+                    </avalonDock:LayoutDocumentPaneGroup>
+                </avalonDock:LayoutPanel>
+            </avalonDock:LayoutRoot>
+        </avalonDock:DockingManager>
 
-        <StackPanel Orientation="Horizontal" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="8">
             <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
                     VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
             <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
