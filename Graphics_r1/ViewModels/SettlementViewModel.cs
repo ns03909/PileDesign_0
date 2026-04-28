@@ -567,18 +567,20 @@ namespace PileDesign.ViewModels
 
             AddScatterPlotAllowable(wpf, [.. settlements], [.. allowableLoads], verticalLineColor);
 
-            AddScatterPlot(wpf, [.. xValues], [.. yValues5], NikkenSKColor.SkyBlue, "杭頭荷重");
-            AddScatterPlot(wpf, [.. xValues], [.. yValues2], NikkenSKColor.DeepBlue, "杭先端支持力");
-            AddScatterPlot(wpf, [.. xValues], [.. yValues3], NikkenSKColor.Yellow, "杭周面抵抗力");
-            AddScatterPlot(wpf, [.. xValues], [.. yValues4], NikkenSKColor.Green, "杭自重");
+            // 限界状態の予約色 (DeepBlue=使用 / Green=損傷 / PaleRed=終局) と衝突しないよう
+            // ライン系列は SkyBlue / LineOrange / Yellow / LineSlate を使用
+            AddScatterPlot(wpf, [.. xValues], [.. yValues5], NikkenSKColor.SkyBlue,    "杭頭荷重");
+            AddScatterPlot(wpf, [.. xValues], [.. yValues2], NikkenSKColor.LineOrange, "杭先端支持力");
+            AddScatterPlot(wpf, [.. xValues], [.. yValues3], NikkenSKColor.Yellow,     "杭周面抵抗力");
+            AddScatterPlot(wpf, [.. xValues], [.. yValues4], NikkenSKColor.LineSlate,  "杭自重");
 
 
             AddScatterPlotAllowable(wpfToe, [.. settlementsToe], [.. allowableLoads], verticalLineColor);
 
-            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues5], NikkenSKColor.SkyBlue, "杭頭荷重");
-            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues2], NikkenSKColor.DeepBlue, "杭先端支持力");
-            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues3], NikkenSKColor.Yellow, "杭周面抵抗力");
-            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues4], NikkenSKColor.Green, "杭自重");
+            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues5], NikkenSKColor.SkyBlue,    "杭頭荷重");
+            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues2], NikkenSKColor.LineOrange, "杭先端支持力");
+            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues3], NikkenSKColor.Yellow,     "杭周面抵抗力");
+            AddScatterPlot(wpfToe, [.. xToeValues], [.. yValues4], NikkenSKColor.LineSlate,  "杭自重");
 
             //InputModel inputModel = InputModel.Instance;
             List<double> forcesVL = [];
@@ -632,9 +634,10 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            AddAxialForceScatterPlot(wpf, [.. settlementsVL], [.. forcesVL], NikkenSKColor.SkyBlue, "VL", MarkerShape.OpenCircle);
-            AddAxialForceScatterPlot(wpf, [.. settlementsLevel1], [.. forcesLevel1], NikkenSKColor.SkyBlue, "レベル1", MarkerShape.OpenTriangleDown);
-            AddAxialForceScatterPlot(wpf, [.. settlementsLevel2], [.. forcesLevel2], NikkenSKColor.SkyBlue, "レベル2", MarkerShape.OpenDiamond);
+            // 限界状態の予約色: VL=使用限界 (DeepBlue) / レベル1=損傷限界 (Green) / レベル2=終局限界 (PaleRed)
+            AddAxialForceScatterPlot(wpf, [.. settlementsVL],     [.. forcesVL],     NikkenSKColor.DeepBlue, "VL",     MarkerShape.OpenCircle);
+            AddAxialForceScatterPlot(wpf, [.. settlementsLevel1], [.. forcesLevel1], NikkenSKColor.Green,    "レベル1", MarkerShape.OpenTriangleDown);
+            AddAxialForceScatterPlot(wpf, [.. settlementsLevel2], [.. forcesLevel2], NikkenSKColor.PaleRed,  "レベル2", MarkerShape.OpenDiamond);
 
             ConfigurePlot(wpf, "荷重-杭頭沈下曲線", "杭頭沈下量(mm)", "荷重 (kN)");
             ConfigurePlot(wpfToe, "荷重-杭先端沈下曲線", "杭先端沈下量(mm)", "荷重 (kN)");

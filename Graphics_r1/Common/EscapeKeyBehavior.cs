@@ -144,7 +144,15 @@ namespace PileDesign.Common
                     // セルが編集モードかチェック
                     return cell.IsEditing;
                 }
-                current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+                // Run などの Visual でない要素は LogicalTree にフォールバック (例外回避)
+                if (current is System.Windows.Media.Visual || current is System.Windows.Media.Media3D.Visual3D)
+                {
+                    current = System.Windows.Media.VisualTreeHelper.GetParent(current);
+                }
+                else
+                {
+                    current = System.Windows.LogicalTreeHelper.GetParent(current);
+                }
             }
             return false;
         }

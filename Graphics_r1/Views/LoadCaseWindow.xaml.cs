@@ -221,5 +221,39 @@ namespace PileDesign.Views
                 vm.PushUndoState();
             }
         }
+
+        private bool _isSplit;
+
+        private void ButtonToggleSplit_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isSplit)
+            {
+                // タブ → 縦分割
+                var ovr = TabItemOverlap.Content as System.Windows.UIElement;
+                var lc = TabItemLoadCase.Content as System.Windows.UIElement;
+                TabItemOverlap.Content = null;
+                TabItemLoadCase.Content = null;
+                SplitOverlapHost.Content = ovr;
+                SplitLoadCaseHost.Content = lc;
+                MainTabControl.Visibility = Visibility.Collapsed;
+                SplitView.Visibility = Visibility.Visible;
+                ButtonToggleSplit.Content = "タブ表示に戻す";
+                _isSplit = true;
+            }
+            else
+            {
+                // 縦分割 → タブ
+                var ovr = SplitOverlapHost.Content as System.Windows.UIElement;
+                var lc = SplitLoadCaseHost.Content as System.Windows.UIElement;
+                SplitOverlapHost.Content = null;
+                SplitLoadCaseHost.Content = null;
+                TabItemOverlap.Content = ovr;
+                TabItemLoadCase.Content = lc;
+                SplitView.Visibility = Visibility.Collapsed;
+                MainTabControl.Visibility = Visibility.Visible;
+                ButtonToggleSplit.Content = "両タブ前面表示";
+                _isSplit = false;
+            }
+        }
     }
 }

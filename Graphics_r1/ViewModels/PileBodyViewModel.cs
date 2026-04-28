@@ -562,7 +562,16 @@ namespace PileDesign.ViewModels
 
         private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
-            DependencyObject parentObject = VisualTreeHelper.GetParent(child);
+            // Run などの Visual でない要素も安全に扱えるよう LogicalTree フォールバックを併用
+            DependencyObject parentObject;
+            if (child is System.Windows.Media.Visual || child is System.Windows.Media.Media3D.Visual3D)
+            {
+                parentObject = VisualTreeHelper.GetParent(child);
+            }
+            else
+            {
+                parentObject = LogicalTreeHelper.GetParent(child);
+            }
             if (parentObject == null) return null;
 
             if (parentObject is T parent)

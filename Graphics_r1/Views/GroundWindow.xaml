@@ -758,8 +758,50 @@
                                     </TextBox.ToolTip>
                                 </TextBox>
                             </StackPanel>
-                            <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
-                                       Text="PL = Σ (1−FL)·(10−0.5z)·H ｜ 岩崎ら(1982)。判定目安: PL=0 危険度なし、0&lt;PL≤5 軽微、5&lt;PL≤15 中程度、PL&gt;15 大"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <ToggleButton x:Name="ButtonShowPLInfo" Padding="6,2" FontSize="11"
+                                              Background="Transparent" BorderThickness="0" Foreground="#666"
+                                              ToolTip="液状化指標 PL の定義と判定目安を表示">
+                                    <TextBlock><Run Text="PL の定義と判定目安"/><Run Text=" ▾"/></TextBlock>
+                                </ToggleButton>
+                                <Popup PlacementTarget="{Binding ElementName=ButtonShowPLInfo}" Placement="Bottom"
+                                       IsOpen="{Binding IsChecked, ElementName=ButtonShowPLInfo, Mode=TwoWay}"
+                                       StaysOpen="False" AllowsTransparency="True">
+                                    <Border Background="White" BorderBrush="#888" BorderThickness="1" Padding="14" SnapsToDevicePixels="True">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="6" ShadowDepth="2" Opacity="0.25"/>
+                                        </Border.Effect>
+                                        <StackPanel MinWidth="320">
+                                            <TextBlock Text="液状化指標 PL (岩崎ら 1982)" FontWeight="Bold" FontSize="13" Margin="0,0,0,6"/>
+                                            <TextBlock Text="PL = Σ (1 − FL) · (10 − 0.5z) · H" Margin="0,0,0,8"/>
+                                            <TextBlock Text="判定目安" FontWeight="Bold" Margin="0,4,0,4"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Border Grid.Row="0" Grid.Column="0" Padding="10,4" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="1,1,0,1"><TextBlock Text="PL 値" FontWeight="Bold"/></Border>
+                                                <Border Grid.Row="0" Grid.Column="1" Padding="10,4" Background="#F0F0F0" BorderBrush="#CCC" BorderThickness="1"><TextBlock Text="液状化危険度" FontWeight="Bold"/></Border>
+                                                <Border Grid.Row="1" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="0"/></Border>
+                                                <Border Grid.Row="1" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="なし"/></Border>
+                                                <Border Grid.Row="2" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="0 &lt; PL ≤ 5"/></Border>
+                                                <Border Grid.Row="2" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="軽微"/></Border>
+                                                <Border Grid.Row="3" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="5 &lt; PL ≤ 15"/></Border>
+                                                <Border Grid.Row="3" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="中程度"/></Border>
+                                                <Border Grid.Row="4" Grid.Column="0" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,0,1"><TextBlock Text="15 &lt; PL"/></Border>
+                                                <Border Grid.Row="4" Grid.Column="1" Padding="10,4" BorderBrush="#CCC" BorderThickness="1,0,1,1"><TextBlock Text="大"/></Border>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            </StackPanel>
                         </StackPanel>
                     </TabItem>
                     <TabItem Header="地盤変位">
@@ -1509,7 +1551,7 @@
                 <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
                     <avalonDock:LayoutDocumentPaneGroup x:Name="LeftPaneGroup" Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="土層入力" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="GroundLayerTab" Title="土層入力" CanClose="False" CanHide="False">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -1924,7 +1966,7 @@
                         </avalonDock:LayoutDocumentPane>
 
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="土質点入力" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="GroundMassTab" Title="土質点入力" CanClose="False" CanHide="False">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -3044,14 +3086,15 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ペイン最大化ボタン (左側): 各ペインを画面幅いっぱいに拡張、再押下で元に戻す -->
+            <!-- ペイン最大化ボタン (左側): 左 2 タブはアンドック+最大化 / 右ペインは幅トグル -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="ペイン最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
+                <TextBlock Text="アンドック・最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
                            Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
-                <Button x:Name="ButtonToggleLeftMaximize" Content="左ペイン" Height="26" Padding="8,0" Margin="0,0,4,0"
-                        ToolTip="土層・土質点入力ペインを最大化 / 元に戻す"
-                        Click="ButtonToggleLeftMaximize_Click"/>
-                <Button x:Name="ButtonToggleRightMaximize" Content="右ペイン" Height="26" Padding="8,0" Margin="0,0,4,0"
+                <Button x:Name="ButtonMaximizeGroundLayer" Content="土層入力" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="土層入力ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonMaximizeGroundMass" Content="土質点入力" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="土質点入力ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonToggleRightMaximize" Content="右ペイン" Height="26" Padding="8,0" Margin="0,0,8,0"
                         ToolTip="グラフペイン (N値 / 粘着力 / S波速度 / 変形係数 / 任意地盤変位 / 地盤変位 / 液状化安全率 / 応答スペクトル) を最大化 / 元に戻す"
                         Click="ButtonToggleRightMaximize_Click"/>
             </StackPanel>

@@ -1097,22 +1097,18 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- ペイン最大化ボタン (左側) -->
+            <!-- ペイン最大化ボタン (左側): ペインをアンドックして最大化、再押下で元の位置にドック -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="ペイン最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
+                <TextBlock Text="アンドック・最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
                            Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
                 <Button x:Name="ButtonMaximizeYouso" Content="要素分割" Height="26" Padding="8,0" Margin="0,0,4,0"
-                        ToolTip="要素分割ペインを最大化 / 元に戻す"
-                        Click="ButtonMaximizePane_Click" Tag="Youso"/>
+                        ToolTip="要素分割ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
                 <Button x:Name="ButtonMaximizeShape" Content="杭姿図" Height="26" Padding="8,0" Margin="0,0,4,0"
-                        ToolTip="杭姿図ペインを最大化 / 元に戻す"
-                        Click="ButtonMaximizePane_Click" Tag="Shape"/>
+                        ToolTip="杭姿図ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
                 <Button x:Name="ButtonMaximizeKh" Content="水平地盤反力" Height="26" Padding="8,0" Margin="0,0,4,0"
-                        ToolTip="水平地盤反力ペインを最大化 / 元に戻す"
-                        Click="ButtonMaximizePane_Click" Tag="Kh"/>
+                        ToolTip="水平地盤反力ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
                 <Button x:Name="ButtonMaximizeGraph" Content="グラフ" Height="26" Padding="8,0" Margin="0,0,4,0"
-                        ToolTip="グラフペインを最大化 / 元に戻す"
-                        Click="ButtonMaximizePane_Click" Tag="Graph"/>
+                        ToolTip="グラフペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
             </StackPanel>
 
             <!-- OK / キャンセルボタン (右側) -->

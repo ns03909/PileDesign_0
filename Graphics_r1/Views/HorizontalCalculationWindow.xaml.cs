@@ -528,7 +528,17 @@ namespace PileDesign.Views
         {
             var element = lb.InputHitTest(p) as DependencyObject;
             while (element != null && element is not ListBoxItem)
-                element = VisualTreeHelper.GetParent(element);
+            {
+                // Run などの Visual でない要素は LogicalTree にフォールバック (例外回避)
+                if (element is System.Windows.Media.Visual || element is System.Windows.Media.Media3D.Visual3D)
+                {
+                    element = VisualTreeHelper.GetParent(element);
+                }
+                else
+                {
+                    element = LogicalTreeHelper.GetParent(element);
+                }
+            }
             return element as ListBoxItem;
         }
 

@@ -56,7 +56,7 @@
                 <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="入力" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="InputTab" Title="入力" CanClose="False" CanHide="False">
                                 <StackPanel Orientation="Vertical" Grid.Column="0">
 
                                     <StackPanel Orientation="Horizontal">
@@ -552,7 +552,7 @@
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="諸元" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="SpecsTab" Title="諸元" CanClose="False" CanHide="False">
                                 <GroupBox Header="諸元">
                                     <Grid>
                                         <common:EnhancedDataGrid x:Name="DrawGridSpecifications"
@@ -596,7 +596,7 @@
                                 </GroupBox>
                             </avalonDock:LayoutAnchorable>
 
-                            <avalonDock:LayoutAnchorable Title="軸力制限（基礎部材の強度と変形性能）" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="AxialLimitTab" Title="軸力制限（基礎部材の強度と変形性能）" CanClose="False" CanHide="False">
 
                                 <StackPanel>
                                     <StackPanel Visibility="{Binding PileSection.PileBodyType,
@@ -986,7 +986,7 @@
 
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="断面図" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="SectionViewTab" Title="断面図" CanClose="False" CanHide="False">
                                 <GroupBox Header="断面図" Grid.Column="1">
                                     <Canvas x:Name="Canvas" Height="300" Width="300" Background="Transparent" Opacity="0.5" MouseRightButtonDown="Canvas_MouseRightButtonDown">
                                         <Canvas.ContextMenu>
@@ -1000,7 +1000,7 @@
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="N-M関係" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="NMTab" Title="N-M関係" CanClose="False" CanHide="False">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
@@ -1021,7 +1021,7 @@
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
 
-                            <avalonDock:LayoutAnchorable Title="M-φ関係" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="MPhiTab" Title="M-φ関係" CanClose="False" CanHide="False">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
@@ -1034,7 +1034,7 @@
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
 
-                            <avalonDock:LayoutAnchorable Title="M-θ関係" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="MThetaTab" Title="M-θ関係" CanClose="False" CanHide="False">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
@@ -1047,7 +1047,7 @@
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
 
-                            <avalonDock:LayoutAnchorable Title="N-Q関係" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="NQTab" Title="N-Q関係" CanClose="False" CanHide="False">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
@@ -1084,19 +1084,46 @@
             </avalonDock:LayoutRoot>
         </avalonDock:DockingManager>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="1">
-            <!--<Button x:Name="ButtonOk" Content="Ok" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="Cancel" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="100" Command="{Binding CancelCommand}"/>-->
-            <Button x:Name="ButtonOk"
-            Content="保存 (Ctrl+Enter)"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center" Height="30" Width="150"
-            Command="{Binding OkCommand}" />
-            <Button x:Name="ButtonCancel"
-            Content="キャンセル (Esc)"
-            HorizontalAlignment="Center"
-VerticalAlignment="Center" Height="30" Width="150"
-            Command="{Binding CancelCommand}" />
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="8,4">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBlock Text="アンドック・最大化:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource MutedTextBrush}" />
+                <Button x:Name="ButtonMaximizeInput" Content="入力" Tag="Input"
+                        Height="28" MinWidth="70" Margin="0,0,4,0"
+                        ToolTip="入力ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeSpecs" Content="諸元" Tag="Specs"
+                        Height="28" MinWidth="70" Margin="0,0,4,0"
+                        ToolTip="諸元ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeAxialLimit" Content="軸力制限" Tag="AxialLimit"
+                        Height="28" MinWidth="70" Margin="0,0,4,0"
+                        ToolTip="軸力制限ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeSectionView" Content="断面図" Tag="SectionView"
+                        Height="28" MinWidth="70" Margin="0,0,4,0"
+                        ToolTip="断面図ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeNM" Content="N-M" Tag="NM"
+                        Height="28" MinWidth="60" Margin="0,0,4,0"
+                        ToolTip="N-M関係ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeMPhi" Content="M-φ" Tag="MPhi"
+                        Height="28" MinWidth="60" Margin="0,0,4,0"
+                        ToolTip="M-φ関係ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeMTheta" Content="M-θ" Tag="MTheta"
+                        Height="28" MinWidth="60" Margin="0,0,4,0"
+                        ToolTip="M-θ関係ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+                <Button x:Name="ButtonMaximizeNQ" Content="N-Q" Tag="NQ"
+                        Height="28" MinWidth="60" Margin="0,0,4,0"
+                        ToolTip="N-Q関係ペインをアンドックして最大化 / もう一度押すと元の位置にドック" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button x:Name="ButtonOk"
+                        Content="保存 (Ctrl+Enter)"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" Height="30" Width="150"
+                        Command="{Binding OkCommand}" />
+                <Button x:Name="ButtonCancel"
+                        Content="キャンセル (Esc)"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center" Height="30" Width="150"
+                        Command="{Binding CancelCommand}" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

@@ -4,6 +4,7 @@ using PileDesign.Output;
 using PileDesign.ViewModels;
 using ScottPlot.Plottables;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -54,6 +55,16 @@ namespace PileDesign.Views
                 //Loaded += PileSectionWindow_Loaded;
                 _viewModel.PileSectionWindowInstance = this;
                 SetComboBoxSelectedItem();
+
+                _paneMaximizer = new PaneFloatMaximizer(dockingManager);
+                _paneMaximizer.Register("Input",       InputTab,       ButtonMaximizeInput,       "入力");
+                _paneMaximizer.Register("Specs",       SpecsTab,       ButtonMaximizeSpecs,       "諸元");
+                _paneMaximizer.Register("AxialLimit",  AxialLimitTab,  ButtonMaximizeAxialLimit,  "軸力制限");
+                _paneMaximizer.Register("SectionView", SectionViewTab, ButtonMaximizeSectionView, "断面図");
+                _paneMaximizer.Register("NM",          NMTab,          ButtonMaximizeNM,          "N-M");
+                _paneMaximizer.Register("MPhi",        MPhiTab,        ButtonMaximizeMPhi,        "M-φ");
+                _paneMaximizer.Register("MTheta",      MThetaTab,      ButtonMaximizeMTheta,      "M-θ");
+                _paneMaximizer.Register("NQ",          NQTab,          ButtonMaximizeNQ,          "N-Q");
             }
             catch (Exception ex)
             {
@@ -141,6 +152,8 @@ namespace PileDesign.Views
             // ComboBoxの選択を再設定
             SetComboBoxSelectedItem();
         }
+
+        private PaneFloatMaximizer? _paneMaximizer;
 
         private void SetComboBoxSelectedItem()
         {

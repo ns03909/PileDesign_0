@@ -4,6 +4,7 @@
                     xmlns:common="clr-namespace:PileDesign.Common"
                     xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
                     xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+                    xmlns:wpfMath="clr-namespace:WpfMath.Controls;assembly=WpfMath"
                     >
 
     <!-- ═══════════════════════ デザイントークン (v29 集約) ═══════════════════════ -->
@@ -28,6 +29,30 @@
     <SolidColorBrush x:Key="LogBackgroundBrush" Color="{StaticResource LogBackgroundColor}"/>
     <SolidColorBrush x:Key="LogForegroundBrush" Color="{StaticResource LogForegroundColor}"/>
     <SolidColorBrush x:Key="SubtleBackgroundBrush" Color="{StaticResource SubtleBackgroundColor}"/>
+
+    <!-- Nikken カラー (限界状態などの分類色) -->
+    <Color x:Key="NikkenSkyBlueColor">#62B0E2</Color>
+    <Color x:Key="NikkenPaleRedColor">#E95541</Color>
+    <Color x:Key="NikkenRedColor">#D82531</Color>
+    <Color x:Key="NikkenDeepBlueColor">#3271AD</Color>
+    <Color x:Key="NikkenYellowColor">#F7B515</Color>
+    <Color x:Key="NikkenGreenColor">#238966</Color>
+    <SolidColorBrush x:Key="NikkenSkyBlueBrush" Color="{StaticResource NikkenSkyBlueColor}"/>
+    <SolidColorBrush x:Key="NikkenPaleRedBrush" Color="{StaticResource NikkenPaleRedColor}"/>
+    <SolidColorBrush x:Key="NikkenRedBrush" Color="{StaticResource NikkenRedColor}"/>
+    <SolidColorBrush x:Key="NikkenDeepBlueBrush" Color="{StaticResource NikkenDeepBlueColor}"/>
+    <SolidColorBrush x:Key="NikkenYellowBrush" Color="{StaticResource NikkenYellowColor}"/>
+    <SolidColorBrush x:Key="NikkenGreenBrush" Color="{StaticResource NikkenGreenColor}"/>
+    <!-- 限界状態の意味的エイリアス: 使用限界=DeepBlue, 損傷限界=Green, 終局限界=PaleRed -->
+    <SolidColorBrush x:Key="ServiceLimitBrush" Color="{StaticResource NikkenDeepBlueColor}"/>
+    <SolidColorBrush x:Key="DamageLimitBrush" Color="{StaticResource NikkenGreenColor}"/>
+    <SolidColorBrush x:Key="UltimateLimitBrush" Color="{StaticResource NikkenPaleRedColor}"/>
+
+    <!-- 数式コントロール (WpfMath.FormulaControl) の共通スタイル: 全画面でラベル列に流用 -->
+    <Style x:Key="FormulaControlStyle" TargetType="wpfMath:FormulaControl">
+        <Setter Property="Scale" Value="12"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
 
     <!-- タイポグラフィ Style -->
     <!-- セクション見出し (左ペインの見出し等)。

@@ -53,7 +53,7 @@
                 <avalonDock:LayoutPanel Orientation="Horizontal" DockWidth="1.0*">
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="入力" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="InputTab" Title="入力" CanClose="False" CanHide="False">
                                 <StackPanel Grid.Column="0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="杭頭タイプ" Width="100"/>
@@ -403,7 +403,7 @@
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="諸元" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="SpecsTab" Title="諸元" CanClose="False" CanHide="False">
                                 <!--<TextBlock Text="諸元"/>-->
                                 <common:EnhancedDataGrid x:Name="DrawGridSpecifications"
                                           ItemsSource="{Binding PileTop.SelectedPileTopSpecification}"
@@ -445,7 +445,7 @@
 
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
-                            <avalonDock:LayoutAnchorable Title="上面図" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="TopViewTab" Title="上面図" CanClose="False" CanHide="False">
                                 <Canvas x:Name="Canvas" Background="Transparent" Opacity="0.5" MouseRightButtonDown="Canvas_MouseRightButtonDown">
                                     <Canvas.ContextMenu>
                                         <ContextMenu>
@@ -474,7 +474,7 @@
 
                                 </Grid>
                             </avalonDock:LayoutAnchorable>
-                            <avalonDock:LayoutAnchorable Title="θMインタラクション" CanClose="False" CanHide="False">
+                            <avalonDock:LayoutAnchorable x:Name="ThetaMInteractionTab" Title="θMインタラクション" CanClose="False" CanHide="False">
                                 <!--<lvc:CartesianChart Grid.Row="1" AutoUpdateEnabled="True"
                                         Series="{Binding ChartThetaMSeries, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
                                         XAxes="{Binding ChartThetaAxes, UpdateSourceTrigger=PreviewLostKeyboardFocus}"
@@ -498,11 +498,36 @@
                 </avalonDock:LayoutPanel>
             </avalonDock:LayoutRoot>
         </avalonDock:DockingManager>
-        <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="1"  HorizontalAlignment="Right">
-            <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
-            <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
-                    VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="1" Margin="8,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ペイン最大化ボタン (左側) -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="アンドック・最大化:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
+                <Button x:Name="ButtonMaximizeInput" Content="入力" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="入力ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonMaximizeSpecs" Content="諸元" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="諸元ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonMaximizeTopView" Content="上面図" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="上面図ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonMaximizeMN" Content="MN" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="MNインタラクションペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+                <Button x:Name="ButtonMaximizeThetaM" Content="θM" Height="26" Padding="8,0" Margin="0,0,4,0"
+                        ToolTip="θMインタラクションペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
+            </StackPanel>
+
+            <!-- OK / キャンセルボタン (右側) -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ButtonOk" Content="保存 (Ctrl+Enter)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding OkCommand}"/>
+                <Button x:Name="ButtonCancel" Content="キャンセル (Esc)" HorizontalAlignment="Left"
+                        VerticalAlignment="Top" Height="30" Width="150" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

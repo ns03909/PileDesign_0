@@ -43,5 +43,9 @@ namespace PileDesign.Common
         public static readonly SKColor DeepBlue = new(50, 113, 173);
         public static readonly SKColor Yellow = new(247, 181, 21);
         public static readonly SKColor Green = new(35, 137, 102);
+        // 限界状態 (DeepBlue / Green / PaleRed) を予約色として温存するための
+        // ライン系列専用カラー (限界色と意味的に衝突しない)
+        public static readonly SKColor LineOrange = new(210, 105, 30);   // 焦茶/オレンジ
+        public static readonly SKColor LineSlate = new(112, 128, 144);   // スレートグレー
     }
 }

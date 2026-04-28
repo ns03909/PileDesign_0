@@ -35,6 +35,7 @@ namespace PileDesign.Views
             )
         {
             InitializeComponent();
+            InitializePaneMaximizer();
             PileBodyNo = pileBodyNo;
             PileConstructionType = pileConstructionType;
             PileSection = pileSection;
@@ -559,6 +560,18 @@ namespace PileDesign.Views
                 var data = dataGrid.ItemsSource.Cast<object>();
                 Output.DataGridCsv.Export(data, dataGrid);
             }
+        }
+
+        private PileDesign.Common.PaneFloatMaximizer? _paneMaximizer;
+
+        private void InitializePaneMaximizer()
+        {
+            _paneMaximizer = new PileDesign.Common.PaneFloatMaximizer(dockingManager);
+            _paneMaximizer.Register("Input",   InputTab,             ButtonMaximizeInput,   "入力");
+            _paneMaximizer.Register("Specs",   SpecsTab,             ButtonMaximizeSpecs,   "諸元");
+            _paneMaximizer.Register("TopView", TopViewTab,           ButtonMaximizeTopView, "上面図");
+            _paneMaximizer.Register("MN",      MNInteractionPane,    ButtonMaximizeMN,      "MN");
+            _paneMaximizer.Register("ThetaM",  ThetaMInteractionTab, ButtonMaximizeThetaM,  "θM");
         }
     }
 }

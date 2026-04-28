@@ -30,6 +30,7 @@ namespace PileDesign.Views
         public GroundWindow()
         {
             InitializeComponent();
+            InitializePaneMaximizer();
             Loaded += GroundWindow_Loaded;
             // ★ ContentRendered で Initialize() を呼ぶように変更
             ContentRendered += GroundWindow_ContentRendered;
@@ -892,62 +893,41 @@ namespace PileDesign.Views
         }
 
         // 左ペイン (土層+土質点) の最大化トグル:
-        // ペイン最大化トグル (左/右)。同じ DockWidth トグルで実装。
-        // _maximizedSide: null=通常, "Left"=左ペイン最大化中, "Right"=右ペイン最大化中
-        private string _maximizedSide;
+        // 右ペインの DockWidth トグル (左 2 タブはアンドック・最大化方式に切替済み)
+        private bool _rightMaximized;
         private WindowState _savedWindowState = WindowState.Normal;
 
         private static readonly System.Windows.GridLength _maximizedWidth = new(0.999, System.Windows.GridUnitType.Star);
         private static readonly System.Windows.GridLength _minimizedWidth = new(0.001, System.Windows.GridUnitType.Star);
         private static readonly System.Windows.GridLength _restoredHalfWidth = new(0.5, System.Windows.GridUnitType.Star);
 
-        private void ButtonToggleLeftMaximize_Click(object sender, RoutedEventArgs e) => ToggleMaximize("Left");
-        private void ButtonToggleRightMaximize_Click(object sender, RoutedEventArgs e) => ToggleMaximize("Right");
-
-        private void ToggleMaximize(string side)
+        private void ButtonToggleRightMaximize_Click(object sender, RoutedEventArgs e)
         {
-            var rightTabs = new[] {
-                NValueTab, CuValueTab, VsValueTab, EsValueTab, CustomDispTab,
-                DefTab, FsTab, SaTab
-            };
-
-            if (_maximizedSide == side)
+            if (_rightMaximized)
             {
-                // 同ボタン再押下 → 元に戻す
-                foreach (var t in rightTabs) t?.Show();
                 if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _restoredHalfWidth;
                 if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _restoredHalfWidth;
                 this.WindowState = _savedWindowState;
-                _maximizedSide = null;
-                UpdateMaximizeButtonLabels();
+                _rightMaximized = false;
             }
             else
             {
-                if (_maximizedSide == null) _savedWindowState = this.WindowState;
-                if (side == "Left")
-                {
-                    foreach (var t in rightTabs) t?.Hide();
-                    if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _maximizedWidth;
-                    if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _minimizedWidth;
-                }
-                else // Right
-                {
-                    foreach (var t in rightTabs) t?.Show();
-                    if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _minimizedWidth;
-                    if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _maximizedWidth;
-                }
+                _savedWindowState = this.WindowState;
+                if (LeftPaneGroup != null) LeftPaneGroup.DockWidth = _minimizedWidth;
+                if (RightChartsPaneGroup != null) RightChartsPaneGroup.DockWidth = _maximizedWidth;
                 this.WindowState = WindowState.Maximized;
-                _maximizedSide = side;
-                UpdateMaximizeButtonLabels();
+                _rightMaximized = true;
             }
+            ButtonToggleRightMaximize.Content = _rightMaximized ? "元に戻す" : "右ペイン";
         }
 
-        private void UpdateMaximizeButtonLabels()
+        private PileDesign.Common.PaneFloatMaximizer? _paneMaximizer;
+
+        private void InitializePaneMaximizer()
         {
-            if (ButtonToggleLeftMaximize != null)
-                ButtonToggleLeftMaximize.Content = (_maximizedSide == "Left") ? "元に戻す" : "左ペイン";
-            if (ButtonToggleRightMaximize != null)
-                ButtonToggleRightMaximize.Content = (_maximizedSide == "Right") ? "元に戻す" : "右ペイン";
+            _paneMaximizer = new PileDesign.Common.PaneFloatMaximizer(dockingManager);
+            _paneMaximizer.Register("GroundLayer", GroundLayerTab, ButtonMaximizeGroundLayer, "土層入力");
+            _paneMaximizer.Register("GroundMass",  GroundMassTab,  ButtonMaximizeGroundMass,  "土質点入力");
         }
     }
 }

@@ -64,6 +64,17 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <!-- グラフのライン系列専用色 (限界状態色と衝突しない) -->
+        <Style x:Key="LineOrangeHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#D2691E"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="LineSlateHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="#708090"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
 
         <Style x:Key="RightAlignTextBlockStyle" TargetType="TextBlock">
             <Setter Property="TextAlignment" Value="Right"/>
@@ -152,8 +163,9 @@
                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                           Background="#DDD" ShowsPreview="True"/>
 
-            <!-- 左側のプロット -->
-            <Grid Grid.Row="0" Grid.Column="0">
+            <!-- 左側のプロット (高さが足りないとき縦スクロール) -->
+            <ScrollViewer Grid.Row="0" Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -187,6 +199,10 @@
                     <RowDefinition Height="Auto" />
                     <!-- 28,29,30: 使用/損傷/終局 限界支持力時の杭頭沈下量 -->
                     <RowDefinition Height="Auto" />
+                    <!-- 上下 2 行構成 (標高/Z) のため +3 行 -->
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <!-- Col 0: ラベル（余剰を吸収して最長ラベルを表示） -->
@@ -209,10 +225,11 @@
                       SelectionChanged = "ComboBoxSoilPileBodyNo_SelectionChanged"/>
 
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="杭工法"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
                          Text="{Binding SoilPile.PileConstructionType, Mode=OneWay}"
                          IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                         HorizontalContentAlignment="Right"/>
+                         HorizontalContentAlignment="Right"
+                         ToolTip="{Binding SoilPile.PileConstructionType, Mode=OneWay}"/>
 
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="地盤番号"/>
                 <TextBox Grid.Row="2" Grid.Column="2"
@@ -334,80 +351,72 @@
                         HorizontalContentAlignment="Right"/>
 
 
-                <TextBlock Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="2"
-                            Text="平均N値算定範囲 上端" TextWrapping="Wrap"/>
-                <StackPanel Grid.Row="14" Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="標高=" VerticalAlignment="Center"/>
-                    <TextBox Width="70" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right">
-                        <TextBox.Text>
-                            <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
-                                <Binding Path="SoilPile.PileToeNValueAverageRangeUpperAltitude"/>
-                                <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
-                            </MultiBinding>
-                        </TextBox.Text>
-                    </TextBox>
-                    <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    <TextBox Width="70" Text="{Binding SoilPile.PileToeNValueAverageRangeUpperAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
-                </StackPanel>
-                <TextBlock Grid.Row="14" Grid.Column="3"
-                            Text="m"/>
+                <!-- 平均N値算定範囲 上端: ラベル RowSpan=2 + 標高 / Z= の 2 サブ行 -->
+                <TextBlock Grid.Row="14" Grid.RowSpan="2" Grid.Column="0"
+                            Text="平均N値算定範囲 上端" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="14" Grid.Column="1" Text="標高=" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                <TextBox Grid.Row="14" Grid.Column="2" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right" FontSize="11">
+                    <TextBox.Text>
+                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                            <Binding Path="SoilPile.PileToeNValueAverageRangeUpperAltitude"/>
+                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
+                        </MultiBinding>
+                    </TextBox.Text>
+                </TextBox>
+                <TextBlock Grid.Row="14" Grid.Column="3" Text="m" FontSize="11" Margin="2,0,0,0"/>
+                <TextBlock Grid.Row="15" Grid.Column="1" Text="Z=" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                <TextBox Grid.Row="15" Grid.Column="2" Text="{Binding SoilPile.PileToeNValueAverageRangeUpperAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right" FontSize="11"/>
+                <TextBlock Grid.Row="15" Grid.Column="3" Text="m" FontSize="11" Margin="2,0,0,0"/>
 
+                <!-- 杭先端: ラベル RowSpan=2 + 標高 / Z= -->
+                <TextBlock Grid.Row="16" Grid.RowSpan="2" Grid.Column="0" Text="杭先端" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="16" Grid.Column="1" Text="標高=" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                <TextBox Grid.Row="16" Grid.Column="2" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right" FontSize="11">
+                    <TextBox.Text>
+                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                            <Binding Path="SoilPile.PileBottomAltitude"/>
+                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
+                        </MultiBinding>
+                    </TextBox.Text>
+                </TextBox>
+                <TextBlock Grid.Row="16" Grid.Column="3" Text="m" FontSize="11" Margin="2,0,0,0"/>
+                <TextBlock Grid.Row="17" Grid.Column="1" Text="Z=" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                <TextBox Grid.Row="17" Grid.Column="2" Text="{Binding SoilPile.PileBottomAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right" FontSize="11"/>
+                <TextBlock Grid.Row="17" Grid.Column="3" Text="m" FontSize="11" Margin="2,0,0,0"/>
 
-                <TextBlock Grid.Row="15" Grid.Column="0" Text="杭先端" TextWrapping="Wrap"/>
-                <StackPanel Grid.Row="15" Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="標高=" VerticalAlignment="Center"/>
-                    <TextBox Width="70" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right">
-                        <TextBox.Text>
-                            <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
-                                <Binding Path="SoilPile.PileBottomAltitude"/>
-                                <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
-                            </MultiBinding>
-                        </TextBox.Text>
-                    </TextBox>
-                    <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    <TextBox Width="70" Text="{Binding SoilPile.PileBottomAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="true" Foreground="Gray" HorizontalContentAlignment="Right"/>
-                </StackPanel>
-                <TextBlock Grid.Row="15" Grid.Column="3" Text="m"/>
-
-
-                <TextBlock Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2"
-                            Text="平均N値算定範囲 下端" TextWrapping="Wrap"/>
-                <StackPanel Grid.Row="16" Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="標高=" VerticalAlignment="Center"/>
-                    <TextBox Width="70" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right">
-                        <TextBox.Text>
-                            <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
-                                <Binding Path="SoilPile.PileToeNValueAverageRangeLowerAltitude"/>
-                                <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
-                            </MultiBinding>
-                        </TextBox.Text>
-                    </TextBox>
-                    <TextBlock Text="  Z=" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    <TextBox Width="70" Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
-                </StackPanel>
-                <TextBlock Grid.Row="16" Grid.Column="3"
-                            Text="m"/>
+                <!-- 平均N値算定範囲 下端: ラベル RowSpan=2 + 標高 / Z= -->
+                <TextBlock Grid.Row="18" Grid.RowSpan="2" Grid.Column="0"
+                            Text="平均N値算定範囲 下端" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="18" Grid.Column="1" Text="標高=" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                <TextBox Grid.Row="18" Grid.Column="2" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right" FontSize="11">
+                    <TextBox.Text>
+                        <MultiBinding Converter="{StaticResource ZElevationConverter}" StringFormat="{}{0:N3}" Mode="OneWay">
+                            <Binding Path="SoilPile.PileToeNValueAverageRangeLowerAltitude"/>
+                            <Binding Path="InputModel.FundamentalInput.ReferenceAltitude"/>
+                        </MultiBinding>
+                    </TextBox.Text>
+                </TextBox>
+                <TextBlock Grid.Row="18" Grid.Column="3" Text="m" FontSize="11" Margin="2,0,0,0"/>
+                <TextBlock Grid.Row="19" Grid.Column="1" Text="Z=" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="11"/>
+                <TextBox Grid.Row="19" Grid.Column="2" Text="{Binding SoilPile.PileToeNValueAverageRangeLowerAltitude, Mode=OneWay, StringFormat=N3}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right" FontSize="11"/>
+                <TextBlock Grid.Row="19" Grid.Column="3" Text="m" FontSize="11" Margin="2,0,0,0"/>
 
 
 
-                <TextBlock Grid.Row="17" Grid.Column="0"
+                <TextBlock Grid.Row="20" Grid.Column="0"
                                 Text="極限先端支持力度"/>
-                <!--<TextBlock Grid.Row="17" Grid.Column="1"
-                                Text="qpu" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="17" Grid.Column="1" Formula="q_{pu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
-                <TextBox Grid.Row="17" Grid.Column="2"
+                <controls:FormulaControl Grid.Row="20" Grid.Column="1" Formula="q_{pu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="20" Grid.Column="2"
                              Text="{Binding SoilPile.Qpu, Mode=OneWay, StringFormat=N0}"
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="17" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
+                <TextBlock Grid.Row="20" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
-                <TextBlock Grid.Row="18" Grid.Column="0" 
+                <TextBlock Grid.Row="21" Grid.Column="0"
                                 Text="沈下検討用極限先端支持力度"/>
-                <!--<TextBlock Grid.Row="18" Grid.Column="1"
-                                Text="qpu_" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="18" Grid.Column="1" Formula="q_{pu(s)}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
-                <TextBox Grid.Row="18" Grid.Column="2"
+                <controls:FormulaControl Grid.Row="21" Grid.Column="1" Formula="q_{pu(s)}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="21" Grid.Column="2"
                          x:Name="TextBoxSettleQpu"
                          Text="{Binding SoilPile.SettleQpu, UpdateSourceTrigger=LostFocus, StringFormat=N0}"
                          HorizontalContentAlignment="Right"
@@ -415,137 +424,130 @@
                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          KeyDown="TextBox_KeyDown"
                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboartFocus"/>
-                <TextBlock Grid.Row="18" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
+                <TextBlock Grid.Row="21" Grid.Column="3"><Run Text="kN/m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
-                <TextBlock Grid.Row="19" Grid.Column="0"
+                <TextBlock Grid.Row="22" Grid.Column="0"
                             Text="杭先端面積"/>
-                <!--<TextBlock Grid.Row="19" Grid.Column="1"
+                <!--<TextBlock Grid.Row="22" Grid.Column="1"
                             Text="Ap" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="19" Grid.Column="1" Formula="A_p" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
-                <TextBox Grid.Row="19" Grid.Column="2"
+                <controls:FormulaControl Grid.Row="22" Grid.Column="1" Formula="A_p" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBox Grid.Row="22" Grid.Column="2"
                              Text="{Binding SoilPile.Ap, Mode=OneWay, StringFormat=N3}"
                         IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="19" Grid.Column="3"><Run Text="m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
-
-                <TextBlock Grid.Row="20" Grid.Column="0"
-                            Text="極限先端支持力"/>
-                <!--<TextBlock Grid.Row="20" Grid.Column="1"
-                            Text="Rpu" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="20" Grid.Column="1" Formula="R_{pu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
-                <TextBox Grid.Row="20" Grid.Column="2"
-                             Text="{Binding SoilPile.Rpu, Mode=OneWay, StringFormat=N0}"
-                        IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="20" Grid.Column="3"
-                            Text="kN"/>
-
-
-                <TextBlock Grid.Row="21" Grid.Column="0" Text="極限周面抵抗力"/>
-                <!--<TextBlock Grid.Row="21" Grid.Column="1" Text="Rfu" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="21" Grid.Column="1" Formula="R_{fu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
-
-                <TextBox Grid.Row="21" Grid.Column="2"
-                             Text="{Binding SoilPile.Rfu, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="21" Grid.Column="3" Text="kN"/>
-
-
-                <TextBlock Grid.Row="22" Grid.Column="0" Text="終局限界引抜力"/>
-                <!--<TextBlock Grid.Row="22" Grid.Column="1" Text="Rt_ULS" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="22" Grid.Column="1" Formula="R_{t,UL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
-                <TextBox Grid.Row="22" Grid.Column="2"
-                             Text="{Binding SoilPile.Rt_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
-                        Foreground="Gray"
-                        HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="22" Grid.Column="3" Text="kN"/>
-
+                <TextBlock Grid.Row="22" Grid.Column="3"><Run Text="m"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/></TextBlock>
 
                 <TextBlock Grid.Row="23" Grid.Column="0"
-                            Text="損傷限界引抜力"/>
+                            Text="極限先端支持力"/>
                 <!--<TextBlock Grid.Row="23" Grid.Column="1"
-                            Text="Rt_DLS" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="23" Grid.Column="1" Formula="R_{t,DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                            Text="Rpu" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="23" Grid.Column="1" Formula="R_{pu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
                 <TextBox Grid.Row="23" Grid.Column="2"
-                             Text="{Binding SoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                             Text="{Binding SoilPile.Rpu, Mode=OneWay, StringFormat=N0}"
+                        IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
                 <TextBlock Grid.Row="23" Grid.Column="3"
                             Text="kN"/>
 
-                <TextBlock Grid.Row="24" Grid.Column="0"
-                            Text="使用限界引抜力"/>
-                <!--<TextBlock Grid.Row="24" Grid.Column="1"
-                            Text="Rt_SLS" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="24" Grid.Column="1" Formula="R_{t,SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+
+                <TextBlock Grid.Row="24" Grid.Column="0" Text="極限周面抵抗力"/>
+                <!--<TextBlock Grid.Row="24" Grid.Column="1" Text="Rfu" HorizontalAlignment="Right"/>-->
+                <controls:FormulaControl Grid.Row="24" Grid.Column="1" Formula="R_{fu}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+
                 <TextBox Grid.Row="24" Grid.Column="2"
-                             Text="{Binding SoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                             Text="{Binding SoilPile.Rfu, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
                         Foreground="Gray"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="24" Grid.Column="3"
-                            Text="kN"/>
+                <TextBlock Grid.Row="24" Grid.Column="3" Text="kN"/>
 
 
-                <TextBlock Grid.Row="25" Grid.Column="0" Text="使用限界支持力"/>
-                <!--<TextBlock Grid.Row="25" Grid.Column="1" Text="R_SLS" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="25" Grid.Column="1" Formula="R_{SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="25" Grid.Column="0" Text="終局限界引抜力" Foreground="{StaticResource UltimateLimitBrush}"/>
+                <controls:FormulaControl Grid.Row="25" Grid.Column="1" Formula="R_{t,UL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource UltimateLimitBrush}"/>
                 <TextBox Grid.Row="25" Grid.Column="2"
-                             Text="{Binding SoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
-                        Foreground="Gray"
+                             Text="{Binding SoilPile.Rt_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="{StaticResource UltimateLimitBrush}"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="25" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="25" Grid.Column="3" Text="kN" Foreground="{StaticResource UltimateLimitBrush}"/>
 
 
-                <TextBlock Grid.Row="26" Grid.Column="0" Text="損傷限界支持力"/>
-                <!--<TextBlock Grid.Row="26" Grid.Column="1" Text="R_DLS" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="26" Grid.Column="1" Formula="R_{DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="26" Grid.Column="0"
+                            Text="損傷限界引抜力" Foreground="{StaticResource DamageLimitBrush}"/>
+                <controls:FormulaControl Grid.Row="26" Grid.Column="1" Formula="R_{t,DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource DamageLimitBrush}"/>
                 <TextBox Grid.Row="26" Grid.Column="2"
-                             Text="{Binding SoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
-                        Foreground="Gray"
+                             Text="{Binding SoilPile.Rt_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="{StaticResource DamageLimitBrush}"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="26" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="26" Grid.Column="3"
+                            Text="kN" Foreground="{StaticResource DamageLimitBrush}"/>
 
-
-                <TextBlock Grid.Row="27" Grid.Column="0" Text="終局限界支持力"/>
-                <!--<TextBlock Grid.Row="27" Grid.Column="1" Text="R_ULS" HorizontalAlignment="Right"/>-->
-                <controls:FormulaControl Grid.Row="27" Grid.Column="1" Formula="R_{UL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="27" Grid.Column="0"
+                            Text="使用限界引抜力" Foreground="{StaticResource ServiceLimitBrush}"/>
+                <controls:FormulaControl Grid.Row="27" Grid.Column="1" Formula="R_{t,SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource ServiceLimitBrush}"/>
                 <TextBox Grid.Row="27" Grid.Column="2"
-                             Text="{Binding SoilPile.R_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
-                        Foreground="Gray"
+                             Text="{Binding SoilPile.Rt_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="{StaticResource ServiceLimitBrush}"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="27" Grid.Column="3" Text="kN"/>
+                <TextBlock Grid.Row="27" Grid.Column="3"
+                            Text="kN" Foreground="{StaticResource ServiceLimitBrush}"/>
+
+
+                <TextBlock Grid.Row="28" Grid.Column="0" Text="使用限界支持力" Foreground="{StaticResource ServiceLimitBrush}"/>
+                <controls:FormulaControl Grid.Row="28" Grid.Column="1" Formula="R_{SL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource ServiceLimitBrush}"/>
+                <TextBox Grid.Row="28" Grid.Column="2"
+                             Text="{Binding SoilPile.R_SLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="{StaticResource ServiceLimitBrush}"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="28" Grid.Column="3" Text="kN" Foreground="{StaticResource ServiceLimitBrush}"/>
+
+
+                <TextBlock Grid.Row="29" Grid.Column="0" Text="損傷限界支持力" Foreground="{StaticResource DamageLimitBrush}"/>
+                <controls:FormulaControl Grid.Row="29" Grid.Column="1" Formula="R_{DL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource DamageLimitBrush}"/>
+                <TextBox Grid.Row="29" Grid.Column="2"
+                             Text="{Binding SoilPile.R_DLS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="{StaticResource DamageLimitBrush}"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="29" Grid.Column="3" Text="kN" Foreground="{StaticResource DamageLimitBrush}"/>
+
+
+                <TextBlock Grid.Row="30" Grid.Column="0" Text="終局限界支持力" Foreground="{StaticResource UltimateLimitBrush}"/>
+                <controls:FormulaControl Grid.Row="30" Grid.Column="1" Formula="R_{UL}" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right" Foreground="{StaticResource UltimateLimitBrush}"/>
+                <TextBox Grid.Row="30" Grid.Column="2"
+                             Text="{Binding SoilPile.R_ULS, Mode=OneWay, StringFormat=N0}" IsReadOnly="True"
+                        Foreground="{StaticResource UltimateLimitBrush}"
+                        HorizontalContentAlignment="Right"/>
+                <TextBlock Grid.Row="30" Grid.Column="3" Text="kN" Foreground="{StaticResource UltimateLimitBrush}"/>
 
                 <!-- 使用限界支持力時杭頭沈下量 -->
-                <TextBlock Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="2" Text="使用限界支持力時杭頭沈下量"/>
-                <TextBox Grid.Row="28" Grid.Column="2"
+                <TextBlock Grid.Row="31" Grid.Column="0" Grid.ColumnSpan="2" Text="使用限界支持力時杭頭沈下量" Foreground="{StaticResource ServiceLimitBrush}"/>
+                <TextBox Grid.Row="31" Grid.Column="2"
                              Text="{Binding SoilPile.SettlementAtR_SLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
-                        Foreground="Gray"
+                        Foreground="{StaticResource ServiceLimitBrush}"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="28" Grid.Column="3" Text="mm"/>
+                <TextBlock Grid.Row="31" Grid.Column="3" Text="mm" Foreground="{StaticResource ServiceLimitBrush}"/>
 
                 <!-- 損傷限界支持力時杭頭沈下量 -->
-                <TextBlock Grid.Row="29" Grid.Column="0" Grid.ColumnSpan="2" Text="損傷限界支持力時杭頭沈下量"/>
-                <TextBox Grid.Row="29" Grid.Column="2"
+                <TextBlock Grid.Row="32" Grid.Column="0" Grid.ColumnSpan="2" Text="損傷限界支持力時杭頭沈下量" Foreground="{StaticResource DamageLimitBrush}"/>
+                <TextBox Grid.Row="32" Grid.Column="2"
                              Text="{Binding SoilPile.SettlementAtR_DLS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
-                        Foreground="Gray"
+                        Foreground="{StaticResource DamageLimitBrush}"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="29" Grid.Column="3" Text="mm"/>
+                <TextBlock Grid.Row="32" Grid.Column="3" Text="mm" Foreground="{StaticResource DamageLimitBrush}"/>
 
                 <!-- 終局限界支持力時杭頭沈下量 -->
-                <TextBlock Grid.Row="30" Grid.Column="0" Grid.ColumnSpan="2" Text="終局限界支持力時杭頭沈下量"/>
-                <TextBox Grid.Row="30" Grid.Column="2"
+                <TextBlock Grid.Row="33" Grid.Column="0" Grid.ColumnSpan="2" Text="終局限界支持力時杭頭沈下量" Foreground="{StaticResource UltimateLimitBrush}"/>
+                <TextBox Grid.Row="33" Grid.Column="2"
                              Text="{Binding SoilPile.SettlementAtR_ULS, Mode=OneWay, StringFormat=N1}" IsReadOnly="True"
-                        Foreground="Gray"
+                        Foreground="{StaticResource UltimateLimitBrush}"
                         HorizontalContentAlignment="Right"/>
-                <TextBlock Grid.Row="30" Grid.Column="3" Text="mm"/>
+                <TextBlock Grid.Row="33" Grid.Column="3" Text="mm" Foreground="{StaticResource UltimateLimitBrush}"/>
 
-                <!--<Button Grid.Row="28" Grid.Column="0" Grid.ColumnSpan="4"
+                <!--<Button Grid.Row="31" Grid.Column="0" Grid.ColumnSpan="4"
                          Content="杭の荷重沈下関係解析実行" Command="{Binding ExecuteAnalysisCommand}"/>-->
 
             </Grid>
+            </ScrollViewer>
 
             <Canvas x:Name="Canvas"  Grid.Row="0" Grid.Column="2" Width="Auto" Height="Auto" Background="AliceBlue"/>
 
@@ -668,9 +670,17 @@
                                     </DataGridTextColumn.Header>
                                 </DataGridTextColumn>
 
-                                <DataGridTextColumn Width="*"
-                                Binding="{Binding GroundLayer.Name, StringFormat=N3}"
-                                MinWidth="50" ElementStyle="{StaticResource RightAlignTextBlockStyle}">
+                                <DataGridTextColumn Width="1.8*" MinWidth="90"
+                                Binding="{Binding GroundLayer.Name}">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextWrapping" Value="Wrap"/>
+                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                                            <Setter Property="Margin" Value="4,2"/>
+                                            <Setter Property="ToolTip" Value="{Binding GroundLayer.Name}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
                                     <DataGridTextColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="土層名" TextAlignment="Center" />
@@ -682,17 +692,14 @@
                                     <DataGridTemplateColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="押込み" TextAlignment="Center"/>
-                                            <TextBlock Text="周面抵抗"
-                                                TextAlignment="Center" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="考慮"
-                                                TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="周面" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="抵抗" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="考慮" TextAlignment="Center" HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </DataGridTemplateColumn.Header>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <CheckBox IsChecked="{Binding IsPositiveCircumResistance, UpdateSourceTrigger=PropertyChanged}"
-                                                      Content="{Binding IsPositiveCircumResistance}"
-                                                      Foreground="Black"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
                                                       Click="CircumResistanceCheckBox_Changed"/>
@@ -704,17 +711,14 @@
                                     <DataGridTemplateColumn.Header>
                                         <StackPanel HorizontalAlignment="Center">
                                             <TextBlock Text="引抜き" TextAlignment="Center"/>
-                                            <TextBlock Text="周面抵抗"
-                                                TextAlignment="Center" HorizontalAlignment="Center"/>
-                                            <TextBlock Text="考慮"
-                                                TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="周面" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="抵抗" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="考慮" TextAlignment="Center" HorizontalAlignment="Center"/>
                                         </StackPanel>
                                     </DataGridTemplateColumn.Header>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <CheckBox IsChecked="{Binding IsNegativeCircumResistance, UpdateSourceTrigger=PropertyChanged}"
-                                                      Content="{Binding IsNegativeCircumResistance}"
-                                                      Foreground="Black"
                                                       HorizontalAlignment="Center"
                                                       VerticalAlignment="Center"
                                                       Click="CircumResistanceCheckBox_Changed"/>
@@ -876,7 +880,7 @@
                                         Binding="{Binding RzToe, StringFormat=N0, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                        HeaderStyle="{StaticResource DeepBlueHeaderStyle}">
+                                        HeaderStyle="{StaticResource LineOrangeHeaderStyle}">
                                     <DataGridTextColumn.Header>
                                         <StackPanel>
                                             <TextBlock Text="杭先端支持力" TextAlignment="Center"/>
@@ -906,7 +910,7 @@
                                         Binding="{Binding Weight, StringFormat=N0, Mode=TwoWay}"
                                         MinWidth="50"
                                         ElementStyle="{StaticResource RightAlignTextBlockStyle}"
-                                        HeaderStyle="{StaticResource GreenHeaderStyle}">
+                                        HeaderStyle="{StaticResource LineSlateHeaderStyle}">
                                     <DataGridTextColumn.Header>
                                         <StackPanel>
                                             <TextBlock Text="杭自重" TextAlignment="Center"/>

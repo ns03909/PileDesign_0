@@ -192,13 +192,22 @@ namespace PileDesign.Views
         }
 
         // VisualTree上で指定した型の親要素を検索するヘルパーメソッド
+        // Run などの Visual でない要素も安全に扱えるよう LogicalTree フォールバックを併用
         private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
             while (child != null)
             {
                 if (child is T parent)
                     return parent;
-                child = VisualTreeHelper.GetParent(child);
+                if (child is System.Windows.Media.Visual || child is System.Windows.Media.Media3D.Visual3D)
+                {
+                    child = VisualTreeHelper.GetParent(child);
+                }
+                else
+                {
+                    // Run / Inline / FrameworkContentElement 等は LogicalTree を辿る
+                    child = LogicalTreeHelper.GetParent(child);
+                }
             }
             return null;
         }

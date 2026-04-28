@@ -18,6 +18,7 @@ namespace PileDesign.Views
         public PileBodyWindow()
         {
             InitializeComponent();
+            InitializePaneMaximizer();
             // DataContextはOpenDialogWindowでセットされるので、ここでは何もしない
             Loaded += PileBodyWindow_Loaded;
         }
@@ -26,6 +27,7 @@ namespace PileDesign.Views
         public PileBodyWindow(MainWindowViewModel mainWindowViewModel)
         {
             InitializeComponent();
+            InitializePaneMaximizer();
             _viewModel = new PileBodyViewModel(mainWindowViewModel);
             DataContext = _viewModel;
             Loaded += PileBodyWindow_Loaded;
@@ -301,38 +303,14 @@ namespace PileDesign.Views
             }
         }
 
-        // v29 (2026-04-27): AvalonDock 各ペインの最大化トグル
-        // 既定の DockWidth は 0.5* / 0.25* / 0.25*。最大化対象ペインは 0.999*、他ペインは 0.0005* で
-        // 実質非表示状態にする (0 にすると AvalonDock が再描画でレイアウトを破壊するため僅かに残す)。
-        // 同じボタンを再度押すと既定の比率に戻す。
-        private string _maximizedPane = null; // null=通常, "Input"/"Shape"/"Result"=最大化中
+        private PileDesign.Common.PaneFloatMaximizer? _paneMaximizer;
 
-        private void ButtonMaximizePane_Click(object sender, RoutedEventArgs e)
+        private void InitializePaneMaximizer()
         {
-            if (sender is not Button button || button.Tag is not string tag) return;
-
-            const double inputDefault = 0.5, shapeDefault = 0.25, resultDefault = 0.25;
-            const double maximized = 0.999, minimized = 0.0005;
-
-            if (_maximizedPane == tag)
-            {
-                // 同じボタン → 元に戻す
-                if (PileBodyInputPaneGroup != null) PileBodyInputPaneGroup.DockWidth = new System.Windows.GridLength(inputDefault, System.Windows.GridUnitType.Star);
-                if (PileShapeImagePaneGroup != null) PileShapeImagePaneGroup.DockWidth = new System.Windows.GridLength(shapeDefault, System.Windows.GridUnitType.Star);
-                if (ResultPaneGroup != null) ResultPaneGroup.DockWidth = new System.Windows.GridLength(resultDefault, System.Windows.GridUnitType.Star);
-                _maximizedPane = null;
-            }
-            else
-            {
-                // 別ペイン or 未最大化 → tag のペインを最大化
-                double inputW = (tag == "Input") ? maximized : minimized;
-                double shapeW = (tag == "Shape") ? maximized : minimized;
-                double resultW = (tag == "Result") ? maximized : minimized;
-                if (PileBodyInputPaneGroup != null) PileBodyInputPaneGroup.DockWidth = new System.Windows.GridLength(inputW, System.Windows.GridUnitType.Star);
-                if (PileShapeImagePaneGroup != null) PileShapeImagePaneGroup.DockWidth = new System.Windows.GridLength(shapeW, System.Windows.GridUnitType.Star);
-                if (ResultPaneGroup != null) ResultPaneGroup.DockWidth = new System.Windows.GridLength(resultW, System.Windows.GridUnitType.Star);
-                _maximizedPane = tag;
-            }
+            _paneMaximizer = new PileDesign.Common.PaneFloatMaximizer(dockingManager);
+            _paneMaximizer.Register("Input",  InputTab,  ButtonMaximizeInput,  "杭体入力");
+            _paneMaximizer.Register("Shape",  ShapeTab,  ButtonMaximizeShape,  "杭姿図");
+            _paneMaximizer.Register("Result", ResultTab, ButtonMaximizeResult, "地盤描画");
         }
     }
 }

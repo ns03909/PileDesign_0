@@ -1761,7 +1761,15 @@ namespace PileDesign.Views
             while (focused != null)
             {
                 if (focused is DataGrid) return true;
-                focused = VisualTreeHelper.GetParent(focused);
+                // Run などの Visual でない要素は LogicalTree にフォールバック (例外回避)
+                if (focused is System.Windows.Media.Visual || focused is System.Windows.Media.Media3D.Visual3D)
+                {
+                    focused = VisualTreeHelper.GetParent(focused);
+                }
+                else
+                {
+                    focused = LogicalTreeHelper.GetParent(focused);
+                }
             }
             return false;
         }
