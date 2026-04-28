@@ -20,6 +20,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 
+using Serilog;
 namespace PileDesign.ViewModels
 {
     public partial class ChangViewModel : BaseViewModel
@@ -754,7 +755,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ChangViewModel.DrawGraphSafe] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[ChangViewModel.DrawGraphSafe]");
             }
         }
 

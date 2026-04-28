@@ -29,6 +29,7 @@ using static PileDesign.Views.MoveCopyWindow;
 using Point = System.Windows.Point;
 using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
+using Serilog;
 namespace PileDesign.ViewModels
 {
     /// <summary>
@@ -3531,7 +3532,7 @@ namespace PileDesign.ViewModels
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[{errorPrefix}Thread] {ex.GetType().Name}: {ex.Message}");
+                            Log.Warning(ex, "[{errorPrefix}Thread]");
                             lock (host.Lock)
                             {
                                 host.Window = null;
@@ -3690,7 +3691,7 @@ namespace PileDesign.ViewModels
                         candidates.Add(candidate);
                     }
                 }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[MainVM] Claude設定探索: {ex.Message}"); }
+                catch (Exception ex) { Log.Warning(ex, "[MainVM] Claude設定探索"); }
             }
 
             // 通常インストール版
@@ -5156,6 +5157,16 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// アプリの致命的例外時に呼び出される緊急 AutoSave。成功時はファイルパス、
+        /// 失敗時 (または初期化前) は null を返す。例外を投げない。
+        /// </summary>
+        public string? TryEmergencyAutoSave()
+        {
+            try { return _autoSaveService?.TryEmergencyAutoSave(); }
+            catch { return null; }
+        }
+
+        /// <summary>
         /// 自動保存完了時のイベントハンドラ
         /// </summary>
         private void OnAutoSaveCompleted(object? sender, AutoSaveEventArgs e)
@@ -5304,7 +5315,7 @@ namespace PileDesign.ViewModels
                 var dismissed = latestAutoSave.Replace("_autosave_", "_autosave_dismissed_");
                 System.IO.File.Move(latestAutoSave, dismissed);
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[AutoSave] リネーム失敗: {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[AutoSave] リネーム失敗"); }
         }
 
         // ==================== InputNode 管理機能 ====================

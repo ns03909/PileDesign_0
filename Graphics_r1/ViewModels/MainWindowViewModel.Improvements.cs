@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
+using Serilog;
 namespace PileDesign.ViewModels
 {
     /// <summary>
@@ -98,13 +99,13 @@ namespace PileDesign.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[CanExecute] コマンド更新失敗: {ex.Message}");
+                        Log.Warning(ex, "[CanExecute] コマンド更新失敗");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[CanExecute] 全体エラー: {ex.Message}");
+                Log.Warning(ex, "[CanExecute] 全体エラー");
             }
         }
 

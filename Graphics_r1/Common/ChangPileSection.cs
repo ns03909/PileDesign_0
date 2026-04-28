@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 
+using Serilog;
 namespace PileDesign.Common
 {
     public class ChangSoilPile : INotifyPropertyChanged
@@ -440,7 +441,7 @@ namespace PileDesign.Common
                                 if (!string.IsNullOrEmpty(s)) parts.Add($"{p.Name}={s}");
                             }
                         }
-                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangPileSection] プロパティ読取失敗: {ex.Message}"); }
+                        catch (Exception ex) { Log.Warning(ex, "[ChangPileSection] プロパティ読取失敗"); }
                     }
                     CaptainPileSummary = parts.Count > 0 ? string.Join(", ", parts) : cp.GetType().Name;
                 }

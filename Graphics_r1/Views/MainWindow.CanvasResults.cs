@@ -14,6 +14,7 @@ using System.Windows.Media.Media3D;
 using Node = PileDesign.FEM.Node;
 using Point = System.Windows.Point;
 
+using Serilog;
 namespace PileDesign.Views
 {
     public partial class MainWindow : RibbonWindow
@@ -2254,7 +2255,7 @@ namespace PileDesign.Views
                     double v = Math.Abs(GetSoilSpringValue(s, springType));
                     if (double.IsFinite(v) && v > maxAbsValue) maxAbsValue = v;
                 }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[CanvasResults] ばね反力取得失敗: {ex.Message}"); }
+                catch (Exception ex) { Log.Warning(ex, "[CanvasResults] ばね反力取得失敗"); }
             }
             double forceScale = viewModel.ForceDiagramRatio * viewModel.ModelExtent;
 

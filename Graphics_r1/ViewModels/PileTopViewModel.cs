@@ -18,6 +18,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Fonts = ScottPlot.Fonts;
 
+using Serilog;
 namespace PileDesign.ViewModels
 {
     public partial class PileTopViewModel : ObservableObject
@@ -63,7 +64,7 @@ namespace PileDesign.ViewModels
                 // Canvas が既にセットされていれば描画
                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                 {
-                    try { RedrawShapes(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PileTopVM] RedrawShapes: {ex.Message}"); }
+                    try { RedrawShapes(); } catch (Exception ex) { Log.Warning(ex, "[PileTopVM] RedrawShapes"); }
                 }), System.Windows.Threading.DispatcherPriority.Loaded);
 
                 ChartUpdate();
@@ -97,7 +98,7 @@ namespace PileDesign.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"PileTop_PropertyChanged redraw failed: {ex.Message}");
+                        Log.Warning(ex, "PileTop_PropertyChanged redraw failed");
                     }
                 }), System.Windows.Threading.DispatcherPriority.Background);
             }
@@ -247,7 +248,7 @@ namespace PileDesign.ViewModels
             catch (Exception ex)
             {
                 // 安全のため例外を握りつぶすがログに出す
-                System.Diagnostics.Debug.WriteLine($"RefreshTopSectionDisplayFromProvidedSection failed: {ex.Message}");
+                Log.Warning(ex, "RefreshTopSectionDisplayFromProvidedSection failed");
             }
         }
 
@@ -309,7 +310,7 @@ namespace PileDesign.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ChartUpdate: DrawRebarAnchorage_MN failed: {ex.Message}");
+                    Log.Warning(ex, "ChartUpdate: DrawRebarAnchorage_MN failed");
                 }
             }
         }
@@ -359,7 +360,7 @@ namespace PileDesign.ViewModels
                 scatter.MarkerSize = 0;
                 if (dashed)
                 {
-                    try { scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PileTopVM] LinePattern: {ex.Message}"); }
+                    try { scatter.LineStyle.Pattern = ScottPlot.LinePattern.Dashed; } catch (Exception ex) { Log.Warning(ex, "[PileTopVM] LinePattern"); }
                 }
                 wpf.Plot.Legend.FontName = Fonts.Detect(legend ?? "メイリオ");
             }

@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 
+using Serilog;
 namespace PileDesign.Views
 {
     /// <summary>
@@ -138,7 +139,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[GroundWindow_ContentRendered] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[GroundWindow_ContentRendered]");
                 MessageBox.Show($"地盤ウィンドウの初期化でエラーが発生しました: {ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }

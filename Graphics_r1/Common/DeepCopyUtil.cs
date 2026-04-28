@@ -1,8 +1,8 @@
 using System;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using Serilog;
 using NewtonJson = Newtonsoft.Json;
 
 namespace PileDesign.Common
@@ -64,7 +64,7 @@ namespace PileDesign.Common
             {
                 // InputModel.LoadFromFile と同じパターンで Newtonsoft にフォールバック
                 // 典型: パラメータなしコンストラクタを持たない型（CaptainPile 等）
-                Debug.WriteLine($"[DeepCopyUtil.CloneJson<{typeof(T).Name}>] STJ 失敗→Newtonsoft にフォールバック: {stjEx.GetType().Name}: {stjEx.Message}");
+                Log.Debug(stjEx, "DeepCopyUtil.CloneJson<{TypeName}>: STJ failed, falling back to Newtonsoft", typeof(T).Name);
                 try
                 {
                     string json = NewtonJson.JsonConvert.SerializeObject(source, _newtonsoftSettings);
@@ -72,13 +72,13 @@ namespace PileDesign.Common
                 }
                 catch (Exception nswEx)
                 {
-                    Debug.WriteLine($"[DeepCopyUtil.CloneJson<{typeof(T).Name}>] Newtonsoft も失敗: {nswEx.GetType().Name}: {nswEx.Message}");
+                    Log.Warning(nswEx, "DeepCopyUtil.CloneJson<{TypeName}>: Newtonsoft fallback also failed", typeof(T).Name);
                     return default;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[DeepCopyUtil.CloneJson<{typeof(T).Name}>] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "DeepCopyUtil.CloneJson<{TypeName}> failed", typeof(T).Name);
                 return default;
             }
         }

@@ -14,6 +14,7 @@ using System.Windows.Media.Media3D;
 using Color = System.Windows.Media.Color;
 using Path = System.IO.Path;
 
+using Serilog;
 namespace PileDesign.Output
 {
     internal static class DiagramRenderer
@@ -613,7 +614,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RenderPileForceElevationPngBytes error: {ex.Message}");
+                Log.Warning(ex, "RenderPileForceElevationPngBytes error");
                 return Array.Empty<byte>();
             }
         }
@@ -805,7 +806,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"RenderPilingLayoutPngBytes error: {ex.Message}");
+                Log.Warning(ex, "RenderPilingLayoutPngBytes error");
                 return Array.Empty<byte>();
             }
         }
@@ -1324,7 +1325,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"DiagramRenderer error: {ex.Message}");
+                Log.Warning(ex, "DiagramRenderer error");
                 return [];
             }
         }

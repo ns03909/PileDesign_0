@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 
+using Serilog;
 namespace PileDesign.Views
 {
     // カメラビュー関連のボタンハンドラとアニメーションを提供する partial。
@@ -37,7 +38,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ButtonXYPlane_Clicked] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[ButtonXYPlane_Clicked]");
             }
         }
 
@@ -52,7 +53,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ButtonYZPlane_Clicked] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[ButtonYZPlane_Clicked]");
             }
         }
 
@@ -67,7 +68,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ButtonXZPlane_Clicked] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[ButtonXZPlane_Clicked]");
             }
         }
 
@@ -80,7 +81,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ButtonIsometric_Clicked] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[ButtonIsometric_Clicked]");
             }
         }
     }

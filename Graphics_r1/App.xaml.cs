@@ -1,28 +1,11 @@
-﻿//using PileDesign.Models.InputData;
-//using System.Windows;
-
-//namespace PileDesign
-//{
-//    /// <summary>
-//    /// App.xaml の相互作用ロジック
-//    /// </summary>
-//    public partial class App : Application
-//    {
-//        public static InputModel InputModel { get; set; }
-
-//        public App()
-//        {
-//            InputModel = new InputModel();
-//        }
-
-//    }
-//}
-
+using PileDesign.Common.Logging;
 using PileDesign.Models.InputData;
 using PileDesign.ViewModels;
 using PileDesign.Views;
+using Serilog;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -33,110 +16,159 @@ namespace PileDesign
     /// </summary>
     public partial class App : Application
     {
-        public static InputModel InputModel { get; set; }
+        public static InputModel InputModel { get; set; } = null!;
 
-        //public App()
-        //{
-        //    InputModel = new InputModel();
-
-        //    // グローバルな未処理例外ハンドラを登録
-        //    this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-        //}
+        /// <summary>
+        /// 致命的例外時に緊急 AutoSave を呼び出すための MainWindowViewModel 参照。
+        /// </summary>
+        public static MainWindowViewModel? CurrentMainViewModel { get; private set; }
 
         public App()
         {
+            // ロギングを最優先で初期化 (それ自身が失敗しても続行)
+            AppLog.Initialize();
+
+            // 全 3 ソースの未捕捉例外をフック
+            this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += AppDomain_UnhandledException;
+            TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+
             try
             {
-                // アプリ起動確認ログ（AppData/Local/PileDesign/Logs/に書き込み）
-                var logDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "PileDesign", "Logs");
-                Directory.CreateDirectory(logDir);
-                string path = Path.Combine(logDir, "startup.log");
-                File.AppendAllText(path, $"[{DateTime.Now}] App constructor start\n");
-                // MainWindowViewModelを先に生成
+                Log.Information("App constructor start");
+
                 var mainWindowViewModel = new MainWindowViewModel();
+                CurrentMainViewModel = mainWindowViewModel;
                 InputModel = new InputModel();
                 InputModel.SetMainWindowViewModel(mainWindowViewModel);
 
-                this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-
-                File.AppendAllText(path, $"[{DateTime.Now}] App constructor end\n");
+                Log.Information("App constructor complete");
             }
             catch (Exception ex)
             {
-                var errorLogDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "PileDesign", "Logs");
-                try { Directory.CreateDirectory(errorLogDir); }
-                catch (Exception createEx) { System.Diagnostics.Debug.WriteLine($"[App] エラーログディレクトリ作成失敗: {createEx.GetType().Name}: {createEx.Message}"); }
-                File.AppendAllText(Path.Combine(errorLogDir, "startup_error.log"), $"[{DateTime.Now}] 例外: {ex}\n");
-                MessageBox.Show($"アプリ起動時に致命的なエラーが発生しました。\n{ex.Message}", "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                Log.Fatal(ex, "App constructor failed");
+                MessageBox.Show(
+                    $"アプリ起動時に致命的なエラーが発生しました。\n{ex.Message}\n\nログ: {AppLog.LogDirectory}",
+                    "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppLog.Close();
                 Environment.Exit(1);
             }
         }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             try
             {
                 base.OnStartup(e);
 
-                // MainWindowを生成・表示
-                // （スプラッシュはMainWindowコンストラクタ内のLoadingMainWindowで表示）
                 var mainWindow = new MainWindow();
                 this.MainWindow = mainWindow;
                 mainWindow.Show();
+
+                Log.Information("MainWindow shown");
             }
             catch (Exception ex)
             {
-                ShowAndLogException(ex);
-                Environment.Exit(1);
+                HandleFatalException(ex, source: "OnStartup");
             }
         }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            Log.Information("App exiting (code={Code})", e.ApplicationExitCode);
+            AppLog.Close();
+            base.OnExit(e);
+        }
+
+        // --- 未捕捉例外ハンドラ -----------------------------------------------
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
-            // ★ IME/TextStore 関連の COMException は無視して続行
-            // HResult 0x80040206 = "現在、レイアウトは使用できません"
+            // IME/TextStore 関連の COMException は無視して続行 (HResult 0x80040206)
             if (e.Exception is System.Runtime.InteropServices.COMException comEx
                 && comEx.HResult == unchecked((int)0x80040206))
             {
+                Log.Debug("Suppressed benign IME COMException (0x80040206)");
                 e.Handled = true;
-                return; // アプリを終了せずに続行
+                return;
             }
 
-            ShowAndLogException(e.Exception);
+            HandleFatalException(e.Exception, source: "DispatcherUnhandledException");
             e.Handled = true;
-            Environment.Exit(1);
         }
 
-        private void ShowAndLogException(Exception ex)
+        private void AppDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            // ログファイルに出力（AppData/Local/PileDesign/Logs/）
+            var ex = e.ExceptionObject as Exception ?? new Exception($"Non-Exception throw: {e.ExceptionObject}");
+            HandleFatalException(ex, source: "AppDomain.UnhandledException");
+            // IsTerminating の場合は CLR が直後にプロセスを落とすので Environment.Exit は不要
+        }
+
+        private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            HandleFatalException(e.Exception, source: "TaskScheduler.UnobservedTaskException");
+            e.SetObserved(); // CLR にプロセスを落とさせない
+        }
+
+        // --- 致命的例外の共通処理 ---------------------------------------------
+
+        private bool _handlingFatal = false;
+
+        /// <summary>
+        /// 全ハンドラから集約される致命的例外処理:
+        ///   1) ログに Fatal で記録
+        ///   2) 緊急 AutoSave を試行 (作業中データの退避)
+        ///   3) ユーザーに退避先とログ場所を含むダイアログを表示
+        ///   4) ログをフラッシュしてプロセス終了
+        /// 多重呼び出し防止のためフラグでガードする。
+        /// </summary>
+        private void HandleFatalException(Exception ex, string source)
+        {
+            if (_handlingFatal)
+            {
+                // 入れ子の致命的例外。ログだけ残して握りつぶす。
+                try { Log.Fatal(ex, "Recursive fatal exception from {Source}", source); } catch { }
+                return;
+            }
+            _handlingFatal = true;
+
+            string emergencySavePath = "(緊急保存に失敗)";
             try
             {
-                var logDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "PileDesign", "Logs");
-                Directory.CreateDirectory(logDir);
-                File.WriteAllText(Path.Combine(logDir, "error.log"), ex.ToString());
+                Log.Fatal(ex, "Fatal exception from {Source}", source);
+
+                var path = CurrentMainViewModel?.TryEmergencyAutoSave();
+                if (!string.IsNullOrEmpty(path))
+                {
+                    emergencySavePath = path;
+                    Log.Information("Emergency AutoSave saved to {Path}", path);
+                }
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception inner)
             {
-                // ファイル書き込み権限がない場合は無視（デバッグ出力のみ）
-            }
-            catch (IOException)
-            {
-                // ファイルI/O例外は無視（デバッグ出力のみ）
+                try { Log.Error(inner, "Emergency AutoSave path retrieval failed"); } catch { }
             }
 
-            // ユーザーに通知
-            MessageBox.Show(
-                ex.ToString(),
-                "エラーが発生しました",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error
-            );
+            try
+            {
+                var msg =
+                    "予期しないエラーが発生しました。アプリケーションを終了します。\n" +
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                    $"エラー: {ex.GetType().Name}\n" +
+                    $"内容: {ex.Message}\n\n" +
+                    $"作業中のデータを退避しました:\n  {emergencySavePath}\n\n" +
+                    $"ログ: {AppLog.LogDirectory}\n\n" +
+                    "次回起動時に「最近開いたファイル」または\n" +
+                    "上記の自動保存ファイルから復元できます。";
+                MessageBox.Show(msg, "致命的エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch
+            {
+                // ダイアログ表示すら失敗するなら諦めて落ちる
+            }
+
+            AppLog.Close();
+            Environment.Exit(1);
         }
     }
 }

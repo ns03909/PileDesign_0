@@ -1,6 +1,7 @@
 ﻿using PileDesign.Constants;
 using Newtonsoft.Json;
 using PileDesign.ViewModels;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -1055,7 +1056,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[InputModel.GetReactionForUnitMoment] angle={angle}: {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[InputModel.GetReactionForUnitMoment] angle={Angle}", angle);
                 return new List<double>();
             }
         }
@@ -1159,7 +1160,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[InputModel] System.Text.Jsonデシリアライズ失敗、Newtonsoft.Jsonにフォールバック: {ex.Message}");
+                Log.Information(ex, "[InputModel] STJ deserialize failed, falling back to Newtonsoft.Json");
                 // フォールバック: Newtonsoft.Json
                 var settings = new Newtonsoft.Json.JsonSerializerSettings
                 {
@@ -1473,11 +1474,13 @@ namespace PileDesign.Models.InputData
                             glAdded++;
                         }
                     }
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[GenerateSoilPiles] PileBody={pileBodyNo}, Ground={groundNo}, " +
-                        $"top={pileTopAltitude:F2}, btm={pileBottomAltitude:F2}, " +
-                        $"segments={pileBodySegments.Count}, groundLayers={groundLayerDataItems.Count}, " +
-                        $"glBoundariesAdded={glAdded}, totalNodes={zs.Count}");
+                    Log.Debug(
+                        "[GenerateSoilPiles] PileBody={PileBodyNo}, Ground={GroundNo}, " +
+                        "top={Top:F2}, btm={Btm:F2}, " +
+                        "segments={SegCount}, groundLayers={GlCount}, " +
+                        "glBoundariesAdded={GlAdded}, totalNodes={NodeCount}",
+                        pileBodyNo, groundNo, pileTopAltitude, pileBottomAltitude,
+                        pileBodySegments.Count, groundLayerDataItems.Count, glAdded, zs.Count);
 
                     // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
                     zs.Sort((a, b) => b.CompareTo(a)); // 降順ソート

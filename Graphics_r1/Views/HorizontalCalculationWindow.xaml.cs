@@ -10,6 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
+using Serilog;
 namespace PileDesign.Views
 {
     /// <summary>
@@ -82,7 +83,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[HorizontalCalculationWindow_Closing] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[HorizontalCalculationWindow_Closing]");
                 MessageBox.Show($"ウィンドウ終了処理でエラーが発生しました: {ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -304,7 +305,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[HorizontalCalculationWindow_Loaded] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[HorizontalCalculationWindow_Loaded]");
                 MessageBox.Show($"水平解析ウィンドウの初期化でエラーが発生しました: {ex.Message}",
                     "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
             }

@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using ToolkitRelayCommand = CommunityToolkit.Mvvm.Input.RelayCommand;
 
+using Serilog;
 namespace PileDesign.ViewModels
 {
     public partial class HorizontalCalculationViewModel : ObservableObject
@@ -29,7 +30,7 @@ namespace PileDesign.ViewModels
             }
             catch (NotSupportedException nse)
             {
-                System.Diagnostics.Debug.WriteLine($"[HorizontalCalcVM init] BestProviders 不可 ({nse.Message}) → UseManaged フォールバック");
+                Log.Warning(nse, "[HorizontalCalcVM init] BestProviders 不可 () → UseManaged フォールバック");
                 try
                 {
                     Control.UseManaged();

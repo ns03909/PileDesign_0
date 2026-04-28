@@ -1,5 +1,6 @@
 ﻿using PileDesign.Constants;
 using PileDesign.Models.InputData;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -382,8 +383,9 @@ namespace PileDesign.FEM
                 // 前の節点とZ座標が同一の場合はスキップ（ゼロ長要素防止）
                 if (i > 0 && Math.Abs(z - prevPileNode!.Coord.Z) < 1e-10)
                 {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[AnalysisModelling] WARNING: 重複Z座標スキップ: Pile-{pile.No} i={i} Z={z:F6}");
+                    Log.Warning(
+                        "[AnalysisModelling] 重複 Z 座標スキップ: Pile-{PileNo} i={Index} Z={Z:F6}",
+                        pile.No, i, z);
                     continue;
                 }
 
@@ -1318,9 +1320,9 @@ namespace PileDesign.FEM
 
             if (warnings.Count > 0)
             {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[ValidateFemModel] {warnings.Count}件の警告:\n" +
-                    string.Join("\n", warnings));
+                Log.Warning(
+                    "[ValidateFemModel] {Count} 件の警告:\n{Warnings}",
+                    warnings.Count, string.Join("\n", warnings));
             }
         }
 

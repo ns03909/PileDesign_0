@@ -9,6 +9,7 @@ using Body = DocumentFormat.OpenXml.Wordprocessing.Body;
 using FontSize = DocumentFormat.OpenXml.Wordprocessing.FontSize;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
+using Serilog;
 namespace PileDesign.Output
 {
     // 入力データ（基本設定・荷重ケース・地盤・杭体・杭配置・根入部・杭支持力）を
@@ -63,7 +64,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddFundamentalTableでエラーが発生しました: {ex.Message}");
+                Log.Warning(ex, "AddFundamentalTableでエラーが発生しました");
             }
         }
 

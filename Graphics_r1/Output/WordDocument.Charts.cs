@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Body = DocumentFormat.OpenXml.Wordprocessing.Body;
 
+using Serilog;
 namespace PileDesign.Output
 {
     // 各種グラフ出力（N-M, Q-N, M-φ, M-θ インタラクション曲線、全杭ダイアグラム、荷重沈下曲線）を提供する partial。
@@ -264,7 +265,7 @@ namespace PileDesign.Output
                                 uhI = pli.Beams[i].NodeI.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                                 uhJ = pli.Beams[i].NodeJ.GetNodeResult(anaModel, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
                             }
-                            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[WordDoc] NodeResult取得失敗: {ex.Message}"); }
+                            catch (Exception ex) { Log.Warning(ex, "[WordDoc] NodeResult取得失敗"); }
                             disps.Add(uhI);
                             disps.Add(uhJ);
                         }

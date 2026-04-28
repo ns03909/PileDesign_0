@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
 
+using Serilog;
 namespace PileDesign.Services
 {
     /// <summary>
@@ -106,7 +107,7 @@ namespace PileDesign.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"BuildTableでエラーが発生しました: {ex.Message}");
+                Log.Warning(ex, "BuildTableでエラーが発生しました");
             }
         }
 
@@ -157,7 +158,7 @@ namespace PileDesign.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"BuildKeyValueTableでエラーが発生しました: {ex.Message}");
+                Log.Warning(ex, "BuildKeyValueTableでエラーが発生しました");
             }
         }
 

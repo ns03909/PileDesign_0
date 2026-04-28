@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Serilog;
 //using System.Windows.Forms;
 
 namespace PileDesign.ViewModels
@@ -2488,7 +2489,7 @@ namespace PileDesign.ViewModels
                                     if (double.IsFinite(nSeis) && nSeis != 0.0)
                                         axialN = nSeis;
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[GraphVM] GetSeismicAxialForce: {ex.Message}"); }
+                                catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
                             }
@@ -2873,7 +2874,7 @@ namespace PileDesign.ViewModels
                                     if (double.IsFinite(nSeis) && nSeis != 0.0)
                                         axialN = nSeis;
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[GraphVM] GetSeismicAxialForce: {ex.Message}"); }
+                                catch (Exception ex) { Log.Warning(ex, "[GraphVM] GetSeismicAxialForce"); }
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
                             }

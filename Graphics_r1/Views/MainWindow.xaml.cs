@@ -22,6 +22,7 @@ using System.Windows.Media.Media3D;
 using System.Windows.Controls.Ribbon;
 using System.Windows.Shapes;
 
+using Serilog;
 namespace PileDesign.Views
 {
     /// <summary>
@@ -452,7 +453,7 @@ namespace PileDesign.Views
                                 popup.IsOpen = false;
                             }
                         }
-                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"QuickHint close: {ex.Message}"); }
+                        catch (Exception ex) { Log.Warning(ex, "QuickHint close"); }
                     });
                 });
             }
@@ -1142,7 +1143,7 @@ namespace PileDesign.Views
             {
                 ClearHoverHighlight();
                 HideSettlementTooltip();
-                try { HideBeamResultTooltip(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"HideBeamResultTooltip: {ex.Message}"); }
+                try { HideBeamResultTooltip(); } catch (Exception ex) { Log.Warning(ex, "HideBeamResultTooltip"); }
             }
         }
 

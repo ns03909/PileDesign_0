@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Windows;
 
+using Serilog;
 namespace PileDesign.Models.InputData
 {
     public class PileBodyInput : BaseModel
@@ -851,7 +852,7 @@ namespace PileDesign.Models.InputData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PileBodyInput.DeepCopy] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[PileBodyInput.DeepCopy]");
                 return null;
             }
         }

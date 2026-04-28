@@ -212,6 +212,90 @@ namespace TestProject1
         }
 
         [TestMethod]
+        public void EmergencyAutoSave_WithValidModel_SavesToEmergencyFile()
+        {
+            var auto = new AutoSaveService(new FileOperationService(MakeOptions()));
+            string? createdFile = null;
+            try
+            {
+                var inputModel = new InputModel
+                {
+                    GroundsInput = new ObservableCollection<GroundInput>
+                    {
+                        new() { GroundTopAltitude = 12.5 }
+                    }
+                };
+
+                SetPrivateField(auto, "_currentInputModel", inputModel);
+                SetPrivateField(auto, "_currentModel", new AnaModel());
+                SetPrivateField(auto, "_currentFilePath", "TestProject_Emergency.json");
+
+                var path = auto.TryEmergencyAutoSave();
+                Assert.IsNotNull(path, "緊急保存に失敗");
+                Assert.IsTrue(System.IO.File.Exists(path), $"緊急保存ファイルが存在しない: {path}");
+                StringAssert.Contains(path, "_emergency_",
+                    $"緊急保存ファイル名に _emergency_ タグが含まれていない: {path}");
+                StringAssert.Contains(path, "TestProject_Emergency",
+                    $"元ファイル名のプレフィックスが含まれていない: {path}");
+
+                createdFile = path;
+            }
+            finally
+            {
+                auto.Stop();
+                if (createdFile != null && System.IO.File.Exists(createdFile))
+                {
+                    try { System.IO.File.Delete(createdFile); } catch { /* ignore */ }
+                }
+            }
+        }
+
+        [TestMethod]
+        public void EmergencyAutoSave_WithoutInputModel_ReturnsNullWithoutThrowing()
+        {
+            var auto = new AutoSaveService(new FileOperationService(MakeOptions()));
+            try
+            {
+                // 何もセットしない状態で呼び出す
+                var path = auto.TryEmergencyAutoSave();
+                Assert.IsNull(path, "InputModel が未設定なので null が期待される");
+            }
+            finally
+            {
+                auto.Stop();
+            }
+        }
+
+        [TestMethod]
+        public void EmergencyAutoSave_WithNaNModel_ReturnsNullWithoutThrowing()
+        {
+            // NaN を含む InputModel に対し緊急保存を試行 → ValidateFinite で例外、
+            // TryEmergencyAutoSave は内部で握りつぶして null を返す。
+            var auto = new AutoSaveService(new FileOperationService(MakeOptions()));
+            try
+            {
+                var inputModel = new InputModel
+                {
+                    GroundsInput = new ObservableCollection<GroundInput>
+                    {
+                        new() { GroundTopAltitude = double.NaN }
+                    }
+                };
+
+                SetPrivateField(auto, "_currentInputModel", inputModel);
+                SetPrivateField(auto, "_currentModel", new AnaModel());
+                SetPrivateField(auto, "_currentFilePath", "TestProject_EmergencyNaN.json");
+
+                var path = auto.TryEmergencyAutoSave();
+                Assert.IsNull(path, "NaN 入力では null が期待される (例外を握りつぶし)");
+            }
+            finally
+            {
+                auto.Stop();
+            }
+        }
+
+        [TestMethod]
         public void AutoSave_Stop_ResetsConsecutiveFailures()
         {
             var auto = new AutoSaveService(new FileOperationService(MakeOptions()));

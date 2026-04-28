@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using Path = System.Windows.Shapes.Path;
 using Point = System.Windows.Point;
 
+using Serilog;
 namespace PileDesign.Views
 {
     /// <summary>
@@ -743,7 +744,7 @@ namespace PileDesign.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[OrientViewToAnimated] {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[OrientViewToAnimated]");
             }
         }
 

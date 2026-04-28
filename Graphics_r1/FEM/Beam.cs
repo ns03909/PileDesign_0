@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json.Serialization;
 
+using Serilog;
 namespace PileDesign.FEM
 {
     public class Beam
@@ -134,7 +135,7 @@ namespace PileDesign.FEM
                 var last = cleanPts.Last();
                 // System.Diagnostics.Debug.WriteLine($"[v2] SetResolvedCombinedMPhi: Beam={Name}, Points={cleanPts.Count}, first={first.Phi:E6}/{first.Moment:E6}, last={last.Phi:E6}/{last.Moment:E6}, InitialCurveTangent={InitialCurveTangent:E6}");
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SetResolvedCombinedMPhi: {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "SetResolvedCombinedMPhi"); }
         }
 
         // 荷重ケースの代表軸力 N を与えて、そのケース用の曲線を解決（線形補間）

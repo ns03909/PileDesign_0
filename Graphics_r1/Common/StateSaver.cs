@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -43,7 +44,7 @@ namespace PileDesign.Common
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[StateSaver] LoadState失敗 ({filePath}): {ex.Message}");
+                Log.Warning(ex, "[StateSaver] LoadState failed: {FilePath}", filePath);
                 return null;
             }
         }

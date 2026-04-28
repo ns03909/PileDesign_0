@@ -20,6 +20,7 @@ using Fonts = ScottPlot.Fonts;
 using WpfPlot = ScottPlot.WPF.WpfPlot;
 
 
+using Serilog;
 namespace PileDesign.ViewModels
 {
     public partial class PileSectionViewModel : ObservableObject
@@ -115,7 +116,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"MonQd change: failed to refresh NQ plot: {ex.Message}");
+                Log.Warning(ex, "MonQd change: failed to refresh NQ plot");
             }
         }
 
@@ -179,7 +180,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SeismicLevel change: failed to refresh NQ/NM plot: {ex.Message}");
+                Log.Warning(ex, "SeismicLevel change: failed to refresh NQ/NM plot");
             }
         }
 

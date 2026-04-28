@@ -16,6 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 
 
+using Serilog;
 namespace PileDesign.Views
 {
     public partial class ChangWindow : Window
@@ -465,7 +466,7 @@ namespace PileDesign.Views
                                     }
                                     if (val != null) pi.SetValue(newItem, Convert.ChangeType(val, pi.PropertyType));
                                 }
-                                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+                                catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
                             }
 
                             foreach (var name in new[] { "SelectedSoilPileIndex", "Number", "Ar", "HorizontalLoad", "H", "EI", "Kh0", "Beta0", "PileHeadMoment", "PileHeadDisplacement", "Kh", "Beta", "MaxBendingMoment", "DepthOfMaxBendingMoment" })
@@ -586,7 +587,7 @@ namespace PileDesign.Views
                     vm.RefreshPlots();
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
 
         // 引張定着筋チェック ON
@@ -599,7 +600,7 @@ namespace PileDesign.Views
                     vm.RefreshPlots();
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
 
         // 引張定着筋チェック OFF
@@ -612,7 +613,7 @@ namespace PileDesign.Views
                     vm.RefreshPlots();
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
 
         // FT 関連のイベントハンドラ（ChangWindow.xaml が参照しているスタブ）
@@ -622,7 +623,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
 
         private void CheckBoxHasFTTensionAnchorsChecked(object? sender, RoutedEventArgs e)
@@ -631,7 +632,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
 
         private void CheckBoxHasFTTensionAnchorsUnchecked(object? sender, RoutedEventArgs e)
@@ -640,7 +641,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
 
         private void TextBoxFTTensionNumChanged(object? sender, TextChangedEventArgs e)
@@ -649,7 +650,7 @@ namespace PileDesign.Views
             {
                 if (DataContext is ChangViewModel vm) vm.RefreshPlots();
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ChangWindow] {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[ChangWindow]"); }
         }
         // --- 追加終了 ---
 

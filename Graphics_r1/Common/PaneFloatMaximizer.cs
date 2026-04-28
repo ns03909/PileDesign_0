@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
+using Serilog;
 namespace PileDesign.Common
 {
     /// <summary>
@@ -198,7 +199,7 @@ namespace PileDesign.Common
             catch (Exception ex)
             {
                 Debug.WriteLine($"[PaneFloatMaximizer] DockBack failed: {ex.GetType().Name}: {ex.Message}");
-                try { tab.DockAsDocument(); } catch (Exception ex2) { Debug.WriteLine($"[PaneFloatMaximizer] DockAsDocument fallback failed: {ex2.Message}"); }
+                try { tab.DockAsDocument(); } catch (Exception ex2) { Log.Warning(ex2, "[PaneFloatMaximizer] DockAsDocument fallback failed"); }
             }
         }
 

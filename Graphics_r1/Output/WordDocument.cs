@@ -24,6 +24,7 @@ using Point = System.Windows.Point;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 using WpStyle = DocumentFormat.OpenXml.Wordprocessing.Style;
 
+using Serilog;
 namespace PileDesign.Output
 {
     internal partial class WordDocument(InputModel _inputModel, AnaModel _anaModel, MainWindowViewModel _mainWindowViewModel)
@@ -189,7 +190,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Word 出力中にエラー: {ex.Message}");
+                Log.Warning(ex, "Word 出力中にエラー");
                 throw;
             }
 
@@ -2637,7 +2638,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DOCX] 検定テキスト生成失敗: {ex.Message}");
+                Log.Warning(ex, "[DOCX] 検定テキスト生成失敗");
                 return;
             }
             if (string.IsNullOrWhiteSpace(text)) return;
@@ -3165,7 +3166,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddScottPlotGraphToBody: エラー: {ex.Message}");
+                Log.Warning(ex, "AddScottPlotGraphToBody: エラー");
             }
         }
 
@@ -3285,7 +3286,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddNMinTScottPlotGraphToBody: エラー: {ex.Message}");
+                Log.Warning(ex, "AddNMinTScottPlotGraphToBody: エラー");
             }
         }
 
@@ -3379,7 +3380,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddScottPlotGraphWithMultipleDataToBody: エラー: {ex.Message}");
+                Log.Warning(ex, "AddScottPlotGraphWithMultipleDataToBody: エラー");
             }
         }
 
@@ -3780,7 +3781,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"図の作成でエラー: {ex.Message}");
+                Log.Warning(ex, "図の作成でエラー");
                 // フォールバック: 何もしないか、プレースホルダを追加する
             }
         }
@@ -4012,7 +4013,7 @@ namespace PileDesign.Output
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddPileForceDiagramByMm: 図作成エラー: {ex.Message}");
+                Log.Warning(ex, "AddPileForceDiagramByMm: 図作成エラー");
                 // 必要ならプレースホルダ段落を追加
             }
         }
@@ -4068,7 +4069,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddPilingLayoutDiagramByMm: 図作成エラー: {ex.Message}");
+                Log.Warning(ex, "AddPilingLayoutDiagramByMm: 図作成エラー");
                 // 必要に応じプレースホルダ段落を追加するなどのフォールバック処理を入れてください
             }
         }
@@ -4117,7 +4118,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"AddGroupPileSettlementContourDiagram: 図作成エラー: {ex.Message}");
+                Log.Warning(ex, "AddGroupPileSettlementContourDiagram: 図作成エラー");
             }
         }
 
@@ -5725,7 +5726,7 @@ diameterSelector,
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SetColumnWidthでエラーが発生しました: {ex.Message}");
+                Log.Warning(ex, "SetColumnWidthでエラーが発生しました");
             }
         }
 

@@ -1,6 +1,8 @@
+using PileDesign.Common.Logging;
 using PileDesign.FEM;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -138,25 +140,14 @@ namespace PileDesign.Services
 
             try
             {
-                // 自動保存ファイル名を生成（元のファイル名 + タイムスタンプ）
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                var originalFileName = !string.IsNullOrEmpty(_currentFilePath)
-                    ? Path.GetFileNameWithoutExtension(_currentFilePath)
-                    : "Untitled";
-
-                var autoSaveFileName = $"{originalFileName}_autosave_{timestamp}.json";
-                var autoSaveFilePath = Path.Combine(AutoSaveFolder, autoSaveFileName);
-
-                // 保存実行
-                _fileOperationService.SaveProjectData(autoSaveFilePath, _currentInputModel, _currentModel, _verticalBeamCaseResults);
+                var path = SaveSnapshot(tag: "autosave");
 
                 LastAutoSaveTime = DateTime.Now;
                 ConsecutiveFailures = 0;
 
-                // イベント発火
                 AutoSaveCompleted?.Invoke(this, new AutoSaveEventArgs
                 {
-                    FilePath = autoSaveFilePath,
+                    FilePath = path,
                     Success = true,
                     Timestamp = LastAutoSaveTime.Value,
                     ConsecutiveFailures = 0
@@ -165,8 +156,8 @@ namespace PileDesign.Services
             catch (Exception ex)
             {
                 ConsecutiveFailures++;
+                Log.Warning(ex, "AutoSave failed (consecutive: {Count})", ConsecutiveFailures);
 
-                // エラー時もイベント発火
                 AutoSaveCompleted?.Invoke(this, new AutoSaveEventArgs
                 {
                     FilePath = null,
@@ -179,6 +170,46 @@ namespace PileDesign.Services
         }
 
         /// <summary>
+        /// 致命的例外発生時に呼び出される緊急保存。
+        /// 通常の AutoSave と異なり、イベントを発火せず、成功時はファイルパスを返す。
+        /// 失敗時 (またはセッション開始前で _currentInputModel が無いとき) は null を返す。
+        /// 例外を投げない (呼び出し側がさらに例外処理する手間を避けるため)。
+        /// </summary>
+        public string? TryEmergencyAutoSave()
+        {
+            if (_currentInputModel == null) return null;
+            try
+            {
+                var path = SaveSnapshot(tag: "emergency");
+                Log.Information("Emergency AutoSave succeeded: {Path}", path);
+                return path;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Emergency AutoSave failed");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 共通スナップショット保存ロジック。例外はそのまま伝播する。
+        /// tag は "autosave" または "emergency" を渡す (ファイル名に埋め込む)。
+        /// </summary>
+        private string SaveSnapshot(string tag)
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var originalFileName = !string.IsNullOrEmpty(_currentFilePath)
+                ? Path.GetFileNameWithoutExtension(_currentFilePath)
+                : "Untitled";
+
+            var fileName = $"{originalFileName}_{tag}_{timestamp}.json";
+            var filePath = Path.Combine(AutoSaveFolder, fileName);
+
+            _fileOperationService.SaveProjectData(filePath, _currentInputModel!, _currentModel, _verticalBeamCaseResults);
+            return filePath;
+        }
+
+        /// <summary>
         /// 古い自動保存ファイルを削除
         /// </summary>
         private void CleanupOldAutoSaveFiles()
@@ -186,7 +217,9 @@ namespace PileDesign.Services
             try
             {
                 var cutoffDate = DateTime.Now.AddDays(-RetentionDays);
-                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json");
+                // 通常の autosave と緊急保存 (emergency) の両方をクリーンアップ対象にする
+                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json")
+                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.json"));
 
                 foreach (var file in autoSaveFiles)
                 {
@@ -200,7 +233,7 @@ namespace PileDesign.Services
             catch (Exception ex)
             {
                 // クリーンアップ失敗は次回に再試行
-                System.Diagnostics.Debug.WriteLine($"[AutoSave] クリーンアップ失敗: {ex.Message}");
+                Log.Warning(ex, "[AutoSave] クリーンアップ失敗");
             }
         }
 
@@ -213,6 +246,7 @@ namespace PileDesign.Services
             try
             {
                 var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, "*_autosave_*.json")
+                    .Concat(Directory.GetFiles(AutoSaveFolder, "*_emergency_*.json"))
                     .Where(f => !f.Contains("_dismissed_"))
                     .ToArray();
                 if (autoSaveFiles.Length == 0)
@@ -241,8 +275,9 @@ namespace PileDesign.Services
             try
             {
                 var originalFileName = Path.GetFileNameWithoutExtension(filePath);
-                var searchPattern = $"{originalFileName}_autosave_*.json";
-                var autoSaveFiles = Directory.GetFiles(AutoSaveFolder, searchPattern);
+                var autoSaveFiles = Directory
+                    .GetFiles(AutoSaveFolder, $"{originalFileName}_autosave_*.json")
+                    .Concat(Directory.GetFiles(AutoSaveFolder, $"{originalFileName}_emergency_*.json"));
 
                 return [.. autoSaveFiles
                     .Select(f => new FileInfo(f))
