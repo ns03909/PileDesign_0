@@ -523,7 +523,7 @@ namespace PileDesign.ViewModels
         private void PlotMPhiCurves(
             IEnumerable<double> nTargets,
             Func<double, (List<double> phis, List<double> Ms)> getMPhi,
-            Func<List<double>, List<double>, List<double>>? buildMiddlePhis = null,
+            Func<List<double>, List<double>, List<double>?>? buildMiddlePhis = null,
             string? middleLegendPrefix = null)
         {
             var wpf = PileSectionWindowInstance?.wpfPlotMphi;

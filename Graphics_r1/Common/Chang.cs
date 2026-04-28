@@ -257,10 +257,10 @@ namespace PileDesign.Common
         public Chang(double _EI, double _beta, double _h, double _horizontalLoad, double _ar)
         {
             _ei = _EI;
-            _beta = _beta;
-            _h = _h;
-            _horizontalLoad = _horizontalLoad;
-            _ar = _ar;
+            this._beta = _beta;
+            this._h = _h;
+            this._horizontalLoad = _horizontalLoad;
+            this._ar = _ar;
             //UpdateDerivedFields();
             Update();
         }

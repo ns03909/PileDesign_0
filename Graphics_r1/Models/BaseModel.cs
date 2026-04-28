@@ -58,7 +58,7 @@ namespace PileDesign.Models
         public bool HasErrors => _errors.Count > 0;
         public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged;
 
-        public IEnumerable GetErrors(string propertyName)
+        public IEnumerable GetErrors(string? propertyName)
         {
             if (string.IsNullOrEmpty(propertyName)) return null;
             return _errors.TryGetValue(propertyName, out var list) ? list : null;

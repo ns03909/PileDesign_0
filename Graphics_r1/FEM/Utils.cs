@@ -11,9 +11,7 @@ namespace PileDesign.FEM
         {
             if (nodeI == null) throw new ArgumentNullException(nameof(nodeI));
             if (nodeJ == null) throw new ArgumentNullException(nameof(nodeJ));
-            if (nodeI.Coord == null) throw new ArgumentNullException(nameof(nodeI.Coord));
-            if (nodeJ.Coord == null) throw new ArgumentNullException(nameof(nodeJ.Coord));
-
+            // Coord は Point3D (struct) なので null チェック不要
 
             double lengthX = Math.Abs(nodeI.Coord.X - nodeJ.Coord.X);
             double lengthY = Math.Abs(nodeI.Coord.Y - nodeJ.Coord.Y);

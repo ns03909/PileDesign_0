@@ -84,7 +84,7 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is not Element other) return false;
 
