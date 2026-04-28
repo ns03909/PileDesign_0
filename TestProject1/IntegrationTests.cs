@@ -391,7 +391,7 @@ namespace TestProject1
         /// <summary>
         /// 地盤例題＋杭例題を組み合わせて InputModel を構築する
         /// </summary>
-        private static (InputModel? model, string? error) BuildExampleInputModel(
+        internal static (InputModel? model, string? error) BuildExampleInputModel(
             string groundExampleName, string pileExampleName)
         {
             var examplesDir = GetExamplesDir();

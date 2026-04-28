@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace PileDesign.Services
@@ -32,6 +34,8 @@ namespace PileDesign.Services
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
+            ValidateFinite(inputModel);
+
             var projectData = new ProjectData
             {
                 InputModel = inputModel,
@@ -54,6 +58,8 @@ namespace PileDesign.Services
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
 
+            ValidateFinite(inputModel);
+
             var projectData = new ProjectData
             {
                 InputModel = inputModel,
@@ -68,6 +74,97 @@ namespace PileDesign.Services
                 string json = JsonSerializer.Serialize(projectData, _jsonOptions);
                 File.WriteAllText(filePath, json);
             });
+        }
+
+        /// <summary>
+        /// InputModel の中に NaN や ±∞ が含まれていれば、そのフィールドパスを示す
+        /// InvalidOperationException を投げる。
+        /// JSON シリアライズ前にプリチェックすることで、System.Text.Json のデフォルト
+        /// 例外メッセージ (どの値が問題かを示さない) を、利用者が値を特定できる形に置換する。
+        /// </summary>
+        internal static void ValidateFinite(InputModel inputModel)
+        {
+            if (inputModel == null) return;
+            var path = FindNonFiniteDouble(inputModel, "InputModel");
+            if (path != null)
+            {
+                throw new InvalidOperationException(
+                    $"NaN または無限大の値が含まれているため保存できません。\n該当箇所: {path}\n値を確認してください。");
+            }
+        }
+
+        private static string FindNonFiniteDouble(object root, string rootName)
+        {
+            var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+            return Recurse(root, rootName);
+
+            string Recurse(object obj, string path)
+            {
+                if (obj == null) return null;
+                if (obj is string) return null;
+                if (!visited.Add(obj)) return null;
+
+                var t = obj.GetType();
+                if (t.IsPrimitive || t.IsEnum || t == typeof(decimal) ||
+                    t == typeof(DateTime) || t == typeof(Guid)) return null;
+
+                if (obj is System.Collections.IEnumerable e && obj is not System.Collections.IDictionary)
+                {
+                    int i = 0;
+                    foreach (var item in e)
+                    {
+                        var r = Recurse(item, $"{path}[{i}]");
+                        if (r != null) return r;
+                        i++;
+                    }
+                    return null;
+                }
+
+                // 自社型 (PileDesign.* 名前空間) のみ深く再帰する。
+                // System.* やフレームワーク型に踏み込んでも誤検知や循環を招くだけ。
+                var ns = t.Namespace ?? "";
+                if (!ns.StartsWith("PileDesign", StringComparison.Ordinal)) return null;
+
+                foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (p.GetIndexParameters().Length > 0) continue;
+                    if (p.GetCustomAttribute<JsonIgnoreAttribute>() != null) continue;
+
+                    var childPath = $"{path}.{p.Name}";
+                    var pt = p.PropertyType;
+
+                    if (pt == typeof(double))
+                    {
+                        double v;
+                        try { v = (double)p.GetValue(obj); } catch { continue; }
+                        if (!double.IsFinite(v))
+                            return $"{childPath} = {FormatNonFinite(v)}";
+                    }
+                    else if (pt == typeof(double?))
+                    {
+                        double? v;
+                        try { v = (double?)p.GetValue(obj); } catch { continue; }
+                        if (v.HasValue && !double.IsFinite(v.Value))
+                            return $"{childPath} = {FormatNonFinite(v.Value)}";
+                    }
+                    else if (!pt.IsValueType && p.CanRead)
+                    {
+                        object child;
+                        try { child = p.GetValue(obj); } catch { continue; }
+                        var r = Recurse(child, childPath);
+                        if (r != null) return r;
+                    }
+                }
+                return null;
+            }
+        }
+
+        private static string FormatNonFinite(double v)
+        {
+            if (double.IsNaN(v)) return "NaN";
+            if (double.IsPositiveInfinity(v)) return "+∞";
+            if (double.IsNegativeInfinity(v)) return "-∞";
+            return v.ToString();
         }
 
         /// <summary>

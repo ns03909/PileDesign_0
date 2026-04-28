@@ -52,6 +52,12 @@ namespace PileDesign.Services
         public DateTime? LastAutoSaveTime { get; private set; }
 
         /// <summary>
+        /// 連続失敗回数。成功で 0 にリセット。
+        /// UI 側はこの値を使って閾値超過時に通知エスカレーションできる。
+        /// </summary>
+        public int ConsecutiveFailures { get; private set; }
+
+        /// <summary>
         /// 自動保存時のイベント
         /// </summary>
         public event EventHandler<AutoSaveEventArgs>? AutoSaveCompleted;
@@ -111,6 +117,7 @@ namespace PileDesign.Services
             _currentInputModel = null;
             _currentModel = null;
             _verticalBeamCaseResults = null;
+            ConsecutiveFailures = 0;
         }
 
         /// <summary>
@@ -144,24 +151,29 @@ namespace PileDesign.Services
                 _fileOperationService.SaveProjectData(autoSaveFilePath, _currentInputModel, _currentModel, _verticalBeamCaseResults);
 
                 LastAutoSaveTime = DateTime.Now;
+                ConsecutiveFailures = 0;
 
                 // イベント発火
                 AutoSaveCompleted?.Invoke(this, new AutoSaveEventArgs
                 {
                     FilePath = autoSaveFilePath,
                     Success = true,
-                    Timestamp = LastAutoSaveTime.Value
+                    Timestamp = LastAutoSaveTime.Value,
+                    ConsecutiveFailures = 0
                 });
             }
             catch (Exception ex)
             {
+                ConsecutiveFailures++;
+
                 // エラー時もイベント発火
                 AutoSaveCompleted?.Invoke(this, new AutoSaveEventArgs
                 {
                     FilePath = null,
                     Success = false,
                     ErrorMessage = ex.Message,
-                    Timestamp = DateTime.Now
+                    Timestamp = DateTime.Now,
+                    ConsecutiveFailures = ConsecutiveFailures
                 });
             }
         }
@@ -253,5 +265,10 @@ namespace PileDesign.Services
         public bool Success { get; set; }
         public string? ErrorMessage { get; set; }
         public DateTime Timestamp { get; set; }
+
+        /// <summary>
+        /// 連続失敗回数 (成功時は 0)。閾値超過で UI 側がエスカレーション通知に使う。
+        /// </summary>
+        public int ConsecutiveFailures { get; set; }
     }
 }

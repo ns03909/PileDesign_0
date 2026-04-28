@@ -5167,6 +5167,15 @@ namespace PileDesign.ViewModels
             else
             {
                 StatusMessage = $"自動保存失敗: {e.ErrorMessage}";
+
+                // 連続失敗が 3 回以上に達したら StatusMessage に加えて Toast でエスカレーション通知。
+                // 3 分間隔 × 3 回 = ~9 分間 AutoSave が動作していない計算で、ユーザーに気付かせるべきタイミング。
+                if (e.ConsecutiveFailures >= 3)
+                {
+                    ShowToast(
+                        $"自動保存が {e.ConsecutiveFailures} 回連続で失敗しています。\n{e.ErrorMessage}",
+                        type: 2);  // Warning
+                }
             }
         }
 
