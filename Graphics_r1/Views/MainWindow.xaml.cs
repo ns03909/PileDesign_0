@@ -375,6 +375,12 @@ namespace PileDesign.Views
         {
             // MainWindowが閉じられたときにOptionWindowも閉じる
             _optionWindow?.Close();
+
+            // ViewModel への購読を解除 (メモリリーク防止)
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.PropertyChanged -= VmOnPropertyChanged;
+            }
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
