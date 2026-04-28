@@ -28,8 +28,8 @@ namespace PileDesign.Services
         /// <summary>
         /// ProjectData を JSON ファイルに保存
         /// </summary>
-        public void SaveProjectData(string filePath, InputModel inputModel, AnaModel anaModel,
-            IList<FEM.VerticalBeamCaseResult> verticalBeamCaseResults = null)
+        public void SaveProjectData(string filePath, InputModel inputModel, AnaModel? anaModel,
+            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -39,10 +39,10 @@ namespace PileDesign.Services
             var projectData = new ProjectData
             {
                 InputModel = inputModel,
-                AnaModel = anaModel,
+                AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
-                    : null
+                    : null!
             };
 
             string json = JsonSerializer.Serialize(projectData, _jsonOptions);
@@ -52,8 +52,8 @@ namespace PileDesign.Services
         /// <summary>
         /// ProjectData を JSON ファイルに非同期保存（UIスレッドをブロックしない）
         /// </summary>
-        public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel anaModel,
-            IList<FEM.VerticalBeamCaseResult> verticalBeamCaseResults = null)
+        public async Task SaveProjectDataAsync(string filePath, InputModel inputModel, AnaModel? anaModel,
+            IList<FEM.VerticalBeamCaseResult>? verticalBeamCaseResults = null)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("ファイルパスが指定されていません。", nameof(filePath));
@@ -63,10 +63,10 @@ namespace PileDesign.Services
             var projectData = new ProjectData
             {
                 InputModel = inputModel,
-                AnaModel = anaModel,
+                AnaModel = anaModel!,
                 VerticalBeamCaseResults = verticalBeamCaseResults != null
                     ? new List<FEM.VerticalBeamCaseResult>(verticalBeamCaseResults)
-                    : null
+                    : null!
             };
 
             await Task.Run(() =>
@@ -82,7 +82,7 @@ namespace PileDesign.Services
         /// JSON シリアライズ前にプリチェックすることで、System.Text.Json のデフォルト
         /// 例外メッセージ (どの値が問題かを示さない) を、利用者が値を特定できる形に置換する。
         /// </summary>
-        internal static void ValidateFinite(InputModel inputModel)
+        internal static void ValidateFinite(InputModel? inputModel)
         {
             if (inputModel == null) return;
             var path = FindNonFiniteDouble(inputModel, "InputModel");
@@ -93,12 +93,12 @@ namespace PileDesign.Services
             }
         }
 
-        private static string FindNonFiniteDouble(object root, string rootName)
+        private static string? FindNonFiniteDouble(object root, string rootName)
         {
             var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
             return Recurse(root, rootName);
 
-            string Recurse(object obj, string path)
+            string? Recurse(object? obj, string path)
             {
                 if (obj == null) return null;
                 if (obj is string) return null;
@@ -136,7 +136,13 @@ namespace PileDesign.Services
                     if (pt == typeof(double))
                     {
                         double v;
-                        try { v = (double)p.GetValue(obj); } catch { continue; }
+                        try
+                        {
+                            var raw = p.GetValue(obj);
+                            if (raw == null) continue;
+                            v = (double)raw;
+                        }
+                        catch { continue; }
                         if (!double.IsFinite(v))
                             return $"{childPath} = {FormatNonFinite(v)}";
                     }
@@ -149,7 +155,7 @@ namespace PileDesign.Services
                     }
                     else if (!pt.IsValueType && p.CanRead)
                     {
-                        object child;
+                        object? child;
                         try { child = p.GetValue(obj); } catch { continue; }
                         var r = Recurse(child, childPath);
                         if (r != null) return r;
@@ -188,7 +194,7 @@ namespace PileDesign.Services
                 throw new IOException($"ファイルの読込に失敗しました。\n別のプロセスで使用中の可能性があります。\n{filePath}", ex);
             }
 
-            ProjectData projectData;
+            ProjectData? projectData;
             try
             {
                 projectData = JsonSerializer.Deserialize<ProjectData>(json, _jsonOptions);
@@ -326,7 +332,7 @@ namespace PileDesign.Services
         /// <summary>
         /// IEnumerable を ObservableCollection に変換（既に ObservableCollection の場合はそのまま返す）
         /// </summary>
-        private static ObservableCollection<T> EnsureObservableCollection<T>(IEnumerable<T> source)
+        private static ObservableCollection<T> EnsureObservableCollection<T>(IEnumerable<T>? source)
         {
             if (source is ObservableCollection<T> observableCollection)
                 return observableCollection;
