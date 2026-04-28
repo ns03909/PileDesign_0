@@ -699,7 +699,8 @@
                                        Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
                                          Text="{Binding GroundInput.GroundAcceleration1, StringFormat='{}{0:0.000}'}"
-                                          HorizontalContentAlignment="Right"
+                                         Style="{StaticResource ValidatedTextBoxStyle}"
+                                         HorizontalContentAlignment="Right"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                                 <TextBlock Text="液状化指標 PL" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="20,0,8,0"/>
                                 <TextBox HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="60"
@@ -731,7 +732,8 @@
                                     Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                    Text="{Binding GroundInput.GroundAcceleration2, StringFormat='{}{0:0.000}'}"
+                                         Style="{StaticResource ValidatedTextBoxStyle}"
+                                         Text="{Binding GroundInput.GroundAcceleration2, StringFormat='{}{0:0.000}'}"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                                 <TextBlock Text="液状化指標 PL" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Margin="20,0,8,0"/>
                                 <TextBox HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="60"
@@ -1247,10 +1249,10 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="レベル2荷重検討用地表面加速度(m/s)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="250" />
-                                <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25" 
+                                <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
-                                    Text="{Binding GroundInput.GroundAcceleration2, StringFormat='{}{0:0.000}'}"
-                                       
+                                         Style="{StaticResource ValidatedTextBoxStyle}"
+                                         Text="{Binding GroundInput.GroundAcceleration2, StringFormat='{}{0:0.000}'}"
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                             </StackPanel>
                         </StackPanel>

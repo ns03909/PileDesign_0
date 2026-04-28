@@ -122,5 +122,22 @@
 
     <Style TargetType="{x:Type common:EnhancedDataGrid}"
            BasedOn="{StaticResource {x:Type DataGrid}}"/>
-        
+
+    <!-- ═══ INotifyDataErrorInfo 連動の検証エラー表示 ═══
+         BaseModel が AddError("...") した瞬間にバインド先 TextBox が
+         赤縁になり ToolTip にエラーメッセージが出る。
+         opt-in (StaticResource 参照) なので既存 TextBox には影響しない。
+    -->
+    <Style x:Key="ValidatedTextBoxStyle" TargetType="TextBox">
+        <Style.Triggers>
+            <Trigger Property="Validation.HasError" Value="True">
+                <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
+                <Setter Property="BorderThickness" Value="1.5"/>
+                <Setter Property="ToolTip"
+                        Value="{Binding RelativeSource={RelativeSource Self},
+                                Path=(Validation.Errors)/ErrorContent}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
 </ResourceDictionary>

@@ -45,20 +45,53 @@ namespace TestProject1
             m.Invoke(obj, args);
         }
 
+        /// <summary>
+        /// GroundInput.GroundTopAltitude に NaN を直書きする。
+        /// 通常の setter (SetFiniteDouble) は NaN を弾いて 0.0 にフォールバックするので、
+        /// 「UI 検証をすり抜けた NaN」を再現するには private フィールド _groundTopAltitude
+        /// に reflection で直接書き込む必要がある。
+        /// この関数は ValidateFinite (defense-in-depth) のテスト用。
+        /// </summary>
+        private static GroundInput CreateGroundInputWithRawNaN()
+        {
+            var g = new GroundInput();
+            var field = typeof(GroundInput).GetField("_groundTopAltitude",
+                BindingFlags.NonPublic | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("_groundTopAltitude が見つかりません");
+            field.SetValue(g, double.NaN);
+            return g;
+        }
+
+        /// <summary>
+        /// 各テストで AutoSaveFolder に残った前回テストのファイルを削除する。
+        /// AutoSaveService は %LocalAppData%\PileDesign\AutoSave という共有フォルダを使うため、
+        /// 過去の test run のゴミが「ファイルが残っているか」検証を撹乱する。
+        /// </summary>
+        private static void CleanupAutoSaveFolder(AutoSaveService auto, string filePrefix)
+        {
+            try
+            {
+                var pattern = $"{filePrefix}*.json";
+                foreach (var f in Directory.GetFiles(auto.AutoSaveFolder, pattern))
+                {
+                    try { File.Delete(f); } catch { /* ignore */ }
+                }
+            }
+            catch { /* ignore */ }
+        }
+
         // --- テスト ------------------------------------------------------------
 
         [TestMethod]
         public void AutoSave_WithNaNInInputModel_FailureEventContainsFieldPath()
         {
             var auto = new AutoSaveService(new FileOperationService(MakeOptions()));
+            CleanupAutoSaveFolder(auto, "TestProject_NaN_");
             try
             {
                 var inputModel = new InputModel
                 {
-                    GroundsInput = new ObservableCollection<GroundInput>
-                    {
-                        new() { GroundTopAltitude = double.NaN }
-                    }
+                    GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
                 };
 
                 SetPrivateField(auto, "_currentInputModel", inputModel);
@@ -101,10 +134,7 @@ namespace TestProject1
             {
                 var inputModel = new InputModel
                 {
-                    GroundsInput = new ObservableCollection<GroundInput>
-                    {
-                        new() { GroundTopAltitude = double.NaN }
-                    }
+                    GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
                 };
 
                 // Start() はタイマーを起動 + state を設定
@@ -131,10 +161,7 @@ namespace TestProject1
             {
                 var inputModel = new InputModel
                 {
-                    GroundsInput = new ObservableCollection<GroundInput>
-                    {
-                        new() { GroundTopAltitude = double.NaN }
-                    }
+                    GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
                 };
 
                 SetPrivateField(auto, "_currentInputModel", inputModel);
@@ -173,10 +200,7 @@ namespace TestProject1
             {
                 var inputModel = new InputModel
                 {
-                    GroundsInput = new ObservableCollection<GroundInput>
-                    {
-                        new() { GroundTopAltitude = double.NaN }
-                    }
+                    GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
                 };
 
                 SetPrivateField(auto, "_currentInputModel", inputModel);
@@ -276,10 +300,7 @@ namespace TestProject1
             {
                 var inputModel = new InputModel
                 {
-                    GroundsInput = new ObservableCollection<GroundInput>
-                    {
-                        new() { GroundTopAltitude = double.NaN }
-                    }
+                    GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
                 };
 
                 SetPrivateField(auto, "_currentInputModel", inputModel);
@@ -302,10 +323,7 @@ namespace TestProject1
 
             var inputModel = new InputModel
             {
-                GroundsInput = new ObservableCollection<GroundInput>
-                {
-                    new() { GroundTopAltitude = double.NaN }
-                }
+                GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
             };
 
             SetPrivateField(auto, "_currentInputModel", inputModel);
@@ -328,10 +346,7 @@ namespace TestProject1
             {
                 var inputModel = new InputModel
                 {
-                    GroundsInput = new ObservableCollection<GroundInput>
-                    {
-                        new() { GroundTopAltitude = double.NaN }
-                    }
+                    GroundsInput = new ObservableCollection<GroundInput> { CreateGroundInputWithRawNaN() }
                 };
 
                 SetPrivateField(auto, "_currentInputModel", inputModel);

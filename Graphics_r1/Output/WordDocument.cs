@@ -194,7 +194,7 @@ namespace PileDesign.Output
                 throw;
             }
 
-            System.Diagnostics.Debug.WriteLine("Word文書を出力しました。開いて Ctrl+A → F9 でフィールド更新してください。");
+            Log.Debug("Word文書を出力しました。開いて Ctrl+A → F9 でフィールド更新してください。");
         }
 
 
@@ -3282,7 +3282,7 @@ namespace PileDesign.Output
                 WordDocumentUtils.AddImageToBodyByMm(mainPart, body, tempFile, widthMm, heightMm);
 
                 try { if (File.Exists(tempFile)) File.Delete(tempFile); }
-                catch (Exception delEx) { System.Diagnostics.Debug.WriteLine($"[WordDocument] tempFile delete failed: {delEx.GetType().Name}: {delEx.Message}"); }
+                catch (Exception delEx) { Log.Warning(delEx, "[WordDocument] tempFile delete failed"); }
             }
             catch (Exception ex)
             {

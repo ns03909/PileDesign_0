@@ -21,14 +21,14 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _groundRef, value);
         }
 
-        // 孔口Z
+        // 孔口Z (有限値必須。NaN/±∞ なら 0.0 にフォールバックしエラー記録)
         private double _groundTopAltitude;
         public double GroundTopAltitude
         {
             get => _groundTopAltitude;
             set
             {
-                if (SetProperty(ref _groundTopAltitude, value))
+                if (SetFiniteDouble(ref _groundTopAltitude, value))
                 {
                     OnPropertyChanged(nameof(IsErrorGroundWaterTableAltitude));
                     OnPropertyChanged(nameof(IsErrorStressAltitude));
@@ -36,29 +36,29 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 地下水位Z
+        // 地下水位Z (有限値必須)
         private double _groundWaterTableAltitude;
         public double GroundWaterTableAltitude
         {
             get => _groundWaterTableAltitude;
             set
             {
-                if (SetProperty(ref _groundWaterTableAltitude, value))
+                if (SetFiniteDouble(ref _groundWaterTableAltitude, value))
                 {
                     OnPropertyChanged(nameof(IsErrorGroundWaterTableAltitude));
-                    OnPropertyChanged(nameof(IsErrorGroundWaterGLDepth)); // 深さ連動して再計算する場合
+                    OnPropertyChanged(nameof(IsErrorGroundWaterGLDepth));
                 }
             }
         }
 
-        // 応力Z
+        // 応力Z (有限値必須)
         private double _stressAltitude;
         public double StressAltitude
         {
             get => _stressAltitude;
             set
             {
-                if (SetProperty(ref _stressAltitude, value))
+                if (SetFiniteDouble(ref _stressAltitude, value))
                 {
                     OnPropertyChanged(nameof(IsErrorStressAltitude));
                 }
@@ -101,12 +101,12 @@ namespace PileDesign.Models.InputData
             }
         }
 
-        // 地表面における設計用レベル1地震水平加速度
+        // 地表面における設計用レベル1地震水平加速度 (m/s²、非負の有限値)
         private double _groundAcceleration1;
         public double GroundAcceleration1
         {
             get => _groundAcceleration1;
-            set => SetProperty(ref _groundAcceleration1, value);
+            set => SetFiniteClampedDouble(ref _groundAcceleration1, value, min: 0.0, max: 100.0, fallback: 1.5);
         }
 
         // 地表面における設計用レベル2地震水平加速度
@@ -114,7 +114,7 @@ namespace PileDesign.Models.InputData
         public double GroundAcceleration2
         {
             get => _groundAcceleration2;
-            set => SetProperty(ref _groundAcceleration2, value);
+            set => SetFiniteClampedDouble(ref _groundAcceleration2, value, min: 0.0, max: 100.0, fallback: 3.5);
         }
 
         // 浅層地盤のタイプ

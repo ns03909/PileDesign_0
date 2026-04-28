@@ -156,7 +156,7 @@ namespace PileDesign.Output
                     if (pi != null && pi.CanWrite && pi.PropertyType == typeof(string))
                         pi.SetValue(target, useFont);
                 }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DiagramRenderer] suppress: {ex.GetType().Name}: {ex.Message}"); }
+                catch (Exception ex) { Log.Warning(ex, "[DiagramRenderer] suppress"); }
             }
 
             try
@@ -192,7 +192,7 @@ namespace PileDesign.Output
             finally
             {
                 try { if (File.Exists(tempFile)) File.Delete(tempFile); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[DiagramRenderer] tempFile delete failed: {ex.GetType().Name}: {ex.Message}"); }
+                catch (Exception ex) { Log.Warning(ex, "[DiagramRenderer] tempFile delete failed"); }
             }
         }
         //public static byte[] RenderScottPlotToPngBytes(Action<WpfPlot> plotAction, double widthMm, double heightMm, double dpi = DefaultDpi, double scale = 2.0, string fontName = "Meiryo")

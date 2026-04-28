@@ -416,12 +416,17 @@ namespace TestProject1
         [DataRow(double.NegativeInfinity, "-∞")]
         public void Save_WithNonFiniteDouble_ThrowsWithFieldPath(double bad, string expectedSymbol)
         {
+            // GroundTopAltitude の setter (SetFiniteDouble) は NaN/Inf を弾くため、
+            // ValidateFinite (defense-in-depth) を発動させるには private フィールドに
+            // reflection で直書きしてセッターをすり抜ける必要がある。
+            var ground = new GroundInput();
+            typeof(GroundInput)
+                .GetField("_groundTopAltitude", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .SetValue(ground, bad);
+
             var inputModel = new InputModel
             {
-                GroundsInput = new ObservableCollection<GroundInput>
-                {
-                    new() { GroundTopAltitude = bad }
-                }
+                GroundsInput = new ObservableCollection<GroundInput> { ground }
             };
 
             var svc = new FileOperationService(MakeOptions());
@@ -442,14 +447,20 @@ namespace TestProject1
         [TestMethod]
         public void Save_WithNonFiniteInNestedCollection_PathIncludesIndex()
         {
-            // ネストされたコレクションの中に NaN を仕込み、エラーパスが配列インデックスを含むことを確認
+            // ネストされたコレクションの中に NaN を仕込み、エラーパスが配列インデックスを含むことを確認。
+            // setter は NaN を弾くので reflection で _groundTopAltitude に直書きする。
+            var nanGround = new GroundInput();
+            typeof(GroundInput)
+                .GetField("_groundTopAltitude", BindingFlags.NonPublic | BindingFlags.Instance)!
+                .SetValue(nanGround, double.NaN);
+
             var inputModel = new InputModel
             {
                 GroundsInput = new ObservableCollection<GroundInput>
                 {
                     new() { GroundTopAltitude = 0.0 },
                     new() { GroundTopAltitude = 1.0 },
-                    new() { GroundTopAltitude = double.NaN },  // [2] 番目に NaN
+                    nanGround,
                 }
             };
 

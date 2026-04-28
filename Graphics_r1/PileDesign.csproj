@@ -2,6 +2,13 @@
   <PropertyGroup>
     <TargetFramework>net8.0-windows7.0</TargetFramework>
 	<Nullable>enable</Nullable>
+
+	<!-- 警告ベースライン: 既存の C# 警告は段階的に解消するため「警告のまま」許容するが、
+	     上記リストに含まれない「新種」の警告は即エラーで止めて回帰を防ぐ。
+	     コードを修正したら下記リストから該当コードを削除して strict 化する。
+	     2026-04-29 baseline (全 6076 警告 → 29 種類のコードを許容)。-->
+	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	<WarningsNotAsErrors>CS0067;CS0108;CS0162;CS0168;CS0169;CS0219;CS0414;CS0618;CS0649;CS1717;CS4014;CS8073;CS8321;CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8612;CS8618;CS8619;CS8621;CS8622;CS8625;CS8629;CS8765;CS8767;CS9113;NU1701</WarningsNotAsErrors>
     <OutputType>WinExe</OutputType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>

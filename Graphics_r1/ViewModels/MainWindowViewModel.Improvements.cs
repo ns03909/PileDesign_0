@@ -145,7 +145,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Undo] スナップショット保存失敗: {ex.GetType().Name}: {ex.Message}");
+                Log.Warning(ex, "[Undo] スナップショット保存失敗");
             }
         }
 
@@ -207,14 +207,14 @@ namespace PileDesign.ViewModels
                 _generateSoilPilesDebounceTimer?.Stop();
                 _generateSoilPilesDebounceTimer = null;
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] _generateSoilPilesDebounceTimer.Stop: {ex.GetType().Name}: {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[Dispose] _generateSoilPilesDebounceTimer.Stop"); }
 
             try
             {
                 _updateWindowDebounceTimer?.Stop();
                 _updateWindowDebounceTimer = null;
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] _updateWindowDebounceTimer.Stop: {ex.GetType().Name}: {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[Dispose] _updateWindowDebounceTimer.Stop"); }
 
             try
             {
@@ -223,7 +223,7 @@ namespace PileDesign.ViewModels
                 _longOpCts?.Dispose();
                 _longOpCts = null;
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] _longOpCts.Cancel/Dispose: {ex.GetType().Name}: {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[Dispose] _longOpCts.Cancel/Dispose"); }
 
             // イベントハンドラの解除
             try
@@ -234,7 +234,7 @@ namespace PileDesign.ViewModels
                     // CurrentInputModel 自体が GC されれば問題ないが、念のため参照をクリア。
                 }
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Dispose] CurrentInputModel cleanup: {ex.GetType().Name}: {ex.Message}"); }
+            catch (Exception ex) { Log.Warning(ex, "[Dispose] CurrentInputModel cleanup"); }
 
             // Clear delegates to avoid leaks
             UpdateWindowAction = null;

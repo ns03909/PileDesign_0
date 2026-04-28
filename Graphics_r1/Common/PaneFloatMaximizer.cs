@@ -80,7 +80,7 @@ namespace PileDesign.Common
                 int paneIdx = origGroup?.Children.IndexOf(origPane) ?? -1;
                 int tabIdx = origPane.Children.IndexOf(tab);
                 _originalPanes[tab] = new OriginalLocation(origPane, origGroup, rootPanel, groupIdx, paneIdx, tabIdx);
-                Debug.WriteLine($"[PaneFloatMaximizer] Captured: tab={tab.Title} groupIdx={groupIdx} paneIdx={paneIdx} tabIdx={tabIdx}");
+                Log.Debug($"[PaneFloatMaximizer] Captured: tab={tab.Title} groupIdx={groupIdx} paneIdx={paneIdx} tabIdx={tabIdx}");
             }
         }
 
@@ -154,7 +154,7 @@ namespace PileDesign.Common
             {
                 if (_originalPanes.TryGetValue(tab, out var info))
                 {
-                    Debug.WriteLine($"[PaneFloatMaximizer] DockBack: pane.Root={info.Pane?.Root != null} group.Root={info.ParentGroup?.Root != null} root.Root={info.RootPanel?.Root != null}");
+                    Log.Debug($"[PaneFloatMaximizer] DockBack: pane.Root={info.Pane?.Root != null} group.Root={info.ParentGroup?.Root != null} root.Root={info.RootPanel?.Root != null}");
 
                     // Step 1: Group が GC されている場合 → RootPanel に再挿入
                     if (info.ParentGroup != null && info.ParentGroup.Root == null
@@ -163,7 +163,7 @@ namespace PileDesign.Common
                     {
                         int idx = Math.Max(0, Math.Min(info.GroupIndexInRoot, info.RootPanel.Children.Count));
                         info.RootPanel.Children.Insert(idx, info.ParentGroup);
-                        Debug.WriteLine($"[PaneFloatMaximizer] Re-attached group at index {idx}");
+                        Log.Debug($"[PaneFloatMaximizer] Re-attached group at index {idx}");
                     }
 
                     // Step 2: Pane が GC されている場合 → Group に再挿入
@@ -173,7 +173,7 @@ namespace PileDesign.Common
                     {
                         int idx = Math.Max(0, Math.Min(info.PaneIndexInGroup, info.ParentGroup.Children.Count));
                         info.ParentGroup.Children.Insert(idx, info.Pane);
-                        Debug.WriteLine($"[PaneFloatMaximizer] Re-attached pane at index {idx}");
+                        Log.Debug($"[PaneFloatMaximizer] Re-attached pane at index {idx}");
                     }
 
                     // Step 3: Tab を Pane に挿入
@@ -187,18 +187,18 @@ namespace PileDesign.Common
                         info.Pane.Children.Insert(tabIdx, tab);
                         tab.IsActive = true;
                         _originalPanes.Remove(tab);
-                        Debug.WriteLine($"[PaneFloatMaximizer] Inserted tab at index {tabIdx}");
+                        Log.Debug($"[PaneFloatMaximizer] Inserted tab at index {tabIdx}");
                         return;
                     }
                 }
 
-                Debug.WriteLine($"[PaneFloatMaximizer] Fallback DockAsDocument");
+                Log.Debug($"[PaneFloatMaximizer] Fallback DockAsDocument");
                 tab.DockAsDocument();
                 _originalPanes.Remove(tab);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[PaneFloatMaximizer] DockBack failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Debug($"[PaneFloatMaximizer] DockBack failed: {ex.GetType().Name}: {ex.Message}");
                 try { tab.DockAsDocument(); } catch (Exception ex2) { Log.Warning(ex2, "[PaneFloatMaximizer] DockAsDocument fallback failed"); }
             }
         }

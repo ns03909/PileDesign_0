@@ -2688,7 +2688,7 @@ namespace PileDesign.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[TrySaveUndoSnapshotSafely] Exception: {ex.GetType().Name}: {ex.Message}");
+                Log.Debug($"[TrySaveUndoSnapshotSafely] Exception: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

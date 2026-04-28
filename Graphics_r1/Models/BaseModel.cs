@@ -114,6 +114,7 @@ namespace PileDesign.Models
             [CallerMemberName] string propertyName = null)
         {
             bool invalid = double.IsNaN(value) || double.IsInfinity(value);
+            bool clamped = false;
             if (invalid)
             {
                 value = fallback;
@@ -123,10 +124,12 @@ namespace PileDesign.Models
             if (value < min || value > max)
             {
                 value = Math.Min(Math.Max(value, min), max);
+                clamped = true;
                 if (recordError)
                     AddError(propertyName, $"許容範囲 [{min}, {max}] 外のため補正しました。");
             }
-            else if (recordError && _errors.ContainsKey(propertyName))
+            // invalid でもクランプでもなく、過去のエラーが残っているなら解消通知
+            if (recordError && !invalid && !clamped && _errors.ContainsKey(propertyName))
             {
                 ClearErrors(propertyName);
             }

@@ -123,7 +123,7 @@ namespace PileDesign.Views
                         catch (Exception innerEx)
                         {
                             // 最終的に失敗しても続行
-                            System.Diagnostics.Debug.WriteLine($"[GroundWindow_ContentRendered] Initialize retry failed: {innerEx.GetType().Name}: {innerEx.Message}");
+                            Log.Warning(innerEx, "[GroundWindow_ContentRendered] Initialize retry failed");
                         }
                     }
 
