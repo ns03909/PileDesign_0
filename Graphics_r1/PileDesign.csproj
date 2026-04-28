@@ -8,8 +8,8 @@
 	     コードを修正したら下記リストから該当コードを削除して strict 化する。
 	     2026-04-29 baseline (全 6076 警告 → 29 種類のコードを許容)。-->
 	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-	<!-- 解消済 (2026-04-29): CS1717 CS8073 CS8621 CS8765 CS8767 CS9113 -->
-	<WarningsNotAsErrors>CS0067;CS0108;CS0162;CS0168;CS0169;CS0219;CS0414;CS0618;CS0649;CS4014;CS8321;CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8612;CS8618;CS8619;CS8622;CS8625;CS8629;NU1701</WarningsNotAsErrors>
+	<!-- 解消済: CS0067 CS0108 CS0169 CS0414 CS1717 CS8073 CS8321 CS8621 CS8765 CS8767 CS9113 (2026-04-29) -->
+	<WarningsNotAsErrors>CS0162;CS0168;CS0219;CS0618;CS0649;CS4014;CS8600;CS8601;CS8602;CS8603;CS8604;CS8605;CS8612;CS8618;CS8619;CS8622;CS8625;CS8629;NU1701</WarningsNotAsErrors>
     <OutputType>WinExe</OutputType>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <UseWindowsForms>true</UseWindowsForms>

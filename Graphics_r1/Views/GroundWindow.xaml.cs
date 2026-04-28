@@ -21,7 +21,6 @@ namespace PileDesign.Views
     public partial class GroundWindow : Window
 
     {
-        private readonly GroundLayerViewModel _viewModel;
         private bool _isClosingHandled = false;
 
         // 再入防止フラグ

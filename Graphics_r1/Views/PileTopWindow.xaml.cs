@@ -15,8 +15,6 @@ namespace PileDesign.Views
     /// </summary>
     public partial class PileTopWindow : Window
     {
-        public event PropertyChangedEventHandler PropertyChanged;
-
         private int PileBodyNo { get; set; }
         private string PileConstructionType { get; set; }
         private PileSection PileSection { get; set; }

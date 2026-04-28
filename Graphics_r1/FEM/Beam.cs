@@ -42,8 +42,8 @@ namespace PileDesign.FEM
 
         // 解決後（N固定）の曲線をキャッシュ
         private MomentCurvatureCurve? _combinedCurve;
-        private MomentCurvatureCurve? _yCurve;
-        private MomentCurvatureCurve? _zCurve;
+        // 注: 個別 M-φ 曲線 (_yCurve / _zCurve) は将来の拡張用として保留中。
+        // 現状は合成曲線 (_combinedCurve) のみ使用する。
 
         // 曲線の初期接線剛性（φ→0 での dM/dφ）：EI正規化の基準
         public double InitialCurveTangent { get; private set; }
@@ -245,15 +245,10 @@ namespace PileDesign.FEM
                 return (EIy, EIz);
             }
 
-            // 個別曲線があればそれで評価、なければ初期 EI をフォールバック
-            double eiy = double.NaN;
-            double eiz = double.NaN;
-            try { eiy = _yCurve?.EvaluateTangent(phiY) ?? double.NaN; } catch { eiy = double.NaN; }
-            try { eiz = _zCurve?.EvaluateTangent(phiZ) ?? double.NaN; } catch { eiz = double.NaN; }
-
-            // v23 (A-1): 個別軸も同様、塑性域での初期剛性フォールバックを縮小
-            if (!double.IsFinite(eiy) || eiy <= 0.0) eiy = 0.001 * EI0y;
-            if (!double.IsFinite(eiz) || eiz <= 0.0) eiz = 0.001 * EI0z;
+            // 個別曲線は未実装。塑性域は初期剛性の 0.001 倍にフォールバック
+            // v23 (A-1): 塑性域での初期剛性フォールバックを縮小
+            double eiy = 0.001 * EI0y;
+            double eiz = 0.001 * EI0z;
 
             return (eiy, eiz);
         }
@@ -284,14 +279,9 @@ namespace PileDesign.FEM
                 return (EIeff, EIeff);
             }
 
-            // 個別曲線があればそれで評価、なければ初期 EI をフォールバック
-            double eiy = double.NaN;
-            double eiz = double.NaN;
-            try { eiy = _yCurve?.EvaluateSecant(phiY) ?? double.NaN; } catch { eiy = double.NaN; }
-            try { eiz = _zCurve?.EvaluateSecant(phiZ) ?? double.NaN; } catch { eiz = double.NaN; }
-
-            if (!double.IsFinite(eiy) || eiy <= 0.0) eiy = EI0y;
-            if (!double.IsFinite(eiz) || eiz <= 0.0) eiz = EI0z;
+            // 個別曲線は未実装。初期 EI へフォールバック
+            double eiy = EI0y;
+            double eiz = EI0z;
 
             return (eiy, eiz);
         }

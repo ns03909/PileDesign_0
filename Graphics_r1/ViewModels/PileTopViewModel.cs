@@ -661,17 +661,6 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // ヘルパ: トップセクション用ジオメトリを追加
-            void AddDonutToGeometry(PathGeometry geom, double outdia, double india)
-            {
-                var center = new Point(Canvas.ActualWidth * 0.5, Canvas.ActualHeight * 0.5);
-                var outer = new EllipseGeometry(center, outdia * 0.5 * Scale, outdia * 0.5 * Scale);
-                var inner = new EllipseGeometry(center, india * 0.5 * Scale, india * 0.5 * Scale);
-                geom.AddGeometry(outer);
-                geom.AddGeometry(inner);
-            }
-
-
             // 初期化
             DrawingGeometry = new PathGeometry();
             TopSectionDrawingGeometry = new PathGeometry();

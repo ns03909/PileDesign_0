@@ -13,8 +13,6 @@ namespace PileDesign.Views
 {
     public partial class LoadCaseWindow : Window
     {
-        // Viewを閉じるためのイベント
-        public event EventHandler RequestClose;
         private bool _isClosingHandled = false;
 
         public LoadCaseWindow()

@@ -72,7 +72,7 @@ namespace PileDesign.Views
 
         public CanvasThreeDView CanvasThreeDViewModel { get; set; }
 
-        private OptionWindow _optionWindow;
+        private OptionWindow? _optionWindow;
 
         private bool _startupQuickHintShown = false;
         private readonly Services.LayoutService _layoutService = new();
@@ -715,9 +715,6 @@ namespace PileDesign.Views
         //        selectionRectangle = null;
         //    }
         //}
-
-        private int? elementAddStartNodeIndex = null;
-        private int? elementAddEndNodeIndex = null;
 
         private int? FindNearestNodeIndex(Point pos)
         {

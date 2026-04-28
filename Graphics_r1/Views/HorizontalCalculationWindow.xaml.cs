@@ -18,7 +18,6 @@ namespace PileDesign.Views
     /// </summary>
     public partial class HorizontalCalculationWindow : Window
     {
-        private readonly bool _isAnalysisResultCheckShown = false; // フラグ追加
         private bool _isClosingHandled = false;
 
         // 並列モニタウィンドウ (案 B, 2026-04-24)。解析中のみ表示。

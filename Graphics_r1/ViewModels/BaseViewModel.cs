@@ -14,11 +14,11 @@ namespace PileDesign.ViewModels
     public partial class BaseViewModel : ObservableObject
     {
         // ObservableObject の OnPropertyChanged を呼び出す
-        public virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+        public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             base.OnPropertyChanged(propertyName);
 
         // SetProperty は自前で保持しつつ、通知は base.OnPropertyChanged に委譲
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
             field = value;

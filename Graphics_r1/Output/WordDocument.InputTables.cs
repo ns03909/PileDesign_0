@@ -306,12 +306,6 @@ namespace PileDesign.Output
 
                 Table table = CreateTableWithBorders();
 
-                static DocumentFormat.OpenXml.Math.OfficeMath mathDeltaNf() =>
-                    GetCombinedRunToMath([
-                        GetRun("Δ"),
-                    GetSubscript(GetRun("N"), GetRun("f"))
-                ]);
-
                 // 1行目: 表題
                 TableRow headerRow = CreateHeaderRow(
                 //headerRow.Append(CreateTableCell("土","質点","番号", "center"));

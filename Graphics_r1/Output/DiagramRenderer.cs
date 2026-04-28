@@ -145,20 +145,6 @@ namespace PileDesign.Output
                 }
             }) ?? preferredFont;
 
-            // 安全に主要な場所へフォント名を設定するヘルパ（反射で広く適用）
-            void SafeSetFont(object? target, string propName)
-            {
-                if (target == null) return;
-                try
-                {
-                    var t = target.GetType();
-                    var pi = t.GetProperty(propName);
-                    if (pi != null && pi.CanWrite && pi.PropertyType == typeof(string))
-                        pi.SetValue(target, useFont);
-                }
-                catch (Exception ex) { Log.Warning(ex, "[DiagramRenderer] suppress"); }
-            }
-
             try
             {
                 // ScottPlot.Fonts.Detect() を使用して日本語対応フォントを検出

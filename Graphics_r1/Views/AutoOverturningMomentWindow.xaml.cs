@@ -21,12 +21,6 @@ namespace PileDesign.Views
             DataContext = viewModel;
         }
 
-        public class AutoOverturningMomentEventArgs : EventArgs
-        {
-
-        }
-        public event EventHandler<AutoOverturningMomentEventArgs> AutoOverturningMomentCompleted;
-
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
             SetReactions();

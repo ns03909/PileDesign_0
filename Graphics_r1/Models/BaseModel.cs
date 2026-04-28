@@ -36,12 +36,12 @@ namespace PileDesign.Models
 {
     public class BaseModel : ObservableObject, INotifyPropertyChanged, INotifyDataErrorInfo
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        public new event PropertyChangedEventHandler PropertyChanged;
 
-        public virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
+        public new virtual void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        protected new bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
         {
             if (EqualityComparer<T>.Default.Equals(field, value)) return false;
             field = value;

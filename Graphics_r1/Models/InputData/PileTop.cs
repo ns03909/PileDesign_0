@@ -69,9 +69,6 @@ namespace PileDesign.Models.InputData
         //public ObservableCollection<string> PCRingOption { get; }
         public ObservableCollection<string> FTCapOption { get; set; }
 
-        //private readonly PCRingLoader _pcRingLoader;
-        private readonly FTCapLoader _ftCapLoader;
-
         //public List<PCRing> PCRings { get; set; }
         public ObservableCollection<(int, string, string)> Description { get; set; }
 

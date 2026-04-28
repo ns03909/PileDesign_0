@@ -680,7 +680,7 @@ namespace PileDesign.ViewModels
             return coordinateRects;
         }
 
-        private bool _hookedDispMouseMove, _hookedFLMouseMove, _hookedNMouseMove, _hookedVsMouseMove, _hookedEsMouseMove, _hookedCuMouseMove;
+        private bool _hookedDispMouseMove, _hookedFLMouseMove, _hookedNMouseMove;
 
         private void DrawGroundDisplacementGraph()
         {

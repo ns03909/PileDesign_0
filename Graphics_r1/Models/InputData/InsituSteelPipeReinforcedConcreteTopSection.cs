@@ -31,7 +31,7 @@ namespace PileDesign.Models.InputData
         public double Ie { get; private set; }
         public double Ft { get; private set; }
 
-        public double CurvatureMaxUltimateLimit { get; private set; }
+        public new double CurvatureMaxUltimateLimit { get; private set; }
 
         public List<double> ServiceLimitShearAxialForceThresholds { get; private set; }
 

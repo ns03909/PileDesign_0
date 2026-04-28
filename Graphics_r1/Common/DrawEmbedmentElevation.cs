@@ -14,9 +14,6 @@ namespace PileDesign.Common
 {
     public partial class ShapeDrawer
     {
-        private readonly MainWindowViewModel _mainWindowViewModel;
-        public InputModel InputModel => _mainWindowViewModel.CurrentInputModel;
-
         public static void DrawEmbedmentElevation(
             Canvas canvas,
             DoatsuGoryokuBane doatsuGoryokuBane,

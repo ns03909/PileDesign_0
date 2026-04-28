@@ -35,7 +35,7 @@ namespace PileDesign.Models.InputData
         public double Fts { get; protected set; } // 
         public double Sigma0E { get; protected set; } // 平均軸応力度　N/Ae
 
-        public double CurvatureMaxUltimateLimit { get; protected set; }
+        public new double CurvatureMaxUltimateLimit { get; protected set; }
 
         public double Fcs { get; protected set; }
         public double Ae { get; protected set; }
