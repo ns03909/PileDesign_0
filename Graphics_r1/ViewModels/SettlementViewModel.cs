@@ -984,11 +984,12 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Title.Label.Text = title;
             wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-            string xLabel = "(Rp/Ap)/(Rp/Ap)u";
+            // Unicode 下付き文字 ₚ (U+209A) ᵤ (U+1D64) で数式風表示
+            string xLabel = "(Rₚ/Aₚ) / (Rₚ/Aₚ)ᵤ";
             wpf.Plot.Axes.Bottom.Label.Text = xLabel;
             wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-            string yLabel = "Sp/dp";
+            string yLabel = "Sₚ / dₚ";
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
@@ -1009,7 +1010,7 @@ namespace PileDesign.ViewModels
 
             // クロスヘアの初期化
             MyCrosshair_PileToe = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_PileToe", "Rp/Ap / (Rp/Ap)u", "Sp/dp");
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_PileToe", "Rₚ/Aₚ / (Rₚ/Aₚ)ᵤ", "Sₚ/dₚ");
         }
 
         // 杭周更新メソッド
