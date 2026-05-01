@@ -67,9 +67,9 @@
                                                 <TextBlock Width="100" HorizontalAlignment="Right"><Run Text="F"/><Run Text="c" BaselineAlignment="Subscript" FontSize="9"/><Run Text=" (N/mm"/><Run Text="2" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox x:Name="TextBoxPileCapFc" Width="50"
                                                          Text="{Binding PileTop.PileCapFc, UpdateSourceTrigger=PropertyChanged}"
-                                                         HorizontalContentAlignment="Right"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="200"
                                                          GotFocus="TextBox_GotFocus"
-                                                        PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                                 <!--</StackPanel>
@@ -77,8 +77,9 @@
                                                 <TextBlock Width="100"  HorizontalAlignment="Right"><Run Text="γ (kN/m"/><Run Text="3" BaselineAlignment="Superscript" FontSize="9"/><Run Text=")"/></TextBlock>
                                                 <TextBox x:Name="TextBoxPileCapGamma" Width="50"
                                                          Text="{Binding PileTop.PileCapGamma, UpdateSourceTrigger=PropertyChanged}"
-                                                         HorizontalContentAlignment="Right" GotFocus="TextBox_GotFocus"
-                                                        PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.1" common:NumericInput.Max="100"
+                                                         GotFocus="TextBox_GotFocus"
+                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                          PreviewKeyDown="TextBox_PreviewKeyDown"
                                                          PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                                 <!--TextChanged="TextBoxPileCapGamma_TextChanged"-->
@@ -182,7 +183,8 @@
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
-                                                    <TextBox  Text="{Binding PileTop.MainBarNum1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                    <TextBox  Text="{Binding PileTop.MainBarNum1, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                              Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="500"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
@@ -196,7 +198,8 @@
                                                                ItemsSource="{Binding PileTop.MainBarSpecOption}" Width="100"/>
 
                                                     <TextBlock Text ="重心かぶり厚 (mm)" Width="150"  HorizontalAlignment="Right"/>
-                                                    <TextBox  Text="{Binding PileTop.MainBarCenterCover1, UpdateSourceTrigger=LostFocus}" Width="50" TextAlignment="Right"
+                                                    <TextBox  Text="{Binding PileTop.MainBarCenterCover1, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                              Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
                                                               GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                               PreviewKeyDown="TextBox_PreviewKeyDown"
                                                               PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
@@ -340,9 +343,10 @@
                                                                 Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                                         <TextBox x:Name="TextBoxTDorTB" Width="50"
                                                                  Text="{Binding PileTop.CaptainPile.CTPTensionRebars.TDorTB, UpdateSourceTrigger=PropertyChanged}"
-                                                                TextChanged="TextBoxTDorTBTextChanged" HorizontalContentAlignment="Right"
-                                                                GotFocus="TextBox_GotFocus"
-                                                                PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" 
+                                                                 Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10000"
+                                                                 TextChanged="TextBoxTDorTBTextChanged"
+                                                                 GotFocus="TextBox_GotFocus"
+                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                                  PreviewKeyDown="TextBox_PreviewKeyDown"
                                                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                                         <TextBlock Width="150" HorizontalAlignment="Right"
@@ -386,9 +390,11 @@
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBox x:Name="TextBoxFTTensionNum"
                                                                  Text="{Binding PileTop.FTPile.FTPileTensionBars.TensionAnchorNum, UpdateSourceTrigger=LostFocus}"
-                                                                 Width="50" TextChanged="TextBoxFTTensionNumChanged" HorizontalContentAlignment="Right"
+                                                                 Width="50"
+                                                                 Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="500"
+                                                                 TextChanged="TextBoxFTTensionNumChanged"
                                                                  GotFocus="TextBox_GotFocus"
-                                                                PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" PreviewKeyDown="TextBox_PreviewKeyDown"/>
+                                                                 PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" PreviewKeyDown="TextBox_PreviewKeyDown"/>
                                                         <TextBlock Text="-"/>
                                                         <ComboBox x:Name="ComboBoxFTTensionBar" Width="150" HorizontalContentAlignment="Right"
                                                                 ItemsSource="{Binding PileTop.FTPile.FTPileTensionBars.TensionAnchorGradeOption}"

@@ -40,14 +40,16 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="幅 b (m)" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox x:Name="TextBoxWidth" Text="{Binding Width, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox x:Name="TextBoxWidth" Text="{Binding Width, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.01"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="高さ h (m)" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox x:Name="TextBoxHeight" Text="{Binding Height, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox x:Name="TextBoxHeight" Text="{Binding Height, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.01"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
@@ -58,42 +60,48 @@
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="断面積係数 A" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox Text="{Binding AFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox Text="{Binding AFactor, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="せん断断面積係数 Ay" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox Text="{Binding AyFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox Text="{Binding AyFactor, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="せん断断面積係数 Az" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox Text="{Binding AzFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox Text="{Binding AzFactor, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="ねじりモーメント係数 Ixx" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox Text="{Binding IxxFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox Text="{Binding IxxFactor, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="断面二次モーメント係数 Iyy" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox Text="{Binding IyyFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox Text="{Binding IyyFactor, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="断面二次モーメント係数 Izz" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox Text="{Binding IzzFactor, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox Text="{Binding IzzFactor, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="10"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>

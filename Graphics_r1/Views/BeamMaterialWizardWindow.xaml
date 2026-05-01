@@ -40,21 +40,24 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="コンクリート強度 Fc (N/mm²)" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox x:Name="TextBoxFc" Text="{Binding Fc, StringFormat=N2}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox x:Name="TextBoxFc" Text="{Binding Fc, StringFormat=N2}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="1" common:NumericInput.Max="200"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="単位重量 γ (kN/m³)" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox x:Name="TextBoxGamma" Text="{Binding Gamma, StringFormat=N2}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox x:Name="TextBoxGamma" Text="{Binding Gamma, StringFormat=N2}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.1" common:NumericInput.Max="100"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,5">
                         <Label Content="ポアソン比 ν" Width="200" HorizontalContentAlignment="Right"/>
-                        <TextBox x:Name="TextBoxPoissonRatio" Text="{Binding PoissonRatio, StringFormat=N3}" Width="100" HorizontalContentAlignment="Right"
+                        <TextBox x:Name="TextBoxPoissonRatio" Text="{Binding PoissonRatio, StringFormat=N3}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="0.5"
                                  GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                  TextChanged="TextBox_TextChanged"/>
                     </StackPanel>
