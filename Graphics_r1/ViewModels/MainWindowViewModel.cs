@@ -399,6 +399,13 @@ namespace PileDesign.ViewModels
                         _currentInputModel.PileLayoutItems.CollectionChanged += PileLayoutItems_CollectionChanged;
                     }
 
+                    // 基礎梁要素の CollectionChanged 再購読 → 基礎梁考慮沈下解析ボタンの活性化条件再評価
+                    if (_currentInputModel?.FoundationBeamInput?.Beams is { } beams)
+                    {
+                        beams.CollectionChanged -= FoundationBeams_CollectionChanged;
+                        beams.CollectionChanged += FoundationBeams_CollectionChanged;
+                    }
+
                     // 注: UpdateWindowImmediate() はここでは呼ばない。
                     // 全ての代入元（ファイル読込、Undo/Redo等）がフラグリセット後に
                     // 明示的に UpdateWindowImmediate() を呼ぶため、ここで呼ぶと
@@ -4105,6 +4112,12 @@ namespace PileDesign.ViewModels
         /// <summary>D.16 HistoryPanel が UndoManager 参照を取得するためのアクセサ。</summary>
         public Common.Undo.UndoManager UndoManager => _undoManager;
 
+        /// <summary>基礎梁要素コレクション変更時のハンドラ (基礎梁考慮沈下解析ボタン活性化条件の再評価)。</summary>
+        private void FoundationBeams_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
+        }
+
         [RelayCommand]
         private void Redo()
         {
@@ -4530,8 +4543,29 @@ namespace PileDesign.ViewModels
             IsLiquefaction = firstResult.IsLiquefaction;
         }
 
+        /// <summary>
+        /// 基礎梁考慮沈下解析ボタンの活性条件:
+        ///   - 杭が 1 本以上配置されている
+        ///   - 基礎梁要素が 1 件以上定義されている
+        ///   - 単杭沈下解析が完了している (各杭の LoadDisplacements が計算済み)
+        /// いずれか満たさない間 UI 上はボタン灰色化 (D.13 の一環)。
+        /// </summary>
+        public bool CanOpenVerticalBeamCalculation()
+        {
+            if (CurrentInputModel?.PileLayoutItems is not { Count: > 0 }) return false;
+            if (CurrentInputModel.FoundationBeamInput?.Beams is not { Count: > 0 }) return false;
+
+            var soilPiles = CurrentInputModel.ElementDivision?.SoilPiles;
+            if (soilPiles == null || soilPiles.Count == 0) return false;
+            foreach (var sp in soilPiles)
+            {
+                if (sp.LoadDisplacements == null || sp.LoadDisplacements.Count == 0) return false;
+            }
+            return true;
+        }
+
         // 基礎梁鉛直解析ウィンドウを開くメソッド
-        [RelayCommand]
+        [RelayCommand(CanExecute = nameof(CanOpenVerticalBeamCalculation))]
         public void OpenVerticalBeamCalculation()
         {
             // バリデーション

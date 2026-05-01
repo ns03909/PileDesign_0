@@ -230,7 +230,10 @@
             <Setter Property="Height" Value="16px"/>
         </Style>
 
-        <!-- SvgViewboxコントロール用のスタイルを定義 -->
+        <!-- SvgViewboxコントロール用のスタイルを定義
+             Style.Triggers で親 ButtonBase の IsEnabled=False を検知して薄く表示する。
+             ボタンが活性化していないとき、リボン LargeImageSource (raster) は WPF Ribbon が
+             自動で灰色化するが、SvgViewbox は何もしないため明示的に Opacity を下げる. -->
         <Style x:Key="SvgIconStyle16" TargetType="svgc:SvgViewbox">
             <Setter Property="Width" Value="16"/>
             <Setter Property="Height" Value="16"/>
@@ -238,6 +241,11 @@
             <Setter Property="StretchDirection" Value="DownOnly"/>
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ButtonBase}}" Value="False">
+                    <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="SvgIconStyle24" TargetType="svgc:SvgViewbox">
@@ -247,6 +255,11 @@
             <Setter Property="StretchDirection" Value="DownOnly"/>
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ButtonBase}}" Value="False">
+                    <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="SvgIconStyle32" TargetType="svgc:SvgViewbox">
@@ -256,6 +269,11 @@
             <Setter Property="StretchDirection" Value="DownOnly"/>
             <Setter Property="ClipToBounds" Value="True"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=ButtonBase}}" Value="False">
+                    <Setter Property="Opacity" Value="0.35"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <!-- ToolTipのスタイルを定義 -->
@@ -1431,7 +1449,8 @@
 
                     <ribbon:RibbonButton x:Name="RibbonButtonVerticalBeamCalculation"
                          Command="{Binding OpenVerticalBeamCalculationCommand}"
-                         ToolTip="基礎梁の剛性を考慮した沈下解析です。単杭沈下解析と基礎梁要素の定義が前提です。">
+                         ToolTipService.ShowOnDisabled="True"
+                         ToolTip="基礎梁の剛性を考慮した沈下解析です。基礎梁を含むモデルで荷重沈下関係解析を実行したときに押下可能となります。">
                         <ribbon:RibbonButton.Style>
                             <Style TargetType="ribbon:RibbonButton">
                                 <Setter Property="Label" Value="基礎梁考慮沈下解析"/>
@@ -5522,7 +5541,7 @@
                                                     <Button Grid.Row="1" Grid.Column="3"
                                                         Padding="0"
                                                         Style="{StaticResource LargeIconToolTipButtonStyle}"
-                                                        Tag="基礎梁考慮沈下解析 (F7)"
+                                                        Tag="基礎梁の剛性を考慮した沈下解析です。基礎梁を含むモデルで荷重沈下関係解析を実行したときに押下可能となります。"
                                                         Command="{Binding OpenVerticalBeamCalculationCommand}">
                                                         <svgc:SvgViewbox Source="/Icons/SettlementWithBeamWindow.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                     </Button>

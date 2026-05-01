@@ -2631,6 +2631,8 @@ namespace PileDesign.ViewModels
 
                 if (value) SetLatestAnalysisCompleted();
                 OnPropertyChanged(nameof(HasAnyAnalysisResult));
+                // 基礎梁考慮沈下解析の活性化条件が変わるため再評価
+                OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
 
                 const string settlementLabel = "沈下量";
                 const string singlePileLabel = "単杭";
@@ -3438,6 +3440,8 @@ namespace PileDesign.ViewModels
             UpdateSumAndOTM();
             OnPropertyChanged(nameof(PileCountText));
             OnPropertyChanged(nameof(ModelExtent));
+            // 杭数 0/>0 の境目で 基礎梁考慮沈下解析 ボタンが活性化／非活性化する
+            OpenVerticalBeamCalculationCommand?.NotifyCanExecuteChanged();
         }
 
 
