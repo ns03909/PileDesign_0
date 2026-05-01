@@ -53,8 +53,8 @@ namespace PileDesign.Views
                     {
                         Index = i,
                         IndexLabel = $"{i + 1}.",
-                        Title = entry.Description ?? $"スナップショット #{i + 1}",
-                        Description = $"{entry.State?.GetType().Name ?? "?"}",
+                        Title = entry.Description ?? "編集",
+                        Description = null, // 副題は不要 (Title に操作名が入るため)
                         TimeText = entry.Timestamp.ToString("HH:mm:ss"),
                         IsCurrentVisibility = isCurrent ? Visibility.Visible : Visibility.Collapsed,
                         FontWeight = isCurrent ? FontWeights.SemiBold : FontWeights.Normal,

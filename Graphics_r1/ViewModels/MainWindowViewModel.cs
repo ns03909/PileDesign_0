@@ -74,15 +74,53 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// 現在のInputModelのスナップショットをUndo履歴に保存します。
         /// 破壊的な操作（削除など）の前に呼び出してください。
+        /// description を省略した場合は呼び出し元メソッド名 ([CallerMemberName]) を
+        /// 履歴ラベルに使う。可能なら明示的に日本語の説明を渡してください
+        /// (例: SaveUndoState("杭追加"))。
         /// </summary>
-        public void SaveUndoState()
+        public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
             var copy = CurrentInputModel.DeepCopy();
             if (copy != null)
             {
-                _undoManager.SaveState(copy);
+                _undoManager.SaveState(copy, FormatHistoryDescription(description));
                 RaiseUndoStateChanged();
             }
+        }
+
+        /// <summary>
+        /// 自動取得されたメソッド名 (例: "DeletePiles") を編集履歴に出す表示文字列に変換する。
+        /// 既知のメソッド名は日本語に置換、それ以外は空白区切りのキャメルケース展開に留める。
+        /// </summary>
+        private static string FormatHistoryDescription(string? raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return "編集";
+            return raw switch
+            {
+                "AddPile" or "AddPileFromCanvas" => "杭追加",
+                "DeletePiles" or "DeletePile" => "杭削除",
+                "EditAddPiles" or "EditPiles" => "杭プロパティ変更",
+                "MoveCopyPiles" => "杭の移動・コピー",
+                "AddInputNode" or "AddInputNodeFromCanvas" => "一般節点追加",
+                "DeleteInputNode" or "DeleteInputNodes" => "一般節点削除",
+                "DeleteDuplicateInputNodes" => "重複一般節点の整理",
+                "AddGridX" or "AddGridY" => "通り心追加",
+                "DeleteGridX" or "DeleteGridY" => "通り心削除",
+                "AddRectLoad" => "矩形荷重追加",
+                "DeleteRectLoad" => "矩形荷重削除",
+                "AddSettlementSoilLayer" => "沈下層追加",
+                "DeleteAllSettlementSoilLayers" => "沈下層一括削除",
+                "ConvertNodeType" => "節点種別変換",
+                "AutoGenerateFoundationBeams" => "基礎梁自動生成",
+                "AddBeamElement" or "EditBeamElements" => "梁要素編集",
+                "AutoIsFrontPiles" => "前後杭自動判定",
+                "AutoOverturningMoment" => "OTM 自動入力",
+                "DeleteDupulicateElements" => "要素重複整理",
+                "AdjustEmbedmentPlan" => "根入部平面調整",
+                "AdjustRectLoadPlan" => "矩形荷重平面調整",
+                "Paste" or "PasteFromClipboard" => "貼り付け",
+                _ => raw, // メソッド名そのまま (将来辞書追加候補)
+            };
         }
         private readonly FileOperationService _fileOperationService;
         private readonly PileLayoutService _pileLayoutService;
