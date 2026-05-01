@@ -381,8 +381,11 @@
             </Setter>
         </Style>
 
-        <!-- 大アイコンToolTip汎用スタイル -->
-        <Style x:Key="LargeIconToolTipButtonStyle" TargetType="Button">
+        <!-- 大アイコンToolTip汎用スタイル
+             BasedOn で Styles.xaml 側の暗黙 Button Style (フラット見た目) を継承し、
+             ここでは ToolTip / Hover 時の大アイコン表示だけ追加する。
+             BasedOn を外すと OS デフォルトの灰色グラデ見た目に戻ってしまう。-->
+        <Style x:Key="LargeIconToolTipButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <!-- 追加 -->
             <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
             <Setter Property="ToolTip">
