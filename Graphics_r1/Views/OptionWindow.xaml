@@ -39,11 +39,11 @@
                     </ToggleButton>
                     <Label Content="軸中心(X,Y,Z)"/>
                     <TextBox Text="{Binding CurrentInputModel.FundamentalInput.X0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                     Width="50" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"/>
+                             Width="50" Style="{StaticResource SignedDecimalTextBoxStyle}" TextChanged="TextBox_TextChanged"/>
                     <TextBox Text="{Binding CurrentInputModel.FundamentalInput.Y0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                     Width="50" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"/>
+                             Width="50" Style="{StaticResource SignedDecimalTextBoxStyle}" TextChanged="TextBox_TextChanged"/>
                     <TextBox Text="{Binding CurrentInputModel.FundamentalInput.Z0, StringFormat=N3, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"
-                     Width="50" HorizontalContentAlignment="Right" TextChanged="TextBox_TextChanged"/>
+                             Width="50" Style="{StaticResource SignedDecimalTextBoxStyle}" TextChanged="TextBox_TextChanged"/>
                 </StackPanel>
 
                 <GroupBox Header="要素表示レベル">
@@ -144,7 +144,8 @@
                             <Slider Minimum="0" Maximum="200"
                                 Value="{Binding BubbleDia, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding BubbleDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                                     common:NumericInput.Min="0" common:NumericInput.Max="200"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
@@ -152,7 +153,8 @@
                             <Slider  Minimum="0" Maximum="200"
                                     Value="{Binding ArrowLength, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding ArrowLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                    Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                                     common:NumericInput.Min="0" common:NumericInput.Max="200"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
@@ -160,7 +162,8 @@
                             <Slider  Minimum="0" Maximum="50"
                                 Value="{Binding ArrowHeadLength, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding ArrowHeadLength, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                                     common:NumericInput.Min="0" common:NumericInput.Max="50"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
@@ -168,7 +171,8 @@
                             <Slider  Minimum="0" Maximum="20"
                                 Value="{Binding ArrowHeadDia, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding ArrowHeadDia, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                                     common:NumericInput.Min="0" common:NumericInput.Max="20"/>
                         </StackPanel>
                     </StackPanel>
                 </Expander>
@@ -181,7 +185,8 @@
                             <Slider x:Name="SliderTheta" Minimum="-180" Maximum="180"
                                 Value="{Binding CanvasThreeDView.Tht, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding CanvasThreeDView.Tht, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
-                                 Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource SignedDecimalTextBoxStyle}"
+                                     common:NumericInput.Min="-180" common:NumericInput.Max="180"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
@@ -189,7 +194,8 @@
                             <Slider x:Name="SliderPhi" Minimum="-90" Maximum="90"
                                 Value="{Binding CanvasThreeDView.Phi, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding CanvasThreeDView.Phi, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
-                                 Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource SignedDecimalTextBoxStyle}"
+                                     common:NumericInput.Min="-90" common:NumericInput.Max="90"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
@@ -197,7 +203,8 @@
                             <Slider x:Name="SliderScale" Minimum="1" Maximum="100"
                                 Value="{Binding CanvasThreeDView.Scale, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
                             <TextBox Text="{Binding CanvasThreeDView.Scale, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
-                                 Width="50" HorizontalContentAlignment="Right"/>
+                                     Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                                     common:NumericInput.Min="0.1" common:NumericInput.Max="100"/>
                         </StackPanel>
                     </StackPanel>
                 </Expander>
@@ -205,15 +212,17 @@
                     <TextBlock Text="杭体線幅" />
                     <Slider Minimum="0.25" Maximum="1.5" TickFrequency="0.25" IsSnapToTickEnabled="True" 
                             Value="{Binding PileStrokeThickness, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
-                    <TextBox Text="{Binding PileStrokeThickness, StringFormat=N2, UpdateSourceTrigger=LostFocus}" 
-                             Width="50" HorizontalContentAlignment="Right"/>
+                    <TextBox Text="{Binding PileStrokeThickness, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                             Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                             common:NumericInput.Min="0.25" common:NumericInput.Max="1.5"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="土層線幅" />
                     <Slider Minimum="0.25" Maximum="1.5" TickFrequency="0.25" IsSnapToTickEnabled="True" 
                             Value="{Binding SoilStrokeThickness, UpdateSourceTrigger=PropertyChanged}" Width="50"/>
-                    <TextBox Text="{Binding SoilStrokeThickness, StringFormat=N2, UpdateSourceTrigger=LostFocus}" 
-                             Width="50" HorizontalContentAlignment="Right"/>
+                    <TextBox Text="{Binding SoilStrokeThickness, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
+                             Width="50" Style="{StaticResource DecimalTextBoxStyle}"
+                             common:NumericInput.Min="0.25" common:NumericInput.Max="1.5"/>
                 </StackPanel>
             </StackPanel>
         </StackPanel>

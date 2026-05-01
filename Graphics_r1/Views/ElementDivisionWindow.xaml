@@ -166,10 +166,12 @@
 
             <TextBlock Text="杭頭～第二節点(m)" VerticalAlignment="Center" Margin="8,0,2,0"/>
             <TextBox Text="{Binding FirstDistance, StringFormat='N2'}"
-                     HorizontalContentAlignment="Right" Width="60" VerticalAlignment="Center"/>
+                     Width="60" VerticalAlignment="Center"
+                     Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.01"/>
             <TextBlock Text="最大節点間(m)" VerticalAlignment="Center" Margin="8,0,2,0"/>
             <TextBox Text="{Binding MaxPileSpacing, StringFormat='N2'}"
-                     HorizontalContentAlignment="Right" Width="60" VerticalAlignment="Center"/>
+                     Width="60" VerticalAlignment="Center"
+                     Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.01"/>
 
             <!-- 赤ランプがある場合の警告メッセージ -->
             <TextBlock Text="{Binding WarningMessage}" Foreground="Red" FontWeight="Bold" Margin="12,0,0,0"
@@ -393,14 +395,18 @@
 
                                                 <StackPanel Orientation="Horizontal" Grid.Row="0">
                                                     <TextBlock Text="確認用群杭影響係数ξ [0.0-1.0]" Width="200"/>
-                                                    <TextBox Text="{Binding Xi, StringFormat=N2, UpdateSourceTrigger=LostFocus, ValidatesOnDataErrors=True, NotifyOnValidationError=True}" 
-                                                            Width="50" HorizontalContentAlignment="Right"
+                                                    <TextBox Text="{Binding Xi, StringFormat=N2, UpdateSourceTrigger=LostFocus, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                                            Width="50"
+                                                            Style="{StaticResource DecimalTextBoxStyle}"
+                                                            common:NumericInput.Min="0.1" common:NumericInput.Max="1.0"
                                                             TextChanged="XiROnB_TextChanged"/>
                                                     <Slider Value="{Binding Xi, UpdateSourceTrigger=PropertyChanged}" Minimum="0.1" Maximum="1" Width="50"/>
 
                                                     <TextBlock Text="確認用杭間隔比R/B" Width="200"/>
-                                                    <TextBox Text="{Binding ROnB, StringFormat=N2, UpdateSourceTrigger=LostFocus, ValidatesOnDataErrors=True, NotifyOnValidationError=True}" 
-                                                            Width="50" HorizontalContentAlignment="Right"
+                                                    <TextBox Text="{Binding ROnB, StringFormat=N2, UpdateSourceTrigger=LostFocus, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                                            Width="50"
+                                                            Style="{StaticResource DecimalTextBoxStyle}"
+                                                            common:NumericInput.Min="0.1"
                                                             ToolTip="後方杭の塑性地盤反力を求めるパラメータとしてのみ。群杭係数には連動せず、別途指定する。"
                                                             TextChanged="XiROnB_TextChanged"/>
                                                     <Slider Value="{Binding ROnB, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="10" Width="50"/>
@@ -690,7 +696,9 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="最大節点間距離(m)" Width="175"/>
                                                             <TextBox x:Name="EmbedmentMaxSpacing" Text="{Binding MaxEmbedmentSpacing, StringFormat='N2'}"
-                                                                    HorizontalContentAlignment="Right" Width="100"></TextBox>
+                                                                    Width="100"
+                                                                    Style="{StaticResource DecimalTextBoxStyle}"
+                                                                    common:NumericInput.Min="0.1"/>
                                                         </StackPanel>
 
                                                         <Button x:Name="ButtonEmbedmentAuto" ToolTip="自動要素分割実行" Width="100"

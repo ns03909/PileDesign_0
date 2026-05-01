@@ -305,11 +305,11 @@
                 <!--<TextBlock Grid.Row="10" Grid.Column="1" Text="dp" HorizontalAlignment="Right"/>-->
                 <controls:FormulaControl Grid.Row="10" Grid.Column="1" Formula="d_p" Style="{StaticResource FormulaControlStyle}" HorizontalContentAlignment="Right"/>
                 <TextBox Grid.Row="10" Grid.Column="2"
-                          x:Name="TextBoxSettlePileToeDia"
-                             Text="{Binding SettlePileToeDiaM, UpdateSourceTrigger=LostFocus, StringFormat=N3}"
-                             HorizontalContentAlignment="Right"
-                            PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                            KeyDown="TextBox_KeyDown"/>
+                         x:Name="TextBoxSettlePileToeDia"
+                         Text="{Binding SettlePileToeDiaM, UpdateSourceTrigger=LostFocus, StringFormat=N3}"
+                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.01"
+                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                         KeyDown="TextBox_KeyDown"/>
                 <TextBlock Grid.Row="10" Grid.Column="3" Text="m"/>
 
                 <!-- 杭先端閉塞率（回転貫入杭、打込み杭の場合のみ表示） -->
@@ -318,7 +318,8 @@
                 <TextBox Grid.Row="11" Grid.Column="2"
                          x:Name="TextBoxPileTipNonPermeability"
                          Text="{Binding PileBody.TipNonPermability, UpdateSourceTrigger=LostFocus}"
-                         HorizontalContentAlignment="Right"
+                         Style="{StaticResource DecimalTextBoxStyle}"
+                         common:NumericInput.Min="0" common:NumericInput.Max="1"
                          LostFocus="OnPileBodyLostFocus"
                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          KeyDown="TextBox_KeyDown"
@@ -330,7 +331,7 @@
                 <TextBox Grid.Row="12" Grid.Column="2"
                          x:Name="TextBoxPileToeDiaD"
                          Text="{Binding SoilPile.D, UpdateSourceTrigger=LostFocus, StringFormat=N3}"
-                         HorizontalContentAlignment="Right"
+                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0.01"
                          LostFocus="OnPileBodyLostFocus"
                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          KeyDown="TextBox_KeyDown"
@@ -419,7 +420,7 @@
                 <TextBox Grid.Row="21" Grid.Column="2"
                          x:Name="TextBoxSettleQpu"
                          Text="{Binding SoilPile.SettleQpu, UpdateSourceTrigger=LostFocus, StringFormat=N0}"
-                         HorizontalContentAlignment="Right"
+                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
                          LostFocus="OnPileBodyLostFocus"
                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                          KeyDown="TextBox_KeyDown"

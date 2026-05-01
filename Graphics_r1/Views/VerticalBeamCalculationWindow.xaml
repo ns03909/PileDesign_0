@@ -71,7 +71,7 @@
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="収束判定値:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ConvergenceTolerance, UpdateSourceTrigger=PropertyChanged, StringFormat=E1}"
                                  Width="80" HorizontalAlignment="Right" Margin="0,2"
-                                 Style="{StaticResource DecimalTextBoxStyle}"
+                                 Style="{StaticResource ScientificDecimalTextBoxStyle}"
                                  common:NumericInput.Min="0.0000001"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="緩和係数 ω:" VerticalAlignment="Center" Margin="0,2"/>

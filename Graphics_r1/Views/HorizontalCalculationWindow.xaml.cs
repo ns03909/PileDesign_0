@@ -552,31 +552,6 @@ namespace PileDesign.Views
             MessageBox.Show(message, "解析中止", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        // TextBox の数値入力制限（小数点と数字のみ許可）
-        private static readonly Regex _numericRegex = new(@"^[0-9]*(\.[0-9]*)?$", RegexOptions.Compiled);
-
-        private void NumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            // 既存テキストに追加したときに有効な数値かをチェック
-            if (sender is TextBox tb)
-            {
-                string prospective = tb.Text.Remove(tb.SelectionStart, tb.SelectionLength)
-                                     .Insert(tb.SelectionStart, e.Text);
-                e.Handled = !_numericRegex.IsMatch(prospective);
-            }
-        }
-
-        private void NumericOnly_Pasting(object sender, DataObjectPastingEventArgs e)
-        {
-            if (!e.SourceDataObject.GetDataPresent(DataFormats.Text, true))
-            {
-                e.CancelCommand();
-                return;
-            }
-            var text = e.SourceDataObject.GetData(DataFormats.Text) as string ?? string.Empty;
-            if (!_numericRegex.IsMatch(text))
-                e.CancelCommand();
-        }
         private void CopyToClipboardFromContextMenu_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem menuItem &&

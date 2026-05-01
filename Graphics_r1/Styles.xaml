@@ -205,4 +205,10 @@
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
     </Style>
 
+    <!-- 指数表記 (1.0E-5, -2.5e+10 等) を許容。収束判定値などで使用。 -->
+    <Style x:Key="ScientificDecimalTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ValidatedTextBoxStyle}">
+        <Setter Property="common:NumericInput.Mode" Value="ScientificDecimal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
 </ResourceDictionary>

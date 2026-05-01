@@ -18,6 +18,8 @@ namespace PileDesign.Common
         SignedInteger,
         /// <summary>-3.14, 1.0 等。先頭 '-' + 小数点 1 個。</summary>
         SignedDecimal,
+        /// <summary>1.0E-5, -2.5e+10 等。指数表記 (E/e + 任意の符号 + 数字)。</summary>
+        ScientificDecimal,
     }
 
     /// <summary>
@@ -119,7 +121,7 @@ namespace PileDesign.Common
 
             string text = tb.Text;
 
-            // 空欄 / "-" 単独 → Min (or 0) に戻す
+            // 空欄 / "-" 単独 / "." 単独 / "1E" 等の編集途中 → Min (or 0) に戻す
             if (string.IsNullOrEmpty(text) || text == "-" || text == ".")
             {
                 double fallback = min ?? 0;
@@ -130,6 +132,7 @@ namespace PileDesign.Common
                 return;
             }
 
+            // NumberStyles.Float は AllowExponent を含むため Scientific 表記もパース可能
             if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
                 return;
 
@@ -149,30 +152,48 @@ namespace PileDesign.Common
 
         /// <summary>
         /// 入力途中の文字列が「数値として続行可能」か判定。
-        /// "" や "-" や "1." などの編集途中も valid として返す。
+        /// "" や "-" や "1." や "1E" や "1E-" などの編集途中も valid として返す。
         /// </summary>
         private static bool IsValid(string text, NumericInputMode mode)
         {
             if (string.IsNullOrEmpty(text)) return true;
             if (mode == NumericInputMode.None) return true;
 
-            bool allowSign = mode is NumericInputMode.SignedInteger or NumericInputMode.SignedDecimal;
-            bool allowDecimal = mode is NumericInputMode.Decimal or NumericInputMode.SignedDecimal;
+            bool allowSign = mode is NumericInputMode.SignedInteger
+                                  or NumericInputMode.SignedDecimal
+                                  or NumericInputMode.ScientificDecimal;
+            bool allowDecimal = mode is NumericInputMode.Decimal
+                                     or NumericInputMode.SignedDecimal
+                                     or NumericInputMode.ScientificDecimal;
+            bool allowExponent = mode is NumericInputMode.ScientificDecimal;
 
             int start = 0;
             if (text[0] == '-')
             {
                 if (!allowSign) return false;
                 start = 1;
-                if (text.Length == 1) return true; // "-" 単独は編集途中として許容
+                if (text.Length == 1) return true;
             }
 
             bool seenDot = false;
+            bool seenE = false;
+            bool sawSignAfterE = false;
             for (int i = start; i < text.Length; i++)
             {
                 char c = text[i];
                 if (c >= '0' && c <= '9') continue;
-                if (c == '.' && allowDecimal && !seenDot) { seenDot = true; continue; }
+                if (c == '.' && allowDecimal && !seenDot && !seenE) { seenDot = true; continue; }
+                if ((c == 'E' || c == 'e') && allowExponent && !seenE && i > start) { seenE = true; continue; }
+                if ((c == '+' || c == '-') && seenE && !sawSignAfterE)
+                {
+                    // 'E' の直後にしか符号は出せない
+                    if (i > 0 && (text[i - 1] == 'E' || text[i - 1] == 'e'))
+                    {
+                        sawSignAfterE = true;
+                        continue;
+                    }
+                    return false;
+                }
                 return false;
             }
             return true;

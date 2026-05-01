@@ -1,5 +1,4 @@
 using System.Collections.Specialized;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 
@@ -72,9 +71,5 @@ namespace PileDesign.Views
             }
         }
 
-        private void NumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            e.Handled = !Regex.IsMatch(e.Text, @"^[0-9eE.\-+]$");
-        }
     }
 }
