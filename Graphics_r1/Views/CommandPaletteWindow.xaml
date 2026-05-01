@@ -8,7 +8,8 @@
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        PreviewKeyDown="Window_PreviewKeyDown">
     <Border CornerRadius="6" Margin="8" Background="White"
             BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="1">
         <Border.Effect>

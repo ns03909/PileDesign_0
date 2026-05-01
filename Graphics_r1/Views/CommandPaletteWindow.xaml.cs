@@ -70,17 +70,43 @@ namespace PileDesign.Views
 
         private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // ↑↓ で結果リストを操作 (テキストボックスにフォーカスを残したまま)
+            // 互換のため残す。実体は Window_PreviewKeyDown で集約処理。
+        }
+
+        private void ResultListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+            => ExecuteSelected();
+
+        private void ResultListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 互換のため残す。実体は Window_PreviewKeyDown で集約処理。
+        }
+
+        /// <summary>
+        /// Window レベルで ↑↓ Enter Esc を捕捉する。フォーカスが TextBox / ListBox /
+        /// その他のどこにあってもキーが効くようにする。
+        ///
+        /// IME 変換中 (Key.ImeProcessed) の場合は ImeProcessedKey を見て本来のキーを取得する。
+        /// IME 変換中の Enter は確定操作なので無視（誤発火防止）。
+        /// </summary>
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // IME で変換候補ウィンドウが開いている場合、Enter は確定。Up/Down は候補移動。
+            // ImeProcessed の Enter は SearchTextBox に流して候補確定させる。
+            // ImeProcessed の Up/Down も同様（候補リスト操作）。
+            if (e.Key == Key.ImeProcessed) return;
+
             if (e.Key == Key.Down)
             {
                 if (_filtered.Count > 0)
                     ResultListBox.SelectedIndex = Math.Min(ResultListBox.SelectedIndex + 1, _filtered.Count - 1);
+                ResultListBox.ScrollIntoView(ResultListBox.SelectedItem);
                 e.Handled = true;
             }
             else if (e.Key == Key.Up)
             {
                 if (_filtered.Count > 0)
                     ResultListBox.SelectedIndex = Math.Max(ResultListBox.SelectedIndex - 1, 0);
+                ResultListBox.ScrollIntoView(ResultListBox.SelectedItem);
                 e.Handled = true;
             }
             else if (e.Key == Key.Enter)
@@ -93,15 +119,6 @@ namespace PileDesign.Views
                 Close();
                 e.Handled = true;
             }
-        }
-
-        private void ResultListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-            => ExecuteSelected();
-
-        private void ResultListBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter) { ExecuteSelected(); e.Handled = true; }
-            else if (e.Key == Key.Escape) { Close(); e.Handled = true; }
         }
 
         private void ExecuteSelected()
