@@ -665,11 +665,11 @@
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="上部構造" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                                     <Run Text="慣性力 P"/>
                                                     <Run Text="s" BaselineAlignment="Subscript" FontSize="10"/>
-                                                    <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
@@ -692,11 +692,11 @@
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="基礎部" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                                     <Run Text="慣性力 P"/>
                                                     <Run Text="f" BaselineAlignment="Subscript" FontSize="10"/>
-                                                    <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
@@ -876,11 +876,11 @@
                                         <DataGridTextColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="上部構造" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                             <Run Text="慣性力 P"/>
                                             <Run Text="s" BaselineAlignment="Subscript" FontSize="10"/>
-                                            <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTextColumn.Header>
                                         <DataGridTextColumn.Binding>
@@ -904,11 +904,11 @@
                                         <DataGridTextColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="基礎部" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                             <Run Text="慣性力 P"/>
                                             <Run Text="f" BaselineAlignment="Subscript" FontSize="10"/>
-                                            <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTextColumn.Header>
                                         <DataGridTextColumn.Binding>
@@ -1324,11 +1324,11 @@
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="上部構造" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                             <Run Text="慣性力 P"/>
                                             <Run Text="s" BaselineAlignment="Subscript" FontSize="10"/>
-                                            <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
@@ -1351,11 +1351,11 @@
                                         <DataGridTemplateColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="基礎部" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                             <Run Text="慣性力 P"/>
                                             <Run Text="f" BaselineAlignment="Subscript" FontSize="10"/>
-                                            <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTemplateColumn.Header>
                                         <DataGridTemplateColumn.CellTemplate>
@@ -1535,11 +1535,11 @@
                                         <DataGridTextColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="上部構造" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                             <Run Text="慣性力 P"/>
                                             <Run Text="s" BaselineAlignment="Subscript" FontSize="10"/>
-                                            <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTextColumn.Header>
                                         <DataGridTextColumn.Binding>
@@ -1563,11 +1563,11 @@
                                         <DataGridTextColumn.Header>
                                             <StackPanel>
                                                 <TextBlock Text="基礎部" TextAlignment="Center"/>
-                                                <TextBlock TextAlignment="Center" TextWrapping="Wrap">
+                                                <TextBlock TextAlignment="Center">
                                             <Run Text="慣性力 P"/>
                                             <Run Text="f" BaselineAlignment="Subscript" FontSize="10"/>
-                                            <Run Text="(kN)"/>
                                                 </TextBlock>
+                                                <TextBlock Text="(kN)" TextAlignment="Center"/>
                                             </StackPanel>
                                         </DataGridTextColumn.Header>
                                         <DataGridTextColumn.Binding>

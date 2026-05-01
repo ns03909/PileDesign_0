@@ -581,8 +581,9 @@
                              TextWrapping="NoWrap"
                              VerticalScrollBarVisibility="Auto"
                              HorizontalScrollBarVisibility="Auto"
-                             FontFamily="MS Gothic"
+                             FontFamily="Consolas, MS Gothic"
                              FontSize="12"
+                             FontWeight="Normal"
                              Background="#FAFAFA"
                              AcceptsReturn="True">
                         <TextBox.ContextMenu>

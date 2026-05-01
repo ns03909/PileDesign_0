@@ -2571,7 +2571,7 @@
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
-                                                <DataGridTemplateColumn Width="*">
+                                                <DataGridTemplateColumn Width="*" MinWidth="60">
                                                     <DataGridTemplateColumn.Header>
                                                         <TextBlock Text="節点I" TextAlignment="Center"/>
                                                     </DataGridTemplateColumn.Header>
@@ -2590,7 +2590,7 @@
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
 
-                                                <DataGridTemplateColumn Width="*">
+                                                <DataGridTemplateColumn Width="*" MinWidth="60">
                                                     <DataGridTemplateColumn.Header>
                                                         <TextBlock Text="節点J" TextAlignment="Center"/>
                                                     </DataGridTemplateColumn.Header>
@@ -2611,7 +2611,7 @@
 
                                                 <DataGridTextColumn Binding="{Binding MaterialNo, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="*">
+                                                                EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="*" MinWidth="60">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="材料No" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2619,7 +2619,7 @@
 
                                                 <DataGridTextColumn Binding="{Binding SectionNo, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="*">
+                                                                EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="*" MinWidth="60">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="断面No" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2627,7 +2627,7 @@
 
                                                 <DataGridTextColumn Binding="{Binding AngleBeta, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*">
+                                                                EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="&#x03B2;(&#x00B0;)" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2925,7 +2925,7 @@
 
                                                     <DataGridTextColumn Binding="{Binding SoilPileAltNo, StringFormat=N0}" Width="*"
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
-                                                                MinWidth="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" >
+                                                                MinWidth="70" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" >
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="地盤・杭" TextAlignment="Center"/>
@@ -4683,7 +4683,7 @@
 
                                                         <DataGrid.Columns>
                                                             <DataGridTextColumn Width="*" Binding="{Binding No}"
-                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50"
+                                                                    ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="70"
                                                                     IsReadOnly=" true" Foreground="Gray">
                                                                 <DataGridTextColumn.Header>
                                                                     <StackPanel>
