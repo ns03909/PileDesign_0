@@ -1465,6 +1465,25 @@ namespace PileDesign.Models.InputData
                         }
                     }
 
+                    // 鋼管杭 + 鉄筋定着工法 の場合、杭頭から D (杭径) の位置に分割点を追加
+                    // (杭頭部=コンクリート充填鋼管部 ≒ 杭径分の長さ、それ以下=鋼管部 として M-φ 切替)
+                    if (PileBodies[pileBodyNo - 1].PileBodyType == "鋼管杭")
+                    {
+                        var topSection = pileBodySegments
+                            .Select(s => s.PileSection)
+                            .FirstOrDefault(s => s?.PileSectionType == "コンクリート充填鋼管部");
+                        double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
+                        if (pileDia_m > 0)
+                        {
+                            double zD = pileTopAltitude - pileDia_m;
+                            if (zD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
+                                && zD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
+                            {
+                                zs.Add(zD);
+                            }
+                        }
+                    }
+
                     int glAdded = 0;
                     foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems)
                     {

@@ -662,7 +662,9 @@ namespace PileDesign.Models.InputData
                     "PHC杭",
                     "PRC杭",
                     "SC杭",
-                    "鋼管杭"
+                    "鋼管杭",      // 旧互換 (鋼管杭 を細分化する前のサブタイプ名)
+                    "鋼管部",
+                    "コンクリート充填鋼管部",
                 };
                 var safeValue = string.IsNullOrWhiteSpace(value) || !validTypes.Contains(value)
                     ? validTypes[0]
@@ -703,9 +705,17 @@ namespace PileDesign.Models.InputData
             "SC杭"
         ];
 
+        // 鋼管杭の部位
+        // 場所打ち鋼管コンクリート杭の "鋼管コンクリート部"/"鉄筋コンクリート部" と同じ思想で、
+        // 鋼管杭でも杭頭部 (鉄筋定着工法用、コンクリート充填+鉄筋配置) と杭中下部 (鋼管のみ) を
+        // 別サブタイプとして杭区間で選べるようにする。
+        // - "鋼管部"          : 純粋な鋼管 (M-φ 計算: SteelPipeSection)
+        // - "コンクリート充填鋼管部": 杭頭部、鋼管内コンクリート充填 + 鉄筋配置可
+        //                       (但し M-φ の耐力には鉄筋を参入しない、長さ ≒ 鋼管外径)
         public string[] SteelPipePileSectionTypeOption { get; } =
         [
-            "鋼管杭",
+            "コンクリート充填鋼管部",
+            "鋼管部",
         ];
 
         // 杭径
@@ -799,7 +809,22 @@ namespace PileDesign.Models.InputData
                 }
                 else if (PileBodyType == "鋼管杭")
                 {
-                    PileDiameter = PipeDia;
+                    // 場所打ち鋼管コンクリート杭の鋼管コンクリート部と同じ計算で、
+                    // 腐食代を考慮した有効径を PileDiameter とする。
+                    // コンクリート充填鋼管部では充填コンクリート関連 (Dc, Tc, MainBarDr) も派生。
+                    if (PileSectionType == "コンクリート充填鋼管部")
+                    {
+                        PileDiameter = PipeDia - CorrosionDepth * 2.0;
+                        CorrodedPipeTs = PipeTs - CorrosionDepth;
+                        ConcreteOutDia = PipeDia - PipeTs * 2.0;
+                        ConcreteThickness = ConcreteOutDia * 0.5;
+                        MainBarDr = ConcreteOutDia - 2.0 * MainBarCenterCover;
+                    }
+                    else // "鋼管部" or 旧 "鋼管杭"
+                    {
+                        PileDiameter = PipeDia - CorrosionDepth * 2.0;
+                        CorrodedPipeTs = PipeTs - CorrosionDepth;
+                    }
                 }
             }
             catch (Exception ex)
@@ -861,7 +886,9 @@ namespace PileDesign.Models.InputData
                 }
                 else if (PileBodyType == "鋼管杭")
                 {
-                    PileSectionType = "鋼管杭";
+                    // 杭頭側 (区間追加時の最初の区間) は "コンクリート充填鋼管部" を既定とする
+                    // (鉄筋定着工法では杭頭が常にこの部位)。下方区間は手動で "鋼管部" に切替える。
+                    PileSectionType = "コンクリート充填鋼管部";
                     ConcreteOutDia = 0.0;
                     MainBarNum = 0;
                     PipeDia = 0.0;
@@ -2188,7 +2215,17 @@ namespace PileDesign.Models.InputData
                         new PrecastSCConcrete(PileDiameter - 2 * PipeTs, PileDiameter - 2 * PipeTs - 2 * ConcreteThickness, ConcreteFc),
                         new PrecastSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth)),
 
-                // 鋼管杭（未実装の場合は null）
+                // 鋼管杭 - コンクリート充填鋼管部 (杭頭部、鉄筋定着工法用)
+                // 鋼管 + 充填コンクリートの SPRC 断面として扱う。鉄筋は配置可だが
+                // M-φ の耐力には参入しない方針のため MainBarNum=0 で渡す。
+                // (杭頭ノード固定の RC 円形 NM 計算は PileTop 側で 2 段断面として別途実施)
+                ("鋼管杭", "コンクリート充填鋼管部") =>
+                    new InsituSteelPipeReinforcedConcreteSection(
+                        new InsituSteelPipe(PipeGrade, PipeDia, PipeTs, CorrosionDepth),
+                        new InsituConcrete(ConcreteOutDia, ConcreteGsi, ConcreteFc),
+                        new MainBars(MainBarDr, 0, MainBarSpec, MainBarSize)),
+
+                // 鋼管杭 - 鋼管部 / 旧サブ名 (純粋な鋼管区間 → 既存挙動に合わせ M-φ は null)
                 ("鋼管杭", _) => null,
 
                 _ => null

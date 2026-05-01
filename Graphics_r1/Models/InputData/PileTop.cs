@@ -98,6 +98,20 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _concreteOutDia, value);
         }
 
+        // 鋼管杭+鉄筋定着工法用 — 杭頭部の下層 RC 断面径 [mm]
+        // 公式 (場所打ち鋼管コンクリート杭の +200mm ルールから派生):
+        //   pile_dia ≤ 1200 → pile_dia × 1.25 + 100
+        //   pile_dia >  1200 → pile_dia + 200
+        // 入力する pile_dia は最上部杭区間 (= コンクリート充填鋼管部) の腐食代考慮後の有効径。
+        // 鋼管杭以外の杭体タイプでは未使用。
+        public double SteelPipePileLowerRcDiameter(double pileDiaMm)
+        {
+            if (pileDiaMm <= 0.0) return 0.0;
+            return pileDiaMm <= 1200.0
+                ? pileDiaMm * 1.25 + 100.0
+                : pileDiaMm + 200.0;
+        }
+
         // コンクリート肉厚
         private double _concreteThickness;
         public double ConcreteThickness
@@ -373,7 +387,11 @@ namespace PileDesign.Models.InputData
             // 定着筋入力 UI も持たない (PileTopWindow.xaml も MainBars2 入力を表示しない)。
             // InsituSteelPipeReinforcedConcreteTopSection は本来「場所打ち鋼管コンクリート杭 +
             // 鉄筋定着工法」の杭頭部 (主筋 + 定着筋 2 段) 用のクラスなので判定をそちらへ修正。
-            if (PileBodyType == "場所打ち鋼管コンクリート杭")
+            //
+            // 鋼管杭 + 鉄筋定着工法 も同じ 2 段断面で扱う (場所打ち鋼管コンクリート杭と同じ思想)。
+            // 唯一の差分: ConcreteOutDia (= 下層 RC 径) が公式から自動算定される点。
+            // (公式は SteelPipePileLowerRcDiameter() を参照)
+            if (PileBodyType == "場所打ち鋼管コンクリート杭" || PileBodyType == "鋼管杭")
             {
                 double pileCapGsi = 1.0;
                 var insituConcrete = new InsituConcrete(ConcreteOutDia, pileCapGsi, PileCapFc);

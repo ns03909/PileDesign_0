@@ -553,8 +553,12 @@ namespace PileDesign.Models.InputData
             // 4) 鉄筋定着工法
             if (pileTopType.Contains("鉄筋定着工法"))
             {
-                // 場所打ち鋼管コンクリート杭/既製コンクリート杭 → 完全剛
-                if (pileBodyType.Contains("場所打ち鋼管コンクリート杭") || pileBodyType.Contains("既製コンクリート杭"))
+                // 場所打ち鋼管コンクリート杭 / 既製コンクリート杭 / 鋼管杭 → 完全剛
+                // (杭頭部 RC 円形 NM は PileTop 側 (PileTop.GetNMRaw) で 2 段断面評価。
+                //  回転ばね M-θ は剛で良い)
+                if (pileBodyType.Contains("場所打ち鋼管コンクリート杭")
+                    || pileBodyType.Contains("既製コンクリート杭")
+                    || pileBodyType.Contains("鋼管杭"))
                 {
                     return PileHeadRotationDef.Rigid();
                 }

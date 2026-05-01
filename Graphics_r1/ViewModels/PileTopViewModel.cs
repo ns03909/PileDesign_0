@@ -235,6 +235,28 @@ namespace PileDesign.ViewModels
                     //try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
                     //try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
                 }
+                else if (string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal) && PileSection != null)
+                {
+                    // 鋼管杭 + 鉄筋定着工法
+                    // 杭径 (= 下層 RC 径) は SteelPipePileLowerRcDiameter 公式で自動算定
+                    // (PileSection.PileDiameter は腐食代考慮済みの有効径)
+                    double baseDia = 0.0;
+                    try { baseDia = PileSection.PileDiameter; } catch { baseDia = 0.0; }
+                    PileTop.ConcreteOutDia = Math.Round(PileTop.SteelPipePileLowerRcDiameter(baseDia), 3);
+
+                    // 鋼管情報を表示
+                    try { DisplayTopSectionPipeDia = PileSection.PipeDia; } catch { DisplayTopSectionPipeDia = 0.0; }
+                    try { DisplayTopSectionPipeTs = PileSection.PipeTs; } catch { DisplayTopSectionPipeTs = 0.0; }
+
+                    // 主筋 (MainBars2) は editable のため初期値のみセット (既存値があれば残す)。
+                    // 鋼管杭の杭体には鉄筋情報は持たないため PileSection からは引かない。
+                    if (PileTop.MainBarNum2 == 0 && string.IsNullOrEmpty(PileTop.MainBarSize2))
+                    {
+                        PileTop.MainBarSize2 = "D29";
+                        PileTop.MainBarSpec2 = "SD390";
+                        PileTop.MainBarCenterCover2 = 300;
+                    }
+                }
                 else
                 {
                     // 非該当時は初期化（表示を消したいとき）

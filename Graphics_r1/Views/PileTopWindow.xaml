@@ -165,9 +165,62 @@
                                         </StackPanel>
                                     </StackPanel>
 
+                                    <!-- 鋼管杭 + 鉄筋定着工法 専用ペイン
+                                         場所打ち鋼管コンクリート杭ペインと類似だが、以下が異なる:
+                                           - 杭径 (= 下層 RC 径) は SteelPipePileLowerRcDiameter で自動算定 (read-only 表示)
+                                           - 鉄筋(最上部杭区間) は editable (場所打ちは read-only)
+                                           - 定着筋ペインは下方の共通ブロックで対応 (ConverterParameter に '鋼管杭' 追加済み) -->
                                     <StackPanel Visibility="{Binding PileBodyType,
                                                      Converter={StaticResource VisibilityConverter},
-                                                     ConverterParameter='場所打ち鋼管コンクリート杭,既製コンクリート杭'}">
+                                                     ConverterParameter='鋼管杭'}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
+                                            <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                     ToolTip="最上部杭区間 (コンクリート充填鋼管部) の有効径から自動算定 (≤1200: ×1.25+100 / >1200: +200)"/>
+                                        </StackPanel>
+
+                                        <GroupBox Header="鋼管（最上部杭区間）">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="鋼管外径(mm)×鋼管厚(mm)：" VerticalAlignment="Center"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
+                                                <TextBlock Text="×" VerticalAlignment="Center"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeTs, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
+                                            </StackPanel>
+                                        </GroupBox>
+
+                                        <!-- 鉄筋(最上部杭区間) — 鋼管杭では editable (2 重鉄筋の 1 つ目) -->
+                                        <GroupBox Header="鉄筋（最上部杭区間）">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
+                                                    <TextBox Text="{Binding PileTop.MainBarNum2, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                             Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="500"
+                                                             GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                    <TextBlock Text ="-" Width="20" HorizontalAlignment="Center"/>
+                                                    <ComboBox SelectedItem="{Binding PileTop.MainBarSize2, UpdateSourceTrigger=PropertyChanged}"
+                                                              ItemsSource="{Binding PileTop.MainBarSizeOption}" Width="50"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text ="規格" Width="100" HorizontalAlignment="Right"/>
+                                                    <ComboBox SelectedItem="{Binding PileTop.MainBarSpec2, UpdateSourceTrigger=PropertyChanged}"
+                                                              ItemsSource="{Binding PileTop.MainBarSpecOption}" Width="100"/>
+
+                                                    <TextBlock Text ="重心かぶり厚 (mm)" Width="150" HorizontalAlignment="Right"/>
+                                                    <TextBox Text="{Binding PileTop.MainBarCenterCover2, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                             Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
+                                                             GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                             PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </GroupBox>
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="{Binding PileBodyType,
+                                                     Converter={StaticResource VisibilityConverter},
+                                                     ConverterParameter='場所打ち鋼管コンクリート杭,既製コンクリート杭,鋼管杭'}">
                                         <GroupBox Header="鉄筋（定着筋）">
                                             <GroupBox.Style>
                                                 <Style TargetType="GroupBox">

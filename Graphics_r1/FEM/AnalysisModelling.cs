@@ -363,7 +363,9 @@ namespace PileDesign.FEM
             Node? prevPileNode = null;
             int nodeCount = soilPile.ZDataItems.Count;
 
-            // 場所打ち鋼管コンクリート杭の杭頭部M-φ適用範囲（杭頭から0.5D）
+            // 杭頭部 M-φ 適用範囲
+            //   - 場所打ち鋼管コンクリート杭 (鋼管コンクリート部): 杭頭から 0.5D
+            //   - 鋼管杭 (コンクリート充填鋼管部): 杭頭から D (鋼管外径相当)
             double pileTopZoneBottom = double.NegativeInfinity;
             if (soilPile.PileBodySegments.Count > 0)
             {
@@ -373,6 +375,12 @@ namespace PileDesign.FEM
                 {
                     double pileDia_m = firstSection.PileDiameter / 1000.0;
                     pileTopZoneBottom = z0 - 0.5 * pileDia_m;
+                }
+                else if (firstSection?.PileBodyType == "鋼管杭"
+                    && firstSection.PileSectionType == "コンクリート充填鋼管部")
+                {
+                    double pileDia_m = firstSection.PileDiameter / 1000.0;
+                    pileTopZoneBottom = z0 - pileDia_m;
                 }
             }
 
