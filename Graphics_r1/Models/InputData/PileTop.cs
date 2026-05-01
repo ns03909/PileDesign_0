@@ -368,7 +368,12 @@ namespace PileDesign.Models.InputData
 
         private (List<double> N, List<double> M) GetNMRaw(string propertyName)
         {
-            if (PileBodyType == "場所打ち鉄筋コンクリート杭")
+            // 2 段鉄筋 (杭体主筋 MainBars2 + 定着筋 MainBars1) を持つ円形 RC 断面で評価する。
+            // 旧実装は判定が "場所打ち鉄筋コンクリート杭" になっていたが、これは 1 段断面で
+            // 定着筋入力 UI も持たない (PileTopWindow.xaml も MainBars2 入力を表示しない)。
+            // InsituSteelPipeReinforcedConcreteTopSection は本来「場所打ち鋼管コンクリート杭 +
+            // 鉄筋定着工法」の杭頭部 (主筋 + 定着筋 2 段) 用のクラスなので判定をそちらへ修正。
+            if (PileBodyType == "場所打ち鋼管コンクリート杭")
             {
                 double pileCapGsi = 1.0;
                 var insituConcrete = new InsituConcrete(ConcreteOutDia, pileCapGsi, PileCapFc);
