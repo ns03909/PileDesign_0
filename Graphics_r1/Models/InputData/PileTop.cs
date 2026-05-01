@@ -113,7 +113,7 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 鋼管杭+鉄筋定着工法 用の杭頭接合部 M-θ 関係を算定する。
+        /// 鋼管杭+鉄筋定着工法 用の杭頭接合部の弾性回転剛性 Kθ を算定する。
         ///
         /// 仕様 (杭基礎指針):
         ///   - 仮想 RC 断面 (パイルキャップコンクリート + 定着筋 MainBars1) の M-φ 解析で
@@ -125,11 +125,10 @@ namespace PileDesign.Models.InputData
         ///   - 杭頭接合部の降伏回転角 ptθy = rφty × Ld
         ///   - 弾性回転剛性 Kθ = rMty / ptθy
         ///
-        /// 戻り値: (thetas[rad], moments[kN·m]) の 4 点折線
-        ///   [0, 極小値 (初期実質剛 K=Kθ), ptθy, 上限 θ (Mu プラトー)]
-        /// 必要な入力が揃っていない場合は null を返す (呼び出し側で Rigid フォールバック)。
+        /// 戻り値は弾性回転剛性 Kθ [kN·m/rad]。M-θ は降伏後挙動を考慮しない純粋な
+        /// 線形ばねとして扱う (折線ではない)。必要入力が欠落している場合は null。
         /// </summary>
-        internal (List<double> Thetas, List<double> Moments)? GetSteelPilePileHeadJointMTheta(double axialN_kN)
+        internal double? GetSteelPilePileHeadJointKtheta(double axialN_kN)
         {
             // 必須入力チェック
             if (ConcreteOutDia <= 0.0 || PileCapFc <= 0.0) return null;
@@ -165,16 +164,11 @@ namespace PileDesign.Models.InputData
             double ptThetaY = rPhiTy * Ld;
             if (ptThetaY <= 0.0) return null;
 
-            // 5. M-θ 折線 (鉄筋定着工法 — 原点から弾性 Kθ で立上り、ptθy で降伏 → プラトー)
-            //    Kθ = rMty / ptθy (= rMty/(rφty × Ld)) を線分 (0,0)–(ptθy, rMty) の勾配として表現
-            double rMty_kNm = rMty_Nmm * 1e-6;     // N·mm → kN·m
-            double thetaUlt = Math.Max(0.01, ptThetaY * 2.0);
-
-            var thetas = new List<double> { 0.0, ptThetaY, thetaUlt };
-            // (0, 0) → (ptThetaY, rMty)        : 弾性区間、勾配 = Kθ
-            // (ptThetaY, rMty) → (thetaUlt, rMty) : 降伏後プラトー (rMty で頭打ち)
-            var moments = new List<double> { 0.0, rMty_kNm, rMty_kNm };
-            return (thetas, moments);
+            // 5. 弾性回転剛性 Kθ
+            //    rMty: N·mm → kN·m に単位変換。Kθ [kN·m/rad] = rMty[kN·m] / ptθy[rad]
+            double rMty_kNm = rMty_Nmm * 1e-6;
+            double Ktheta = rMty_kNm / ptThetaY;
+            return Ktheta;
         }
 
         // コンクリート肉厚

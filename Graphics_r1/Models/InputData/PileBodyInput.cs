@@ -562,28 +562,22 @@ namespace PileDesign.Models.InputData
                     return PileHeadRotationDef.Rigid();
                 }
 
-                // 鋼管杭 + 鉄筋定着工法 → 接合部の弾性回転剛性 Kθ を考慮した M-θ 曲線
-                // (PileTop.GetSteelPilePileHeadJointMTheta が 4 点折線を生成。
-                //  必須入力欠落時は Rigid フォールバック)
+                // 鋼管杭 + 鉄筋定着工法 → 接合部の弾性回転剛性 Kθ を線形ばねとして反映
+                // (PileTop.GetSteelPilePileHeadJointKtheta で算定。降伏後挙動は考慮しない
+                //  純粋な線形ばね = 折線でない。必須入力欠落時は Rigid フォールバック)
                 if (pileBodyType.Contains("鋼管杭"))
                 {
                     if (this.PileTop != null)
                     {
                         try
                         {
-                            var result = this.PileTop.GetSteelPilePileHeadJointMTheta(axialN);
-                            if (result.HasValue)
+                            double? ktheta = this.PileTop.GetSteelPilePileHeadJointKtheta(axialN);
+                            if (ktheta.HasValue && ktheta.Value > 0.0 && double.IsFinite(ktheta.Value))
                             {
-                                var (thetas, ms) = result.Value;
-                                var pts = new List<(double theta, double moment)>(thetas.Count);
-                                for (int i = 0; i < thetas.Count; i++)
-                                    pts.Add((thetas[i], ms[i]));
                                 System.Diagnostics.Debug.WriteLine(
                                     $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法: " +
-                                    $"axialN={axialN:F1} kN, points={pts.Count}, " +
-                                    $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
-                                    $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}]");
-                                return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
+                                    $"axialN={axialN:F1} kN, Kθ={ktheta.Value:E3} kN·m/rad");
+                                return PileHeadRotationDef.CombinedLinear(ktheta.Value);
                             }
                         }
                         catch (Exception ex)
