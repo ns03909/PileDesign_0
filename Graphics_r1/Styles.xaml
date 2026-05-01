@@ -211,4 +211,31 @@
         <Setter Property="HorizontalContentAlignment" Value="Right"/>
     </Style>
 
+    <!-- ═══ DataGrid 数値セル EditingElementStyle ═══
+         DataGridTextColumn の EditingElementStyle に指定すると、
+         セル編集モードに入ったときの TextBox に NumericInput フィルタが適用される。
+         Min/Max は inline で個別カラムに指定可:
+           <DataGridTextColumn EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}">
+             <DataGridTextColumn.EditingElementStyle>
+               <Style TargetType="TextBox" BasedOn="{StaticResource IntegerEditingTextBoxStyle}">
+                 <Setter Property="common:NumericInput.Min" Value="0"/>
+               </Style>
+             </DataGridTextColumn.EditingElementStyle>
+           </DataGridTextColumn>
+         BasedOn は無いことに注意 (DataGrid セル TextBox は内側の Padding 等を持たないため). -->
+    <Style x:Key="IntegerEditingTextBoxStyle" TargetType="TextBox">
+        <Setter Property="common:NumericInput.Mode" Value="Integer"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="DecimalEditingTextBoxStyle" TargetType="TextBox">
+        <Setter Property="common:NumericInput.Mode" Value="Decimal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="SignedDecimalEditingTextBoxStyle" TargetType="TextBox">
+        <Setter Property="common:NumericInput.Mode" Value="SignedDecimal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
 </ResourceDictionary>

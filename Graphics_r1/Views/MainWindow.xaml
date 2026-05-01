@@ -2122,7 +2122,7 @@
                                         </DataGrid.ColumnHeaderStyle>
 
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                            <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="X" TextAlignment="Center"/>
@@ -2131,7 +2131,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Width="*" Binding="{Binding Y, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                            <DataGridTextColumn Width="*" Binding="{Binding Y, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="Y" TextAlignment="Center"/>
@@ -2140,7 +2140,7 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
-                                            <DataGridTextColumn Width="*" Binding="{Binding Z, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                            <DataGridTextColumn Width="*" Binding="{Binding Z, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
                                                 <DataGridTextColumn.Header>
                                                     <StackPanel>
                                                         <TextBlock Text="Z" TextAlignment="Center"/>
@@ -2238,7 +2238,8 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding YoungModulus, Converter={StaticResource StressUnitConverter}, StringFormat=N2, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
                                                         <StackPanel>
                                                             <TextBlock Text="ヤング" TextAlignment="Center"/>
@@ -2262,7 +2263,8 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding PoissonRatio, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="ポアソン比" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2348,14 +2350,16 @@
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding Width, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="幅(m)" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding Height, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="高さ(m)" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2363,42 +2367,48 @@
 
                                                 <!-- 増減係数 -->
                                                 <DataGridTextColumn Binding="{Binding AFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="係数A" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding AyFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="係数Ay" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding AzFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="係数Az" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding IxxFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="係数Ixx" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding IyyFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="係数Iyy" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding IzzFactor, StringFormat=N3, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="55" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="55" MinWidth="50">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="係数Izz" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2600,21 +2610,24 @@
                                                 </DataGridTemplateColumn>
 
                                                 <DataGridTextColumn Binding="{Binding MaterialNo, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="材料No" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding SectionNo, StringFormat=N0, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="断面No" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 
                                                 <DataGridTextColumn Binding="{Binding AngleBeta, StringFormat=N1, UpdateSourceTrigger=LostFocus}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" Width="*">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="*">
                                                     <DataGridTextColumn.Header>
                                                         <TextBlock Text="&#x03B2;(&#x00B0;)" TextAlignment="Center"/>
                                                     </DataGridTextColumn.Header>
@@ -2808,7 +2821,7 @@
                                                 </DataGrid.ColumnHeaderStyle>
 
                                                 <DataGrid.Columns>
-                                                    <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                    <DataGridTextColumn Width="*" Binding="{Binding X, StringFormat=N3, Mode=TwoWay}" ElementStyle="{StaticResource RightAlignedTextBlockStyle}" EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="X"
@@ -2822,7 +2835,8 @@
 
                                                     <DataGridTextColumn Width="*"
                                                                 Binding="{Binding Y, StringFormat=N3, Mode=TwoWay}"
-                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50">
+                                                                ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                                EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="Y" TextAlignment="Center"/>
@@ -2836,6 +2850,7 @@
                                                     <DataGridTextColumn Binding="{Binding Z, StringFormat={}{0:+0.00;-0.00;+0.00}, Mode=TwoWay}"
                                                             Width="*"
                                                             ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                            EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}"
                                                             MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -2851,6 +2866,7 @@
                                                     <DataGridTextColumn Binding="{Binding FoundationBeamDeltaZc, StringFormat=N3, Mode=TwoWay}"
                                                             Width="*"
                                                             ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
+                                                            EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}"
                                                             MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
