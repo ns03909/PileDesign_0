@@ -553,13 +553,47 @@ namespace PileDesign.Models.InputData
             // 4) 鉄筋定着工法
             if (pileTopType.Contains("鉄筋定着工法"))
             {
-                // 場所打ち鋼管コンクリート杭 / 既製コンクリート杭 / 鋼管杭 → 完全剛
+                // 場所打ち鋼管コンクリート杭 / 既製コンクリート杭 → 完全剛
                 // (杭頭部 RC 円形 NM は PileTop 側 (PileTop.GetNMRaw) で 2 段断面評価。
                 //  回転ばね M-θ は剛で良い)
                 if (pileBodyType.Contains("場所打ち鋼管コンクリート杭")
-                    || pileBodyType.Contains("既製コンクリート杭")
-                    || pileBodyType.Contains("鋼管杭"))
+                    || pileBodyType.Contains("既製コンクリート杭"))
                 {
+                    return PileHeadRotationDef.Rigid();
+                }
+
+                // 鋼管杭 + 鉄筋定着工法 → 接合部の弾性回転剛性 Kθ を考慮した M-θ 曲線
+                // (PileTop.GetSteelPilePileHeadJointMTheta が 4 点折線を生成。
+                //  必須入力欠落時は Rigid フォールバック)
+                if (pileBodyType.Contains("鋼管杭"))
+                {
+                    if (this.PileTop != null)
+                    {
+                        try
+                        {
+                            var result = this.PileTop.GetSteelPilePileHeadJointMTheta(axialN);
+                            if (result.HasValue)
+                            {
+                                var (thetas, ms) = result.Value;
+                                var pts = new List<(double theta, double moment)>(thetas.Count);
+                                for (int i = 0; i < thetas.Count; i++)
+                                    pts.Add((thetas[i], ms[i]));
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法: " +
+                                    $"axialN={axialN:F1} kN, points={pts.Count}, " +
+                                    $"θ=[{string.Join(",", thetas.Select(t => t.ToString("E3")))}], " +
+                                    $"M=[{string.Join(",", ms.Select(m => m.ToString("F1")))}]");
+                                return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法 例外: {ex.Message}");
+                        }
+                    }
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[GetMThetaRelationship] 鋼管杭+鉄筋定着工法 フォールバック → Rigid()");
                     return PileHeadRotationDef.Rigid();
                 }
 

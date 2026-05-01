@@ -112,6 +112,71 @@ namespace PileDesign.Models.InputData
                 : pileDiaMm + 200.0;
         }
 
+        /// <summary>
+        /// 鋼管杭+鉄筋定着工法 用の杭頭接合部 M-θ 関係を算定する。
+        ///
+        /// 仕様 (杭基礎指針):
+        ///   - 仮想 RC 断面 (パイルキャップコンクリート + 定着筋 MainBars1) の M-φ 解析で
+        ///     最外縁定着筋が降伏するときの (rMty, rφty) を算定
+        ///   - 付着長さ Ld = ptλ × ptα × S × rσy × dd / 10 / fb
+        ///       ptλ = 0.86 (付着長さ補正)、ptα = 1.0 (横補強筋拘束あり想定)、S = 1.0 (直線定着)
+        ///       fb = Fc/40 + 0.9 (付着割裂強度)
+        ///       dd = 定着筋の呼び名数値 (D41 → 41)
+        ///   - 杭頭接合部の降伏回転角 ptθy = rφty × Ld
+        ///   - 弾性回転剛性 Kθ = rMty / ptθy
+        ///
+        /// 戻り値: (thetas[rad], moments[kN·m]) の 4 点折線
+        ///   [0, 極小値 (初期実質剛 K=Kθ), ptθy, 上限 θ (Mu プラトー)]
+        /// 必要な入力が揃っていない場合は null を返す (呼び出し側で Rigid フォールバック)。
+        /// </summary>
+        internal (List<double> Thetas, List<double> Moments)? GetSteelPilePileHeadJointMTheta(double axialN_kN)
+        {
+            // 必須入力チェック
+            if (ConcreteOutDia <= 0.0 || PileCapFc <= 0.0) return null;
+            if (MainBarNum1 <= 0 || string.IsNullOrEmpty(MainBarSize1) || string.IsNullOrEmpty(MainBarSpec1))
+                return null;
+            if (MainBarDr1 <= 0.0) return null;
+
+            // 1. 仮想 RC 断面: パイルキャップコンクリート (Fc, ξ=1.0, D=ConcreteOutDia)
+            //    + 定着筋 MainBars1 のみ (杭体主筋 MainBars2 は接合部の付着定着と無関係)
+            var insituConcrete = new InsituConcrete(ConcreteOutDia, 1.0, PileCapFc);
+            var anchorBars = new MainBars(MainBarDr1, MainBarNum1, MainBarSpec1, MainBarSize1);
+            var jointSection = new InsituReinforcedConcreteSection(insituConcrete, anchorBars);
+
+            // 2. 引張側最外縁定着筋が降伏するときの (rMty, rφty)
+            //    GetSteelYieldMoment は (M[N·mm], curvature[1/mm]), Ntarget は [N]
+            double Ntarget_N = axialN_kN * 1000.0;
+            (double rMty_Nmm, double rPhiTy) = jointSection.GetSteelYieldMoment(Ntarget_N);
+            if (!double.IsFinite(rMty_Nmm) || !double.IsFinite(rPhiTy) || rMty_Nmm <= 0.0 || rPhiTy <= 0.0)
+                return null;
+
+            // 3. 付着長さ Ld [mm]
+            double rsigmay = anchorBars.RSigmaY; // 定着筋規格降伏点 [N/mm²]
+            double dd = InsituReinforcedConcreteSection.ExtractBarSizeNumber(MainBarSize1); // D41 → 41
+            double fb = PileCapFc / 40.0 + 0.9; // 付着割裂強度 [N/mm²]
+            const double ptlambda = 0.86;
+            const double ptalpha = 1.0; // 横補強筋拘束ありを既定 (拘束なしは 1.25)
+            const double S = 1.0;       // 直線定着筋
+            if (dd <= 0.0 || rsigmay <= 0.0 || fb <= 0.0) return null;
+            double Ld = ptlambda * ptalpha * S * rsigmay * dd / 10.0 / fb;
+            if (Ld <= 0.0) return null;
+
+            // 4. 杭頭接合部の降伏回転角 ptθy [rad]
+            double ptThetaY = rPhiTy * Ld;
+            if (ptThetaY <= 0.0) return null;
+
+            // 5. M-θ 折線 (鉄筋定着工法 — 原点から弾性 Kθ で立上り、ptθy で降伏 → プラトー)
+            //    Kθ = rMty / ptθy (= rMty/(rφty × Ld)) を線分 (0,0)–(ptθy, rMty) の勾配として表現
+            double rMty_kNm = rMty_Nmm * 1e-6;     // N·mm → kN·m
+            double thetaUlt = Math.Max(0.01, ptThetaY * 2.0);
+
+            var thetas = new List<double> { 0.0, ptThetaY, thetaUlt };
+            // (0, 0) → (ptThetaY, rMty)        : 弾性区間、勾配 = Kθ
+            // (ptThetaY, rMty) → (thetaUlt, rMty) : 降伏後プラトー (rMty で頭打ち)
+            var moments = new List<double> { 0.0, rMty_kNm, rMty_kNm };
+            return (thetas, moments);
+        }
+
         // コンクリート肉厚
         private double _concreteThickness;
         public double ConcreteThickness
