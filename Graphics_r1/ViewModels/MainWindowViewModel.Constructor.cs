@@ -809,6 +809,14 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isMinimapVisible, value);
         }
 
+        // B.6: スケールバー表示/非表示 (Canvas 左下のスケールガイド)
+        private bool _isScaleBarVisible = true;
+        public bool IsScaleBarVisible
+        {
+            get => _isScaleBarVisible;
+            set => SetProperty(ref _isScaleBarVisible, value);
+        }
+
         // XYZ軸トグル用プロパティ
         private bool _isCenterCoordEditorVisible;
         public bool IsCenterCoordEditorVisible
