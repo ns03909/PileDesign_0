@@ -119,6 +119,16 @@ namespace PileDesign.ViewModels
                 "AdjustEmbedmentPlan" => "根入部平面調整",
                 "AdjustRectLoadPlan" => "矩形荷重平面調整",
                 "Paste" or "PasteFromClipboard" => "貼り付け",
+
+                // DataGrid 編集系 (HandleDataGridCellEditEnding 経由)
+                "DataGridPileLayout_OnCellEditEnding" => "杭配置編集",
+                "DataGridPileAxialForce_OnCellEditEnding" => "杭軸力編集",
+                "DataGridIsFrontPile_OnCellEditEnding" => "前後杭編集",
+                "DataGridInputNodes_OnCellEditEnding" => "一般節点編集",
+                "DataGridEmbedment_OnCellEditEnding" => "根入部編集",
+                "DataGridSoilPile_OnCellEditEnding" => "土層・杭編集",
+                "DataGridRectLoads_OnCellEditEnding" => "矩形荷重編集",
+
                 _ => raw, // メソッド名そのまま (将来辞書追加候補)
             };
         }
@@ -240,10 +250,17 @@ namespace PileDesign.ViewModels
         /// <param name="customAction">追加のカスタム処理（オプション）</param>
         /// <param name="updateTree">TreeViewも更新するか（デフォルト: true）</param>
         /// <returns>Commitアクションの場合true、それ以外false</returns>
-        private bool HandleDataGridCellEditEnding(DataGridCellEditEndingEventArgs e, Action customAction = null, bool updateTree = true)
+        private bool HandleDataGridCellEditEnding(DataGridCellEditEndingEventArgs e,
+            Action customAction = null,
+            bool updateTree = true,
+            [System.Runtime.CompilerServices.CallerMemberName] string? undoDescription = null)
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
+                // 編集確定の直前に Undo スナップショットを保存
+                // (binding.UpdateSource() より前 = まだモデルは旧値のため pre-edit が捕捉される)
+                SaveUndoState(undoDescription);
+
                 // バインディングソースの更新
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
                 binding?.UpdateSource();
