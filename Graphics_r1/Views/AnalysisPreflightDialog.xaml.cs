@@ -40,7 +40,6 @@ namespace PileDesign.Views
                 ParallelismText = { Text = summary.MaxParallelism > 1
                     ? $"{summary.MaxParallelism} 並列"
                     : "逐次実行" },
-                EstimatedTimeText = { Text = FormatDuration(summary.EstimatedDuration) },
             };
 
             var result = dlg.ShowDialog();
@@ -60,13 +59,6 @@ namespace PileDesign.Views
             DialogResult = true;
         }
 
-        private static string FormatDuration(TimeSpan d)
-        {
-            if (d.TotalSeconds < 1) return "1 秒未満";
-            if (d.TotalMinutes < 1) return $"約 {(int)d.TotalSeconds} 秒";
-            if (d.TotalHours < 1) return $"約 {(int)d.TotalMinutes} 分 {d.Seconds} 秒";
-            return $"約 {(int)d.TotalHours} 時間 {d.Minutes} 分";
-        }
     }
 
     /// <summary>
@@ -79,6 +71,5 @@ namespace PileDesign.Views
         int CombinationCount,
         int CounterLoadingCount,
         int NonLinearLoadCaseCount,
-        int MaxParallelism,
-        TimeSpan EstimatedDuration);
+        int MaxParallelism);
 }

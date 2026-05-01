@@ -1296,7 +1296,6 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// プリフライト用サマリを構築する。AnalysisPreflightDialog にそのまま渡せる形。
-        /// 実行時間は経験則の係数 (1 step あたりの目安) を用いた粗い見積もり。
         /// </summary>
         private Views.AnalysisPreflightSummary BuildPreflightSummary()
         {
@@ -1319,11 +1318,6 @@ namespace PileDesign.ViewModels
             int parallelism = Math.Max(1, MaxCaseDegreeOfParallelism);
             int totalSteps = TotalCalculationCount;
 
-            // 経験則: 1 step あたり ~0.4 秒 (非線形解析平均)。並列度で按分。
-            // 線形主体ならもっと短いが、安全側に多めに見積もる方がユーザーの期待値マネジメントになる。
-            double secondsPerStep = nonLinearCases > 0 ? 0.5 : 0.15;
-            double estimatedSec = totalSteps * secondsPerStep / parallelism;
-
             string loadCaseText = liquefactionFactor == 2
                 ? $"L1={level1Count} / L2={level2Count} (液状化: あり/なし両方)"
                 : $"L1={level1Count} / L2={level2Count}";
@@ -1335,8 +1329,7 @@ namespace PileDesign.ViewModels
                 CombinationCount: combinationCount,
                 CounterLoadingCount: counterLoadingCount,
                 NonLinearLoadCaseCount: nonLinearCases,
-                MaxParallelism: parallelism,
-                EstimatedDuration: TimeSpan.FromSeconds(estimatedSec));
+                MaxParallelism: parallelism);
         }
 
         private async Task OnExecuteAnalysisCore(bool additive)

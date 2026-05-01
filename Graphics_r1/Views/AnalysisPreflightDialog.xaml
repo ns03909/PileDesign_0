@@ -23,7 +23,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ヘッダー -->
@@ -53,7 +52,6 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="総ステップ数" Foreground="#555" Margin="0,2"/>
@@ -73,17 +71,8 @@
 
                 <TextBlock Grid.Row="5" Grid.Column="0" Text="ケース並列度" Foreground="#555" Margin="0,2"/>
                 <TextBlock Grid.Row="5" Grid.Column="1" x:Name="ParallelismText" Margin="0,2"/>
-
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="目安実行時間" Foreground="#555" Margin="0,2"/>
-                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="EstimatedTimeText" FontWeight="SemiBold"
-                           Foreground="{StaticResource NikkenDeepBlueBrush}" Margin="0,2"/>
             </Grid>
         </Border>
-
-        <!-- 注記 -->
-        <TextBlock Grid.Row="3" x:Name="NoteText" Foreground="#888" FontSize="11"
-                   Margin="0,8,0,0" TextWrapping="Wrap"
-                   Text="目安実行時間は経験的な係数による試算です。非線形性・収束性により実時間とは大きく異なる場合があります。"/>
 
         <!-- フッター -->
         <Grid Grid.Row="4" Margin="0,16,0,0">
