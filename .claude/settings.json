@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "PowerShell(dotnet test TestProject1/TestProject1.csproj --filter \"FullyQualifiedName~WithAnalysisResults\" --nologo --logger \"console;verbosity=normal\" 2>&1)",
+      "PowerShell(dotnet test TestProject1/TestProject1.csproj --filter \"FullyQualifiedName~PropertyBasedTests\" --nologo --logger \"console;verbosity=normal\" 2>&1)",
+      "PowerShell(dotnet test TestProject1/TestProject1.csproj --filter \"FullyQualifiedName~GroundInputValidationTests\" --nologo --logger \"console;verbosity=normal\" 2>&1)",
+      "PowerShell(dotnet test TestProject1/TestProject1.csproj --filter \"FullyQualifiedName~SaveLoadRoundTripTests|FullyQualifiedName~PropertyBasedTests|FullyQualifiedName~AutoSaveServiceNaNTests|FullyQualifiedName~FileOperationServiceTests|FullyQualifiedName~GroundInputValidationTests\" --nologo --no-build --logger \"console;verbosity=normal\" 2>&1)",
+      "Bash(awk 'NR==6957,NR==7430 {if \\(/-->/\\) {print NR\": \"$0; exit}}' Graphics_r1/Help/help.html)",
+      "Bash(awk ' *)",
+      "Bash(awk 'NR>=6171 && NR<=6900 && /<h[123]>/ {print NR\": \"$0}' Graphics_r1/Help/help.html)",
+      "Bash(awk 'NR>=6900 && NR<=8000 && /<h[123]>/ {print NR\": \"$0}' Graphics_r1/Help/help.html)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

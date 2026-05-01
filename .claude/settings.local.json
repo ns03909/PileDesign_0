@@ -43,7 +43,8 @@
       "WebFetch(domain:support.midasuser.com)",
       "Bash(xargs:*)",
       "Read(//c/Users/keisu/.nuget/**)",
-      "Bash(/c/Users/keisu/AppData/Local/Programs/Python/Python310/python.exe /tmp/transform_verification.py \"/c/Users/keisu/source/repos/PileDesign_0/Graphics_r1/Help/verification.html\")"
+      "Bash(/c/Users/keisu/AppData/Local/Programs/Python/Python310/python.exe /tmp/transform_verification.py \"/c/Users/keisu/source/repos/PileDesign_0/Graphics_r1/Help/verification.html\")",
+      "Bash(pdftotext -enc UTF-8 -layout \"C:/Users/keisu/source/repos/PileDesign_0/Graphics_r1/Sources/32_107_表層地盤による地震動増幅率評価法に関する研究.pdf\" /tmp/paper.txt)"
     ],
     "additionalDirectories": [
       "c:\\Users\\keisu\\source\\repos\\PileDesign_0",

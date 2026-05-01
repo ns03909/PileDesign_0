@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="128" height="128" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-356,-1602)">
+        <g id="BeamTwistStiffness0" transform="matrix(1,0,0,1,356,0)">
+            <rect x="0" y="1602" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="0" y="1602" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.375493,0,0,0.486999,40.229166,1291.599899)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(247,181,21);stroke-width:19.16px;"/>
+                </g>
+                <g transform="matrix(1,0,0,1,-1085.028474,1527.453601)">
+                    <g transform="matrix(50,0,0,50,1208.833348,117.996293)">
+                    </g>
+                    <text x="1180.233px" y="117.996px" style="font-family:'AdobeGothicStd-Bold', 'Adobe Gothic Std', sans-serif;font-weight:700;font-size:50px;fill:rgb(50,113,173);">0</text>
+                </g>
+                <g transform="matrix(0,1.299435,-1.299435,0,2252.630469,1598.109876)">
+                    <g transform="matrix(0,-0.769565,0.769565,0,2.993704,1733.546056)">
+                        <path d="M126.938,79.975L114.438,67.475L101.938,79.975" style="fill:none;stroke:rgb(247,181,21);stroke-width:8.33px;stroke-miterlimit:10;"/>
+                        <path d="M51.5,4.537L64,17.037L51.5,29.537" style="fill:none;stroke:rgb(247,181,21);stroke-width:8.33px;stroke-miterlimit:10;"/>
+                        <path d="M114.438,67.475C114.438,95.312 91.837,117.912 64,117.912C36.163,117.912 13.562,95.312 13.562,67.475C13.562,39.638 36.163,17.037 64,17.037" style="fill:none;stroke:rgb(247,181,21);stroke-width:8.33px;"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

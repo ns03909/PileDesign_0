@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="128" height="128" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-712,-356)">
+        <g id="AnyFormPressure" transform="matrix(1,0,0,1,534,356)">
+            <rect x="178" y="0" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="178" y="0" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(0.315876,0,0,0.408604,191.756995,-288.737354)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:22.82px;"/>
+                </g>
+                <g transform="matrix(0.413886,0,0,0.506333,252.361177,-298.959882)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:none;stroke:rgb(82,143,73);stroke-width:18.02px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -175,7 +175,6 @@ namespace PileDesign.Views
         {
             MainWindowViewModel viewModel = (MainWindowViewModel)DataContext;
             double maxArrowLength2D = viewModel.ArrowLength;
-            double maxArrowLength3D = 5;
             double arrowHeadLength2D = viewModel.ArrowHeadLength;
             double arrowHeadDia2D = viewModel.ArrowHeadDia;
 
@@ -200,27 +199,35 @@ namespace PileDesign.Views
                         Point arrowHead2D;
                         Point arrowEnd2D;
 
-                        // valueVectors[i] を正規化
+                        // valueVectors[i] (大きさ = value kN) を foreshortening 込みで描画する。
+                        // arrowVectorTemp は 3D の valueVectors[i] の 2D 投影 (Scale 込み, ピクセル単位)。
+                        // 視点とベクトルが直交に近いほど |arrowVectorTemp| は元の長さに近くなり、
+                        // 平行に近い (上から見た鉛直力等) ほど短く投影される。
+                        // dimensionless 係数 scaleFactor を掛けて 2D 矢印長に変換する:
+                        //   2D 矢印長 [px] = (value × cos(viewAngle) × Scale)        ← arrowVectorTemp.Length
+                        //                 × (ForceDiagramRatio × ModelExtent / absMaxValue)  ← scaleFactor
+                        //                 = (value/absMaxValue) × ForceDiagramRatio × ModelExtent × Scale × cos(viewAngle)
+                        // 旧実装は arrowVectorTemp を正規化してから固定長を掛けていたため
+                        // foreshortening 効果が失われていた (上から見ても矢印が短くならない)。修正済み。
                         Vector3D normalizedVector = valueVectors[i];
-
-                        // 尾の長さ
-                        double tailLength2D = absMaxValue == 0 ? 0 : maxArrowLength3D * value / absMaxValue * viewModel.CanvasThreeDView.Scale * viewModel.ForceDiagramRatio * viewModel.ModelExtent;
+                        double scaleFactor = absMaxValue == 0 ? 0
+                            : viewModel.ForceDiagramRatio * viewModel.ModelExtent / absMaxValue;
 
                         if (isPointAtHead)
                         {
                             // 矢印頭座標
                             arrowHead2D = viewModel.CanvasThreeDView.Transformation(points[i]);
 
-                            // 矢印尾の位置を計算
+                            // 矢印尾の位置を計算 (3D で 1 vector 分後退した点を 2D 投影)
                             Point3D arrowEnd3DTemp = points[i] - normalizedVector;
                             Point arrowEnd2DTemp = viewModel.CanvasThreeDView.Transformation(arrowEnd3DTemp);
 
-                            // arrowVector を計算
+                            // arrowVector (2D, ピクセル単位、foreshortening 反映済み)
                             arrowVectorTemp = arrowHead2D - arrowEnd2DTemp;
 
-                            // arrowEnd2D を計算
+                            // arrowEnd2D = head から arrowVectorTemp 方向に scaleFactor 倍だけ後退
                             arrowEnd2D = arrowVectorTemp.Length > Math.Pow(10, -3) ?
-                                arrowHead2D - arrowVectorTemp / arrowVectorTemp.Length * tailLength2D : arrowHead2D;
+                                arrowHead2D - arrowVectorTemp * scaleFactor : arrowHead2D;
                             TextPos2Ds.Add(arrowEnd2D);
                         }
                         else // if (!isPointAtHead)
@@ -235,9 +242,9 @@ namespace PileDesign.Views
                             // arrowVector を計算
                             arrowVectorTemp = arrowHead2DTemp - arrowEnd2D;
 
-                            // arrowEnd2D を計算
+                            // arrowHead2D = end から arrowVectorTemp 方向に scaleFactor 倍だけ前進
                             arrowHead2D = arrowVectorTemp.Length > Math.Pow(10, -3) ?
-                                arrowEnd2D + arrowVectorTemp / arrowVectorTemp.Length * tailLength2D : arrowEnd2D;
+                                arrowEnd2D + arrowVectorTemp * scaleFactor : arrowEnd2D;
                             TextPos2Ds.Add(arrowHead2D);
                         }
 

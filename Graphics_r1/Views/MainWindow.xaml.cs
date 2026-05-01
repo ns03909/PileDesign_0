@@ -117,7 +117,6 @@ namespace PileDesign.Views
             loadingMainWindow.ShowDialog();
 
             Loaded += MainWindow_Loaded;
-            Deactivated += MainWindow_Deactivated;
 
             viewModel.TreeViewControl = TreeViewControl;
             // ViewModelのActionにUpdateCanvas3Dを設定
@@ -290,6 +289,34 @@ namespace PileDesign.Views
                 {
                     AnalysisResultRibbonTab.IsSelected = true;
                 }
+            }
+
+            // INPUT フロートウィンドウの表示/非表示
+            if (e.PropertyName == nameof(MainWindowViewModel.IsInputVisualizerVisible))
+            {
+                UpdateInputVisualizerWindow();
+            }
+        }
+
+        private InputVisualizerWindow? _inputVisualizerWindow;
+
+        private void UpdateInputVisualizerWindow()
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+
+            if (vm.IsInputVisualizerVisible)
+            {
+                if (_inputVisualizerWindow == null)
+                {
+                    _inputVisualizerWindow = new InputVisualizerWindow(this);
+                    _inputVisualizerWindow.Closed += (s, e) => _inputVisualizerWindow = null;
+                    _inputVisualizerWindow.Show();
+                }
+            }
+            else
+            {
+                _inputVisualizerWindow?.Close();
+                _inputVisualizerWindow = null;
             }
         }
 
@@ -472,14 +499,6 @@ namespace PileDesign.Views
             //_layoutService.RestoreDockLayout(dockingManager);
         }
 
-        private void MainWindow_Deactivated(object sender, EventArgs e)
-        {
-            // メイン画面がフォーカスを失ったとき（ダイアログ表示等）、入力状況表示をリセット
-            if (DataContext is MainWindowViewModel vm && vm.IsInputVisualizerVisible)
-            {
-                vm.IsInputVisualizerVisible = false;
-            }
-        }
         private void ColorBarCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             // キャンバスのサイズが変更されたときに DrawColorBar を呼び出す
@@ -1808,6 +1827,13 @@ namespace PileDesign.Views
             {
                 // Ctrl + Shift + I が押されたときの処理
                 ButtonIsometric_Clicked(this, new RoutedEventArgs());
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F12 && Keyboard.Modifiers == ModifierKeys.None)
+            {
+                // F12: INPUT 表示の切替
+                if (_mainWindowViewModel != null)
+                    _mainWindowViewModel.IsInputVisualizerVisible = !_mainWindowViewModel.IsInputVisualizerVisible;
                 e.Handled = true;
             }
             else if (e.Key == Key.A && Keyboard.Modifiers == ModifierKeys.Control)

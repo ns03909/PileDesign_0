@@ -60,6 +60,9 @@ namespace PileDesign.Views
                 new("ビュー", "正面", "Ctrl + Shift + F"),
                 new("ビュー", "アイソメ", "Ctrl + Shift + I"),
 
+                // 説明用
+                new("説明用", "INPUT 表示切替", "F12"),
+
                 // ヘルプ
                 new("ヘルプ", "ヘルプ", "F1"),
                 new("ヘルプ", "クイックヒント", "Shift + F1"),

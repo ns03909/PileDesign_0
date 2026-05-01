@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="128" height="128" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(1,0,0,1,-712,-1602)">
+        <g id="Display" transform="matrix(1,0,0,1,712,356)">
+            <rect x="0" y="1246" width="128" height="128" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="0" y="1246" width="128" height="128"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(1.083152,0,0,0.850236,-4.569678,636.516831)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:url(#_Radial2);"/>
+                </g>
+                <g transform="matrix(0.415992,0,0,0.039335,37.038279,1341.155217)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(247,181,21);"/>
+                </g>
+                <g transform="matrix(0.102068,0,0,0.193616,56.911483,1207.680793)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(247,181,21);"/>
+                </g>
+                <g transform="matrix(0.944028,0,0,0.687422,4.237637,762.847793)">
+                    <rect x="4.219" y="716.84" width="118.174" height="118.17" style="fill:rgb(216,255,255);"/>
+                </g>
+            </g>
+        </g>
+    </g>
+    <defs>
+        <radialGradient id="_Radial2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(59.086814,0,0,59.08497,63.305684,775.925313)"><stop offset="0" style="stop-color:white;stop-opacity:1"/><stop offset="1" style="stop-color:rgb(247,181,21);stop-opacity:1"/></radialGradient>
+    </defs>
+</svg>

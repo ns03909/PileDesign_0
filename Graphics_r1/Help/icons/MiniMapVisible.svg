@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="128" height="128" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-178,-2136)">
+        <g id="MiniMapVisible" transform="matrix(1,0,0,1,178,0)">
+            <rect x="0" y="2136" width="128" height="128" style="fill:none;"/>
+            <g transform="matrix(1,0,0,1,-1.760676,-3.270278)">
+                <rect x="14.512" y="2163.215" width="102.498" height="80.11" style="fill:none;stroke:black;stroke-width:8.33px;"/>
+            </g>
+            <g transform="matrix(0.643499,0,0,0.559059,27.202615,970.773243)">
+                <rect x="14.512" y="2163.215" width="102.498" height="80.11" style="fill:rgb(199,199,199);"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-164.483259,220.665344)">
+                <circle cx="222.629" cy="1981.866" r="5.854" style="fill:rgb(30,0,0);"/>
+            </g>
+            <g transform="matrix(1,0,0,1,-149.620274,232.372988)">
+                <circle cx="222.629" cy="1981.866" r="5.854" style="fill:rgb(30,0,0);"/>
+            </g>
+        </g>
+    </g>
+</svg>

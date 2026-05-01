@@ -86,6 +86,12 @@ namespace PileDesign.FEM
         public List<HorizontalSoilSpring> PenaltySprings { get; set; } = [];  // ConnectionNode↔CapNodeペナルティばね
         public List<AnalysisStepResult> AnalysisStepResults { get; set; } = []; // 解析ステップ結果のリスト
 
+        /// <summary>
+        /// 前回の水平解析実行設定スナップショット。「追加実行」(段階追加) の互換性検証に使用。
+        /// 旧 JSON との後方互換のため null 許容 (null = 「前回情報なし、追加実行不可」)。
+        /// </summary>
+        public AnalysisRunSnapshot? LastRunConfig { get; set; } = null;
+
         public int CountFree { get; set; }
         public int CountFix { get; set; }
 
@@ -1671,6 +1677,24 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
+        /// <summary>
+        /// 全ての水平解析結果と前回実行設定を明示的にクリアする。
+        /// 「新規実行」(段階追加でない通常実行) の冒頭で呼び、結果の積み重ねを防ぐ。
+        /// </summary>
+        public void ClearAllAnalysisResults()
+        {
+            AnalysisStepResults.Clear();
+            if (Nodes != null)
+                foreach (var n in Nodes) n.NodeResults?.Clear();
+            if (Beams != null)
+                foreach (var b in Beams) b.BeamResults?.Clear();
+            if (HorizontalSoilSprings != null)
+                foreach (var s in HorizontalSoilSprings) s.HorizontalSpringResults?.Clear();
+            if (RotationalSprings != null)
+                foreach (var rs in RotationalSprings) rs.RotationalSpringResults?.Clear();
+            LastRunConfig = null;
+        }
+
         /// E2 (2026-04-23): ケース並列化 E3 で使用する結果マージ。
         /// case-local (DeepCopy 済) AnaModel で蓄積した結果を main AnaModel に append する。
         /// snapshot は DeepCopy 前の main の各結果コレクション長を渡す。caseModel はコピーなので
