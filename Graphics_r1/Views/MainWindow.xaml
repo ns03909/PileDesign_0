@@ -412,8 +412,9 @@
             </Setter>
         </Style>
 
-        <!-- ToggleButton用: 大アイコンToolTip汎用スタイル -->
-        <Style x:Key="LargeIconToolTipToggleButtonStyle" TargetType="ToggleButton">
+        <!-- ToggleButton用: 大アイコンToolTip汎用スタイル
+             BasedOn で Styles.xaml 側の暗黙 ToggleButton Style (フラット見た目 + IsChecked accent) を継承 -->
+        <Style x:Key="LargeIconToolTipToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
             <Setter Property="ToolTip">
                 <Setter.Value>
                     <ToolTip Placement="Mouse" HasDropShadow="True">
