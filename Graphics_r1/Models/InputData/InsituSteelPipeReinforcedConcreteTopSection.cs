@@ -35,10 +35,19 @@ namespace PileDesign.Models.InputData
 
         public List<double> ServiceLimitShearAxialForceThresholds { get; private set; }
 
+        /// <summary>
+        /// 安全限界曲げモーメントの低減率 β1 (M-φ / M-θ で Mu0 に乗じる)。
+        /// null の場合は既存挙動 (低 N で 0.95、高 N で 0.80) を維持。
+        /// 鋼管杭+鉄筋定着工法のように一律で β1 を上書きしたい用途で使用。
+        /// </summary>
+        private readonly double? _ultimateBeta1Override;
+
         // コンストラクタ
         internal InsituSteelPipeReinforcedConcreteTopSection(
-            InsituConcrete insituConcrete, MainBars mainBars1, MainBars mainBars2)
+            InsituConcrete insituConcrete, MainBars mainBars1, MainBars mainBars2,
+            double? ultimateBeta1Override = null)
         {
+            _ultimateBeta1Override = ultimateBeta1Override;
             PileDia = insituConcrete.DO;
             MainBarArea1 = mainBars1.Ag; //mainBarArea;
             MainBarPCD1 = mainBars1.PCD;  //mainBarPcd;
@@ -576,7 +585,11 @@ namespace PileDesign.Models.InputData
             //}
 
             double ag = Math.PI * PileDia * PileDia / 4.0;
-            double beta1 = (Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80;
+            // 既存挙動: 低 N (≤ ξFc/3) で β1=0.95、高 N で β1=0.80
+            // 鋼管杭の定着部のように外部から一律 β1 を指定したい場合は
+            // _ultimateBeta1Override で上書きできる (両軸力域で同じ値を使用)
+            double beta1 = _ultimateBeta1Override
+                ?? ((Ntarget / ag <= (1.0 / 3.0) * InsituConcrete.Gsi * InsituConcrete.Fc) ? 0.95 : 0.80);
             double phiC = GetPhiC(phiCr, MCr, phiY, MY, Mu0, beta1);
             List<double> phis;
             List<double> Ms;
@@ -599,7 +612,8 @@ namespace PileDesign.Models.InputData
         //// ある軸力時のM-θ関係を得るメソッド
         internal (List<double>, List<double>) GetMThetaRelationship(double Ntarget, double alpha = 32)
         {
-            double beta1 = 0.95;
+            // 既存挙動: β1=0.95 固定。鋼管杭の定着部のように外部から指定された場合は上書き
+            double beta1 = _ultimateBeta1Override ?? 0.95;
             (double MCr, double _) = GetCrackMoment(Ntarget, false);
             (double MY, double phiY) = GetSteelYieldMoment(Ntarget);
             double thetaY = 0.5 * alpha * ExtractBarSizeNumber(MainBars1.BarSize) * phiY;

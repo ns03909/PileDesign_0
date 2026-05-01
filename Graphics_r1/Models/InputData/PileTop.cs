@@ -397,7 +397,11 @@ namespace PileDesign.Models.InputData
                 var insituConcrete = new InsituConcrete(ConcreteOutDia, pileCapGsi, PileCapFc);
                 var mainBars1 = new MainBars(MainBarDr1, MainBarNum1, MainBarSpec1, MainBarSize1);
                 var mainBars2 = new MainBars(MainBarDr2, MainBarNum2, MainBarSpec2, MainBarSize2);
-                var pileTop = new InsituSteelPipeReinforcedConcreteTopSection(insituConcrete, mainBars1, mainBars2);
+                // 鋼管杭の定着部は安全限界曲げモーメント低減率 β1 = 0.9 (一律) で評価
+                // (場所打ち鋼管コンクリート杭は従来挙動: 低 N で 0.95 / 高 N で 0.80)
+                double? beta1Override = PileBodyType == "鋼管杭" ? 0.9 : (double?)null;
+                var pileTop = new InsituSteelPipeReinforcedConcreteTopSection(
+                    insituConcrete, mainBars1, mainBars2, beta1Override);
 
                 //UltimateLimitAxialForceThresholds = pileSection.UltimateLimitAxialForceThresholds;
                 //UltimateLimitAxialForceThresholds = [.. pileTop.UltimateLimitAxialForceThresholds];
