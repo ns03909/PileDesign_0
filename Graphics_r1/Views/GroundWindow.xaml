@@ -1642,7 +1642,7 @@
                                             </DataGrid.ContextMenu>
 
                                             <DataGrid.ColumnHeaderStyle>
-                                                <Style TargetType="DataGridColumnHeader">
+                                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                     <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
@@ -2053,7 +2053,7 @@
                                         </DataGrid.ContextMenu>
 
                                         <DataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
@@ -2903,7 +2903,7 @@
                                         LoadingRow="DataGrid_LoadingRow_Numbering"
                                         ToolTip="Excelから標高(m)・変位(mm)の2列をコピーしてCtrl+Vでペースト可能">
                                         <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                             </Style>
                                         </common:EnhancedDataGrid.ColumnHeaderStyle>

@@ -414,7 +414,7 @@
                         </common:EnhancedDataGrid.AlternatingRowBackground>
 
                         <common:EnhancedDataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                             </Style>
                         </common:EnhancedDataGrid.ColumnHeaderStyle>
@@ -517,7 +517,7 @@
                                 </common:EnhancedDataGrid.AlternatingRowBackground>
 
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                    <Style TargetType="DataGridColumnHeader">
+                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
                                         <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                     </Style>
@@ -744,7 +744,7 @@
                                 </common:EnhancedDataGrid.ContextMenu>
 
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                    <Style TargetType="DataGridColumnHeader">
+                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
                                         <Setter Property="Foreground" Value="#3271AD" />
                                     </Style>
@@ -1079,7 +1079,7 @@
                                     </common:EnhancedDataGrid.ContextMenu>
 
                                     <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader">
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                         </Style>
                                     </common:EnhancedDataGrid.ColumnHeaderStyle>
@@ -1114,7 +1114,7 @@
                                     </common:EnhancedDataGrid.ContextMenu>
 
                                     <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader">
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                         </Style>
                                     </common:EnhancedDataGrid.ColumnHeaderStyle>
@@ -1181,7 +1181,7 @@
                                 </common:EnhancedDataGrid.ContextMenu>
 
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                    <Style TargetType="DataGridColumnHeader">
+                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
                                         <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                     </Style>
@@ -1404,7 +1404,7 @@
                                 </common:EnhancedDataGrid.ContextMenu>
 
                                 <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                    <Style TargetType="DataGridColumnHeader">
+                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                         <Setter Property="HorizontalContentAlignment" Value="Center" />
                                         <Setter Property="Foreground" Value="#3271AD" />
                                     </Style>
@@ -1742,7 +1742,7 @@
                                     </common:EnhancedDataGrid.ContextMenu>
 
                                     <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader">
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                         </Style>
                                     </common:EnhancedDataGrid.ColumnHeaderStyle>
@@ -1775,7 +1775,7 @@
                                     </common:EnhancedDataGrid.ContextMenu>
 
                                     <common:EnhancedDataGrid.ColumnHeaderStyle>
-                                        <Style TargetType="DataGridColumnHeader">
+                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                         </Style>
                                     </common:EnhancedDataGrid.ColumnHeaderStyle>

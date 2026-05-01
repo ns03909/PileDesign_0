@@ -270,26 +270,22 @@
             <!-- フォントの色を赤に設定 -->
         </Style>
 
-        <!-- 特定の列ヘッダーの色を変更するスタイル -->
-        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader">
+        <!-- 特定の列ヘッダーの色を変更するスタイル
+             BasedOn で Styles.xaml の暗黙 DataGridColumnHeader Style (FontWeight=SemiBold) を継承 -->
+        <Style x:Key="GreenHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="#238966"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader">
+        <Style x:Key="YellowHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="#F7B515"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader">
+        <Style x:Key="DeepBlueHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="#3271AD"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader">
+        <Style x:Key="PaleRedHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="#E95541"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
-        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader">
+        <Style x:Key="CrimsonHeaderStyle" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
             <Setter Property="Foreground" Value="#D82531"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
         </Style>
 
         <!--RibbonToggleButton 用: 大アイコン ToolTip スタイル-->
@@ -2119,7 +2115,7 @@
                                         </DataGrid.ContextMenu>
 
                                         <DataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
@@ -2220,7 +2216,7 @@
                                             </DataGrid.ContextMenu>
 
                                             <DataGrid.ColumnHeaderStyle>
-                                                <Style TargetType="DataGridColumnHeader">
+                                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                     <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
@@ -2332,7 +2328,7 @@
                                             </DataGrid.ContextMenu>
 
                                             <DataGrid.ColumnHeaderStyle>
-                                                <Style TargetType="DataGridColumnHeader">
+                                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                     <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
@@ -2561,7 +2557,7 @@
                                             </DataGrid.ContextMenu>
 
                                             <DataGrid.ColumnHeaderStyle>
-                                                <Style TargetType="DataGridColumnHeader">
+                                                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                     <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                 </Style>
@@ -2818,7 +2814,7 @@
                                                 </DataGrid.ContextMenu>
 
                                                 <DataGrid.ColumnHeaderStyle>
-                                                    <Style TargetType="DataGridColumnHeader">
+                                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                         <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                     </Style>
@@ -3318,7 +3314,7 @@
                                                 </DataGrid.ContextMenu>
 
                                                 <DataGrid.ColumnHeaderStyle>
-                                                    <Style TargetType="DataGridColumnHeader">
+                                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                         <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                     </Style>
@@ -3756,7 +3752,7 @@
                                                 </DataGrid.ContextMenu>
 
                                                 <DataGrid.ColumnHeaderStyle>
-                                                    <Style TargetType="DataGridColumnHeader">
+                                                    <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                         <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                         <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                     </Style>
@@ -3928,7 +3924,7 @@
                                         </DataGrid.Style>
 
                                         <DataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
@@ -4112,7 +4108,7 @@
                                         </DataGrid.ContextMenu>
 
                                         <DataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
@@ -4234,7 +4230,7 @@
                                         </DataGrid.ContextMenu>
 
                                         <DataGrid.ColumnHeaderStyle>
-                                            <Style TargetType="DataGridColumnHeader">
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                             </Style>
@@ -4505,7 +4501,7 @@
                                                         </DataGrid.ContextMenu>
 
                                                         <DataGrid.ColumnHeaderStyle>
-                                                            <Style TargetType="DataGridColumnHeader">
+                                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                             </Style>
@@ -4679,7 +4675,7 @@
                                                         </DataGrid.ContextMenu>
 
                                                         <DataGrid.ColumnHeaderStyle>
-                                                            <Style TargetType="DataGridColumnHeader">
+                                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                             </Style>
@@ -4900,7 +4896,7 @@
                                                         </DataGrid.ContextMenu>
 
                                                         <DataGrid.ColumnHeaderStyle>
-                                                            <Style TargetType="DataGridColumnHeader">
+                                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                             </Style>
@@ -5137,7 +5133,7 @@
                                                     </DataGrid.ContextMenu>
 
                                                     <DataGrid.ColumnHeaderStyle>
-                                                        <Style TargetType="DataGridColumnHeader">
+                                                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                                             <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                                                         </Style>

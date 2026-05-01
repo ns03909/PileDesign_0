@@ -264,7 +264,7 @@
                               common:DataGridNavigationBehavior.Enable="True">
 
                         <common:EnhancedDataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
+                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                                 <Setter Property="Foreground" Value="{StaticResource PrimaryAccentBrush}" />
                             </Style>

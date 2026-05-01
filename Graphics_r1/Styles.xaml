@@ -120,6 +120,18 @@
         <Setter Property="ClipboardCopyMode" Value="ExcludeHeader"/>
     </Style>
 
+    <!-- DataGrid 列ヘッダー: 全 DataGrid で太さ・配置・パディングを統一。
+         Foreground は色付き Header Style (GreenHeaderStyle 等) や個別 inline で
+         上書きできるよう設定しない。各 keyed/inline Style 側で
+         BasedOn="{StaticResource {x:Type DataGridColumnHeader}}" を指定して
+         FontWeight 等を継承する. -->
+    <Style TargetType="DataGridColumnHeader">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="6,4"/>
+    </Style>
+
 
     <Style TargetType="{x:Type common:EnhancedDataGrid}"
            BasedOn="{StaticResource {x:Type DataGrid}}"/>
