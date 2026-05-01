@@ -870,7 +870,7 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Title.Label.Text = title;
             wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
 
-            string xLabel = "基準水平地盤反力係数 kh0 (kN/m3)";
+            string xLabel = "基準水平地盤反力係数 kₕ₀ (kN/m³)";
             wpf.Plot.Axes.Bottom.Label.Text = xLabel;
             wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
@@ -901,7 +901,7 @@ namespace PileDesign.ViewModels
 
             // クロスヘアの初期化
             MyCrosshair_kh0 = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
-            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove_RectangleVertexFocus(s, e, "CrosshairPositionText_kh0", "kh0(kN/m3)", "Z(m)");
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove_RectangleVertexFocus(s, e, "CrosshairPositionText_kh0", "kₕ₀(kN/m³)", "Z(m)");
 
             // クロスヘアの初期化
             MyCrosshair_Front = PlotHelper.InitCrosshair(wpfPlotPFront, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
@@ -1059,7 +1059,7 @@ namespace PileDesign.ViewModels
 
             wpf.Plot.Axes.Title.Label.Text = "基準等相対変位時土圧分布";
             wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(wpf.Plot.Axes.Title.Label.Text);
-            wpf.Plot.Axes.Bottom.Label.Text = "土圧 (pp-p0)/3 (kN/m2)";
+            wpf.Plot.Axes.Bottom.Label.Text = "土圧 (pₚ−p₀)/3 (kN/m²)";
             wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(wpf.Plot.Axes.Bottom.Label.Text);
             wpf.Plot.Axes.Left.Label.Text = "Z (m)";
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(wpf.Plot.Axes.Left.Label.Text);

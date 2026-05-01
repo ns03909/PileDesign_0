@@ -1040,7 +1040,7 @@ namespace PileDesign.ViewModels
             wpf.Plot.Axes.Bottom.Label.Text = xLabel;
             wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect(xLabel);
 
-            string yLabel = "Sa (m/s²)";
+            string yLabel = "Sₐ (m/s²)";
             wpf.Plot.Axes.Left.Label.Text = yLabel;
             wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect(yLabel);
 
