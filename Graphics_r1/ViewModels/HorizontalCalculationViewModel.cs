@@ -1732,13 +1732,32 @@ namespace PileDesign.ViewModels
                 }
 
                 // 軸力を取得（PileLayoutItemから）
-                // 注: AxialForce は N 単位で格納されているが、
-                //     GetMPhiRelationship は kN 単位を期待するため変換
+                // 注: pile.AxialForce / model.GetAxialForce は kN 単位で格納されている
+                //     (UI 入力 (kN), SetAxialForce コメント [kN], AxialForceLevel{1,2}s [kN] と整合)。
+                //     PileSection.GetMPhiRelationship は kN を期待 (内部で *1000 して N に変換)。
+                //     旧実装は誤って /1000.0 で「N→kN 変換」していたため、軸力が 1/1000 で
+                //     M-φ が 24% 程度過小評価される単位バグがあった (検証テスト: PileSectionMPhiUnitTests)。
+                // 初期セットアップではケース固有の入力軸力 (AxialForceLevel{1,2}s) を優先。
+                // (per-step の SetupMPhiByCurrentAxialForMiddleBeam がステップごとに再解決するため、
+                //  ここでの値は step 0 の K 行列構築時に効く)
                 double axialN_kN = 0.0;
                 if (pileByPileBodyNo.TryGetValue(pb, out var pile))
                 {
-                    // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)
-                    axialN_kN = model.GetAxialForce(pile) / 1000.0; // N → kN
+                    try
+                    {
+                        double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                        if (double.IsFinite(nSeis) && nSeis != 0.0)
+                            axialN_kN = nSeis;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "[SetupMPhi] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
+                            loadCase.No, loadCase.Level);
+                    }
+                    if (axialN_kN == 0.0)
+                    {
+                        axialN_kN = model.GetAxialForce(pile); // kN フォールバック (重力ベース)
+                    }
                 }
 
                 // 場所打ち鋼管コンクリート杭: 杭頭部と杭中間部で異なるM-φを適用
@@ -4057,9 +4076,12 @@ namespace PileDesign.ViewModels
 
             foreach (var pile in InputModel.PileLayoutItems)
             {
-                // 現ステップの解析軸力（N → kN）
-                // E3b: case-local AxialForce / Beams を取得 (主モデルでは従来と同じ参照)
-                double axialN_kN = model.GetAxialForce(pile) / 1000.0;
+                // 現ステップの解析軸力 [kN]
+                // pile.AxialForce / model.GetAxialForce は kN 単位 (UI 入力, SetAxialForce コメント,
+                // AxialForceLevel{1,2}s 全て kN)。PileSection.GetMPhiRelationship も kN を期待。
+                // 旧実装は誤って /1000.0 で「N→kN 変換」していたため、軸力が 1/1000 で
+                // M-φ が 24% 程度過小評価される単位バグがあった (検証: PileSectionMPhiUnitTests)。
+                double axialN_kN = model.GetAxialForce(pile);
 
                 int pb = pile.PileBodyNo;
                 if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) continue;
