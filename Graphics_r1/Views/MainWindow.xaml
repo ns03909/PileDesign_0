@@ -4843,7 +4843,7 @@
                                                         </Grid>
                                                     </GroupBox>
 
-                                                    <GroupBox Header="登録済みの土層の仮値のコピー">
+                                                    <GroupBox Header="登録済み土層のコピー">
                                                         <GroupBox.ToolTip>
                                                             <StackPanel>
                                                                 <TextBlock Text="登録済みの土層の各下端Z、変形係数、ポアソン比をコピーします。"/>
