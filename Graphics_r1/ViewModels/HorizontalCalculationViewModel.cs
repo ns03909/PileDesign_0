@@ -2031,6 +2031,11 @@ namespace PileDesign.ViewModels
 
                 // 回転バネの名前から杭番号を抽出して軸力を取得
                 // 名前形式: "RθXY-{pileNo}"
+                // L1/L2 地震ケースでは「地震時軸力」(GetSeismicAxialForce) を使うべき。
+                // pile.AxialForce は重力のみのベース軸力で、L2 の鉛直地震成分や上部構造慣性力
+                // による軸力増分が反映されないため、M-θ 曲線が誤った (低めの) N で構築される。
+                // GraphViewModel の popup と同じ優先順位に揃える:
+                //   GetSeismicAxialForce (case/level 別) → model.GetAxialForce (重力ベースフォールバック)
                 double axialN = 0.0;
                 if (spring.Name != null && spring.Name.Contains('-'))
                 {
@@ -2040,8 +2045,22 @@ namespace PileDesign.ViewModels
                         var pile = InputModel.PileLayoutItems?.FirstOrDefault(p => p.No == pileNo);
                         if (pile != null)
                         {
-                            // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)
-                            axialN = model.GetAxialForce(pile); // kN単位（PileBodyInput内でN単位に変換される）
+                            try
+                            {
+                                double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                    axialN = nSeis;
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning(ex, "[SetupMTheta] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
+                                    loadCase.No, loadCase.Level);
+                            }
+                            if (axialN == 0.0)
+                            {
+                                // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)
+                                axialN = model.GetAxialForce(pile); // kN
+                            }
                         }
                     }
                 }
@@ -2060,6 +2079,7 @@ namespace PileDesign.ViewModels
                     spring.CurveXY = null;
                     spring.KthetaXY = KBig;
                     spring.McrXY = null; // Mode 切替は非線形ケースでのみ有効
+                    spring.LastSetupReason = $"Rigid(IsPileNonLinear=false, axialN={axialN:F0}kN)";
                     continue;
                 }
 
@@ -2071,13 +2091,13 @@ namespace PileDesign.ViewModels
                         spring.Mode = RotationalSpringMode.CombinedXY;
                         spring.CurveXY = null;
                         spring.KthetaXY = KBig;
-                        // System.Diagnostics.Debug.WriteLine(
-                        //     $"[SetupMTheta] {spring.Name}: → Rigid (KBig={KBig:E2})");
+                        spring.LastSetupReason = $"Rigid(def.Mode=Rigid, PileTop='{pileBody.PileTopType}', PileBody='{pileBody.PileBodyType}', axialN={axialN:F0}kN)";
                         break;
 
                     case PileHeadRotationMode.CombinedXY:
                         spring.Mode = RotationalSpringMode.CombinedXY;
                         spring.CurveXY = def.CurveXY;
+                        spring.LastSetupReason = $"CombinedXY({(def.CurveXY != null ? def.CurveXY.Points.Count + "pts" : "null")}, Mcr={(def.McrXY?.ToString("F0") ?? "null")}, axialN={axialN:F0}kN)";
                         // v28: Mcr 同期 Mode 切替 (ヒステリシス付き) 用。場所打ち RC 杭のみ非 null。
                         spring.McrXY = def.McrXY;
                         // 状態はケース開始時にリセットするため念のためクリア
@@ -2149,6 +2169,42 @@ namespace PileDesign.ViewModels
                 {
                     var pts = spring.CurveXY.Points;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Y 案: caseModel (DeepCopy 済) のばね M-θ 構成を、永続側 targetModel の
+        /// 同インデックスばねの CaseMThetaSnapshots 辞書へ書き戻す。
+        /// SetupNonlinearMThetaForLoadCase 直後に呼ぶ。
+        /// 同じ (LoadCase, LoadCombination, IsLiquefaction) で再試行が走った場合は上書き。
+        /// </summary>
+        private static void SnapshotMThetaToOriginalSprings(
+            FEM.AnaModel caseModel,
+            FEM.AnaModel targetModel,
+            Models.InputData.LoadCase loadCase,
+            Models.InputData.LoadCombination loadCombination,
+            bool isLiquefaction)
+        {
+            var src = caseModel?.RotationalSprings;
+            var dst = targetModel?.RotationalSprings;
+            if (src == null || dst == null) return;
+            int n = Math.Min(src.Count, dst.Count);
+            string key = FEM.RotationalSpring.MakeCaseKey(
+                loadCase?.LoadName, loadCombination?.No ?? 0, isLiquefaction);
+            for (int i = 0; i < n; i++)
+            {
+                var s = src[i];
+                var d = dst[i];
+                d.CaseMThetaSnapshots[key] = new FEM.MThetaCaseSnapshot
+                {
+                    Mode = s.Mode,
+                    CurveXY = s.CurveXY,
+                    Curve = s.Curve,
+                    KthetaXY = s.KthetaXY,
+                    Ktheta = s.Ktheta,
+                    McrXY = s.McrXY,
+                    SetupReason = s.LastSetupReason ?? "",
+                };
             }
         }
 
@@ -2518,6 +2574,9 @@ namespace PileDesign.ViewModels
                             }
                             // M–θ は常にセット（非線形OFFは剛 KThetaXY=KRigid）
                             SetupNonlinearMThetaForLoadCase(caseModel, loadCase);
+                            // Y 案: caseModel のばね構成を targetModel のばねへスナップショット書き戻し。
+                            // GraphViewModel / AnalysisResultTableService がケース別構成を可視化できるようにする。
+                            SnapshotMThetaToOriginalSprings(caseModel, targetModel, loadCase, loadCombination, isLiquefaction);
 
                             SetVectorDF(caseModel, loadCase, loadCombination, level, iLC, nStep);
                             caseModel.MapOnVectorDF();

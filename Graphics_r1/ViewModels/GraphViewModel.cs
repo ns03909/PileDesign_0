@@ -2879,29 +2879,51 @@ namespace PileDesign.ViewModels
                                     axialN = pileLayout.AxialForce;
                             }
 
-                            // 曲線取得
+                            // Y 案: 表示中ケースに対応するスナップショットから曲線取得 (解析実体と整合)
+                            // 無ければ rs 直接 (旧経路、後方互換)、それも無ければ K·θ 線形外挿。
+                            string snapKey = RotationalSpring.MakeCaseKey(
+                                loadCase?.LoadName, loadCombination?.No ?? 0, isLiquefaction);
+                            MomentRotationCurve? snapCurveXY = null;
+                            MomentRotationCurve? snapCurveSingle = null;
+                            RotationalSpringMode snapMode = rs.Mode;
+                            double? snapKxy = rs.KthetaXY;
+                            double? snapKsingle = rs.Ktheta;
+                            if (rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var snap))
+                            {
+                                snapCurveXY = snap.CurveXY;
+                                snapCurveSingle = snap.Curve;
+                                snapMode = snap.Mode;
+                                snapKxy = snap.KthetaXY;
+                                snapKsingle = snap.Ktheta;
+                            }
+                            else
+                            {
+                                snapCurveXY = rs.CurveXY;
+                                snapCurveSingle = rs.Curve;
+                            }
+
                             double[] thetas;
                             double[] moments;
                             string modeTag;
-                            if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
+                            if (snapMode == RotationalSpringMode.CombinedXY && snapCurveXY != null)
                             {
-                                (thetas, moments) = rs.CurveXY.ToArrays();
+                                (thetas, moments) = snapCurveXY.ToArrays();
                                 modeTag = "XY";
                             }
-                            else if (rs.Mode == RotationalSpringMode.SingleDof && rs.Curve != null)
+                            else if (snapMode == RotationalSpringMode.SingleDof && snapCurveSingle != null)
                             {
-                                (thetas, moments) = rs.Curve.ToArrays();
+                                (thetas, moments) = snapCurveSingle.ToArrays();
                                 modeTag = rs.Dof.ToString();
                             }
                             else
                             {
-                                double? k = rs.Mode == RotationalSpringMode.CombinedXY ? rs.KthetaXY : rs.Ktheta;
+                                double? k = snapMode == RotationalSpringMode.CombinedXY ? snapKxy : snapKsingle;
                                 if (!k.HasValue || k.Value <= 0.0) continue;
                                 const double thetaMax = 0.02;
                                 int nDiv = 50;
                                 thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];
                                 moments = [.. thetas.Select(t => k.Value * t)];
-                                modeTag = rs.Mode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
+                                modeTag = snapMode == RotationalSpringMode.CombinedXY ? "XY" : rs.Dof.ToString();
                             }
                             if (thetas.Length == 0 || moments.Length == 0) continue;
 
@@ -2920,7 +2942,8 @@ namespace PileDesign.ViewModels
                                 if (pbody?.PileBodySegments != null && pbody.PileBodySegments.Count > 0)
                                     headSectionDesc = pbody.PileBodySegments[0].PileSection?.PileDescription ?? "";
                             }
-                            double kUsed = rs.Mode == RotationalSpringMode.CombinedXY ? (rs.KthetaXY ?? 0.0) : (rs.Ktheta ?? 0.0);
+                            // Y 案: snapshot 側の K を優先表示 (ケース別実体)
+                            double kUsed = snapMode == RotationalSpringMode.CombinedXY ? (snapKxy ?? 0.0) : (snapKsingle ?? 0.0);
                             string mthetaDetails =
                                 $"杭 No: {pileLayout.No}  (X={pileLayout.X:F3}, Y={pileLayout.Y:F3})\n" +
                                 $"杭頭 Z: {(double.IsFinite(pileHeadZ) ? pileHeadZ.ToString("F3") + " m" : "—")}\n" +
@@ -2962,14 +2985,16 @@ namespace PileDesign.ViewModels
                                         // 現在値 (θ_proj, M_proj) は線形除荷経路上の点で、monotonic loading
                                         // curve 上には乗らない。設計的にはピーク時の最大 demand を包絡線で
                                         // 示す方が意味のある可視化。
+                                        // Y 案: ピーク投影は snapshot 側の CurveXY を優先
+                                        var peakCurve = snapCurveXY ?? rs.CurveXY;
                                         if (rsResult.HasCracked
                                             && rsResult.CrackNx.HasValue
                                             && rsResult.CrackNy.HasValue
                                             && rsResult.ThetaProjMax > 0.0
-                                            && rs.CurveXY != null)
+                                            && peakCurve != null)
                                         {
                                             thetaFinal = rsResult.ThetaProjMax;
-                                            mFinal = Math.Abs(rs.CurveXY.EvaluateMoment(thetaFinal));
+                                            mFinal = Math.Abs(peakCurve.EvaluateMoment(thetaFinal));
                                             isPeakPlot = true;
                                         }
                                         else

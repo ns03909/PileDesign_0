@@ -8,6 +8,22 @@ namespace PileDesign.FEM
     public enum RotationalDof { Rx, Ry, Rz }
     public enum RotationalSpringMode { SingleDof, CombinedXY }
 
+    // Y 案: ケース別 M-θ 構成スナップショット。
+    // 解析中に caseModel (DeepCopy) で SetupNonlinearMThetaForLoadCase が施した
+    // 構成を、元 model のばねへ書き戻すためのレコード。
+    // 可視化レイヤはこれをケース毎に引いて、解析実体と一致したカーブを描く。
+    public sealed class MThetaCaseSnapshot
+    {
+        public RotationalSpringMode Mode { get; init; }
+        public MomentRotationCurve? CurveXY { get; init; }
+        public MomentRotationCurve? Curve { get; init; }     // SingleDof 用
+        public double? KthetaXY { get; init; }
+        public double? Ktheta { get; init; }                 // SingleDof 用
+        public double? McrXY { get; init; }
+        public double AxialN { get; init; }
+        public string SetupReason { get; init; } = "";
+    }
+
     // M-θ曲線（タプル名の有無に依存しない実装）
     public sealed class MomentRotationCurve
     {
@@ -223,6 +239,23 @@ namespace PileDesign.FEM
         // McrXY = null なら従来挙動 (他杭種)。
         [System.Text.Json.Serialization.JsonIgnore]  // 揮発状態、保存不要
         public double? McrXY { get; set; }
+
+        // SetupMTheta() がこのばねに対して取った経路 (デバッグ・解析結果テーブル「状態」列で表示)。
+        // 例: "Combined(curve)", "Rigid(IsPileNonLinear=false)", "Rigid(GetMTheta=null)" 等
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? LastSetupReason { get; set; }
+
+        // Y 案: 解析中に caseModel (DeepCopy) のばねへ施した M-θ 構成を、
+        // 元 model のばねへ「ケース別スナップショット」として書き戻す辞書。
+        // GraphViewModel / AnalysisResultTableService はこの辞書を引いて、
+        // 表示中の (LoadCase, LoadCombination, IsLiquefaction) に対応する構成を可視化する。
+        // キー形式: MakeCaseKey() で生成 ("LoadName|CombNo|IsLiq")。
+        [System.Text.Json.Serialization.JsonIgnore]
+        public System.Collections.Concurrent.ConcurrentDictionary<string, MThetaCaseSnapshot> CaseMThetaSnapshots { get; }
+            = new();
+
+        public static string MakeCaseKey(string? loadCaseName, int loadCombinationNo, bool isLiquefaction)
+            => $"{loadCaseName ?? ""}|{loadCombinationNo}|{isLiquefaction}";
 
         [System.Text.Json.Serialization.JsonIgnore]
         public bool HasCrackedXY { get; private set; } = false;

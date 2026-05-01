@@ -344,34 +344,86 @@ namespace PileDesign.Services
             }
 
             // M-θ曲線テーブル（杭頭ばねごと）
+            // 曲線 (CurveXY/Curve) が null でも Kθ 線形フォールバックで行を生成し、
+            // 必ず解析結果行 (★結果) は追加する。グラフ側と整合させ、テーブルが
+            // 一覧から消える/値比較できない状況を回避する。
             if (rotSprings.Count > 0)
             {
                 var mthetaRows = new List<object>();
+                // Y 案: 表示中ケースに対応するスナップショットを引いて使う。
+                string snapKey = RotationalSpring.MakeCaseKey(
+                    loadCase?.LoadName, loadCombination?.No ?? 0, isLiquefaction);
                 for (int idx = 0; idx < rotSprings.Count; idx++)
                 {
                     var rs = rotSprings[idx];
 
-                    // M-θ曲線の取得
-                    MomentRotationCurve? curve = rs.CurveXY ?? rs.Curve;
-                    if (curve?.Points == null || curve.Points.Count < 1) continue;
+                    // M-θ曲線の取得 (snapshot 優先、無ければ rs 直接、それも無ければ K·θ フォールバック)
+                    MomentRotationCurve? curve = null;
+                    RotationalSpringMode snapMode = rs.Mode;
+                    double? snapKxy = rs.KthetaXY;
+                    double? snapKsingle = rs.Ktheta;
+                    string snapReason = "";
+                    if (rs.CaseMThetaSnapshots.TryGetValue(snapKey, out var snap))
+                    {
+                        curve = snap.CurveXY ?? snap.Curve;
+                        snapMode = snap.Mode;
+                        snapKxy = snap.KthetaXY;
+                        snapKsingle = snap.Ktheta;
+                        snapReason = snap.SetupReason;
+                    }
+                    else
+                    {
+                        // フォールバック (旧経路): rs 直接の構成
+                        curve = rs.CurveXY ?? rs.Curve;
+                    }
 
-                    // 原点を追加（曲線は原点を含まない場合がある）
                     var thetas = new List<double>();
                     var moms = new List<double>();
-                    if (curve.Points[0].Theta > 1e-12)
+                    bool isFallbackCurve = false;
+
+                    if (curve?.Points != null && curve.Points.Count >= 1)
                     {
-                        thetas.Add(0.0);
-                        moms.Add(0.0);
+                        // 原点を追加（曲線は原点を含まない場合がある）
+                        if (curve.Points[0].Theta > 1e-12)
+                        {
+                            thetas.Add(0.0);
+                            moms.Add(0.0);
+                        }
+                        foreach (var p in curve.Points)
+                        {
+                            thetas.Add(p.Theta);
+                            moms.Add(p.Moment);
+                        }
                     }
-                    foreach (var p in curve.Points)
+                    else
                     {
-                        thetas.Add(p.Theta);
-                        moms.Add(p.Moment);
+                        // フォールバック: Kθ から線形 M = K·θ を 50 点生成
+                        // (GraphViewModel.DrawMThetaCurvesWithMarker と同条件)
+                        double? k = snapMode == RotationalSpringMode.CombinedXY ? snapKxy : snapKsingle;
+                        if (!k.HasValue || k.Value <= 0.0) continue;
+                        const double thetaMax = 0.02;
+                        const int nDiv = 50;
+                        for (int i = 0; i < nDiv; i++)
+                        {
+                            double t = i * thetaMax / (nDiv - 1);
+                            thetas.Add(t);
+                            moms.Add(k.Value * t);
+                        }
+                        isFallbackCurve = true;
                     }
 
                     for (int j = 0; j < thetas.Count; j++)
                     {
                         double kth = CalcSegmentSlope(thetas, moms, j);
+                        // PointIndex=1 (先頭行) には経路情報を出す。フォールバック時は K·θ線形外挿、
+                        // それ以外はスナップショットが記録した SetupReason をそのまま表示。
+                        // snapReason が空なら旧経路 (rs.LastSetupReason) で補完。
+                        string reasonText = !string.IsNullOrEmpty(snapReason) ? snapReason : (rs.LastSetupReason ?? "?");
+                        string headerStatus = j == 0
+                            ? (isFallbackCurve
+                                ? $"K·θ線形外挿 [{reasonText}]"
+                                : reasonText)
+                            : "";
                         mthetaRows.Add(new MThetaCurveRow
                         {
                             SpringIndex = idx + 1,
@@ -380,10 +432,11 @@ namespace PileDesign.Services
                             Theta = thetas[j],
                             Moment = moms[j],
                             Ktheta = kth,
+                            Status = headerStatus,
                         });
                     }
 
-                    // 最終ステップの解析結果行を追加
+                    // 最終ステップの解析結果行を追加（曲線フォールバック時も含めて常時）
                     var rsResult = FindRotSpringResult(rs);
                     if (rsResult?.CumulativeDisp != null && rsResult?.CumulativeForce != null)
                     {
