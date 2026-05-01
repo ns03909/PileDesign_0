@@ -1,0 +1,217 @@
+using PileDesign.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+
+namespace PileDesign.Views
+{
+    /// <summary>
+    /// コマンドパレット (C.9) — Ctrl+Shift+P で開き、機能名で検索→Enter で実行。
+    /// 列挙はリフレクションではなく手動カタログ (CommandCatalog) で管理:
+    ///   - 機械的な列挙だと表示名/順序が制御しづらい
+    ///   - パラメータが必要なコマンドや Window 起動など、種類が多様
+    ///   - 「ユーザに見せたい」コマンドのみキュレーションできる
+    /// </summary>
+    public partial class CommandPaletteWindow : Window
+    {
+        private readonly List<CommandItem> _allCommands;
+        private readonly ObservableCollection<CommandItem> _filtered = new();
+
+        public CommandPaletteWindow(MainWindowViewModel mainVm, MainWindow mainWindow)
+        {
+            InitializeComponent();
+            _allCommands = CommandCatalog.Build(mainVm, mainWindow, this);
+            ResultListBox.ItemsSource = _filtered;
+            Loaded += OnLoaded;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            ApplyFilter("");
+            SearchTextBox.Focus();
+        }
+
+        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+            => ApplyFilter(SearchTextBox.Text);
+
+        private void ApplyFilter(string query)
+        {
+            _filtered.Clear();
+            IEnumerable<CommandItem> matches = string.IsNullOrWhiteSpace(query)
+                ? _allCommands
+                : _allCommands.Where(c => MatchesQuery(c, query));
+            foreach (var c in matches.Take(50))
+                _filtered.Add(c);
+            if (_filtered.Count > 0)
+                ResultListBox.SelectedIndex = 0;
+            HintText.Text = $"{_filtered.Count} 件 / {_allCommands.Count} 件中  —  ↑↓ で選択、Enter で実行";
+        }
+
+        /// <summary>
+        /// 大文字小文字を無視した部分一致 + Title / Description / Tags のいずれかにヒット。
+        /// 全角スペースで区切った AND 条件にも対応。
+        /// </summary>
+        private static bool MatchesQuery(CommandItem c, string query)
+        {
+            var tokens = query.Split(new[] { ' ', '　' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var t in tokens)
+            {
+                bool hit = c.Title.IndexOf(t, StringComparison.OrdinalIgnoreCase) >= 0
+                        || (c.Description?.IndexOf(t, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0
+                        || (c.Tags?.IndexOf(t, StringComparison.OrdinalIgnoreCase) ?? -1) >= 0;
+                if (!hit) return false;
+            }
+            return true;
+        }
+
+        private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            // ↑↓ で結果リストを操作 (テキストボックスにフォーカスを残したまま)
+            if (e.Key == Key.Down)
+            {
+                if (_filtered.Count > 0)
+                    ResultListBox.SelectedIndex = Math.Min(ResultListBox.SelectedIndex + 1, _filtered.Count - 1);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Up)
+            {
+                if (_filtered.Count > 0)
+                    ResultListBox.SelectedIndex = Math.Max(ResultListBox.SelectedIndex - 1, 0);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Enter)
+            {
+                ExecuteSelected();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                Close();
+                e.Handled = true;
+            }
+        }
+
+        private void ResultListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+            => ExecuteSelected();
+
+        private void ResultListBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter) { ExecuteSelected(); e.Handled = true; }
+            else if (e.Key == Key.Escape) { Close(); e.Handled = true; }
+        }
+
+        private void ExecuteSelected()
+        {
+            if (ResultListBox.SelectedItem is not CommandItem item) return;
+            // 先に閉じてから実行 (実行先が Window を開くなら主役を譲る)
+            Close();
+            try
+            {
+                item.Action?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"コマンド実行に失敗しました:\n{ex.Message}", "コマンドパレット",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    /// <summary>パレットに表示する 1 コマンド。</summary>
+    public class CommandItem
+    {
+        public string Title { get; set; } = "";
+        public string? Description { get; set; }
+        public string? Shortcut { get; set; }
+        public string? Tags { get; set; }
+        public Action? Action { get; set; }
+    }
+
+    /// <summary>
+    /// コマンドカタログ。MainWindowViewModel と MainWindow の参照を受け取り、
+    /// 主要操作の Action を構築する。新コマンドはここに追記する。
+    /// </summary>
+    public static class CommandCatalog
+    {
+        public static List<CommandItem> Build(MainWindowViewModel vm, MainWindow mainWindow, Window paletteOwner)
+        {
+            var list = new List<CommandItem>();
+
+            // ── ファイル ──────────────────────────────────────────────
+            Add(list, "新規ファイル", "新しい入力モデルを作成", "Ctrl+N", "new file 新規",
+                () => vm.NewInputModelFileCommand?.Execute(null));
+            Add(list, "ファイルを開く", "既存の入力モデルファイルを開く", null, "open file 開く",
+                () => vm.OpenInputModelFileCommand?.Execute(null));
+            Add(list, "ファイル保存", "現在のモデルを上書き保存", "Ctrl+S", "save file 保存",
+                () => vm.SaveInputModelFileCommand?.Execute(null));
+            Add(list, "ファイル名を付けて保存", "別名で保存", "Ctrl+Shift+S", "save as 別名",
+                () => vm.SaveInputModelFileAsCommand?.Execute(null));
+            Add(list, "Word 出力ウィンドウを開く", "Word ドキュメント出力", null, "docx word 出力 report",
+                () => vm.OpenDocxOutputWindowCommand?.Execute(null));
+
+            // ── 解析 ──────────────────────────────────────────────────
+            Add(list, "水平解析を開く", "横方向解析ウィンドウ", "F9", "horizontal lateral analysis 水平 解析",
+                () => vm.OpenLateralLoadAnalysisWindowCommand?.Execute(null));
+            Add(list, "沈下解析を開く", "単杭沈下解析ウィンドウ", null, "settlement 沈下 解析",
+                () => vm.OpenSettlementWindowCommand?.Execute(null));
+            Add(list, "基礎梁考慮鉛直解析を開く", "基礎梁付き鉛直解析", null, "vertical beam 鉛直 解析 基礎梁",
+                () => vm.OpenVerticalBeamCalculationCommand?.Execute(null));
+            Add(list, "群杭沈下解析", "グループ杭沈下解析", null, "group pile settlement 群杭",
+                () => vm.PileGroupSettlementAnalysisCommand?.Execute(null));
+            Add(list, "要素分割ウィンドウ", "杭の要素分割設定", null, "element division 要素 分割",
+                () => vm.OpenElementDivisionWindowCommand?.Execute(null));
+
+            // ── 入力ウィンドウ ────────────────────────────────────────
+            Add(list, "基本条件 ウィンドウ", "Z=0 標高など基本設定", null, "fundamental basic 基本",
+                () => vm.OpenFundamentalWindowCommand?.Execute(null));
+            Add(list, "地盤 ウィンドウ", "地盤入力ウィンドウ", null, "ground soil 地盤",
+                () => vm.OpenGroundWindowCommand?.Execute(null));
+            Add(list, "杭体 ウィンドウ", "杭体（断面）の入力", null, "pile body 杭体 断面",
+                () => vm.OpenPileBodyWindowCommand?.Execute(null));
+            Add(list, "荷重ケース ウィンドウ", "荷重ケース・組合せ設定", null, "load case 荷重",
+                () => vm.OpenLoadCaseWindowCommand?.Execute(null));
+
+            // ── 表示 ──────────────────────────────────────────────────
+            Add(list, "表示: ズームフィット", "全体が見える倍率に調整", null, "zoom fit ズーム",
+                () => vm.ZoomFitCommand?.Execute(null));
+            Add(list, "表示: 平面図", "上から見下ろす視点", null, "top view plan 平面",
+                () => vm.ViewXYPlaneCommand?.Execute(null));
+            Add(list, "表示: アイソメ", "等角投影視点", null, "isometric iso アイソ",
+                () => vm.ViewIsometricCommand?.Execute(null));
+
+            // ── ダッシュボード / ヘルプ ──────────────────────────────
+            Add(list, "解析結果 ダッシュボード", "解析モデル / 統計をカード表示", null, "dashboard summary 結果 ダッシュボード",
+                () =>
+                {
+                    var w = new ResultDashboardWindow(vm) { Owner = mainWindow };
+                    w.ShowDialog();
+                });
+            Add(list, "ショートカット一覧", "キーボードショートカット表", null, "shortcut keyboard ショートカット",
+                () => vm.OpenShortcutKeysWindowCommand?.Execute(null));
+            Add(list, "ヘルプを開く", "アプリのヘルプ HTML", null, "help ヘルプ",
+                () => vm.OpenHelpWindowCommand?.Execute(null));
+
+            // ── Undo / Redo ───────────────────────────────────────────
+            Add(list, "元に戻す", "直前の編集を取り消し", "Ctrl+Z", "undo 元 戻す",
+                () => vm.UndoCommand?.Execute(null));
+            Add(list, "やり直し", "取り消した編集をやり直す", "Ctrl+Y", "redo やり直し",
+                () => vm.RedoCommand?.Execute(null));
+
+            return list;
+        }
+
+        private static void Add(List<CommandItem> list, string title, string desc, string? shortcut, string tags, Action action)
+            => list.Add(new CommandItem
+            {
+                Title = title,
+                Description = desc,
+                Shortcut = shortcut,
+                Tags = tags,
+                Action = action,
+            });
+    }
+}

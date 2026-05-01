@@ -117,6 +117,8 @@ namespace PileDesign.Views
             loadingMainWindow.ShowDialog();
 
             Loaded += MainWindow_Loaded;
+            // Ctrl+Shift+P でコマンドパレット起動 (C.9)
+            PreviewKeyDown += MainWindow_GlobalShortcutPreviewKeyDown;
 
             viewModel.TreeViewControl = TreeViewControl;
             // ViewModelのActionにUpdateCanvas3Dを設定
@@ -3866,6 +3868,39 @@ namespace PileDesign.Views
         }
 
         #endregion
+
+        // ---- E.18 / C.9 Dashboard / Command Palette ハンドラ ----------------
+
+        private void OpenResultDashboard_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            var w = new ResultDashboardWindow(vm) { Owner = this };
+            w.ShowDialog();
+        }
+
+        private void OpenCommandPalette_Click(object sender, RoutedEventArgs e) => OpenCommandPalette();
+
+        private void OpenCommandPalette()
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            var w = new CommandPaletteWindow(vm, this) { Owner = this };
+            w.ShowDialog();
+        }
+
+        /// <summary>
+        /// Ctrl+Shift+P でコマンドパレットを起動。テキストボックス入力中でも有効。
+        /// (テキストボックス内の Ctrl+Shift+P をユーザがコマンドとして使うことは想定していないため
+        /// PreviewKeyDown で先取りして OK)
+        /// </summary>
+        private void MainWindow_GlobalShortcutPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.P
+                && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                OpenCommandPalette();
+                e.Handled = true;
+            }
+        }
     }
 }
 

@@ -1,0 +1,87 @@
+<Window x:Class="PileDesign.Views.CommandPaletteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="コマンドパレット"
+        Width="540" Height="420"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False">
+    <Border CornerRadius="6" Margin="8" Background="White"
+            BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.20" Color="#333333"/>
+        </Border.Effect>
+        <Grid Margin="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ヘッダー -->
+            <Grid Grid.Row="0" Margin="12,8,12,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="コマンドパレット" FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryAccentBrush}" FontSize="13"/>
+                <TextBlock Grid.Column="1" Text="Esc で閉じる" Foreground="#888" FontSize="10"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- 検索ボックス -->
+            <Border Grid.Row="1" Margin="12,4,12,8" Padding="8,4" CornerRadius="3"
+                    BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="1"
+                    Background="#FAFAFA">
+                <TextBox x:Name="SearchTextBox" BorderThickness="0" Background="Transparent"
+                         FontSize="14" Padding="0"
+                         TextChanged="SearchTextBox_TextChanged"
+                         PreviewKeyDown="SearchTextBox_PreviewKeyDown"/>
+            </Border>
+
+            <!-- 結果リスト -->
+            <ListBox x:Name="ResultListBox" Grid.Row="2" Margin="12,0,12,8"
+                     BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     MouseDoubleClick="ResultListBox_MouseDoubleClick"
+                     KeyDown="ResultListBox_KeyDown">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="8,4"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="#222"/>
+                                <TextBlock Text="{Binding Description}" Foreground="#888" FontSize="11"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{Binding Shortcut}" Foreground="#999"
+                                       FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- フッター -->
+            <Border Grid.Row="3" Background="#F8F9FA" Padding="12,4"
+                    BorderBrush="#E8E8E8" BorderThickness="0,1,0,0"
+                    CornerRadius="0,0,6,6">
+                <TextBlock x:Name="HintText" Text="↑↓ で選択、Enter で実行" FontSize="10" Foreground="#888"/>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
