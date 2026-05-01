@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g id="CommandPalette">
+        <rect x="0" y="0" width="128" height="128" style="fill:none;"/>
+        <!-- search input box -->
+        <rect x="10" y="34" width="108" height="38" rx="6" ry="6"
+              style="fill:white;stroke:rgb(50,113,173);stroke-width:3;"/>
+        <!-- > prompt (chevron) -->
+        <path d="M 22 47 L 32 53 L 22 59" style="fill:none;stroke:rgb(50,113,173);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;"/>
+        <!-- typed query line -->
+        <line x1="42" y1="53" x2="92" y2="53" style="stroke:rgb(98,176,226);stroke-width:3;stroke-linecap:round;"/>
+        <!-- caret blink -->
+        <line x1="98" y1="44" x2="98" y2="62" style="stroke:rgb(50,113,173);stroke-width:2;"/>
+        <!-- result list (3 rows) -->
+        <rect x="14" y="82" width="100" height="8" rx="2" ry="2" style="fill:rgb(98,176,226);"/>
+        <rect x="14" y="94" width="80" height="6" rx="2" ry="2" style="fill:rgb(200,200,200);"/>
+        <rect x="14" y="104" width="64" height="6" rx="2" ry="2" style="fill:rgb(200,200,200);"/>
+    </g>
+</svg>

@@ -1969,13 +1969,13 @@
                     <ribbon:RibbonButton Label="解析結果 ダッシュボード"
                         ToolTip="現在の解析モデル・水平/沈下/梁鉛直解析の状況をカード形式で一括表示"
                         Click="OpenResultDashboard_Click"
-                        LargeImageSource="pack://application:,,,/Icons/AnalysisResult.png"
-                        SmallImageSource="pack://application:,,,/Icons/AnalysisResult.png"/>
+                        LargeImageSource="pack://application:,,,/Icons/Dashboard.png"
+                        SmallImageSource="pack://application:,,,/Icons/Dashboard.png"/>
                     <ribbon:RibbonButton Label="コマンド パレット"
                         ToolTip="コマンドパレット (Ctrl+Shift+P): 機能名で検索して実行"
                         Click="OpenCommandPalette_Click"
-                        LargeImageSource="pack://application:,,,/Icons/QuickHint.png"
-                        SmallImageSource="pack://application:,,,/Icons/QuickHint.png"/>
+                        LargeImageSource="pack://application:,,,/Icons/CommandPalette.png"
+                        SmallImageSource="pack://application:,,,/Icons/CommandPalette.png"/>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="説明用">

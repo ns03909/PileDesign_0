@@ -199,6 +199,8 @@
     <None Remove="Icons\ClaudeMCP.svg" />
     <None Remove="Icons\CollapseRibbon.png" />
     <None Remove="Icons\CollapseRibbon.svg" />
+    <None Remove="Icons\CommandPalette.png" />
+    <None Remove="Icons\CommandPalette.svg" />
     <None Remove="Icons\ConnectionNodeVisible.png" />
     <None Remove="Icons\ConnectionNodeVisible.svg" />
     <None Remove="Icons\CopyMove.svg" />
@@ -216,6 +218,8 @@
     <None Remove="Icons\CrossFormPressure.png" />
     <None Remove="Icons\CrossFormPressure.svg" />
     <None Remove="Icons\CsvFileOutput.svg" />
+    <None Remove="Icons\Dashboard.png" />
+    <None Remove="Icons\Dashboard.svg" />
     <None Remove="Icons\DataTabVisible.png" />
     <None Remove="Icons\DataTabVisible.svg" />
     <None Remove="Icons\DecimalPoint.png" />
@@ -994,6 +998,12 @@
     <Resource Include="Icons\CollapseRibbon.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Icons\CommandPalette.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\CommandPalette.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="Icons\ConnectionNodeVisible.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
@@ -1043,6 +1053,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\CsvFileOutput.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Dashboard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Icons\Dashboard.svg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
     <Resource Include="Icons\DataTabVisible.png">
