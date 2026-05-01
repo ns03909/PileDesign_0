@@ -164,10 +164,9 @@
     <!-- ═══ INotifyDataErrorInfo 連動の検証エラー表示 ═══
          BaseModel が AddError("...") した瞬間にバインド先 TextBox が
          赤縁になり ToolTip にエラーメッセージが出る。
-         BasedOn でデフォルト TextBox 暗黙 Style を継承し、Template / Hover / Focus
-         を維持したまま検証エラー時のみ赤縁に切替える。
+         opt-in (StaticResource 参照) なので既存 TextBox には影響しない。
     -->
-    <Style x:Key="ValidatedTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+    <Style x:Key="ValidatedTextBoxStyle" TargetType="TextBox">
         <Style.Triggers>
             <Trigger Property="Validation.HasError" Value="True">
                 <Setter Property="BorderBrush" Value="{StaticResource ErrorBrush}"/>
@@ -254,7 +253,7 @@
            - ComboBox は内部 Template が複雑なので暗黙置換しない (リスク回避)
     -->
 
-    <!-- 共通 hover / pressed 色 -->
+    <!-- 共通 hover / pressed 色 (TabItem / GroupBox / overlay 等で参照) -->
     <SolidColorBrush x:Key="ControlHoverBackground" Color="#E8F4FB"/>
     <SolidColorBrush x:Key="ControlPressedBackground" Color="#CFE6F4"/>
     <SolidColorBrush x:Key="ControlBorderBrush" Color="#C8C8C8"/>
@@ -263,156 +262,13 @@
     <SolidColorBrush x:Key="ControlDisabledBackground" Color="#F5F5F5"/>
     <SolidColorBrush x:Key="ControlDisabledForeground" Color="#A0A0A0"/>
 
-    <!-- Button: 角丸 2px, 薄いボーダー, accent hover -->
-    <Style TargetType="Button">
-        <Setter Property="Background" Value="White"/>
-        <Setter Property="Foreground" Value="#333333"/>
-        <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="8,3"/>
-        <Setter Property="MinHeight" Value="22"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="SnapsToDevicePixels" Value="True"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="2"
-                            SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          Margin="{TemplateBinding Padding}"
-                                          RecognizesAccessKey="True"
-                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlHoverBackground}"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlPressedBackground}"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlDisabledBackground}"/>
-                            <Setter Property="Foreground" Value="{StaticResource ControlDisabledForeground}"/>
-                            <Setter Property="Cursor" Value="Arrow"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- TextBox: 角丸 2px, 薄いボーダー, focus 時に accent。
-         ValidatedTextBoxStyle は引き続き keyed として並存 (Validation.HasError 連動)。 -->
-    <Style TargetType="TextBox">
-        <Setter Property="Background" Value="White"/>
-        <Setter Property="Foreground" Value="#333333"/>
-        <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="3,1"/>
-        <Setter Property="MinHeight" Value="22"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="SnapsToDevicePixels" Value="True"/>
-        <Setter Property="CaretBrush" Value="{StaticResource PrimaryAccentBrush}"/>
-        <Setter Property="SelectionBrush" Value="{StaticResource PrimaryAccentBrush}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="Bd"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="2"
-                            SnapsToDevicePixels="True">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                      Padding="{TemplateBinding Padding}"
-                                      Focusable="False"
-                                      HorizontalScrollBarVisibility="Hidden"
-                                      VerticalScrollBarVisibility="Hidden"
-                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderFocusBrush}"/>
-                            <Setter TargetName="Bd" Property="BorderThickness" Value="1.5"/>
-                        </Trigger>
-                        <Trigger Property="IsReadOnly" Value="True">
-                            <Setter Property="Background" Value="{StaticResource SubtleBackgroundBrush}"/>
-                            <Setter Property="Foreground" Value="{StaticResource ReadOnlyBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlDisabledBackground}"/>
-                            <Setter Property="Foreground" Value="{StaticResource ControlDisabledForeground}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- ValidatedTextBoxStyle / IntegerTextBoxStyle 等が暗黙 TextBox Style を BasedOn できるよう
-         元の暗黙 Style を別 key にも複製しておく (BasedOn で参照可能にするため). -->
-    <Style x:Key="DefaultTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}"/>
-
-    <!-- ToggleButton: Button と同等の見た目 + IsChecked=True 時に accent 強調 -->
-    <Style TargetType="ToggleButton">
-        <Setter Property="Background" Value="White"/>
-        <Setter Property="Foreground" Value="#333333"/>
-        <Setter Property="BorderBrush" Value="{StaticResource ControlBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="6,2"/>
-        <Setter Property="MinHeight" Value="22"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="SnapsToDevicePixels" Value="True"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Bd"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="2"
-                            SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          Margin="{TemplateBinding Padding}"
-                                          RecognizesAccessKey="True"
-                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlHoverBackground}"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlBorderHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryAccentBrush}"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlDisabledBackground}"/>
-                            <Setter Property="Foreground" Value="{StaticResource ControlDisabledForeground}"/>
-                            <Setter Property="Cursor" Value="Arrow"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
+    <!-- 注: 当初 Button / TextBox / ToggleButton にも暗黙 Custom Template を置いていたが、
+         (a) Ribbon 内の通常 Button にも適用されてアイコン枠が中途半端に出る
+         (b) DataGrid 編集セル内 TextBox に角丸ボーダーが付き、未編集セルと不整合
+         (c) 通り心の「選」ボタン等、小型ボタンに MinHeight=22 が大きすぎる
+         という不具合があり撤去 (2026-05-01)。
+         Ribbon / DataGrid との両立が要件のため、Button/TextBox の見た目刷新は
+         「Window 単位での opt-in keyed Style」として今後検討する. -->
 
     <!-- TabItem: 上にあるタブの選択状態を accent カラーで明示 -->
     <Style TargetType="TabItem">

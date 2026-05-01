@@ -575,7 +575,6 @@
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="SpecsTab" Title="諸元" CanClose="False" CanHide="False">
-                                <GroupBox Header="諸元">
                                     <Grid>
                                         <common:EnhancedDataGrid x:Name="DrawGridSpecifications"
                                                   ItemsSource="{Binding PileSection.SelectedPileSectionSpecification}"
@@ -615,7 +614,6 @@
                                         </common:EnhancedDataGrid>
 
                                     </Grid>
-                                </GroupBox>
                             </avalonDock:LayoutAnchorable>
 
                             <avalonDock:LayoutAnchorable x:Name="AxialLimitTab" Title="軸力制限（基礎部材の強度と変形性能）" CanClose="False" CanHide="False">
@@ -1009,7 +1007,6 @@
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="SectionViewTab" Title="断面図" CanClose="False" CanHide="False">
-                                <GroupBox Header="断面図" Grid.Column="1">
                                     <Canvas x:Name="Canvas" Height="300" Width="300" Background="Transparent" Opacity="0.5" MouseRightButtonDown="Canvas_MouseRightButtonDown">
                                         <Canvas.ContextMenu>
                                             <ContextMenu>
@@ -1018,7 +1015,6 @@
                                             </ContextMenu>
                                         </Canvas.ContextMenu>
                                     </Canvas>
-                                </GroupBox>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
