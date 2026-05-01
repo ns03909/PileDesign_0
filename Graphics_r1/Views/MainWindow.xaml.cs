@@ -3897,8 +3897,11 @@ namespace PileDesign.Views
             if (e.Key == Key.P
                 && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == (ModifierKeys.Control | ModifierKeys.Shift))
             {
-                OpenCommandPalette();
                 e.Handled = true;
+                // 同期的に ShowDialog を呼ぶと現在の PreviewKeyDown 伝搬が止まり、
+                // InputVisualizer 等の後続ハンドラに届かなくなる (P が記録されない)。
+                // 1 ティック遅延させて、現在のキーイベントを完走させてからモーダルを開く。
+                Dispatcher.BeginInvoke(new Action(OpenCommandPalette), System.Windows.Threading.DispatcherPriority.Background);
             }
         }
     }

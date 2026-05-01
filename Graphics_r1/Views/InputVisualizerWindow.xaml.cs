@@ -24,7 +24,7 @@ namespace PileDesign.Views
         private const int FadeDurationMs = 350;
         private const int CurrentKeyHoldDurationMs = 1000;  // 解放後にこの時間ホールドしてからフェード
 
-        // 押下時はシアン系明色 (グラスフィルム上で輝くように)
+        // 押下時はシアン系明色 (すりガラス上で発光するように)
         private static readonly Color PressedColor = Color.FromArgb(0xFF, 0x33, 0xC8, 0xFF);
         // 通常時はうっすら青みのある透明色 (XAML 既定 #80E8F4FC と整合)
         private static readonly Color NormalColor = Color.FromArgb(0x80, 0xE8, 0xF4, 0xFC);
@@ -33,7 +33,7 @@ namespace PileDesign.Views
         // 左右マウスボタンは「ハイライト Path」が上 2/5 にだけ重なる構成のため、
         // 解放時はハイライトを完全に透明にして下層の常時表示パスを露出させる
         private static readonly Color MouseNormalColor = Colors.Transparent;
-        // 中ボタン (ホイール) 通常時の薄青グレー
+        // 中ボタン (ホイール) 通常時の薄青グレー (XAML 既定 #B0CFE5F2 と整合)
         private static readonly Color MouseMiddleNormalColor = Color.FromArgb(0xB0, 0xCF, 0xE5, 0xF2);
 
         private readonly Window _ownerWindow;

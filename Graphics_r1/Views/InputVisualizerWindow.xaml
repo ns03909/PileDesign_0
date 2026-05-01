@@ -17,23 +17,23 @@
         UseLayoutRounding="True">
 
     <Window.Resources>
-        <!-- グラスフィルム共通グラデーション (薄い空色〜白) -->
+        <!-- すりガラス調パネル (白〜薄シアン、低不透明) — 背景が白でも黒でも馴染む -->
         <LinearGradientBrush x:Key="GlassPanelBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#70F4FBFF" Offset="0"/>
-            <GradientStop Color="#50DCEAF8" Offset="0.5"/>
-            <GradientStop Color="#60D0E0F0" Offset="1"/>
+            <GradientStop Color="#80FAFEFF" Offset="0"/>
+            <GradientStop Color="#60E4F2FA" Offset="0.5"/>
+            <GradientStop Color="#70D6E8F2" Offset="1"/>
         </LinearGradientBrush>
 
-        <!-- 内側パネル (キー枠/マウス枠) のさらに薄いガラス感 -->
+        <!-- 内側パネル (キー枠/マウス枠) — 上にもう一段薄い白を重ねて凹凸感 -->
         <LinearGradientBrush x:Key="InnerPanelBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#40FFFFFF" Offset="0"/>
-            <GradientStop Color="#28DEEAF6" Offset="1"/>
+            <GradientStop Color="#50FFFFFF" Offset="0"/>
+            <GradientStop Color="#30E6F2FA" Offset="1"/>
         </LinearGradientBrush>
 
-        <!-- シアン系の薄いアクセントボーダー -->
+        <!-- シアン系のアクセントボーダー (ホログラフィック寄りに鮮やかさ維持) -->
         <LinearGradientBrush x:Key="AccentBorderBrush" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#C054D7FF" Offset="0"/>
-            <GradientStop Color="#503CA0E8" Offset="1"/>
+            <GradientStop Color="#E054D7FF" Offset="0"/>
+            <GradientStop Color="#7033A0E0" Offset="1"/>
         </LinearGradientBrush>
 
         <!-- 個別キー (Ctrl/Shift/Alt) のスタイル -->
@@ -64,8 +64,8 @@
                 BorderThickness="1"
                 Padding="8,6,8,8">
             <Border.Effect>
-                <!-- シアン色のソフトな外周発光 -->
-                <DropShadowEffect BlurRadius="20" ShadowDepth="0"
+                <!-- シアン色のソフトな外周発光 (すりガラス越しに滲む光) -->
+                <DropShadowEffect BlurRadius="22" ShadowDepth="0"
                                   Color="#54D7FF" Opacity="0.55"/>
             </Border.Effect>
             <Grid>
@@ -74,7 +74,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- 内側ハイライトライン (上部に細い反射) -->
+                <!-- 内側ハイライトライン (上部に細い反射 — 白の鏡面反射) -->
                 <Border Grid.Row="0" Grid.RowSpan="3"
                         CornerRadius="13"
                         BorderThickness="1,1,1,0"
@@ -82,7 +82,7 @@
                         Margin="0,0,0,0">
                     <Border.BorderBrush>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#80FFFFFF" Offset="0"/>
+                            <GradientStop Color="#A0FFFFFF" Offset="0"/>
                             <GradientStop Color="#00FFFFFF" Offset="0.5"/>
                         </LinearGradientBrush>
                     </Border.BorderBrush>
