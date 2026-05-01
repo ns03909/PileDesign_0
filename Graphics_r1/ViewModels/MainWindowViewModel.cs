@@ -4081,6 +4081,15 @@ namespace PileDesign.ViewModels
         private void Undo()
         {
             _undoManager.UndoSnapshot();
+            ApplyCurrentUndoSnapshot();
+        }
+
+        /// <summary>
+        /// UndoManager の CurrentState を取り込んで CurrentInputModel を再構築する。
+        /// Undo / Redo 共通処理 + D.16 HistoryPanel からの任意ジャンプにも使う。
+        /// </summary>
+        public void ApplyCurrentUndoSnapshot()
+        {
             if (_undoManager.CurrentState is InputModel state)
             {
                 CurrentInputModel = state.DeepCopy();
@@ -4093,20 +4102,14 @@ namespace PileDesign.ViewModels
             RaiseUndoStateChanged();
         }
 
+        /// <summary>D.16 HistoryPanel が UndoManager 参照を取得するためのアクセサ。</summary>
+        public Common.Undo.UndoManager UndoManager => _undoManager;
+
         [RelayCommand]
         private void Redo()
         {
             _undoManager.RedoSnapshot();
-            if (_undoManager.CurrentState is InputModel state)
-            {
-                CurrentInputModel = state.DeepCopy();
-                CurrentInputModel.AttachViewModel(this);
-
-                // UpdateWindow() 内で UpdateTreeView() も実行されるため updateTree: false
-                NotifyUIChanged(updateTree: false, immediate: true);
-                OnPropertyChanged(nameof(CurrentInputModel));
-            }
-            RaiseUndoStateChanged();
+            ApplyCurrentUndoSnapshot();
         }
 
         public void DeleteDuplicatedPiles()

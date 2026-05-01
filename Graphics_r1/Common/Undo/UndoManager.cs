@@ -4,6 +4,12 @@ using System.Diagnostics;
 
 namespace PileDesign.Common.Undo;
 
+/// <summary>
+/// スナップショット履歴の 1 件。状態 + 説明 + タイムスタンプを保持。
+/// HistoryPanel (D.16) の表示元。
+/// </summary>
+public sealed record HistoryEntry(object State, string? Description, DateTime Timestamp);
+
 public sealed class UndoManager
 {
     private readonly Stack<IUndoAction> _undo = new();
@@ -12,9 +18,14 @@ public sealed class UndoManager
     private CompositeUndoAction? _scope;
 
     // スナップショット方式用の履歴管理
-    private readonly List<object> _history = new();
+    private readonly List<HistoryEntry> _history = new();
     private int _currentIndex = -1;
     private int _maxHistory = 50;
+
+    /// <summary>履歴 / Undo スタックが変化したときに発火 (D.16 HistoryPanel が購読)。</summary>
+    public event Action? HistoryChanged;
+
+    private void RaiseHistoryChanged() => HistoryChanged?.Invoke();
 
     public bool CanUndo => _undo.Count > 0 || _currentIndex > 0;
     public bool CanRedo => _redo.Count > 0 || (_currentIndex >= 0 && _currentIndex < _history.Count - 1);
@@ -35,7 +46,13 @@ public sealed class UndoManager
     /// <summary>
     /// 現在の状態を取得します（スナップショット方式用）
     /// </summary>
-    public object? CurrentState => _currentIndex >= 0 && _currentIndex < _history.Count ? _history[_currentIndex] : null;
+    public object? CurrentState => _currentIndex >= 0 && _currentIndex < _history.Count ? _history[_currentIndex].State : null;
+
+    /// <summary>履歴一覧 (古い → 新しい)。HistoryPanel 表示用。</summary>
+    public IReadOnlyList<HistoryEntry> History => _history;
+
+    /// <summary>現在位置のインデックス (0 始まり、未保存時 -1)。</summary>
+    public int CurrentIndex => _currentIndex;
 
     public void BeginScope(string? description = null)
     {
@@ -70,6 +87,7 @@ public sealed class UndoManager
     {
         _undo.Push(action);
         _redo.Clear();
+        RaiseHistoryChanged();
     }
 
     public void Undo()
@@ -78,6 +96,7 @@ public sealed class UndoManager
         var a = _undo.Pop();
         a.Undo();
         _redo.Push(a);
+        RaiseHistoryChanged();
     }
 
     public void Redo()
@@ -86,6 +105,7 @@ public sealed class UndoManager
         var a = _redo.Pop();
         a.Redo();
         _undo.Push(a);
+        RaiseHistoryChanged();
     }
 
     /// <summary>
@@ -96,6 +116,9 @@ public sealed class UndoManager
         _undo.Clear();
         _redo.Clear();
         _scope = null;
+        _history.Clear();
+        _currentIndex = -1;
+        RaiseHistoryChanged();
     }
 
     /// <summary>
@@ -129,9 +152,10 @@ public sealed class UndoManager
     // スナップショット方式のメソッド群
 
     /// <summary>
-    /// 状態のスナップショットを保存します（スナップショット方式用）
+    /// 状態のスナップショットを保存します（スナップショット方式用）。
+    /// description を渡すと HistoryPanel で識別しやすい説明文として表示される。
     /// </summary>
-    public void SaveState(object state)
+    public void SaveState(object state, string? description = null)
     {
         if (state == null) return;
 
@@ -141,16 +165,30 @@ public sealed class UndoManager
             _history.RemoveRange(_currentIndex + 1, _history.Count - _currentIndex - 1);
         }
 
-        _history.Add(state);
+        _history.Add(new HistoryEntry(state, description, DateTime.Now));
         _currentIndex = _history.Count - 1;
 
         TrimHistory();
+        RaiseHistoryChanged();
     }
 
     /// <summary>
     /// 状態のスナップショットを保存します（SaveStateのエイリアス、互換性用）
     /// </summary>
-    public void PushState(object state) => SaveState(state);
+    public void PushState(object state) => SaveState(state, null);
+
+    /// <summary>
+    /// 履歴の特定インデックスへジャンプします (D.16 HistoryPanel から呼ばれる)。
+    /// _currentIndex のみ更新するので、呼び出し側は CurrentState を参照して
+    /// アプリ側のモデルを再適用してください。
+    /// </summary>
+    public void JumpToIndex(int targetIndex)
+    {
+        if (targetIndex < 0 || targetIndex >= _history.Count) return;
+        if (targetIndex == _currentIndex) return;
+        _currentIndex = targetIndex;
+        RaiseHistoryChanged();
+    }
 
     /// <summary>
     /// 履歴をトリミングして最大数を維持します
@@ -175,6 +213,7 @@ public sealed class UndoManager
         if (_currentIndex > 0)
         {
             _currentIndex--;
+            RaiseHistoryChanged();
             return;
         }
 
@@ -184,6 +223,7 @@ public sealed class UndoManager
             var a = _undo.Pop();
             a.Undo();
             _redo.Push(a);
+            RaiseHistoryChanged();
         }
     }
 
@@ -196,6 +236,7 @@ public sealed class UndoManager
         if (_currentIndex >= 0 && _currentIndex < _history.Count - 1)
         {
             _currentIndex++;
+            RaiseHistoryChanged();
             return;
         }
 
@@ -205,6 +246,7 @@ public sealed class UndoManager
             var a = _redo.Pop();
             a.Redo();
             _undo.Push(a);
+            RaiseHistoryChanged();
         }
     }
 }

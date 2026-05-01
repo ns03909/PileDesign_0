@@ -1243,6 +1243,12 @@ namespace PileDesign.ViewModels
         /// <summary>
         /// F9 ボタンの活性条件。NumericInput でクランプされていれば常に妥当な値だが、
         /// バインド失敗 (古い値が残っている / プログラム的に外れた値) に対する最後の防壁。
+        /// D.13 即時バリデーション一環として「解析実行に必要な前提条件」も含める:
+        ///   - 杭が 1 本以上配置されている
+        ///   - 解析対象荷重ケースが 1 件以上選択されている
+        ///   - 適用される荷重組合せが 1 件以上ある
+        /// これらが満たされない間 F9 ボタンが灰色になり、ユーザに「設定不足」が
+        /// 視覚的にフィードバックされる。
         /// </summary>
         private bool CanExecuteAnalysis()
         {
@@ -1252,6 +1258,16 @@ namespace PileDesign.ViewModels
             if (MaxCaseDegreeOfParallelism < 1) return false;
             if (FullNRIterations < 0) return false;
             if (RelaxationFactor <= 0 || RelaxationFactor > 1) return false;
+
+            // 解析前提条件 (D.13)
+            if (InputModel == null) return false;
+            if ((InputModel.PileLayoutItems?.Count ?? 0) == 0) return false;
+            int activeCases = (InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases?.Count ?? 0);
+            if (activeCases == 0) return false;
+            int activeCombinations = InputModel.LoadCasesInput.AllLoadCombinations?
+                .Count(c => c.IsApplicable) ?? 0;
+            if (activeCombinations == 0) return false;
+
             return true;
         }
 

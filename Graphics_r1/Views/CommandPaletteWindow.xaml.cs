@@ -200,6 +200,12 @@ namespace PileDesign.Views
                 () => vm.UndoCommand?.Execute(null));
             Add(list, "やり直し", "取り消した編集をやり直す", "Ctrl+Y", "redo やり直し",
                 () => vm.RedoCommand?.Execute(null));
+            Add(list, "編集履歴 パネル", "Undo/Redo 履歴の一覧表示・任意ジャンプ", null, "history undo redo 履歴",
+                () =>
+                {
+                    var w = new HistoryPanelWindow(vm, vm.UndoManager) { Owner = mainWindow };
+                    w.Show();
+                });
 
             return list;
         }
