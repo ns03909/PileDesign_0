@@ -93,49 +93,8 @@ namespace PileDesign.ViewModels
                 {
                     scale = value;
                     OnPropertyChanged(nameof(Scale));
-                    OnPropertyChanged(nameof(ScaleBarPixels));
-                    OnPropertyChanged(nameof(ScaleBarMeters));
                     UpdateCanvas3DAction?.Invoke(); // デリゲートを通じてコードビハインドのメソッドを呼び出す
                 }
-            }
-        }
-
-        /// <summary>
-        /// Canvas オーバーレイのスケールバー (B.6) で使う表示長 (ピクセル単位)。
-        /// 現在の Scale (1m あたりピクセル数) を見て 1 / 5 / 10 / 50m から「画面上 50〜200px」に
-        /// 収まる代表長を選ぶ。Scale 変化時に自動で 1m → 5m → 10m と切り替わる。
-        /// </summary>
-        public double ScaleBarPixels
-        {
-            get
-            {
-                double s = scale;
-                if (s <= 0) return 0;
-                // 候補: 0.1, 0.5, 1, 5, 10, 50, 100 m
-                double[] candidates = { 0.1, 0.5, 1, 5, 10, 50, 100, 500 };
-                foreach (var m in candidates)
-                {
-                    double px = m * s;
-                    if (px >= 50 && px <= 200) return px;
-                }
-                return 100; // フォールバック
-            }
-        }
-
-        public string ScaleBarMeters
-        {
-            get
-            {
-                double s = scale;
-                if (s <= 0) return "";
-                double[] candidates = { 0.1, 0.5, 1, 5, 10, 50, 100, 500 };
-                foreach (var m in candidates)
-                {
-                    double px = m * s;
-                    if (px >= 50 && px <= 200)
-                        return m < 1 ? $"{m:0.0} m" : $"{m:0} m";
-                }
-                return "";
             }
         }
 

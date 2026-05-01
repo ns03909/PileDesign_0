@@ -5247,31 +5247,6 @@
                                                 Panel.ZIndex="0">
                                         </Canvas>
 
-                                        <!-- B.6: スケールバー overlay (Canvas 左下に配置, 現在のズーム倍率に応じた代表長を表示) -->
-                                        <Border Grid.Row="2" Grid.Column="0"
-                                                HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                                                Margin="12,0,0,12"
-                                                Background="#E0FFFFFF"
-                                                BorderBrush="{StaticResource ControlBorderBrush}" BorderThickness="1"
-                                                CornerRadius="3" Padding="6,3"
-                                                Panel.ZIndex="15"
-                                                IsHitTestVisible="False"
-                                                ToolTip="スケールバー: 現在のズーム倍率に応じた代表長"
-                                                Visibility="{Binding IsScaleBarVisible, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Visible}">
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Grid Width="{Binding CanvasThreeDView.ScaleBarPixels, FallbackValue=100}" Height="10"
-                                                      VerticalAlignment="Center">
-                                                    <!-- 横の縞（黒 → 白 → 黒の交互で目盛感を出す） -->
-                                                    <Rectangle Fill="#333" Height="4" VerticalAlignment="Center" />
-                                                    <Rectangle Fill="#333" Width="1" Height="10" HorizontalAlignment="Left"/>
-                                                    <Rectangle Fill="#333" Width="1" Height="10" HorizontalAlignment="Right"/>
-                                                </Grid>
-                                                <TextBlock Text="{Binding CanvasThreeDView.ScaleBarMeters, FallbackValue='—'}"
-                                                           Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold" Foreground="#333"
-                                                           VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
-
                                         <!-- ミニマップはAvalonDockパネルに移動 -->
 
                                         <Canvas x:Name="ColorBarCanvas"
