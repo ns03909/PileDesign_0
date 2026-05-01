@@ -198,6 +198,7 @@ namespace PileDesign.Views
                     UpdateNodes3D();
                     UpdateInputNodes3D(); // 一般節点も描画
                     UpdateConnectingNodes3D(); // 接続用節点・剛体連結線
+                    if (viewModel.IsRigidFloorVisible) UpdateRigidFloor3D(); // 代表節点 ↔ 杭頭の緑色連結線
                     if (viewModel.IsFoundationBeamVisible) UpdateFoundationBeams3D(); // 基礎梁・一般梁要素も描画
                     UpdateSelectedNodesAndElements3D(); // 選択要素も描画
                     if (viewModel.IsXYZAxesVisible) UpdateAxes3D();
