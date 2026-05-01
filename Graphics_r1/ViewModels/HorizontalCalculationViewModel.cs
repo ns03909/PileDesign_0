@@ -146,6 +146,7 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _level1CalculationStepsCount, value);
                 OnPropertyChanged(nameof(TotalCalculationCount));
+                ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
             }
         }
 
@@ -158,6 +159,7 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _level2CalculationStepsCount, value);
                 OnPropertyChanged(nameof(TotalCalculationCount));
+                ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
             }
         }
 
@@ -168,7 +170,11 @@ namespace PileDesign.ViewModels
         public double RelaxationFactor
         {
             get => _relaxationFactor;
-            set => SetProperty(ref _relaxationFactor, Math.Clamp(value, 0.1, 1.0));
+            set
+            {
+                SetProperty(ref _relaxationFactor, Math.Clamp(value, 0.1, 1.0));
+                ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+            }
         }
 
         // Newton-Raphsonモード選択
@@ -197,7 +203,11 @@ namespace PileDesign.ViewModels
         public int FullNRIterations
         {
             get => _fullNRIterations;
-            set => SetProperty(ref _fullNRIterations, Math.Clamp(value, 1, 99));
+            set
+            {
+                SetProperty(ref _fullNRIterations, Math.Clamp(value, 1, 99));
+                ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+            }
         }
 
         // 反復なし簡易法（1ステップ=1回解析、最も安定だがステップ数を増やす必要あり）
@@ -310,8 +320,12 @@ namespace PileDesign.ViewModels
         public int MaxCaseDegreeOfParallelism
         {
             get => _maxCaseDegreeOfParallelism;
-            set => SetProperty(ref _maxCaseDegreeOfParallelism,
-                Math.Clamp(value, 1, Environment.ProcessorCount));
+            set
+            {
+                SetProperty(ref _maxCaseDegreeOfParallelism,
+                    Math.Clamp(value, 1, Environment.ProcessorCount));
+                ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+            }
         }
 
         // 選択地盤番号
@@ -543,6 +557,8 @@ namespace PileDesign.ViewModels
                 PauseAnalysisCommand.NotifyCanExecuteChanged();
                 ResumeAnalysisCommand.NotifyCanExecuteChanged();
                 CancelAnalysisCommand.NotifyCanExecuteChanged();
+                ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                ExecuteAdditiveAnalysisCommand?.NotifyCanExecuteChanged();
             }
         }
 
@@ -583,6 +599,18 @@ namespace PileDesign.ViewModels
         public IRelayCommand ResumeAnalysisCommand { get; }
         public IRelayCommand CancelAnalysisCommand { get; }
 
+        /// <summary>
+        /// 「追加実行 (段階追加再解析)」コマンド。既存結果を保持し、選択中ケースのうち
+        /// 未計算分のみを実行する。前回設定 (LastRunConfig) と互換性チェック有り。
+        /// </summary>
+        public IAsyncRelayCommand ExecuteAdditiveAnalysisCommand { get; }
+
+        /// <summary>
+        /// 完了済みケースキー (LoadName|CombName|IsLiquefaction) の集合。
+        /// UI DataGrid 「済」列バインディング用。
+        /// </summary>
+        public ObservableCollection<string> CompletedCaseKeys { get; } = new();
+
         private int _currentProgress;
         public int CurrentProgress
         {
@@ -594,14 +622,33 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(ElapsedTimeText));
                 OnPropertyChanged(nameof(EstimatedRemainingText));
                 OnPropertyChanged(nameof(ProgressText));
+                OnPropertyChanged(nameof(EffectiveProgress));
             }
         }
+
+        /// <summary>
+        /// 追加実行モード時のステップ基準値。RunAsync 開始時に「既存結果のステップ数」を入れ、
+        /// プログレスバーと進捗テキストから差し引くことで「未計算分のみの進捗」を表示する。
+        /// 通常実行 (additive=false) では 0。
+        /// </summary>
+        private int _additiveBaselineSteps = 0;
+
+        /// <summary>
+        /// プログレスバー Value バインド用。追加実行時は baseline 分を引いて 0 始まりとする。
+        /// </summary>
+        public int EffectiveProgress => Math.Max(0, CurrentProgress - _additiveBaselineSteps);
+
+        /// <summary>
+        /// プログレスバー Maximum バインド用。追加実行時は既存ステップ数を除外した「未計算分」を返す。
+        /// 通常実行時は TotalCalculationCount と同じ。
+        /// </summary>
+        public int EffectiveProgressTotal => Math.Max(0, TotalCalculationCount - _additiveBaselineSteps);
 
         public string ProgressText
         {
             get
             {
-                string baseText = $"{CurrentProgress}/{TotalCalculationCount}";
+                string baseText = $"{EffectiveProgress}/{EffectiveProgressTotal}";
                 string elapsed = ElapsedTimeText;
                 string remaining = EstimatedRemainingText;
                 if (string.IsNullOrEmpty(elapsed) && string.IsNullOrEmpty(remaining))
@@ -682,6 +729,10 @@ namespace PileDesign.ViewModels
             PauseAnalysisCommand = new ToolkitRelayCommand(OnPauseAnalysis, () => IsAnalysisRunning);
             ResumeAnalysisCommand = new ToolkitRelayCommand(OnResumeAnalysis, () => IsAnalysisRunning);
             CancelAnalysisCommand = new ToolkitRelayCommand(OnCancelAnalysis, () => IsAnalysisRunning);
+
+            // 追加実行 (段階追加再解析) コマンド
+            ExecuteAdditiveAnalysisCommand = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(
+                OnExecuteAdditiveAnalysis, CanExecuteAdditiveAnalysis);
 
             foreach (var item in InputModel.LoadCasesInput.LoadCasesLevel1)
                 item.PropertyChanged += LoadCase_PropertyChanged;
@@ -799,12 +850,91 @@ namespace PileDesign.ViewModels
                 PenaltySprings = AnalysisModelling.PenaltySprings
             };
 
+            // メイン側に保存された既存の水平解析結果を editModel に転写
+            // (ウィンドウ再オープン時に「済」列表示や追加実行を機能させるため)
+            SeedEditModelFromMainCurrentModel(editModel);
+
             if (AnaModels.Count > 1)
                 AnaModels[1] = editModel;
             else if (AnaModels.Count == 1)
                 AnaModels.Add(editModel);
             else
                 AnaModels.Add(editModel);
+
+            // 「済」列を更新 + 追加実行ボタンの enable 状態再評価
+            RefreshCompletedCaseKeys();
+
+            // CommandManager.RequerySuggested を待たず即座に CanExecute を再評価
+            // (シード後 AnalysisStepResults が増えても WPF はフォーカス変化等まで気付かない)
+            ExecuteAdditiveAnalysisCommand?.NotifyCanExecuteChanged();
+
+            // 既存結果があれば「実行済み」として扱う (サマリーコピー等のボタンも有効化)
+            if (editModel.AnalysisStepResults?.Count > 0)
+                IsAnalysisExecuted = true;
+        }
+
+        /// <summary>
+        /// MainWindowViewModel.CurrentModel に既存の水平解析結果があれば、
+        /// 新規 editModel に転写する。既存結果保持と「済」列表示・追加実行のために使用。
+        /// 既存モデルとノード/ビーム件数が一致しない場合は転写を行わない (構造変更検出)。
+        /// </summary>
+        private void SeedEditModelFromMainCurrentModel(AnaModel editModel)
+        {
+            var mainModel = _mainWindowViewModel?.CurrentModel;
+            if (mainModel == null) return;
+            if (mainModel.AnalysisStepResults == null || mainModel.AnalysisStepResults.Count == 0) return;
+
+            // 構造一致チェック (件数のみ。InputModel が変わっていれば既存の
+            // CheckAndResetAnalysisResults が main 側結果を破棄しているはず)
+            if (mainModel.Nodes?.Count != editModel.Nodes?.Count) return;
+            if (mainModel.Beams?.Count != editModel.Beams?.Count) return;
+
+            // ステップ結果コピー (LoadCase/LoadCombination は InputModel 経由で共有)
+            editModel.AnalysisStepResults.Clear();
+            foreach (var r in mainModel.AnalysisStepResults)
+                editModel.AnalysisStepResults.Add(r);
+
+            // LastRunConfig 転写 (互換性検証で参照される)
+            editModel.LastRunConfig = mainModel.LastRunConfig;
+
+            // 各要素の結果も転写 (個別グラフ・テーブル表示の整合性のため)
+            // 件数チェック後なのでインデックスで対応
+            for (int i = 0; i < editModel.Nodes.Count && i < mainModel.Nodes.Count; i++)
+            {
+                var src = mainModel.Nodes[i].NodeResults;
+                if (src == null) continue;
+                editModel.Nodes[i].NodeResults.Clear();
+                foreach (var nr in src) editModel.Nodes[i].NodeResults.Add(nr);
+            }
+            for (int i = 0; i < editModel.Beams.Count && i < mainModel.Beams.Count; i++)
+            {
+                var src = mainModel.Beams[i].BeamResults;
+                if (src == null) continue;
+                editModel.Beams[i].BeamResults.Clear();
+                foreach (var br in src) editModel.Beams[i].BeamResults.Add(br);
+            }
+            if (mainModel.HorizontalSoilSprings != null && editModel.HorizontalSoilSprings != null
+                && mainModel.HorizontalSoilSprings.Count == editModel.HorizontalSoilSprings.Count)
+            {
+                for (int i = 0; i < editModel.HorizontalSoilSprings.Count; i++)
+                {
+                    var src = mainModel.HorizontalSoilSprings[i].HorizontalSpringResults;
+                    if (src == null) continue;
+                    editModel.HorizontalSoilSprings[i].HorizontalSpringResults.Clear();
+                    foreach (var sr in src) editModel.HorizontalSoilSprings[i].HorizontalSpringResults.Add(sr);
+                }
+            }
+            if (mainModel.RotationalSprings != null && editModel.RotationalSprings != null
+                && mainModel.RotationalSprings.Count == editModel.RotationalSprings.Count)
+            {
+                for (int i = 0; i < editModel.RotationalSprings.Count; i++)
+                {
+                    var src = mainModel.RotationalSprings[i].RotationalSpringResults;
+                    if (src == null) continue;
+                    editModel.RotationalSprings[i].RotationalSpringResults.Clear();
+                    foreach (var rr in src) editModel.RotationalSprings[i].RotationalSpringResults.Add(rr);
+                }
+            }
         }
 
         // コレクション変更時のハンドラ
@@ -862,6 +992,8 @@ namespace PileDesign.ViewModels
                 OnPropertyChanged(nameof(TotalCalculationCount));
                 OnPropertyChanged(nameof(TotalLoadCaseCount));
                 OnPropertyChanged(nameof(ProgressText));
+                // 選択ケース数変化に伴い「追加実行」ボタンの enable 状態も再評価
+                ExecuteAdditiveAnalysisCommand?.NotifyCanExecuteChanged();
             }
         }
 
@@ -1105,11 +1237,99 @@ namespace PileDesign.ViewModels
         }
 
         // 水平解析の実行
-        [RelayCommand]
-        private async Task OnExecuteAnalysis()
+        [RelayCommand(CanExecute = nameof(CanExecuteAnalysis))]
+        private async Task OnExecuteAnalysis() => await OnExecuteAnalysisCore(additive: false);
+
+        /// <summary>
+        /// F9 ボタンの活性条件。NumericInput でクランプされていれば常に妥当な値だが、
+        /// バインド失敗 (古い値が残っている / プログラム的に外れた値) に対する最後の防壁。
+        /// </summary>
+        private bool CanExecuteAnalysis()
         {
-            // 既存の解析結果がある場合は警告
-            if (_mainWindowViewModel.IsHorizontalAnalysisDone)
+            if (IsAnalysisRunning) return false;
+            if (Level1CalculationStepsCount < 1 || Level1CalculationStepsCount > 256) return false;
+            if (Level2CalculationStepsCount < 1 || Level2CalculationStepsCount > 256) return false;
+            if (MaxCaseDegreeOfParallelism < 1) return false;
+            if (FullNRIterations < 0) return false;
+            if (RelaxationFactor <= 0 || RelaxationFactor > 1) return false;
+            return true;
+        }
+
+        /// <summary>追加実行 (段階追加再解析)。既存結果を保持し、未計算ケースのみ実行。</summary>
+        private async Task OnExecuteAdditiveAnalysis() => await OnExecuteAnalysisCore(additive: true);
+
+        /// <summary>
+        /// 解析対象 AnaModel を安全に取得 (Count==0 で IndexOutOfRange を出さない)。
+        /// AnaModels[1] (編集用) があればそれ、なければ [0] (本体)、空なら null。
+        /// </summary>
+        private AnaModel? TryGetTargetAnaModel()
+        {
+            if (AnaModels == null) return null;
+            if (AnaModels.Count > 1) return AnaModels[1];
+            if (AnaModels.Count > 0) return AnaModels[0];
+            return null;
+        }
+
+        private bool CanExecuteAdditiveAnalysis()
+        {
+            if (IsAnalysisRunning) return false;
+            if (TotalCalculationCount <= 0) return false;
+            var target = TryGetTargetAnaModel();
+            return target?.AnalysisStepResults?.Count > 0;
+        }
+
+        /// <summary>
+        /// プリフライト用サマリを構築する。AnalysisPreflightDialog にそのまま渡せる形。
+        /// 実行時間は経験則の係数 (1 step あたりの目安) を用いた粗い見積もり。
+        /// </summary>
+        private Views.AnalysisPreflightSummary BuildPreflightSummary()
+        {
+            int level1Count = InputModel.LoadCasesInput.LoadCasesLevel1?
+                .Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
+            int level2Count = InputModel.LoadCasesInput.LoadCasesLevel2?
+                .Count(x => x.IsAnalysisTarget && (x.UpperMassForce != 0 || x.FoundationMassForce != 0)) ?? 0;
+            int liquefactionFactor = LiquefactionOption == LiquefactionOptionType.Both ? 2 : 1;
+
+            int combinationCount = InputModel.LoadCasesInput.AllLoadCombinations?
+                .Count(x => x.IsApplicable) ?? 0;
+
+            // CounterLoading: βU × βL < 0 の組合せ数
+            int counterLoadingCount = InputModel.LoadCasesInput.AllLoadCombinations?
+                .Count(x => x.IsApplicable && x.Beta1 * x.Beta2 < 0) ?? 0;
+
+            int nonLinearCases = InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases?
+                .Count(lc => lc.IsPileNonLinear) ?? 0;
+
+            int parallelism = Math.Max(1, MaxCaseDegreeOfParallelism);
+            int totalSteps = TotalCalculationCount;
+
+            // 経験則: 1 step あたり ~0.4 秒 (非線形解析平均)。並列度で按分。
+            // 線形主体ならもっと短いが、安全側に多めに見積もる方がユーザーの期待値マネジメントになる。
+            double secondsPerStep = nonLinearCases > 0 ? 0.5 : 0.15;
+            double estimatedSec = totalSteps * secondsPerStep / parallelism;
+
+            string loadCaseText = liquefactionFactor == 2
+                ? $"L1={level1Count} / L2={level2Count} (液状化: あり/なし両方)"
+                : $"L1={level1Count} / L2={level2Count}";
+
+            return new Views.AnalysisPreflightSummary(
+                AnalysisName: "水平解析",
+                TotalSteps: totalSteps,
+                LoadCaseCountText: loadCaseText,
+                CombinationCount: combinationCount,
+                CounterLoadingCount: counterLoadingCount,
+                NonLinearLoadCaseCount: nonLinearCases,
+                MaxParallelism: parallelism,
+                EstimatedDuration: TimeSpan.FromSeconds(estimatedSec));
+        }
+
+        private async Task OnExecuteAnalysisCore(bool additive)
+        {
+            // 既存の解析結果がある場合は警告 (新規実行のみ。追加実行は既存結果保持が前提なのでスキップ)
+            // メイン側 (OK 済み) または、現セッションでロードした「済」結果のいずれかがあれば確認
+            bool hasExistingResults = _mainWindowViewModel.IsHorizontalAnalysisDone
+                || (TryGetTargetAnaModel()?.AnalysisStepResults?.Count > 0);
+            if (!additive && hasExistingResults)
             {
                 var result = MessageBox.Show(
                     "既に水平解析の結果が存在します。\n再実行すると既存の結果は上書きされます。\n\n解析を実行しますか？",
@@ -1262,22 +1482,71 @@ namespace PileDesign.ViewModels
             }
 
             // モデル作成（進捗ウィンドウ表示前に実施。失敗時はここで中止）
-            if (!TryCreateAnalysisModel())
-                return;
+            // 追加実行モードでは既存 editModel (前回 RunAsync の結果と LastRunConfig を保持)
+            // を再利用するため TryCreateAnalysisModel は呼ばない (呼ぶと AnaModels[1] が
+            // フレッシュなモデルで上書きされ、前回情報が失われる)
+            if (!additive)
+            {
+                if (!TryCreateAnalysisModel())
+                    return;
+            }
+            else
+            {
+                // 追加実行: 既存 editModel に結果が残っていることを確認
+                var existingTarget = TryGetTargetAnaModel();
+                if (existingTarget == null || existingTarget.AnalysisStepResults == null ||
+                    existingTarget.AnalysisStepResults.Count == 0)
+                {
+                    MessageBox.Show(
+                        "追加実行のための既存結果が見つかりません。\n通常実行でやり直してください。",
+                        "エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+
+            // 追加実行モードのみ: 前回設定との互換性チェック
+            if (additive)
+            {
+                if (!ValidateIncrementalCompatibility(out var reason))
+                {
+                    var choice = MessageBox.Show(
+                        $"追加実行できません。前回設定と相違があります。\n\n{reason}\n\n" +
+                        "「はい」: 既存結果を破棄して新規実行に切替\n" +
+                        "「いいえ」: キャンセル",
+                        "互換性チェック失敗", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    if (choice != MessageBoxResult.Yes) return;
+                    additive = false;
+                }
+            }
+
+            // プリフライト: ステップ数 / 並列度 / CounterLoading / 推定時間をユーザーに提示し、
+            // 実行可否を最終確認する (User 設定で無効化可)。追加実行はスキップ (差分のため意味が薄い)。
+            if (!additive)
+            {
+                var summary = BuildPreflightSummary();
+                var owner = Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive)
+                            ?? Application.Current?.MainWindow;
+                if (!Views.AnalysisPreflightDialog.Confirm(owner, summary))
+                    return;
+            }
 
             IsAnalysisRunning = true;
+            // 新規実行時のみ「未実行」状態に戻す (追加実行は実行済み状態を維持)
+            if (!additive) IsAnalysisExecuted = false;
             _cancellationTokenSource = new CancellationTokenSource();
 
             // ボタン押下直後にログを表示
-            await AddLogAsync("計算モデル作成開始");
+            await AddLogAsync(additive ? "追加実行: 計算モデル作成開始" : "計算モデル作成開始");
 
             var progress = new Progress<Models.AnalysisProgress>();
 
+            // ローカル変数化: ラムダで closure するため
+            bool isAdditive = additive;
             try
             {
                 // 解析実行を非同期で行う
                 await Task.Run(async () => {
-                    await RunAsync(_cancellationTokenSource.Token, progress);
+                    await RunAsync(_cancellationTokenSource.Token, progress, additive: isAdditive);
                 });
 
                 IsAnalysisExecuted = true; // 解析実行済みフラグをセット
@@ -1324,6 +1593,10 @@ namespace PileDesign.ViewModels
                 // CancellationTokenSourceをDisposeしてリソース解放
                 _cancellationTokenSource?.Dispose();
                 _cancellationTokenSource = null;
+
+                // 解析完了後の追加実行ボタン enable 状態を再評価
+                // (RunAsync で AnalysisStepResults が増えても自動再評価されないため明示)
+                ExecuteAdditiveAnalysisCommand?.NotifyCanExecuteChanged();
             }
         }
 
@@ -1847,14 +2120,65 @@ namespace PileDesign.ViewModels
         // v21 Phase 3 prep: ばね剛性 min/max はインスタンスフィールドを廃し、
         // FindK / PrepareKmat の戻り値（out パラメータ）で局所管理する。
 
-        public async Task RunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress = null)
+        public async Task RunAsync(CancellationToken token, IProgress<Models.AnalysisProgress>? progress = null, bool additive = false)
         {
-            // 既に「計算モデル作成開始」が出ているので、ここでは「計算開始」を追記する
-            await AddLogAsync("解析計算処理開始");
+            // additive=true: 既存結果を保持し、未計算ケースのみを実行 (段階追加再解析)
+            // additive=false: 通常実行 (既存結果を明示クリアして全ケース計算)
             await Task.Yield();
 
-            // v29: ステップサマリーをリセット (前回解析の結果をクリア)
-            _stepSummaries.Clear();
+            // === 追加実行モード用: 既存ケースキー集合 ===
+            // RunAsync 開始時に 1 回スナップショットを取り、ループ内で skip 判定に使用。
+            // 並列ループ実行中は targetModel.AnalysisStepResults へ append が走るため
+            // 並列実行内で再評価しない (ロック保護下のスナップショット)。
+            HashSet<FEM.AnalysisRunSnapshot.CaseKey> existingKeys = new();
+
+            var preTargetModel = TryGetTargetAnaModel();
+            if (preTargetModel != null)
+            {
+                lock (_caseMergeLock)
+                {
+                    if (additive && preTargetModel.LastRunConfig != null)
+                    {
+                        existingKeys = preTargetModel.LastRunConfig.ExecutedCaseKeys.ToHashSet();
+                    }
+                    else if (additive && preTargetModel.AnalysisStepResults?.Count > 0)
+                    {
+                        // 防御: LastRunConfig が null だが結果がある旧データの場合、結果から復元
+                        existingKeys = preTargetModel.AnalysisStepResults
+                            .Select(r => new FEM.AnalysisRunSnapshot.CaseKey(
+                                r.LoadCase.LoadName, r.LoadCombination.Name, r.IsLiquefaction))
+                            .ToHashSet();
+                    }
+                }
+            }
+
+            if (additive)
+            {
+                await AddLogAsync($"=== 追加実行: 既存 {existingKeys.Count} ケースを保持し、未計算分のみ計算します ===");
+                // _stepSummaries.Clear() は呼ばない (既存ログを保持)
+                // 既存結果のステップ数を baseline として記録 (プログレスバー分母から除外)
+                _additiveBaselineSteps = preTargetModel?.AnalysisStepResults?.Count ?? 0;
+            }
+            else
+            {
+                // 既に「計算モデル作成開始」が出ているので、ここでは「計算開始」を追記する
+                await AddLogAsync("解析計算処理開始");
+                // v29: ステップサマリーをリセット (前回解析の結果をクリア)
+                _stepSummaries.Clear();
+                // 結果と前回設定を明示クリア (新規実行時)
+                if (preTargetModel != null)
+                {
+                    lock (_caseMergeLock)
+                    {
+                        preTargetModel.ClearAllAnalysisResults();
+                    }
+                }
+                // baseline をリセット (通常実行)
+                _additiveBaselineSteps = 0;
+            }
+            OnPropertyChanged(nameof(EffectiveProgressTotal));
+            OnPropertyChanged(nameof(EffectiveProgress));
+            OnPropertyChanged(nameof(ProgressText));
 
             // v29: 経過/残り時間表示用に開始時刻記録 + 1 秒タイマーで定期更新
             _analysisStartUtc = DateTime.UtcNow;
@@ -1986,6 +2310,18 @@ namespace PileDesign.ViewModels
 
                     foreach (bool isLiquefaction in liquefactionCases)
                     {
+                        // 追加実行モード: 既存結果に同じキーがあるケースはスキップ
+                        if (additive)
+                        {
+                            var caseKey = new FEM.AnalysisRunSnapshot.CaseKey(
+                                loadCase.LoadName, loadCombination.Name, isLiquefaction);
+                            if (existingKeys.Contains(caseKey))
+                            {
+                                await AddLogAsync($"[skip] {BuildCaseTag(level, iLC, iLCOM, isLiquefaction)} は既存結果あり (追加実行モード)");
+                                continue;
+                            }
+                        }
+
                         // E3c-3-enable: ケース 1 件分の body を local function に wrap。
                         // MDOP=1 ではこのまま直接 await で呼出、MDOP>1 では Task.Run に投げて並行実行。
                         // foreach 変数 (loadCase, loadCombination, isLiquefaction, iLC, iLCOM, level) は
@@ -3296,6 +3632,23 @@ namespace PileDesign.ViewModels
 
             token.ThrowIfCancellationRequested();
 
+            // === LastRunConfig 更新 (追加実行の互換性比較に使用) ===
+            // 解析が正常完了した場合のみ更新。中断/エラーは既存値を保持。
+            if (preTargetModel != null)
+            {
+                lock (_caseMergeLock)
+                {
+                    var snap = CaptureCurrentRunSnapshot();
+                    snap.ExecutedCaseKeys = preTargetModel.AnalysisStepResults
+                        .Select(r => new FEM.AnalysisRunSnapshot.CaseKey(
+                            r.LoadCase.LoadName, r.LoadCombination.Name, r.IsLiquefaction))
+                        .Distinct()
+                        .ToList();
+                    preTargetModel.LastRunConfig = snap;
+                }
+                RefreshCompletedCaseKeys();
+            }
+
             // v29: ステップ単位の収束サマリーをレポート出力
             await OutputStepSummaryReport();
 
@@ -3993,7 +4346,153 @@ namespace PileDesign.ViewModels
         /// 形式: [L{level}-{iLC+1}.C{iLCOM+1}.{Liq|Dry}]  (例: [L2-1.C4.Liq])
         /// </summary>
         private static string BuildCaseTag(int level, int iLC, int iLCOM, bool isLiquefaction)
-            => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "Dry")}] ";
+            => $"[L{level}-{iLC + 1}.C{iLCOM + 1}.{(isLiquefaction ? "Liq" : "NoLq")}] ";
+
+        /// <summary>
+        /// 「追加実行 (段階追加再解析)」用のヘルパ群。
+        /// </summary>
+
+        /// <summary>
+        /// 現在の VM 状態から AnalysisRunSnapshot を構築する。
+        /// 解析完了時に呼び、AnaModel.LastRunConfig として保存。
+        /// 次回 ValidateIncrementalCompatibility で前回値と比較する。
+        /// </summary>
+        private FEM.AnalysisRunSnapshot CaptureCurrentRunSnapshot()
+        {
+            return new FEM.AnalysisRunSnapshot
+            {
+                LiquefactionOption = LiquefactionOption.ToString(),
+                Level1StepsCount = Level1CalculationStepsCount,
+                Level2StepsCount = Level2CalculationStepsCount,
+                UseModifiedNewtonRaphson = UseModifiedNewtonRaphson,
+                FullNRIterations = FullNRIterations,
+                SkipIteration = SkipIteration,
+                UseLineSearch = UseLineSearch,
+                RelaxationFactor = RelaxationFactor,
+                UseAnalysisAxialForce = UseAnalysisAxialForce,
+                ConnectionMode = ConnectionMode.ToString(),
+                ExecutedCaseKeys = new List<FEM.AnalysisRunSnapshot.CaseKey>(),
+                InputModelHash = null  // Phase 1 は null 許容、Phase 2 で SHA256 等
+            };
+        }
+
+        /// <summary>
+        /// LiquefactionOption に応じたフラグ列挙。三重ループと CountPendingCases で共通利用。
+        /// </summary>
+        private IEnumerable<bool> EnumerateLiquefactionCases() =>
+            LiquefactionOption switch
+            {
+                LiquefactionOptionType.Both => new[] { true, false },
+                LiquefactionOptionType.Yes => new[] { true },
+                LiquefactionOptionType.None => new[] { false },
+                _ => new[] { false }
+            };
+
+        /// <summary>
+        /// 「実行予定 (現在選択中) だが既存結果にない」ケースの件数。
+        /// 追加実行モードの TotalPlannedCaseCount 表示用。
+        /// </summary>
+        private int CountPendingCases(HashSet<FEM.AnalysisRunSnapshot.CaseKey> existingKeys)
+        {
+            int n = 0;
+            foreach (var lc in InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases)
+            {
+                if (lc.UpperMassForce == 0 && lc.FoundationMassForce == 0) continue;
+                foreach (var com in InputModel.LoadCasesInput.AllLoadCombinations)
+                {
+                    foreach (var liq in EnumerateLiquefactionCases())
+                    {
+                        var k = new FEM.AnalysisRunSnapshot.CaseKey(lc.LoadName, com.Name, liq);
+                        if (!existingKeys.Contains(k)) n++;
+                    }
+                }
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// 「追加実行」の互換性検証。前回設定 (AnaModel.LastRunConfig) と現在 VM の状態を比較し、
+        /// 差分があれば false + 理由を out で返す。
+        /// 規則:
+        ///   - 解析パラメータ (ステップ数, NR モード, Full NR 反復, 反復なし簡易, ライン
+        ///     サーチ, 緩和係数, 杭軸力モード, 接続方式) は完全一致が必要
+        ///   - 液状化選択は前回をカバーするスーパーセットなら可 (Both は Yes/None を内包)
+        ///   - InputModelHash は Phase 1 では null 許容、未来拡張用
+        /// </summary>
+        private bool ValidateIncrementalCompatibility(out string reason)
+        {
+            var target = TryGetTargetAnaModel();
+            var prev = target?.LastRunConfig;
+            if (prev == null)
+            {
+                reason = "前回実行情報がありません。新規実行が必要です。";
+                return false;
+            }
+
+            var diffs = new List<string>();
+
+            if (prev.Level1StepsCount != Level1CalculationStepsCount)
+                diffs.Add($"レベル1ステップ数 {prev.Level1StepsCount}→{Level1CalculationStepsCount}");
+            if (prev.Level2StepsCount != Level2CalculationStepsCount)
+                diffs.Add($"レベル2ステップ数 {prev.Level2StepsCount}→{Level2CalculationStepsCount}");
+            if (prev.UseModifiedNewtonRaphson != UseModifiedNewtonRaphson)
+                diffs.Add($"NR モード切替 (Modified={prev.UseModifiedNewtonRaphson}→{UseModifiedNewtonRaphson})");
+            if (prev.FullNRIterations != FullNRIterations)
+                diffs.Add($"Full NR 初期反復数 {prev.FullNRIterations}→{FullNRIterations}");
+            if (prev.SkipIteration != SkipIteration)
+                diffs.Add($"反復なし簡易法切替 ({prev.SkipIteration}→{SkipIteration})");
+            if (prev.UseLineSearch != UseLineSearch)
+                diffs.Add($"ラインサーチ切替 ({prev.UseLineSearch}→{UseLineSearch})");
+            if (Math.Abs(prev.RelaxationFactor - RelaxationFactor) > 1e-9)
+                diffs.Add($"緩和係数 {prev.RelaxationFactor:F2}→{RelaxationFactor:F2}");
+            if (prev.UseAnalysisAxialForce != UseAnalysisAxialForce)
+                diffs.Add($"杭軸力モード切替 ({prev.UseAnalysisAxialForce}→{UseAnalysisAxialForce})");
+            if (prev.ConnectionMode != ConnectionMode.ToString())
+                diffs.Add($"接続方式 {prev.ConnectionMode}→{ConnectionMode}");
+
+            // 液状化スーパーセットチェック
+            if (!IsLiqSuperset(LiquefactionOption, prev.LiquefactionOption))
+                diffs.Add($"液状化選択 {prev.LiquefactionOption}→{LiquefactionOption} (現在が前回をカバーしていません)");
+
+            if (diffs.Count == 0) { reason = ""; return true; }
+            reason = "差分:\n  - " + string.Join("\n  - ", diffs);
+            return false;
+        }
+
+        /// <summary>
+        /// 現在の液状化選択が前回をカバーするスーパーセットかどうか。
+        /// Both はすべての値をカバー、それ以外は完全一致のみ可。
+        /// </summary>
+        private static bool IsLiqSuperset(LiquefactionOptionType cur, string prevString)
+        {
+            // 前回値が Both なら、現在は Both のみ可 (Yes/None ではカバーしきれない)
+            if (prevString == nameof(LiquefactionOptionType.Both))
+                return cur == LiquefactionOptionType.Both;
+            // 前回値が Yes/None なら、現在も同じか Both なら可
+            return cur == LiquefactionOptionType.Both || cur.ToString() == prevString;
+        }
+
+        /// <summary>
+        /// CompletedCaseKeys を最新の AnalysisStepResults から再構築する。
+        /// UI の「済」列バインディング更新のために OnPropertyChanged も発火。
+        /// </summary>
+        private void RefreshCompletedCaseKeys()
+        {
+            Application.Current?.Dispatcher.BeginInvoke(new System.Action(() =>
+            {
+                CompletedCaseKeys.Clear();
+                var target = TryGetTargetAnaModel();
+                if (target?.AnalysisStepResults == null) return;
+                foreach (var k in target.AnalysisStepResults
+                                       .Where(r => r.LoadCase != null && r.LoadCombination != null)
+                                       .Select(r => $"{r.LoadCase.LoadName}|{r.LoadCombination.Name}|{r.IsLiquefaction}")
+                                       .Distinct())
+                {
+                    CompletedCaseKeys.Add(k);
+                }
+                OnPropertyChanged(nameof(CompletedCaseKeys));
+            }));
+        }
 
         /// <summary>
         /// MS Gothic 等幅フォント上での視覚幅を計算する (col 数)。
@@ -4071,7 +4570,7 @@ namespace PileDesign.ViewModels
                     s.Level.ToString(),
                     s.LoadCaseNo.ToString(),
                     s.ComboNo.ToString(),
-                    s.IsLiquefaction ? "Liq" : "Dry",
+                    s.IsLiquefaction ? "Liq" : "NoLq",
                     s.Step.ToString(),
                     s.NStep.ToString(),
                     s.BisectionAttempt.ToString(),

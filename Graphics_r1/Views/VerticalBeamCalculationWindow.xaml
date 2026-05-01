@@ -58,23 +58,27 @@
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="荷重分割数:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding LoadStepsCount, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
-                                 PreviewTextInput="NumericOnly_PreviewTextInput"/>
+                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Style="{StaticResource IntegerTextBoxStyle}"
+                                 common:NumericInput.Min="1" common:NumericInput.Max="256"/>
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="最大反復回数:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MaxIterations, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
-                                 PreviewTextInput="NumericOnly_PreviewTextInput"/>
+                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Style="{StaticResource IntegerTextBoxStyle}"
+                                 common:NumericInput.Min="1" common:NumericInput.Max="1000"/>
 
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="収束判定値:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ConvergenceTolerance, UpdateSourceTrigger=PropertyChanged, StringFormat=E1}"
-                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
-                                 PreviewTextInput="NumericOnly_PreviewTextInput"/>
+                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Style="{StaticResource DecimalTextBoxStyle}"
+                                 common:NumericInput.Min="0.0000001"/>
 
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="緩和係数 ω:" VerticalAlignment="Center" Margin="0,2"/>
                         <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding RelaxationFactor, UpdateSourceTrigger=PropertyChanged, StringFormat=F2}"
-                                 Width="80" HorizontalAlignment="Right" HorizontalContentAlignment="Right" Margin="0,2"
-                                 PreviewTextInput="NumericOnly_PreviewTextInput"/>
+                                 Width="80" HorizontalAlignment="Right" Margin="0,2"
+                                 Style="{StaticResource DecimalTextBoxStyle}"
+                                 common:NumericInput.Min="0.1" common:NumericInput.Max="1.0"/>
                     </Grid>
                 </GroupBox>
 

@@ -34,5 +34,17 @@ namespace PileDesign.Properties {
                 this["ShowWelcomeDialog"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShowAnalysisPreflight {
+            get {
+                return ((bool)(this["ShowAnalysisPreflight"]));
+            }
+            set {
+                this["ShowAnalysisPreflight"] = value;
+            }
+        }
     }
 }

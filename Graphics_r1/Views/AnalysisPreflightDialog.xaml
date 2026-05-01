@@ -1,0 +1,107 @@
+<Window x:Class="PileDesign.Views.AnalysisPreflightDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="解析実行の確認"
+        Width="480" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="White">
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="RootContent" Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.18"/>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+    <Grid x:Name="RootContent" Margin="20" Opacity="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ヘッダー -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="&#x25B6;" Foreground="{StaticResource PrimaryAccentBrush}"
+                       FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock x:Name="HeaderText" Text="水平解析を実行します"
+                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 説明 -->
+        <TextBlock Grid.Row="1" Text="以下の内容で解析を実行します。問題なければ「実行」を押してください。"
+                   Foreground="#555" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+        <!-- サマリーカード -->
+        <Border Grid.Row="2" Background="#F8F9FA" BorderBrush="#E0E0E0" BorderThickness="1"
+                CornerRadius="4" Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="総ステップ数" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TotalStepsText" FontWeight="SemiBold" Margin="0,2"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="荷重ケース数" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LoadCaseCountText" Margin="0,2"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="荷重組合せ数" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CombinationCountText" Margin="0,2"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="逆方向組合せ" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CounterLoadingText" Margin="0,2"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="杭体非線形 ON" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="NonLinearText" Margin="0,2"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="ケース並列度" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="ParallelismText" Margin="0,2"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="目安実行時間" Foreground="#555" Margin="0,2"/>
+                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="EstimatedTimeText" FontWeight="SemiBold"
+                           Foreground="{StaticResource NikkenDeepBlueBrush}" Margin="0,2"/>
+            </Grid>
+        </Border>
+
+        <!-- 注記 -->
+        <TextBlock Grid.Row="3" x:Name="NoteText" Foreground="#888" FontSize="11"
+                   Margin="0,8,0,0" TextWrapping="Wrap"
+                   Text="目安実行時間は経験的な係数による試算です。非線形性・収束性により実時間とは大きく異なる場合があります。"/>
+
+        <!-- フッター -->
+        <Grid Grid.Row="4" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <CheckBox Grid.Column="0" x:Name="DoNotShowAgainCheckBox"
+                      Content="次回から表示しない" Foreground="#888"
+                      VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="キャンセル" IsCancel="True"
+                    MinWidth="84" Padding="12,6" Margin="0,0,8,0"/>
+            <Button Grid.Column="2" Content="実行" IsDefault="True"
+                    Click="OkButton_Click"
+                    MinWidth="84" Padding="12,6"
+                    Background="{StaticResource PrimaryAccentBrush}" Foreground="White"
+                    FontWeight="SemiBold"/>
+        </Grid>
+    </Grid>
+</Window>

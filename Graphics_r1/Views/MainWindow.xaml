@@ -716,7 +716,7 @@
 
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -1005,7 +1005,7 @@
                                                LargeImageSource="pack://application:,,,/Icons/GridVisible.png"
                                                SmallImageSource="pack://application:,,,/Icons/GridVisible.png"
                                                ToolTip="定義した通り心の表示／非表示を切り替えます。"/>
-                    <ribbon:RibbonToggleButton Label="XYZ軸" IsChecked="{Binding IsXYZAxesVisible}"
+                    <ribbon:RibbonToggleButton Label="XYZ 軸" IsChecked="{Binding IsXYZAxesVisible}"
                                                LargeImageSource="pack://application:,,,/Icons/AxesVisible.png"
                                                SmallImageSource="pack://application:,,,/Icons/AxesVisible.png"
                                                ToolTip="XYZ座標軸の表示／非表示を切り替えます。"/>
@@ -1038,7 +1038,7 @@
                                                 IsChecked="{Binding IsEmbedmentBoxVisible}"
                                                 SmallImageSource="pack://application:,,,/Icons/IsEmbedmentBoxVisible.png"/>
                     <!-- 梁系 -->
-                    <ribbon:RibbonSplitButton Label="梁中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
+                    <ribbon:RibbonSplitButton Label="梁 中心線" IsCheckable="True" IsChecked="{Binding IsFoundationBeamVisible}"
                                               ribbon:RibbonControlService.ToolTipTitle="梁中心線"
                                               ribbon:RibbonControlService.ToolTipDescription="梁中心線の表示／非表示を切り替えます。▼メニューから杭中心線・要素軸の表示を個別に制御できます。"
                                               LargeImageSource="pack://application:,,,/Icons/ElementVisible.png"
@@ -1128,7 +1128,7 @@
                 
                 <!-- 土層・土質点関連 -->
                 <ribbon:RibbonGroup Header="土層・土質点" SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png">
-                    <ribbon:RibbonToggleButton Label="杭周土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
+                    <ribbon:RibbonToggleButton Label="杭周 土層" ToolTip="杭周土層の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsGroundVisible}"
                                                    LargeImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"
                                                    SmallImageSource="pack://application:,,,/Icons/SurroundingSoilVisible.png"/>
@@ -1162,7 +1162,7 @@
 
                 <!-- 地盤変位 -->
                 <ribbon:RibbonGroup Header="地盤変位" SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png">
-                    <ribbon:RibbonToggleButton Label="地盤変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
+                    <ribbon:RibbonToggleButton Label="地盤 変位" ToolTip="地盤変位の表示／非表示を切り替えます。"
                                                    IsChecked="{Binding IsForcedDisplacementVisible}"
                                                    LargeImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"
                                                    SmallImageSource="pack://application:,,,/Icons/IsForcedDispVisible.png"/>
@@ -1184,69 +1184,62 @@
 
                 <!-- XYZ平行軸グループは目盛・通り心に統合済み -->
 
-                <!-- 選択・表示 -->
+                <!-- 選択・表示 (Small icons のみ) -->
                 <ribbon:RibbonGroup Header="選択・表示" SmallImageSource="pack://application:,,,/Icons/ActiveAll.png">
                     <ribbon:RibbonButton ToolTip="すべて選択 (Ctrl + Shift + A)"
                              Click="SelectAllNodesButton_Click"
-                             LargeImageSource="pack://application:,,,/Icons/SelectAll.png"
                              SmallImageSource="pack://application:,,,/Icons/SelectAll.png"/>
                     <ribbon:RibbonButton ToolTip="全選択解除 (Esc)"
                              Click="DeselectAllNodesButton_Click"
-                             LargeImageSource="pack://application:,,,/Icons/DeselectAll.png"
                              SmallImageSource="pack://application:,,,/Icons/DeselectAll.png"/>
                     <ribbon:RibbonSeparator/>
                     <ribbon:RibbonButton ToolTip="すべてアクティブ (Ctrl + A)"
                              Click="ShowAllNodesButton_Click"
-                             LargeImageSource="pack://application:,,,/Icons/ActiveAll.png"
                              SmallImageSource="pack://application:,,,/Icons/ActiveAll.png"/>
                     <ribbon:RibbonButton ToolTip="選択のみアクティブ (F2)"
                              Click="ShowSelectedNodesButton_Click"
-                             LargeImageSource="pack://application:,,,/Icons/SelectedActive.png"
                              SmallImageSource="pack://application:,,,/Icons/SelectedActive.png"/>
                     <ribbon:RibbonButton ToolTip="選択を非アクティブ (Shift + F2)"
                              Click="ShowUnselectedNodesButton_Click"
-                             LargeImageSource="pack://application:,,,/Icons/SelectedInactive.png"
                              SmallImageSource="pack://application:,,,/Icons/SelectedInactive.png"/>
                     <ribbon:RibbonButton ToolTip="アクティブ反転"
                              Click="InvertActiveNodesButton_click"
-                             LargeImageSource="pack://application:,,,/Icons/InvertActive.png"
                              SmallImageSource="pack://application:,,,/Icons/InvertActive.png"/>
                 </ribbon:RibbonGroup>
 
 
-                <!-- ビュー切替 -->
+                <!-- ビュー切替 (Small icons のみ) -->
                 <ribbon:RibbonGroup Header="ビュー切替" SmallImageSource="pack://application:,,,/Icons/ZoomFit.png">
                     <ribbon:RibbonButton Label="ズームフィット" Command="{Binding ZoomFitCommand}"
-                                         LargeImageSource="pack://application:,,,/Icons/ZoomFit.png"
                                          SmallImageSource="pack://application:,,,/Icons/ZoomFit.png"
                                          ToolTip="ズームフィット (ctrl + 0)"/>
                     <ribbon:RibbonButton Label="平面" Command="{Binding ViewXYPlaneCommand}"
-                                         LargeImageSource="pack://application:,,,/Icons/TopView.png"
                                          SmallImageSource="pack://application:,,,/Icons/TopView.png"
                                          ToolTip="平面 (Ctrl + Shift + T)"/>
                     <ribbon:RibbonButton Label="正面" Command="{Binding ViewXZPlaneCommand}"
-                                         LargeImageSource="pack://application:,,,/Icons/FrontView.png"
                                          SmallImageSource="pack://application:,,,/Icons/FrontView.png"
                                          ToolTip="正面 (Ctrl + Shift + F)"/>
                     <ribbon:RibbonButton Label="右面" Command="{Binding ViewYZPlaneCommand}"
-                                         LargeImageSource="pack://application:,,,/Icons/RightView.png"
                                          SmallImageSource="pack://application:,,,/Icons/RightView.png"
                                          ToolTip="右面 (Ctrl + Shift + R)"/>
                     <ribbon:RibbonButton Label="アイソメ" Command="{Binding ViewIsometricCommand}"
-                                         LargeImageSource="pack://application:,,,/Icons/IsometricView.png"
                                          SmallImageSource="pack://application:,,,/Icons/IsometricView.png"
                                          ToolTip="アイソメ (Ctrl + Shift + I)"/>
                 </ribbon:RibbonGroup>
 
 
                 <!-- 値表示・ダイアグラムスケール・テキスト 統合グループ（右端、解析結果タブと同じ） -->
-                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示">
+                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示"
+                                    LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
+                                    SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
                     <StackPanel Orientation="Horizontal">
                         <!-- ダイアグラムスケールセクション（2 行: 応力 / 変位） -->
                         <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="応力" VerticalAlignment="Center" Width="28"
-                                           ToolTip="ダイアグラムスケール（応力）"/>
+                                <Image Source="pack://application:,,,/Icons/LoadForceScale.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="ダイアグラムスケール（応力）"/>
                                 <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                         TickFrequency="0.1" IsSnapToTickEnabled="False"
                                         Value="{Binding ForceDiagramRatio}"
@@ -1256,8 +1249,10 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
                                     Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="変位" VerticalAlignment="Center" Width="28"
-                                           ToolTip="ダイアグラムスケール（変位）"/>
+                                <Image Source="pack://application:,,,/Icons/DisplacementScale.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="ダイアグラムスケール（変位）"/>
                                 <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                         TickFrequency="0.1" IsSnapToTickEnabled="False"
                                         Value="{Binding DisplacementDiagramRatio}"
@@ -1270,9 +1265,12 @@
                         <!-- 区切り -->
                         <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
 
-                        <!-- テキストサイズセクション（1 行） -->
+                        <!-- テキストサイズセクション（1 行、LabelSize アイコン） -->
                         <StackPanel Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center">
-                            <TextBlock Text="テキスト" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <Image Source="pack://application:,,,/Icons/LabelSize.png"
+                                   Width="16" Height="16" Margin="0,0,4,0"
+                                   VerticalAlignment="Center"
+                                   ToolTip="テキストサイズ"/>
                             <ComboBox Width="50"
                                   ItemsSource="{Binding LabelSizeOption}"
                                   SelectedItem="{Binding LabelSize}"
@@ -1300,7 +1298,10 @@
                                       IsEnabled="{Binding IsResultValueVisible}"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
-                                <TextBlock Text="位置" VerticalAlignment="Center" Width="28"/>
+                                <Image Source="pack://application:,,,/Icons/AdjustTextPositions.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="位置調整"/>
                                 <Slider Width="70" Minimum="0" Maximum="20"
                                     Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
@@ -1309,7 +1310,10 @@
                                      KeyDown="TextBox_KeyDown"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
-                                <TextBlock Text="小数" VerticalAlignment="Center" Width="28"/>
+                                <Image Source="pack://application:,,,/Icons/DecimalPoint.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="小数桁数"/>
                                 <Slider Width="70" Minimum="0" Maximum="5"
                                     Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
@@ -1326,7 +1330,7 @@
             <ribbon:RibbonTab Header="解析条件/解析(S)" KeyTip="S">
                 <ribbon:RibbonGroup Header="解析条件設定">
                     <ribbon:RibbonButton x:Name="ButtonFundamental"
-                         Label="基本設定"
+                         Label="基本 設定"
                          ToolTip="基本設定 (Ctrl+E)"
                          Command="{Binding OpenFundamentalWindowCommand}"
                          LargeImageSource="pack://application:,,,/Icons/FundamentalWindow.png"
@@ -1353,7 +1357,7 @@
                          SmallImageSource="pack://application:,,,/Icons/PileBodyWindow.png"/>
 
                     <ribbon:RibbonButton x:Name="RibbonButtonAxialForceCheck"
-                         Label="軸力確認"
+                         Label="軸力 確認"
                          PreviewMouseDown="ButtonPileBody_PreviewMouseDown"
                          Command="{Binding AxialForceCheckCommand}"
                          LargeImageSource="pack://application:,,,/Icons/AxialForceVeirification.png"
@@ -1473,7 +1477,7 @@
 
             <ribbon:RibbonTab x:Name="AnalysisResultRibbonTab" Header="解析結果(R)" KeyTip="R">
                 <ribbon:RibbonGroup Header="解析結果表示">
-                    <ribbon:RibbonToggleButton Label="杭・梁要素"
+                    <ribbon:RibbonToggleButton Label="杭・梁 要素"
                         ToolTip="杭・梁要素の解析結果表示/非表示"
                         IsChecked="{Binding IsAnalysisResultVisible}"
                         IsEnabled="{Binding HasAnyAnalysisResult}"
@@ -1646,7 +1650,7 @@
                             </i:EventTrigger>
                         </i:Interaction.Triggers>
                     </ComboBox>
-                    <ribbon:RibbonToggleButton Label="群杭グリッド変位"
+                    <ribbon:RibbonToggleButton Label="群杭グリッド 変位"
                                ToolTip="群杭グリッド変位表示"
                                IsChecked="{Binding IsGroupPileGridDeformationVisible}"
                                LargeImageSource="pack://application:,,,/Icons/GroupPileContorVisible.png"
@@ -1654,7 +1658,7 @@
                 </ribbon:RibbonGroup>
                 
                 <ribbon:RibbonGroup Header="バブル">
-                    <ribbon:RibbonSplitButton Label="バブル表示" IsCheckable="True"
+                    <ribbon:RibbonSplitButton Label="バブル 表示" IsCheckable="True"
                                               IsChecked="{Binding IsBubbleVisible}"
                                               LargeImageSource="pack://application:,,,/Icons/BubbleVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/BubbleVisible.png"
@@ -1674,7 +1678,7 @@
 
 
                 <ribbon:RibbonGroup Header="矢印">
-                    <ribbon:RibbonSplitButton Label="矢印表示" IsCheckable="True"
+                    <ribbon:RibbonSplitButton Label="矢印 表示" IsCheckable="True"
                                               IsChecked="{Binding IsArrowVisible}"
                                               LargeImageSource="pack://application:,,,/Icons/ArrowVisible.png"
                                               SmallImageSource="pack://application:,,,/Icons/ArrowVisible.png"
@@ -1713,7 +1717,7 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="変形後">
-                    <ribbon:RibbonToggleButton Label="変形後形状"
+                    <ribbon:RibbonToggleButton Label="変形後 形状"
                                    IsChecked="{Binding IsDeformedElementVisible}"
                                    LargeImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"
                                    SmallImageSource="pack://application:,,,/Icons/DeformedElementVisible.png"
@@ -1721,12 +1725,12 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="グラフ・テーブル">
-                    <ribbon:RibbonButton Label="グラフ出力"
+                    <ribbon:RibbonButton Label="グラフ 出力"
                              ToolTip="杭変位応力グラフ・沈下曲線などの結果グラフウィンドウを開きます。"
                              Command="{Binding OpenGraphWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Graph.png"
                              SmallImageSource="pack://application:,,,/Icons/Graph.png"/>
-                    <ribbon:RibbonButton Label="テーブル出力"
+                    <ribbon:RibbonButton Label="テーブル 出力"
                              ToolTip="解析結果をテーブル形式で表示します。"
                              Command="{Binding OpenTableWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Table.png"
@@ -1734,7 +1738,7 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="ログ">
-                    <ribbon:RibbonButton Label="ログ表示"
+                    <ribbon:RibbonButton Label="ログ 表示"
                              ToolTip="解析ログウィンドウを開きます。"
                              Command="{Binding OpenLogWindowCommand}"
                              LargeImageSource="pack://application:,,,/Icons/Log.png"
@@ -1750,13 +1754,17 @@
                 </ribbon:RibbonGroup>
 
                 <!-- 値表示・ダイアグラムスケール・テキスト 統合グループ（右端） -->
-                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示">
+                <ribbon:RibbonGroup Header="ダイアグラムスケール・テキスト・値表示"
+                                    LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
+                                    SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
                     <StackPanel Orientation="Horizontal">
                         <!-- ダイアグラムスケールセクション（2 行: 応力 / 変位） -->
                         <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="応力" VerticalAlignment="Center" Width="28"
-                                           ToolTip="ダイアグラムスケール（応力）"/>
+                                <Image Source="pack://application:,,,/Icons/LoadForceScale.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="ダイアグラムスケール（応力）"/>
                                 <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                         TickFrequency="0.1" IsSnapToTickEnabled="False"
                                         Value="{Binding ForceDiagramRatio}"
@@ -1766,8 +1774,10 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
                                     Visibility="{Binding IsDisplacementDiagramRatioApplicable, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="変位" VerticalAlignment="Center" Width="28"
-                                           ToolTip="ダイアグラムスケール（変位）"/>
+                                <Image Source="pack://application:,,,/Icons/DisplacementScale.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="ダイアグラムスケール（変位）"/>
                                 <Slider Width="70" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                         TickFrequency="0.1" IsSnapToTickEnabled="False"
                                         Value="{Binding DisplacementDiagramRatio}"
@@ -1780,9 +1790,12 @@
                         <!-- 区切り -->
                         <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
 
-                        <!-- テキストサイズセクション（1 行） -->
+                        <!-- テキストサイズセクション（1 行、LabelSize アイコン） -->
                         <StackPanel Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center">
-                            <TextBlock Text="テキスト" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <Image Source="pack://application:,,,/Icons/LabelSize.png"
+                                   Width="16" Height="16" Margin="0,0,4,0"
+                                   VerticalAlignment="Center"
+                                   ToolTip="テキストサイズ"/>
                             <ComboBox Width="50"
                                   ItemsSource="{Binding LabelSizeOption}"
                                   SelectedItem="{Binding LabelSize}"
@@ -1810,7 +1823,10 @@
                                       IsEnabled="{Binding IsResultValueVisible}"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
-                                <TextBlock Text="位置" VerticalAlignment="Center" Width="28"/>
+                                <Image Source="pack://application:,,,/Icons/AdjustTextPositions.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="位置調整"/>
                                 <Slider Width="70" Minimum="0" Maximum="20"
                                     Value="{Binding TextPositionAdjuster, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
@@ -1819,7 +1835,10 @@
                                      KeyDown="TextBox_KeyDown"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
-                                <TextBlock Text="小数" VerticalAlignment="Center" Width="28"/>
+                                <Image Source="pack://application:,,,/Icons/DecimalPoint.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="小数桁数"/>
                                 <Slider Width="70" Minimum="0" Maximum="5"
                                     Value="{Binding DecimalPlaces, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBox Width="35" HorizontalContentAlignment="Right" Margin="4,0,0,0"
@@ -1843,32 +1862,32 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="ライブラリ">
-                    <ribbon:RibbonButton Label="杭断面ライブラリ" ToolTip="杭ライブラリを確認"
+                    <ribbon:RibbonButton Label="杭断面 ライブラリ" ToolTip="杭ライブラリを確認"
                         Command="{Binding OpenPileSectionLibraryWindowCommand}"
                         LargeImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"
                         SmallImageSource="pack://application:,,,/Icons/PileSectionLibrary.png"/>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="画像">
-                    <ribbon:RibbonButton Label="画像コピー(x1.0)"
+                    <ribbon:RibbonButton Label="画像コピー (x1.0)"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（等倍）"
                              Command="{Binding ImageCopyCommand}"
                              LargeImageSource="pack://application:,,,/Icons/CopyPicture1.png"
                              SmallImageSource="pack://application:,,,/Icons/CopyPicture1.png"
                              CommandParameter="1.0"/>
-                    <ribbon:RibbonButton Label="画像コピー(x2.0)"
+                    <ribbon:RibbonButton Label="画像コピー (x2.0)"
                              ToolTip="現在の画面を画像としてクリップボードにコピー（2倍解像度）"
                              Command="{Binding ImageCopyCommand}"
                              LargeImageSource="pack://application:,,,/Icons/CopyPicture2.png"
                              SmallImageSource="pack://application:,,,/Icons/CopyPicture2.png"
                              CommandParameter="2.0"/>
-                    <ribbon:RibbonButton Label="画像保存(x1.0)"
+                    <ribbon:RibbonButton Label="画像保存 (x1.0)"
                              ToolTip="現在の画面を画像ファイルとして保存（等倍）"
                              Command="{Binding ImageSaveCommand}"
                              LargeImageSource="pack://application:,,,/Icons/SavePicture1.png"
                              SmallImageSource="pack://application:,,,/Icons/SavePicture1.png"
                              CommandParameter="1.0"/>
-                    <ribbon:RibbonButton Label="画像保存(x2.0)"
+                    <ribbon:RibbonButton Label="画像保存 (x2.0)"
                              ToolTip="現在の画面を画像ファイルとして保存（2倍解像度）"
                              Command="{Binding ImageSaveCommand}"
                              LargeImageSource="pack://application:,,,/Icons/SavePicture2.png"
@@ -1877,22 +1896,22 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="エクスポート">
-                    <ribbon:RibbonButton Label="3dm出力"
+                    <ribbon:RibbonButton Label="3dm 出力"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
                         Command="{Binding Export3dmFileCommand}"
                         LargeImageSource="pack://application:,,,/Icons/rhino8-.png"
                         SmallImageSource="pack://application:,,,/Icons/rhino8-.png"/>
-                    <ribbon:RibbonButton Label="DXF(3D)"
+                    <ribbon:RibbonButton Label="DXF (3D)"
                         ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
                         Command="{Binding ExportDxfFileCommand}"
                         LargeImageSource="pack://application:,,,/Icons/dxf.png"
                         SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
-                    <ribbon:RibbonButton Label="DXF(伏図)"
+                    <ribbon:RibbonButton Label="DXF (伏図)"
                         ToolTip="杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXFファイルにエクスポート"
                         Command="{Binding ExportDxfPlanFileCommand}"
                         LargeImageSource="pack://application:,,,/Icons/dxf.png"
                         SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
-                    <ribbon:RibbonButton Label="MGT出力"
+                    <ribbon:RibbonButton Label="MGT 出力"
                         ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組み合わせを含む）"
                         Command="{Binding ExportMgtFileCommand}"
                         LargeImageSource="pack://application:,,,/Icons/mgtFile.png"
@@ -1905,14 +1924,14 @@
             <ribbon:RibbonTab Header="ウィンドウ(W)" KeyTip="W">
                 <ribbon:RibbonGroup Header="パネル">
                     <ribbon:RibbonToggleButton x:Name="LeftTabsToggle"
-                                         Label="データタブ"
+                                         Label="データ タブ"
                                          ToolTip="データタブ（一般節点～群杭荷重）の表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleLeftTabs_Click"
                                          LargeImageSource="pack://application:,,,/Icons/DataTabVisible.png"
                                          SmallImageSource="pack://application:,,,/Icons/DataTabVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="InputDataPanelToggle"
-                                         Label="入力データ"
+                                         Label="入力 データ"
                                          ToolTip="入力データパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleInputDataPanel_Click"
@@ -1926,7 +1945,7 @@
                                          LargeImageSource="pack://application:,,,/Icons/PropertyVisible.png"
                                          SmallImageSource="pack://application:,,,/Icons/PropertyVisible.png"/>
                     <ribbon:RibbonToggleButton x:Name="MinimapPanelToggle"
-                                         Label="ミニマップ"
+                                         Label="ミニ マップ"
                                          ToolTip="ミニマップパネルの表示/非表示"
                                          IsChecked="True"
                                          Click="ToggleMinimapPanel_Click"
@@ -1934,7 +1953,7 @@
                                          SmallImageSource="pack://application:,,,/Icons/MiniMapVisible.png"/>
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="3Dビュー">
-                    <ribbon:RibbonToggleButton Label="ビューキューブ"
+                    <ribbon:RibbonToggleButton Label="ビュー キューブ"
                                                 ToolTip="ビューキューブの表示/非表示"
                                                 IsChecked="{Binding IsViewCubeVisible}"
                                                 LargeImageSource="pack://application:,,,/Icons/ViewCubeVisible.png"
@@ -1947,8 +1966,8 @@
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="説明用">
-                    <ribbon:RibbonToggleButton Label="入力状況表示"
-                        ToolTip="マウス・キーボード入力状態を画面右下に表示"
+                    <ribbon:RibbonToggleButton Label="INPUT 表示"
+                        ToolTip="マウス・キーボード入力状態を画面右下に表示 (F12)"
                         IsChecked="{Binding IsInputVisualizerVisible}"
                         LargeImageSource="pack://application:,,,/Icons/Mouse.png"
                         SmallImageSource="pack://application:,,,/Icons/Mouse.png"/>
@@ -1964,7 +1983,7 @@
                                  LargeImageSource="pack://application:,,,/Icons/Help.png"
                                  SmallImageSource="pack://application:,,,/Icons/Help.png"/>
                     <ribbon:RibbonToggleButton x:Name="RibbonToggleQuickHint"
-                                   Label="クイックヒント"
+                                   Label="クイック ヒント"
                                                ToolTip="クイックヒント (Shift + F1)"
                                    IsChecked="{Binding IsQuickHintVisible}"
                                    LargeImageSource="pack://application:,,,/Icons/QuickHint.png"
@@ -1973,7 +1992,7 @@
                                    Unchecked="QuickHintToggle_Unchecked"
                                    KeyTip="Q"/>
                     <ribbon:RibbonButton x:Name="RibbonButtonShortcutKeys"
-                                 Label="ショートカット"
+                                 Label="ショート カット"
                                  ToolTip="ショートカット (Ctrl + /)"
                                  Command="{Binding OpenShortcutKeysWindowCommand}"
                                  LargeImageSource="pack://application:,,,/Icons/ShortcutKeys.png"
@@ -5725,9 +5744,36 @@
 
                                     <!-- ヘッダー -->
                                     <Border Grid.Row="0" Background="#F0F0F0" Padding="8,6">
-                                        <TextBlock Text="{Binding SelectedItemHeader}"
-                                                   FontWeight="SemiBold" FontSize="13"
-                                                   Foreground="#333"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding SelectedItemHeader}"
+                                                       FontWeight="SemiBold" FontSize="13"
+                                                       Foreground="#333"
+                                                       VerticalAlignment="Center"/>
+                                            <!-- 複数選択時のみ表示する total/each トグル -->
+                                            <StackPanel Grid.Column="1"
+                                                        Orientation="Horizontal"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding IsMultipleSelection, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <RadioButton Content="合計"
+                                                             FontSize="11"
+                                                             Padding="6,2"
+                                                             GroupName="PropDisplayMode"
+                                                             IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay}"
+                                                             ToolTip="複数杭の合計値を表示"/>
+                                                <RadioButton Content="各値"
+                                                             FontSize="11"
+                                                             Padding="6,2"
+                                                             Margin="4,0,0,0"
+                                                             GroupName="PropDisplayMode"
+                                                             IsChecked="{Binding PropertyDisplayIsTotal, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
+                                                             ToolTip="各杭の値 (異なれば (various)) を表示"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
 
                                     <!-- プロパティ一覧（スクロール可能） -->
@@ -5902,14 +5948,16 @@
                 <TextBlock Text="{Binding SelectionCountText}" Foreground="#E95541" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding PileCountText}" Foreground="DarkBlue" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding AnalysisStatusText}" Foreground="DarkGreen" Margin="0,0,16,0"/>
+                <TextBlock Text="{Binding LastAnalysisTimeText}" Foreground="#3271AD" Margin="0,0,16,0"
+                           ToolTip="直近で完了した解析の時刻"/>
+                <TextBlock Text="{Binding LastAutoSaveText}" Foreground="{Binding LastAutoSaveBrush}" Margin="0,0,16,0"
+                           ToolTip="自動保存の最終結果（失敗時は赤）"/>
                 <TextBlock Text="{Binding MouseCoordinateText}" Foreground="#555" Margin="0,0,16,0"/>
                 <TextBlock Text="{Binding ZoomText}" Foreground="Gray" Margin="0,0,0,0"/>
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
 
-                <!-- 入力ビジュアライザー（マウス・キーボード状態表示） -->
-                <views:InputVisualizer Visibility="{Binding IsInputVisualizerVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                       Margin="4,0,8,0"/>
+                <!-- 入力ビジュアライザーはフロートウィンドウ (InputVisualizerWindow) に移動 -->
 
                 <!-- 右余白（無描画帯）コントロール -->
                 <Separator Width="8" Opacity="0"/>

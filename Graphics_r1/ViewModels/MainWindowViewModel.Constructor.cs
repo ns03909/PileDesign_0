@@ -198,6 +198,31 @@ namespace PileDesign.ViewModels
         // プロパティパネル: 選択アイテムのプロパティ一覧
         public ObservableCollection<PropertyPanelItem> SelectedItemProperties { get; } = [];
 
+        // プロパティパネル: 複数選択時の表示モード (true=合計、false=各値)
+        [ObservableProperty]
+        private bool _propertyDisplayIsTotal = true;
+
+        partial void OnPropertyDisplayIsTotalChanged(bool value)
+        {
+            // 表示モード変更時にプロパティパネルを再構築
+            UpdatePropertyPanel();
+        }
+
+        // プロパティパネル: 複数選択中かどうか (トグルボタン表示制御用)
+        public bool IsMultipleSelection
+        {
+            get
+            {
+                var pileCount = CurrentInputModel?.PileLayoutItems?.Count(p => p.IsSelected) ?? 0;
+                if (pileCount > 1) return true;
+                var beamCount = CurrentInputModel?.FoundationBeamInput?.Beams?.Count(b => b.IsSelected) ?? 0;
+                if (beamCount > 1) return true;
+                var nodeCount = CurrentInputModel?.InputNodes?.Count(n => n.IsSelected && n.Type == Models.InputData.NodeType.General) ?? 0;
+                if (nodeCount > 1) return true;
+                return false;
+            }
+        }
+
         // プロパティパネル: 選択中アイテムのPropertyChanged購読管理
         private INotifyPropertyChanged? _subscribedPropertyItem;
 
@@ -235,6 +260,7 @@ namespace PileDesign.ViewModels
 
             SelectedItemProperties.Clear();
             OnPropertyChanged(nameof(SelectedItemHeader));
+            OnPropertyChanged(nameof(IsMultipleSelection));
 
             // 杭
             var piles = CurrentInputModel?.PileLayoutItems?.Where(p => p.IsSelected).ToList();
@@ -529,11 +555,17 @@ namespace PileDesign.ViewModels
 
             SelectedItemProperties.Add(new("選択数", $"{piles.Count} 本"));
 
-            // 杭長合計（読み取り専用）
+            // 杭長 (total/each 切替、読み取り専用)
             double totalPileLen = 0; int countValidLen = 0;
-            foreach (var p in piles) { var l = CalcPileLength(p); if (l.HasValue) { totalPileLen += l.Value; countValidLen++; } }
+            var pileLengths = new List<double>();
+            foreach (var p in piles) { var l = CalcPileLength(p); if (l.HasValue) { totalPileLen += l.Value; countValidLen++; pileLengths.Add(l.Value); } }
             if (countValidLen > 0)
-                SelectedItemProperties.Add(new("杭長 (total)", $"{totalPileLen:F3} m"));
+            {
+                if (PropertyDisplayIsTotal)
+                    SelectedItemProperties.Add(new("杭長 (total)", $"{totalPileLen:F3} m"));
+                else
+                    SelectedItemProperties.Add(new("杭長 (each)", $"{CommonDoubleOrVarious(pileLengths)} m"));
+            }
 
             // 杭体No（ComboBox: 同一値なら選択可、様々なら空欄）
             var commonPileBodyNo = piles.Select(p => p.PileBodyNo).Distinct().ToList();
@@ -592,45 +624,66 @@ namespace PileDesign.ViewModels
                     RequestUpdateWindow();
                 }));
 
-            // 軸力 VL（合計：読み取り専用）— ディープブルー
-            SelectedItemProperties.Add(new("軸力 VL (total)", $"{piles.Sum(p => p.AxialForceVL):F1} kN", nameColor: "#3271AD"));
+            // 軸力 VL (total/each 切替、読み取り専用) — ディープブルー
+            if (PropertyDisplayIsTotal)
+                SelectedItemProperties.Add(new("軸力 VL (total)", $"{piles.Sum(p => p.AxialForceVL):F1} kN", nameColor: "#3271AD"));
+            else
+                SelectedItemProperties.Add(new("軸力 VL (each)", $"{CommonDoubleOrVarious(piles.Select(p => p.AxialForceVL), "F1")} kN", nameColor: "#3271AD"));
 
-            // レベル1軸力 — 緑
+            // レベル1軸力 — 緑 (total: 合計・読み取り専用、each: 各値・編集可)
             int level1Count = piles.Min(p => p.AxialForceLevel1s.Count);
             for (int i = 0; i < level1Count; i++)
             {
                 int idx = i;
-                SelectedItemProperties.Add(new($"軸力 1-{i + 1}",
-                    CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1"), "kN",
-                    PropertyInputType.Number,
-                    (item, rawValue) =>
-                    {
-                        if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
-                        if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
-                        SaveUndoState();
-                        foreach (var p in piles) p.AxialForceLevel1s[idx] = newVal;
-                        RequestUpdateWindow();
-                    },
-                    nameColor: "#238966"));
+                if (PropertyDisplayIsTotal)
+                {
+                    SelectedItemProperties.Add(new($"軸力 1-{i + 1} (total)",
+                        $"{piles.Sum(p => p.AxialForceLevel1s[idx]):F1} kN",
+                        nameColor: "#238966"));
+                }
+                else
+                {
+                    SelectedItemProperties.Add(new($"軸力 1-{i + 1} (each)",
+                        CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1"), "kN",
+                        PropertyInputType.Number,
+                        (item, rawValue) =>
+                        {
+                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
+                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel1s[idx]), "F1")); return; }
+                            SaveUndoState();
+                            foreach (var p in piles) p.AxialForceLevel1s[idx] = newVal;
+                            RequestUpdateWindow();
+                        },
+                        nameColor: "#238966"));
+                }
             }
 
-            // レベル2軸力 — 赤
+            // レベル2軸力 — 赤 (total: 合計・読み取り専用、each: 各値・編集可)
             int level2Count = piles.Min(p => p.AxialForceLevel2s.Count);
             for (int i = 0; i < level2Count; i++)
             {
                 int idx = i;
-                SelectedItemProperties.Add(new($"軸力 2-{i + 1}",
-                    CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1"), "kN",
-                    PropertyInputType.Number,
-                    (item, rawValue) =>
-                    {
-                        if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
-                        if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
-                        SaveUndoState();
-                        foreach (var p in piles) p.AxialForceLevel2s[idx] = newVal;
-                        RequestUpdateWindow();
-                    },
-                    nameColor: "#D82531"));
+                if (PropertyDisplayIsTotal)
+                {
+                    SelectedItemProperties.Add(new($"軸力 2-{i + 1} (total)",
+                        $"{piles.Sum(p => p.AxialForceLevel2s[idx]):F1} kN",
+                        nameColor: "#D82531"));
+                }
+                else
+                {
+                    SelectedItemProperties.Add(new($"軸力 2-{i + 1} (each)",
+                        CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1"), "kN",
+                        PropertyInputType.Number,
+                        (item, rawValue) =>
+                        {
+                            if (!double.TryParse(rawValue, out var newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
+                            if (!CheckAndResetAnalysisResults()) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => p.AxialForceLevel2s[idx]), "F1")); return; }
+                            SaveUndoState();
+                            foreach (var p in piles) p.AxialForceLevel2s[idx] = newVal;
+                            RequestUpdateWindow();
+                        },
+                        nameColor: "#D82531"));
+                }
             }
         }
 
@@ -682,6 +735,46 @@ namespace PileDesign.ViewModels
                 if (IsVerticalBeamAnalysisDone) statuses.Add("梁鉛直解析完了");
                 return statuses.Count > 0 ? string.Join(" | ", statuses) : "未解析";
             }
+        }
+
+        // 直近の解析完了時刻 (ステータスバー表示用)。各解析の完了処理から SetLatestAnalysisCompleted() で更新。
+        private DateTime? _lastAnalysisTime;
+        public DateTime? LastAnalysisTime
+        {
+            get => _lastAnalysisTime;
+            private set
+            {
+                if (SetProperty(ref _lastAnalysisTime, value))
+                    OnPropertyChanged(nameof(LastAnalysisTimeText));
+            }
+        }
+
+        public string LastAnalysisTimeText => _lastAnalysisTime is { } t
+            ? $"最終解析: {t:HH:mm:ss}"
+            : "";
+
+        /// <summary>
+        /// 各解析 (水平 / 沈下 / 梁鉛直) が完了したときに呼び出す。ステータスバーに完了時刻を表示する。
+        /// </summary>
+        public void SetLatestAnalysisCompleted()
+        {
+            LastAnalysisTime = DateTime.Now;
+        }
+
+        // 直近の自動保存状態表示 (ステータスバー用)。OnAutoSaveCompleted から更新。
+        // StatusMessage を上書きしないことで一過性メッセージとの衝突を避ける。
+        private string _lastAutoSaveText = "";
+        public string LastAutoSaveText
+        {
+            get => _lastAutoSaveText;
+            private set => SetProperty(ref _lastAutoSaveText, value);
+        }
+
+        private Brush _lastAutoSaveBrush = Brushes.Gray;
+        public Brush LastAutoSaveBrush
+        {
+            get => _lastAutoSaveBrush;
+            private set => SetProperty(ref _lastAutoSaveBrush, value);
         }
 
         // リボン最小化
@@ -2536,6 +2629,7 @@ namespace PileDesign.ViewModels
                 if (!SetProperty(ref _isVerticalAnalysisDone, value))
                     return;
 
+                if (value) SetLatestAnalysisCompleted();
                 OnPropertyChanged(nameof(HasAnyAnalysisResult));
 
                 const string settlementLabel = "沈下量";
@@ -2663,6 +2757,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isVerticalBeamAnalysisDone, value))
                 {
+                    if (value) SetLatestAnalysisCompleted();
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
                     OnPropertyChanged(nameof(AnalysisStatusText));
                     OnPropertyChanged(nameof(AvailableLoadingTypeOptions));
@@ -2720,6 +2815,7 @@ namespace PileDesign.ViewModels
             {
                 if (SetProperty(ref _isHorizontalAnalysisDone, value))
                 {
+                    if (value) SetLatestAnalysisCompleted();
                     OnPropertyChanged(nameof(HasAnyAnalysisResult));
 
                     // "梁応力（水平）"の表示制御

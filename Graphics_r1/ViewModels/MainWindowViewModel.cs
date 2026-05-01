@@ -5171,15 +5171,19 @@ namespace PileDesign.ViewModels
         /// </summary>
         private void OnAutoSaveCompleted(object? sender, AutoSaveEventArgs e)
         {
+            // StatusMessage は他の一過性メッセージ用に温存。AutoSave 状態は専用の
+            // LastAutoSaveText に出すことで衝突を避ける。
             if (e.Success)
             {
-                StatusMessage = $"自動保存完了 ({e.Timestamp:HH:mm:ss})";
+                LastAutoSaveText = $"自動保存: {e.Timestamp:HH:mm:ss}";
+                LastAutoSaveBrush = Brushes.Gray;
             }
             else
             {
-                StatusMessage = $"自動保存失敗: {e.ErrorMessage}";
+                LastAutoSaveText = $"自動保存失敗 ({e.Timestamp:HH:mm:ss})";
+                LastAutoSaveBrush = Brushes.Red;
 
-                // 連続失敗が 3 回以上に達したら StatusMessage に加えて Toast でエスカレーション通知。
+                // 連続失敗が 3 回以上に達したら Toast でエスカレーション通知。
                 // 3 分間隔 × 3 回 = ~9 分間 AutoSave が動作していない計算で、ユーザーに気付かせるべきタイミング。
                 if (e.ConsecutiveFailures >= 3)
                 {

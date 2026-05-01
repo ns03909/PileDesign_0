@@ -133,15 +133,16 @@ namespace PileDesign
             _handlingFatal = true;
 
             string emergencySavePath = "(緊急保存に失敗)";
+            string? emergencyPathOrNull = null;
             try
             {
                 Log.Fatal(ex, "Fatal exception from {Source}", source);
 
-                var path = CurrentMainViewModel?.TryEmergencyAutoSave();
-                if (!string.IsNullOrEmpty(path))
+                emergencyPathOrNull = CurrentMainViewModel?.TryEmergencyAutoSave();
+                if (!string.IsNullOrEmpty(emergencyPathOrNull))
                 {
-                    emergencySavePath = path;
-                    Log.Information("Emergency AutoSave saved to {Path}", path);
+                    emergencySavePath = emergencyPathOrNull;
+                    Log.Information("Emergency AutoSave saved to {Path}", emergencyPathOrNull);
                 }
             }
             catch (Exception inner)
@@ -149,18 +150,41 @@ namespace PileDesign
                 try { Log.Error(inner, "Emergency AutoSave path retrieval failed"); } catch { }
             }
 
+            // クラッシュレポート zip を作成 (失敗しても続行)
+            string? crashReportPath = null;
             try
             {
+                crashReportPath = CrashReporter.TryCreateReport(ex, source, emergencyPathOrNull);
+            }
+            catch (Exception inner)
+            {
+                try { Log.Error(inner, "CrashReporter invocation failed"); } catch { }
+            }
+
+            try
+            {
+                var reportLine = string.IsNullOrEmpty(crashReportPath)
+                    ? "クラッシュレポート: (作成に失敗)"
+                    : $"クラッシュレポート (開発元への共有用):\n  {crashReportPath}";
+
                 var msg =
                     "予期しないエラーが発生しました。アプリケーションを終了します。\n" +
                     "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
                     $"エラー: {ex.GetType().Name}\n" +
                     $"内容: {ex.Message}\n\n" +
                     $"作業中のデータを退避しました:\n  {emergencySavePath}\n\n" +
+                    $"{reportLine}\n\n" +
                     $"ログ: {AppLog.LogDirectory}\n\n" +
-                    "次回起動時に「最近開いたファイル」または\n" +
-                    "上記の自動保存ファイルから復元できます。";
-                MessageBox.Show(msg, "致命的エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                    "「はい」を押すとクラッシュレポートのフォルダを開きます。\n" +
+                    "次回起動時に「最近開いたファイル」または上記の自動保存ファイルから復元できます。";
+
+                var result = MessageBox.Show(msg, "致命的エラー",
+                    MessageBoxButton.YesNo, MessageBoxImage.Error, MessageBoxResult.No);
+
+                if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(crashReportPath))
+                {
+                    CrashReporter.TryOpenInExplorer(crashReportPath);
+                }
             }
             catch
             {

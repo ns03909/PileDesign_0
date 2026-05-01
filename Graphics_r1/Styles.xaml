@@ -1,5 +1,6 @@
     <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
                     xmlns:common="clr-namespace:PileDesign.Common"
                     xmlns:svg="http://sharpvectors.codeplex.com/runtime/"
@@ -123,6 +124,43 @@
     <Style TargetType="{x:Type common:EnhancedDataGrid}"
            BasedOn="{StaticResource {x:Type DataGrid}}"/>
 
+    <!-- ═══ アニメーション (B.8) ═══
+         FadeInOnAppearStyle: opt-in。Border / Grid / Panel 等に
+         `Style="{StaticResource FadeInOnAppearStyle}"` を指定すると、
+         非表示→表示への遷移時に 180ms の opacity 0→1 アニメーションが走る。
+         既存要素には影響しない (個別適用). -->
+    <Style x:Key="FadeInOnAppearStyle" TargetType="FrameworkElement">
+        <Style.Triggers>
+            <Trigger Property="IsVisible" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1" Duration="0:0:0.18"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Border 専用版 (上の FrameworkElement 版は Border の暗黙 Style と
+         衝突しにくいよう型を絞った別キー). -->
+    <Style x:Key="FadeInBorderStyle" TargetType="Border">
+        <Style.Triggers>
+            <Trigger Property="IsVisible" Value="True">
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1" Duration="0:0:0.18"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ═══ INotifyDataErrorInfo 連動の検証エラー表示 ═══
          BaseModel が AddError("...") した瞬間にバインド先 TextBox が
          赤縁になり ToolTip にエラーメッセージが出る。
@@ -138,6 +176,33 @@
                                 Path=(Validation.Errors)/ErrorContent}"/>
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <!-- ═══ 数値入力 TextBox (B+C) ═══
+         common:NumericInput 添付プロパティ + ValidatedTextBoxStyle (赤縁) を結合。
+         整数欄は IntegerTextBoxStyle, 小数欄は DecimalTextBoxStyle を使う。
+         範囲制限が必要なら inline で common:NumericInput.Min / .Max を上書きできる:
+           <TextBox Style="{StaticResource IntegerTextBoxStyle}"
+                    common:NumericInput.Min="1" common:NumericInput.Max="64"/>
+    -->
+    <Style x:Key="IntegerTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ValidatedTextBoxStyle}">
+        <Setter Property="common:NumericInput.Mode" Value="Integer"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="SignedIntegerTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ValidatedTextBoxStyle}">
+        <Setter Property="common:NumericInput.Mode" Value="SignedInteger"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="DecimalTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ValidatedTextBoxStyle}">
+        <Setter Property="common:NumericInput.Mode" Value="Decimal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
+    </Style>
+
+    <Style x:Key="SignedDecimalTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ValidatedTextBoxStyle}">
+        <Setter Property="common:NumericInput.Mode" Value="SignedDecimal"/>
+        <Setter Property="HorizontalContentAlignment" Value="Right"/>
     </Style>
 
 </ResourceDictionary>
