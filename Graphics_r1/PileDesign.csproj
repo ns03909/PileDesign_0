@@ -498,6 +498,8 @@
     <None Remove="Icons\？2.svg" />
     <None Remove="Models\PileLibrary\CaptainPileTensionBarPCD_circle.csv" />
     <None Remove="Models\PileLibrary\CaptainPileTensionBarPCD_square.csv" />
+    <None Remove="Models\PileLibrary\CapringPCRing.csv" />
+    <None Remove="Models\PileLibrary\CapringTensionBar.csv" />
     <None Remove="Models\PileLibrary\FTCap.csv" />
     <None Remove="Models\PileLibrary\PCRing.csv" />
     <None Remove="Views\help.html" />
@@ -565,6 +567,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Models\PileLibrary\CaptainPileTensionBarPCD_square.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Models\PileLibrary\CapringPCRing.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Models\PileLibrary\CapringTensionBar.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Models\PileLibrary\FTCap.csv">

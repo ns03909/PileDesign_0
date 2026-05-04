@@ -89,13 +89,32 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _captainPile, value);
         }
 
+        private CapringPile _capringPile;
+        public CapringPile CapringPile
+        {
+            get => _capringPile;
+            set => SetProperty(ref _capringPile, value);
+        }
+
 
         // コンクリート外径
         private double _concreteOutDia;
         public double ConcreteOutDia
         {
             get => _concreteOutDia;
-            set => SetProperty(ref _concreteOutDia, value);
+            set
+            {
+                if (SetProperty(ref _concreteOutDia, value))
+                {
+                    // 鉄筋配置直径 (MainBarDr1/Dr2) は ConcreteOutDia とかぶり厚から派生する量。
+                    // かぶり厚 setter (MainBarCenterCover1/2) でも再計算しているが、外径が後から
+                    // 設定された場合 (例: 鋼管杭+鉄筋定着工法 で SteelPipePileLowerRcDiameter で自動算定) に
+                    // Dr が古いままだと GetSteelPilePileHeadJointInfo が null を返してしまうため、
+                    // ここでも同期的に再計算する。
+                    MainBarDr1 = _concreteOutDia - 2.0 * MainBarCenterCover1;
+                    MainBarDr2 = _concreteOutDia - 2.0 * MainBarCenterCover2;
+                }
+            }
         }
 
         // 鋼管杭+鉄筋定着工法用 — 杭頭部の下層 RC 断面径 [mm]
@@ -113,7 +132,64 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 鋼管杭+鉄筋定着工法 用の杭頭接合部の弾性回転剛性 Kθ を算定する。
+        /// 鋼管杭+鉄筋定着工法 の杭頭接合部の弾性回転剛性に関する情報。
+        /// Ktheta [kN·m/rad] と参考値としての降伏点 (PtThetaY [rad], RMtyKNm [kN·m])。
+        /// FEM では Ktheta の線形ばねのみ使用し降伏点は無視するが、グラフ表示の
+        /// 上限点として PtThetaY/RMtyKNm を利用する。
+        /// </summary>
+        internal sealed record SteelPilePileHeadJointInfo(double Ktheta, double PtThetaY, double RMtyKNm);
+
+        /// <summary>
+        /// 鋼管杭+鉄筋定着工法 の付着長さ Ld 算定に用いる軸力非依存の諸係数。
+        /// 杭基礎指針:
+        ///   Ld = pcλ × pcα × S × rσy × dd / 10 / fb
+        ///   pcλ = 0.86 (付着長さの補正係数)
+        ///   pcα = 1.0  (割裂破壊に対する補正係数 — 横補強筋拘束あり想定。拘束なしは 1.25)
+        ///   S   = 1.0  (必要長さの修正係数 — 直線定着筋)
+        ///   fb  = Fc/40 + 0.9 [N/mm²] (付着割裂の基準となる強度)
+        ///   dd  = 定着筋の呼び名数値 (D41 → 41)
+        ///   rσy = 定着筋規格降伏点 [N/mm²]
+        /// </summary>
+        internal sealed record SteelPilePileHeadJointConstants(
+            double Pclambda, double Pcalpha, double S, double Fb, double Ld,
+            double Dd, double RsigmaY);
+
+        /// <summary>
+        /// 鋼管杭+鉄筋定着工法 の付着長さ Ld と関連諸係数を返す (軸力非依存)。
+        /// 必要入力 (PileCapFc, MainBarSize1, MainBarSpec1) が欠落していれば null。
+        /// </summary>
+        internal SteelPilePileHeadJointConstants? GetSteelPilePileHeadJointConstants()
+        {
+            if (PileCapFc <= 0.0) return null;
+            if (string.IsNullOrEmpty(MainBarSize1) || string.IsNullOrEmpty(MainBarSpec1)) return null;
+
+            double rsigmay = GetMainBarYieldStress(MainBarSpec1);
+            double dd = InsituReinforcedConcreteSection.ExtractBarSizeNumber(MainBarSize1);
+            double fb = PileCapFc / 40.0 + 0.9;
+            if (rsigmay <= 0.0 || dd <= 0.0 || fb <= 0.0) return null;
+
+            const double pclambda = 0.86;
+            const double pcalpha = 1.0;
+            const double S = 1.0;
+            double Ld = pclambda * pcalpha * S * rsigmay * dd / 10.0 / fb;
+            if (Ld <= 0.0) return null;
+
+            return new SteelPilePileHeadJointConstants(pclambda, pcalpha, S, fb, Ld, dd, rsigmay);
+        }
+
+        // 鉄筋規格降伏点 [N/mm²]
+        private static double GetMainBarYieldStress(string? grade) => grade switch
+        {
+            "SD295" => 295.0,
+            "SD345" => 345.0,
+            "SD390" => 390.0,
+            "SD490" => 490.0,
+            "SD685" => 685.0,
+            _ => 0.0,
+        };
+
+        /// <summary>
+        /// 鋼管杭+鉄筋定着工法 用の杭頭接合部の弾性回転剛性 Kθ と降伏点を算定する。
         ///
         /// 仕様 (杭基礎指針):
         ///   - 仮想 RC 断面 (パイルキャップコンクリート + 定着筋 MainBars1) の M-φ 解析で
@@ -125,21 +201,27 @@ namespace PileDesign.Models.InputData
         ///   - 杭頭接合部の降伏回転角 ptθy = rφty × Ld
         ///   - 弾性回転剛性 Kθ = rMty / ptθy
         ///
-        /// 戻り値は弾性回転剛性 Kθ [kN·m/rad]。M-θ は降伏後挙動を考慮しない純粋な
-        /// 線形ばねとして扱う (折線ではない)。必要入力が欠落している場合は null。
+        /// FEM 上の M-θ は降伏後挙動を考慮しない純粋な線形ばね (Kθ) として扱う。
+        /// 必要入力が欠落している場合は null。
         /// </summary>
-        internal double? GetSteelPilePileHeadJointKtheta(double axialN_kN)
+        internal SteelPilePileHeadJointInfo? GetSteelPilePileHeadJointInfo(double axialN_kN)
         {
             // 必須入力チェック
             if (ConcreteOutDia <= 0.0 || PileCapFc <= 0.0) return null;
             if (MainBarNum1 <= 0 || string.IsNullOrEmpty(MainBarSize1) || string.IsNullOrEmpty(MainBarSpec1))
                 return null;
-            if (MainBarDr1 <= 0.0) return null;
+            // MainBarDr1 (鉄筋配置直径) は派生量 = ConcreteOutDia - 2·cover。
+            // setter 連動で同期している筈だが、既存セーブデータや setter 順序由来で 0 のままの
+            // ケースに備えて、ここで just-in-time 再計算する (defensive)。
+            double effectiveDr1 = MainBarDr1;
+            if (effectiveDr1 <= 0.0)
+                effectiveDr1 = ConcreteOutDia - 2.0 * MainBarCenterCover1;
+            if (effectiveDr1 <= 0.0) return null;
 
             // 1. 仮想 RC 断面: パイルキャップコンクリート (Fc, ξ=1.0, D=ConcreteOutDia)
             //    + 定着筋 MainBars1 のみ (杭体主筋 MainBars2 は接合部の付着定着と無関係)
             var insituConcrete = new InsituConcrete(ConcreteOutDia, 1.0, PileCapFc);
-            var anchorBars = new MainBars(MainBarDr1, MainBarNum1, MainBarSpec1, MainBarSize1);
+            var anchorBars = new MainBars(effectiveDr1, MainBarNum1, MainBarSpec1, MainBarSize1);
             var jointSection = new InsituReinforcedConcreteSection(insituConcrete, anchorBars);
 
             // 2. 引張側最外縁定着筋が降伏するときの (rMty, rφty)
@@ -149,16 +231,10 @@ namespace PileDesign.Models.InputData
             if (!double.IsFinite(rMty_Nmm) || !double.IsFinite(rPhiTy) || rMty_Nmm <= 0.0 || rPhiTy <= 0.0)
                 return null;
 
-            // 3. 付着長さ Ld [mm]
-            double rsigmay = anchorBars.RSigmaY; // 定着筋規格降伏点 [N/mm²]
-            double dd = InsituReinforcedConcreteSection.ExtractBarSizeNumber(MainBarSize1); // D41 → 41
-            double fb = PileCapFc / 40.0 + 0.9; // 付着割裂強度 [N/mm²]
-            const double ptlambda = 0.86;
-            const double ptalpha = 1.0; // 横補強筋拘束ありを既定 (拘束なしは 1.25)
-            const double S = 1.0;       // 直線定着筋
-            if (dd <= 0.0 || rsigmay <= 0.0 || fb <= 0.0) return null;
-            double Ld = ptlambda * ptalpha * S * rsigmay * dd / 10.0 / fb;
-            if (Ld <= 0.0) return null;
+            // 3. 付着長さ Ld [mm] (軸力非依存の係数群)
+            var constants = GetSteelPilePileHeadJointConstants();
+            if (constants == null) return null;
+            double Ld = constants.Ld;
 
             // 4. 杭頭接合部の降伏回転角 ptθy [rad]
             double ptThetaY = rPhiTy * Ld;
@@ -168,7 +244,90 @@ namespace PileDesign.Models.InputData
             //    rMty: N·mm → kN·m に単位変換。Kθ [kN·m/rad] = rMty[kN·m] / ptθy[rad]
             double rMty_kNm = rMty_Nmm * 1e-6;
             double Ktheta = rMty_kNm / ptThetaY;
-            return Ktheta;
+            return new SteelPilePileHeadJointInfo(Ktheta, ptThetaY, rMty_kNm);
+        }
+
+        /// <summary>
+        /// 鋼管杭+鉄筋定着工法 用の杭頭接合部の弾性回転剛性 Kθ [kN·m/rad] のみを返す。
+        /// 詳細仕様は <see cref="GetSteelPilePileHeadJointInfo"/> を参照。
+        /// </summary>
+        internal double? GetSteelPilePileHeadJointKtheta(double axialN_kN)
+            => GetSteelPilePileHeadJointInfo(axialN_kN)?.Ktheta;
+
+        /// <summary>
+        /// 鉄筋定着工法 の諸元 (<see cref="SelectedPileTopSpecification"/>) を入力値・派生値から再構築する。
+        /// PileBodyType が「鋼管杭」/「場所打ち鋼管コンクリート杭」/「既製コンクリート杭」のいずれかで動作。
+        /// 鋼管杭のみ付着長さ Ld・補正係数群・弾性回転剛性 Kθ(N=0) も併記する。
+        /// </summary>
+        public void UpdateRebarAnchorageSpecs(string pileBodyType, PileSection? pileSection)
+        {
+            var specs = new ObservableCollection<Spec>
+            {
+                // パイルキャップコンクリート
+                new Spec("パイルキャップ コンクリート基準強度", "Fc", $"{PileCapFc:N0}", "N/mm2"),
+                new Spec("パイルキャップ コンクリート単位体積重量", "γc", $"{PileCapGamma:N1}", "kN/m3"),
+                new Spec("パイルキャップ コンクリート縦弾性係数", "Ec", $"{PileCapEc:N0}", "N/mm2"),
+                // 杭頭部 RC 径
+                new Spec("杭頭部 RC径", "Dc", $"{ConcreteOutDia:N0}", "mm"),
+            };
+
+            // 鋼管 (鋼管杭・場所打ち鋼管コンクリート杭の場合のみ)
+            bool hasPipe = pileSection != null
+                && (pileBodyType == "鋼管杭" || pileBodyType == "場所打ち鋼管コンクリート杭")
+                && pileSection.PipeDia > 0.0;
+            if (hasPipe)
+            {
+                specs.Add(new Spec("鋼管外径", "PipeDia", $"{pileSection!.PipeDia:N0}", "mm"));
+                specs.Add(new Spec("鋼管厚", "Ts", $"{pileSection.PipeTs:N0}", "mm"));
+                string ratio = pileSection.PipeTs > 0
+                    ? $"{pileSection.PipeDia / pileSection.PipeTs:N1}" : "N/A";
+                specs.Add(new Spec("鋼管径厚比", "D/Ts", ratio, ""));
+            }
+
+            // 鉄筋 (最上部杭区間 — MainBars2)
+            if (MainBarNum2 > 0 && !string.IsNullOrEmpty(MainBarSize2))
+            {
+                double ag2 = MainBarNum2 * GetBarArea(MainBarSize2);
+                double sy2 = GetMainBarYieldStress(MainBarSpec2);
+                specs.Add(new Spec("鉄筋(最上部杭区間) 数-呼び径", "", $"{MainBarNum2}-{MainBarSize2}", ""));
+                specs.Add(new Spec("鉄筋(最上部杭区間) 規格", "", MainBarSpec2 ?? "", ""));
+                specs.Add(new Spec("鉄筋(最上部杭区間) 断面積", "Ag2", $"{ag2:N0}", "mm2"));
+                specs.Add(new Spec("鉄筋(最上部杭区間) 規格降伏点", "σy2", $"{sy2:N0}", "N/mm2"));
+                specs.Add(new Spec("鉄筋(最上部杭区間) 重心かぶり厚", "", $"{MainBarCenterCover2:N0}", "mm"));
+            }
+
+            // 鉄筋 (定着筋 — MainBars1)
+            if (MainBarNum1 > 0 && !string.IsNullOrEmpty(MainBarSize1))
+            {
+                double ag1 = MainBarNum1 * GetBarArea(MainBarSize1);
+                double sy1 = GetMainBarYieldStress(MainBarSpec1);
+                specs.Add(new Spec("定着筋 数-呼び径", "", $"{MainBarNum1}-{MainBarSize1}", ""));
+                specs.Add(new Spec("定着筋 規格", "", MainBarSpec1 ?? "", ""));
+                specs.Add(new Spec("定着筋 断面積", "Ag1", $"{ag1:N0}", "mm2"));
+                specs.Add(new Spec("定着筋 規格降伏点", "σy1", $"{sy1:N0}", "N/mm2"));
+                specs.Add(new Spec("定着筋 重心かぶり厚", "", $"{MainBarCenterCover1:N0}", "mm"));
+            }
+
+            // 鋼管杭 + 鉄筋定着工法 専用: 付着長さ・補正係数・弾性回転剛性 Kθ(N=0)
+            if (pileBodyType == "鋼管杭")
+            {
+                var c = GetSteelPilePileHeadJointConstants();
+                if (c != null)
+                {
+                    specs.Add(new Spec("付着長さの補正係数", "pcλ", $"{c.Pclambda:N2}", ""));
+                    specs.Add(new Spec("割裂破壊に対する補正係数", "pcα", $"{c.Pcalpha:N2}", ""));
+                    specs.Add(new Spec("必要長さの修正係数", "S", $"{c.S:N2}", ""));
+                    specs.Add(new Spec("付着割裂の基準となる強度", "fb", $"{c.Fb:N2}", "N/mm2"));
+                    specs.Add(new Spec("定着筋の付着長さ", "Ld", $"{c.Ld:N0}", "mm"));
+                }
+                var info = GetSteelPilePileHeadJointInfo(0.0);
+                if (info != null && double.IsFinite(info.Ktheta) && info.Ktheta > 0.0)
+                {
+                    specs.Add(new Spec("杭頭接合部 弾性回転剛性 (N=0)", "Kθ", $"{info.Ktheta:N0}", "kN·m/rad"));
+                }
+            }
+
+            SelectedPileTopSpecification = specs;
         }
 
         // コンクリート肉厚

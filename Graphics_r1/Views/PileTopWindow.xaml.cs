@@ -79,6 +79,18 @@ namespace PileDesign.Views
                     viewModel.PileTop.FTPile = new(viewModel.PileTop.PileCapFc, viewModel.PileTop.PileCapEc);
                 }
             }
+            else if (pileTopType == "キャプリングパイル工法")
+            {
+                // CapringPile が存在しない場合のみ新規作成
+                if (viewModel.PileTop.CapringPile == null)
+                {
+                    viewModel.PileTop.CapringPile = new(viewModel.PileTop.PileCapEc);
+                }
+                // PileBodyType を伝える (鋼管杭判定で合成EI に切替)
+                viewModel.PileTop.CapringPile.PileBodyType = pileBodyType;
+                viewModel.PileTop.CapringPile.PileCapFc = viewModel.PileTop.PileCapFc;
+                viewModel.PileTop.CapringPile.PileCapEc = viewModel.PileTop.PileCapEc;
+            }
             else if (pileTopType == "鉄筋定着工法")
             {
 
@@ -183,6 +195,30 @@ namespace PileDesign.Views
                         }
                     }
                 }
+
+                // キャプリングパイル工法: 杭径が変わった (= 初回 or 杭径変更後) のみ PC リングを自動選定
+                if (vm.PileTopType == "キャプリングパイル工法" && PileSection != null)
+                {
+                    var capringPile = vm.PileTop?.CapringPile;
+                    if (capringPile != null)
+                    {
+                        double pileDia = PileSection.PileDiameter;
+                        int optimalSize = (int)System.Math.Ceiling(pileDia / 100.0) * 100;
+                        optimalSize = System.Math.Max(optimalSize, 300);
+                        optimalSize = System.Math.Min(optimalSize, 1200);
+
+                        if (capringPile.D <= 0 || System.Math.Abs(capringPile.D - optimalSize) > 1)
+                        {
+                            AutoSelectCapringPCRing(vm, PileSection);
+                            Recalculate();
+                        }
+                        else
+                        {
+                            // 既に PC リングが設定済 → 描画だけ実行
+                            vm.RedrawShapes();
+                        }
+                    }
+                }
             }
         }
 
@@ -229,6 +265,7 @@ namespace PileDesign.Views
                     viewModel.PileTop.CaptainPile.Update();
                     viewModel.RedrawShapes();
                     viewModel.ChartUpdate();
+                    viewModel.RaiseRingDiameterWarningChanged();
                 }
             }
             else if (viewModel.PileTopType == "FT-Pile構法")
@@ -236,7 +273,76 @@ namespace PileDesign.Views
                 viewModel.PileTop.FTPile.Update();
                 viewModel.RedrawShapes();
                 viewModel.ChartUpdate();
+                viewModel.RaiseRingDiameterWarningChanged();
             }
+            else if (viewModel.PileTopType == "キャプリングパイル工法")
+            {
+                var capringPile = viewModel.PileTop.CapringPile;
+                if (capringPile != null)
+                {
+                    // PCリング ComboBox の選択を反映 (SelectedPCRingName から PCRing オブジェクトを引く)
+                    if (ComboBoxCapringPCRing?.SelectedItem != null)
+                    {
+                        string name = ComboBoxCapringPCRing.SelectedItem.ToString() ?? string.Empty;
+                        var ring = capringPile.PCRings.FirstOrDefault(r => r.Name == name);
+                        if (ring != null)
+                        {
+                            capringPile.PCRing = ring;
+                            capringPile.D = ring.D;
+                        }
+                    }
+
+                    // 引張定着筋 ComboBox の選択を反映
+                    if (capringPile.HasTensionBars && ComboBoxCapringTensionBar?.SelectedItem != null)
+                    {
+                        string tname = ComboBoxCapringTensionBar.SelectedItem.ToString() ?? string.Empty;
+                        var bar = capringPile.TensionBars.FirstOrDefault(b => b.Name == tname);
+                        if (bar != null) capringPile.TensionBar = bar;
+                    }
+
+                    capringPile.Update();
+                    if (capringPile.PCRing != null)
+                        viewModel.PileTop.SelectedPileTopSpecification = capringPile.PCRing.GetSpecs();
+                    viewModel.RedrawShapes();
+                    viewModel.ChartUpdate();
+                    viewModel.RaiseRingDiameterWarningChanged();
+                }
+            }
+        }
+
+        // キャプリング PC リング選択変更
+        private void ComboBoxCapringPCRingChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Recalculate();
+        }
+
+        // キャプリング 引張定着筋選択 (標準配筋・鋼種共通)
+        private void ComboBoxCapringTensionBarChanged(object sender, SelectionChangedEventArgs e)
+        {
+            Recalculate();
+        }
+
+        private void CheckBoxCapringHasTensionBarsChecked(object sender, RoutedEventArgs e)
+        {
+            // 初回チェック時に標準配筋未選定なら 1 番目を自動選択
+            if (DataContext is PileTopViewModel vm && vm.PileTop?.CapringPile != null)
+            {
+                var cp = vm.PileTop.CapringPile;
+                if ((cp.TensionBar == null || cp.TensionBar.BarNum == 0) && cp.TensionBars.Count > 0)
+                {
+                    // 杭径以上を満たす最小の標準配筋を選択
+                    var firstApplicable = cp.TensionBars.FirstOrDefault(b => b.MinPileDia <= cp.D)
+                                         ?? cp.TensionBars[0];
+                    cp.TensionBar = firstApplicable;
+                    cp.SelectedTensionBarName = firstApplicable.Name;
+                }
+            }
+            Recalculate();
+        }
+
+        private void CheckBoxCapringHasTensionBarsUnchecked(object sender, RoutedEventArgs e)
+        {
+            Recalculate();
         }
 
         // 絞り率コンボボックスの選択が変更したときのイベントハンドラ
@@ -469,6 +575,73 @@ namespace PileDesign.Views
                 // 諸元表示を更新
                 viewModel.PileTop.SelectedPileTopSpecification = targetPCRing.GetSpecs();
             }
+        }
+
+        /// <summary>
+        /// キャプリングパイル工法選択時に PC リングを自動選定。
+        /// 杭径以上で最小の N タイプ PC リングを選択し、CapringPile.D を設定する。
+        /// 鋼管杭の場合は IsConcreteFilledSteelPipe + 管厚もセット。
+        /// </summary>
+        private static void AutoSelectCapringPCRing(PileTopViewModel viewModel, PileSection pileSection)
+        {
+            if (pileSection == null) return;
+
+            var capringPile = viewModel.PileTop?.CapringPile;
+            if (capringPile?.PCRings == null || capringPile.PCRings.Count == 0) return;
+
+            double pileDia = pileSection.PileDiameter;
+            if (pileDia <= 0) return;
+
+            // CapringPile の PCリング標準径: 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200
+            // 杭径以上で最小のサイズを 100 mm 刻みで丸める
+            int targetSize = (int)System.Math.Ceiling(pileDia / 50.0) * 50;
+            if (targetSize < 300) targetSize = 300;
+            if (targetSize > 1200) targetSize = 1200;
+
+            // 標準タイプ名を生成 (例: "300N", "700N", "1200N")
+            string targetName = $"{targetSize}N";
+
+            var targetRing = capringPile.PCRings.FirstOrDefault(r => r.Name == targetName);
+            if (targetRing == null)
+            {
+                // 完全一致がなければ、N タイプの中で D ≥ pileDia の最小、それもなければ最大
+                targetRing = capringPile.PCRings
+                    .Where(r => (r.Name ?? "").EndsWith("N") && r.D >= pileDia)
+                    .OrderBy(r => r.D)
+                    .FirstOrDefault();
+                targetRing ??= capringPile.PCRings
+                    .Where(r => (r.Name ?? "").EndsWith("N"))
+                    .OrderByDescending(r => r.D)
+                    .FirstOrDefault();
+            }
+
+            if (targetRing == null) return;
+
+            capringPile.PCRing = targetRing;
+            capringPile.SelectedPCRingName = targetRing.Name ?? "";
+            capringPile.D = targetRing.D;
+
+            // 鋼管杭+キャプリング: 杭頭はコンクリート充填鋼管部 → 合成 EI モード ON
+            string pileBodyType = viewModel.PileBodyType ?? "";
+            if (pileBodyType.Contains("鋼管杭"))
+            {
+                capringPile.IsConcreteFilledSteelPipe = true;
+                // 管厚は最上部杭区間の鋼管厚から取得 (PileSection.SteelPipeThickness が無ければ ConcreteThickness を試す)
+                double ts = 0;
+                try
+                {
+                    var prop = pileSection.GetType().GetProperty("SteelPipeThickness")
+                            ?? pileSection.GetType().GetProperty("PipeThickness")
+                            ?? pileSection.GetType().GetProperty("Ts");
+                    if (prop != null && prop.GetValue(pileSection) is double v) ts = v;
+                }
+                catch { }
+                if (ts <= 0) ts = pileSection.ConcreteThickness; // フォールバック
+                capringPile.SteelPipeWallThickness = ts;
+            }
+
+            capringPile.Update();
+            viewModel.PileTop.SelectedPileTopSpecification = targetRing.GetSpecs();
         }
 
         /// <summary>

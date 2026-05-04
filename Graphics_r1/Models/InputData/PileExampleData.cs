@@ -14,6 +14,13 @@ namespace PileDesign.Models.InputData
         [JsonPropertyName("groundExampleName")]
         public string GroundExampleName { get; set; } = "";
 
+        /// <summary>
+        /// 追加地盤 (Ground No2 以降) の例題ファイル名リスト。
+        /// 単一地盤しか必要ない場合は省略可。
+        /// </summary>
+        [JsonPropertyName("additionalGroundExampleNames")]
+        public List<string> AdditionalGroundExampleNames { get; set; } = [];
+
         [JsonPropertyName("loadCaseLevel1")]
         public LoadCaseSettingDto LoadCaseLevel1 { get; set; } = new();
 

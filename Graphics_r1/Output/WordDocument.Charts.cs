@@ -157,8 +157,10 @@ namespace PileDesign.Output
                                                 maxMomentInPile = Math.Max(maxMomentInPile, cum.MabsMax);
                                         }
 
-                                        // 区間ループ後に1回だけ散布点を追加（重複防止）
-                                        if (maxMomentInPile == double.MinValue) maxMomentInPile = 0.0;
+                                        // 解析結果が見つからなかった場合は散布点を追加しない
+                                        // (例: レベル1 が IsApplicable=true でも未解析だと M=0 マーカーが
+                                        //  X 軸上に貼り付いて誤解を招くため)
+                                        if (maxMomentInPile == double.MinValue) continue;
 
                                         if (loadCase.Level == 1)
                                         {
@@ -425,7 +427,9 @@ namespace PileDesign.Output
                                                 maxShearInPile = Math.Max(maxShearInPile, cum.FabsMax);
                                         }
 
-                                        if (maxShearInPile == double.MinValue) maxShearInPile = 0.0;
+                                        // 解析結果なし (該当ケース未解析) → 散布点をスキップして
+                                        // X 軸上の Q=0 ゴーストマーカーを防ぐ
+                                        if (maxShearInPile == double.MinValue) continue;
 
                                         if (loadCase.Level == 1)
                                         {
@@ -855,7 +859,7 @@ namespace PileDesign.Output
         /// mainWindowViewModel.GroupPileStressBySoilPile でグループ化の有無を切替。
         /// </summary>
         private void AddAllPileStressDiagrams(MainDocumentPart mainPart, Body body,
-            bool includeBending, bool includeShear)
+            bool includeBending, bool includeShear, bool includeLimitState = false)
         {
             if (anaModel == null) return;
 
@@ -869,6 +873,7 @@ namespace PileDesign.Output
 
             if (mainWindowViewModel.GroupPileStressBySoilPile)
             {
+                // グループ化版は限界状態の重ね描きに非対応 (杭ごとに異なる断面/軸力で意味が薄いため省略)
                 AddAllPileStressDiagramsGrouped(mainPart, body, includeBending, includeShear, loadCases, loadCombinations);
                 return;
             }
@@ -980,11 +985,43 @@ namespace PileDesign.Output
                             for (int i = 0; i < xsLists.Count; i++)
                                 ysLists.Add(zs);
 
+                            // 限界状態ステップライン (せん断/曲げ パネルにのみ重ねる)
+                            // パネル順は xsLists と整合させる: [変位, (せん断), (曲げ), 地盤変位]
+                            List<List<double>>? limitXsByPanel = null;
+                            List<List<double>>? limitYsByPanel = null;
+                            string? limitLegend = null;
+                            if (includeLimitState)
+                            {
+                                (List<double> shearLimXs, List<double> shearLimZs, List<double> momentLimXs,
+                                 List<double> momentLimZs, string usedLimitName) =
+                                    BuildPileLimitStateStepLines(pli, lc, comb, isLiq);
+                                if (shearLimXs.Count > 0 || momentLimXs.Count > 0)
+                                {
+                                    limitLegend = usedLimitName;
+                                    limitXsByPanel = [];
+                                    limitYsByPanel = [];
+                                    // 変位パネルには出さない (空リスト)
+                                    limitXsByPanel.Add([]);
+                                    limitYsByPanel.Add([]);
+                                    if (includeShear)
+                                    {
+                                        limitXsByPanel.Add(shearLimXs);
+                                        limitYsByPanel.Add(shearLimZs);
+                                    }
+                                    if (includeBending)
+                                    {
+                                        limitXsByPanel.Add(momentLimXs);
+                                        limitYsByPanel.Add(momentLimZs);
+                                    }
+                                }
+                            }
+
                             AddPileElevResultToBody(
                                 mainPart, body,
                                 xsLists, ysLists,
                                 titles, xLabels, yLabels,
-                                150, 100);
+                                150, 100,
+                                limitXsByPanel, limitYsByPanel, limitLegend);
 
                             string liqText = isLiq ? "液状化" : "非液状化";
                             AddAutoFigureCaption(body,
@@ -994,6 +1031,104 @@ namespace PileDesign.Output
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// (PileLayoutDataItem, LoadCase, LoadCombination, isLiq) の解析結果軸力に応じた
+        /// 限界状態 (Q / M) のステップラインを構築する。
+        /// 限界状態の選択は (loadCase.Level, FundamentalInput.SeismicGrade) で自動決定:
+        ///   レベル1 → 損傷限界
+        ///   レベル2 + S → 損傷限界
+        ///   レベル2 + A → 安全限界
+        /// 値はすべて FACTORED (低減後)。
+        /// 戻り値: (せん断 X, せん断 Z, モーメント X, モーメント Z, 凡例ラベル)
+        /// </summary>
+        private (List<double>, List<double>, List<double>, List<double>, string) BuildPileLimitStateStepLines(
+            PileLayoutDataItem pli, LoadCase lc, LoadCombination comb, bool isLiq)
+        {
+            var shearXs = new List<double>();
+            var shearZs = new List<double>();
+            var momentXs = new List<double>();
+            var momentZs = new List<double>();
+
+            if (anaModel == null || pli?.Beams == null) return (shearXs, shearZs, momentXs, momentZs, "限界状態");
+
+            string seismicGrade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+            bool useDamage = lc.Level == 1 || (lc.Level == 2 && seismicGrade == "S");
+            string limitName = useDamage ? "損傷限界 (低減後)" : "安全限界 (低減後)";
+
+            var soilPile = pli.SoilPile;
+            if (soilPile?.PileBodySegments == null) return (shearXs, shearZs, momentXs, momentZs, limitName);
+
+            foreach (var beam in pli.Beams)
+            {
+                if (beam?.NodeI?.Coord == null || beam?.NodeJ?.Coord == null) continue;
+                if (beam.SegmentIndex is null) continue;
+
+                var result = beam.GetBeamResult(anaModel, lc, comb, isLiq);
+                if (result?.CumulativeForce == null) continue;
+
+                int segIdx = beam.SegmentIndex.Value;
+                if (segIdx < 0 || segIdx >= soilPile.PileBodySegments.Count) continue;
+                var pileSection = soilPile.PileBodySegments[segIdx].PileSection;
+                if (pileSection == null) continue;
+
+                double axialN = (result.CumulativeForce.Fxi + result.CumulativeForce.Fxj) / 2.0;
+
+                // モーメント限界
+                var (nMs, mVals) = useDamage
+                    ? (pileSection.FactoredDamageNM.N, pileSection.FactoredDamageNM.M)
+                    : (pileSection.FactoredUltimateNM.N, pileSection.FactoredUltimateNM.M);
+                double mLim = InterpolateLimitFromNCurve(nMs, mVals, axialN);
+                if (!double.IsNaN(mLim) && mLim > 0)
+                {
+                    momentXs.Add(mLim); momentZs.Add(beam.NodeI.Coord.Z);
+                    momentXs.Add(mLim); momentZs.Add(beam.NodeJ.Coord.Z);
+                }
+
+                // せん断限界
+                var (nQs, qVals) = useDamage
+                    ? (pileSection.FactoredDamageNQ.N, pileSection.FactoredDamageNQ.Q)
+                    : (pileSection.FactoredUltimateNQ.N, pileSection.FactoredUltimateNQ.Q);
+                double qLim = InterpolateLimitFromNCurve(nQs, qVals, axialN);
+                if (!double.IsNaN(qLim) && qLim > 0)
+                {
+                    shearXs.Add(qLim); shearZs.Add(beam.NodeI.Coord.Z);
+                    shearXs.Add(qLim); shearZs.Add(beam.NodeJ.Coord.Z);
+                }
+            }
+
+            return (shearXs, shearZs, momentXs, momentZs, limitName);
+        }
+
+        /// <summary>
+        /// 軸力 N に対応する限界値 (M または Q) を線形補間で取得。
+        /// 範囲外は端点クランプ。GraphViewModel.InterpolateLimitValue と同等。
+        /// </summary>
+        private static double InterpolateLimitFromNCurve(List<double> nValues, List<double> mOrQValues, double targetN)
+        {
+            if (nValues == null || mOrQValues == null) return double.NaN;
+            if (nValues.Count == 0 || nValues.Count != mOrQValues.Count) return double.NaN;
+
+            double minN = nValues.Min();
+            double maxN = nValues.Max();
+            if (targetN <= minN) return mOrQValues[nValues.IndexOf(minN)];
+            if (targetN >= maxN) return mOrQValues[nValues.IndexOf(maxN)];
+
+            var sorted = nValues.Select((n, i) => new { N = n, Index = i }).OrderBy(x => x.N).ToList();
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                double n1 = sorted[i].N;
+                double n2 = sorted[i + 1].N;
+                if (n1 <= targetN && targetN <= n2)
+                {
+                    double m1 = mOrQValues[sorted[i].Index];
+                    double m2 = mOrQValues[sorted[i + 1].Index];
+                    double r = (n2 - n1) != 0 ? (targetN - n1) / (n2 - n1) : 0;
+                    return m1 + r * (m2 - m1);
+                }
+            }
+            return double.NaN;
         }
 
         /// <summary>

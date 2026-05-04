@@ -108,6 +108,61 @@
                                         </StackPanel>
                                     </GroupBox>
 
+                                    <!-- 最上部杭区間 サマリ表示: 半剛接合工法 (キャプテン / FT-Pile / キャプリング) で表示 -->
+                                    <GroupBox Header="最上部杭区間">
+                                        <GroupBox.Style>
+                                            <Style TargetType="GroupBox">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding PileTopType}" Value="キャプテンパイル工法">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PileTopType}" Value="FT-Pile構法">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </GroupBox.Style>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="杭径 (mm)：" HorizontalAlignment="Right" Width="100"/>
+                                                <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}"
+                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                         Width="50" HorizontalContentAlignment="Right"/>
+
+                                                <!-- 既製コンクリート杭: 肉厚 -->
+                                                <TextBlock Text="肉厚 (mm)：" HorizontalAlignment="Right" Width="100"
+                                                           Visibility="{Binding PileBodyType,
+                                                                Converter={StaticResource VisibilityConverter},
+                                                                ConverterParameter='既製コンクリート杭'}"/>
+                                                <TextBox Text="{Binding PileTop.ConcreteThickness, StringFormat=N0}"
+                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                         Width="50" HorizontalContentAlignment="Right"
+                                                         Visibility="{Binding PileBodyType,
+                                                                Converter={StaticResource VisibilityConverter},
+                                                                ConverterParameter='既製コンクリート杭'}"/>
+                                            </StackPanel>
+
+                                            <!-- 鋼管杭 / SC杭 / 場所打ち鋼管コンクリート杭: 鋼管外径 × 鋼管厚 -->
+                                            <StackPanel Orientation="Horizontal"
+                                                        Visibility="{Binding PileBodyType,
+                                                            Converter={StaticResource VisibilityConverter},
+                                                            ConverterParameter='鋼管杭,場所打ち鋼管コンクリート杭'}">
+                                                <TextBlock Text="鋼管外径 (mm) × 鋼管厚 (mm)：" HorizontalAlignment="Right" Width="180"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeDia, StringFormat=N0}"
+                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                         Width="50" HorizontalContentAlignment="Right"/>
+                                                <TextBlock Text=" × " VerticalAlignment="Center"/>
+                                                <TextBox Text="{Binding DisplayTopSectionPipeTs, StringFormat=N0}"
+                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
+                                                         Width="50" HorizontalContentAlignment="Right"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+
                                     <StackPanel Visibility="{Binding PileBodyType,
                                                      Converter={StaticResource VisibilityConverter},
                                                      ConverterParameter='場所打ち鋼管コンクリート杭'}">
@@ -158,6 +213,16 @@
                                                      Converter={StaticResource VisibilityConverter},
                                                      ConverterParameter='既製コンクリート杭'}">
                                         <StackPanel Orientation="Horizontal">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
                                             <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
                                             <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                             <TextBlock Text="肉厚(mm)：" HorizontalAlignment="Right" Width="100"/>
@@ -174,6 +239,16 @@
                                                      Converter={StaticResource VisibilityConverter},
                                                      ConverterParameter='鋼管杭'}">
                                         <StackPanel Orientation="Horizontal">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
                                             <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
                                             <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
                                                      ToolTip="最上部杭区間 (コンクリート充填鋼管部) の有効径から自動算定 (≤1200: ×1.25+100 / >1200: +200)"/>
@@ -190,6 +265,16 @@
 
                                         <!-- 鉄筋(最上部杭区間) — 鋼管杭では editable (2 重鉄筋の 1 つ目) -->
                                         <GroupBox Header="鉄筋（最上部杭区間）">
+                                            <GroupBox.Style>
+                                                <Style TargetType="GroupBox">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </GroupBox.Style>
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
@@ -228,6 +313,10 @@
                                                     <Style.Triggers>
                                                         <!-- 杭頭タイプが FT-Pile構法のときは非表示 -->
                                                         <DataTrigger Binding="{Binding PileTopType}" Value="FT-Pile構法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <!-- 杭頭タイプがキャプリングパイル工法のときは非表示 (キャプリング側で独自の引張定着筋 UI を持つ) -->
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -341,7 +430,23 @@
                                                 </ComboBox>
                                             </StackPanel>
 
-                                            <CheckBox x:Name="CheckBoxHasTensionAnchors" Content= "引張定着筋" 
+                                            <!-- PC リング径 ≠ 杭径 の警告 -->
+                                            <TextBlock Text="{Binding RingDiameterWarning}"
+                                                       Foreground="Red" FontWeight="Bold" TextWrapping="Wrap"
+                                                       Margin="20,2,0,2">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RingDiameterWarning}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <CheckBox x:Name="CheckBoxHasTensionAnchors" Content= "引張定着筋"
                                                         IsChecked="{Binding PileTop.CaptainPile.CTPTensionRebars.HasTensionRebars, UpdateSourceTrigger=PropertyChanged}"
                                                               Checked="CheckBoxHasTensionAnchorsChecked" Unchecked="CheckBoxHasTensionAnchorsUnchecked"/>
 
@@ -420,6 +525,103 @@
                                         </StackPanel>
                                     </GroupBox>
 
+                                    <GroupBox Header="キャプリングパイル" Visibility="{Binding PileTopType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='キャプリングパイル工法'}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="PCリング" Width="100" HorizontalAlignment="Right"/>
+                                                <ComboBox x:Name="ComboBoxCapringPCRing" Width="120"
+                                                          ItemsSource="{Binding PileTop.CapringPile.PCRingOption}"
+                                                          SelectedItem="{Binding PileTop.CapringPile.SelectedPCRingName, UpdateSourceTrigger=PropertyChanged}"
+                                                          SelectionChanged="ComboBoxCapringPCRingChanged"
+                                                          HorizontalContentAlignment="Right"
+                                                          DropDownOpened="ComboBox_DropDownOpened"/>
+                                            </StackPanel>
+
+                                            <!-- PC リング径 ≠ 杭径 の警告 (RingDiameterWarning が空のときは非表示) -->
+                                            <TextBlock Text="{Binding RingDiameterWarning}"
+                                                       Foreground="Red" FontWeight="Bold" TextWrapping="Wrap"
+                                                       Margin="20,2,0,2">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RingDiameterWarning}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <CheckBox x:Name="CheckBoxCapringHasTensionBars" Content="引張定着筋"
+                                                      IsChecked="{Binding PileTop.CapringPile.HasTensionBars, UpdateSourceTrigger=PropertyChanged}"
+                                                      Checked="CheckBoxCapringHasTensionBarsChecked"
+                                                      Unchecked="CheckBoxCapringHasTensionBarsUnchecked"/>
+
+                                            <!-- 適用最小杭径 > 杭径 の場合の警告 (TensionBarWarning が空のときは表示なし) -->
+                                            <TextBlock Text="{Binding PileTop.CapringPile.TensionBarWarning}"
+                                                       Foreground="Red" FontWeight="Bold" TextWrapping="Wrap"
+                                                       Margin="20,2,0,2">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding PileTop.CapringPile.TensionBarWarning}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <GroupBox Header="引張定着筋" Visibility="{Binding ElementName=CheckBoxCapringHasTensionBars, Path=IsChecked,
+                                                        Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="標準配筋" Width="100" HorizontalAlignment="Right"/>
+                                                        <ComboBox x:Name="ComboBoxCapringTensionBar" Width="100"
+                                                                  ItemsSource="{Binding PileTop.CapringPile.TensionBarOption}"
+                                                                  SelectedItem="{Binding PileTop.CapringPile.SelectedTensionBarName, UpdateSourceTrigger=PropertyChanged}"
+                                                                  SelectionChanged="ComboBoxCapringTensionBarChanged"
+                                                                  DropDownOpened="ComboBox_DropDownOpened"/>
+                                                        <TextBlock Text="鋼種" Width="40" HorizontalAlignment="Right" Margin="10,0,0,0"/>
+                                                        <ComboBox x:Name="ComboBoxCapringTensionBarGrade" Width="80"
+                                                                  ItemsSource="{Binding PileTop.CapringPile.TensionBarGradeOption}"
+                                                                  SelectedItem="{Binding PileTop.CapringPile.TensionBarGrade, UpdateSourceTrigger=PropertyChanged}"
+                                                                  SelectionChanged="ComboBoxCapringTensionBarChanged"
+                                                                  DropDownOpened="ComboBox_DropDownOpened"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="配置径Dc (mm)" Width="100" HorizontalAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.Dc, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                        <TextBlock Text="帯筋外径 (mm)" Width="100" HorizontalAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.HoopOutDia, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="定着長さ (キャップ側) 定着版あり (mm)" HorizontalAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.AnchorLengthCapWithPlate, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                        <TextBlock Text="定着版なし (mm)" Width="100" HorizontalAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.AnchorLengthCapWithoutPlate, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="定着長さ (杭体側) (mm)" Width="200" HorizontalAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.AnchorLengthPileSide, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                        <TextBlock Text="適用最小杭径 (mm)" Width="120" HorizontalAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.MinPileDia, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </GroupBox>
+                                        </StackPanel>
+                                    </GroupBox>
+
                                     <GroupBox Header="FTパイル" Visibility="{Binding PileTopType,
                                                 Converter={StaticResource VisibilityConverter},
                                                 ConverterParameter='FT-Pile構法'}">
@@ -431,6 +633,22 @@
                                                     SelectedItem="{Binding PileTop.FTPile.SelectedFTCapName, UpdateSourceTrigger=PropertyChanged}"
                                                     SelectionChanged="ComboBoxFTCapChanged" />
                                             </StackPanel>
+
+                                            <!-- FT キャップ径 ≠ 杭径 の警告 -->
+                                            <TextBlock Text="{Binding RingDiameterWarning}"
+                                                       Foreground="Red" FontWeight="Bold" TextWrapping="Wrap"
+                                                       Margin="20,2,0,2">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RingDiameterWarning}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
 
                                             <CheckBox x:Name="CheckBoxHasFTTensionAnchors" Content="引張定着筋"
                                                       IsChecked="{Binding PileTop.FTPile.FTPileTensionBars.IsTensionType, UpdateSourceTrigger=PropertyChanged}"

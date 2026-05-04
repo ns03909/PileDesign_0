@@ -247,37 +247,57 @@ namespace PileDesign.Output
             AddText(body, $"杭検討プログラム ver {(System.Reflection.Assembly.GetExecutingAssembly().GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString())}", "center");
             AddText(body, DateTime.Now.ToString("yyyy/MM/dd"), "center");
 
-            AddHeader1(body, "基本設定", 1);
+            if (mainWindowViewModel.IncludeFundamental)
+            {
+                AddHeader1(body, "基本設定", 1);
+                AddFundamentalTable(body, inputModel.FundamentalInput); // 基本設定テーブル
+                AddLineBreak(body);
+            }
 
-            AddFundamentalTable(body, inputModel.FundamentalInput); // 基本設定テーブル
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludeLoadCondition)
+            {
+                AddHeader1(body, "荷重条件", 1);
+                AddText(body, "レベル1荷重");
+                AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1, inputModel.FundamentalInput);
+                AddText(body, "レベル2荷重");
+                AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2, inputModel.FundamentalInput);
+                AddLineBreak(body);
+            }
 
-            AddHeader1(body, "荷重条件", 1);
-            AddText(body, "レベル1荷重");
-            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel1, inputModel.FundamentalInput);
-            AddText(body, "レベル2荷重");
-            AddLoadCaseTable(body, inputModel.LoadCasesInput.LoadCasesLevel2, inputModel.FundamentalInput);
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludePileBodies)
+            {
+                AddHeader1(body, "杭体", 1);
+                AddPileBodiesTables(body, inputModel.PileBodies);
+                AddLineBreak(body);
+            }
 
-            AddHeader1(body, "杭体", 1);
-            AddPileBodiesTables(body, inputModel.PileBodies);
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludePileLayoutTable)
+            {
+                AddHeader1(body, "杭配置", 1);
+                AddPileLayoutTables(body, inputModel.PileLayoutItems, inputModel.FundamentalInput);
+                AddLineBreak(body);
+            }
 
-            AddHeader1(body, "杭配置", 1);
-            AddPileLayoutTables(body, inputModel.PileLayoutItems, inputModel.FundamentalInput);
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludePileAxialLoad)
+            {
+                AddHeader1(body, "杭軸力", 1);
+                AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
+                AddLineBreak(body);
+            }
 
-            AddHeader1(body, "杭軸力", 1);
-            AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludeIsFrontPile)
+            {
+                AddHeader1(body, "前後方杭", 1);
+                AddIsFrontPileTables(body, inputModel.PileLayoutItems);
+                AddLineBreak(body);
+            }
 
-            AddHeader1(body, "前後方杭", 1);
-            AddIsFrontPileTables(body, inputModel.PileLayoutItems);
-            AddLineBreak(body);
-
-            AddHeader1(body, "検討方針", 1);
-            AddDesignApproachSection(body, inputModel);
-            AddLineBreak(body);
+            if (mainWindowViewModel.IncludeDesignApproach)
+            {
+                AddHeader1(body, "検討方針", 1);
+                AddDesignApproachSection(body, inputModel);
+                AddLineBreak(body);
+            }
 
 
             if (mainWindowViewModel.IncludeGroundInformation) // 地盤
@@ -286,6 +306,15 @@ namespace PileDesign.Output
                 AddGroundInfo(body, inputModel.GroundsInput, inputModel.FundamentalInput);
                 AddLineBreak(body);
             }
+
+            // 地盤グラフ (N値分布 / Cu / Vs / Es / FL) — 個別チェックされた項目のみ出力
+            AddGroundGraphsSection(mainPart, body);
+
+            // 杭の図・諸元 (杭姿図 / 杭頭諸元 / 軸力制限) — 個別チェックされた項目のみ出力
+            AddPileDiagramsSection(mainPart, body);
+
+            // 解析サマリーレポート (テキスト) — 水平解析完了済かつチェックされた場合のみ
+            AddAnalysisSummaryReportSection(body);
 
             if (mainWindowViewModel.IncludeLiquefaction) // 液状化
             {
@@ -414,7 +443,8 @@ namespace PileDesign.Output
             {
                 AddAllPileStressDiagrams(mainPart, body,
                     mainWindowViewModel.IncludeHorizontal_Bending,
-                    mainWindowViewModel.IncludeHorizontal_Shear);
+                    mainWindowViewModel.IncludeHorizontal_Shear,
+                    mainWindowViewModel.IncludeHorizontal_StressLimitState);
             }
             if (mainWindowViewModel.IncludePileLocationMap) // 杭配置マップ
             {
@@ -551,49 +581,52 @@ namespace PileDesign.Output
         {
             if (body == null) return;
 
-            // 目次見出し
-            var titlePara = new Paragraph(
-                new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
-                new Run(new RunProperties(new FontSize { Val = (14 * 2).ToString() }, CreateDefaultRunFonts())) { }
-            );
-            titlePara.Append(new Run(new Text("目次")));
-            body.Append(titlePara);
-
-            // 本文目次 TOC フィールド
+            // 目次見出し (3 種類すべて同フォーマット: Bold + 中央 + 14pt)
+            AppendTocTitle(body, "目次");
             AddTocField(body, $"TOC \\o \"1-{headingLevels}\" \\h \\z \\u",
-                "目次を更新するには、Wordでフィールドを更新してください。 (選択: __Ctrl+A__, 更新: __F9__)");
-
+                "（Ctrl+A → F9 で更新）");
             AddLineBreak(body);
 
             // 図目次
-            var figTitlePara = new Paragraph(
-                new ParagraphProperties(new Justification { Val = JustificationValues.Left }),
-                new Run(new RunProperties(new FontSize { Val = (12 * 2).ToString() }, CreateDefaultRunFonts(), new Bold()),
-                    new Text("図目次"))
-            );
-            body.Append(figTitlePara);
+            AppendTocTitle(body, "図目次");
             // TOC \c の識別子は SEQ 識別子と同じ（Latin）を使う。
             AddTocField(body, "TOC \\h \\z \\c \"Figure\"", "（Ctrl+A → F9 で更新）");
-
             AddLineBreak(body);
 
             // 表目次
-            var tblTitlePara = new Paragraph(
-                new ParagraphProperties(new Justification { Val = JustificationValues.Left }),
-                new Run(new RunProperties(new FontSize { Val = (12 * 2).ToString() }, CreateDefaultRunFonts(), new Bold()),
-                    new Text("表目次"))
-            );
-            body.Append(tblTitlePara);
+            AppendTocTitle(body, "表目次");
             AddTocField(body, "TOC \\h \\z \\c \"Table\"", "（Ctrl+A → F9 で更新）");
         }
 
+        // 目次タイトル段落を統一フォーマットで追加 (Bold + 中央 + 14pt)
+        private static void AppendTocTitle(Body body, string title)
+        {
+            var para = new Paragraph(
+                new ParagraphProperties(new Justification { Val = JustificationValues.Center }),
+                new Run(
+                    new RunProperties(new FontSize { Val = (14 * 2).ToString() }, CreateDefaultRunFonts(), new Bold()),
+                    new Text(title))
+            );
+            body.Append(para);
+        }
+
         /// <summary>TOCフィールドを1つ挿入するヘルパ</summary>
+        /// <remarks>
+        /// fldChar に Dirty=true を付け、Word が「結果が古いので再計算が必要」と認識するようにする。
+        /// これがないと Word が初回 F9 時に placeholder のままで更新しないケースがある (環境依存)。
+        /// fieldCode の前後にスペースを入れることで Word の field parser がトークン分解で失敗しないようにする。
+        /// </remarks>
         private static void AddTocField(Body body, string fieldCode, string placeholder)
         {
             var tocPara = new Paragraph();
-            tocPara.Append(new Run(new FieldChar { FieldCharType = FieldCharValues.Begin }));
+            tocPara.Append(new Run(new FieldChar
+            {
+                FieldCharType = FieldCharValues.Begin,
+                Dirty = OnOffValue.FromBoolean(true) // Word に「結果が古い」と通知 → F9 で必ず再評価
+            }));
             var instrRun = new Run();
-            instrRun.Append(new FieldCode(fieldCode) { Space = SpaceProcessingModeValues.Preserve });
+            // fieldCode は前後に空白を持たせる (例: " TOC \\o ... ") — Word の field parser 互換性
+            instrRun.Append(new FieldCode($" {fieldCode.Trim()} ") { Space = SpaceProcessingModeValues.Preserve });
             tocPara.Append(instrRun);
             tocPara.Append(new Run(new FieldChar { FieldCharType = FieldCharValues.Separate }));
             tocPara.Append(new Run(new Text(placeholder)));
@@ -3061,7 +3094,12 @@ namespace PileDesign.Output
             MainDocumentPart mainPart, Body body,
             List<List<double>> xsLists, List<List<double>> ysLists,
             List<string> titles, List<string> xLabels, List<string> yLabels,
-            double widthMm = 150, double heightMm = 150)
+            double widthMm = 150, double heightMm = 150,
+            // 各パネルに重ねる限界状態ステップライン (xs=limit values, ys=Z)。null なら描画なし。
+            // limitXsByPanel[i] が null/空なら i 番パネルにラインを引かない。
+            List<List<double>>? limitXsByPanel = null,
+            List<List<double>>? limitYsByPanel = null,
+            string? limitLegend = null)
         {
             ScottPlot.Multiplot multiplot = new();
 
@@ -3077,6 +3115,7 @@ namespace PileDesign.Output
                 double[] xsArray = [.. xsLists[i]];
                 double[] ysArray = [.. ysLists[i]];
                 var scatter = plots[i].Add.ScatterLine(xsArray, ysArray);
+                var pileColor = scatter.LineStyle.Color;
 
                 // 変位図（先頭パネル）に地盤変位を重ねるのは xsLists にcount+1個の要素があるときのみ
                 if (i == 0 && xsLists.Count > count)
@@ -3088,12 +3127,30 @@ namespace PileDesign.Output
                     {
                         var soilScatter = plots[i].Add.ScatterLine(xsArrayS, ysArray);
                         // 杭変位と同じ色で破線にする
-                        var pileColor = scatter.LineStyle.Color;
                         soilScatter.LineStyle.Color = pileColor;
                         soilScatter.LineStyle.Pattern = LinePattern.Dashed;
                         soilScatter.LegendText = "地盤変位";
                     }
 
+                    plots[i].ShowLegend();
+                }
+
+                // 限界状態ステップラインを重ねる (せん断力/モーメントパネル用)
+                // 正側のみ・破線・応力ラインと同色 (GraphViewModel.DrawPileForce と整合)
+                if (limitXsByPanel != null && limitYsByPanel != null
+                    && i < limitXsByPanel.Count && i < limitYsByPanel.Count
+                    && limitXsByPanel[i] != null && limitYsByPanel[i] != null
+                    && limitXsByPanel[i].Count > 0
+                    && limitXsByPanel[i].Count == limitYsByPanel[i].Count)
+                {
+                    double[] limXs = [.. limitXsByPanel[i]];
+                    double[] limYs = [.. limitYsByPanel[i]];
+                    var limitScatter = plots[i].Add.ScatterLine(limXs, limYs);
+                    limitScatter.LineStyle.Color = pileColor;
+                    limitScatter.LineStyle.Pattern = LinePattern.Dashed;
+                    limitScatter.LineStyle.Width = 1.5f;
+                    limitScatter.MarkerStyle.IsVisible = false;
+                    limitScatter.LegendText = limitLegend ?? "限界状態";
                     plots[i].ShowLegend();
                 }
 

@@ -175,6 +175,44 @@ namespace PileDesign.Views
                     var p0 = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, layer.BottomAltitude));
                     AddLineGeometry(p0, new Point(p0.X + xShiftEnd, p0.Y), gridPath);
                 }
+
+                // 4) 土層別の半透明塗りつぶし（粘性土=茶, 砂質土=橙, 礫質土=緑）
+                AddSoilLayerFillRectangles(vm, pile, ground, topZ, xShiftEnd);
+            }
+        }
+
+        // 土層パラメータグラフ背景に土層別の半透明塗りつぶし矩形を追加
+        private void AddSoilLayerFillRectangles(MainWindowViewModel vm,
+            PileLayoutDataItem pile, GroundInput ground,
+            double topZ, double xShiftEnd)
+        {
+            if (ground.GroundLayers == null || ground.GroundLayers.Count == 0) return;
+            for (int i = 0; i < ground.GroundLayers.Count; i++)
+            {
+                var layer = ground.GroundLayers[i];
+                double zTop = i == 0 ? topZ : ground.GroundLayers[i - 1].BottomAltitude;
+                double zBtm = layer.BottomAltitude;
+
+                var pTopL = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, zTop));
+                var pBtmL = vm.CanvasThreeDView.Transformation(new Point3D(pile.Point3D.X, pile.Point3D.Y, zBtm));
+
+                PathGeometry fillPath = layer.GranularityClass switch
+                {
+                    "粘性土" => vm.CanvasGeometry.PathGeoSoilParamFillClay,
+                    "砂質土" => vm.CanvasGeometry.PathGeoSoilParamFillSand,
+                    "礫質土" => vm.CanvasGeometry.PathGeoSoilParamFillGravel,
+                    _ => null
+                };
+                if (fillPath == null) continue;
+
+                var rect = new List<Point>
+                {
+                    pTopL,
+                    new(pTopL.X + xShiftEnd, pTopL.Y),
+                    new(pBtmL.X + xShiftEnd, pBtmL.Y),
+                    pBtmL
+                };
+                AddPolyLineGeometry(rect, fillPath, isClosed: true);
             }
         }
 
@@ -269,6 +307,9 @@ namespace PileDesign.Views
                 // 上端・下端の水平線（0 から最大オフセットまで）
                 AddLineGeometry(top2D0, new Point(top2D0.X + xShiftEnd, top2D0.Y), gridPath);
                 AddLineGeometry(btm2D0, new Point(btm2D0.X + xShiftEnd, btm2D0.Y), gridPath);
+
+                // 3) 土層別の半透明塗りつぶし（粘性土=茶, 砂質土=橙, 礫質土=緑）
+                AddSoilLayerFillRectangles(vm, pile, ground, topZ, xShiftEnd);
             }
         }
 

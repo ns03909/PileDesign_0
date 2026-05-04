@@ -2919,6 +2919,24 @@ namespace PileDesign.ViewModels
                             {
                                 double? k = snapMode == RotationalSpringMode.CombinedXY ? snapKxy : snapKsingle;
                                 if (!k.HasValue || k.Value <= 0.0) continue;
+
+                                // 剛体相当 (HorizontalCalculationViewModel.SetupNonlinearMThetaForLoadCase で
+                                // K=1e10 を「剛」マーカーとして使っている) の場合は曲線をプロットしない。
+                                // K·θ で θ=0.02 まで描くと M=2×10^8 kN·m という非物理値の直線になり、
+                                // 「鋼管杭 (plain) で M-θ がおかしい」ように見える誤解を防ぐため。
+                                // 杭頭は剛結扱いの設計なので M-θ 関係そのものが存在しない、と表示する。
+                                const double KRigidThreshold = 1e9; // KBig=1e10 の 1 桁下を閾値に
+                                if (k.Value >= KRigidThreshold)
+                                {
+                                    // 凡例のみ追加 (空シリーズ) して「剛結」表示
+                                    string rigidLegend =
+                                        $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|Pile:{pileLayout.No}|剛結 (M-θ 関係なし)";
+                                    var marker = wpfPlot.Plot.Add.Marker(0, 0);
+                                    marker.LegendText = rigidLegend;
+                                    marker.MarkerSize = 0;
+                                    continue;
+                                }
+
                                 const double thetaMax = 0.02;
                                 int nDiv = 50;
                                 thetas = [.. Enumerable.Range(0, nDiv).Select(i => i * thetaMax / (nDiv - 1))];

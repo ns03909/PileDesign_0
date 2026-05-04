@@ -79,6 +79,43 @@ namespace PileDesign.Services
                 massInput.AltitudeDepth = data.GroundTopAltitude + massDto.GLDepth;
                 groundInput.GroundMassesData.Add(massInput);
             }
+
+            // 整合性確保: 各 mass 点の VS0 / Density が、その点が含まれる土層の Vs / Density と
+            // 異なる場合は土層の値で上書きする (土層側を正と扱う)。
+            // 層の glDepth は負値・降順 (浅→深) で並んでいることを前提とする。
+            ApplyLayerValuesToMasses(groundInput);
+        }
+
+        /// <summary>
+        /// 各 GroundMassData の VS0/Density を、その depth に対応する GroundLayer の値で上書きする。
+        /// 土層 (Vs, Density) を正、Mass (VS0, Density) を従とみなす整合化処理。
+        /// </summary>
+        private static void ApplyLayerValuesToMasses(GroundInput groundInput)
+        {
+            if (groundInput.GroundLayers == null || groundInput.GroundLayers.Count == 0) return;
+            if (groundInput.GroundMassesData == null) return;
+
+            foreach (var mass in groundInput.GroundMassesData)
+            {
+                // depth (負値) から該当層を線形検索: 最初に bottomGLDepth <= mass.GLDepth となる層
+                // (層の bottomGLDepth は降順、massのGLDepth=-0.83はlayer1.bottomGLDepth=-2.5以上なのでlayer1にヒット)
+                GroundLayerInput? hitLayer = null;
+                foreach (var layer in groundInput.GroundLayers)
+                {
+                    if (layer.BottomGLDepth <= mass.GLDepth)
+                    {
+                        hitLayer = layer;
+                        break;
+                    }
+                }
+                // 最深層より深い場合は最後の層を使用
+                hitLayer ??= groundInput.GroundLayers[groundInput.GroundLayers.Count - 1];
+
+                if (mass.VS0 != hitLayer.Vs)
+                    mass.VS0 = hitLayer.Vs;
+                if (mass.Density != hitLayer.Density)
+                    mass.Density = hitLayer.Density;
+            }
         }
 
         /// <summary>

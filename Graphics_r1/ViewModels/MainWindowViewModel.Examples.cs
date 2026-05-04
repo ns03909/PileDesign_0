@@ -71,22 +71,44 @@ namespace PileDesign.ViewModels
             CurrentModel = null;
 
             // JSON読み込み＋地盤データ準備をバックグラウンドで実行（UIバインド済みコレクションには触れない）
-            var (pileData, groundInputCopy) = await Task.Run(() =>
+            var (pileData, groundInputCopies) = await Task.Run(() =>
             {
                 // JSONから杭例題データを読み込む
                 var pd = PileExampleLoader.LoadFromFile(pileJsonFileName);
 
-                // 地盤例題を読み込む
-                var groundLayerViewModel = new GroundLayerViewModel(this);
-                var groundData = GroundExampleLoader.LoadFromFile(pd.GroundExampleName);
-                GroundExampleLoader.ApplyToGroundInput(groundLayerViewModel.GroundInput, groundData);
-                groundLayerViewModel.Update(); // 土層プロパティを再計算
+                // 地盤例題を読み込む (Ground No1)
+                var copies = new System.Collections.Generic.List<GroundInput>();
 
-                return (pd, groundLayerViewModel.GroundInput.DeepCopy());
+                var glvm = new GroundLayerViewModel(this);
+                var groundData = GroundExampleLoader.LoadFromFile(pd.GroundExampleName);
+                GroundExampleLoader.ApplyToGroundInput(glvm.GroundInput, groundData);
+                glvm.Update();
+                copies.Add(glvm.GroundInput.DeepCopy());
+
+                // 追加地盤 (Ground No2 以降)
+                if (pd.AdditionalGroundExampleNames != null)
+                {
+                    foreach (var name in pd.AdditionalGroundExampleNames)
+                    {
+                        if (string.IsNullOrEmpty(name)) continue;
+                        var glvm2 = new GroundLayerViewModel(this);
+                        var data2 = GroundExampleLoader.LoadFromFile(name);
+                        GroundExampleLoader.ApplyToGroundInput(glvm2.GroundInput, data2);
+                        glvm2.Update();
+                        copies.Add(glvm2.GroundInput.DeepCopy());
+                    }
+                }
+
+                return (pd, copies);
             });
 
             // モデルへの適用はUIスレッドで実行（CollectionView のスレッド制約を回避）
-            CurrentInputModel.GroundsInput[0] = groundInputCopy;
+            CurrentInputModel.GroundsInput[0] = groundInputCopies[0];
+            // 追加地盤は GroundsInput に Add (Index 1 以降)
+            while (CurrentInputModel.GroundsInput.Count > 1)
+                CurrentInputModel.GroundsInput.RemoveAt(CurrentInputModel.GroundsInput.Count - 1);
+            for (int i = 1; i < groundInputCopies.Count; i++)
+                CurrentInputModel.GroundsInput.Add(groundInputCopies[i]);
 
             // 杭例題データを適用
             PileExampleLoader.ApplyToInputModel(CurrentInputModel, pileData, this);
@@ -287,6 +309,22 @@ namespace PileDesign.ViewModels
                 // 砂時計を戻す
                 Mouse.OverrideCursor = null;
                 EndExample(nameof(Example3_4));
+            }
+        }
+
+        // 設計例集3.5
+        [RelayCommand]
+        private async Task Example3_5()
+        {
+            if (!TryStartExample(nameof(Example3_5))) return;
+            try
+            {
+                await LoadPileExampleAsync("PileExample3_5", "設計例3.5");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                EndExample(nameof(Example3_5));
             }
         }
 

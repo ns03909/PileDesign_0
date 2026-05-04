@@ -1778,12 +1778,44 @@ namespace PileDesign.Models.InputData
         {
             var section = CreateSectionCalculator();
             if (section == null)
+            {
+                // 鋼管杭+鋼管部 は IPileSectionCalculation 実装を持たない。
+                // 軸力制限はユーザ指定式で更新し、M-N 曲線もユーザ指定式 (Ms / Md) で構築。
+                UpdateSteelPipeAxialThresholds();
+                if (PileBodyType == "鋼管杭" && PileSectionType == "鋼管部")
+                {
+                    if (propertyName == nameof(UnfactoredServiceNM)
+                        || propertyName == nameof(FactoredServiceNM))
+                    {
+                        return BuildSteelPipeServiceNMRaw();
+                    }
+                    if (propertyName == nameof(UnfactoredDamageNM)
+                        || propertyName == nameof(FactoredDamageNM)
+                        || propertyName == nameof(FactoredDamageNMLevel1))
+                    {
+                        return BuildSteelPipeDamageNMRaw();
+                    }
+                    if (propertyName == nameof(UnfactoredUltimateNM)
+                        || propertyName == nameof(FactoredUltimateNM))
+                    {
+                        return BuildSteelPipeUltimateNMRaw();
+                    }
+                }
                 return ([], []);
+            }
 
             // 軸力閾値を更新
             UltimateLimitAxialForceThresholds = [.. section.UltimateLimitAxialForceThresholds];
             if (section is AbstractPileSection abs && abs.DamageLimitAxialForceThresholds != null)
                 DamageLimitAxialForceThresholds = [.. abs.DamageLimitAxialForceThresholds];
+
+            // 鋼管杭+コンクリート充填鋼管部 は M-N 曲線は SPRC と共有 (上記 section から取得済) するが、
+            // 軸力制限は鉄道構造物等設計標準・強度と変形性能 8 章の SteelPipeSection 系式で上書きする。
+            bool isSteelFilledTube = PileBodyType == "鋼管杭" && PileSectionType == "コンクリート充填鋼管部";
+            if (isSteelFilledTube)
+            {
+                UpdateSteelPipeAxialThresholds();
+            }
             // 使用限界軸力制限値を転送（PrecastPileSection用）
             if (section is PrecastPileSection precast)
             {
@@ -1814,6 +1846,78 @@ namespace PileDesign.Models.InputData
                 _ => (new List<double>(), new List<double>(), new List<double>(), new List<double>())
             };
 
+            // 鋼管杭+コンクリート充填鋼管部 の使用限界 M-N はユーザ指定の Ms 式で上書きする
+            // (SPRC のファイバー積分結果ではなく、鋼管降伏ベースの線形相互作用)。
+            if (isSteelFilledTube && (propertyName == nameof(UnfactoredServiceNM)
+                            || propertyName == nameof(FactoredServiceNM)))
+            {
+                var (svcN, svcM) = BuildSteelPipeServiceNMRaw();
+                if (svcN.Count > 0)
+                {
+                    return (svcN, svcM);
+                }
+            }
+
+            // 鋼管杭+コンクリート充填鋼管部 の損傷限界 M-N はユーザ指定の Md 式 (杭頭部) で上書き。
+            // sMd (鋼管部寄与、5 ケース分岐) + cMd (充填コン寄与、Xn 依存) の合成。
+            if (isSteelFilledTube && (propertyName == nameof(UnfactoredDamageNM)
+                            || propertyName == nameof(FactoredDamageNM)
+                            || propertyName == nameof(FactoredDamageNMLevel1)))
+            {
+                var (dmgN, dmgM) = BuildSteelPipeDamageNMRaw();
+                if (dmgN.Count > 0)
+                {
+                    return (dmgN, dmgM);
+                }
+            }
+
+            // 鋼管杭+コンクリート充填鋼管部 の安全限界 M-N はユーザ指定の Mu 式 (杭頭部) で上書き。
+            // sMu = 4·srm²·t·sin(sθO)·sσU と cMu = (2/3)·cσIr·(cro³·sin³(cθO) − cri³·sin³(cθI)) の合成。
+            if (isSteelFilledTube && (propertyName == nameof(UnfactoredUltimateNM)
+                            || propertyName == nameof(FactoredUltimateNM)))
+            {
+                var (ultN, ultM) = BuildSteelPipeUltimateNMRaw();
+                if (ultN.Count > 0)
+                {
+                    return (ultN, ultM);
+                }
+            }
+
+            // 鋼管杭+コンクリート充填鋼管部: 低減後 (Factored*) 曲線を SteelPipeSection 系の
+            // 新しい軸力閾値で再クリップする。低減前 (Unfactored*) は SPRC 計算のまま表示。
+            if (isSteelFilledTube && propertyName.StartsWith("Factored"))
+            {
+                (List<double> uN, List<double> uM, _, _) = propertyName switch
+                {
+                    nameof(FactoredServiceNM) => section.UnfactoredServiceNM,
+                    nameof(FactoredDamageNM) => section.UnfactoredDamageNM,
+                    nameof(FactoredDamageNMLevel1) => section.UnfactoredDamageNM,
+                    nameof(FactoredUltimateNM) => section.UnfactoredUltimateNM,
+                    _ => (new List<double>(), new List<double>(), new List<double>(), new List<double>())
+                };
+
+                (double nMinN, double nMaxN) = propertyName switch
+                {
+                    nameof(FactoredServiceNM) =>
+                        // ServiceLimitNMin/NMax は kN なので N に変換
+                        (ServiceLimitNMin * 1000.0, ServiceLimitNMax * 1000.0),
+                    nameof(FactoredDamageNM) or nameof(FactoredDamageNMLevel1) =>
+                        DamageLimitAxialForceThresholds.Count >= 2
+                            ? (DamageLimitAxialForceThresholds[0], DamageLimitAxialForceThresholds[1])
+                            : (double.NaN, double.NaN),
+                    nameof(FactoredUltimateNM) =>
+                        UltimateLimitAxialForceThresholds.Count >= 2
+                            ? (UltimateLimitAxialForceThresholds[0], UltimateLimitAxialForceThresholds[1])
+                            : (double.NaN, double.NaN),
+                    _ => (double.NaN, double.NaN)
+                };
+
+                if (uN.Count > 0 && double.IsFinite(nMinN) && double.IsFinite(nMaxN))
+                {
+                    (n, m) = ClipNMByThresholds(uN, uM, nMinN, nMaxN);
+                }
+            }
+
             // 低減前安全限界曲線に軸力閾値の計算点を挿入（曲線が閾値を正確に通るようにする）
             // 場所打ち鋼管コンクリート杭のみ（他の杭種ではNM曲線の非単調性で不正な点が挿入される）
             if (propertyName == nameof(UnfactoredUltimateNM) && n.Count > 1
@@ -1841,7 +1945,32 @@ namespace PileDesign.Models.InputData
         {
             var section = CreateSectionCalculator();
             if (section is not AbstractPileSection absSection)
+            {
+                // 鋼管杭 (鋼管部 / コンクリート充填鋼管部) は IPileSectionCalculation を実装しないため
+                // 通常パスでは ([], []) になり、せん断力グラフで限界状態線が描画されない。
+                // NM と同じく Build* メソッドで N-Q 曲線を構築する。
+                if (PileBodyType == "鋼管杭"
+                    && (PileSectionType == "鋼管部" || PileSectionType == "コンクリート充填鋼管部"))
+                {
+                    UpdateSteelPipeAxialThresholds();
+                    var (sN, sQ) = propertyName switch
+                    {
+                        nameof(UnfactoredServiceNQ) or nameof(FactoredServiceNQ)
+                            => BuildSteelPipeServiceNQRaw(),
+                        nameof(UnfactoredDamageNQ) or nameof(FactoredDamageNQ)
+                            => BuildSteelPipeDamageNQRaw(),
+                        nameof(UnfactoredUltimateNQ) or nameof(FactoredUltimateNQ)
+                            => BuildSteelPipeUltimateNQRaw(),
+                        _ => ((List<double>)[], (List<double>)[])
+                    };
+                    if (sN.Count == 0) return ([], []);
+                    return (
+                        GetMultipliedListValues(sN, 1e-3),
+                        GetMultipliedListValues(sQ, 1e-3)
+                    );
+                }
                 return ([], []);
+            }
 
             // プロパティ名に応じた NQ を取得
             // 注意: AbstractPileSection の NQ プロパティは (Q, N) の順で格納されている
@@ -2165,6 +2294,374 @@ namespace PileDesign.Models.InputData
             copy._crackNMRawCache = null;
 
             return copy;
+        }
+
+        /// <summary>
+        /// 鋼管杭 (鋼管部 / コンクリート充填鋼管部) の使用・損傷・安全限界軸力を
+        /// SteelPipeSection から直接算定し、ServiceLimitNMin/NMax,
+        /// DamageLimitAxialForceThresholds, UltimateLimitAxialForceThresholds
+        /// に反映する。β1=β2=1.0 として以下の式に従う:
+        ///
+        ///   使用限界:
+        ///     Nsc = β1·sNsc1 = β1·sfc1·sAp
+        ///     Nst = β1·sNst  = β1·sft·sAp
+        ///
+        ///   損傷限界 (鋼管部):
+        ///     Ndc = β1·sNdc1 = β1·1.5·sfc1·sAp
+        ///     Ndt = β1·sNdt  = β1·1.5·sft·sAp
+        ///
+        ///   損傷限界 (コンクリート充填鋼管部):
+        ///     Ndc = β1·(sNdc1 + cNdc),  cNdc = cσck·Air
+        ///     Ndt = β1·sNdt
+        ///
+        ///   安全限界 (両方共通):
+        ///     Nuc = β1·β2·sNuc1 = β1·β2·sσCy1·sAp,  sσCy1 = 1.1·1.5·sfc1
+        ///     Nut = β1·β2·sNut  = β1·β2·sσTy ·sAp,  sσTy  = 1.1·1.5·sft
+        ///
+        /// 単位: ServiceLimitNMin/NMax は kN、Damage/Ultimate Thresholds は N。
+        /// 必要入力が欠落している場合は何もしない。
+        /// </summary>
+        /// <summary>
+        /// 鋼管杭用の SteelPipeSection (鉄道構造物等設計標準・強度と変形性能 8 章準拠) を構築する。
+        /// PileSectionType="鋼管部" は Fc=0、"コンクリート充填鋼管部" は Fc=ConcreteFc を渡す。
+        /// β1=1.0、e=205000 N/mm² 固定。必要入力が欠落していれば null。
+        /// </summary>
+        private SteelPipeSection? TryCreateSteelPipeSection()
+        {
+            if (PileBodyType != "鋼管杭") return null;
+            if (PileSectionType != "鋼管部" && PileSectionType != "コンクリート充填鋼管部") return null;
+            if (PileDiameter <= 0 || CorrodedPipeTs <= 0) return null;
+
+            var (sigmaU, f) = SteelPipeGrades.GetProperties(PipeGrade ?? "SKK400");
+            double fcForSection = PileSectionType == "コンクリート充填鋼管部" ? ConcreteFc : 0.0;
+
+            return new SteelPipeSection(
+                PileDiameter, CorrodedPipeTs, f,
+                _beta1: 1.0,
+                fc: fcForSection,
+                sigmaB: sigmaU,
+                e: 205000.0);
+        }
+
+        /// <summary>
+        /// 鋼管杭の損傷限界 M-N 曲線を構築する。
+        /// ユーザ指定式に従い β1 = 1.0:
+        ///
+        /// 鋼管部 (杭中間部・杭下部、コンクリート充填なし):
+        ///   Md = β1·(1.5·sfc1 − |Ndd|/sAp)·sZe
+        ///
+        /// コンクリート充填鋼管部 (杭頭部):
+        ///   Ndd &lt; 0:                    Md = β1·sMd
+        ///   0 ≤ Ndd ≤ cNdc:              Md = β1·(sMd + cMd)
+        ///   cNdc &lt; Ndd:                 Md = β1·sMd
+        ///
+        ///   sMd: 鋼管部寄与 (5 ケース分岐、ユーザ指定式)
+        ///   cMd: 充填コンクリート部寄与 (Xn 依存、ユーザ指定式)
+        ///   cNdc = cσck·Air, cσck = (2/3)·α·√(sApf/(zn·Atr))·Fc
+        /// </summary>
+        private (List<double> N, List<double> M) BuildSteelPipeDamageNMRaw()
+        {
+            var sps = TryCreateSteelPipeSection();
+            if (sps == null) return ([], []);
+
+            bool isFilledTube = PileSectionType == "コンクリート充填鋼管部";
+            // 軸力スイープ範囲 = 損傷限界軸力閾値 (UpdateSteelPipeAxialThresholds で設定済)
+            if (DamageLimitAxialForceThresholds == null
+                || DamageLimitAxialForceThresholds.Count < 2) return ([], []);
+            double nMin = DamageLimitAxialForceThresholds[0];
+            double nMax = DamageLimitAxialForceThresholds[1];
+            if (nMax <= nMin) return ([], []);
+
+            Func<double, double> getMd = isFilledTube
+                ? sps.GetDamageLimitMomentHead
+                : sps.GetDamageLimitMomentMiddle;
+
+            const int nDiv = 100;
+            var ns = new List<double>(nDiv + 1);
+            var ms = new List<double>(nDiv + 1);
+            for (int i = 0; i <= nDiv; i++)
+            {
+                double Ndd = nMin + (nMax - nMin) * i / nDiv;
+                double m = Math.Max(0.0, getMd(Ndd));
+                ns.Add(Ndd);
+                ms.Add(m);
+            }
+            return (ns, ms);
+        }
+
+        /// <summary>
+        /// 鋼管杭の安全限界 M-N 曲線を構築する。
+        /// ユーザ指定式に従い β1 = β2 = 1.0:
+        ///
+        /// 鋼管部 (杭中間部・杭下部):
+        ///   |Nud|/sNuc &gt; 0.2:  Mu = β1·β2·1.25·sσCy1·(1 − |Nud|/sNuc)·sZe
+        ///   |Nud|/sNuc ≤ 0.2:   Mu = β1·β2·sσCy1·sZp        (塑性プラトー)
+        ///   sNuc = min(sNuc1, sNuc2)
+        ///
+        /// コンクリート充填鋼管部 (杭頭部):
+        ///   Mu = β1·β2·(sMu + cMu)
+        ///   sMu = 4·srm²·t·sin(sθO)·sσU,   sσU = ((π−sθO)·sσTy + sθO·sσCy1)/π
+        ///   cMu = (2/3)·cσIr·(cro³·sin³(cθO) − cri³·sin³(cθI))
+        ///   sθO, cθO, cθI は中立軸位置 Xn から導出 (Xn は Ns(Xn) + Nc(Xn) = Nud から二分法で解く)。
+        /// </summary>
+        private (List<double> N, List<double> M) BuildSteelPipeUltimateNMRaw()
+        {
+            var sps = TryCreateSteelPipeSection();
+            if (sps == null) return ([], []);
+
+            bool isFilledTube = PileSectionType == "コンクリート充填鋼管部";
+            if (UltimateLimitAxialForceThresholds == null
+                || UltimateLimitAxialForceThresholds.Count < 2) return ([], []);
+            double nMin = UltimateLimitAxialForceThresholds[0];
+            double nMax = UltimateLimitAxialForceThresholds[1];
+            if (nMax <= nMin) return ([], []);
+
+            Func<double, double> getMu = isFilledTube
+                ? sps.GetUltimateLimitMomentHead
+                : sps.GetUltimateLimitMomentMiddle;
+
+            const int nDiv = 100;
+            var ns = new List<double>(nDiv + 1);
+            var ms = new List<double>(nDiv + 1);
+            for (int i = 0; i <= nDiv; i++)
+            {
+                double Nud = nMin + (nMax - nMin) * i / nDiv;
+                double m = Math.Max(0.0, getMu(Nud));
+                ns.Add(Nud);
+                ms.Add(m);
+            }
+            return (ns, ms);
+        }
+
+        /// <summary>
+        /// 鋼管杭 (鋼管部 / コンクリート充填鋼管部 共通) の使用限界 M-N 曲線を構築する。
+        /// ユーザ指定式:
+        ///   Ms = β1·(sf − |Nsd|/sAp)·sZe,   β1 = 1
+        ///   sf = sfc1 (Nsd ≥ 0)、sft (Nsd &lt; 0)
+        ///   sZe = π·(D⁴ − (D−2t)⁴) / (32·D)   (腐食代考慮済み有効断面係数)
+        ///   sAp = π·(D² − (D−2t)²) / 4
+        ///   sft = F/1.5
+        ///   sfc1 = F/1.5            (D/t ≤ 25)
+        ///        = F/1.5·(0.8 + 5/(D/t))  (D/t &gt; 25、局部座屈低減)
+        /// 戻り値は (N [N単位], M [N·mm単位])。範囲外で M&lt;0 は 0 にクランプ。
+        /// </summary>
+        private (List<double> N, List<double> M) BuildSteelPipeServiceNMRaw()
+        {
+            if (PileBodyType != "鋼管杭") return ([], []);
+            if (PileSectionType != "鋼管部" && PileSectionType != "コンクリート充填鋼管部") return ([], []);
+            double D = PileDiameter;
+            double t = CorrodedPipeTs;
+            if (D <= 0 || t <= 0 || D <= 2 * t) return ([], []);
+
+            (_, double F) = SteelPipeGrades.GetProperties(PipeGrade ?? "SKK400");
+
+            double sAp = Math.PI * (D * D - (D - 2 * t) * (D - 2 * t)) / 4.0;
+            double sZe = Math.PI * (Math.Pow(D, 4) - Math.Pow(D - 2 * t, 4)) / (32.0 * D);
+            double sft = F / 1.5;
+            double sfc1 = D / t > 25.0
+                ? F / 1.5 * (0.8 + 5.0 / (D / t))
+                : F / 1.5;
+
+            const double beta1 = 1.0;
+            double Nst = beta1 * sft  * sAp;   // 引張容量 (正値)
+            double Nsc = beta1 * sfc1 * sAp;   // 圧縮容量
+
+            const int nDiv = 100;
+            var ns = new List<double>(nDiv + 1);
+            var ms = new List<double>(nDiv + 1);
+            double nMin = -Nst;
+            double nMax =  Nsc;
+            for (int i = 0; i <= nDiv; i++)
+            {
+                double Nsd = nMin + (nMax - nMin) * i / nDiv;
+                double sf = (Nsd >= 0) ? sfc1 : sft;
+                double m = beta1 * (sf - Math.Abs(Nsd) / sAp) * sZe;
+                ns.Add(Nsd);
+                ms.Add(Math.Max(0.0, m));
+            }
+            return (ns, ms);
+        }
+
+        // ========== 鋼管杭 N-Q 曲線 ==========
+        // SteelPipeSection は AbstractPileSection を継承していないため、GetNQScaled の
+        // 通常パスでは ([], []) が返り、せん断力グラフで限界状態線が描画されなかった。
+        // 以下 3 メソッドで NM と同じ建付けで N-Q 曲線を構築する。
+        // 戻り値は (N [N単位], Q [N単位]) — GetNQScaled 側で N→kN, Q→kN に変換される。
+
+        /// <summary>
+        /// 鋼管杭 (鋼管部・コンクリート充填鋼管部 共通) の使用限界 N-Q 曲線を構築する。
+        /// Qs = β1 × sfs × sAp / κ は軸力非依存なので、損傷限界軸力範囲で水平線を引く。
+        /// </summary>
+        private (List<double> N, List<double> Q) BuildSteelPipeServiceNQRaw()
+        {
+            var sps = TryCreateSteelPipeSection();
+            if (sps == null) return ([], []);
+            if (DamageLimitAxialForceThresholds == null
+                || DamageLimitAxialForceThresholds.Count < 2) return ([], []);
+            double nMin = DamageLimitAxialForceThresholds[0];
+            double nMax = DamageLimitAxialForceThresholds[1];
+            if (nMax <= nMin) return ([], []);
+
+            double q = sps.GetServiceLimitShear();
+            return ([nMin, nMax], [q, q]);
+        }
+
+        /// <summary>
+        /// 鋼管杭 の損傷限界 N-Q 曲線。Qd = 1.5 × Qs (軸力非依存) → 水平線。
+        /// </summary>
+        private (List<double> N, List<double> Q) BuildSteelPipeDamageNQRaw()
+        {
+            var sps = TryCreateSteelPipeSection();
+            if (sps == null) return ([], []);
+            if (DamageLimitAxialForceThresholds == null
+                || DamageLimitAxialForceThresholds.Count < 2) return ([], []);
+            double nMin = DamageLimitAxialForceThresholds[0];
+            double nMax = DamageLimitAxialForceThresholds[1];
+            if (nMax <= nMin) return ([], []);
+
+            double q = sps.GetDamageLimitShear();
+            return ([nMin, nMax], [q, q]);
+        }
+
+        /// <summary>
+        /// 鋼管杭 の安全限界 N-Q 曲線。
+        /// 鋼管部 (中間部・下部): Qu = β1 β2 × sQ0 × √(1 − η²),  η = Nud / sNy
+        /// コンクリート充填鋼管部 (杭頭部): 上式に Mu/sMu 比を乗じる
+        /// 軸力依存なので安全限界軸力範囲で多点プロット。
+        /// </summary>
+        private (List<double> N, List<double> Q) BuildSteelPipeUltimateNQRaw()
+        {
+            var sps = TryCreateSteelPipeSection();
+            if (sps == null) return ([], []);
+            if (UltimateLimitAxialForceThresholds == null
+                || UltimateLimitAxialForceThresholds.Count < 2) return ([], []);
+            double nMin = UltimateLimitAxialForceThresholds[0];
+            double nMax = UltimateLimitAxialForceThresholds[1];
+            if (nMax <= nMin) return ([], []);
+
+            bool isFilledTube = PileSectionType == "コンクリート充填鋼管部";
+            Func<double, double> getQu = isFilledTube
+                ? sps.GetUltimateLimitShearHead
+                : sps.GetUltimateLimitShearMiddle;
+
+            const int nDiv = 100;
+            var ns = new List<double>(nDiv + 1);
+            var qs = new List<double>(nDiv + 1);
+            for (int i = 0; i <= nDiv; i++)
+            {
+                double Nud = nMin + (nMax - nMin) * i / nDiv;
+                double q = Math.Max(0.0, getQu(Nud));
+                ns.Add(Nud);
+                qs.Add(q);
+            }
+            return (ns, qs);
+        }
+
+        private void UpdateSteelPipeAxialThresholds()
+        {
+            var sps = TryCreateSteelPipeSection();
+            if (sps == null) return;
+
+            const double beta1 = 1.0;
+            const double beta2 = 1.0;
+
+            // 使用限界 (kN)
+            double sNsc1 = sps.Sfc1 * sps.sAp;   // = sfc1·sAp [N]
+            double sNst  = sps.sft  * sps.sAp;   // = sft ·sAp [N]
+            ServiceLimitNMin = -beta1 * sNst  * 1e-3;  // 引張 (負)
+            ServiceLimitNMax =  beta1 * sNsc1 * 1e-3;  // 圧縮
+
+            // 損傷限界 (N)
+            double sNdc1 = 1.5 * sps.Sfc1 * sps.sAp;
+            double sNdtPos = 1.5 * sps.sft  * sps.sAp;
+            double Ndt = -beta1 * sNdtPos;
+            double Ndc = PileSectionType == "コンクリート充填鋼管部"
+                ? beta1 * (sNdc1 + sps.cNdc)
+                : beta1 * sNdc1;
+            DamageLimitAxialForceThresholds = [Ndt, Ndc];
+
+            // 安全限界 (N)
+            // 鋼管部 (杭中間部・杭下部):
+            //   Nuc = β1·β2·min(sNuc1, sNuc2),    sNuci = sσCyi·sAp,  sσCyi = 1.1·1.5·sfci
+            //   Nut = β1·β2·sNut,                 sNut  = sσTy·sAp,   sσTy  = 1.1·1.5·sft
+            // コンクリート充填鋼管部 (杭頭部):
+            //   Nuc = β1·β2·(sNuc1 + cNuc),       cNuc = cσIr·Air, cσIr = α·√(sApf/(zn·Air))·Fc
+            //   Nut = β1·β2·sNut1,                sNut1 = σB·sAp   (ultimate tensile strength)
+            double Nuc, Nut;
+            if (PileSectionType == "コンクリート充填鋼管部")
+            {
+                Nuc = beta1 * beta2 * (sps.sNuc1 + sps.cNuc);
+                Nut = beta1 * beta2 * sps.sNut1;
+            }
+            else
+            {
+                Nuc = beta1 * beta2 * Math.Min(sps.sNuc1, sps.sNuc2);
+                Nut = beta1 * beta2 * sps.sNut;
+            }
+            UltimateLimitAxialForceThresholds = [-Nut, Nuc];
+        }
+
+        /// <summary>
+        /// 軸力制限 [nMin, nMax] (どちらも N 単位) で N-M 曲線をクリップする。
+        /// 範囲外では M=0、境界では (nMin, 0) → (nMin, M_補間) → ... → (nMax, M_補間) → (nMax, 0)
+        /// と垂直降下/上昇する点列を返す。PrecastPileSection.ApplyAxialForceLimitsToNM と同等。
+        /// </summary>
+        private static (List<double> ns, List<double> ms) ClipNMByThresholds(
+            List<double> uN, List<double> uM, double nMin, double nMax)
+        {
+            var ns = new List<double>();
+            var ms = new List<double>();
+
+            ns.Add(nMin);
+            ms.Add(0.0);
+
+            double mAtMin = InterpolateMAtN(uN, uM, nMin);
+            if (mAtMin > 0)
+            {
+                ns.Add(nMin);
+                ms.Add(mAtMin);
+            }
+
+            for (int i = 0; i < uN.Count; i++)
+            {
+                if (uN[i] >= nMin && uN[i] <= nMax)
+                {
+                    ns.Add(uN[i]);
+                    ms.Add(uM[i]);
+                }
+            }
+
+            double mAtMax = InterpolateMAtN(uN, uM, nMax);
+            if (mAtMax > 0)
+            {
+                ns.Add(nMax);
+                ms.Add(mAtMax);
+            }
+
+            ns.Add(nMax);
+            ms.Add(0.0);
+
+            return (ns, ms);
+        }
+
+        /// <summary>
+        /// N-M 曲線上で軸力 nTarget に対応する M を線形補間で算定する。
+        /// 単調でない曲線でも複数交点のうち最大の M を返す (耐力包絡線として安全側)。
+        /// </summary>
+        private static double InterpolateMAtN(List<double> ns, List<double> ms, double nTarget)
+        {
+            double maxM = 0.0;
+            for (int i = 0; i < ns.Count - 1; i++)
+            {
+                double n0 = ns[i], n1 = ns[i + 1];
+                if ((n0 - nTarget) * (n1 - nTarget) <= 0 && n0 != n1)
+                {
+                    double t = (nTarget - n0) / (n1 - n0);
+                    double mInterp = ms[i] + t * (ms[i + 1] - ms[i]);
+                    maxM = Math.Max(maxM, mInterp);
+                }
+            }
+            return maxM;
         }
 
         /// <summary>

@@ -14,9 +14,13 @@ Title="計算書出力設定" Height="560" Width="640"
 common:EscapeKeyBehavior.Enable="True"
 WindowStartupLocation="CenterOwner">
 
-    <Window.DataContext>
+    <!-- DataContext は code-behind で渡される MainWindowViewModel を直接利用する。
+         ここで <local:MainWindowViewModel/> を書くと一時 VM が生成され、
+         AutoSaveService 等の購読/タイマーが残って共有状態を汚す不具合があったため削除。
+         d:DataContext は XAML デザイナーの IntelliSense 用 (実行時には影響なし) -->
+    <d:Window.DataContext>
         <local:MainWindowViewModel/>
-    </Window.DataContext>
+    </d:Window.DataContext>
 
     <Window.Resources>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
@@ -67,7 +71,7 @@ WindowStartupLocation="CenterOwner">
                                 <DataGridTemplateColumn Width="Auto">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                            <CheckBox IsChecked="{Binding IsApplicableForDocxDisplay, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsAnalyzed}" HorizontalAlignment="Center"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -91,7 +95,7 @@ WindowStartupLocation="CenterOwner">
                                 <DataGridTemplateColumn Width="Auto">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                            <CheckBox IsChecked="{Binding IsApplicableForDocxDisplay, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsAnalyzed}" HorizontalAlignment="Center"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -115,7 +119,7 @@ WindowStartupLocation="CenterOwner">
                                 <DataGridTemplateColumn Width="Auto">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsApplicable, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                            <CheckBox IsChecked="{Binding IsApplicableForDocxDisplay, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                                                       IsEnabled="{Binding IsAnalyzed}" HorizontalAlignment="Center"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -151,6 +155,13 @@ WindowStartupLocation="CenterOwner">
 
                     <GroupBox Header="入力データ" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
+                            <CheckBox Content="基本設定" IsChecked="{Binding IncludeFundamental, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="荷重条件" IsChecked="{Binding IncludeLoadCondition, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭体 (杭体明細表を含む)" IsChecked="{Binding IncludePileBodies, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭配置 (テーブル)" IsChecked="{Binding IncludePileLayoutTable, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭軸力" IsChecked="{Binding IncludePileAxialLoad, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="前後方杭" IsChecked="{Binding IncludeIsFrontPile, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="検討方針 (杭頭接続仮定を含む)" IsChecked="{Binding IncludeDesignApproach, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="地盤情報" IsChecked="{Binding IncludeGroundInformation, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="液状化検討" IsChecked="{Binding IncludeLiquefaction, Mode=TwoWay}" Margin="0,2"/>
                             <CheckBox Content="杭配置図" IsChecked="{Binding IncludepileLocationMap, Mode=TwoWay}" Margin="0,2"/>
@@ -159,111 +170,96 @@ WindowStartupLocation="CenterOwner">
                         </StackPanel>
                     </GroupBox>
 
+                    <GroupBox Header="地盤グラフ" Margin="0,0,0,4" Padding="4">
+                        <StackPanel>
+                            <CheckBox Content="N値分布グラフ" IsChecked="{Binding IncludeNValueGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="粘着力 Cu グラフ" IsChecked="{Binding IncludeCuGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="S波速度 Vs グラフ" IsChecked="{Binding IncludeVsGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="変形係数 Es グラフ" IsChecked="{Binding IncludeEsGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="液状化安全率 FL グラフ" IsChecked="{Binding IncludeFLGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="任意地盤変位グラフ" IsChecked="{Binding IncludeGroundDisplacementGraph, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="応答スペクトルグラフ" IsChecked="{Binding IncludeResponseSpectrumGraph, Mode=TwoWay}" Margin="0,2"/>
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox Header="杭の図・諸元" Margin="0,0,0,4" Padding="4">
+                        <StackPanel>
+                            <CheckBox Content="杭姿図 (杭体ごと)" IsChecked="{Binding IncludePileElevation, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭断面図 (配筋詳細)" IsChecked="{Binding IncludePileSectionDiagram, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭頭上面図" IsChecked="{Binding IncludePileTopView, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="杭頭諸元テーブル" IsChecked="{Binding IncludePileTopSpecs, Mode=TwoWay}" Margin="0,2"/>
+                            <CheckBox Content="軸力制限テーブル" IsChecked="{Binding IncludeAxialLimitTable, Mode=TwoWay}" Margin="0,2"/>
+                        </StackPanel>
+                    </GroupBox>
+
                     <GroupBox Header="支持力" Margin="0,0,0,4" Padding="4">
-                        <CheckBox Content="支持力検討" IsChecked="{Binding IncludeVertical, Mode=TwoWay}">
-                            <CheckBox.Style>
-                                <Style TargetType="CheckBox">
-                                    <Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="False">
-                                            <Setter Property="IsEnabled" Value="False"/>
-                                            <Setter Property="IsChecked" Value="False"/>
-                                            <Setter Property="ToolTip" Value="単杭沈下解析が未完了"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </CheckBox.Style>
-                        </CheckBox>
+                        <CheckBox Content="支持力検討" IsChecked="{Binding IncludeVertical, Mode=TwoWay}"
+                                  IsEnabled="{Binding IsVerticalAnalysisDone}"
+                                  ToolTip="単杭沈下解析が未完了の場合は灰色"/>
                     </GroupBox>
 
                     <GroupBox Header="水平検討" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <CheckBox Content="水平検討" IsChecked="{Binding IncludeHorizontal, Mode=TwoWay}" Margin="0,2">
-                                <CheckBox.Style>
-                                    <Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                        <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False">
-                                            <Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/>
-                                        </DataTrigger></Style.Triggers>
-                                    </Style>
-                                </CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="N-M関係" IsChecked="{Binding IncludeHorizontal_NMinT, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="N-Q関係" IsChecked="{Binding IncludeHorizontal_QNInT, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="M-φ関係" IsChecked="{Binding IncludeHorizontal_MPhi, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="M-θ関係" IsChecked="{Binding IncludeHorizontal_MTheta, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="曲げモーメント検討" IsChecked="{Binding IncludeHorizontal_Bending, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="せん断力検討" IsChecked="{Binding IncludeHorizontal_Shear, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="検定結果（NGのみ）" IsChecked="{Binding IncludeHorizontal_NGReport, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <StackPanel Margin="30,0,0,2">
-                                <TextBlock Text="杭変位応力図のまとめ方" FontSize="11" Foreground="#555"/>
-                                <RadioButton Content="杭ごとに個別" GroupName="PileStressGrouping" Margin="0,2,0,0"
+                            <!-- 親: 解析未完了時に灰色 (子は親+解析の AND で IsEnabled 制御) -->
+                            <CheckBox Content="水平検討" IsChecked="{Binding IncludeHorizontal, Mode=TwoWay}" Margin="0,2"
+                                      IsEnabled="{Binding IsHorizontalAnalysisDone}"/>
+                            <!-- 表示順 (ユーザー指定):
+                                 M-φ → M-θ → N-M → N-Q → 杭の変位・応力ダイアグラム
+                                 → 杭頭Mマップ → 杭頭Qマップ → 解析サマリーレポート → 検定結果 -->
+                            <CheckBox Content="M-φ関係" IsChecked="{Binding IncludeHorizontal_MPhi, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="M-θ関係" IsChecked="{Binding IncludeHorizontal_MTheta, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="N-M関係" IsChecked="{Binding IncludeHorizontal_NMinT, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="N-Q関係" IsChecked="{Binding IncludeHorizontal_QNInT, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <!-- 杭の変位・応力ダイアグラム (3 連グラフ: 変位 / せん断力 / 曲げモーメント) -->
+                            <!-- 変位列は常に出力。せん断/曲げ列の有無を以下 2 個で個別 ON/OFF -->
+                            <TextBlock Text="杭の変位・応力ダイアグラム" Margin="15,6,0,2"
+                                       FontWeight="SemiBold" Foreground="#444"/>
+                            <CheckBox Content="└ 曲げモーメント列を含める" IsChecked="{Binding IncludeHorizontal_Bending, Mode=TwoWay}" Margin="30,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"
+                                      ToolTip="3 連グラフの 3 列目 (曲げモーメント) を出力するか"/>
+                            <CheckBox Content="└ せん断力列を含める" IsChecked="{Binding IncludeHorizontal_Shear, Mode=TwoWay}" Margin="30,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"
+                                      ToolTip="3 連グラフの 2 列目 (せん断力) を出力するか"/>
+                            <CheckBox Content="└ 限界状態線を重ねて描画" IsChecked="{Binding IncludeHorizontal_StressLimitState, Mode=TwoWay}"
+                                      Margin="30,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"
+                                      ToolTip="レベル1→損傷限界、レベル2+グレードS→損傷限界、レベル2+グレードA→安全限界 (低減後値) を自動選択"/>
+                            <StackPanel Margin="30,0,0,2" IsEnabled="{Binding CanEditHorizontalChildren}">
+                                <TextBlock Text="└ まとめ方" FontSize="11" Foreground="#555"/>
+                                <RadioButton Content="杭ごとに個別" GroupName="PileStressGrouping" Margin="15,2,0,0"
                                              IsChecked="{Binding GroupPileStressBySoilPile, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"/>
-                                <RadioButton Content="杭地盤セットごとにまとめる" GroupName="PileStressGrouping" Margin="0,2,0,0"
+                                <RadioButton Content="杭地盤セットごとにまとめる" GroupName="PileStressGrouping" Margin="15,2,0,0"
                                              IsChecked="{Binding GroupPileStressBySoilPile, Mode=TwoWay}"/>
                             </StackPanel>
-                            <CheckBox Content="杭頭Mマップ" IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="杭頭Qマップ" IsChecked="{Binding IncludePileHeadShearMap, Mode=TwoWay}" Margin="15,2,0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsHorizontalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
+
+                            <CheckBox Content="杭頭Mマップ" IsChecked="{Binding IncludePileHeadMomentMap, Mode=TwoWay}" Margin="15,6,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="杭頭Qマップ" IsChecked="{Binding IncludePileHeadShearMap, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="解析サマリーレポート" IsChecked="{Binding IncludeAnalysisSummaryReport, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
+                            <CheckBox Content="検定結果（NGのみ）" IsChecked="{Binding IncludeHorizontal_NGReport, Mode=TwoWay}" Margin="15,2,0,2"
+                                      IsEnabled="{Binding CanEditHorizontalChildren}"/>
                         </StackPanel>
                     </GroupBox>
 
                     <GroupBox Header="沈下検討" Margin="0,0,0,4" Padding="4">
                         <StackPanel>
-                            <CheckBox Content="沈下検討" IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" Margin="0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/><Setter Property="ToolTip" Value="単杭沈下解析が未完了"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="荷重沈下曲線" IsChecked="{Binding IncludeLoadSettlementCurve, Mode=TwoWay}" Margin="0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsVerticalAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="群杭沈下マップ" IsChecked="{Binding IncludeGroupPileSettlement, Mode=TwoWay}" Margin="0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsGroupPileSettlementAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
-                            <CheckBox Content="基礎梁考慮鉛直解析結果" IsChecked="{Binding IncludeVerticalBeamResults, Mode=TwoWay}" Margin="0,2">
-                                <CheckBox.Style><Style TargetType="CheckBox"><Setter Property="IsEnabled" Value="True"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding IsVerticalBeamAnalysisDone}" Value="False"><Setter Property="IsEnabled" Value="False"/><Setter Property="IsChecked" Value="False"/></DataTrigger></Style.Triggers>
-                                </Style></CheckBox.Style>
-                            </CheckBox>
+                            <!-- 沈下検討/荷重沈下曲線は支持力検討 (IncludeVertical) の子 -->
+                            <CheckBox Content="沈下検討" IsChecked="{Binding IncludeSettlement, Mode=TwoWay}" Margin="0,2"
+                                      IsEnabled="{Binding CanEditVerticalChildren}"
+                                      ToolTip="支持力検討 ON かつ 単杭沈下解析完了で編集可"/>
+                            <CheckBox Content="荷重沈下曲線" IsChecked="{Binding IncludeLoadSettlementCurve, Mode=TwoWay}" Margin="0,2"
+                                      IsEnabled="{Binding CanEditVerticalChildren}"/>
+                            <!-- 群杭沈下/基礎梁考慮 は独立 (各々の解析完了でガード) -->
+                            <CheckBox Content="群杭沈下マップ" IsChecked="{Binding IncludeGroupPileSettlement, Mode=TwoWay}" Margin="0,2"
+                                      IsEnabled="{Binding IsGroupPileSettlementAnalysisDone}"/>
+                            <CheckBox Content="基礎梁考慮鉛直解析結果" IsChecked="{Binding IncludeVerticalBeamResults, Mode=TwoWay}" Margin="0,2"
+                                      IsEnabled="{Binding IsVerticalBeamAnalysisDone}"/>
                         </StackPanel>
                     </GroupBox>
 

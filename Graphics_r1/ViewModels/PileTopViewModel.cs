@@ -76,12 +76,13 @@ namespace PileDesign.ViewModels
         {
             if (e == null) return;
 
-            // 上面図を更新したいプロパティ名のリスト
+            // 上面図・諸元を更新したいプロパティ名のリスト
             var watched = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "MainBarNum1", "MainBarSize1", "MainBarSpec1", "MainBarCenterCover1",
-                "MainBarNum2", "MainBarSize2", "MainBarSpec2", "MainBarCenterCover2",
-                "ConcreteOutDia", "PipeDia", "PipeTs"
+                "MainBarNum1", "MainBarSize1", "MainBarSpec1", "MainBarCenterCover1", "MainBarDr1",
+                "MainBarNum2", "MainBarSize2", "MainBarSpec2", "MainBarCenterCover2", "MainBarDr2",
+                "ConcreteOutDia", "PipeDia", "PipeTs",
+                "PileCapFc", "PileCapGamma"
             };
 
             if (watched.Contains(e.PropertyName))
@@ -109,6 +110,45 @@ namespace PileDesign.ViewModels
 
         [ObservableProperty]
         private PileSection _pileSection;
+
+        /// <summary>
+        /// 半剛接合工法 (キャプテン / FT-Pile / キャプリング) で、選択されている
+        /// PCリング径 / FTキャップ径 が最上部杭区間の杭径と一致しないときの警告メッセージ。
+        /// 一致 (誤差 ≤ 1 mm) または該当工法外の場合は空文字。
+        /// XAML 側で TextBlock の Text にバインドして赤字表示。
+        /// </summary>
+        public string RingDiameterWarning
+        {
+            get
+            {
+                if (PileSection == null || PileSection.PileDiameter <= 0) return string.Empty;
+                double actualDia = PileSection.PileDiameter;
+                const double tol = 1.0;
+
+                if (PileTopType == "キャプリングパイル工法" && PileTop?.CapringPile?.PCRing != null)
+                {
+                    double ringDia = PileTop.CapringPile.PCRing.D;
+                    if (ringDia > 0 && Math.Abs(ringDia - actualDia) > tol)
+                        return $"⚠ PCリング径 {ringDia:N0} mm ≠ 杭径 {actualDia:N0} mm";
+                }
+                else if (PileTopType == "キャプテンパイル工法" && PileTop?.CaptainPile?.PCRing != null)
+                {
+                    double ringDia = PileTop.CaptainPile.PCRing.D;
+                    if (ringDia > 0 && Math.Abs(ringDia - actualDia) > tol)
+                        return $"⚠ PCリング径 {ringDia:N0} mm ≠ 杭径 {actualDia:N0} mm";
+                }
+                else if (PileTopType == "FT-Pile構法" && PileTop?.FTPile?.FTCap != null)
+                {
+                    double capDia = PileTop.FTPile.FTCap.Phi;
+                    if (capDia > 0 && Math.Abs(capDia - actualDia) > tol)
+                        return $"⚠ FTキャップ径 {capDia:N0} mm ≠ 杭径 {actualDia:N0} mm";
+                }
+                return string.Empty;
+            }
+        }
+
+        /// <summary>RingDiameterWarning の再評価を XAML に通知する。Recalculate() 等から呼ぶ。</summary>
+        public void RaiseRingDiameterWarningChanged() => OnPropertyChanged(nameof(RingDiameterWarning));
 
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
@@ -266,6 +306,13 @@ namespace PileDesign.ViewModels
                     DisplayTopSectionPipeDia = 0.0;
                     DisplayTopSectionPipeTs = 0.0;
                 }
+
+                // 鉄筋定着工法 のとき諸元 (SelectedPileTopSpecification) を再構築
+                if (string.Equals(PileTopType, "鉄筋定着工法", StringComparison.Ordinal))
+                {
+                    try { PileTop.UpdateRebarAnchorageSpecs(PileBodyType, PileSection); }
+                    catch (Exception exSpec) { Log.Warning(exSpec, "UpdateRebarAnchorageSpecs failed"); }
+                }
             }
             catch (Exception ex)
             {
@@ -323,6 +370,18 @@ namespace PileDesign.ViewModels
             {
                 UpdateChartThetaMSeries(PileTop.FTPile.Ns, PileTop.FTPile.ThetasMs);
             }
+            else if (PileTopType == "キャプリングパイル工法" && PileTop.CapringPile != null)
+            {
+                // θ-M バイリニア曲線群 (軸力 N サンプリング × M-θ)
+                if (PileTop.CapringPile.Ns != null && PileTop.CapringPile.ThetasMs != null
+                    && PileTop.CapringPile.Ns.Count > 0)
+                {
+                    UpdateChartThetaMSeries(PileTop.CapringPile.Ns, PileTop.CapringPile.ThetasMs);
+                }
+                // MN: Mu(N) 折れ線
+                try { DrawCapringPile_MN(); }
+                catch (Exception ex) { Log.Warning(ex, "ChartUpdate: DrawCapringPile_MN failed"); }
+            }
             else if (PileTopType == "鉄筋定着工法")
             {
                 // 鉄筋定着工法用の MN 曲線描画（場所打ち鋼管コンクリート杭 を想定）
@@ -333,6 +392,16 @@ namespace PileDesign.ViewModels
                 catch (Exception ex)
                 {
                     Log.Warning(ex, "ChartUpdate: DrawRebarAnchorage_MN failed");
+                }
+
+                // 鋼管杭+鉄筋定着工法 のみ θ-M 曲線 (Kθ 線形ばね) を描画
+                try
+                {
+                    DrawRebarAnchorage_ThetaM();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "ChartUpdate: DrawRebarAnchorage_ThetaM failed");
                 }
             }
         }
@@ -407,6 +476,150 @@ namespace PileDesign.ViewModels
             MyCrosshair_MN = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
             // イベントを二重登録しないため、追加のみ（既存で二重登録が問題ならデリゲートを保持して解除する実装に変更してください）
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_MN", "N(kN)", "M(kNm)", 1, 1);
+        }
+
+
+        /// <summary>
+        /// キャプリングパイル工法の MN 相互作用 (Mu(N) 折れ線) を MN タブに描画。
+        /// - 引張定着筋なし: Mu = (D/2)·N (圧縮側線形)
+        /// - 引張定着筋あり 圧縮側: Mu = (D/2)·N + Mr
+        /// - 引張定着筋あり 引張側: Mu = Mr·(1 - |N|/Ny)、N=-Ny で 0
+        /// </summary>
+        private void DrawCapringPile_MN()
+        {
+            if (PileTop?.CapringPile == null || PileTopWindowInstance == null) return;
+            var wpf = PileTopWindowInstance.wpfPlotMN;
+            if (wpf == null) return;
+
+            var cp = PileTop.CapringPile;
+
+            wpf.Plot.Clear();
+
+            string title = "軸力と最大抵抗モーメント関係 (キャプリングパイル工法)";
+            wpf.Plot.Axes.Title.Label.Text = title;
+            wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
+            wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
+            wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect("N (kN)");
+            wpf.Plot.Axes.Left.Label.Text = "M (kNm)";
+            wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect("M (kNm)");
+            wpf.Plot.Legend.FontName = Fonts.Detect("メイリオ");
+
+            // N サンプリング: 引張側 NMin から 圧縮側 NMax まで 41 点
+            double nMin = cp.GetNMin();
+            double nMax = cp.GetNMax();
+            if (nMax <= nMin) nMax = nMin + 1.0;
+
+            const int sampleCount = 41;
+            var xs = new double[sampleCount];
+            var ys = new double[sampleCount];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                double n = nMin + (nMax - nMin) * i / (sampleCount - 1);
+                (double _, double mu) = cp.GetKiMu(n);
+                xs[i] = n / 1000.0;          // N → kN
+                ys[i] = mu / 1.0e6;          // N·mm → kN·m
+            }
+
+            var scatter = wpf.Plot.Add.Scatter(xs, ys);
+            scatter.LineWidth = 1.5f;
+            scatter.MarkerSize = 0;
+            scatter.LegendText = "Mu";
+            wpf.Plot.Legend.FontName = Fonts.Detect("Mu");
+
+            var black = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, black);
+            wpf.Plot.Add.HorizontalLine(0, 1, black);
+
+            wpf.Plot.Legend.IsVisible = true;
+            wpf.Plot.Axes.AutoScale();
+            wpf.Plot.Axes.AutoScaleExpandX();
+            wpf.Plot.Axes.AutoScaleExpandY();
+            wpf.Plot.Axes.Left.Min = 0.0;
+
+            wpf.Refresh();
+
+            MyCrosshair_MN = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_MN", "N(kN)", "M(kNm)", 1, 1);
+        }
+
+        // 鋼管杭+鉄筋定着工法 の杭頭接合部の弾性回転剛性 Kθ を線形ばね M = Kθ·θ として
+        // θ-M タブに描画する。SPRC / 既製杭 の場合は剛接合のためタブを空のままクリア表示する。
+        private void DrawRebarAnchorage_ThetaM()
+        {
+            if (PileTop == null || PileTopWindowInstance == null) return;
+            var wpf = PileTopWindowInstance.wpfPlotThetaM;
+            if (wpf == null) return;
+
+            wpf.Plot.Clear();
+
+            string title = "回転角と曲げモーメント関係（定着工法）";
+            wpf.Plot.Axes.Title.Label.Text = title;
+            wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
+
+            wpf.Plot.Axes.Bottom.Label.Text = "θ (rad)";
+            wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect("θ (rad)");
+            wpf.Plot.Axes.Left.Label.Text = "M (kNm)";
+            wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect("M (kNm)");
+
+            // 鋼管杭以外 (場所打ち鋼管コンクリート杭/既製コンクリート杭) は剛接合のため曲線なし
+            if (!string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal))
+            {
+                wpf.Plot.Axes.AutoScale();
+                wpf.Refresh();
+                return;
+            }
+
+            // 軸力範囲は M-N (UnfactoredDamageNM) の N の最小〜最大に揃える。
+            // 取得できなければ Service / Ultimate も順に試す。
+            List<double> nList = PileTop.UnfactoredDamageNM.N ?? [];
+            if (nList.Count == 0) nList = PileTop.UnfactoredServiceNM.N ?? [];
+            if (nList.Count == 0) nList = PileTop.UnfactoredUltimateNM.N ?? [];
+            if (nList.Count == 0)
+            {
+                wpf.Plot.Axes.AutoScale();
+                wpf.Refresh();
+                return;
+            }
+
+            double nMin = nList.Min();
+            double nMax = nList.Max();
+            const int nNum = 7;
+            for (int i = nNum - 1; i >= 0; i--)
+            {
+                double n = nMin + (nMax - nMin) * i / (double)(nNum - 1);
+                var info = PileTop.GetSteelPilePileHeadJointInfo(n);
+                if (info == null) continue;
+                if (!double.IsFinite(info.Ktheta) || info.Ktheta <= 0.0) continue;
+                if (!double.IsFinite(info.PtThetaY) || info.PtThetaY <= 0.0) continue;
+                if (!double.IsFinite(info.RMtyKNm) || info.RMtyKNm <= 0.0) continue;
+
+                // 線形ばね M = Kθ·θ を原点から降伏点 (ptθy, rMty) まで描画
+                double[] xs = [0.0, info.PtThetaY];
+                double[] ys = [0.0, info.RMtyKNm];
+                var scatter = wpf.Plot.Add.Scatter(xs, ys);
+                scatter.LineWidth = 1;
+                scatter.MarkerSize = 0;
+                scatter.MarkerShape = ScottPlot.MarkerShape.None;
+                string legend = $"N = {n:N0}kN";
+                scatter.LegendText = legend;
+                wpf.Plot.Legend.FontName = Fonts.Detect(legend);
+            }
+
+            var blackTM = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, blackTM);
+            wpf.Plot.Add.HorizontalLine(0, 1, blackTM);
+
+            wpf.Plot.Legend.IsVisible = true;
+            wpf.Plot.Axes.AutoScale();
+            wpf.Plot.Axes.AutoScaleExpandX();
+            wpf.Plot.Axes.AutoScaleExpandY();
+            wpf.Plot.Axes.Left.Min = 0.0;
+            wpf.Plot.Axes.Bottom.Min = 0.0;
+
+            wpf.Refresh();
+
+            MyCrosshair_ThetaM = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_ThetaM", "θ(rad)", "M(kNm)", 1, 1);
         }
 
 
@@ -661,6 +874,10 @@ namespace PileDesign.ViewModels
             {
                 baseDimension = Math.Max(PileTop.FTPile.FTCap.D2 + 150.0, 1200.0);
             }
+            else if (PileTopType == "キャプリングパイル工法" && PileTop.CapringPile?.PCRing != null)
+            {
+                baseDimension = Math.Max(PileTop.CapringPile.PCRing.RD2 + 150.0, 1200.0);
+            }
             else if (PileTopType == "鉄筋定着工法")
             {
                 baseDimension = Math.Max(PileTop.ConcreteOutDia, 1200.0);
@@ -760,9 +977,77 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            else if (PileTopType == "キャプリングパイル工法" && PileTop.CapringPile?.PCRing != null)
+            {
+                var ring = PileTop.CapringPile.PCRing;
+
+                // 杭体描画 — 杭種に応じてコンクリート内径・鋼管内径も描画
+                bool isSteelPipe = PileBodyType?.Contains("鋼管杭") ?? false;
+                bool isPrecastConcrete = PileBodyType?.Contains("既製コンクリート杭") ?? false;
+                double pileOuterDia = ring.D;
+
+                if (isSteelPipe)
+                {
+                    // 鋼管杭+キャプリング: 杭頭はコンクリート充填鋼管部
+                    // 鋼管 (外径〜内径) + 内側コンクリート充填
+                    double pipeDia = (PileSection != null && PileSection.PipeDia > 0) ? PileSection.PipeDia : pileOuterDia;
+                    double pipeTs = PileSection?.PipeTs ?? 0;
+                    double pipeInner = Math.Max(0.0, pipeDia - 2 * pipeTs);
+                    if (pipeInner > 0)
+                        DrawDonut("concrete", pipeInner, 0.0); // 充填コンクリート (青)
+                    DrawDonut("steelPipe", pipeDia, pipeInner, Brushes.Gray); // 鋼管 (灰)
+                }
+                else if (isPrecastConcrete)
+                {
+                    // 既製コンクリート杭 (PHC/PRC/SC): 中空コンクリート (外径〜内径)
+                    double concreteThickness = PileTop.ConcreteThickness;
+                    double concreteInner = Math.Max(0.0, pileOuterDia - 2 * concreteThickness);
+                    DrawDonut("concrete", pileOuterDia, concreteInner);
+
+                    // SC 杭の場合は内側に鋼管あり
+                    if (PileSection != null && PileSection.PipeDia > 0 && PileSection.PipeTs > 0)
+                    {
+                        double pipeInner = Math.Max(0.0, PileSection.PipeDia - 2 * PileSection.PipeTs);
+                        DrawDonut("steelPipe", PileSection.PipeDia, pipeInner, Brushes.Gray);
+                    }
+                }
+                else
+                {
+                    // フォールバック: 単純な円
+                    DrawDonut("concrete", pileOuterDia, 0.0);
+                }
+
+                // PC リング (rd1 内径〜rd2 外径) コンクリート部
+                DrawDonut("concrete", ring.RD2, ring.RD1);
+
+                // 鋼リング (rd1 + 2*ts、内側鋼管厚)
+                double steelRingDia = ring.RD1 + 2.0 * ring.Ts;
+                DrawDonut("steelPipe", steelRingDia, ring.RD1);
+
+                // PC リング定着筋 (BarNum 本、円環配置、リング外径から かぶり 40 + スパイラル筋径 + 鉄筋径/2 内側に配置)
+                int barNum = ring.BarNum;
+                double barDia = ExtractNumber(ring.BarSize ?? "");
+                double spiralDia = ExtractNumber(ring.SpiralDia ?? "");
+                double pcd = ring.RD2 - 2.0 * (40.0 + spiralDia + barDia * 0.5);
+                if (pcd > 0 && barNum > 0 && barDia > 0)
+                    DrawMainBars(barNum, barDia, pcd);
+
+                // 引張定着筋 (オプション、円環配置)
+                var capring = PileTop.CapringPile;
+                if (capring.HasTensionBars && capring.TensionBar != null)
+                {
+                    int tNum = capring.TensionBar.BarNum;
+                    double tDia = ExtractNumber(capring.TensionBar.BarSize ?? "");
+                    double tPcd = capring.TensionBar.Dc;
+                    if (tPcd > 0 && tNum > 0 && tDia > 0)
+                        DrawMainBars(tNum, tDia, tPcd);
+                }
+            }
+
             else if (PileTopType == "鉄筋定着工法")
             {
-                if (string.Equals(PileBodyType, "場所打ち鋼管コンクリート杭", StringComparison.Ordinal))
+                if (string.Equals(PileBodyType, "場所打ち鋼管コンクリート杭", StringComparison.Ordinal)
+                    || string.Equals(PileBodyType, "鋼管杭", StringComparison.Ordinal))
                 {
                     if (PileSection != null)
                     {

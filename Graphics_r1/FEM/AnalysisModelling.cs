@@ -42,6 +42,24 @@ namespace PileDesign.FEM
         }
 
         /// <summary>
+        /// PileLayoutItems の No / PileNo を 1-based 連番で振り直す。
+        /// **必ず UI スレッドから呼出すこと**。AnalysisModelling コンストラクタは Task.Run で
+        /// バックグラウンド実行されるため、ここで item プロパティを書き換えると
+        /// 同コレクションをバインドする DataGrid (CanUserSortColumns + ソート中) の CollectionView が
+        /// bg スレッドから CollectionChanged を発火し NotSupportedException が発生する。
+        /// </summary>
+        public static void EnsurePileNumbersSequential(InputModel inputModel)
+        {
+            if (inputModel?.PileLayoutItems == null) return;
+            for (int i = 0; i < inputModel.PileLayoutItems.Count; i++)
+            {
+                var item = inputModel.PileLayoutItems[i];
+                if (item.No != i + 1) item.No = i + 1;
+                if (item.PileNo != i + 1) item.PileNo = i + 1;
+            }
+        }
+
+        /// <summary>
         /// FoundationBeamInput が有効（非null かつ梁要素あり）かどうか
         /// </summary>
         private bool HasFoundationBeams =>
@@ -291,13 +309,23 @@ namespace PileDesign.FEM
         {
             if (InputModel.PileLayoutItems == null) return;
 
-            // 重要: 並列処理を始める前に PileLayoutItems の No（および PileNo）をリスト番号で上書きする
-            // これにより ProcessSinglePile 内で使用される pile.No が 0 で固定される問題を解消します。
+            // 重要: ここに以前あった No/PileNo の振り直しは EnsurePileNumbersSequential() に分離し
+            // UI スレッドで AnalysisModelling コンストラクタ呼出前に実行するように変更した。
+            // 理由: AnalysisModelling は Task.Run (background thread) から構築されるため、
+            // ここで item.No/PileNo を書き換えると PileLayoutItems がバインドされた DataGrid
+            // (CanUserSortColumns=True で No 列にソートが掛かっていると特に) の CollectionView が
+            // bg スレッドから CollectionChanged を発火し NotSupportedException を投げる。
+            //
+            // この時点で No/PileNo は既に sequential である前提。安全のため未同期なら例外で気づく。
             for (int i = 0; i < InputModel.PileLayoutItems.Count; i++)
             {
                 var item = InputModel.PileLayoutItems[i];
-                item.No = i + 1;       // Node.No（表示／識別に使われる）
-                item.PileNo = i + 1;   // PileLayoutDataItem 側の PileNo（必要なら同期）
+                if (item.No != i + 1 || item.PileNo != i + 1)
+                {
+                    throw new InvalidOperationException(
+                        $"AnalysisModelling: PileLayoutItems[{i}] の No={item.No}/PileNo={item.PileNo} が " +
+                        $"期待値 {i + 1} と一致しません。EnsurePileNumbersSequential() を UI スレッドで先に呼出してください。");
+                }
             }
             var pileList = InputModel.PileLayoutItems.ToList();
             int pileCount = pileList.Count;

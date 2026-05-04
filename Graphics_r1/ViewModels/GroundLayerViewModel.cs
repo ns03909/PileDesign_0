@@ -1225,6 +1225,16 @@ namespace PileDesign.ViewModels
             Color waterColor = Color.FromSKColor(NikkenSKColor.DeepBlue);
             wpf.Plot.Add.HorizontalLine(gwDepth, 2, waterColor, LinePattern.Solid);
 
+            // 「▽GWT」ラベル (Y軸位置 x=0、線の少し上)
+            // ▽ (U+25BD) を描画できるフォントを Fonts.Detect で取得
+            const string gwtText = "▽GWT";
+            var gwtLabel = wpf.Plot.Add.Text(gwtText, new ScottPlot.Coordinates(0, gwDepth));
+            gwtLabel.LabelFontColor = waterColor;
+            gwtLabel.LabelFontSize = 10;
+            gwtLabel.LabelBold = true;
+            gwtLabel.LabelFontName = Fonts.Detect(gwtText);
+            gwtLabel.LabelAlignment = ScottPlot.Alignment.LowerLeft;
+
             // Y軸レンジから線間隔を決定：(maxY - minY) / 50 を使用。データ不足時は従来の 0.12 を使用
             double yMax = 0.0;
             double yMin = 0.0;

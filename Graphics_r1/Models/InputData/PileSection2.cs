@@ -236,7 +236,11 @@ namespace PileDesign.Models.InputData
         internal MainBars(double pcd, int number, string grade, string barSize)
         {
             PCD = Math.Max(pcd, 100);
-            Number = Math.Max(number, 4);
+            // 主筋は CircularPipeSection で平均化したリングとして積分され、
+            // 寄与は Ag = Number × area にのみ依存する。本数そのものは積分式に現れず、
+            // 1～3 本でも安定に計算できるため最小本数のクランプは不要。
+            // 負値のみ防ぐ (0 は「主筋なし」、Ag=0 として正しく寄与ゼロになる)。
+            Number = Math.Max(number, 0);
             Grade = string.IsNullOrEmpty(grade) ? "SD345" : grade;
             BarSize = string.IsNullOrEmpty(barSize) ? "D25" : barSize;
 

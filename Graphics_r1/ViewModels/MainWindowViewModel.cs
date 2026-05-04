@@ -3141,8 +3141,11 @@ namespace PileDesign.ViewModels
                 // 水平解析済みの荷重ケース・荷重組み合わせ・液状化条件を判定
                 UpdateDocxOutputAnalyzedFlags();
 
-                var dockxOutputOptionWindow = new DocxOutputWindow(this);
-                dockxOutputOptionWindow.Show();
+                var dockxOutputOptionWindow = new DocxOutputWindow(this)
+                {
+                    Owner = System.Windows.Application.Current?.MainWindow,
+                };
+                dockxOutputOptionWindow.ShowDialog();
             }
             catch (Exception ex)
             {
@@ -3151,17 +3154,24 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// AnalysisStepResults を参照し、各荷重ケース・荷重組み合わせ・液状化条件の解析済みフラグを設定
+        /// AnalysisStepResults を参照し、各荷重ケース・荷重組み合わせ・液状化条件の解析済みフラグを設定。
+        ///
+        /// ⚠ 注意: IsApplicable には触らない。
+        ///   - IsApplicable は「ユーザーが解析対象に含めたい」という入力意図 (CanExecuteAnalysis でも参照)
+        ///   - IsAnalyzed は「実際に解析が済んでいるか」の結果状態
+        ///   両者を混同して IsApplicable=false に強制すると、未解析時に DocxOutputWindow を開いただけで
+        ///   F9 ボタンが永久に押せなくなる。docx 出力でフィルタする場合は IsAnalyzed (もしくは
+        ///   解析結果存在チェック) のみで判定する。
         /// </summary>
         private void UpdateDocxOutputAnalyzedFlags()
         {
             var results = CurrentModel?.AnalysisStepResults;
             if (results == null || results.Count == 0)
             {
-                // 解析結果なし → すべて未解析
-                foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1) { lc.IsAnalyzed = false; lc.IsApplicable = false; }
-                foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2) { lc.IsAnalyzed = false; lc.IsApplicable = false; }
-                foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations) { comb.IsAnalyzed = false; comb.IsApplicable = false; }
+                // 解析結果なし → すべて IsAnalyzed=false に
+                foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1) lc.IsAnalyzed = false;
+                foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2) lc.IsAnalyzed = false;
+                foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations) comb.IsAnalyzed = false;
                 IsLiquefactionYesAnalyzed = false;
                 IsLiquefactionNoAnalyzed = false;
                 IncludeOutputLiquefactionYes = false;
@@ -3174,25 +3184,16 @@ namespace PileDesign.ViewModels
                 results.Where(r => r.LoadCase != null).Select(r => r.LoadCase.LoadName));
 
             foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel1)
-            {
                 lc.IsAnalyzed = analyzedLoadCaseNames.Contains(lc.LoadName);
-                if (!lc.IsAnalyzed) lc.IsApplicable = false;
-            }
             foreach (var lc in CurrentInputModel.LoadCasesInput.LoadCasesLevel2)
-            {
                 lc.IsAnalyzed = analyzedLoadCaseNames.Contains(lc.LoadName);
-                if (!lc.IsAnalyzed) lc.IsApplicable = false;
-            }
 
             // 解析済み荷重組み合わせ名のセット
             var analyzedCombNames = new HashSet<string>(
                 results.Where(r => r.LoadCombination != null).Select(r => r.LoadCombination.Name));
 
             foreach (var comb in CurrentInputModel.LoadCasesInput.LoadCombinations)
-            {
                 comb.IsAnalyzed = analyzedCombNames.Contains(comb.Name);
-                if (!comb.IsAnalyzed) comb.IsApplicable = false;
-            }
 
             // 液状化条件
             IsLiquefactionYesAnalyzed = results.Any(r => r.IsLiquefaction);
@@ -3553,6 +3554,7 @@ namespace PileDesign.ViewModels
         }
 
         private static readonly SeparateUiWindowHost _helpWindowHost = new();
+        private static readonly SeparateUiWindowHost _helpChatWindowHost = new();
         private static readonly SeparateUiWindowHost _verificationWindowHost = new();
         private static readonly SeparateUiWindowHost _shortcutKeysWindowHost = new();
 
@@ -3566,7 +3568,7 @@ namespace PileDesign.ViewModels
         /// モーダルダイアログ中でも独立して入力を受け付けられる。
         /// 既に開いていれば対象スレッドで Activate するだけ。
         /// </summary>
-        private static void OpenOnSeparateUiThread(SeparateUiWindowHost host, Func<Window> factory, string errorPrefix)
+        private static void OpenOnSeparateUiThread(SeparateUiWindowHost host, Func<Window> factory, string errorPrefix, Action<Window>? onActivate = null)
         {
             try
             {
@@ -3578,7 +3580,11 @@ namespace PileDesign.ViewModels
                         var dispatcher = host.Dispatcher;
                         dispatcher.BeginInvoke(new Action(() =>
                         {
-                            try { existing.Activate(); }
+                            try
+                            {
+                                existing.Activate();
+                                onActivate?.Invoke(existing);
+                            }
                             catch { /* ウィンドウが閉じ中の場合は無視 */ }
                         }));
                         return;
@@ -3631,6 +3637,30 @@ namespace PileDesign.ViewModels
             OpenOnSeparateUiThread(_helpWindowHost,
                 () => new HelpWindow { Topmost = true },
                 "ヘルプ");
+        }
+
+        /// <summary>
+        /// ヘルプウィンドウを指定 anchor または見出しタイトルへスクロールして開く (チャットからの遷移用)。
+        /// 既に開いていれば NavigateTo で更新、未オープンなら新規作成。
+        /// </summary>
+        public static void OpenHelpWindowAt(string? anchor, string? scrollToTitle)
+        {
+            OpenOnSeparateUiThread(_helpWindowHost,
+                () => new HelpWindow(anchor, scrollToTitle) { Topmost = true },
+                "ヘルプ",
+                existing =>
+                {
+                    if (existing is HelpWindow hw)
+                        hw.NavigateTo(anchor, scrollToTitle);
+                });
+        }
+
+        [RelayCommand]
+        public static void OpenHelpChatWindow()
+        {
+            OpenOnSeparateUiThread(_helpChatWindowHost,
+                () => new HelpChatWindow { Topmost = true },
+                "ヘルプチャット");
         }
 
         // 設計例によるプログラムの検証ウィンドウ表示

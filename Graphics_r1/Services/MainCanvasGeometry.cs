@@ -41,6 +41,12 @@ namespace PileDesign.Services
         public PathGeometry PathGeoNValues { get; set; } = new();
         public PathGeometry PathGeoNValueGrids { get; set; } = new();
 
+        // 土層・土質点パラメータグラフ背景の土層別塗りつぶし (粘性土=茶, 砂質土=橙, 礫質土=緑、半透明)
+        // FillRule = Nonzero — 複数の閉ポリゴンが同じ PathGeometry に乗っても塗り抜けが起きない
+        public PathGeometry PathGeoSoilParamFillClay { get; set; } = new() { FillRule = FillRule.Nonzero };
+        public PathGeometry PathGeoSoilParamFillSand { get; set; } = new() { FillRule = FillRule.Nonzero };
+        public PathGeometry PathGeoSoilParamFillGravel { get; set; } = new() { FillRule = FillRule.Nonzero };
+
         public PathGeometry PathGeoGroundDisp { get; set; } = new();
         public PathGeometry PathGeoDisp { get; set; } = new();
         public PathGeometry PathGeoAxisX { get; set; } = new();
@@ -118,6 +124,10 @@ namespace PileDesign.Services
 
             PathGeoNValues.Figures.Clear();
             PathGeoNValueGrids.Figures.Clear();
+
+            PathGeoSoilParamFillClay.Figures.Clear();
+            PathGeoSoilParamFillSand.Figures.Clear();
+            PathGeoSoilParamFillGravel.Figures.Clear();
 
             PathGeoGroundDisp.Figures.Clear();
 
@@ -422,6 +432,31 @@ namespace PileDesign.Services
                 Data = PathGeoPileGroundWater,
                 Name = "Soil",
                 StrokeDashArray = [4, 2] // 破線パターンを設定 (例: ダッシュが4、ギャップが2)
+            });
+
+            // 土層パラメータグラフ背景の土層別塗りつぶし
+            // (粘性土=薄茶、砂質土=薄橙、礫質土=薄緑、各 alpha=64)
+            // N値ポリラインより手前に追加 → ポリライン・数値が下から透けず読みやすくなる
+            canvas.Children.Add(new Path()
+            {
+                Fill = new SolidColorBrush(Color.FromArgb(64, 210, 180, 140)),
+                Data = PathGeoSoilParamFillClay,
+                Name = "SoilParamFill",
+                IsHitTestVisible = false,
+            });
+            canvas.Children.Add(new Path()
+            {
+                Fill = new SolidColorBrush(Color.FromArgb(64, 255, 165, 0)),
+                Data = PathGeoSoilParamFillSand,
+                Name = "SoilParamFill",
+                IsHitTestVisible = false,
+            });
+            canvas.Children.Add(new Path()
+            {
+                Fill = new SolidColorBrush(Color.FromArgb(64, 144, 238, 144)),
+                Data = PathGeoSoilParamFillGravel,
+                Name = "SoilParamFill",
+                IsHitTestVisible = false,
             });
 
             // N値

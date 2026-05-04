@@ -919,6 +919,11 @@
                                               Command="{Binding Example3_4Command}"
                                               ToolTip="日本建築学会　建築基礎構造設計例集3.4　液状化の可能性がある地盤に建つ建物のSC杭基礎"
                                               ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
+                                    <ribbon:RibbonApplicationMenuItem Header="3.5　鋼管杭"
+                                              KeyTip="E9"
+                                              Command="{Binding Example3_5Command}"
+                                              ToolTip="日本建築学会　建築基礎構造設計例集3.5　鋼管杭基礎"
+                                              ImageSource="pack://application:,,,/Icons/316kZCPgkUL._SY291_BO1,204,203,200_QL40_ML2_.jpg"/>
 
                                     <!-- 追加計算例が増える場合はここに同様に列挙 -->
                                 </StackPanel>
@@ -1251,9 +1256,25 @@
                                     LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
                                     SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
                     <StackPanel Orientation="Horizontal">
-                        <!-- ダイアグラムスケールセクション（2 行: 応力 / 変位） -->
+                        <!-- ===== 1 列目: テキストサイズ → 応力スケール → 変位スケール (最大 3 行) ===== -->
                         <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
+                                <Image Source="pack://application:,,,/Icons/LabelSize.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="テキストサイズ"/>
+                                <ComboBox Width="70"
+                                          ItemsSource="{Binding LabelSizeOption}"
+                                          SelectedItem="{Binding LabelSize}"
+                                          ToolTip="テキストサイズ">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="SelectionChanged">
+                                            <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                 <Image Source="pack://application:,,,/Icons/LoadForceScale.png"
                                        Width="16" Height="16" Margin="0,0,12,0"
                                        VerticalAlignment="Center"
@@ -1280,32 +1301,10 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- 区切り -->
                         <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
 
-                        <!-- テキストサイズセクション（1 行、LabelSize アイコン） -->
-                        <StackPanel Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center">
-                            <Image Source="pack://application:,,,/Icons/LabelSize.png"
-                                   Width="16" Height="16" Margin="0,0,4,0"
-                                   VerticalAlignment="Center"
-                                   ToolTip="テキストサイズ"/>
-                            <ComboBox Width="50"
-                                  ItemsSource="{Binding LabelSizeOption}"
-                                  SelectedItem="{Binding LabelSize}"
-                                  ToolTip="テキストサイズ">
-                                <i:Interaction.Triggers>
-                                    <i:EventTrigger EventName="SelectionChanged">
-                                        <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
-                                    </i:EventTrigger>
-                                </i:Interaction.Triggers>
-                            </ComboBox>
-                        </StackPanel>
-
-                        <!-- 区切り -->
-                        <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
-
-                        <!-- 値表示セクション（3 行: チェック群 / 位置 / 小数） -->
-                        <StackPanel Orientation="Vertical" Margin="10,0,0,0">
+                        <!-- ===== 2 列目: 値表示チェック群 / 上面図モードチェック群 (最大 2 行) ===== -->
+                        <StackPanel Orientation="Vertical" Margin="10,0,0,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
                                 <CheckBox Content="要素中間"
@@ -1315,7 +1314,22 @@
                                       IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
                                       IsEnabled="{Binding IsResultValueVisible}"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <CheckBox Content="基礎梁応力 水平表示"
+                                          IsChecked="{Binding IsFoundationBeamStressRotatedToHorizontal}"
+                                          ToolTip="基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示。上面図 (+Z) で確認しやすくなります。"
+                                          Margin="0,0,6,0"/>
+                                <CheckBox Content="杭応力 非表示"
+                                          IsChecked="{Binding IsPileStressHidden}"
+                                          ToolTip="杭体・RigidLink の応力ダイアグラムを非表示。上面図モードと併用すると基礎梁応力だけが見えます。"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Separator Margin="10,2,0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
+
+                        <!-- ===== 3 列目: テキスト位置 / 小数桁 (最大 2 行) ===== -->
+                        <StackPanel Orientation="Vertical" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsResultValueVisible}">
                                 <Image Source="pack://application:,,,/Icons/AdjustTextPositions.png"
                                        Width="16" Height="16" Margin="0,0,12,0"
                                        VerticalAlignment="Center"
@@ -1327,7 +1341,7 @@
                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                      KeyDown="TextBox_KeyDown"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsResultValueVisible}">
                                 <Image Source="pack://application:,,,/Icons/DecimalPoint.png"
                                        Width="16" Height="16" Margin="0,0,12,0"
                                        VerticalAlignment="Center"
@@ -1777,9 +1791,25 @@
                                     LargeImageSource="pack://application:,,,/Icons/LabelSize.png"
                                     SmallImageSource="pack://application:,,,/Icons/LabelSize.png">
                     <StackPanel Orientation="Horizontal">
-                        <!-- ダイアグラムスケールセクション（2 行: 応力 / 変位） -->
+                        <!-- ===== 1 列目: テキストサイズ → 応力スケール → 変位スケール (最大 3 行) ===== -->
                         <StackPanel Orientation="Vertical" Margin="0,0,10,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
+                                <Image Source="pack://application:,,,/Icons/LabelSize.png"
+                                       Width="16" Height="16" Margin="0,0,12,0"
+                                       VerticalAlignment="Center"
+                                       ToolTip="テキストサイズ"/>
+                                <ComboBox Width="70"
+                                          ItemsSource="{Binding LabelSizeOption}"
+                                          SelectedItem="{Binding LabelSize}"
+                                          ToolTip="テキストサイズ">
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="SelectionChanged">
+                                            <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                 <Image Source="pack://application:,,,/Icons/LoadForceScale.png"
                                        Width="16" Height="16" Margin="0,0,12,0"
                                        VerticalAlignment="Center"
@@ -1806,32 +1836,10 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- 区切り -->
                         <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
 
-                        <!-- テキストサイズセクション（1 行、LabelSize アイコン） -->
-                        <StackPanel Orientation="Horizontal" Margin="10,0,10,0" VerticalAlignment="Center">
-                            <Image Source="pack://application:,,,/Icons/LabelSize.png"
-                                   Width="16" Height="16" Margin="0,0,4,0"
-                                   VerticalAlignment="Center"
-                                   ToolTip="テキストサイズ"/>
-                            <ComboBox Width="50"
-                                  ItemsSource="{Binding LabelSizeOption}"
-                                  SelectedItem="{Binding LabelSize}"
-                                  ToolTip="テキストサイズ">
-                                <i:Interaction.Triggers>
-                                    <i:EventTrigger EventName="SelectionChanged">
-                                        <i:InvokeCommandAction Command="{Binding ComboBox3DLabelSize_OnSelectionChangedCommand}"/>
-                                    </i:EventTrigger>
-                                </i:Interaction.Triggers>
-                            </ComboBox>
-                        </StackPanel>
-
-                        <!-- 区切り -->
-                        <Separator Margin="0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
-
-                        <!-- 値表示セクション（3 行: チェック群 / 位置 / 小数） -->
-                        <StackPanel Orientation="Vertical" Margin="10,0,0,0">
+                        <!-- ===== 2 列目: 値表示チェック群 / 上面図モードチェック群 (最大 2 行) ===== -->
+                        <StackPanel Orientation="Vertical" Margin="10,0,0,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
                                 <CheckBox Content="値表示" IsChecked="{Binding IsResultValueVisible}" Margin="0,0,6,0"/>
                                 <CheckBox Content="要素中間"
@@ -1841,7 +1849,22 @@
                                       IsChecked="{Binding IsPileTopResultValueVisibleOnly}"
                                       IsEnabled="{Binding IsResultValueVisible}"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <CheckBox Content="基礎梁応力 水平表示"
+                                          IsChecked="{Binding IsFoundationBeamStressRotatedToHorizontal}"
+                                          ToolTip="基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示。上面図 (+Z) で確認しやすくなります。"
+                                          Margin="0,0,6,0"/>
+                                <CheckBox Content="杭応力 非表示"
+                                          IsChecked="{Binding IsPileStressHidden}"
+                                          ToolTip="杭体・RigidLink の応力ダイアグラムを非表示。上面図モードと併用すると基礎梁応力だけが見えます。"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Separator Margin="10,2,0,2" Background="#DDD" Width="1" HorizontalAlignment="Center"/>
+
+                        <!-- ===== 3 列目: テキスト位置 / 小数桁 (最大 2 行) ===== -->
+                        <StackPanel Orientation="Vertical" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" IsEnabled="{Binding IsResultValueVisible}">
                                 <Image Source="pack://application:,,,/Icons/AdjustTextPositions.png"
                                        Width="16" Height="16" Margin="0,0,12,0"
                                        VerticalAlignment="Center"
@@ -1853,7 +1876,7 @@
                                      PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                      KeyDown="TextBox_KeyDown"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0" IsEnabled="{Binding IsResultValueVisible}">
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding IsResultValueVisible}">
                                 <Image Source="pack://application:,,,/Icons/DecimalPoint.png"
                                        Width="16" Height="16" Margin="0,0,12,0"
                                        VerticalAlignment="Center"
@@ -2012,6 +2035,12 @@
                                  Label="ヘルプ"
                                          ToolTip="ヘルプ (F1)"
                                  Command="{Binding OpenHelpWindowCommand}"
+                                 LargeImageSource="pack://application:,,,/Icons/Help.png"
+                                 SmallImageSource="pack://application:,,,/Icons/Help.png"/>
+                    <ribbon:RibbonButton x:Name="RibbonButtonHelpChat"
+                                 Label="ヘルプ チャット"
+                                 ToolTip="質問入力でヘルプを検索"
+                                 Command="{Binding OpenHelpChatWindowCommand}"
                                  LargeImageSource="pack://application:,,,/Icons/Help.png"
                                  SmallImageSource="pack://application:,,,/Icons/Help.png"/>
                     <ribbon:RibbonToggleButton x:Name="RibbonToggleQuickHint"

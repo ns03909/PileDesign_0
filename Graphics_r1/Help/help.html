@@ -1121,7 +1121,29 @@
                 <p><strong>ヒント</strong></p>
                 <dl>
                     <dt>サンプルファイルの活用</dt>
-                    <dd>Examplesフォルダには様々な条件のサンプルファイルがあります。<br>まずサンプルを開いて動作を確認してみてください。</dd>
+                    <dd>
+                        Examples フォルダには様々な条件のサンプルファイルがあります。
+                        リボン「アプリケーション メニュー」 → 「例題」から、ワンクリックで以下の代表例題を開けます。
+                        <table class="table-doc" style="margin: 0.5em 0;">
+                            <thead>
+                                <tr>
+                                    <th>メニュー (KeyTip)</th>
+                                    <th>例題</th>
+                                    <th>主な杭種</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>3.1 (E5)</td><td>建築基礎構造設計例集 3.1</td><td>SC 杭・PRC 杭</td></tr>
+                                <tr><td>3.2 (E6)</td><td>建築基礎構造設計例集 3.2</td><td>PHC 杭</td></tr>
+                                <tr><td>3.3 (E7)</td><td>建築基礎構造設計例集 3.3</td><td>場所打ち杭</td></tr>
+                                <tr><td>3.4 (E8)</td><td>建築基礎構造設計例集 3.4</td><td>液状化地盤の SC 杭</td></tr>
+                                <tr><td>3.5 (E9)</td><td>建築基礎構造設計例集 3.5</td><td>鋼管杭 (Φ800、鉄筋定着工法、24 本群杭)</td></tr>
+                                <tr><td>7</td><td>建築基礎構造設計例 7</td><td>直接基礎</td></tr>
+                                <tr><td>8</td><td>建築基礎構造設計例 8</td><td>杭基礎</td></tr>
+                            </tbody>
+                        </table>
+                        まずサンプルを開いて動作を確認してみてください。
+                    </dd>
                     <dt>Excelとの連携</dt>
                     <dd>データグリッドではExcelからのコピー&amp;ペースト（Ctrl+V）が使えます。<br>効率よく入出力ができます。</dd>
                     <dt>グラフデータの活用</dt>
@@ -1140,16 +1162,21 @@
             <h2>杭モデル</h2>
             <p>１本の杭は、「杭頭」、「杭体」、「杭先端」で構成されます。</p>
             <p>
-                「杭頭」については、<strong>鉄筋定着工法</strong>とした場合、解析上、弾性時の回転固定度を無限大と仮定します。<br>
-                ただし、場所打ち鉄筋コンクリート杭で、軸応力度が (1/4)ξ/F<sub>c</sub> 以下の場合は、ポリリニア型の曲げモーメントー回転角関係とします〔「強度と変形性能」3.3,3〕）。<br>
+                「杭頭」工法は杭体の種類に応じて次のように扱います。<br>
+                <strong>場所打ち鉄筋コンクリート杭の鉄筋定着工法</strong>では、軸応力度が
+                $-F_t \le \sigma_0 \le (1/4)\xi F_c$ の範囲にある場合は、ポリリニア型の曲げモーメント－回転角関係とします〔「強度と変形性能」3.3,3〕）。
+                範囲外の場合は剛接合（回転固定度を無限大）として扱います。<br>
+                <strong>鋼管杭の鉄筋定着工法</strong>では、杭頭接合部の弾性回転剛性 $K_\theta$ を線形ばねとして反映します
+                （詳細は<a href="#section-steel-pipe-rebar-anchorage">「鋼管杭+鉄筋定着工法 の杭頭工法」</a>節参照）。<br>
                 杭頭半固定工法として、場所打ち鉄筋コンクリート杭では <strong>キャプテンパイル工法</strong>、既製コンクリート杭では <strong>F.T.Pile 構法</strong> を適用できます。
             </p>
             <p>
-                「杭体の種類」は、<strong>場所打ち鉄筋コンクリート杭</strong>、<strong>場所打ち鋼管コンクリート杭</strong>、<strong>既製コンクリート杭</strong>
-                の3種類です。<br>
+                「杭体の種類」は、<strong>場所打ち鉄筋コンクリート杭</strong>、<strong>場所打ち鋼管コンクリート杭</strong>、<strong>既製コンクリート杭</strong>、<strong>鋼管杭</strong>
+                の4種類です。<br>
                 「杭体」は、単数または複数の <strong>杭体（断面）区間</strong>から構成できます。<br>
                 場所打ち鋼管コンクリート杭では、<strong>鋼管コンクリート部</strong>、または <strong>鉄筋コンクリート部</strong>
-                のいずれかを、既製コンクリート杭では、<strong>PHC杭</strong>、<strong>PRC杭</strong>、<strong>SC杭</strong> のいずれかを選択します。
+                のいずれかを、既製コンクリート杭では、<strong>PHC杭</strong>、<strong>PRC杭</strong>、<strong>SC杭</strong> のいずれかを選択します。<br>
+                鋼管杭では、<strong>コンクリート充填鋼管部</strong>（鉄筋定着工法の最上部杭区間）と <strong>鋼管部</strong>（純鋼管、杭中間部・杭下部）の 2 サブタイプを区間ごとに選択します。コンクリート充填鋼管部は、ごく短い区間を指定します。
             </p>
             <p>
                 最下段の杭区間よりも大きな杭先端径を入力した場合、場所打ちコンクリート杭では <strong>拡底杭</strong>、既製コンクリート杭では
@@ -1302,6 +1329,7 @@
                     <tr><td>F7</td><td>基礎梁考慮沈下解析ウィンドウを開く</td></tr>
                     <tr><td>F8</td><td>群杭沈下解析を実行</td></tr>
                     <tr><td>Ctrl+Shift+B</td><td>自動梁要素生成</td></tr>
+                    <tr><td>Ctrl+Shift+P</td><td><a href="#section-utility-windows">コマンドパレット</a>を開く</td></tr>
                     <tr><td>F12</td><td>INPUT 表示の切替</td></tr>
                     <tr><td>Ctrl+/</td><td>ショートカットキー一覧</td></tr>
                 </tbody>
@@ -1465,8 +1493,8 @@
             </p>
             <ul>
                 <li><strong>杭体</strong>: 杭体入力 / 杭姿図 / 地盤描画</li>
-                <li><strong>杭頭</strong>: 入力 / 諸元 / 上面図 / MN / θM</li>
-                <li><strong>杭断面</strong>: 入力 / 諸元 / 軸力制限 / 断面図 / N-M / M-φ / M-θ / N-Q</li>
+                <li><strong>杭頭</strong>: 入力 / 諸元 / 上面図 / MNインタラクション / θMインタラクション</li>
+                <li><strong>杭断面</strong>: 入力 / 諸元 / 軸力制限（基礎部材の強度と変形性能）/ 断面図 / N-M関係 / M-φ関係 / M-θ関係 / N-Q関係</li>
                 <li><strong>要素分割</strong>: 要素分割 / 杭姿図 / 水平地盤反力 / グラフ</li>
                 <li><strong>地盤</strong>: 土層入力 / 土質点入力 (浮動最大化) ＋ 右ペイン (グラフ群 8 タブをまとめて拡張するトグル)</li>
             </ul>
@@ -1491,6 +1519,57 @@
                 <li><strong>編集モード</strong>: 現在の編集モード（選択／杭配置追加／一般節点追加／梁要素追加）</li>
                 <li><strong>ズーム率</strong>: 現在のビューのズーム倍率</li>
             </ul>
+
+            <h3 id="section-utility-windows">拡張機能パネル</h3>
+            <p>
+                リボン「ウィンドウ」タブまたはコマンドパレットから、以下のユーティリティ機能を呼び出せます。
+            </p>
+
+            <h4>コマンドパレット (Ctrl+Shift+P)</h4>
+            <p>
+                <strong>Ctrl+Shift+P</strong> でコマンドパレットを起動します。
+                登録された 22 コマンドをキーワードの AND 部分一致で検索でき、↑↓ で候補を選び Enter で実行、Esc で閉じます。
+                IME 変換中でも矢印キー・Enter・Esc が動作します（Window 級ハンドラに集約）。
+                リボン「ウィンドウ」タブの「コマンド パレット」ボタンからも起動できます。
+            </p>
+
+            <h4>結果ダッシュボード</h4>
+            <p>
+                解析規模・統計・状態を 1 画面でカード形式に集約表示するパネルです。
+                杭本数・ステップ数・反復回数・代表変位などを一覧でき、解析全体の俯瞰に使えます。
+                リボン「ウィンドウ」タブの「解析結果ダッシュボード」ボタンから開きます。
+            </p>
+
+            <h4>編集履歴パネル</h4>
+            <p>
+                Undo/Redo 履歴を可視化するパネルです。各エントリには操作名（CallerMemberName ＋既知メソッド辞書による日本語ラベル）と時刻が表示され、
+                行をクリックすると当該時点の状態にジャンプして復元します。Redo 可能な未来側エントリは灰色で表示されます。
+                データグリッドのセル編集や、根入部の地盤番号・区分数・下端 Z 切替なども履歴対象です。
+            </p>
+
+            <h4>ヘルプ チャット (オフライン全文検索)</h4>
+            <p>
+                リボン「ヘルプ」タブの「<strong>ヘルプ チャット</strong>」ボタンから、本ヘルプ文書 (help.html) を対象とした
+                簡易チャット形式の検索ウィンドウを開きます。下端のテキストボックスに知りたい用語や機能名を入力して
+                <strong>Enter</strong> または「送信」ボタンで検索すると、関連する見出し (h2/h3/h4) が最大 6 件表示されます。
+                各候補の見出し名 (青字リンク) をクリックすると、ヘルプウィンドウ側で該当箇所へジャンプし、
+                見出しが黄色くハイライトされます。
+            </p>
+            <p>
+                検索方式はオフライン専用 (ネットワーク不要) の <strong>キーワード一致</strong> です。
+                日本語は文字 bigram (例: 「杭頭」「頭の」) で索引付けし、英数字 (例: 「M-θ」) は単語単位で扱います。
+                「して」「です」「とは」など共通語は重み付けから除外、見出しに含まれるキーワードはタイトル本文より高スコア化されます。
+                LLM (大規模言語モデル) 連携はないため、自然な会話による解説生成は行われません。
+                マニュアル全体を読まずに目的の章節を素早く見つけたい初心者ユーザー向けの機能です。
+            </p>
+
+            <h4>解析実行の前提条件チェック (F9 灰色化)</h4>
+            <p>
+                <strong>F9 解析実行</strong> ボタンは、杭配置・荷重ケース・荷重組合せのいずれかが未入力の場合に
+                自動的に灰色化（非活性化）されます。マウスを重ねると ToolTip で不足項目が表示されるため、
+                何が足りないかを確認できます。<br>
+                <strong>基礎梁考慮沈下解析</strong> ボタンも同様に、杭配置 ＋ 基礎梁定義 ＋ 単杭沈下解析の完了を満たした場合のみ活性化されます。
+            </p>
 
             <h3>左ペインアイテム</h3>
             <h4 style="font-weight: bold;">「杭」</h4>
@@ -3268,7 +3347,7 @@
                     </tr>
                     <tr>
                         <td>鋼管杭</td>
-                        <td>鋼管を使用した杭。杭頭部はコンクリート充填 (CFT) で曲げ耐力増。損傷限界曲げモーメントのみ対応 (使用限界・安全限界・M-φ・FEM 統合は未対応)</td>
+                        <td>鋼管を使用した杭。杭頭接合部のごく一部分にコンクリートが充填され曲げ耐力を増加。</td>
                     </tr>
                 </tbody>
             </table>
@@ -4064,6 +4143,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 <thead><tr><th style="text-align:center">ボタン</th><th style="text-align:center">ショートカット</th><th>説明</th></tr></thead>
                 <tbody>
                     <tr><td>ヘルプ</td><td>F1</td><td>このヘルプドキュメントを開きます</td></tr>
+                    <tr><td>ヘルプ チャット</td><td>-</td><td>質問テキストを入力してヘルプ全文を検索する簡易チャットウィンドウを開きます (詳細: <a href="#section-utility-windows">拡張機能パネル</a>)</td></tr>
                     <tr><td>クイックヒント</td><td>Shift+F1</td><td>ON にすると、マウスカーソルをUI要素に合わせた際にヘルプの該当箇所がポップアップ表示されます</td></tr>
                     <tr><td>ショートカット</td><td>Ctrl+/</td><td>全ショートカットキーの一覧ウィンドウを開きます</td></tr>
                     <tr><td>検証</td><td>-</td><td>基礎指針等の設計例によるプログラム計算結果の検証ウィンドウを開きます</td></tr>
@@ -4115,19 +4195,18 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 沈下量・沈下部材角・沈下反力・沈下応力を選択した場合も、値表示が自動的にONになります。
             </p>
 
-            <h3>ダイアグラムスケール</h3>
+            <h3>ダイアグラムスケール・テキスト・値表示</h3>
             <p>
-                リボンメニュー「解析結果(R)」タブの「ダイアグラムスケール」グループで、
-                応力・変位のダイアグラム表示サイズを調整できます。
+                リボンメニュー「表示(V)」/「解析結果(R)」タブの右端「ダイアグラムスケール・テキスト・値表示」グループに、
+                ダイアグラム表示と値ラベルの全設定がまとまっています。3 列構成です。
             </p>
+
+            <h4>列 1: テキストサイズ・スケール</h4>
             <ul>
-                <li><strong>スライダー</strong>: ドラッグして0.00～1.00の範囲で調整</li>
-                <li><strong>テキストボックス</strong>: スライダー右側のテキストボックスに数値を直接入力して指定可能（入力後フォーカスを外すと反映）</li>
+                <li><strong>テキストサイズ</strong>（最上段、🔤 アイコン）: メインビュー上のラベル/値ラベルのフォントサイズを変更。両タブ共通で反映されます。</li>
+                <li><strong>応力ダイアグラムスケール</strong>: 応力・地盤反力・杭頭マップ・慣性力/杭軸力の矢印など力に関するダイアグラム長を 0.00〜1.00 で調整。</li>
+                <li><strong>変位ダイアグラムスケール</strong>: 節点変位のダイアグラム長を調整（節点変位表示時のみ表示）。</li>
             </ul>
-            <p>
-                「応力」は梁応力・地盤反力・杭頭マップ・<strong>慣性力／杭軸力の矢印</strong>等の力に関するダイアグラムに適用されます。
-                「変位」は節点変位のダイアグラムに適用され、節点変位表示時のみ表示されます。
-            </p>
             <p>
                 <strong>矢印長の意味</strong>: スケール値 $r$ に対して、最大値ケースの矢印は 3D ワールド単位で
                 $r \times \text{ModelExtent}$ の長さになります（ModelExtent = 杭配置の X 範囲・Y 範囲の最大値）。
@@ -4136,25 +4215,30 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 真横から見た時にフル長で見える挙動になります。
             </p>
 
-            <h3>値表示と小数桁数</h3>
-            <p>
-                リボンメニュー「解析結果(R)」タブの「値表示」グループで、ダイアグラム上の数値表示を制御できます。
-            </p>
+            <h4>列 2: 値表示・上面図モード</h4>
             <ul>
                 <li><strong>値表示</strong>チェックボックス: ダイアグラム上の数値の表示/非表示を切り替えます。
                     沈下量のバブル/矢印テキストもこのチェックボックスで制御されます。</li>
-                <li><strong>要素中間</strong>チェックボックス: 梁要素の中間位置のみ値を表示します</li>
-                <li><strong>杭頭</strong>チェックボックス: 杭頭位置のみ値を表示します</li>
-                <li><strong>位置</strong>スライダー: テキストの表示位置（ダイアグラムからの離れ）を調整します</li>
-                <li><strong>小数</strong>スライダー: 表示する小数点以下の桁数を0～5の範囲で指定します。
+                <li><strong>要素中間</strong>チェックボックス: 梁要素の中間位置のみ値を表示します。</li>
+                <li><strong>杭頭</strong>チェックボックス: 杭頭位置のみ値を表示します。</li>
+                <li><strong>基礎梁応力 水平表示</strong>チェックボックス: 基礎梁の鉛直方向成分 (My/Qz など) を梁軸まわりに 90° 回転して水平面に表示します。
+                    上面図 (+Z 視点) で確認しやすくなります。</li>
+                <li><strong>杭応力 非表示</strong>チェックボックス: 杭体・RigidLink の応力ダイアグラムを非表示にします。
+                    「基礎梁応力 水平表示」と併用すると上面図で基礎梁応力ダイアグラムだけが見える状態になります。</li>
+            </ul>
+
+            <h4>列 3: 値表示位置・小数桁</h4>
+            <ul>
+                <li><strong>位置</strong>スライダー: テキストの表示位置（ダイアグラムからの離れ）を調整します。</li>
+                <li><strong>小数</strong>スライダー: 表示する小数点以下の桁数を 0〜5 の範囲で指定します。
                     すべてのダイアグラム値（梁応力、節点変位、地盤反力、沈下量、部材角等）に共通で適用されます。</li>
             </ul>
 
-            <h3>テキストサイズ</h3>
+            <h4>カラーバーの色構成</h4>
             <p>
-                リボンメニュー「表示(V)」タブおよび「解析結果(R)」タブの「テキスト」グループで、
-                メインビュー上のラベルや値表示のテキストサイズを変更できます。
-                どちらのタブからでも同じ設定を変更でき、両方に反映されます。
+                値の大小を表すカラーバーは Turbo に類似した 6 色（鮮青→シアン青→緑→黄→橙→赤）で構成されており、
+                低値域の判別性が高くなっています。値スケールは 0 軸の有無を自動判定し、
+                正負両方の値があれば赤/青の Diverging スケール（中央=グレー）、片側のみなら 6 色 Rainbow スケールで描画します。
             </p>
 
             <h3>荷重ケース・荷重組み合わせ・液状化の選択</h3>
@@ -4227,6 +4311,12 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             <p>
                 回転ばねのM-&theta;関係（モード: CombinedXY / Rx / Ry / Rz）を表示します。
                 各杭の杭頭回転角と杭頭モーメントの関係、および最終ステップマーカーを確認できます。
+            </p>
+            <p>
+                <strong>剛結 (Rigid) ケースの表示</strong>: 杭頭が剛結扱い (例: 場所打ち鋼管コンクリート杭・既製コンクリート杭、
+                および鋼管杭で鉄筋定着工法の入力が無い場合) では、FEM 内で K=10<sup>10</sup> kN&middot;m/rad の数値的剛体相当値を使うため
+                K&middot;&theta; を 0.02 rad まで外挿すると非物理的な直線 (M&approx;2&times;10<sup>8</sup> kN&middot;m) が描かれていました。
+                現在は K &geq; 10<sup>9</sup> を「剛体相当」と判定して曲線を描かず、凡例に <strong>「剛結 (M-&theta; 関係なし)」</strong>とだけ表示します。
             </p>
 
             <h4>その他のグラフ</h4>
@@ -4329,24 +4419,57 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             <h3>限界状態設計の考え方</h3>
             <p>
                 本プログラムでは、基礎指針'19に準拠した限界状態設計法による検討を行います。
+                杭基礎の検討は <strong>「杭支持力に関する限界状態」</strong> と <strong>「杭体に関する限界状態」</strong>
+                の二系統に分けて行います。
             </p>
 
-            <h3 id="section-sls">使用限界状態 (SLS: Serviceability Limit State)</h3>
+            <h3>杭支持力に関する限界状態</h3>
+            <p>
+                地盤の支持機構（先端支持力・周面摩擦力）に対して、極限支持力 $R_u$ に
+                抵抗係数 $\phi_R$ を乗じた値を許容値とします。
+            </p>
+
+            <h4 id="section-sls">使用限界状態 (SLS: Serviceability Limit State)</h4>
             <p>
                 通常使用時に要求される機能を満足するための限界状態です。
-                鉛直荷重に対しては$\phi_R = 1/3$、水平荷重に対しては弾性範囲内であることを確認します。
+                鉛直荷重に対しては $\phi_R = 1/3$、水平荷重に対しては弾性範囲内であることを確認します。
             </p>
 
-            <h3 id="section-dls">損傷限界状態 (DLS: Damage Limit State)</h3>
+            <h4 id="section-dls">損傷限界状態 (DLS: Damage Limit State)</h4>
             <p>
                 レベル1地震動に対して、補修なしで使用継続可能な限界状態です。
-                鉛直荷重に対しては$\phi_R = 1/1.5$を適用します。
+                鉛直荷重に対しては $\phi_R = 1/1.5$ を適用します。
             </p>
 
-            <h3 id="section-uls">安全限界状態 (ULS: Ultimate Limit State)</h3>
+            <h4 id="section-uls">終局限界状態 (ULS: Ultimate Limit State)</h4>
             <p>
                 レベル2地震動に対して、人命の安全確保および建物の崩壊防止が可能な限界状態です。
-                鉛直荷重に対しては$\phi_R = 1/1$（極限支持力）を適用します。
+                鉛直荷重に対しては $\phi_R = 1/1$（極限支持力）を適用します。
+            </p>
+
+            <h3>杭体に関する限界状態</h3>
+            <p>
+                杭体（杭体断面・杭頭接合部）の応力・変形に対して、各杭種・部位ごとの式
+                （場所打ち RC・場所打ち鋼管コンクリート・PHC・PRC・SC・鋼管杭の各「強度と変形性能」式）に基づき、
+                曲げモーメント $M$・せん断力 $Q$・軸力 $N$ がそれぞれの耐力以下であることを確認します。
+            </p>
+
+            <h4>使用限界状態 (SLS)</h4>
+            <p>
+                通常使用時に部材が弾性応答にとどまる限界。曲げ ($M_s$)・せん断 ($Q_s$)・軸力 ($N_{sc}, N_{st}$)
+                の使用限界耐力に対して断面力が下回ることを確認します。$\beta_1 = 1.0$ を採用。
+            </p>
+
+            <h4>損傷限界状態 (DLS)</h4>
+            <p>
+                レベル1地震動に対して補修なしで使用継続可能な限界。曲げ ($M_d$)・せん断 ($Q_d$)・軸力 ($N_{dc}, N_{dt}$)
+                の損傷限界耐力に対して断面力が下回ることを確認します。$\beta_1 = 1.0$ を採用 (杭種により異なる)。
+            </p>
+
+            <h4>安全限界状態 (ULS)</h4>
+            <p>
+                レベル2地震動に対して人命の安全確保・崩壊防止が可能な限界。曲げ ($M_u$)・せん断 ($Q_u$)・軸力 ($N_{uc}, N_{ut}$)
+                の安全限界耐力に対して断面力が下回ることを確認します。$\beta_1, \beta_2$ は杭種・条件に応じた低減係数を採用。
             </p>
 
             <h3>検定ウィンドウ</h3>
@@ -4454,8 +4577,8 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             <ul>
                 <li><strong>杭長</strong>: 杭体セグメントの合計長さ</li>
                 <li><strong>軸力 VL</strong>: 常時合計軸力</li>
-                <li><strong>軸力 1-1 ～ 1-N</strong>: レベル1地震時の各ケース軸力</li>
-                <li><strong>軸力 2-1 ～ 2-N</strong>: レベル2地震時の各ケース軸力</li>
+                <li><strong>軸力 1-1 ～ 1-4</strong>: レベル1地震時の各ケース軸力</li>
+                <li><strong>軸力 2-1 ～ 2-4</strong>: レベル2地震時の各ケース軸力</li>
             </ul>
             <p>複数の杭を選択した場合、杭長（合計）および軸力（合計）が表示されます。</p>
 
@@ -4594,40 +4717,71 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
 
             <h3><img class="heading-icon" src="icons/DocxFileOutput.svg" alt="">レポート出力</h3>
             <p>
-                「ファイル」→「レポート出力」で、解析結果をWord形式の計算書として出力できます。
-                出力される内容は以下の通りです。
+                「ファイル」→「レポート出力」で、解析結果を Word 形式の計算書として出力できます。
+                出力ダイアログ「計算書出力設定」で各項目を個別に ON/OFF 選択でき、
+                未解析の項目は <strong>未チェック+灰色</strong> 表示で自動的に出力対象外になります（「チェック付き+灰色」状態は発生しません）。
             </p>
+
+            <h3><img class="heading-icon" src="icons/DocxFileOutput.svg" alt="">計算書出力ダイアログの構成</h3>
+            <p>
+                ダイアログは左ペイン（ケース設定）と右ペイン（出力項目選択）の 2 列構成です。
+            </p>
+
+            <h4>左ペイン: 解析ケース設定</h4>
             <ul>
-                <li>入力条件（地盤条件、杭諸元、荷重条件）</li>
-                <li>支持力計算結果</li>
-                <li>沈下量計算結果</li>
-                <li>水平解析結果（変位、応力分布図）</li>
-                <li>判定結果一覧表</li>
+                <li><strong>荷重ケース レベル1 / レベル2</strong>: 解析済の荷重ケースから出力対象を選択。
+                    未解析ケースは「未チェック+灰色」で表示され、解析後に元の意図が復活します。</li>
+                <li><strong>荷重組み合わせ</strong>: 同上 (α/β組合せ)。</li>
+                <li><strong>液状化</strong>: 「液状化あり」「液状化なし」を個別に ON/OFF (該当解析がない場合は灰色)。</li>
+                <li><strong>計算書レベル</strong>: 「簡易（数式説明なし）」/「詳細（数式説明あり）」をラジオで選択。</li>
             </ul>
 
-            <h3><img class="heading-icon" src="icons/DocxFileOutput.svg" alt="">計算書出力オプション</h3>
+            <h4>右ペイン: 出力項目選択</h4>
+            <p>項目は以下のグループに分かれており、すべて個別に ON/OFF 可能です。</p>
             <ul>
-                <li>
-                    <strong>杭変位応力図のまとめ方</strong>（水平検討セクション内のラジオボタン）:
+                <li><strong>入力データ</strong>: 基本設定 / 荷重条件 / 杭体 / 杭配置 / 杭軸力 / 前後方杭 / 検討方針 / 地盤情報 / 液状化検討 / 杭配置・杭軸力・前後方杭マップ。</li>
+                <li><strong>地盤グラフ</strong>: N値分布 / 粘着力 Cu / S波速度 Vs / 変形係数 Es / 液状化安全率 FL / 任意地盤変位 / 応答スペクトル の 7 種を地盤ごとに出力。</li>
+                <li><strong>杭の図・諸元</strong>: 杭姿図 (杭体ごと) / 杭断面図 (配筋詳細) / 杭頭上面図 / 杭頭諸元テーブル / 軸力制限テーブル。</li>
+                <li><strong>支持力</strong>: 支持力検討 (沈下解析完了で有効)。</li>
+                <li><strong>水平検討</strong> (親 OFF で全水平項目スキップ):
                     <ul>
-                        <li><strong>杭ごとに個別</strong>（既定）: 全杭 × 荷重ケース × 組合せ × 液状化 の組み合わせごとに 1 図を出力。</li>
-                        <li><strong>杭地盤セットごとにまとめる</strong>: <code>ElementDivision.SoilPiles</code> 単位（同一 PileBody &times; 同一 Ground &times; 同一杭頭 Z）でグループ化し、
-                            グループ内の杭を 1 図にオーバーレイ表示。図数が大幅に削減され、同一条件の杭を比較しやすくなります。</li>
+                        <li>M-&phi; 関係 / M-&theta; 関係 / N-M 関係 / N-Q 関係</li>
+                        <li><strong>杭の変位・応力ダイアグラム</strong> (3 連グラフ: 変位/せん断力/曲げモーメント):
+                            <ul>
+                                <li>「曲げモーメント列を含める」「せん断力列を含める」: 各列の有無を切替 (変位列は常に出力)。</li>
+                                <li><strong>限界状態線を重ねて描画</strong> (既定 ON): せん断/曲げパネルに、各杭要素の軸力に対応する限界値ステップラインを破線で重ね描き。
+                                    限界状態は <code>FundamentalInput.SeismicGrade</code> と <code>LoadCase.Level</code> から自動選択:
+                                    レベル1→損傷限界、レベル2+グレード S→損傷限界、レベル2+グレード A→安全限界 (いずれも低減後値)。</li>
+                                <li><strong>まとめ方</strong>:
+                                    <ul>
+                                        <li><strong>杭ごとに個別</strong>（既定）: 全杭 &times; 荷重ケース &times; 組合せ &times; 液状化 の組合せごとに 1 図を出力。</li>
+                                        <li><strong>杭地盤セットごとにまとめる</strong>: <code>ElementDivision.SoilPiles</code> 単位（同一 PileBody &times; 同一 Ground &times; 同一杭頭 Z）でグループ化し、
+                                            グループ内の杭を 1 図にオーバーレイ表示。図数が大幅に削減され、同一条件の杭を比較しやすくなります。</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>杭頭M マップ / 杭頭Q マップ</li>
+                        <li>解析サマリーレポート (テキスト形式の解析サマリー)</li>
+                        <li>検定結果（NGのみ） (NG項目のみのテキストレポート)</li>
                     </ul>
                 </li>
-                <li>
-                    <strong>M-&phi;／M-&theta; 曲線の凡例</strong>: 同一 (荷重ケース, 組合せ, 液状化, 軸力[10kN 丸め])
-                    の曲線は 1 本に集約して重複を抑制します（マーカーは各杭ごと）。凡例表記は
-                    <code>U1|Comb1|液状化|N&asymp;2452kN</code> 形式。
-                </li>
+                <li><strong>沈下検討</strong>: 沈下検討 / 荷重沈下曲線 / 群杭沈下マップ / 基礎梁考慮鉛直解析結果。</li>
             </ul>
+            <p>
+                <strong>M-&phi;／M-&theta; 曲線の凡例</strong>: 同一 (荷重ケース, 組合せ, 液状化, 軸力[10 kN 丸め])
+                の曲線は 1 本に集約して重複を抑制します（マーカーは各杭ごと）。凡例表記は
+                <code>U1|Comb1|液状化|N&asymp;2452 kN</code> 形式。
+            </p>
 
             <h3>図表番号と目次</h3>
             <p>
                 図表番号はアプリ側でカウンタを持ち、各図表キャプションに直接書き込まれます。
                 Word の SEQ フィールド自動更新に依存しないため、出力直後から正しい連番（図 1, 図 2, …）が表示されます。
-                目次は SEQ 識別子 <code>Figure</code>／<code>Table</code>（Latin）で紐付けており、
-                Word を開いた際に目次のページ番号等は <strong>Ctrl+A → F9</strong> で更新してください。
+                目次・図目次・表目次の見出しは Bold + 中央寄せ + 14pt で統一されており、
+                目次フィールドには <code>dirty=true</code> 属性を付与して Word に「結果が古いので再評価」を明示しています。
+                Word で開いた際にページ番号や図番号一覧が空欄の場合は本文中をクリックしてから
+                <strong>Ctrl+A → F9</strong> で更新してください。
             </p>
 
             <h3>3Dモデルエクスポート</h3>
@@ -4894,7 +5048,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
         </section>
         </section>
         <section>
-            <h1>計算理論編</h1>
+            <h1>設計検討式・計算理論編</h1>
 
             <h2>地盤の液状化</h2>
 
@@ -5932,6 +6086,18 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         </div>
                         <div class="formula-right">強度と変形性能 4.1</div>
                     </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号 (各 $M_{si}$ は当該縁ひずみが使用限界に達するときの曲げモーメント)</li>
+                        <li><span class="symbol-label">$M_{s1}$</span>鋼管の引張縁ひずみ ${}_s\varepsilon_{t,s}$ が使用限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{s2}$</span>鋼管の圧縮縁ひずみ ${}_s\varepsilon_{c,s}$ が使用限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{s3}$</span>主鉄筋の引張縁ひずみ ${}_r\varepsilon_{t,s}$ が使用限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{s4}$</span>主鉄筋の圧縮縁ひずみ ${}_r\varepsilon_{c,s}$ が使用限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{s5}$</span>コンクリートの圧縮縁ひずみ ${}_c\varepsilon_{c,s}$ が使用限界に達するときの $M$</li>
+                    </ul>
+                    <p style="font-style: italic; color: #666;">
+                        実装は離散的な $M_{si}$ を直接算定せず、断面ファイバー積分で各材料のひずみを同時にチェックし、
+                        最初に使用限界ひずみに達した縁の $M$ が結果として $M_s$ となる ($\min$ と等価)。
+                    </p>
 
                     <h4>場所打ち鋼管コンクリート杭の使用限界せん断力</h4>
                     <div class="formula-block">
@@ -5957,6 +6123,18 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         </div>
                         <div class="formula-right">強度と変形性能 4.3</div>
                     </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号 (各 $M_{di}$ は当該縁ひずみが損傷限界に達するときの曲げモーメント)</li>
+                        <li><span class="symbol-label">$M_{d1}$</span>鋼管の引張縁ひずみ ${}_s\varepsilon_{t,d}$ が損傷限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{d2}$</span>鋼管の圧縮縁ひずみ ${}_s\varepsilon_{c,d}$ が損傷限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{d3}$</span>主鉄筋の引張縁ひずみ ${}_r\varepsilon_{t,d}$ が損傷限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{d4}$</span>主鉄筋の圧縮縁ひずみ ${}_r\varepsilon_{c,d}$ が損傷限界に達するときの $M$</li>
+                        <li><span class="symbol-label">$M_{d5}$</span>コンクリートの圧縮縁ひずみ ${}_c\varepsilon_{c,d}$ が損傷限界に達するときの $M$</li>
+                    </ul>
+                    <p style="font-style: italic; color: #666;">
+                        実装は離散的な $M_{di}$ を直接算定せず、断面ファイバー積分で各材料のひずみを同時にチェックし、
+                        最初に損傷限界ひずみに達した縁の $M$ が結果として $M_d$ となる ($\min$ と等価)。
+                    </p>
 
                     <h4>場所打ち鋼管コンクリート杭の損傷限界せん断力</h4>
                     <div class="formula-block">
@@ -5984,7 +6162,11 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
 
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">$M_{u0}$</span>低減前の安全限界曲げモーメント。鋼管・鉄筋・コンクリートをそれぞれ非線形応力-ひずみ関係でモデル化し、目標軸力 $N$ に対応する曲げモーメントを Newton-Raphson 法で算定する。</li>
+                        <li>
+                            <span class="symbol-label">$M_{u0}$</span>コンクリートの圧縮縁が圧縮限界ひずみ $\varepsilon_{cu} = 0.003$ に達したときの曲げモーメント。
+                            鋼管・鉄筋・コンクリートをそれぞれ非線形応力-ひずみ関係でモデル化し、
+                            目標軸力 $N$ に対応する曲げモーメントを Newton-Raphson 法で算定する。
+                        </li>
                         <li><span class="symbol-label">$\beta_1, \beta_2$</span>SC 系断面に対し $\beta_1=\beta_2=1.0$ とする (レベル 1・レベル 2 同値)。</li>
                     </ul>
 
@@ -6145,19 +6327,19 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <p>
                         $$
-                        I = \frac{\pi (R_o^4 - R_i^4)}{4}, \quad
-                        I_e = I + \tfrac{1}{2}(n-1)\,A_p R_p^2, \quad
-                        Z_e = \frac{I_e}{R_o}
+                        I = \frac{\pi (r_o^4 - r_i^4)}{4}, \quad
+                        I_e = I + \tfrac{1}{2}(n-1)\,A_p r_p^2, \quad
+                        Z_e = \frac{I_e}{r_o}
                         $$
                         $$
-                        A_c = \pi (R_o^2 - R_i^2), \quad
+                        A_c = \pi (r_o^2 - r_i^2), \quad
                         A_e = A_c + (n-1)\,A_p
                         $$
                     </p>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$R_o, R_i$</span>杭外半径・内半径</li>
-                        <li><span class="symbol-label">$A_p, R_p$</span>PC 鋼材の総断面積・配置半径</li>
+                        <li><span class="symbol-label">$r_o, r_i$</span>杭外半径・内半径</li>
+                        <li><span class="symbol-label">$A_p, r_p$</span>PC 鋼材の総断面積・配置半径</li>
                         <li><span class="symbol-label">$n$</span>弾性係数比 (本実装では $n=5$ 固定)</li>
                     </ul>
 
@@ -6165,51 +6347,91 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     <p>
                         コンクリート縁応力度がひび割れ強度・許容圧縮応力度に達するときの曲げモーメントの小さい方をとる。
                     </p>
-                    <p>
-                        $$
-                        M_s = \beta \cdot \min\!\left[
-                            Z_e\,(-F_{ts} + \sigma_E + \sigma_{0E}),\;
-                            Z_e\,(F_{cs} - \sigma_E - \sigma_{0E})
-                        \right]
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_s = \beta_1 \cdot \min(M_{s1},\;M_{s2})$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.1)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{s1} = Z_e\,(F_{ts} + \sigma_e + \sigma_{0e})$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.2)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{s2} = Z_e\,(F_{cs} - \sigma_e - \sigma_{0e})$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.3)</div>
+                    </div>
                     <ul class="symbol-list">
-                        <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$F_{ts}$</span>使用限界引張応力度 $= -0.56\sqrt{F_c}/2$ [N/mm$^2$]</li>
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_{s1}$</span>引張縁の応力度が使用限界引張応力度 $F_{ts}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{s2}$</span>圧縮縁の応力度が使用限界圧縮応力度 $F_{cs}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$F_{ts}$</span>使用限界引張応力度 $= 0.56\sqrt{F_c}/2$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$F_{cs}$</span>使用限界圧縮応力度 $= F_c/3.5$ [N/mm$^2$]</li>
-                        <li><span class="symbol-label">$\sigma_E$</span>有効プレストレス応力度</li>
-                        <li><span class="symbol-label">$\sigma_{0E}$</span>軸力による応力度 $= N/A_e$</li>
-                        <li><span class="symbol-label">$\beta$</span>低減係数 ($\beta_1\beta_2$)</li>
+                        <li><span class="symbol-label">$\sigma_e$</span>有効プレストレス応力度</li>
+                        <li><span class="symbol-label">$\sigma_{0e}$</span>軸力による応力度 $= N/A_e$</li>
+                        <li><span class="symbol-label">$\beta_1$</span>低減係数 ($\beta_1 = 1.0$)</li>
                     </ul>
 
                     <h4>PHC 杭の損傷限界曲げモーメント $M_d$</h4>
                     <p>
                         $M_s$ と同形式。引張縁・圧縮縁の応力度限界を損傷限界値に置き換える。
                     </p>
-                    <p>
-                        $$
-                        M_d = \beta \cdot \min\!\left[
-                            Z_e\,(-F_{td} + \sigma_E + \sigma_{0E}),\;
-                            Z_e\,(F_{cd} - \sigma_E - \sigma_{0E})
-                        \right]
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_d = \beta \cdot \min(M_{d1},\;M_{d2})$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.7)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{d1} = Z_e\,(F_{td} + \sigma_e + \sigma_{0e})$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.8)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{d2} = Z_e\,(F_{cd} - \sigma_e - \sigma_{0e})$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.9)</div>
+                    </div>
                     <ul class="symbol-list">
-                        <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$F_{td}$</span>損傷限界引張応力度 $= -0.56\sqrt{F_c}$ [N/mm$^2$]</li>
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_{d1}$</span>引張縁の応力度が損傷限界引張応力度 $F_{td}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d2}$</span>圧縮縁の応力度が損傷限界圧縮応力度 $F_{cd}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$F_{td}$</span>損傷限界引張応力度 $= 0.56\sqrt{F_c}$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$F_{cd}$</span>損傷限界圧縮応力度 $= 2F_c/3.5$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$\beta$</span>L1: $\beta_1=1.0$、L2: $\beta_1\beta_2=1.0\times0.65$</li>
                     </ul>
 
                     <h4>PHC 杭の安全限界曲げモーメント $M_u$</h4>
-                    <p>
-                        中空円形断面のひずみ分布から PC 鋼材・コンクリートの応力度を非線形に積分し、
-                        指定軸力 $N$ に対応するモーメントを Newton-Raphson 法で求める
-                        (<code>GetUltimateForceAndMoment</code>)。<br>
-                        圧縮縁ひずみ度 $\varepsilon_{cu}$ と中立軸位置 $x_n$ をパラメータとし、
-                        最終曲率 $\phi_u$ における $M$ が安全限界曲げモーメントとなる。
-                        コードでは安全限界軸力閾値 (`UltimateLimitAxialForceThresholds`) ごとに離散的に算定する。
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_u = \beta_1 \cdot \beta_2 \cdot M_{u0}$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 (5.13)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{u0} = \min(M_{u1},\;M_{u2})$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li>
+                            <span class="symbol-label">$M_{u0}$</span>断面の曲げ解析による計算値 ($M_{u1}$ と $M_{u2}$ の小さい方)。
+                            中空円形断面のひずみ分布から PC 鋼材・コンクリートの応力度を非線形に積分し、
+                            指定軸力 $N$ に対応するモーメントを Newton-Raphson 法で求める (<code>GetUltimateForceAndMoment</code>)。
+                        </li>
+                        <li><span class="symbol-label">$M_{u1}$</span>圧縮側最外縁のコンクリートのひずみが圧縮限界ひずみ $\varepsilon_{cu}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{u2}$</span>PC 鋼材のひずみが引張限界ひずみ $\varepsilon_{pu} = -0.02$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$\beta_1$</span>$= 0.8$ (PHC 杭、設計式の信頼性に基づく低減係数)</li>
+                        <li><span class="symbol-label">$\beta_2$</span>$= 1.0$ (軸力比依存の低減係数、PHC 杭は 1.0 固定)</li>
+                    </ul>
 
                     <h4>PHC 杭のせん断耐力 $Q_s, Q_d, Q_u$</h4>
                     <p>
@@ -6217,44 +6439,55 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <p>
                         $$
-                        t = \frac{R_o - R_i}{2}, \quad
-                        s_0 = \frac{2(R_o^3 - R_i^3)}{3}, \quad
+                        t = \frac{r_o - r_i}{2}, \quad
+                        S_0 = \frac{2(r_o^3 - r_i^3)}{3}, \quad
                         \alpha = \min\!\left[\max\!\left(\frac{4}{M/(Q\,d) + 1},\,1.0\right),\,2.0\right]
                         $$
                         $$
-                        \sigma_G = \sigma_E + \sigma_{0E}, \quad
-                        \tau_X = \frac{1}{2}\sqrt{(\sigma_G + 2\sigma_X)^2 - \sigma_G^2}, \quad
+                        \sigma_g = \sigma_e + \sigma_{0e}, \quad
+                        \tau_x = \frac{1}{2}\sqrt{(\sigma_g + 2\sigma_x)^2 - \sigma_g^2}, \quad
                         \tau_V = 1.9\,F_c^{0.323}, \quad
                         \eta_1 = \frac{t - d_{pc}}{t}
                         $$
                     </p>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$\sigma_X$</span>使用限界 $\sigma_S=1.2$、損傷・安全限界 $\sigma_D=1.8$ [N/mm$^2$]</li>
+                        <li><span class="symbol-label">$\sigma_x$</span>使用限界 $\sigma_s=1.2$、損傷・安全限界 $\sigma_d=1.8$ [N/mm$^2$]</li>
+                        <li><span class="symbol-label">$\sigma_e$</span>有効プレストレス応力度</li>
+                        <li><span class="symbol-label">$\sigma_{0e}$</span>軸力による応力度 $= N/A_e$</li>
                         <li><span class="symbol-label">$d_{pc}$</span>PC 鋼線径 $= 15$ mm (固定値)</li>
                         <li><span class="symbol-label">$M/Q$</span>せん断スパン比 (=モーメント/せん断力比)</li>
                     </ul>
                     <p>
                         各限界状態の式 (<code>GetServiceLimitShear / GetDamageLimitShear / GetUltimateLimitShear</code>):
                     </p>
-                    <p>
-                        $$
-                        \begin{aligned}
-                        Q_s &= \beta_1 \cdot \min\!\left[
-                            0.6\,\alpha\,(2t)\,\frac{I}{s_0}\cdot\tfrac{2}{3}\tau_S,\;\;
-                            0.6\,\alpha\,\eta_1\,(2t)\,\frac{I}{s_0}\cdot\tfrac{2}{3}\tau_V
-                        \right] \\
-                        Q_d &= \beta \cdot \min\!\left[
-                            0.6\,\alpha\,(2t)\,\frac{I}{s_0}\,\tau_D,\;\;
-                            0.6\,\alpha\,\eta_1\,(2t)\,\frac{I}{s_0}\,\tau_V
-                        \right] \\
-                        Q_u &= \beta_1\beta_2 \cdot \min\!\left[
-                            0.75\,\alpha\,(2t)\,\frac{I}{s_0}\,\tau_D,\;\;
-                            0.75\,\alpha\,\eta_1\,(2t)\,\frac{I}{s_0}\,\tau_V
-                        \right]
-                        \end{aligned}
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_s = \beta_1 \cdot \min\!\left[
+                                0.6\,\alpha\,(2t)\,\frac{I}{S_0}\,\tau_s,\;\;
+                                0.6\,\alpha\,\eta_1\,(2t)\,\frac{I}{S_0}\cdot\tfrac{2}{3}\tau_V
+                            \right]$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (5.4)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_d = \beta \cdot \min\!\left[
+                                0.6\,\alpha\,(2t)\,\frac{I}{S_0}\,\tau_d,\;\;
+                                0.6\,\alpha\,\eta_1\,(2t)\,\frac{I}{S_0}\,\tau_V
+                            \right]$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (5.10)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_u = \beta_1\beta_2 \cdot \min\!\left[
+                                0.75\,\alpha\,(2t)\,\frac{I}{S_0}\,\tau_d,\;\;
+                                0.75\,\alpha\,\eta_1\,(2t)\,\frac{I}{S_0}\,\tau_V
+                            \right]$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (5.14)</div>
+                    </div>
                     <p>
                         低減係数: $\beta_1 = 1.0$、$\beta_2 = 0.65$ (L2 のみ適用、L1 は $\beta_2 = 1.0$ と扱う)。
                     </p>
@@ -6283,9 +6516,9 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <p>
                         $$
-                        I = \frac{\pi (R_o^4 - R_i^4)}{4}, \quad
-                        I_e = I + \tfrac{1}{2}(n-1)\,(A_p R_p^2 + A_g R_g^2), \quad
-                        Z_e = \frac{I_e}{R_o}
+                        I = \frac{\pi (r_o^4 - r_i^4)}{4}, \quad
+                        I_e = I + \tfrac{1}{2}(n-1)\,(A_p r_p^2 + A_g r_g^2), \quad
+                        Z_e = \frac{I_e}{r_o}
                         $$
                         $$
                         A_e = A_c + (n-1)(A_p + A_g)
@@ -6293,72 +6526,128 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$A_g, R_g$</span>主筋の総断面積・配置半径</li>
-                        <li><span class="symbol-label">$A_p, R_p$</span>PC 鋼材の総断面積・配置半径</li>
+                        <li><span class="symbol-label">$A_g, r_g$</span>主筋の総断面積・配置半径</li>
+                        <li><span class="symbol-label">$A_p, r_p$</span>PC 鋼材の総断面積・配置半径</li>
                     </ul>
 
                     <h4>PRC 杭の使用限界曲げモーメント $M_s$</h4>
                     <p>
                         式形式は PHC と同一。換算断面係数 $Z_e$ に主筋寄与が含まれる点のみ異なる。
                     </p>
-                    <p>
-                        $$
-                        M_s = \beta \cdot \min\!\left[
-                            Z_e\,(-F_{ts} + \sigma_E + \sigma_{0E}),\;
-                            Z_e\,(F_{cs} - \sigma_E - \sigma_{0E})
-                        \right]
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_s = \beta_1 \cdot \min(M_{s1},\;M_{s2})$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.1)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{s1} = Z_e\,(F_{ts} + \sigma_e + \sigma_{0e})$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.2)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{s2} = Z_e\,(F_{cs} - \sigma_e - \sigma_{0e})$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.3)</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_{s1}$</span>引張縁の応力度が使用限界引張応力度 $F_{ts}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{s2}$</span>圧縮縁の応力度が使用限界圧縮応力度 $F_{cs}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$F_{ts}$</span>使用限界引張応力度 $= 0.56\sqrt{F_c}/2$ [N/mm$^2$]</li>
+                        <li><span class="symbol-label">$F_{cs}$</span>使用限界圧縮応力度 $= F_c/3.5$ [N/mm$^2$]</li>
+                        <li><span class="symbol-label">$\sigma_e$</span>有効プレストレス応力度</li>
+                        <li><span class="symbol-label">$\sigma_{0e}$</span>軸力による応力度 $= N/A_e$</li>
+                        <li><span class="symbol-label">$\beta_1$</span>低減係数 ($\beta_1 = 1.0$)</li>
+                    </ul>
 
                     <h4>PRC 杭の損傷限界曲げモーメント $M_d$</h4>
                     <p>
-                        式形式は PHC と同一。低減係数の値が異なる ($\beta_1=0.8$、$\beta_2$ は軸応力レベルにより 0.65 〜 0.75)。
+                        PRC 杭は主筋を含むため、断面の曲げ解析により最外縁鉄筋・コンクリートの 3 ケースの中から最小値を採る。
                     </p>
-                    <p>
-                        $$
-                        M_d = \beta \cdot \min\!\left[
-                            Z_e\,(-F_{td} + \sigma_E + \sigma_{0E}),\;
-                            Z_e\,(F_{cd} - \sigma_E - \sigma_{0E})
-                        \right]
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_d = \beta \cdot M_{d0}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.7)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{d0} = \min(M_{d1},\;M_{d2},\;M_{d3})$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_{d0}$</span>断面の曲げ解析によって得られる損傷限界曲げモーメントの計算値</li>
+                        <li><span class="symbol-label">$M_{d1}$</span>最外縁の軸方向鉄筋が短期許容引張応力度に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d2}$</span>最外縁の軸方向鉄筋が短期許容圧縮応力度に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d3}$</span>最外縁のコンクリートが短期許容圧縮応力度に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$\beta$</span>$\beta_1=0.8$、$\beta_2$ は軸応力レベルにより 0.65 〜 0.75</li>
+                    </ul>
 
                     <h4>PRC 杭の安全限界曲げモーメント $M_u$</h4>
-                    <p>
-                        中空円形断面に対し、PC 鋼材と主筋の両方の応力-ひずみ関係を考慮した非線形断面解析を行う
-                        (<code>GetUltimateForceAndMoment</code>)。<br>
-                        曲げ降伏のパターンとして以下を判定する:
-                    </p>
-                    <ul>
-                        <li>(a) 主筋の引張降伏が先行</li>
-                        <li>(b) 主筋の圧縮降伏が先行</li>
-                        <li>(c) コンクリート圧縮縁の圧壊が先行</li>
-                        <li>(d) 軸力のみで主筋が降伏 (曲げ耐力なし)</li>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_u = \beta_1 \cdot \beta_2 \cdot M_{u0}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.11)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{u0} = \min(M_{u1},\;M_{u2})$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li>
+                            <span class="symbol-label">$M_{u0}$</span>断面の曲げ解析による計算値 ($M_{u1}$ と $M_{u2}$ の小さい方)。
+                            中空円形断面に対し、PC 鋼材と主筋の両方の応力-ひずみ関係を考慮した非線形断面解析を行う
+                            (<code>GetUltimateForceAndMoment</code>)。
+                            曲げ降伏パターンとして (a) 主筋の引張降伏が先行、(b) 主筋の圧縮降伏が先行、
+                            (c) コンクリート圧縮縁の圧壊が先行、(d) 軸力のみで主筋が降伏 (曲げ耐力なし) を判定する。
+                        </li>
+                        <li><span class="symbol-label">$M_{u1}$</span>圧縮側最外縁のコンクリートのひずみが圧縮限界ひずみ $\varepsilon_{cu}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{u2}$</span>PC 鋼材のひずみが引張限界ひずみに達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$\beta_1$</span>$= 0.8$ (PRC 杭、設計式の信頼性に基づく低減係数)</li>
+                        <li><span class="symbol-label">$\beta_2$</span>軸応力レベルにより 0.65 〜 0.75</li>
                     </ul>
 
                     <h4>PRC 杭のせん断耐力 $Q_s, Q_d, Q_u$</h4>
                     <p>
-                        式形式は PHC と完全に同一 (<code>GetServiceLimitShear / GetDamageLimitShear / GetUltimateLimitShear</code>)。
-                        コンクリート断面寸法 $t, s_0, I$ と $\alpha, \tau_S, \tau_D, \tau_V, \eta_1$ の定義は PHC を参照。
+                        式形式は PHC と同一 (<code>GetServiceLimitShear / GetDamageLimitShear / GetUltimateLimitShear</code>)。
+                        コンクリート断面寸法 $t, S_0, I$ と $\alpha, \tau_s, \tau_d, \tau_V, \eta_1$ の定義は PHC を参照。
                     </p>
-                    <p>
-                        $$
-                        \begin{aligned}
-                        Q_s &= \beta_1 \cdot \min\!\left[
-                            0.6\,\alpha\,(2t)\,\tfrac{I}{s_0}\,\tfrac{2}{3}\tau_S,\;\;
-                            0.6\,\alpha\,\eta_1\,(2t)\,\tfrac{I}{s_0}\,\tfrac{2}{3}\tau_V
-                        \right] \\
-                        Q_d &= \beta \cdot \min\!\left[
-                            0.6\,\alpha\,(2t)\,\tfrac{I}{s_0}\,\tau_D,\;\;
-                            0.6\,\alpha\,\eta_1\,(2t)\,\tfrac{I}{s_0}\,\tau_V
-                        \right] \\
-                        Q_u &= \beta_1\beta_2 \cdot \min\!\left[
-                            0.75\,\alpha\,(2t)\,\tfrac{I}{s_0}\,\tau_D,\;\;
-                            0.75\,\alpha\,\eta_1\,(2t)\,\tfrac{I}{s_0}\,\tau_V
-                        \right]
-                        \end{aligned}
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_s = \beta_1 \cdot \min\!\left[
+                                0.6\,\alpha\,(2t)\,\frac{I}{S_0}\,\tau_s,\;\;
+                                0.6\,\alpha\,\eta_1\,(2t)\,\frac{I}{S_0}\cdot\tfrac{2}{3}\tau_V
+                            \right]$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.4)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_d = \beta \cdot \min\!\left[
+                                0.6\,\alpha\,(2t)\,\frac{I}{S_0}\,\tau_d,\;\;
+                                0.6\,\alpha\,\eta_1\,(2t)\,\frac{I}{S_0}\,\tau_V
+                            \right]$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.8)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_u = \beta_1 \cdot \beta_2 \cdot \min\!\left[
+                                0.75\,\alpha\,(2t)\,\frac{I}{S_0}\,\tau_d,\;\;
+                                0.75\,\alpha\,\eta_1\,(2t)\,\frac{I}{S_0}\,\tau_V
+                            \right]$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (6.12)</div>
+                    </div>
 
                     <h4>PRC 杭の M-φ 関係</h4>
                     <p>
@@ -6381,33 +6670,88 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <p>
                         $$
-                        I = \frac{\pi (R_o^4 - R_i^4)}{4}, \quad
-                        I_e = I + \tfrac{1}{2}(n-1)\,A_p R_p^2, \quad
-                        Z_e = \frac{I_e}{R_o}
+                        I = \frac{\pi (r_o^4 - r_i^4)}{4}, \quad
+                        I_e = I + \tfrac{1}{2}(n-1)\,A_p r_p^2, \quad
+                        Z_e = \frac{I_e}{r_o}
                         $$
                     </p>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$A_p, R_p$</span>鋼管の換算断面積・配置半径 ($A_p = A_{s,\text{pipe}}$、$R_p = D/2 - t/2$)</li>
+                        <li><span class="symbol-label">$A_p, r_p$</span>鋼管の換算断面積・配置半径 ($A_p = A_{s,\text{pipe}}$、$r_p = D/2 - t/2$)</li>
                         <li><span class="symbol-label">$D, t$</span>鋼管外径・肉厚</li>
                     </ul>
 
-                    <h4>SC 杭の使用・損傷限界曲げモーメント $M_s, M_d$</h4>
+                    <h4>SC 杭の使用限界曲げモーメント $M_s$</h4>
                     <p>
-                        SC 杭は曲げに対する N-M インタラクション図を生成し、軸力制限値
-                        (`ApplyAxialForceLimitsToNM`) を適用したうえで指定軸力に対する $M$ を読み取る方式で算定する。
-                        鋼管とコンクリートそれぞれの応力-ひずみ関係から計算した断面合力から $M_s, M_d$ を求める
-                        (関数 <code>GetServiceLimitMNInteraction / GetDamageLimitMNInteraction</code>)。<br>
+                        鋼管とコンクリートそれぞれの応力-ひずみ関係から断面合力を非線形に積分し、
+                        指定軸力 $N$ に対応する曲げモーメントを 3 ケースの中から最小値で求める
+                        (関数 <code>GetServiceLimitMNInteraction</code>)。
+                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_s = \beta_1 \cdot \min(M_{s1},\;M_{s2},\;M_{s3})$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.1)</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_{s1}$</span>コンクリートの圧縮縁が使用限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{s2}$</span>鋼管の引張縁が使用限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{s3}$</span>鋼管の圧縮縁が使用限界圧縮応力度 $f_{c,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$\beta_1$</span>$= 1.0$ (SC 杭、設計式の信頼性に基づく低減係数)</li>
+                    </ul>
+
+                    <h4>SC 杭の損傷限界曲げモーメント $M_d$</h4>
+                    <p>
+                        $M_s$ と同形式で、各縁の応力度限界を損傷限界値に置き換える
+                        (関数 <code>GetDamageLimitMNInteraction</code>)。
                         SC 杭は $\beta_1 = \beta_2 = 1.0$ のためレベル 1・レベル 2 で同一値となる。
                     </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_d = \beta \cdot \min(M_{d1},\;M_{d2},\;M_{d3})$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.3)</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_{d1}$</span>コンクリートの圧縮縁が損傷限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d2}$</span>鋼管の引張縁が損傷限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d3}$</span>鋼管の圧縮縁が損傷限界圧縮応力度 $f_{c,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0 \times 1.0 = 1.0$</li>
+                    </ul>
 
                     <h4>SC 杭の安全限界曲げモーメント $M_u$</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_u = \beta \cdot M_{u0}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.5)</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li>
+                            <span class="symbol-label">$M_{u0}$</span>断面の曲げ解析によって得られる安全限界時の曲げモーメントで、低減係数 $\beta$ を乗じる前の値。
+                            鋼管とコンクリートの非線形応力-ひずみ関係から断面合力を非線形に積分し、
+                            圧縮縁ひずみ度 $\varepsilon_{cu}$ と曲率を反復することで指定軸力 $N$ に対応する曲げモーメントを求める
+                            (<code>GetUltimateMomentForSpecificN</code>)。
+                            $\varepsilon_{cu}$ は $(D - 2t_s)/t_c \leq 6$ (高靱性、コンクリート肉厚に対し中空内径が小さい)
+                            を満たす場合 $\varepsilon_{cu} = 0.004$、それ以外は $\varepsilon_{cu} = 0.003$ に設定する。
+                        </li>
+                        <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0$ (SC 杭、N-M 曲線そのものは <code>UltimateLimitBeta = [0, 1, 0]</code> の構成で軸力制限値外を 0 にクリップ)</li>
+                    </ul>
                     <p>
-                        圧縮縁ひずみ度 $\varepsilon_{cu}$ を軸力比 $N/N_0$ に応じて $0.003 \sim 0.004$ の範囲で動的に補正し、
-                        鋼管とコンクリートの非線形応力-ひずみから断面合力を計算する
-                        (<code>GetUltimateMomentForSpecificN</code>)。<br>
-                        曲げ降伏パターン (a〜d) を判定し、目標軸力に対応する曲げ耐力を Newton-Raphson で求める。
-                        $\beta_1 = 0.9$ を乗じる。
+                        曲げ降伏パターンは:
+                    </p>
+                    <ul>
+                        <li>(a) 鋼管の引張降伏が先行</li>
+                        <li>(b) 鋼管の圧縮降伏が先行</li>
+                        <li>(c) コンクリート圧縮縁の圧壊が先行</li>
+                        <li>(d) 軸力のみで鋼管が降伏 (曲げ耐力なし)</li>
+                    </ul>
+                    <p>
+                        曲げ軸力制限値 $[-0.4\,F\cdot 1.1\,A_s,\;0.5\,(F\cdot 1.1\,A_s + A_c F_c)]$ の外で $M = 0$ にクリップする。
+                        M-φ 関係を構築する際 (<code>GetMPhiRelationshipInternal</code>) は別途 $\beta_1 = 0.9$ を乗じてモーメント値を低減する。
                     </p>
 
                     <h4>SC 杭の使用限界せん断力 $Q_s$</h4>
@@ -6415,12 +6759,12 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         鋼管断面の許容せん断応力度に基づく単純式
                         (<code>GetServiceLimitShear</code>)。
                     </p>
-                    <p>
-                        $$
-                        Q_s = \frac{\beta_1}{\kappa_S} \cdot f_s \cdot A_{s,\text{pipe}}, \qquad
-                        f_s = \frac{F}{1.5\sqrt{3}}
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_s = \frac{\beta_1}{\kappa_S} \cdot f_s \cdot A_{s,\text{pipe}},\qquad f_s = \frac{F}{1.5\sqrt{3}}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.2)</div>
+                    </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
                         <li><span class="symbol-label">$F$</span>鋼管の降伏応力度 [N/mm$^2$]</li>
@@ -6434,33 +6778,39 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         $Q_s$ の応力度を損傷限界値 $f_d = F/\sqrt{3}$ に置き換えた式
                         (<code>GetDamageLimitShear</code>)。
                     </p>
-                    <p>
-                        $$
-                        Q_d = \frac{\beta_1}{\kappa_S} \cdot f_d \cdot A_{s,\text{pipe}}, \qquad
-                        f_d = \frac{F}{\sqrt{3}}
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_d = \frac{\beta_1}{\kappa_S} \cdot f_d \cdot A_{s,\text{pipe}},\qquad f_d = \frac{F}{\sqrt{3}}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.4)</div>
+                    </div>
 
                     <h4>SC 杭の安全限界せん断力 $Q_u$</h4>
                     <p>
                         鋼管杭と同形式。軸力相互作用を考慮した相関式
                         (<code>GetUltimateLimitShear</code>)。
                     </p>
-                    <p>
-                        $$
-                        Q_u = \beta_1 \beta_2 \cdot s_{Q_0} \sqrt{\,1 - \eta^2\,}, \qquad
-                        \eta = \frac{N}{N_y}
-                        $$
-                        $$
-                        s_{Q_0} = \frac{2\,t\,(D - t)\,\sigma_Y}{\sqrt{3}}, \qquad
-                        N_y = \sigma_Y \cdot A_{s,\text{pipe}}
-                        $$
-                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_u = \beta \cdot {}_sQ_{un}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (7.8)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$${}_sQ_{un} = {}_sQ_0 \sqrt{\,1 - \eta^2\,},\qquad \eta = \frac{N}{N_y}$$</p>
+                            <p>$${}_sQ_0 = \frac{2\,t\,(D - t)\,\sigma_y}{\sqrt{3}},\qquad N_y = \sigma_y \cdot A_{s,\text{pipe}}$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
                     <ul class="symbol-list">
-                        <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$\sigma_Y$</span>鋼管の降伏応力度 ($=F$)</li>
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_sQ_{un}$</span>低減前の SC 杭安全限界せん断力 (軸力相互作用 $\sqrt{1-\eta^2}$ を考慮した鋼管断面のせん断耐力)。<strong>鋼管杭と同式</strong>とする。</li>
+                        <li><span class="symbol-label">${}_sQ_0$</span>軸力がないときの鋼管断面の安全限界せん断力</li>
+                        <li><span class="symbol-label">$\eta$</span>軸力比 $= N/N_y$</li>
+                        <li><span class="symbol-label">$\sigma_y$</span>鋼管の降伏応力度 ($=F$)</li>
                         <li><span class="symbol-label">$N_y$</span>鋼管降伏軸力 (コンクリート寄与なし)</li>
-                        <li><span class="symbol-label">$\beta_1, \beta_2$</span>SC 杭は両者とも $1.0$</li>
+                        <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0$ (SC 杭は両者とも $1.0$)</li>
                     </ul>
                     <p style="font-size: 0.92em; color: #555;">
                         ※ $|\eta| \geq 1$ のとき、すなわち軸力が降伏軸力以上のときは $Q_u = 0$ とする。
@@ -6479,50 +6829,142 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     <h2>鋼管杭の強度と変形性能</h2>
 
                     <p>
-                        鋼管杭は鉄道構造物等設計標準・同解説 強度と変形性能 第 8 章に基づく。
-                        現状の実装は <strong>損傷限界曲げモーメント</strong>(中間部・杭頭部 CFT) と
-                        <strong>損傷限界圧縮軸力</strong>(局部座屈 + 柱座屈) のみ対応。
-                        使用限界・安全限界 NM 曲線、M-φ 曲線、FEM 統合は未対応。
+                        鋼管杭の杭体は <strong>「鋼管部」</strong>(杭中間部・杭下部、鋼管内にコンクリート充填なし)
+                        と <strong>「コンクリート充填鋼管部」</strong>(杭頭部、鉄筋定着工法用) の 2 サブタイプを区間ごとに選択する。
+                        本節の N-M 包絡線では、<strong>鋼管部は β<sub>1</sub> = β<sub>2</sub> = 1.0</strong>、
+                        <strong>コンクリート充填鋼管部の安全限界 M-φ は β<sub>1</sub> = 0.9 固定</strong>
+                        （その他の限界状態は β<sub>1</sub> = β<sub>2</sub> = 1.0）として、
+                        使用限界・損傷限界・安全限界の N-M 包絡線の式を示す。
                     </p>
 
                     <h3>許容圧縮応力度</h3>
 
-                    <h4>許容圧縮応力度 sfc1 (局部座屈低減後)</h4>
+                    <h4>局部座屈を考慮した鋼管杭の長期許容圧縮応力度 sfc1</h4>
                     <p>径厚比 D/t に応じて次の式で局部座屈低減を行う。D/t = 25 で連続。</p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$_sf_{c1} = \begin{cases} \dfrac{F}{1.5} & (D/t \leq 25) \\[6pt] \dfrac{F}{1.5}\left(0.8 + \dfrac{5}{D/t}\right) & (D/t > 25) \end{cases}$$</p>
+                            <p>$$_sf_{c1} = \dfrac{F}{1.5} \quad (D/t \leq 25)$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.2)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sf_{c1} = \dfrac{F}{1.5}\left(0.8 + \dfrac{5}{D/t}\right) \quad (D/t > 25)$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.3)</div>
                     </div>
 
-                    <h4>許容圧縮応力度 sfc2 (柱座屈低減後)</h4>
+                    <h4>鋼管杭の長期許容曲げ座屈応力度 sfc2</h4>
                     <p>
                         柱座屈による低減は Johnson 放物線 + Euler 双曲線で表す。
-                        可変安全率 $\nu$ と規準化細長比 $\lambda_C = \sqrt{N_y/N_c}$ を用いる:
+                        可変安全率 $\nu$ と規準化細長比 $\lambda_c$ を用いる:
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$_sf_{c2} = \begin{cases} \left(1 - 0.4\,\dfrac{\lambda_C^2}{e\lambda_C^2}\right)\dfrac{F}{\nu} & (\lambda \leq \Lambda) \\[6pt] \dfrac{F}{\nu \cdot \lambda_C^2} & (\lambda > \Lambda) \end{cases}$$</p>
-                            <p>$$\nu = \dfrac{3}{2} + \dfrac{2}{3}\left(\dfrac{\lambda}{\Lambda}\right)^2,\quad \lambda = \lambda_C \pi \sqrt{E/F},\quad \Lambda = \sqrt{\dfrac{\pi^2 E}{0.6 F}},\quad e\lambda_C = \dfrac{1}{\sqrt{0.6}}$$</p>
+                            <p>$$_sf_{c2} = \left(1 - 0.4\,\dfrac{\lambda_c^{\,2}}{e\lambda_c^{\,2}}\right)\dfrac{F}{\nu} \quad (\lambda_c \leq e\lambda_c)$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.10)</div>
                     </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sf_{c2} = \dfrac{F}{\nu \cdot \lambda_c^{\,2}} \quad (\lambda_c > e\lambda_c)$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.11)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$\lambda_c = \sqrt{N_y / N_c},\quad e\lambda_c = \dfrac{1}{\sqrt{0.6}},\quad \nu = \dfrac{3}{2} + \dfrac{2}{3}\left(\dfrac{\lambda_c}{e\lambda_c}\right)^2$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.12)</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$\nu$</span>座屈安全率</li>
+                        <li><span class="symbol-label">$\lambda_c$</span>液状化による地盤剛性の低下を考慮した鋼管杭の曲げ座屈細長比</li>
+                        <li><span class="symbol-label">$e\lambda_c$</span>弾性限界細長比</li>
+                        <li><span class="symbol-label">$N_y$</span>鋼管杭の降伏軸力</li>
+                        <li><span class="symbol-label">$N_c$</span>液状化による地盤剛性の低減を考慮した鋼管杭の弾性曲げ座屈荷重 (将来実装)</li>
+                    </ul>
                     <p style="font-style: italic; color: #666;">
-                        注: $N_c$ (オイラー座屈荷重) の式は文献で複雑なため、現実装では <strong>$N_c = N_y\;(= 1.5 \times {}_sf_t \times {}_sA_p)$</strong>
-                        のプレースホルダを採用 ($\lambda_C = 1$ 固定)。$N_c$ 本格実装は将来対応。
+                        注: $N_c$ (弾性曲げ座屈荷重) の本格実装は将来対応。地盤に支持される杭では $N_c$ が十分大きく
+                        $\lambda_c \to 0$、$_sf_{c2} \approx _sf_{c1}$ となるため、現状の暫定実装では <strong>$_sf_{c2} = _sf_{c1}$</strong>
+                        (柱座屈低減なし) として扱う。これにより安全限界軸力 $N_{uc} = \beta_1\beta_2 \min(_sN_{uc1},\,_sN_{uc2})$
+                        は常に $_sN_{uc1}$ と一致する。
                     </p>
 
+                    <h3>使用限界状態</h3>
+                    <p>鋼管部・コンクリート充填鋼管部 共通。$\beta_1 = 1.0$。</p>
+
+                    <h4>使用限界軸力</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$N_{sc} = \beta_1 \cdot _sN_{sc1}$$</p>
+                            <p>$$N_{st} = \beta_1 \cdot _sN_{st}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.1)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sN_{sc1} = _sf_{c1} \cdot _sA_p,\quad _sN_{st} = _sf_t \cdot _sA_p$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$N_{sc}$</span>鋼管杭の使用限界軸圧縮力</li>
+                        <li><span class="symbol-label">$N_{st}$</span>鋼管杭の使用限界軸引張力</li>
+                        <li><span class="symbol-label">${}_sN_{sc1}$</span>使用限界状態における鋼管杭の局部座屈荷重</li>
+                        <li><span class="symbol-label">${}_sN_{st}$</span>使用限界状態における鋼管杭の引張降伏荷重</li>
+                    </ul>
+
+                    <h4>使用限界曲げモーメント $M_s$</h4>
+                    <p>軸力依存の線形相互作用。圧縮側と引張側で許容応力度を切替える:</p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_s = \beta_1 \left(_sf - \dfrac{|N_{sd}|}{_sA_p}\right) _sZ_e$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.4)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sf = \begin{cases} _sf_{c1} & (0 \leq N_{sd}) \\[4pt] _sf_t & (N_{sd} < 0) \end{cases}$$</p>
+                            <p>$$_sZ_e = \dfrac{\pi (D^4 - (D - 2t)^4)}{32 D}$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$M_s$</span>鋼管杭の使用限界曲げモーメント (強度と変形性能 8.4)</li>
+                        <li><span class="symbol-label">${}_sf$</span>鋼管杭の長期許容応力度</li>
+                        <li><span class="symbol-label">${}_sZ_e$</span>腐食代を考慮した鋼管杭の有効断面係数</li>
+                        <li><span class="symbol-label">$N_{sd}$</span>設計用軸力 (圧縮 $\geq 0$ / 引張 $&lt; 0$)</li>
+                    </ul>
+
                     <h3>損傷限界状態</h3>
+                    <p>鋼管部・コンクリート充填鋼管部 共通。$\beta_1 = 1.0$。</p>
+
+                    <h4>損傷限界軸力</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$N_{dc} = \beta_1 \cdot \min(_sN_{dc1},\;_sN_{dc2})$$</p>
+                            <p>$$N_{dt} = \beta_1 \cdot _sN_{dt}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.8)</div>
+                    </div>
 
                     <h4>損傷限界圧縮軸力 $N_{dc}$</h4>
                     <p>局部座屈系 (${}_sN_{dc1}$) と柱座屈系 (${}_sN_{dc2}$) のうち厳しい方を採用する:</p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$N_{dc} = \beta_1 \cdot \min(_sN_{dc1},\;_sN_{dc2})$$</p>
-                            <p>$$_sN_{dc1} = 1.5 \cdot _sf_{c1} \cdot _sA_p,\quad _sN_{dc2} = 1.5 \cdot _sf_{c2} \cdot _sA_p$$</p>
+                            <p>$$_sN_{dc1} = 1.5 \cdot _sf_{c1} \cdot _sA_p$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.7)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sN_{dc2} = 1.5 \cdot _sf_{c2} \cdot _sA_p$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.9)</div>
                     </div>
 
                     <h4>損傷限界曲げモーメント — 杭中間部・杭下部 (鋼管のみ、コンクリート充填なし)</h4>
@@ -6530,7 +6972,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         <div class="formula-left">
                             <p>$$M_d = \beta_1 \left(1.5 \cdot _sf_{c1} - \dfrac{|N_{dd}|}{_sA_p}\right) _sZ_e$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
 
                     <h4>損傷限界曲げモーメント — 杭頭部 (鋼管 + 充填コンクリート)</h4>
@@ -6545,34 +6987,47 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         <div class="formula-left">
                             <p>$$M_d = \begin{cases} \beta_1 \cdot _sM_d & (N_{dd} < 0) \\[6pt] \beta_1 (_sM_d + _cM_d) & (0 \leq N_{dd} \leq _cN_{dc}) \\[6pt] \beta_1 \cdot _sM_d & (_cN_{dc} < N_{dd}) \end{cases}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.16)</div>
                     </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_sM_d$</span>鋼管部の損傷限界曲げモーメント</li>
+                        <li><span class="symbol-label">${}_cM_d$</span>充填コンクリート部の損傷限界曲げモーメント</li>
+                    </ul>
 
                     <h4>鋼管部寄与 ${}_sM_d$ (5 ケース)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$_sM_d = \begin{cases} 0 & (N_{dd} \leq _sN_{dt}) \\[6pt] (_s\sigma_D - |N_{dd}|/_sA_p) \cdot _sZ_e & (_sN_{dt} < N_{dd} < 0) \\[6pt] _sM_{d0} = _s\sigma_{D0} \cdot _sZ_e & (0 \leq N_{dd} \leq _cN_{dc}) \\[6pt] (_s\sigma_D - |N_{dd}-_cN_{dc}|/_sA_p) \cdot _sZ_e & (_cN_{dc} < N_{dd} \leq _sN_{dc1}+_cN_{dc}) \\[6pt] 0 & (_sN_{dc1}+_cN_{dc} < N_{dd}) \end{cases}$$</p>
-                            <p>$$_s\sigma_D = \dfrac{1.5\,((\pi - {_s\theta_O}) \cdot _sf_t + _s\theta_O \cdot _sf_{c1})}{\pi},\quad _s\sigma_{D0} = \dfrac{1.5(_sf_t + _sf_{c1})}{2}$$</p>
+                            <p>$$_sM_d = \begin{cases} 0 & (N_{dd} \leq _sN_{dt}) \\[6pt] (_s\sigma_d - |N_{dd}|/_sA_p) \cdot _sZ_e & (_sN_{dt} < N_{dd} < 0) \\[6pt] _sM_{d0} = _s\sigma_{d0} \cdot _sZ_e & (0 \leq N_{dd} \leq _cN_{dc}) \\[6pt] (_s\sigma_d - |N_{dd}-_cN_{dc}|/_sA_p) \cdot _sZ_e & (_cN_{dc} < N_{dd} \leq _sN_{dc1}+_cN_{dc}) \\[6pt] 0 & (_sN_{dc1}+_cN_{dc} < N_{dd}) \end{cases}$$</p>
+                            <p>$$_s\sigma_d = \dfrac{1.5\,((\pi - {}_s\theta_o) \cdot {}_sf_t + {}_s\theta_o \cdot {}_sf_{c1})}{\pi}$$</p>
+                            <p>$$_s\sigma_{d0} = \dfrac{1.5\,({}_sf_t + {}_sf_{c1})}{2}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_s\sigma_d$</span>鋼管部断面内の圧縮領域と引張領域の比率を考慮して加重平均した見かけ上の鋼管部の損傷限界応力度</li>
+                        <li><span class="symbol-label">${}_s\sigma_{d0}$</span>軸力がないときの鋼管部の損傷限界応力度</li>
+                        <li><span class="symbol-label">${}_sM_{d0}$</span>軸力がないときの鋼管部の損傷限界曲げモーメント</li>
+                        <li><span class="symbol-label">${}_s\theta_o$</span>中立軸と腐食代を考慮した鋼管部の外半径とのなす角度 $\;{}_s\theta_o = \arccos(({}_sr_o - X_n)/{}_sr_o)$ <span style="color:#a00;">(確認)</span></li>
+                    </ul>
 
                     <h4>コンクリート部寄与 ${}_cM_d$ (3 ケース、$X_n$ = 中立軸〜圧縮側鋼管外面距離)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$_cM_d = \begin{cases} 0 & (X_n \leq t) \\[6pt] \dfrac{_c\sigma_{Ck}}{4(X_n - t)} \left[c_{r0}^4 \cdot g(_c\theta_O) - c_{ri}^4 \cdot g(_c\theta_I)\right] & (t < X_n \leq _sr_o + _cr_i) \\[6pt] \dfrac{_c\sigma_{Ck}}{4(X_n - t)} \cdot \pi (c_{r0}^4 - c_{ri}^4) & (_sr_o + _cr_i < X_n) \end{cases}$$</p>
+                            <p>$$_cM_d = \begin{cases} 0 & (X_n \leq t) \\[6pt] \dfrac{_c\sigma_{ck}}{4(X_n - t)} \left[{}_cr_o^4 \cdot g(_c\theta_o) - {}_cr_i^4 \cdot g(_c\theta_i)\right] & (t < X_n \leq _sr_o + _cr_i) \\[6pt] \dfrac{_c\sigma_{ck}}{4(X_n - t)} \cdot \pi ({}_cr_o^4 - {}_cr_i^4) & (_sr_o + _cr_i < X_n) \end{cases}$$</p>
                             <p>$$g(\theta) = \theta + \tfrac{1}{3}(\cos^2\theta - \tfrac{5}{2}) \sin(2\theta)$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
 
-                    <h4>中立軸との角度 ${}_c\theta_O$, ${}_c\theta_I$ (上限 $\pi$ でクリップ)</h4>
+                    <h4>中立軸との角度 ${}_c\theta_o$, ${}_c\theta_i$ (上限 $\pi$ でクリップ)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$_c\theta_O = \begin{cases} 0 & (X_n \leq t) \\[6pt] \arccos((_sr_o - X_n)/_sr_o) & (t < X_n \leq _sr_i + _cr_o) \\[6pt] \pi & (_sr_i + _cr_o < X_n) \end{cases}$$</p>
-                            <p>$$_c\theta_I = \begin{cases} 0 & (X_n \leq t + z_h) \\[6pt] \arccos((_sr_i - X_n)/_sr_i) & (t + z_h < X_n < _sr_o + _cr_i) \\[6pt] \pi & (_sr_o + _cr_i \leq X_n) \end{cases}$$</p>
+                            <p>$$_c\theta_o = \begin{cases} 0 & (X_n \leq t) \\[6pt] \arccos(({}_sr_o - X_n)/{}_cr_o) & (t < X_n < {}_sr_o + {}_cr_o) \\[6pt] \pi & ({}_sr_o + {}_cr_o \leq X_n) \end{cases}$$</p>
+                            <p>$$_c\theta_i = \begin{cases} 0 & (X_n \leq t + z_h) \\[6pt] \arccos(({}_sr_o - X_n)/{}_cr_i) & (t + z_h < X_n < {}_sr_o + {}_cr_i) \\[6pt] \pi & ({}_sr_o + {}_cr_i \leq X_n) \end{cases}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
 
                     <h4>$X_n = t$ 近傍の数値特異性対策</h4>
@@ -6583,83 +7038,143 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
 
                     <h4>充填コンクリートのずれ止めパラメータ</h4>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$\alpha = \max(5.05 - 0.053\,D/t,\,1.0)$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.14)</div>
+                    </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">$\alpha$</span>拘束効果による強度上昇率 $\alpha = \max(5.05 - 0.053 D/t,\,1.0)$</li>
-                        <li><span class="symbol-label">$_sA_{pf}$</span>鋼管部閉塞面積 $= \pi c_{r0}^2$</li>
-                        <li><span class="symbol-label">$A_{tr}$</span>ずれ止め支圧面積 $= \pi (c_{r0}^2 - c_{ri}^2)$</li>
-                        <li><span class="symbol-label">$z_n$</span>ずれ止め段数 (= 2)</li>
-                        <li><span class="symbol-label">$z_h$</span>ずれ止め板厚 (D &lt; 800 → 9, D &lt; 1200 → 12, それ以外 → 16 mm)</li>
-                        <li><span class="symbol-label">$_c\sigma_{Ck}$</span>短期許容支圧応力度 $= \dfrac{2}{3}\alpha \sqrt{\dfrac{_sA_{pf}}{z_n A_{tr}}} F_c$</li>
-                        <li><span class="symbol-label">$_cN_{dc}$</span>充填コンクリート損傷限界圧縮軸力 $= _c\sigma_{Ck} \cdot A_{tr}$</li>
+                        <li><span class="symbol-label">$\alpha$</span>拘束効果による強度上昇率</li>
+                        <li><span class="symbol-label">${}_sA_{pf}$</span>鋼管部閉塞面積 $= \pi\, {}_cr_o^{\,2}$</li>
+                        <li><span class="symbol-label">$A_{ir}$</span>ずれ止め支圧面積 $= \pi ({}_cr_o^{\,2} - {}_cr_i^{\,2})$</li>
+                        <li><span class="symbol-label">$z_n$</span>ずれ止め段数 ($= 2$)</li>
+                        <li><span class="symbol-label">$z_h$</span>ずれ止め板厚 ($D &lt; 800 \to 9$、$D &lt; 1200 \to 12$、それ以外 $\to 16$ mm)</li>
+                        <li><span class="symbol-label">${}_c\sigma_{ck}$</span>ずれ止め部コンクリートの短期許容支圧応力度 $= \dfrac{2}{3}\,\alpha \sqrt{\dfrac{{}_sA_{pf}}{z_n\,A_{ir}}}\,F_c$</li>
+                        <li><span class="symbol-label">${}_cN_{dc}$</span>充填コンクリート部の損傷限界圧縮軸力 $= {}_c\sigma_{ck} \cdot A_{ir}$</li>
                     </ul>
 
                     <h4>幾何パラメータ</h4>
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">$_sr_o$</span>鋼管部外半径 (腐食代考慮後) $= D/2$</li>
-                        <li><span class="symbol-label">$_sr_i$</span>鋼管部内半径 $= _sr_o - t$</li>
-                        <li><span class="symbol-label">$c_{r0}$</span>充填コンクリート外半径 $= _sr_i$</li>
-                        <li><span class="symbol-label">$c_{ri}$</span>充填コンクリート内半径 (ずれ止め内縁) $= c_{r0} - z_h$</li>
+                        <li><span class="symbol-label">${}_sr_o$</span>鋼管部外半径 (腐食代考慮後) $= D/2$</li>
+                        <li><span class="symbol-label">${}_sr_i$</span>鋼管部内半径 $= {}_sr_o - t$</li>
+                        <li><span class="symbol-label">${}_cr_o$</span>ずれ止め部コンクリートの外半径 $= {}_sr_i$</li>
+                        <li><span class="symbol-label">${}_cr_i$</span>ずれ止め部コンクリートの内半径 (ずれ止め内縁) $= {}_cr_o - z_h$</li>
                     </ul>
 
                     <h4>$X_n$ 求解 (case B)</h4>
                     <p>
-                        case B ($0 \leq N_{dd} \leq {}_cN_{dc}$) では
-                        コンクリート単独の軸力釣合 $N_c(X_n) = N_{dd}$ を <strong>二分法</strong> で解いて $X_n$ を求める。
-                        $N_c(X_n)$ は ${}_c\sigma_{Ck} \times$ (環状セクター面積) で、面積は
-                        $A = c_{r0}^2(_c\theta_O - \sin {}_c\theta_O \cos {}_c\theta_O) - c_{ri}^2(_c\theta_I - \sin {}_c\theta_I \cos {}_c\theta_I)$ で計算する。
+                        case B ($0 \leq N_{dd} \leq {}_cN_{dc}$) では、
+                        充填コンクリートの圧縮領域が負担する軸力 ${}_cN(X_n)$ が外部軸力 $N_{dd}$ と釣り合う条件
+                        ${}_cN(X_n) = N_{dd}$ を <strong>二分法</strong> (中点反復) で解いて中立軸位置 $X_n$ を求める。
+                        二分法は探索範囲 $[X_{n,\min},\,X_{n,\max}] = [t,\,{}_sr_o + {}_cr_i]$ を毎反復で半分に絞り、
+                        ${}_cN(X_n) - N_{dd}$ の符号で次の半区間を選ぶ手順 (許容差 $|\Delta N| \leq 1\,\mathrm{N}$ または最大 60 反復で収束)。
+                    </p>
+                    <p>
+                        圧縮領域の軸力 ${}_cN(X_n)$ は、ずれ止め部コンクリートの圧縮環状領域の面積 $A_{cmp}(X_n)$ に支圧応力度 ${}_c\sigma_{ck}$ を掛けて求める。
+                        この圧縮環状領域は、外円 (半径 ${}_cr_o$) の中立軸より圧縮側にある弓形 (セクター) から、
+                        内円 (半径 ${}_cr_i$、ずれ止め内縁) の同様の弓形を抜いた形をしている。
+                        弓形面積は、半径 $r$ と中立軸〜外周中心点間角度 $\theta$ で
+                        $r^2(\theta - \sin\theta\cos\theta)$ と表せるので:
+                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$ {}_cN(X_n) = {}_c\sigma_{ck} \cdot A_{cmp}(X_n) $$</p>
+                            <p>$$ A_{cmp}(X_n) = \underbrace{{}_cr_o^{\,2}({}_c\theta_o - \sin {}_c\theta_o \cos {}_c\theta_o)}_{外円弓形面積} - \underbrace{{}_cr_i^{\,2}({}_c\theta_i - \sin {}_c\theta_i \cos {}_c\theta_i)}_{内円弓形面積} $$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <p>
+                        ここで ${}_c\theta_o$、${}_c\theta_i$ は前述 (8.3.7) のとおり $X_n$ から求める中立軸との角度。
+                        $X_n$ が大きくなる (中立軸が引張側へ進む) ほど圧縮領域が広がり、${}_cN(X_n)$ は単調増加する性質を利用する。
                     </p>
 
                     <h3>安全限界状態</h3>
 
                     <h4>安全限界用降伏応力度</h4>
-                    <p>安全限界では損傷限界の許容応力度に係数 1.1 を掛けて材料強度に立ち戻る:</p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$_s\sigma_{Cy1} = 1.1 \times 1.5 \cdot _sf_{c1},\quad _s\sigma_{Cy2} = 1.1 \times 1.5 \cdot _sf_{c2},\quad _s\sigma_{Ty} = 1.1 \times 1.5 \cdot _sf_t$$</p>
+                            <p>$$_s\sigma_{cy1} = 1.1 \times 1.5 \cdot _sf_{c1},\quad _s\sigma_{cy2} = 1.1 \times 1.5 \cdot _sf_{c2},\quad _s\sigma_{ty} = 1.1 \times 1.5 \cdot _sf_t$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_s\sigma_{cy1}$</span>局部座屈を考慮した鋼管杭の材料強度</li>
+                        <li><span class="symbol-label">${}_s\sigma_{cy2}$</span>柱座屈 (曲げ座屈) を考慮した鋼管杭の材料強度</li>
+                        <li><span class="symbol-label">${}_s\sigma_{ty}$</span>鋼管杭の材料強度</li>
+                    </ul>
 
                     <h4>安全限界軸力 — 杭中間部・下部 (鋼管のみ、$\beta_1 = \beta_2 = 1.0$)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$N_{uc} = \beta_1 \beta_2 \min(_sN_{uc1}, _sN_{uc2}),\quad N_{ut} = \beta_1 \beta_2 \cdot _sN_{ut}$$</p>
-                            <p>$$_sN_{uc1} = _s\sigma_{Cy1} \cdot _sA_p,\quad _sN_{uc2} = _s\sigma_{Cy2} \cdot _sA_p,\quad _sN_{ut} = _s\sigma_{Ty} \cdot _sA_p$$</p>
+                            <p>$$N_{uc} = \beta_1 \beta_2 \min(_sN_{uc1},\; _sN_{uc2})$$</p>
+                            <p>$$N_{ut} = \beta_1 \beta_2 \cdot _sN_{ut}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.20)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sN_{uc1} = _s\sigma_{cy1} \cdot _sA_p$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.19)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sN_{uc2} = _s\sigma_{cy2} \cdot _sA_p$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.21)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sN_{ut} = _s\sigma_{ty} \cdot _sA_p$$</p>
+                        </div>
+                        <div class="formula-right"></div>
                     </div>
 
-                    <h4>安全限界軸力 — 杭頭部 (CFT、引張強さ ベース)</h4>
+                    <h4>安全限界軸力 — 杭頭部 (コンクリート充填鋼管部、引張強さ ベース)</h4>
                     <p>
                         引張側は <strong>鋼の引張強さ ${}_s\sigma_B$</strong> を使用する (中間部の降伏ベースとは異なる)。
                         圧縮側は鋼管の局部座屈系 ${}_sN_{uc1}$ に充填コンクリートの寄与 ${}_cN_{uc}$ を加算する。
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$N_{uc} = \beta_1 \beta_2 (_sN_{uc1} + _cN_{uc}),\quad N_{ut} = \beta_1 \beta_2 \cdot _sN_{ut1}$$</p>
-                            <p>$$_sN_{ut1} = _s\sigma_B \cdot _sA_p,\quad _cN_{uc} = _c\sigma_{Ir} \cdot A_{ir},\quad A_{ir} = \pi(c_{r0}^2 - c_{ri}^2)$$</p>
-                            <p>$$_c\sigma_{Ir} = \alpha \sqrt{\dfrac{_sA_{pf}}{z_n A_{ir}}} F_c \quad (= 1.5 \times _c\sigma_{Ck})$$</p>
+                            <p>$$N_{uc} = \beta_1 \beta_2 ({}_sN_{uc1} + {}_cN_{uc})$$</p>
+                            <p>$$N_{ut} = \beta_1 \beta_2 \cdot {}_sN_{ut1}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.22)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sN_{ut1} = {}_s\sigma_B \cdot {}_sA_p,\quad {}_cN_{uc} = {}_c\sigma_{ir} \cdot A_{ir},\quad A_{ir} = \pi({}_cr_o^{\,2} - {}_cr_i^{\,2})$$</p>
+                            <p>$$_c\sigma_{ir} = \alpha \sqrt{\dfrac{{}_sA_{pf}}{z_n\,A_{ir}}}\,F_c \quad (= 1.5 \times {}_c\sigma_{ck})$$</p>
+                        </div>
+                        <div class="formula-right"></div>
                     </div>
                     <p style="font-style: italic; color: #666;">
-                        注: <strong>${}_c\sigma_{Ir}$</strong> は損傷限界の ${}_c\sigma_{Ck}$ から $2/3$ 係数を取り除いた形 ($= 1.5 \times {}_c\sigma_{Ck}$)。
+                        注: <strong>${}_c\sigma_{ir}$</strong> は損傷限界の ${}_c\sigma_{ck}$ から $2/3$ 係数を取り除いた形 ($= 1.5 \times {}_c\sigma_{ck}$)。
                         安全限界では安全率を撤去し材料の支圧強度そのものを使う。
                     </p>
 
                     <h4>安全限界曲げモーメント — 杭中間部・下部 (0.2 軸力比で式分岐)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$M_u = \begin{cases} \beta_1 \beta_2 \cdot _s\sigma_{Cy1} \cdot _sZ_p & (|N_{ud}|/_sN_{uc} \leq 0.2) \\[6pt] \beta_1 \beta_2 \cdot 1.25 \cdot _s\sigma_{Cy1} \left(1 - \dfrac{|N_{ud}|}{_sN_{uc}}\right) _sZ_e & (|N_{ud}|/_sN_{uc} > 0.2) \end{cases}$$</p>
-                            <p>$$_sN_{uc} = \min(_sN_{uc1}, _sN_{uc2}),\quad _sZ_p = \dfrac{4}{3} {_sr_o}^3 \left(1 - \left(1 - \dfrac{t}{_sr_o}\right)^3\right)$$</p>
+                            <p>$$M_u = \begin{cases} \beta_1 \beta_2 \cdot {}_s\sigma_{cy1} \cdot {}_sZ_p & (|N_{ud}|/{}_sN_{uc} \leq 0.2) \\[6pt] \beta_1 \beta_2 \cdot 1.25 \cdot {}_s\sigma_{cy1} \left(1 - \dfrac{|N_{ud}|}{{}_sN_{uc}}\right) {}_sZ_p & (|N_{ud}|/{}_sN_{uc} > 0.2) \end{cases}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.23)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$${}_sN_{uc} = \min({}_sN_{uc1},\;{}_sN_{uc2})$$</p>
+                            <p>$${}_sZ_p = \dfrac{4}{3}\,{}_sr_o^{\,3} \left(1 - \left(1 - \dfrac{t}{{}_sr_o}\right)^3\right)$$</p>
+                        </div>
+                        <div class="formula-right"></div>
                     </div>
                     <p style="font-style: italic; color: #666;">
-                        注: 0.2 軸力比の境界で <strong>意図的不連続</strong>あり。低軸力では塑性係数 ${}_sZ_p$ を、高軸力では弾性係数 ${}_sZ_e$ + 線形相互作用を使う。
-                        ${}_sZ_p / {}_sZ_e \approx 4/\pi \approx 1.27$ のため、境界で約 21% の段差。
+                        注: 0.2 軸力比の境界で連続。低軸力では塑性係数 ${}_sZ_p$ で全塑性曲げ耐力 (${}_s\sigma_{cy1}\cdot{}_sZ_p$)、
+                        高軸力では同じ ${}_sZ_p$ を用いた線形相互作用で耐力が低下する。
                     </p>
 
                     <h4>安全限界曲げモーメント — 杭頭部 (コンクリート充填部)</h4>
@@ -6669,17 +7184,23 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$M_u = \beta_1 \beta_2 (_sM_u + _cM_u)$$</p>
-                            <p>$$_sM_u = 4 \cdot _sr_m^2 \cdot t \cdot \sin(_s\theta_O) \cdot _s\sigma_U,\quad _s\sigma_U = \dfrac{(\pi - _s\theta_O) _s\sigma_{Ty} + _s\theta_O \cdot _s\sigma_{Cy1}}{\pi}$$</p>
-                            <p>$$_cM_u = \dfrac{2}{3} _c\sigma_{Ir} \left(c_{r0}^3 \sin^3(_c\theta_O) - c_{ri}^3 \sin^3(_c\theta_I)\right)$$</p>
+                            <p>$$M_u = \beta_1 \beta_2 ({}_sM_u + {}_cM_u)$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.24)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sM_u = 4 \cdot {}_sr_m^{\,2} \cdot t \cdot \sin({}_s\theta_o) \cdot {}_s\sigma_u$$</p>
+                            <p>$${}_s\sigma_u = \dfrac{(\pi - {}_s\theta_o)\,{}_s\sigma_{ty} + {}_s\theta_o \cdot {}_s\sigma_{cy1}}{\pi}$$</p>
+                            <p>$$_cM_u = \dfrac{2}{3}\,{}_c\sigma_{ir} \left({}_cr_o^{\,3} \sin^3({}_c\theta_o) - {}_cr_i^{\,3} \sin^3({}_c\theta_i)\right)$$</p>
+                        </div>
+                        <div class="formula-right"></div>
                     </div>
                     <p>
-                        ここに $_sr_m = _sr_o - t/2$ は鋼管平均半径、${}_s\theta_O$, ${}_c\theta_O$, ${}_c\theta_I$ は $X_n$ から
+                        ここに $_sr_m = _sr_o - t/2$ は鋼管平均半径、${}_s\theta_o$, ${}_c\theta_o$, ${}_c\theta_i$ は $X_n$ から
                         前述の損傷限界と同形 (上限 $\pi$ クリップあり) で求める。
-                        $N_s(X_n)$ は鋼管断面の塑性応力分布 (圧縮 $+{}_s\sigma_{Cy1}$, 引張 $-{}_s\sigma_{Ty}$) で計算し、
-                        $N_c(X_n)$ は ${}_c\sigma_{Ir} \times$ (圧縮環セクター面積)、${}_cN_{uc}$ でクリップする。
+                        $N_s(X_n)$ は鋼管断面の塑性応力分布 (圧縮 $+{}_s\sigma_{cy1}$, 引張 $-{}_s\sigma_{ty}$) で計算し、
+                        $N_c(X_n)$ は ${}_c\sigma_{ir} \times$ (圧縮環セクター面積)、${}_cN_{uc}$ でクリップする。
                     </p>
 
                     <h3>せん断耐力</h3>
@@ -6690,24 +7211,53 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$Q_s = \beta_1 \cdot \dfrac{_sf_s \cdot _sA_p}{\kappa},\quad Q_d = \beta_1 \cdot \dfrac{1.5 \cdot _sf_s \cdot _sA_p}{\kappa}$$</p>
+                            <p>$$Q_s = \beta_1 \cdot \dfrac{{}_sf_s \cdot {}_sA_p}{\kappa}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.5)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$Q_d = \beta_1 \cdot \dfrac{1.5 \cdot {}_sf_s \cdot {}_sA_p}{\kappa}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.17)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
                             <p>$$_sf_s = \dfrac{F}{1.5 \sqrt{3}},\quad \kappa = 2.0$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_sf_s$</span>鋼管杭の長期許容せん断応力度</li>
+                        <li><span class="symbol-label">$\kappa$</span>せん断応力度の分布に関する形状係数</li>
+                    </ul>
                     <p style="font-style: italic; color: #666;">
                         $Q_d = 1.5 \times Q_s$ (損傷限界は安全率 1.5 を撤去)。
                     </p>
 
                     <h4>安全限界せん断力 — 杭中間部・杭下部</h4>
-                    <p>塑性せん断耐力 ${}_sQ_0$ に Mises 軸力相互作用 $\sqrt{1 - \eta^2}$ を乗じる。降伏応力度は ${}_s\sigma_{Ty}\;(= 1.1 F)$ を使用:</p>
+                    <p>塑性せん断耐力 ${}_sQ_0$ に Mises 軸力相互作用 $\sqrt{1 - \eta^2}$ を乗じる。降伏応力度は ${}_s\sigma_{ty}\;(= 1.1 F)$ を使用:</p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$Q_u = \beta_1 \beta_2 \cdot sQ_0 \sqrt{1 - \eta^2}$$</p>
-                            <p>$$sQ_0 = 2 t (D - t) \dfrac{_s\sigma_{Ty}}{\sqrt{3}},\quad \eta = \dfrac{N_{ud}}{_sN_y},\quad _sN_y = _s\sigma_{Ty} \cdot _sA_p$$</p>
+                            <p>$$Q_u = \beta_1 \beta_2 \cdot {}_sQ_0 \sqrt{1 - \eta^2}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right">強度と変形性能 (8.26)</div>
                     </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$_sQ_0 = \dfrac{2\,t\,(D - t)\,{}_s\sigma_{ty}}{\sqrt{3}}$$</p>
+                            <p>$$\eta = \dfrac{N_{ud}}{{}_sN_y}$$</p>
+                            <p>$$_sN_y = {}_s\sigma_{ty} \cdot {}_sA_p$$</p>
+                        </div>
+                        <div class="formula-right"></div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">${}_sQ_0$</span>軸力がないときの鋼管杭の安全限界せん断力</li>
+                        <li><span class="symbol-label">$\eta$</span>軸力比</li>
+                        <li><span class="symbol-label">${}_sN_y$</span>鋼管杭の安全限界降伏軸力</li>
+                    </ul>
 
                     <h4>安全限界せん断力 — 杭頭部 (コンクリート充填部)</h4>
                     <p>
@@ -6716,10 +7266,15 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$Q_u = \beta_1 \beta_2 \cdot sQ_0 \sqrt{1 - \eta^2} \cdot \dfrac{M_u}{sM_u}$$</p>
+                            <p>$$Q_u = \beta_1 \beta_2 \cdot {}_sQ_0 \sqrt{1 - \eta^2} \cdot \dfrac{M_u}{{}_sM_u}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 (8.27)</div>
+                    </div>
+                    <div class="formula-block">
+                        <div class="formula-left">
                             <p>$$\eta = \begin{cases} N_{ud} / N_{uc} & (N_{ud} \geq 0) \\[4pt] N_{ud} / N_{ut} & (N_{ud} < 0) \end{cases}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
                     <p style="font-style: italic; color: #666;">
                         ${}_sM_u$ は鋼管部のみの安全限界曲げ、$M_u$ は鋼管 + コンクリート合計。両者は前述の $M_u$ 式から同時に求める。
@@ -6747,7 +7302,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         <div class="formula-left">
                             <p>$$\theta_{Mu} = \begin{cases} \dfrac{M_u (1 - \alpha_{Pt} L / \tan(\alpha_{Pt} L))}{N_{ud} \cdot L} & (N_{ud} > 0) \\[10pt] \dfrac{M_u L}{3 EI} & (N_{ud} \leq 0) \end{cases},\quad \alpha_{Pt} = \sqrt{|N_{ud}| / EI}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
                     <p style="font-style: italic; color: #666;">
                         $\alpha L \geq \pi/2$ (片持柱座屈到達) では弾性式に自動フォールバック (発散ガード)。
@@ -6759,9 +7314,9 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                             <p>$$\theta'_{Mu} = \beta_3 \, (\beta'_3 \, \rho_{Mu'} + 1) \, \theta_{Mu},\quad \theta_u = \beta_3 \, \theta_{95},\quad \theta_{95} = (\beta'_3 \, \rho_{95} + 1) \, \theta_{Mu}$$</p>
                             <p>$$\rho_{Mu'} = 0.01 \big[(1 - n_{ud}/(_{pm}N_y \beta))^2 + 0.246 (1 - n_{ud}/(_{pm}N_y \beta))\big]$$</p>
                             <p>$$\rho_{95} = 0.021 \big[(1 - n_{ud}/(_{pm}N_y \beta))^2 + 0.289 (1 - n_{ud}/(_{pm}N_y \beta))\big]$$</p>
-                            <p>$$\beta = \dfrac{D}{t} \cdot \dfrac{_s\sigma_{Ty}}{sE},\quad _{pm}N_y = _s\sigma_{Ty} \cdot _sA_p,\quad n_{ud} = \max(N_{ud}, 0)$$</p>
+                            <p>$$\beta = \dfrac{D}{t} \cdot \dfrac{_s\sigma_{ty}}{sE},\quad _{pm}N_y = _s\sigma_{ty} \cdot _sA_p,\quad n_{ud} = \max(N_{ud}, 0)$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
                     <p>
                         $\beta_3 = 1.0$、$\beta'_3 = 0.45$ (中間部)。<br>
@@ -6776,25 +7331,25 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                         <div class="formula-left">
                             <p>$$\dfrac{L^3}{EI_{eq}} = \dfrac{L^3 - (l_2 + l_3)^3}{EI_1} + \dfrac{(l_2 + l_3)^3 - l_3^3}{EI_2} + \dfrac{l_3^3}{EI_3}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
                     <ul>
-                        <li>$l_1$: パイルキャップ下面〜コンクリート充填部下端 (CFT 部、既定 $= D$)</li>
+                        <li>$l_1$: パイルキャップ下面〜コンクリート充填部下端 (コンクリート充填鋼管部、既定 $= D$)</li>
                         <li>$l_2$: コンクリート充填部下端〜鋼管断面変化部 (鋼管厚部、既定 $= 0$)</li>
                         <li>$l_3$: 鋼管断面変化部〜$L = 4D$ 位置 (鋼管薄部、既定 $= 3D$)</li>
-                        <li>$EI_1 = sE \times I_{\text{steel}} + E_c \times I_{\text{conc}}$ (CFT 合成)、$EI_2 = EI_3 = sE \times I_{\text{steel}}$ (既定で同一)</li>
-                        <li>$E_c = 33500 \times (F_c/60)^{1/3}$、$I_{\text{conc}} = \pi/4 \times c_{r0}^4$ (鋼管内全断面)</li>
+                        <li>$EI_1 = sE \times I_{\text{steel}} + E_c \times I_{\text{conc}}$ (鋼管+充填コンクリート 合成)、$EI_2 = EI_3 = sE \times I_{\text{steel}}$ (既定で同一)</li>
+                        <li>$E_c = 33500 \times (F_c/60)^{1/3}$、$I_{\text{conc}} = \pi/4 \times {}_cr_o^4$ (鋼管内全断面)</li>
                     </ul>
                     <div class="formula-block">
                         <div class="formula-left">
                             <p>$$\theta'_{Mu} = 0.172 (1 - n_{ud}/(_{pm}N_y \beta)) \cdot cL' / D$$</p>
-                            <p>$$cL' = \zeta \cdot cL_c,\quad cL_c = \dfrac{z_n (c_{r0}^2 - c_{ri}^2) \cdot _c\sigma_{Ir}}{c\tau \cdot D_i},\quad c\tau = 0.5,\quad D_i = D - 2t$$</p>
+                            <p>$$cL' = \zeta \cdot cL_c,\quad cL_c = \dfrac{z_n ({}_cr_o^2 - {}_cr_i^2) \cdot _c\sigma_{ir}}{c\tau \cdot D_i},\quad c\tau = 0.5,\quad D_i = D - 2t$$</p>
                             <p>$$\zeta = \dfrac{2}{3} (1 - _{pt}A_c / _{pt}A),\quad _{pt}A = _sA_p + A_{ir},\quad _{pt}A_c = A_{steel-comp}(X_n) + A_{conc-comp}(X_n)$$</p>
                             <p>$$\rho_{95} = 0.003 \big[(1 - n_{ud} cL'/(_{pt}N_u \beta D))^2 + 0.289 (1 - n_{ud} cL'/(_{pt}N_u \beta D))\big]$$</p>
-                            <p>$$_{pt}N_u = 2 \pi \cdot _sr_m \cdot t \cdot _s\sigma_{Cy1} + \pi (c_{r0}^2 - c_{ri}^2) \cdot _c\sigma_{Ir}$$</p>
+                            <p>$$_{pt}N_u = 2 \pi \cdot _sr_m \cdot t \cdot _s\sigma_{cy1} + \pi ({}_cr_o^2 - {}_cr_i^2) \cdot _c\sigma_{ir}$$</p>
                             <p>$$\theta_u = \beta_3 \, \theta_{95},\quad \theta_{95} = (\beta'_3 \, \rho_{95} + 1) \, \theta_{Mu}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 8 章</div>
+                        <div class="formula-right"></div>
                     </div>
                     <p>
                         $\beta_3 = 1.0$、$\beta'_3 = 0.75$ (杭頭部)。${}_{pt}A_c$ は $X_n$ 依存量で、安全限界軸力釣合から求めた中立軸位置に基づく。
@@ -6802,8 +7357,6 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
 
                     <h3>未対応項目 (将来対応)</h3>
                     <ul>
-                        <li>使用限界 NM 曲線</li>
-                        <li>M-φ 曲線の構成則差し替え (ご指示の鋼管 bilinear $\sigma_{cy} = 1.1 \times 1.5 \times {}_sf_{c1}$, $\sigma_{ty} = 1.1 \times 1.5 \times {}_sf_t$、$sE/100$ 降伏後剛性、コン e 関数法 — 現実装は文献 8 章のトリリニア解析式)</li>
                         <li>非線形 FEM 解析への組込み (AnalysisModelling.cs / HorizontalCalculationViewModel.cs)</li>
                         <li>Word 出力テーブル</li>
                         <li>$N_c$ (オイラー座屈荷重) 本格式</li>
@@ -7144,6 +7697,10 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     ただし、杭先端の抵抗力は0とし、引抜き側杭周面抵抗力は基礎指針'19　p247に従い砂質土は押込み側の2/3倍、粘性土は押込み側の4/5倍とします。
                 </p>
                 <figure>
+                    <img src="images/Fig_6.5.10.png" alt="___" width="600">
+                    <figcaption>基礎指針'19　図6.5.10</figcaption>
+                </figure>
+                <figure>
                     <img src="images/Fig_6.5.11.png" alt="___" width="600">
                     <figcaption>基礎指針'19　図6.5.11</figcaption>
                 </figure>
@@ -7198,7 +7755,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
 
                     また、地盤モデルは一つの成層多層地盤とする必要があります。<br>
 
-                    なお、地震時の沈下量に対する群杭効果は基礎指針'19(p231)に考慮する必要がないことが示されており、本プログラムでも考慮しません。
+                    なお、地震時の沈下量に対する群杭効果は基礎指針'19(p231)に考慮する必要がないことが示されています。
 
                 </p>
                 <figure>
@@ -7219,15 +7776,6 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     地震時の荷重沈下関係は、基礎指針'19(p232)によると、即時沈下における荷重-沈下関係を用いることができます。<br>
                     本プログラムでもこれに従います。
                 </p>
-                <figure>
-                    <img src="images/Fig_6.3.12.png" alt="___" width="400">
-                    <figcaption>基礎指針'19　図6.3.12</figcaption>
-                </figure>
-
-                <figure>
-                    <img src="images/Fig_6.5.10.png" alt="___" width="600">
-                    <figcaption>基礎指針'19　図6.5.10</figcaption>
-                </figure>
 
                 <div class="formula-block">
                     <div class="formula-left">
@@ -7413,13 +7961,21 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
         </p>
 
 
-        <h2>杭頭工法の理論</h2>
+        <h2>杭頭工法の検討式</h2>
         <p>
             場所打ち鉄筋コンクリート杭ではキャプテンパイル工法、既製コンクリート杭では F.T.Pile 構法を、
-            杭頭半固定工法として適用できる。各工法の力学モデルを以下に示す。
+            杭頭半固定工法として適用できます。各工法の計算式を以下に示します。
         </p>
 
-        <h3>F.T. Pile構法</h3>
+        <h3 id="section-ft-pile">F.T. Pile構法</h3>
+        <p>
+            F.T.Pile 構法は、<strong>既製コンクリート杭</strong>の杭頭部に
+            <strong>FT キャップ</strong>(鋼板製の円筒キャップ) を被せて杭体とパイルキャップを接合する杭頭半剛接合工法です。
+            杭頭タブで FT キャップの杭径区分 ($\Phi$) を選択すると、対応する標準寸法 (キャップ内径 $D_1$、外径 $D_2$、鉄板厚さ $T$、高さ $H$、重量 $W$) が
+            自動的に設定されます。
+        </p>
+
+        <h4>許容回転角の設定方法</h4>
         <p>
             許容回転角の設定方法
         </p>
@@ -7456,10 +8012,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             <li><span class="symbol-label">$L_s$</span>鋼棒の有効長さ(m)</li>
         </ul>
 
-        <p>
-            杭頭接合部の回転剛性の設定
-        </p>
-
+        <h4>杭頭接合部の回転剛性の設定</h4>
         <p>
             杭頭接合部の回転剛性は、杭頭の曲げモーメントMと回転角θの関係（以後、M-θ関係
             と略します）を（4.8）式と（4.9）式でモデル化して用います。<br>
@@ -7502,7 +8055,8 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
         </p>
 
         <p>
-            $$K_0=\frac{\pi \cdot E}{32(1-\nu^2)}(D_1^3-D_2^3)\times 10^3$$
+            $$K_0=\frac{\pi \cdot E}{32(1-\nu^2)}(D_1^3-D_2^3)$$
+            ここで $E$ [N/mm<sup>2</sup>]、$D_1, D_2$ [mm]、$K_0$ [N·mm/rad]
         </p>
 
         <p>
@@ -7533,7 +8087,36 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             $$M_e=5\times 10^{-4} \times a_g \cdot f_u \cdot D_s + 0.5N \cdot D_S$$
         </p>
 
+        <h4>FT キャップ標準仕様</h4>
+        <p>
+            記号: $\Phi$ 杭径、$T$ FT キャップ鉄板厚さ、$D_1$ FT キャップ内径、$D_2$ FT キャップ外径、
+            $H$ FT キャップ高さ、$W$ FT キャップ重量。
+        </p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$\Phi$ (mm)</th><th>$T$ (mm)</th><th>$D_1$ (mm)</th><th>$D_2$ (mm)</th>
+                <th>$H$ (mm)</th><th>$W$ (kg)</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>300</td><td>1.2</td><td>301</td><td>345</td><td>201</td><td>1.8</td></tr>
+                <tr><td>350</td><td>1.2</td><td>351</td><td>395</td><td>201</td><td>2.3</td></tr>
+                <tr><td>400</td><td>1.2</td><td>401</td><td>445</td><td>201</td><td>2.7</td></tr>
+                <tr><td>450</td><td>1.2</td><td>451</td><td>495</td><td>201</td><td>3.2</td></tr>
+                <tr><td>500</td><td>1.2</td><td>501</td><td>545</td><td>201</td><td>3.8</td></tr>
+                <tr><td>600</td><td>1.6</td><td>601</td><td>645</td><td>201</td><td>7.2</td></tr>
+                <tr><td>700</td><td>1.6</td><td>701</td><td>745</td><td>201</td><td>9.0</td></tr>
+                <tr><td>800</td><td>2.0</td><td>801</td><td>845</td><td>201</td><td>13.8</td></tr>
+                <tr><td>900</td><td>2.0</td><td>901</td><td>945</td><td>201</td><td>17.4</td></tr>
+                <tr><td>1,000</td><td>2.3</td><td>1,001</td><td>1,045</td><td>201</td><td>23.9</td></tr>
+                <tr><td>1,100</td><td>3.2</td><td>1,101</td><td>1,145</td><td>201</td><td>38.6</td></tr>
+                <tr><td>1,200</td><td>3.2</td><td>1,201</td><td>1,245</td><td>201</td><td>44.3</td></tr>
+            </tbody>
+        </table>
 
+        <h4>参考</h4>
+        <p>
+            出典: F.T.Pile 構法既製杭協会「F.T.Pile 構法既製コンクリート杭 設計・施工指針【暫定版】」(BCJ 評定-FD0141-05、2018 年 12 月)。
+        </p>
 
         <h3>キャプテンパイル工法</h3>
         <p>
@@ -7685,7 +8268,553 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             <p>①最外縁の引張定着筋が降伏するとき</p>
             <p>②圧縮縁コンクリートが短期許容圧縮応力度($\frac {2}{3} \cdot \frac{F_c}{\nu^2}$($\nu$: 絞り係数))に達するとき</p>
 
+        <h4>PC リング標準仕様</h4>
+        <p>
+            PC リングは杭径 $D$ と要求せん断耐力に応じて、N タイプ (標準) / S1 タイプ (高せん断耐力 1) / S2 タイプ (高せん断耐力 2) の 3 種類が用意されています。
+            場所打ち杭用は $D = 800\text{〜}3000$ mm に対応します。
+        </p>
+        <p>
+            記号: $r_{D1}$ PC リング内径、$t_c$ コンクリート厚、$h_r$ PC リング高さ、$L_1$ 定着筋定着長さ、$L_2$ 定着筋全長、$t_s$ 鋼管厚。
+        </p>
+
+        <p><b>① 場所打ち杭用標準タイプ (N タイプ)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th><th>$r_{D1}$ (mm)</th><th>$t_c$ (mm)</th><th>$h_r$ (mm)</th>
+                <th>定着筋</th><th>$L_1$ (mm)</th><th>$L_2$ (mm)</th><th>タイプ</th>
+                <th>$t_s$ (mm)</th><th>鋼種</th><th>スパイラル筋</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>800</td><td>900</td><td>120</td><td>200</td><td>10-D16</td><td>350</td><td>515</td><td>800-N</td><td>6.0</td><td>SS400</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>900</td><td>1,000</td><td>120</td><td>200</td><td>10-D16</td><td>350</td><td>515</td><td>900-N</td><td>6.0</td><td>SS400</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>1,000</td><td>1,100</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1000-N</td><td>6.0</td><td>SS400</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>1,100</td><td>1,200</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1100-N</td><td>6.0</td><td>SS400</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>1,200</td><td>1,300</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1200-N</td><td>6.0</td><td>SS400</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>1,300</td><td>1,400</td><td>120</td><td>200</td><td>14-D16</td><td>350</td><td>515</td><td>1300-N</td><td>6.0</td><td>SS400</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>1,400</td><td>1,500</td><td>120</td><td>200</td><td>14-D16</td><td>350</td><td>515</td><td>1400-N</td><td>6.0</td><td>SS400</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>1,500</td><td>1,600</td><td>120</td><td>200</td><td>16-D16</td><td>350</td><td>515</td><td>1500-N</td><td>6.0</td><td>SS400</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>1,600</td><td>1,700</td><td>120</td><td>200</td><td>16-D19</td><td>400</td><td>565</td><td>1600-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>1,700</td><td>1,800</td><td>120</td><td>200</td><td>18-D19</td><td>400</td><td>565</td><td>1700-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>1,800</td><td>1,900</td><td>120</td><td>200</td><td>18-D19</td><td>400</td><td>565</td><td>1800-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>1,900</td><td>2,000</td><td>120</td><td>200</td><td>20-D19</td><td>400</td><td>565</td><td>1900-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>2,000</td><td>2,100</td><td>120</td><td>200</td><td>20-D19</td><td>400</td><td>565</td><td>2000-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (8 巻)</td></tr>
+                <tr><td>2,100</td><td>2,200</td><td>150</td><td>250</td><td>22-D19</td><td>400</td><td>615</td><td>2100-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (10 巻)</td></tr>
+                <tr><td>2,200</td><td>2,300</td><td>150</td><td>250</td><td>22-D19</td><td>400</td><td>615</td><td>2200-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (10 巻)</td></tr>
+                <tr><td>2,300</td><td>2,400</td><td>150</td><td>250</td><td>24-D19</td><td>400</td><td>615</td><td>2300-N</td><td>9.0</td><td>SM490A</td><td>U10.7 (10 巻)</td></tr>
+                <tr><td>2,400</td><td>2,500</td><td>150</td><td>250</td><td>24-D19</td><td>400</td><td>615</td><td>2400-N</td><td>12.0</td><td>SM490A</td><td>U10.7 (10 巻)</td></tr>
+                <tr><td>2,500</td><td>2,600</td><td>150</td><td>250</td><td>26-D19</td><td>400</td><td>615</td><td>2500-N</td><td>12.0</td><td>SM490A</td><td>U10.7 (10 巻)</td></tr>
+                <tr><td>2,600</td><td>2,700</td><td>150</td><td>250</td><td>26-D19</td><td>400</td><td>615</td><td>2600-N</td><td>12.0</td><td>SM490A</td><td>U10.7 (10 巻)</td></tr>
+                <tr><td>2,700</td><td>2,800</td><td>150</td><td>250</td><td>28-D19</td><td>400</td><td>615</td><td>2700-N</td><td>16.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,800</td><td>2,900</td><td>150</td><td>250</td><td>28-D19</td><td>400</td><td>615</td><td>2800-N</td><td>16.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,900</td><td>3,000</td><td>150</td><td>250</td><td>30-D19</td><td>400</td><td>615</td><td>2900-N</td><td>16.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>3,000</td><td>3,100</td><td>150</td><td>250</td><td>30-D19</td><td>400</td><td>615</td><td>3000-N</td><td>16.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+            </tbody>
+        </table>
+
+        <p><b>② 場所打ち杭用高せん断耐力タイプ 1 (S1 タイプ)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th><th>$r_{D1}$ (mm)</th><th>$t_c$ (mm)</th><th>$h_r$ (mm)</th>
+                <th>定着筋</th><th>$L_1$ (mm)</th><th>$L_2$ (mm)</th><th>タイプ</th>
+                <th>$t_s$ (mm)</th><th>鋼種</th><th>スパイラル筋</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>800</td><td>900</td><td>120</td><td>200</td><td>10-D16</td><td>350</td><td>515</td><td>800-S1</td><td>6.0</td><td>SS400</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>900</td><td>1,000</td><td>120</td><td>200</td><td>10-D16</td><td>350</td><td>515</td><td>900-S1</td><td>6.0</td><td>SS400</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,000</td><td>1,100</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1000-S1</td><td>6.0</td><td>SS400</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,100</td><td>1,200</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1100-S1</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,200</td><td>1,300</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1200-S1</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,300</td><td>1,400</td><td>120</td><td>200</td><td>14-D16</td><td>350</td><td>515</td><td>1300-S1</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,400</td><td>1,500</td><td>120</td><td>200</td><td>14-D16</td><td>350</td><td>515</td><td>1400-S1</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,500</td><td>1,600</td><td>120</td><td>200</td><td>16-D16</td><td>350</td><td>515</td><td>1500-S1</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,600</td><td>1,700</td><td>120</td><td>200</td><td>16-D19</td><td>400</td><td>565</td><td>1600-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,700</td><td>1,800</td><td>120</td><td>200</td><td>18-D19</td><td>400</td><td>565</td><td>1700-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,800</td><td>1,900</td><td>120</td><td>200</td><td>18-D19</td><td>400</td><td>565</td><td>1800-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,900</td><td>2,000</td><td>120</td><td>200</td><td>20-D19</td><td>400</td><td>565</td><td>1900-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>2,000</td><td>2,100</td><td>120</td><td>200</td><td>20-D19</td><td>400</td><td>565</td><td>2000-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>2,100</td><td>2,200</td><td>150</td><td>250</td><td>22-D19</td><td>400</td><td>615</td><td>2100-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,200</td><td>2,300</td><td>150</td><td>250</td><td>22-D19</td><td>400</td><td>615</td><td>2200-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,300</td><td>2,400</td><td>150</td><td>250</td><td>24-D19</td><td>400</td><td>615</td><td>2300-S1</td><td>12.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,400</td><td>2,500</td><td>150</td><td>250</td><td>24-D19</td><td>400</td><td>615</td><td>2400-S1</td><td>19.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,500</td><td>2,600</td><td>150</td><td>250</td><td>26-D19</td><td>400</td><td>615</td><td>2500-S1</td><td>19.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,600</td><td>2,700</td><td>150</td><td>250</td><td>26-D19</td><td>400</td><td>615</td><td>2600-S1</td><td>19.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,700</td><td>2,800</td><td>150</td><td>250</td><td>28-D19</td><td>400</td><td>615</td><td>2700-S1</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,800</td><td>2,900</td><td>150</td><td>250</td><td>28-D19</td><td>400</td><td>615</td><td>2800-S1</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,900</td><td>3,000</td><td>150</td><td>250</td><td>30-D19</td><td>400</td><td>615</td><td>2900-S1</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>3,000</td><td>3,100</td><td>150</td><td>250</td><td>30-D19</td><td>400</td><td>615</td><td>3000-S1</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+            </tbody>
+        </table>
+
+        <p><b>③ 場所打ち杭用高せん断耐力タイプ 2 (S2 タイプ)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th><th>$r_{D1}$ (mm)</th><th>$t_c$ (mm)</th><th>$h_r$ (mm)</th>
+                <th>定着筋</th><th>$L_1$ (mm)</th><th>$L_2$ (mm)</th><th>タイプ</th>
+                <th>$t_s$ (mm)</th><th>鋼種</th><th>スパイラル筋</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>800</td><td>900</td><td>120</td><td>200</td><td>10-D16</td><td>350</td><td>515</td><td>800-S2</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>900</td><td>1,000</td><td>120</td><td>200</td><td>10-D16</td><td>350</td><td>515</td><td>900-S2</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,000</td><td>1,100</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1000-S2</td><td>9.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,100</td><td>1,200</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1100-S2</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,200</td><td>1,300</td><td>120</td><td>200</td><td>12-D16</td><td>350</td><td>515</td><td>1200-S2</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,300</td><td>1,400</td><td>120</td><td>200</td><td>14-D16</td><td>350</td><td>515</td><td>1300-S2</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,400</td><td>1,500</td><td>120</td><td>200</td><td>14-D16</td><td>350</td><td>515</td><td>1400-S2</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,500</td><td>1,600</td><td>120</td><td>200</td><td>16-D16</td><td>350</td><td>515</td><td>1500-S2</td><td>12.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,600</td><td>1,700</td><td>120</td><td>200</td><td>16-D19</td><td>400</td><td>565</td><td>1600-S2</td><td>16.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,700</td><td>1,800</td><td>120</td><td>200</td><td>18-D19</td><td>400</td><td>565</td><td>1700-S2</td><td>16.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,800</td><td>1,900</td><td>120</td><td>200</td><td>18-D19</td><td>400</td><td>565</td><td>1800-S2</td><td>16.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,900</td><td>2,000</td><td>120</td><td>200</td><td>20-D19</td><td>400</td><td>565</td><td>1900-S2</td><td>16.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>2,000</td><td>2,100</td><td>120</td><td>200</td><td>20-D19</td><td>400</td><td>565</td><td>2000-S2</td><td>16.0</td><td>SM490A</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>2,100</td><td>2,200</td><td>150</td><td>250</td><td>22-D19</td><td>400</td><td>615</td><td>2100-S2</td><td>19.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,200</td><td>2,300</td><td>150</td><td>250</td><td>22-D19</td><td>400</td><td>615</td><td>2200-S2</td><td>19.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,300</td><td>2,400</td><td>150</td><td>250</td><td>24-D19</td><td>400</td><td>615</td><td>2300-S2</td><td>19.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,400</td><td>2,500</td><td>150</td><td>250</td><td>24-D19</td><td>400</td><td>615</td><td>2400-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,500</td><td>2,600</td><td>150</td><td>250</td><td>26-D19</td><td>400</td><td>615</td><td>2500-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,600</td><td>2,700</td><td>150</td><td>250</td><td>26-D19</td><td>400</td><td>615</td><td>2600-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,700</td><td>2,800</td><td>150</td><td>250</td><td>28-D19</td><td>400</td><td>615</td><td>2700-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,800</td><td>2,900</td><td>150</td><td>250</td><td>28-D19</td><td>400</td><td>615</td><td>2800-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>2,900</td><td>3,000</td><td>150</td><td>250</td><td>30-D19</td><td>400</td><td>615</td><td>2900-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+                <tr><td>3,000</td><td>3,100</td><td>150</td><td>250</td><td>30-D19</td><td>400</td><td>615</td><td>3000-S2</td><td>22.0</td><td>SM490A</td><td>U12.6 (10 巻)</td></tr>
+            </tbody>
+        </table>
+
+        <h4>引張定着筋配置径 (絞り率 ν 別)</h4>
+        <p>
+            キャプテンパイル工法では、杭頭近傍に <strong>絞り部</strong> (絞り率 $\nu$ = 絞り部径 / 杭径) を設けることができます。
+            絞り率に応じて、配置可能な引張定着筋の最大配置径 (円形配置 $t_D$) または最大配置辺長 (正方形配置 $t_B$) が
+            以下のとおり標準として定められています。
+        </p>
+
+        <p><b>① 円形配置 (最大配置径 $t_D$)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th>
+                <th>$\nu = 1.00$<br>$t_D$ (mm)</th>
+                <th>$\nu = 0.85$<br>$t_D$ (mm)</th>
+                <th>$\nu = 0.70$<br>$t_D$ (mm)</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>800</td><td>420</td><td>420</td><td>420</td></tr>
+                <tr><td>900</td><td>490</td><td>490</td><td>490</td></tr>
+                <tr><td>1,000</td><td>560</td><td>560</td><td>560</td></tr>
+                <tr><td>1,100</td><td>630</td><td>630</td><td>630</td></tr>
+                <tr><td>1,200</td><td>730</td><td>730</td><td>700</td></tr>
+                <tr><td>1,300</td><td>830</td><td>830</td><td>770</td></tr>
+                <tr><td>1,400</td><td>930</td><td>930</td><td>840</td></tr>
+                <tr><td>1,500</td><td>1,030</td><td>1,030</td><td>910</td></tr>
+                <tr><td>1,600</td><td>1,130</td><td>1,130</td><td>980</td></tr>
+                <tr><td>1,700</td><td>1,230</td><td>1,230</td><td>1,050</td></tr>
+                <tr><td>1,800</td><td>1,330</td><td>1,330</td><td>1,120</td></tr>
+                <tr><td>1,900</td><td>1,430</td><td>1,430</td><td>1,190</td></tr>
+                <tr><td>2,000</td><td>1,530</td><td>1,530</td><td>1,260</td></tr>
+                <tr><td>2,100</td><td>1,630</td><td>1,630</td><td>1,330</td></tr>
+                <tr><td>2,200</td><td>1,730</td><td>1,730</td><td>1,400</td></tr>
+                <tr><td>2,300</td><td>1,830</td><td>1,810</td><td>1,470</td></tr>
+                <tr><td>2,400</td><td>1,930</td><td>1,900</td><td>1,540</td></tr>
+                <tr><td>2,500</td><td>2,030</td><td>1,980</td><td>1,610</td></tr>
+                <tr><td>2,600</td><td>2,130</td><td>2,070</td><td>1,680</td></tr>
+                <tr><td>2,700</td><td>2,230</td><td>2,150</td><td>1,750</td></tr>
+                <tr><td>2,800</td><td>2,330</td><td>2,240</td><td>1,820</td></tr>
+                <tr><td>2,900</td><td>2,430</td><td>2,320</td><td>1,890</td></tr>
+                <tr><td>3,000</td><td>2,520</td><td>2,410</td><td>1,960</td></tr>
+            </tbody>
+        </table>
+
+        <p><b>② 正方形配置 (最大配置辺長 $t_B$、$D \ge 1100$ mm)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th>
+                <th>$\nu = 1.00$<br>$t_B$ (mm)</th>
+                <th>$\nu = 0.85$<br>$t_B$ (mm)</th>
+                <th>$\nu = 0.70$<br>$t_B$ (mm)</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>1,100</td><td>440</td><td>440</td><td>440</td></tr>
+                <tr><td>1,200</td><td>510</td><td>510</td><td>490</td></tr>
+                <tr><td>1,300</td><td>580</td><td>580</td><td>540</td></tr>
+                <tr><td>1,400</td><td>650</td><td>650</td><td>590</td></tr>
+                <tr><td>1,500</td><td>720</td><td>720</td><td>640</td></tr>
+                <tr><td>1,600</td><td>790</td><td>790</td><td>690</td></tr>
+                <tr><td>1,700</td><td>860</td><td>860</td><td>740</td></tr>
+                <tr><td>1,800</td><td>940</td><td>940</td><td>790</td></tr>
+                <tr><td>1,900</td><td>1,010</td><td>1,010</td><td>840</td></tr>
+                <tr><td>2,000</td><td>1,080</td><td>1,080</td><td>890</td></tr>
+                <tr><td>2,100</td><td>1,150</td><td>1,150</td><td>940</td></tr>
+                <tr><td>2,200</td><td>1,220</td><td>1,220</td><td>990</td></tr>
+                <tr><td>2,300</td><td>1,290</td><td>1,280</td><td>1,030</td></tr>
+                <tr><td>2,400</td><td>1,360</td><td>1,340</td><td>1,080</td></tr>
+                <tr><td>2,500</td><td>1,430</td><td>1,400</td><td>1,130</td></tr>
+                <tr><td>2,600</td><td>1,500</td><td>1,460</td><td>1,180</td></tr>
+                <tr><td>2,700</td><td>1,570</td><td>1,520</td><td>1,230</td></tr>
+                <tr><td>2,800</td><td>1,640</td><td>1,580</td><td>1,280</td></tr>
+                <tr><td>2,900</td><td>1,710</td><td>1,640</td><td>1,330</td></tr>
+                <tr><td>3,000</td><td>1,780</td><td>1,700</td><td>1,380</td></tr>
+            </tbody>
+        </table>
+
+        <h4>参考</h4>
+        <p>
+            出典: 一般社団法人キャプテンパイル工法協会 (CEPIA)「キャプテンパイル工法 (場所打ち杭用杭頭半固定工法) 設計・施工マニュアル」(第 5 版、2021 年 4 月改定、BCJ 評定-FD0230-01)。
+            本プログラムでの実装は同マニュアルに準拠します。
+        </p>
+
         <!--</p>-->
+
+        <h3 id="section-capring-pile">キャプリングパイル工法</h3>
+        <p>
+            キャプリングパイル工法は、<strong>既製コンクリート杭 (PHC / PRC / SC)</strong> に適用可能な杭頭半剛接合工法です。
+            キャプテンパイル工法と同様に PC リングおよびパイルキャップにより杭頭部の回転を拘束しますが、
+            杭体が既製杭であることに対応した M-θ モデルおよび適用範囲が定められています。
+        </p>
+
+        <h4>適用範囲</h4>
+        <ul>
+            <li>適用杭種: PHC 杭、PRC 杭、SC 杭、鋼管杭</li>
+            <li>杭径: $D = 300\text{〜}1200$ mm</li>
+            <li>杭体コンクリート設計基準強度: $\sigma_{ck} \ge 80$ N/mm²</li>
+            <li>限界回転角: $\theta_u = 0.03$ rad (実験結果及び設計許容範囲を考慮)</li>
+        </ul>
+
+        <h4>力学モデル (M-θ 完全バイリニア)</h4>
+        <p>
+            キャプリングパイル工法による杭頭接合部の回転ばねは、杭頭曲げモーメント $M_0$ と杭頭回転角 $\theta_0$ の関係 ($M_0\text{-}\theta_0$ 関係) で表します。
+            $M_0\text{-}\theta_0$ 関係は、初期回転剛性 $K_i$、最大抵抗モーメント $M_u$、限界回転角 $\theta_u$ で定義される
+            <strong>完全バイリニア</strong> でモデル化します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$M_0(\theta_0) = \begin{cases} K_i \cdot \theta_0 & (0 \le \theta_0 \le \theta_y) \\ M_u & (\theta_y \lt \theta_0 \le \theta_u) \end{cases}, \quad \theta_y = M_u / K_i$$
+            </div>
+        </div>
+        <ul class="symbol-list">
+            <li class="symbol-intro">ここに、</li>
+            <li><span class="symbol-label">$K_i$</span>初期回転剛性 (kN·m/rad)</li>
+            <li><span class="symbol-label">$M_u$</span>最大抵抗モーメント (kN·m)</li>
+            <li><span class="symbol-label">$\theta_y$</span>降伏時回転角 ($= M_u / K_i$) (rad)</li>
+            <li><span class="symbol-label">$\theta_u$</span>限界回転角 (= 0.03 rad)</li>
+        </ul>
+        <p>
+            $K_i$ および $M_u$ は、引張定着筋の有無、軸力の方向（圧縮 / 引張）に応じて以下の 3 ケースに場合分けされます。
+            なお、軸力 $N$ は <strong>圧縮を正</strong>とします。
+        </p>
+
+        <h4>ケース① 引張定着筋なし × 軸力圧縮</h4>
+        <p>
+            引張定着筋を配置しない場合は、軸力 $N$ による圧着のみで回転を抵抗します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$K_i = K_e = \dfrac{1}{\dfrac{1}{K_p} + \dfrac{1}{K_c} + \dfrac{1}{K_b}}, \qquad M_u = \dfrac{D}{2} \cdot N$$
+            </div>
+        </div>
+
+        <h4>ケース② 引張定着筋あり × 軸力圧縮</h4>
+        <p>
+            軸力 $N$ による圧着に加え、引張定着筋による曲げ抵抗 $M_r$ が加算されます。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$K_i = K_e = \dfrac{1}{\dfrac{1}{K_p} + \dfrac{1}{K_c} + \dfrac{1}{K_b}}, \qquad M_u = \dfrac{D}{2} \cdot N + M_r$$
+            </div>
+        </div>
+
+        <h4>ケース③ 引張定着筋あり × 軸力引張</h4>
+        <p>
+            軸力 $N$ が引張側 ($N \lt 0$) の場合、引張軸力レベルに応じて初期回転剛性 $K_i$ が低減されます。
+            引張軸力が定着筋降伏軸力相当 $N_{ty}$ 以下の領域では、$K_e$ から $K_{ty}$ への遷移を
+            <strong>楕円相互作用式</strong> で評価します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$\begin{cases} \left( \dfrac{|N| - N_{ty}}{N_{ty}} \right)^2 + \left( \dfrac{K_e - K_i}{K_e - K_{ty}} \right)^2 = 1 & (0 \le |N| \le N_{ty}) \\ K_i = K_{ty} & (|N| \gt N_{ty}) \end{cases}$$
+            </div>
+        </div>
+        <p>
+            最大抵抗モーメントは、定着筋の引張降伏軸力 $N_y$ に対する余裕に応じて低減されます。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$M_u = M_r \left( 1 - \dfrac{|N|}{N_y} \right)$$
+            </div>
+        </div>
+
+        <h4>直列ばね $K_p$ / $K_c$ / $K_b$ の定義</h4>
+        <p>
+            初期回転剛性 $K_e$ は、杭体部分・PC リング内コンクリート部分・パイルキャップ仮想円柱の 3 ばねの直列合成で評価します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$K_p = \dfrac{E_p \cdot I_p}{H_p}, \qquad K_c = \dfrac{E_c \cdot I_c}{H_c}, \qquad K_b = \dfrac{E_b \cdot I_b}{H_b}$$
+            </div>
+        </div>
+        <ul class="symbol-list">
+            <li class="symbol-intro">ここに、</li>
+            <li><span class="symbol-label">$K_p$</span>杭体部分の回転剛性 (kN·m/rad)</li>
+            <li><span class="symbol-label">$E_p$</span>杭体のヤング係数 (kN/m²)</li>
+            <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント (m⁴)</li>
+            <li><span class="symbol-label">$H_p$</span>杭体と PC リングとの重なり長さ (m)</li>
+            <li><span class="symbol-label">$K_c$</span>PC リング内コンクリート部分の回転剛性 (kN·m/rad)</li>
+            <li><span class="symbol-label">$E_c$</span>PC リングに囲まれたパイルキャップコンクリートのヤング係数 (kN/m²)</li>
+            <li><span class="symbol-label">$I_c$</span>PC リング内側コンクリートの断面二次モーメント (m⁴)</li>
+            <li><span class="symbol-label">$H_c$</span>杭頭接合面から PC リング上端までの長さ (m)</li>
+            <li><span class="symbol-label">$K_b$</span>パイルキャップ部分で杭頭回転に寄与する仮想円柱の回転剛性 (kN·m/rad)</li>
+            <li><span class="symbol-label">$E_b$</span>パイルキャップコンクリートのヤング係数 (kN/m²)、$E_b = E_c$ とします。</li>
+            <li><span class="symbol-label">$I_b$</span>仮想円柱の断面二次モーメント (m⁴)、$I_b = I_c$ とします。</li>
+            <li><span class="symbol-label">$H_b$</span>仮想円柱の高さ (m)、$H_b = D/2$ とします。</li>
+            <li><span class="symbol-label">$D$</span>杭径 (m)</li>
+        </ul>
+
+        <h4>引張定着筋関連量</h4>
+        <p>
+            引張定着筋を <strong>等価な円環配置</strong> と仮定し、配置径 $D_c$、本数 $n_s$、1 本あたり断面積 $a_s$ により以下の量を算定します。
+            鋼種は SD345 または SD390 とします。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$Z = \dfrac{\pi}{32} \cdot \dfrac{D_c^4 - \left(D_c^2 - \dfrac{4 \cdot n_s \cdot a_s}{\pi}\right)^2}{D_c}$$
+            </div>
+        </div>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$N_y = n_s \cdot a_s \cdot \sigma_y, \qquad N_{ty} = N_y \cdot \dfrac{D}{D + D_c}$$
+            </div>
+        </div>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$K_{ty} = \dfrac{D_c \cdot Z \cdot E_s}{2D}$$
+            </div>
+        </div>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$\phi_{ty} = \dfrac{2 \sigma_y}{E_s (D + D_c)}, \qquad \theta_{ty} = \phi_{ty} \cdot D, \qquad M_{ty} = \dfrac{\sigma_y \cdot D_c \cdot Z}{D + D_c}$$
+            </div>
+        </div>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$M_r = n_s \cdot a_s \cdot \sigma_y \cdot \dfrac{7}{8} \cdot \dfrac{D}{2}$$
+            </div>
+        </div>
+        <ul class="symbol-list">
+            <li class="symbol-intro">ここに、</li>
+            <li><span class="symbol-label">$Z$</span>引張定着筋を等価な円環配置と仮定した場合の断面係数 (m³)</li>
+            <li><span class="symbol-label">$D_c$</span>引張定着筋の配置径 (m)</li>
+            <li><span class="symbol-label">$n_s$</span>引張定着筋の本数</li>
+            <li><span class="symbol-label">$a_s$</span>引張定着筋 1 本あたりの断面積 (m²)</li>
+            <li><span class="symbol-label">$\sigma_y$</span>引張定着筋の規格降伏強度 (kN/m²)</li>
+            <li><span class="symbol-label">$E_s$</span>引張定着筋のヤング係数 (kN/m²)</li>
+            <li><span class="symbol-label">$N_y$</span>引張定着筋の総降伏軸力 (kN)</li>
+            <li><span class="symbol-label">$N_{ty}$</span>引張軸力時の遷移境界軸力 (kN)</li>
+            <li><span class="symbol-label">$K_{ty}$</span>引張軸力 $|N| \ge N_{ty}$ における初期回転剛性 (kN·m/rad)</li>
+            <li><span class="symbol-label">$\phi_{ty}$</span>引張定着筋降伏時曲率 (1/m)</li>
+            <li><span class="symbol-label">$\theta_{ty}$</span>引張定着筋降伏時回転角 (rad)</li>
+            <li><span class="symbol-label">$M_{ty}$</span>引張定着筋降伏時曲げモーメント (kN·m)</li>
+            <li><span class="symbol-label">$M_r$</span>引張定着筋による最大抵抗モーメント寄与 (kN·m)、応力中心距離係数 $\jmath = 7/8$、内部偶力アーム $D/2$</li>
+        </ul>
+
+        <h4>PC リング標準仕様</h4>
+        <p>
+            PC リングは杭径 $D$ と要求せん断耐力に応じて、N タイプ (標準) / S1 タイプ (高せん断耐力 1) / S2 タイプ (高せん断耐力 2) の 3 種類が用意されています。
+            各タイプの寸法・配筋・鋼管厚は以下のとおりです。
+        </p>
+        <p>
+            記号: $r_{D1}$ PC リング内径、$r_{D2}$ PC リング外径、$s_D$ スパイラル筋外径、$h_r$ PC リング高さ、$L_1$ 定着筋長さ、
+            $t_c$ コンクリート厚、$t_s$ 鋼管厚。
+        </p>
+
+        <p><b>① 既製杭用標準タイプ (N タイプ)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th><th>$r_{D1}$ (mm)</th><th>$r_{D2}$ (mm)</th><th>$s_D$ (mm)</th><th>$h_r$ (mm)</th>
+                <th>定着筋本数</th><th>定着筋 $L_1$ (mm)</th><th>タイプ</th>
+                <th>$t_c$ (mm)</th><th>$t_s$ (mm)</th><th>スパイラル筋</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>300</td><td>320</td><td>506</td><td>426</td><td>150</td><td>6-D16</td><td>350</td><td>300N</td><td>87</td><td>6.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>350</td><td>370</td><td>556</td><td>476</td><td>150</td><td>6-D16</td><td>350</td><td>350N</td><td>87</td><td>6.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>400</td><td>420</td><td>606</td><td>526</td><td>150</td><td>6-D16</td><td>350</td><td>400N</td><td>87</td><td>6.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>450</td><td>470</td><td>656</td><td>576</td><td>150</td><td>8-D16</td><td>350</td><td>450N</td><td>87</td><td>6.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>500</td><td>520</td><td>706</td><td>626</td><td>150</td><td>8-D16</td><td>350</td><td>500N</td><td>87</td><td>6.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>600</td><td>620</td><td>812</td><td>732</td><td>150</td><td>8-D16</td><td>350</td><td>600N</td><td>87</td><td>9.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>700</td><td>720</td><td>912</td><td>832</td><td>150</td><td>10-D16</td><td>350</td><td>700N</td><td>87</td><td>9.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>800</td><td>820</td><td>1,012</td><td>932</td><td>150</td><td>10-D16</td><td>350</td><td>800N</td><td>87</td><td>9.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>900</td><td>920</td><td>1,112</td><td>1,032</td><td>150</td><td>10-D16</td><td>350</td><td>900N</td><td>87</td><td>9.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>1,000</td><td>1,020</td><td>1,212</td><td>1,132</td><td>150</td><td>12-D16</td><td>350</td><td>1,000N</td><td>87</td><td>9.0 (SS400)</td><td>U7.1 (6 巻)</td></tr>
+                <tr><td>1,100</td><td>1,120</td><td>1,348</td><td>1,268</td><td>200</td><td>12-D16</td><td>350</td><td>1,100N</td><td>105</td><td>9.0 (SS400)</td><td>U9.0 (8 巻)</td></tr>
+                <tr><td>1,200</td><td>1,220</td><td>1,448</td><td>1,368</td><td>200</td><td>12-D16</td><td>350</td><td>1,200N</td><td>105</td><td>9.0 (SS400)</td><td>U9.0 (8 巻)</td></tr>
+            </tbody>
+        </table>
+
+        <p><b>② 既製杭用高せん断耐力タイプ 1 (S1 タイプ)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th><th>$r_{D1}$ (mm)</th><th>$r_{D2}$ (mm)</th><th>$s_D$ (mm)</th><th>$h_r$ (mm)</th>
+                <th>定着筋本数</th><th>定着筋 $L_1$ (mm)</th><th>タイプ</th>
+                <th>$t_c$ (mm)</th><th>$t_s$ (mm)</th><th>スパイラル筋</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>300</td><td>320</td><td>512</td><td>432</td><td>150</td><td>6-D16</td><td>350</td><td>300S1</td><td>87</td><td>9.0 (SS400)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>350</td><td>370</td><td>562</td><td>482</td><td>150</td><td>6-D16</td><td>350</td><td>350S1</td><td>87</td><td>9.0 (SS400)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>400</td><td>420</td><td>612</td><td>532</td><td>150</td><td>6-D16</td><td>350</td><td>400S1</td><td>87</td><td>9.0 (SS400)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>450</td><td>470</td><td>662</td><td>582</td><td>150</td><td>8-D16</td><td>350</td><td>450S1</td><td>87</td><td>9.0 (SS400)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>500</td><td>520</td><td>712</td><td>632</td><td>150</td><td>8-D16</td><td>350</td><td>500S1</td><td>87</td><td>9.0 (SS400)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>600</td><td>620</td><td>812</td><td>732</td><td>150</td><td>8-D16</td><td>350</td><td>600S1</td><td>87</td><td>9.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>700</td><td>720</td><td>912</td><td>832</td><td>150</td><td>10-D16</td><td>350</td><td>700S1</td><td>87</td><td>9.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>800</td><td>820</td><td>1,012</td><td>932</td><td>150</td><td>10-D16</td><td>350</td><td>800S1</td><td>87</td><td>9.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>900</td><td>920</td><td>1,112</td><td>1,032</td><td>150</td><td>10-D16</td><td>350</td><td>900S1</td><td>87</td><td>9.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>1,000</td><td>1,020</td><td>1,212</td><td>1,132</td><td>150</td><td>12-D16</td><td>350</td><td>1,000S1</td><td>87</td><td>9.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>1,100</td><td>1,120</td><td>1,348</td><td>1,268</td><td>200</td><td>12-D16</td><td>350</td><td>1,100S1</td><td>105</td><td>9.0 (SM490A)</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,200</td><td>1,220</td><td>1,448</td><td>1,368</td><td>200</td><td>12-D16</td><td>350</td><td>1,200S1</td><td>105</td><td>9.0 (SM490A)</td><td>U12.6 (8 巻)</td></tr>
+            </tbody>
+        </table>
+
+        <p><b>③ 既製杭用高せん断耐力タイプ 2 (S2 タイプ)</b></p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>$D$ (mm)</th><th>$r_{D1}$ (mm)</th><th>$r_{D2}$ (mm)</th><th>$s_D$ (mm)</th><th>$h_r$ (mm)</th>
+                <th>定着筋本数</th><th>定着筋 $L_1$ (mm)</th><th>タイプ</th>
+                <th>$t_c$ (mm)</th><th>$t_s$ (mm)</th><th>スパイラル筋</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>300</td><td>320</td><td>518</td><td>438</td><td>150</td><td>6-D16</td><td>350</td><td>300S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>350</td><td>370</td><td>568</td><td>488</td><td>150</td><td>6-D16</td><td>350</td><td>350S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>400</td><td>420</td><td>618</td><td>538</td><td>150</td><td>6-D16</td><td>350</td><td>400S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>450</td><td>470</td><td>668</td><td>588</td><td>150</td><td>8-D16</td><td>350</td><td>450S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>500</td><td>520</td><td>718</td><td>638</td><td>150</td><td>8-D16</td><td>350</td><td>500S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>600</td><td>620</td><td>818</td><td>738</td><td>150</td><td>8-D16</td><td>350</td><td>600S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>700</td><td>720</td><td>918</td><td>838</td><td>150</td><td>10-D16</td><td>350</td><td>700S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>800</td><td>820</td><td>1,018</td><td>938</td><td>150</td><td>10-D16</td><td>350</td><td>800S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>900</td><td>920</td><td>1,118</td><td>1,038</td><td>150</td><td>10-D16</td><td>350</td><td>900S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>1,000</td><td>1,020</td><td>1,218</td><td>1,138</td><td>150</td><td>12-D16</td><td>350</td><td>1,000S2</td><td>87</td><td>12.0 (SM490A)</td><td>U9.0 (6 巻)</td></tr>
+                <tr><td>1,100</td><td>1,120</td><td>1,354</td><td>1,274</td><td>200</td><td>12-D16</td><td>350</td><td>1,100S2</td><td>105</td><td>12.0 (SM490A)</td><td>U12.6 (8 巻)</td></tr>
+                <tr><td>1,200</td><td>1,220</td><td>1,454</td><td>1,374</td><td>200</td><td>12-D16</td><td>350</td><td>1,200S2</td><td>105</td><td>12.0 (SM490A)</td><td>U12.6 (8 巻)</td></tr>
+            </tbody>
+        </table>
+
+        <h4>引張定着筋標準配筋</h4>
+        <p>
+            引張定着筋は、配筋本数・呼び径・配置径 ($D_c$) ・帯筋外径・定着長さ・適用可能最小杭径が標準として定められています。
+            定着長さはパイルキャップ側 (定着版あり / 定着版なし) と杭体側 (杭頭部内) で区別されます。鋼種は SD345 または SD390 とします。
+        </p>
+        <table class="table-doc">
+            <thead><tr>
+                <th>No</th><th>配筋</th><th>配置径 $D_c$ (mm)</th><th>帯筋外径 (mm)</th>
+                <th>定着長さ (パイルキャップ側、定着版あり) (mm)</th>
+                <th>定着長さ (パイルキャップ側、定着版なし) (mm)</th>
+                <th>定着長さ (杭体側) (mm)</th>
+                <th>適用可能最小杭径 $D$ (mm)</th>
+            </tr></thead>
+            <tbody>
+                <tr><td>1</td><td>3-D19</td><td>110</td><td>150</td><td>500</td><td>800</td><td>800</td><td>300</td></tr>
+                <tr><td>2</td><td>4-D19</td><td>180</td><td>220</td><td>500</td><td>800</td><td>800</td><td>400</td></tr>
+                <tr><td>3</td><td>5-D19</td><td>180</td><td>220</td><td>500</td><td>800</td><td>800</td><td>450</td></tr>
+                <tr><td>4</td><td>6-D19</td><td>180</td><td>220</td><td>500</td><td>800</td><td>800</td><td>600</td></tr>
+                <tr><td>5</td><td>4-D25</td><td>230</td><td>280</td><td>600</td><td>950</td><td>950</td><td>600</td></tr>
+                <tr><td>6</td><td>5-D25</td><td>230</td><td>280</td><td>600</td><td>950</td><td>950</td><td>700</td></tr>
+                <tr><td>7</td><td>6-D25</td><td>230</td><td>280</td><td>600</td><td>950</td><td>950</td><td>800</td></tr>
+                <tr><td>8</td><td>5-D32</td><td>300</td><td>360</td><td>750</td><td>1,200</td><td>1,200</td><td>900</td></tr>
+                <tr><td>9</td><td>6-D32</td><td>300</td><td>360</td><td>750</td><td>1,200</td><td>1,200</td><td>1,100</td></tr>
+                <tr><td>10</td><td>5-D38</td><td>355</td><td>420</td><td>800</td><td>1,450</td><td>1,450</td><td>1,200</td></tr>
+            </tbody>
+        </table>
+
+        <h4>参考</h4>
+        <p>
+            出典: 一般社団法人キャプリングパイル工法協会 (CAPIA)「キャプリングパイル工法 設計マニュアル (2023 年 4 月版)」。
+            本プログラムでの実装は同マニュアルに準拠します。
+        </p>
+
+        <h3 id="section-steel-pipe-rebar-anchorage">鋼管杭+鉄筋定着工法</h3>
+        <p>
+            鋼管杭の杭頭工法として、最上部杭区間を <strong>コンクリート充填鋼管部</strong> とし、
+            パイルキャップ内に <strong>定着筋</strong> で接合する工法です。
+            杭体は最上部の充填鋼管部 + 下部の純鋼管部の 2 区間構成とします。
+            杭頭接合部の M-θ 関係は、定着筋の付着長さで決まる
+            <strong>弾性回転剛性 $K_\theta$ の線形ばね</strong> としてモデル化します（降伏後挙動は考慮しません）。
+        </p>
+
+        <h4>杭頭 RC 仮想断面</h4>
+        <p>
+            杭頭の M-θ を評価するために、次の構成の <strong>仮想 RC 断面</strong> を用います:
+        </p>
+        <ul>
+            <li><strong>パイルキャップコンクリート</strong>: 設計基準強度 $F_c$、絞り係数 $\xi = 1.0$</li>
+            <li><strong>定着筋</strong>: 杭頭タブで入力する MainBars1（本数・呼び名・規格・重心かぶり厚）</li>
+            <li><strong>仮想断面径</strong> ConcreteOutDia は最上部杭径 $D$ から自動算定:
+                <ul>
+                    <li>$D \le 1200$ mm: $\text{ConcreteOutDia} = D \times 1.25 + 100$</li>
+                    <li>$D > 1200$ mm: $\text{ConcreteOutDia} = D + 200$</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h4>定着筋の付着長さ $L_d$</h4>
+        <p>
+            付着長さを次式で評価します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$L_d = \frac{{}_{pc}\lambda \cdot {}_{pc}\alpha \cdot S \cdot {}_r\sigma_y \cdot d_d}{10 \cdot f_b}$$
+            </div>
+        </div>
+        <ul class="symbol-list">
+            <li class="symbol-intro">ここに、</li>
+            <li><span class="symbol-label">${}_{pc}\lambda$</span>係数 $= 0.86$</li>
+            <li><span class="symbol-label">${}_{pc}\alpha$</span>横補強筋拘束係数（拘束あり） $= 1.0$</li>
+            <li><span class="symbol-label">$S$</span>定着形状係数（直線定着） $= 1.0$</li>
+            <li><span class="symbol-label">${}_r\sigma_y$</span>定着筋の降伏強度 (N/mm<sup>2</sup>)</li>
+            <li><span class="symbol-label">$d_d$</span>定着筋の呼び名数値（D41 → 41）</li>
+            <li><span class="symbol-label">$f_b$</span>付着強度 $= F_c / 40 + 0.9$ (N/mm<sup>2</sup>)</li>
+        </ul>
+
+        <h4>降伏点と弾性回転剛性 $K_\theta$</h4>
+        <p>
+            仮想 RC 断面（パイルキャップコンクリート + 定着筋）について、軸力 $N = 0$ として
+            断面解析を行い、降伏曲げモーメント ${}_rM_{ty}$ と降伏曲率 ${}_r\phi_{ty}$ を求めます。
+            降伏回転角と弾性回転剛性は次式で評価します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $${}_{pc}\theta_y = {}_r\phi_{ty} \cdot L_d$$
+            </div>
+        </div>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$K_\theta = \frac{{}_rM_{ty}}{{}_{pc}\theta_y} \quad [\text{kN·m/rad}]$$
+            </div>
+        </div>
+        <ul class="symbol-list">
+            <li class="symbol-intro">ここに、</li>
+            <li><span class="symbol-label">$K_\theta$</span>杭頭接合部の回転剛性 (kN·m/rad)</li>
+            <li><span class="symbol-label">${}_rM_{ty}$</span>杭頭接合部定着筋の最外縁引張鉄筋が材料強度に達したときの曲げモーメント (kN·m)</li>
+            <li><span class="symbol-label">${}_{pc}\theta_y$</span>鋼管杭の杭頭接合部の降伏回転角 (rad)</li>
+            <li><span class="symbol-label">${}_r\phi_{ty}$</span>杭頭接合部の仮想鉄筋コンクリート断面において、引張側最外縁の定着筋が規格降伏点に至るときの曲率 (1/mm)</li>
+            <li><span class="symbol-label">$L_d$</span>定着筋の付着長さ (mm)</li>
+        </ul>
+
+        <h4>M-θ 関係</h4>
+        <p>
+            杭頭接合部の曲げモーメント－回転角関係は、降伏後挙動を考慮せず、
+            $K_\theta$ のみによる純線形ばねとしてモデル化します。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$M = K_\theta \cdot \theta$$
+            </div>
+        </div>
+        <p>
+            なお、コンクリート充填鋼管部の <strong>安全限界 M-φ</strong> 算定では、
+            曲げモーメント低減率 $\beta_1 = 0.9$ を固定値として用います。
+        </p>
+
+        <h4>入力 UI 案内</h4>
+        <ul>
+            <li><strong>杭頭タブ</strong>: 「定着筋」と「鉄筋（最上部杭区間）」の 2 セット鉄筋入力、
+                パイルキャップ基準強度 $F_c$ を指定。仮想断面径と $K_\theta$ ($N=0$) は読み取り専用で表示</li>
+            <li><strong>杭断面タブ</strong>: 「鋼管規格」(SKK400 / SKK490) と「コンクリート充填鋼管部」の $F_c$ を指定。
+                各限界状態の軸力制限値 ($N_{st}$, $N_{sc}$, $N_{dt}$, $N_{dc}$, $N_{ut}$, $N_{uc}$) は表示</li>
+            <li><strong>θ-M グラフ</strong>: 複数軸力に対する $K_\theta$ 線形ばね曲線が描画されます</li>
+        </ul>
 
             <h2>有限要素法による解析手法</h2>
 
@@ -8084,21 +9213,6 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 <li><span class="symbol-label">$\lambda_{sec} = 0.5$</span>割線剛性の緩和率</li>
             </ul>
 
-            <h4>M-φ曲線の接線勾配の平滑化</h4>
-            <p>
-                M-φ曲線の折れ点（制御点の境界）において、接線勾配が不連続になると
-                ニュートン・ラフソン法の収束性が低下します。
-                本プログラムでは、各折れ線区間の境界付近（区間長の20%の範囲）で
-                Smoothstep関数による滑らかな補間を行います。
-            </p>
-
-            <div class="formula-block">
-                <div class="formula-left">
-                    $$t_{smooth} = t^2(3 - 2t)$$
-                </div>
-                <div class="formula-right">(Smoothstep関数)</div>
-            </div>
-
             <h3>発散検出と自動制御</h3>
             <p>
                 解析の安定性を確保するため、以下の自動制御機能を備えています。
@@ -8125,8 +9239,8 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     </tr>
                     <tr>
                         <td style="border: 1px solid #ddd; padding: 6px;">停滞</td>
-                        <td style="border: 1px solid #ddd; padding: 6px;">残差変化が0.1%未満で継続</td>
-                        <td style="border: 1px solid #ddd; padding: 6px;">収束基準の緩和</td>
+                        <td style="border: 1px solid #ddd; padding: 6px;">残差比 (今回/前回) が 0.98〜1.05 の範囲で 15 回連続</td>
+                        <td style="border: 1px solid #ddd; padding: 6px;">収束基準の緩和 ($\alpha_{tol} = 10^{-5}$)</td>
                     </tr>
                     <tr>
                         <td style="border: 1px solid #ddd; padding: 6px;">変位増分過大</td>
@@ -8254,7 +9368,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     <p>杭体の区間境界や地層境界ごとに節点（node）が自動配置され、隣り合う節点を結ぶ区間が1つの梁要素になります。
                     各節点には地盤ばね（水平地盤反力を表す非線形ばね）が取り付けられ、杭と地盤の相互作用をモデル化します。</p>
                     <p>要素数が多いほど精度は向上しますが、計算時間も増加します。
-                    本プログラムでは杭体の区間定義と地盤層厚に応じて自動的に適切な分割が行われます。</p>
+                    本プログラムではおよそ 1 m 程度ごとに自動分割する機能があります。</p>
                 </dd>
 
                 <dt><strong>有限要素法 FEM（ゆうげんようそほう）</strong></dt>
@@ -8263,8 +9377,6 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     <p>本プログラムでは、杭を梁要素、地盤を非線形ばね要素でモデル化し、
                     全体剛性マトリクス $\mathbf{K}$ と荷重ベクトル $\mathbf{F}$ から
                     変位ベクトル $\mathbf{d}$ を求めます: $\mathbf{K} \cdot \mathbf{d} = \mathbf{F}$</p>
-                    <p>杭体や地盤が非線形挙動を示す場合は、この方程式を直接解くことができないため、
-                    ニュートン・ラフソン法などの反復解法を用います。</p>
                 </dd>
 
                 <dt><strong>EI（曲げ剛性）</strong></dt>
@@ -8332,9 +9444,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     <p><strong>欠点</strong>: 変位が進むにつれて実際の接線と使用している剛性にずれが生じるため、
                     収束に必要な反復回数が Full NR法より多くなります。
                     非線形性が強い場合は収束しないことがあります。</p>
-                    <p>本プログラムでは「Full→Modified NR」モードを選択でき、
-                    最初の反復は Full NR で最新の接線剛性を使い、2回目以降の反復ではそれを再利用します。
-                    これにより収束性と計算効率のバランスをとることができます。</p>
+                    <p>本プログラムでは「Full→Modified NR」モードを選択でき、指定した回数 Full NR で収束計算を行い、それ以降は、最後の Full NR での接線剛性を使い続けて収束計算を行うことができます。</p>
                 </dd>
 
                 <dt><strong>荷重増分法</strong></dt>
@@ -8373,8 +9483,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     ひび割れや降伏が進むにつれて低下します。</p>
                     <p>NR法では、接線剛性マトリクス $\mathbf{K}_{tan}$ を構成する各要素の曲げ剛性として使用します。
                     接線剛性が正確であるほど NR法の収束が速くなりますが、
-                    M-φ曲線の折れ点（剛性が急変する点）付近では数値的な不安定性が生じることがあります。
-                    本プログラムでは、折れ点付近の接線剛性を平滑化する処理を行っています。</p>
+                    M-φ曲線の折れ点（剛性が急変する点）付近では数値的な不安定性が生じることがあります。</p>
                 </dd>
 
                 <dt><strong>割線剛性（Secant Stiffness）</strong></dt>
@@ -8383,7 +9492,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     荷重を除荷したときに原点に戻ると仮定した場合の等価剛性に相当します。</p>
                     <p>M-φ曲線上では:
                     $$EI_{sec} = \frac{M}{\varphi}$$
-                    と定義されます。常に正の値をとり、接線剛性のように負になることはありません。</p>
+                    と定義されます。</p>
                     <p>本プログラムでは、NR法の各反復で内力ベクトル $\mathbf{T}$ を計算する際に割線剛性を使用します。
                     これにより、接線剛性（$\mathbf{K}_{tan}$の組立）と割線剛性（内力の計算）を
                     使い分けることで、収束の安定性を高めています。</p>
@@ -8396,8 +9505,8 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     外力ベクトルのノルムの二乗 $\|\mathbf{F}\|^2$ に対して十分小さい比率になったとき、
                     収束したと判定します:
                     $$\frac{\|\mathbf{R}\|^2}{\|\mathbf{F}\|^2} \leq \alpha_{tol}$$
-                    既定の収束判定値は $\alpha_{tol} = 10^{-5}$ です。</p>
-                    <p>この値は「力の釣り合いの誤差が外力の $10^{-5}$ 倍以下」を意味し、
+                    既定の収束判定値は $\alpha_{tol} = 10^{-6}$ です。</p>
+                    <p>この値は「力の釣り合いの誤差が外力の $10^{-6}$ 倍以下」を意味し、
                     工学的に十分な精度を保証します。
                     反復が最大回数（既定: 100回）に達しても収束しない場合は、
                     停滞検出や収束基準の緩和が自動的に適用されます。</p>
@@ -8431,8 +9540,8 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                     <p>反復を重ねても残差がほとんど改善しない状態（停滞、リミットサイクル）を検出する機能です。</p>
                     <p>具体的には、連続する反復で残差比（今回の残差 / 前回の残差）が0.98以上（2%未満の改善）となる回数を
                     カウントし、15回連続で停滞すると判定します。</p>
-                    <p>停滞が検出されると、収束判定値を $\alpha_{tol} = 10^{-4}$ に緩和して解析を完了させます。
-                    これは「厳密な収束には至らないが、工学的に許容できる精度の解が得られている」ことを意味します。</p>
+                    <p>停滞が検出されると、収束判定値を $\alpha_{tol} = 10^{-5}$ に緩和して解析を完了させます。
+                    これは「デフォルトの収束条件には至らないが、工学的に許容できる精度の解が得られている」ことを意味します。</p>
                     <p>停滞の主な原因は、M-φ曲線の折れ点付近での剛性の急変や、
                     複数の非線形要素が同時に状態変化する（ひび割れの進展と地盤ばねの塑性化が連動する）場合です。</p>
                 </dd>
@@ -8441,7 +9550,7 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 <dd>
                     <p>非常に大きなばね定数（ペナルティ定数 $K_{big} = 10^8$ [kN/m]）をもつ仮想的なばね要素で
                     2つの節点を連結し、両節点の変位を実質的に同一にする（拘束する）方法です。</p>
-                    <p>杭頭の CapNode と PileNode の並進変位（Ux, Uy）および鉛直軸回り回転（Rz）の拘束に使用します。</p>
+                    <p>杭頭回転ばねをモデル化するために、同一位置に設けてばねの両端に接合される CapNode と PileNode の並進変位（Ux, Uy）および鉛直軸回り回転（Rz）の拘束に使用します。</p>
                     <p><strong>利点</strong>: 剛性マトリクスの構造（サイズや帯幅）を変更せずにばね定数を加算するだけで拘束を実現でき、実装が容易です。</p>
                     <p><strong>注意点</strong>: 近似的な拘束であるため、両端節点間にわずかな相対変位が残ります。
                     また、ペナルティ定数が大きすぎると剛性マトリクスの条件数（最大固有値/最小固有値の比）が悪化し、
@@ -8453,12 +9562,36 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 <dt><strong>M-θ関係（エムシータかんけい）</strong></dt>
                 <dd>
                     <p>杭頭接合部における曲げモーメント $M$ と回転角 $\theta$ の関係です。</p>
-                    <p>杭頭接合部は完全な剛接合ではなく、接合方法（鉄筋定着、PC鋼棒、埋込みなど）に応じた
-                    回転剛性を持ちます。この回転剛性は M-θ曲線として定義され、
-                    モーメントの増加に伴い非線形的に剛性が低下します。</p>
                     <p>本プログラムでは、杭頭接合タイプに応じた M-θ曲線を自動生成し、
                     回転ばね要素（RotationalSpring）として杭頭の CapNode と PileNode の間に配置します。
                     M-θの非線形性は NR法の反復過程で考慮されます。</p>
+                    <p>本プログラムでは、以下の場合に考慮されます。それ以外の場合では剛接合が仮定されます。</p>
+                    <table class="symbol-table" style="margin: 0.5em 0;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">杭体タイプ／杭頭工法</th>
+                                <th style="text-align:left;">適用条件・M-θ 関係の形式</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>場所打ち鉄筋コンクリート杭</td>
+                                <td>軸応力度 $\sigma_0 = N/A_e$ が $-F_t \leq \sigma_0 \leq (1/4)\,\xi\,F_c$ の範囲にある場合のみ M-θ 曲線を考慮 (範囲外は剛接合)</td>
+                            </tr>
+                            <tr>
+                                <td>鋼管杭 (鉄筋定着工法)</td>
+                                <td>杭頭接合部の弾性回転剛性 $K_\theta$ を線形ばねとして反映 (<a href="#section-steel-pipe-rebar-anchorage">詳細</a>)</td>
+                            </tr>
+                            <tr>
+                                <td>キャプテンパイル工法</td>
+                                <td>PC リング・引張定着筋の特性に基づく M-θ 曲線を考慮</td>
+                            </tr>
+                            <tr>
+                                <td>FT-Pile 構法</td>
+                                <td>FT キャップ・引張定着筋の特性に基づく M-θ 曲線を考慮</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </dd>
 
                 <dt><strong>剛体連結（Master-Slave拘束）</strong></dt>

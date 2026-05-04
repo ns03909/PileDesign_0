@@ -134,6 +134,16 @@ namespace PileDesign.ViewModels
             {
                 DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
             }
+            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "コンクリート充填鋼管部")
+            {
+                // 鋼管杭+コンクリート充填鋼管部 は SPRC の鋼管コンクリート部 と同じ計算で描画
+                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, nDiv);
+            }
+            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "鋼管部")
+            {
+                // 鋼管杭 (鋼管部、純鋼管区間) は SteelPipeSection の Middle ヘルパーで直接描画
+                DrawSteelPipePileMiddle_NQ(nDiv);
+            }
             else if (PileSection.PileSectionType == "PHC杭")
             {
                 DrawPHC_NQ(NMin, NMax, nDiv);
@@ -519,6 +529,87 @@ namespace PileDesign.ViewModels
             PlotNQCurves(svcUnf, svcFac, dmgUnf, dmgFac, ultUnf, ultFac);
         }
 
+        // 鋼管杭 (鋼管部) — 純鋼管区間用の SteelPipeSection を構築
+        // CorrosionDepth は既に PileDiameter / CorrodedPipeTs で控除済み。
+        private SteelPipeSection? CreateSteelPipeSectionMiddle()
+        {
+            if (PileSection == null || PileSection.PileBodyType != "鋼管杭") return null;
+            if (PileSection.PileDiameter <= 0 || PileSection.CorrodedPipeTs <= 0) return null;
+
+            var (sigmaU, f) = SteelPipeGrades.GetProperties(PileSection.PipeGrade ?? "SKK400");
+            // beta1 = 1.0 (低減なし)、fc = 0 (充填コンクリートなし)
+            return new SteelPipeSection(
+                PileSection.PileDiameter,
+                PileSection.CorrodedPipeTs,
+                f,
+                _beta1: 1.0,
+                fc: 0.0,
+                sigmaB: sigmaU,
+                e: 205000.0);
+        }
+
+        // 鋼管杭 (鋼管部) の N 範囲 (NMin = 引張容量負側、NMax = 圧縮容量、共に β1=1)
+        // M-φ・N-Q を描画する際の軸力スウィープ範囲として用いる。
+        // 軸力 100% で曲げ容量 0 となり M-φ は単点に縮退するが、GetMPhiRelationshipMiddle は
+        // Md/Mu ≤ 0 で ([0.0], [0.0]) を返すため発散しない。
+        private (double NMin, double NMax) ComputeSteelPipeMiddleNRange(SteelPipeSection section)
+        {
+            double nMax = section.NucMiddle;
+            double nMin = -section.NutMiddle;
+            return (nMin, nMax);
+        }
+
+        // 鋼管杭 (鋼管部) の M-φ
+        private void DrawSteelPipePileMiddle_MPhiMThetaGraph(int nDiv)
+        {
+            var section = CreateSteelPipeSectionMiddle();
+            if (section == null) return;
+
+            var (NMin, NMax) = ComputeSteelPipeMiddleNRange(section);
+            var nTargets = Enumerable.Range(0, nDiv + 1)
+                .Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
+
+            // SteelPipeSection.GetMPhiRelationshipMiddle は (List<double>, List<double>) を返す
+            PlotMPhiCurves(nTargets, n => section.GetMPhiRelationshipMiddle(n));
+
+            PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
+                notDefinedMessageIfNull: "鋼管杭の曲げモーメント-回転角関係は、杭頭部で定義されます");
+        }
+
+        // 鋼管杭 (鋼管部) の N-Q
+        // 使用限界・損傷限界せん断は軸力非依存 (水平直線)。安全限界のみ Nud に依存。
+        private void DrawSteelPipePileMiddle_NQ(int nDiv)
+        {
+            var section = CreateSteelPipeSectionMiddle();
+            if (section == null) return;
+
+            var (NMin, NMax) = ComputeSteelPipeMiddleNRange(section);
+            const int iCount = 100;
+
+            var ns = new List<double>(iCount + 1);
+            var qsService = new List<double>(iCount + 1);
+            var qsDamage = new List<double>(iCount + 1);
+            var qsUltimate = new List<double>(iCount + 1);
+
+            double qSvc = section.GetServiceLimitShear();
+            double qDmg = section.GetDamageLimitShear();
+
+            for (int i = 0; i <= iCount; i++)
+            {
+                double n = NMin + (NMax - NMin) * i / iCount;
+                ns.Add(n);
+                qsService.Add(qSvc);
+                qsDamage.Add(qDmg);
+                qsUltimate.Add(section.GetUltimateLimitShearMiddle(n));
+            }
+
+            // 鋼管杭 (鋼管部) は β1 既定 1.0 で低減前/後同一カーブ。
+            PlotNQCurves(
+                (qsService, ns), (qsService, ns),
+                (qsDamage, ns), (qsDamage, ns),
+                (qsUltimate, ns), (qsUltimate, ns));
+        }
+
         // 共通: M-φ 曲線を描画するヘルパー
         private void PlotMPhiCurves(
             IEnumerable<double> nTargets,
@@ -724,9 +815,51 @@ namespace PileDesign.ViewModels
             // M-φ（杭頭部 + 杭中間部(破線)）
             PlotMPhiCurves(nTargets, n => section.GetMPhiRelationship(n), BuildMiddlePhis, "杭中間部");
 
-            // M-θ は未定義メッセージ
+            // M-θ は未定義メッセージ。鋼管杭+コンクリート充填鋼管部 は M-θ が杭頭部側 (PileTop) で
+            // Kθ 線形ばねとして定義されるため、その旨を表示する。
+            string mThetaMessage = PileSection?.PileBodyType == "鋼管杭"
+                ? "鋼管杭の曲げモーメント-回転角関係は、杭頭部で定義されます"
+                : "場所打ち鋼管コンクリート杭の曲げモーメント-回転角関係の定義はありません";
             PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
-                notDefinedMessageIfNull: "場所打ち鋼管コンクリート杭の曲げモーメント-回転角関係の定義はありません");
+                notDefinedMessageIfNull: mThetaMessage);
+        }
+
+        // 鋼管杭+コンクリート充填鋼管部 専用の M-φ (杭頭接合部)
+        // SPRC のファイバー積分 (ひび割れ MCr 概念を含む) ではなく、SteelPipeSection の
+        // GetMPhiRelationshipHead を使用する。これにより M-N 図 (Md, Mu) と完全に整合した
+        // 4 点折れ線 (0,0) → (φMd, Md) → (φMu', Mu) → (φu, Mu) を描く。
+        // 鋼管杭ではコンクリートのひび割れモーメント MCr の概念は用いない。
+        // M-θ は杭頭部 PileTop 側で Kθ 線形ばねとして定義されるためメッセージを表示する。
+        private void DrawSteelPipePileTopComposite_MPhiMThetaGraph(double NMin, double NMax, int nDiv)
+        {
+            var sps = CreateSteelPipeSectionHead();
+            if (sps == null) return;
+
+            var nTargets = Enumerable.Range(0, nDiv + 1).Select(i => NMin + (NMax - NMin) * i / nDiv).ToList();
+
+            PlotMPhiCurves(nTargets, n => sps.GetMPhiRelationshipHead(n));
+
+            PlotMThetaCurves(nTargets, getMTheta: null, canPlotPredicate: null,
+                notDefinedMessageIfNull: "鋼管杭の曲げモーメント-回転角関係は、杭頭部で定義されます");
+        }
+
+        // 鋼管杭+コンクリート充填鋼管部 (杭頭) の SteelPipeSection を構築。
+        // CreateSteelPipeSectionMiddle と異なり Fc を渡す (杭頭部 Md/Mu 計算に必要)。
+        private SteelPipeSection? CreateSteelPipeSectionHead()
+        {
+            if (PileSection == null || PileSection.PileBodyType != "鋼管杭") return null;
+            if (PileSection.PileSectionType != "コンクリート充填鋼管部") return null;
+            if (PileSection.PileDiameter <= 0 || PileSection.CorrodedPipeTs <= 0) return null;
+
+            var (sigmaU, f) = SteelPipeGrades.GetProperties(PileSection.PipeGrade ?? "SKK400");
+            return new SteelPipeSection(
+                PileSection.PileDiameter,
+                PileSection.CorrodedPipeTs,
+                f,
+                _beta1: 1.0,
+                fc: PileSection.ConcreteFc,
+                sigmaB: sigmaU,
+                e: 205000.0);
         }
 
         // PHC杭
@@ -928,6 +1061,26 @@ namespace PileDesign.ViewModels
 
                 DrawInsituSteelPipeReinforcedConcretePile_MPhiMThetaGraph(NMin, NMax, 10);
                 DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
+            }
+
+            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "コンクリート充填鋼管部")
+            {
+                // 鋼管杭+コンクリート充填鋼管部 は接合部 (杭頭) のみに存在する部位なので、
+                // 杭中間部 (破線) 曲線は描かない。SPRC のように杭全長に存在する部位ではない。
+                double NMin = ns[0];
+                double NMax = ns[^1];
+
+                DrawSteelPipePileTopComposite_MPhiMThetaGraph(NMin, NMax, 10);
+                DrawInsituSteelPipeReinforcedConcretePile_NQ(NMin, NMax, 10);
+            }
+
+            else if (PileSection.PileBodyType == "鋼管杭" && PileSection.PileSectionType == "鋼管部")
+            {
+                // 鋼管杭 (鋼管部、純鋼管区間) は SteelPipeSection の Middle ヘルパーで直接描画。
+                // UltimateLimitAxialForceThresholds は CreateSectionCalculator が null を返すため
+                // 利用できないので、N 範囲は描画ヘルパー内で sNut/NucMiddle から自動計算する。
+                DrawSteelPipePileMiddle_MPhiMThetaGraph(10);
+                DrawSteelPipePileMiddle_NQ(10);
             }
 
             else if (PileSection.PileSectionType == "PHC杭")

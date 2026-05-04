@@ -295,6 +295,11 @@ namespace PileDesign.Views
                         continue;
                     }
 
+                    // 杭応力非表示モード: 基礎梁以外 (杭体・RigidLink 含む) を全部スキップ
+                    // 上面図モードと併用すると基礎梁応力だけが見えるようになる。
+                    if (viewModel.IsPileStressHidden && !beam.Name.StartsWith("FoundationBeam-"))
+                        continue;
+
                     // 接続用節点が非表示でもRigidLinkの応力図は描画する（スキップしない）
 
                     beamCount++;
@@ -2027,13 +2032,20 @@ namespace PileDesign.Views
                 (name: "Mz", idxI: 5, idxJ: 11, dir: Vector<double>.Build.DenseOfArray(new[] { 0.0, 1.0, 0.0 })),
             };
 
+            // 上面図モード: dir をローカル X 軸 (= 梁軸) 周りに 90° 回転して水平面に倒す。
+            // local 系 (x: 梁軸, y, z) における (0, dy, dz) → (0, -dz, dy)
+            bool rotateToHorizontal = viewModel.IsFoundationBeamStressRotatedToHorizontal;
+
             foreach (var (name, idxI, idxJ, dir) in components)
             {
                 double origI = bf.GetByIndex(idxI);
                 double origJ = bf.GetByIndex(idxJ);
                 if (!double.IsFinite(origI) || !double.IsFinite(origJ)) continue;
 
-                var transformedDir = t.Transpose() * dir;
+                var localDir = rotateToHorizontal
+                    ? Vector<double>.Build.DenseOfArray(new[] { dir[0], -dir[2], dir[1] })
+                    : dir;
+                var transformedDir = t.Transpose() * localDir;
 
                 double fI = maxAbsValue == 0 ? 0 : origI / maxAbsValue * forceScale;
                 double fJ = maxAbsValue == 0 ? 0 : origJ / maxAbsValue * forceScale;
@@ -2056,7 +2068,13 @@ namespace PileDesign.Views
                 Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
 
                 var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
-                List<double> values = [origI, origI, -origJ, -origJ];
+                // 色付け値は絶対値で渡す。
+                // 親 (DrawCanvasResults) で Mh = sqrt(My²+Mz²) (≥0) を allValues に入れて 0〜max の
+                // Rainbow スケールを生成しているため、符号付き My/Mz を渡すと負側が全部
+                // スケール下限 (濃い青) にクランプされる ("色が分割されない" 現象)。
+                // ダイアグラムが描かれる側 (上下) は既に符号で位置決めされているので、
+                // 色は |成分| で大小だけ表現するのが整合的。
+                List<double> values = [Math.Abs(origI), Math.Abs(origI), Math.Abs(origJ), Math.Abs(origJ)];
                 AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
                 if (viewModel.IsResultValueVisible)
@@ -2099,13 +2117,19 @@ namespace PileDesign.Views
                 (name: "Fz", idxI: 2, idxJ: 8, dir: Vector<double>.Build.DenseOfArray(new[] { 0.0, 0.0, 1.0 })),
             };
 
+            // 上面図モード: dir をローカル X 軸 (= 梁軸) 周りに 90° 回転 (DrawFoundationBeamMyMz と同様)
+            bool rotateToHorizontal = viewModel.IsFoundationBeamStressRotatedToHorizontal;
+
             foreach (var (name, idxI, idxJ, dir) in components)
             {
                 double origI = bf.GetByIndex(idxI);
                 double origJ = bf.GetByIndex(idxJ);
                 if (!double.IsFinite(origI) || !double.IsFinite(origJ)) continue;
 
-                var transformedDir = t.Transpose() * dir;
+                var localDir = rotateToHorizontal
+                    ? Vector<double>.Build.DenseOfArray(new[] { dir[0], -dir[2], dir[1] })
+                    : dir;
+                var transformedDir = t.Transpose() * localDir;
 
                 double fI = maxAbsValue == 0 ? 0 : origI / maxAbsValue * forceScale;
                 double fJ = maxAbsValue == 0 ? 0 : origJ / maxAbsValue * forceScale;
@@ -2128,7 +2152,9 @@ namespace PileDesign.Views
                 Point nodeJ2D = viewModel.CanvasThreeDView.Transformation(nodeJ3D);
 
                 var points = new[] { nodeI2D, nodeIForce2D, nodeJForce2D, nodeJ2D };
-                List<double> values = [origI, origI, -origJ, -origJ];
+                // Mh と同様に Fh も合成量 (≥0) で色スケールが組まれているため
+                // 符号付き Fy/Fz を渡すと負側が一律 dark blue になる。|成分| を渡す。
+                List<double> values = [Math.Abs(origI), Math.Abs(origI), Math.Abs(origJ), Math.Abs(origJ)];
                 AddColorPolyLineAreaGeometry(points, values, colorBaredGeometries);
 
                 if (viewModel.IsResultValueVisible)

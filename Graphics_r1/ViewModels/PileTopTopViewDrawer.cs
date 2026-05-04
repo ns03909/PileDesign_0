@@ -31,6 +31,10 @@ namespace PileDesign.ViewModels
             {
                 baseDimension = Math.Max(ViewModel.PileTop.FTPile.FTCap.D2 + 150.0, 1200.0);
             }
+            else if (ViewModel.PileTopType == "キャプリングパイル工法" && ViewModel.PileTop.CapringPile?.PCRing != null)
+            {
+                baseDimension = Math.Max(ViewModel.PileTop.CapringPile.PCRing.RD2 + 150.0, 1200.0);
+            }
             return Math.Min(canvasWidth, canvasHeight) / baseDimension;
         }
 
@@ -110,6 +114,72 @@ namespace PileDesign.ViewModels
                         double dia1 = 11;
                         double pcd1 = ViewModel.PileTop.FTPile.FTCap.D1 - 150; // need to change
                         DrawMainBars(number1, dia1, pcd1);
+                    }
+                }
+
+                else if (ViewModel.PileTopType == "キャプリングパイル工法" && ViewModel.PileTop.CapringPile?.PCRing != null)
+                {
+                    var ring = ViewModel.PileTop.CapringPile.PCRing;
+
+                    // 杭体描画 — 杭種に応じてコンクリート内径・鋼管内径も描画
+                    bool isSteelPipe = ViewModel.PileBodyType?.Contains("鋼管杭") ?? false;
+                    bool isPrecastConcrete = ViewModel.PileBodyType?.Contains("既製コンクリート杭") ?? false;
+                    double pileOuterDia = ring.D;
+
+                    if (isSteelPipe)
+                    {
+                        // 鋼管杭+キャプリング: 杭頭はコンクリート充填鋼管部
+                        double pipeDia = (ViewModel.PileSection != null && ViewModel.PileSection.PipeDia > 0) ? ViewModel.PileSection.PipeDia : pileOuterDia;
+                        double pipeTs = ViewModel.PileSection?.PipeTs ?? 0;
+                        double pipeInner = Math.Max(0.0, pipeDia - 2 * pipeTs);
+                        if (pipeInner > 0)
+                            DrawDonut("concrete", pipeInner, 0.0); // 充填コンクリート
+                        DrawDonut("steelPipe", pipeDia, pipeInner); // 鋼管 (環)
+                    }
+                    else if (isPrecastConcrete)
+                    {
+                        // 既製コンクリート杭 (PHC/PRC/SC): 中空コンクリート (外径〜内径)
+                        double concreteThickness = ViewModel.PileTop.ConcreteThickness;
+                        double concreteInner = Math.Max(0.0, pileOuterDia - 2 * concreteThickness);
+                        DrawDonut("concrete", pileOuterDia, concreteInner);
+
+                        // SC 杭の場合は内側に鋼管あり
+                        if (ViewModel.PileSection != null && ViewModel.PileSection.PipeDia > 0 && ViewModel.PileSection.PipeTs > 0)
+                        {
+                            double pipeInner = Math.Max(0.0, ViewModel.PileSection.PipeDia - 2 * ViewModel.PileSection.PipeTs);
+                            DrawDonut("steelPipe", ViewModel.PileSection.PipeDia, pipeInner);
+                        }
+                    }
+                    else
+                    {
+                        DrawDonut("concrete", pileOuterDia, 0.0);
+                    }
+
+                    // PC リング (rd1 内径〜rd2 外径) コンクリート部
+                    DrawDonut("concrete", ring.RD2, ring.RD1);
+
+                    // 鋼リング (rd1 + 2*ts、内側鋼管厚)
+                    double steelRingDia = ring.RD1 + 2.0 * ring.Ts;
+                    DrawDonut("steelPipe", steelRingDia, ring.RD1);
+
+                    // PC リング定着筋 (BarNum 本、BarSize)
+                    int barNum = ring.BarNum;
+                    double barDia = ExtractNumber(ring.BarSize ?? "");
+                    double spiralDia = ExtractNumber(ring.SpiralDia ?? "");
+                    double pcd = ring.RD2 - 2.0 * (40.0 + spiralDia + barDia * 0.5);
+                    if (pcd > 0 && barNum > 0 && barDia > 0)
+                        DrawMainBars(barNum, barDia, pcd);
+
+                    // 引張定着筋 (オプション、円環配置)
+                    var capring = ViewModel.PileTop.CapringPile;
+                    if (capring.HasTensionBars && capring.TensionBar != null)
+                    {
+                        var tb = capring.TensionBar;
+                        int tNum = tb.BarNum;
+                        double tDia = ExtractNumber(tb.BarSize ?? "");
+                        double tPcd = tb.Dc;
+                        if (tPcd > 0 && tNum > 0 && tDia > 0)
+                            DrawMainBars(tNum, tDia, tPcd);
                     }
                 }
 

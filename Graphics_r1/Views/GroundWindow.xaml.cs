@@ -3,6 +3,7 @@ using PileDesign.Models.InputData;
 using PileDesign.Output;
 using PileDesign.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
@@ -363,6 +364,85 @@ namespace PileDesign.Views
                 vm.ScheduleUpdate();
                 vm.ValidateCustomDisplacementProfiles();
             }
+        }
+
+        // 基礎指針'19 4.5 自動計算結果 (DmaxU* / DmaxU*+ΣγcyH) を、選択中ケースのプロファイルへコピー
+        // ケース対応: 0=L1非液状化(DmaxUStar[0]), 1=L1液状化(DmaxUStarSigmaGammaCyH[0]),
+        //             2=L2非液状化(DmaxUStar[1]), 3=L2液状化(DmaxUStarSigmaGammaCyH[1])
+        private void CustomDispCopyAuto_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not GroundLayerViewModel vm) return;
+            var ground = vm.GroundInput;
+            if (ground == null) return;
+            var masses = ground.GroundMassesData;
+            if (masses == null || masses.Count == 0)
+            {
+                MessageBox.Show("土質点データが空です。先に「土質点入力」で土質点を入力してください。",
+                    "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var profile = vm.SelectedCustomDispProfile;
+            if (profile == null) return;
+
+            int caseIndex = vm.SelectedCustomDispCaseIndex;
+            int level = caseIndex / 2;            // 0=L1, 1=L2
+            bool withLiq = (caseIndex % 2) == 1;  // 1,3 が液状化あり (ΣγcyH 加算)
+
+            // 既存データがあれば確認
+            if (profile.Count > 0)
+            {
+                var ans = MessageBox.Show(
+                    $"現在「{vm.CustomDispCaseOptions[caseIndex]}」に {profile.Count} 件のデータがあります。\nこれらを破棄して自動計算値で置き換えますか?",
+                    "上書き確認", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (ans != MessageBoxResult.Yes) return;
+            }
+
+            // 各土質点について Z (標高) と変位を算出
+            double topAlt = ground.GroundTopAltitude;
+            var newPoints = new List<DisplacementPoint>(masses.Count);
+            int skipped = 0;
+            for (int i = 0; i < masses.Count; i++)
+            {
+                var data = masses[i];
+                // GroundLayerViewModel.DrawGroundDisplacementGraph と同じ深さ算出ロジック
+                double factor = (i == 0) ? 1.0
+                              : (i == masses.Count - 1) ? 0.0
+                              : 0.5;
+                double gLDepth = data.GLDepth + data.Spacing * factor;
+                double Z = topAlt + gLDepth; // 標高 = 孔口標高 + GL基準深さ(負値)
+
+                double disp;
+                var src = withLiq ? data.DmaxUStarSigmaGammaCyH : data.DmaxUStar;
+                if (src == null || src.Count <= level)
+                {
+                    skipped++;
+                    continue;
+                }
+                disp = src[level];
+                if (double.IsNaN(disp))
+                {
+                    skipped++;
+                    continue;
+                }
+                newPoints.Add(new DisplacementPoint(Z, disp));
+            }
+
+            if (newPoints.Count == 0)
+            {
+                MessageBox.Show("自動計算値がすべて空または NaN でした。「液状化」タブで先に計算を実行してください。",
+                    "コピー不可", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            profile.Clear();
+            foreach (var p in newPoints) profile.Add(p);
+
+            vm.ScheduleUpdate();
+            vm.ValidateCustomDisplacementProfiles();
+
+            string msg = $"{newPoints.Count} 件のデータをコピーしました。";
+            if (skipped > 0) msg += $" ({skipped} 件は計算値なしでスキップ)";
+            MessageBox.Show(msg, "コピー完了", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void CustomDispDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)

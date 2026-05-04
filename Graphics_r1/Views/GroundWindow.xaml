@@ -2885,6 +2885,10 @@
                                         <Button Content="標高整列" Padding="8,2" Margin="0,0,4,2"
                                                 Click="CustomDispSortAndDedupe_Click"
                                                 ToolTip="標高Zの重複を削除し、上から単調減少するように並び替えます"/>
+                                        <Separator Margin="4,0,4,0" Width="1" Background="#CCC"/>
+                                        <Button Content="基礎指針'19 4.5 自動計算をコピー" Padding="8,2" Margin="0,0,4,2"
+                                                Click="CustomDispCopyAuto_Click"
+                                                ToolTip="基礎指針2019 4.5節の自動計算結果 (土質点ごとの DmaxU* または DmaxU*+ΣγcyH) を、選択中のケース (レベル/液状化条件) に合わせて標高Z・変位データグリッドにペーストします&#x0a;※既存データはクリアされます"/>
                                     </WrapPanel>
 
                                     <common:EnhancedDataGrid x:Name="DataGridCustomDisplacement" Grid.Row="2"
@@ -3096,7 +3100,7 @@
                         ToolTip="土層入力ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
                 <Button x:Name="ButtonMaximizeGroundMass" Content="土質点入力" Height="26" Padding="8,0" Margin="0,0,4,0"
                         ToolTip="土質点入力ペインをアンドックして最大化 / もう一度押すと元の位置にドック"/>
-                <Button x:Name="ButtonToggleRightMaximize" Content="右ペイン" Height="26" Padding="8,0" Margin="0,0,8,0"
+                <Button x:Name="ButtonToggleRightMaximize" Content="グラフ" Height="26" Padding="8,0" Margin="0,0,8,0"
                         ToolTip="グラフペイン (N値 / 粘着力 / S波速度 / 変形係数 / 任意地盤変位 / 地盤変位 / 液状化安全率 / 応答スペクトル) を最大化 / 元に戻す"
                         Click="ButtonToggleRightMaximize_Click"/>
             </StackPanel>

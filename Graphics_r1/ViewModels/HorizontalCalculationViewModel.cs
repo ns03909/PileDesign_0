@@ -723,6 +723,54 @@ namespace PileDesign.ViewModels
         {
             _mainWindowViewModel = mainWindowViewModel;
 
+            // 起動診断ログ — HCM が新規生成された瞬間とその時の入力状態を記録
+            try
+            {
+                int piles = mainWindowViewModel?.CurrentInputModel?.PileLayoutItems?.Count ?? -1;
+                int activeCases = mainWindowViewModel?.CurrentInputModel?.LoadCasesInput?.AnalysisTargetSeismicLoadCases?.Count ?? -1;
+                int applicableCombos = mainWindowViewModel?.CurrentInputModel?.LoadCasesInput?.AllLoadCombinations?.Count(c => c.IsApplicable) ?? -1;
+                Serilog.Log.Warning(
+                    "[HCM ctor] new HorizontalCalculationViewModel: piles={P}, activeCases={C}, applicableCombos={K}, isHorizontalAnalysisDone={D}",
+                    piles, activeCases, applicableCombos, mainWindowViewModel?.IsHorizontalAnalysisDone);
+            }
+            catch { /* 診断ログ失敗は無視 */ }
+
+            // LoadCase / LoadCombination の IsApplicable 変更時に F9 ボタン活性 + 派生カウント表示を再評価
+            // (これがないと、ユーザがチェックボックスを変更しても Command が再評価されず F9 が灰色のまま、
+            //  かつ「全解析ステップ数」表示も更新されない)
+            try
+            {
+                var lcInput = _mainWindowViewModel?.CurrentInputModel?.LoadCasesInput;
+                if (lcInput != null)
+                {
+                    void OnApplicabilityChanged()
+                    {
+                        ExecuteAnalysisCommand?.NotifyCanExecuteChanged();
+                        OnPropertyChanged(nameof(TotalCalculationCount));
+                        OnPropertyChanged(nameof(TotalLoadCaseCount));
+                        OnPropertyChanged(nameof(TotalPlannedCaseCount));
+                        OnPropertyChanged(nameof(PendingCaseCount));
+                    }
+                    void HookApplicabilityChanged(System.ComponentModel.INotifyPropertyChanged item)
+                    {
+                        if (item == null) return;
+                        item.PropertyChanged += (s, e) =>
+                        {
+                            if (e.PropertyName == nameof(LoadCase.IsApplicable)
+                                || e.PropertyName == nameof(LoadCombination.IsApplicable)
+                                || e.PropertyName == nameof(LoadCase.IsAnalysisTarget))
+                            {
+                                OnApplicabilityChanged();
+                            }
+                        };
+                    }
+                    foreach (var lc in lcInput.LoadCasesLevel1) HookApplicabilityChanged(lc);
+                    foreach (var lc in lcInput.LoadCasesLevel2) HookApplicabilityChanged(lc);
+                    foreach (var c in lcInput.LoadCombinations) HookApplicabilityChanged(c);
+                }
+            }
+            catch { /* 購読失敗は致命的でない */ }
+
             // 重い処理(OnAnalysisModeling)はInitializeModelAsync()に移動
             // → ウィンドウのLoadedイベントから呼び出す
 
@@ -762,6 +810,12 @@ namespace PileDesign.ViewModels
                     RequestClose?.Invoke(this, EventArgs.Empty);
                     return;
                 }
+
+                // PileLayoutItems の No/PileNo 振り直しは UI スレッドで実施する。
+                // (AnalysisModelling 内で振り直すと bg スレッドから item プロパティが変更され、
+                //  PileLayoutItems がバインドされた DataGrid の CollectionView が
+                //  CollectionChanged を bg スレッドから発火し NotSupportedException が発生するため)
+                PileDesign.FEM.AnalysisModelling.EnsurePileNumbersSequential(InputModel);
 
                 // 重いFEMモデル作成をバックグラウンドで実行
                 AnalysisModelling? modelling = null;
@@ -1148,6 +1202,9 @@ namespace PileDesign.ViewModels
 
             try
             {
+                // UI スレッドでの構築だが、AnalysisModelling 内部の事前条件 (No/PileNo 連番) を満たすため
+                // ここでも EnsurePileNumbersSequential を呼出す。
+                PileDesign.FEM.AnalysisModelling.EnsurePileNumbersSequential(InputModel);
                 AnalysisModelling = new AnalysisModelling(InputModel);
             }
             catch (InvalidOperationException ex)
@@ -1252,22 +1309,33 @@ namespace PileDesign.ViewModels
         /// </summary>
         private bool CanExecuteAnalysis()
         {
-            if (IsAnalysisRunning) return false;
-            if (Level1CalculationStepsCount < 1 || Level1CalculationStepsCount > 256) return false;
-            if (Level2CalculationStepsCount < 1 || Level2CalculationStepsCount > 256) return false;
-            if (MaxCaseDegreeOfParallelism < 1) return false;
-            if (FullNRIterations < 0) return false;
-            if (RelaxationFactor <= 0 || RelaxationFactor > 1) return false;
+            string DisableReason()
+            {
+                if (IsAnalysisRunning) return "IsAnalysisRunning=true (前回解析が完了/キャンセルしないまま固着の可能性)";
+                if (Level1CalculationStepsCount < 1 || Level1CalculationStepsCount > 256) return $"Level1CalculationStepsCount={Level1CalculationStepsCount} (1-256 範囲外)";
+                if (Level2CalculationStepsCount < 1 || Level2CalculationStepsCount > 256) return $"Level2CalculationStepsCount={Level2CalculationStepsCount} (1-256 範囲外)";
+                if (MaxCaseDegreeOfParallelism < 1) return $"MaxCaseDegreeOfParallelism={MaxCaseDegreeOfParallelism} (<1)";
+                if (FullNRIterations < 0) return $"FullNRIterations={FullNRIterations} (<0)";
+                if (RelaxationFactor <= 0 || RelaxationFactor > 1) return $"RelaxationFactor={RelaxationFactor} (0<x≤1 範囲外)";
+                if (InputModel == null) return "InputModel == null";
+                if ((InputModel.PileLayoutItems?.Count ?? 0) == 0) return "PileLayoutItems が空";
+                int activeCases = (InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases?.Count ?? 0);
+                if (activeCases == 0) return "AnalysisTargetSeismicLoadCases が 0 件 (荷重ケースの IsAnalysisTarget=true を確認)";
+                int activeCombinations = InputModel.LoadCasesInput.AllLoadCombinations?.Count(c => c.IsApplicable) ?? 0;
+                if (activeCombinations == 0) return "AllLoadCombinations の IsApplicable=true が 0 件";
+                return null;
+            }
 
-            // 解析前提条件 (D.13)
-            if (InputModel == null) return false;
-            if ((InputModel.PileLayoutItems?.Count ?? 0) == 0) return false;
-            int activeCases = (InputModel.LoadCasesInput.AnalysisTargetSeismicLoadCases?.Count ?? 0);
-            if (activeCases == 0) return false;
-            int activeCombinations = InputModel.LoadCasesInput.AllLoadCombinations?
-                .Count(c => c.IsApplicable) ?? 0;
-            if (activeCombinations == 0) return false;
-
+            var reason = DisableReason();
+            if (reason != null)
+            {
+                // 診断ログ — F9 が灰色のままになる原因を即座に追跡できるよう毎回出力
+                // Warning レベルで出力 (Info より確実にログに残る + filter で見つけやすい)
+                Serilog.Log.Warning("[F9 disabled] {Reason}", reason);
+                return false;
+            }
+            // 活性時も 1 度ログを出して、CanExecute が確実に呼ばれていることを確認できるように
+            Serilog.Log.Information("[F9 enabled] CanExecuteAnalysis returned true");
             return true;
         }
 
@@ -2320,7 +2388,7 @@ namespace PileDesign.ViewModels
                 StartTime = startTime
             });
 
-            const double alpha = 1e-5;
+            const double alpha = 1e-6;
 
             // v21 Phase 3 prep: 将来のケース並列化に向けた設計メモ（このループを並列実行する場合の必要要件）
             //
@@ -2720,7 +2788,7 @@ namespace PileDesign.ViewModels
                             int stagnationCount = 0;           // 停滞カウント（残差がほぼ変化しない回数）
                             const int STAGNATION_LIMIT = 15;   // 停滞判定の閾値回数
                             const double STAGNATION_RATIO = 0.98; // 残差比がこれ以上なら停滞とみなす
-                            const double RELAXED_ALPHA = 1e-4; // 停滞時の緩和収束基準
+                            const double RELAXED_ALPHA = 1e-5; // 停滞時の緩和収束基準
                             double effectiveAlpha = alpha;     // 実効収束基準（停滞時に緩和）
 
                             // v12: 発散検出用の変数
@@ -4730,6 +4798,29 @@ namespace PileDesign.ViewModels
             var snapshot = _stepSummaries.ToArray();
             if (snapshot.Length == 0) return;
 
+            // テキスト全体を 1 度ビルド → ログとキャッシュに出す (docx 出力用)
+            string summaryText = BuildStepSummaryReportText(snapshot);
+            _mainWindowViewModel.LastAnalysisSummaryText = summaryText;
+            foreach (var line in summaryText.Split('\n'))
+            {
+                // BuildStepSummaryReportText は \r\n を出さない前提
+                await AddLogAsync(line.TrimEnd('\r'));
+            }
+        }
+
+        // docx 出力でも同内容を再利用するため、テキスト全体を 1 つの string として返す
+        private static string BuildStepSummaryReportText(StepSummary[] snapshot)
+        {
+            var sb = new System.Text.StringBuilder();
+            void Add(string line) => sb.AppendLine(line);
+            Add_LegacyOutputStepSummary(snapshot, Add);
+            return sb.ToString();
+        }
+
+        // 旧 OutputStepSummaryReport の本体ロジックを Action<string> 経由で出力するように汎化
+        private static void Add_LegacyOutputStepSummary(StepSummary[] snapshot, Action<string> emit)
+        {
+
             // ケースタグ → 荷重ステップ番号 → 試行番号 の順でソート
             var sorted = snapshot
                 .OrderBy(s => s.Level)
@@ -4749,37 +4840,36 @@ namespace PileDesign.ViewModels
 
             // 罫線文字 (Box-Drawing) で表組み。LogWindow は MS Gothic 等幅フォント。
             // MS Gothic では ━ (U+2501) と CJK は全角 2 col、ASCII は半角 1 col。
-            // 表本体は 102 visual cols (2 leading + 各列 + " | " 区切り) なので、罫線も 102 cols に揃える:
-            //   topRule    = 20 ━ + "  解析サマリーレポート  " + 20 ━ = 40 + 22 + 40 = 102 cols
-            //   bottomRule = 51 ━ = 102 cols
+            // 表本体は 103 visual cols (2 leading + 各列 + " | " 区切り) — 罫線も同幅に揃える:
+            //   topRule    = 20 ━ + "  解析サマリーレポート  " + 20 ━ + " ━" = 40 + 22 + 40 + 2 = 103 cols
+            //   (実際は ━ 単位で偶数幅しか作れないため bottomRule = 52 × 2 = 104 col で許容)
             const string topRule    = "━━━━━━━━━━━━━━━━━━━━  解析サマリーレポート  ━━━━━━━━━━━━━━━━━━━━";
-            const string bottomRule = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            const string bottomRule = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
-            await AddLogAsync("");
-            await AddLogAsync(topRule);
-            await AddLogAsync($"ステップ総数 {totalCount} (再試行含む)  ┃  合計時間 {totalElapsed:F1}s");
-            await AddLogAsync($"  ✓ 収束 {convergedCount} 件" +
+            emit("");
+            emit(topRule);
+            emit($"ステップ総数 {totalCount} (再試行含む)  ┃  合計時間 {totalElapsed:F1}s");
+            emit($"  ✓ 収束 {convergedCount} 件" +
                 (unconvergedCount > 0 ? $"  /  ✗ 未収束 (反復上限到達) {unconvergedCount} 件" : "") +
                 (physicallyUnconvergedCount > 0 ? $"  /  ⛔ 物理的未収束 (耐力超過の可能性) {physicallyUnconvergedCount} 件" : "") +
                 (retryCount > 0 ? $"  /  ♻ 再試行発生 {retryCount} 件" : ""));
-            await AddLogAsync("");
+            emit("");
 
             // 列の視覚幅 (MS Gothic 上での col 数)。データの最大幅以上に確保すること:
             //   wRes/wMaxD: "X.XXE-NNN" = 9 col 必要、wAlpha: "X.XE-NNN" = 8 col 必要
             //   wTime: " XX.Xs" = 6 col、wIter: 3 桁反復まで = 4 col
-            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wRes = 9, wAlpha = 8, wMaxD = 9, wStat = 13, wTime = 6;
+            const int wCase = 18, wStep = 5, wRetry = 4, wIter = 4, wRes = 9, wAlpha = 8, wMaxD = 9, wStat = 14, wTime = 6;
 
             // 表ヘッダ + 区切り行 (視覚幅でパディング)
-            // 区切り行は ASCII '-' '+' を使用。MS Gothic では Box Drawing '─' が全角 (2 col)
-            // で描画される一方、'│' は半角 (1 col) のため混在で約 2x のずれが発生する。
-            // ASCII は半角 1 col 固定で確実に揃う。
-            await AddLogAsync(
-                "  " + VisualPad("ケース", wCase) + " | " + VisualPad("Step", wStep) +
-                " | " + VisualPad("試行", wRetry) + " | " + VisualPad("反復", wIter) +
-                " | " + VisualPad("残差", wRes) + " | " + VisualPad("α許容", wAlpha) +
-                " | " + VisualPad("max|δu|", wMaxD) + " | " + VisualPad("状態", wStat) +
-                " | " + VisualPad("時間", wTime));
-            await AddLogAsync(
+            // ASCII-only ヘッダ — Consolas/MS Gothic 混在環境で CJK 幅が ASCII×2 と
+            // 厳密に一致しないため、列構造はすべて ASCII で統一する
+            emit(
+                "  " + VisualPad("Case", wCase) + " | " + VisualPad("Step", wStep) +
+                " | " + VisualPad("Try", wRetry) + " | " + VisualPad("Iter", wIter) +
+                " | " + VisualPad("Resid", wRes) + " | " + VisualPad("a_tol", wAlpha) +
+                " | " + VisualPad("max|du|", wMaxD) + " | " + VisualPad("Status", wStat) +
+                " | " + VisualPad("Time", wTime));
+            emit(
                 "  " + new string('-', wCase + 1) + "+" + new string('-', wStep + 2) +
                 "+" + new string('-', wRetry + 2) + "+" + new string('-', wIter + 2) +
                 "+" + new string('-', wRes + 2) + "+" + new string('-', wAlpha + 2) +
@@ -4789,14 +4879,14 @@ namespace PileDesign.ViewModels
             {
                 string statusStr = s.Status switch
                 {
-                    StepStatus.Converged => "✓ Converged",
-                    StepStatus.Unconverged => "✗ Unconverged",
-                    StepStatus.PhysicallyUnconverged => "⛔ Phys.Unconv",
+                    StepStatus.Converged => "OK Converged",
+                    StepStatus.Unconverged => "NG Unconverged",
+                    StepStatus.PhysicallyUnconverged => "!! Phys.Unconv",
                     _ => "?"
                 };
                 string retryTag = s.BisectionAttempt > 0 ? $"#{s.BisectionAttempt}" : "-";
                 string stepStr = $"{s.Step,2}/{s.NStep,-2}";
-                await AddLogAsync(
+                emit(
                     "  " + VisualPad(s.CaseTag, wCase) + " | " + VisualPad(stepStr, wStep) +
                     " | " + VisualPad(retryTag, wRetry, rightAlign: true) +
                     " | " + VisualPad(s.Iterations.ToString(), wIter, rightAlign: true) +
@@ -4811,8 +4901,8 @@ namespace PileDesign.ViewModels
             var failures = sorted.Where(s => s.Status != StepStatus.Converged).ToList();
             if (failures.Count > 0)
             {
-                await AddLogAsync("");
-                await AddLogAsync("  ─ 未収束 / 物理的未収束のステップ ─");
+                emit("");
+                emit("  ─ 未収束 / 物理的未収束のステップ ─");
                 foreach (var s in failures)
                 {
                     string statusStr = s.Status switch
@@ -4821,11 +4911,11 @@ namespace PileDesign.ViewModels
                         StepStatus.PhysicallyUnconverged => "⛔ 物理的未収束",
                         _ => "?"
                     };
-                    await AddLogAsync($"    {s.CaseTag} step {s.Step}/{s.NStep} (試行#{s.BisectionAttempt})  {statusStr}  残差={s.FinalResidual:E2}  max|δu|={s.MaxDisp:E2}m");
+                    emit($"    {s.CaseTag} step {s.Step}/{s.NStep} (試行#{s.BisectionAttempt})  {statusStr}  残差={s.FinalResidual:E2}  max|δu|={s.MaxDisp:E2}m");
                 }
             }
-            await AddLogAsync(bottomRule);
-            await AddLogAsync("");
+            emit(bottomRule);
+            emit("");
         }
 
         #endregion

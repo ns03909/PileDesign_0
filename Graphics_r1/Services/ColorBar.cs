@@ -42,15 +42,18 @@ namespace PileDesign.Services
             //    if (valueToInterpolate < 0 || 1 < valueToInterpolate)
             //    { MessageBox.Show("no."); }
             valueToInterpolate = Math.Max(Math.Min(valueToInterpolate, 1), 0);
-            //List<double> points = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+            // Turbo に類似した 6 色レインボー (青→シアン→緑→黄→橙→赤)。
+            // 旧 5 色 (#000088→#0000FF→#00FFFF→#FFFF00→#FF0000) は低値域が
+            // 濃い indigo で潰れて変化が分かりにくかったため、起点を彩度の高い青に変更し
+            // 中間に緑 (#1FCB6F) を挿入して 1/3 ずつのレンジで色相が切替わるようにした。
             List<Color> colors =
             [
-                (Color)ColorConverter.ConvertFromString("#000088"),
-                (Color)ColorConverter.ConvertFromString("#0000FF"),
-                (Color)ColorConverter.ConvertFromString("#00FFFF"),
-                (Color)ColorConverter.ConvertFromString("#FFFF00"),
-                (Color)ColorConverter.ConvertFromString("#FF0000"),
-                //(Color)ColorConverter.ConvertFromString("#FFFFFF")
+                (Color)ColorConverter.ConvertFromString("#1F3FCB"),  // 鮮青
+                (Color)ColorConverter.ConvertFromString("#1F9FE8"),  // シアン青
+                (Color)ColorConverter.ConvertFromString("#1FCB6F"),  // 緑
+                (Color)ColorConverter.ConvertFromString("#E8E81F"),  // 黄
+                (Color)ColorConverter.ConvertFromString("#E89F1F"),  // 橙
+                (Color)ColorConverter.ConvertFromString("#CB1F1F"),  // 赤
             ];
 
             List<double> points = [];

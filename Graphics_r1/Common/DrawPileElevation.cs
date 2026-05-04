@@ -27,7 +27,11 @@ namespace PileDesign.Common
             List<double> zs = null,
             double? selectedZ = null,
             double? selectedTop = null,
-            double? selectedBottom = null)
+            double? selectedBottom = null,
+            bool showLiquefactionFL = false,
+            bool showGroundDisplacement = false,
+            int seismicLevelIndex = 0,
+            bool displacementWithLiquefaction = false)
 
         {
             if (canvas == null || canvas.ActualWidth == 0 || canvas.ActualHeight == 0) return;
@@ -84,6 +88,12 @@ namespace PileDesign.Common
             if (groundInput != null)
             {
                 DrawSoilLayers(canvas, groundInput, pileTopAltitude, ratio, topMargin);
+
+                if (showLiquefactionFL)
+                    DrawFLValues(canvas, groundInput, pileTopAltitude, ratio, topMargin, seismicLevelIndex);
+
+                if (showGroundDisplacement)
+                    DrawDisplacementValues(canvas, groundInput, pileTopAltitude, ratio, topMargin, seismicLevelIndex, displacementWithLiquefaction);
             }
 
             foreach (var segment in pileBodySegments)
@@ -355,7 +365,93 @@ namespace PileDesign.Common
             Canvas.SetTop(symbol, groundTopDepth - symbolHeight); // 文字の下端を調整
             canvas.Children.Add(symbol);
 
+            DrawWaterTable(canvas, groundInput, pileTopAltitude, ratio, topMargin);
+
             DrawNValues(canvas, groundInput, pileTopAltitude, ratio, topMargin);
+        }
+
+        // 地下水位描画メソッド (実線 1 本 + 直下 3 本の半透明ラインで水位を表現)
+        private static void DrawWaterTable(
+            Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin)
+        {
+            if (groundInput == null) return;
+
+            double canvasWidth = canvas.ActualWidth;
+            // 地下水位 GL 深度 → 標高 = TopAltitude + GLDepth, 描画 Y = (-Altitude + pileTopAltitude) * ratio + topMargin
+            double waterAltitude = groundInput.GroundTopAltitude + groundInput.GroundWaterGLDepth;
+            double yWater = (-waterAltitude + pileTopAltitude) * ratio + topMargin;
+
+            // メインライン (Nikken DeepBlue、地盤ウィンドウのグラフと統一: 太さ 2)
+            var mainColor = Color.FromRgb(0x32, 0x71, 0xAD); // NikkenDeepBlueColor #3271AD
+            DrawLine(canvas, 0, yWater, canvasWidth, yWater, new SolidColorBrush(mainColor), 0, 2);
+
+            // Y 軸レンジから線間隔を決定 (地層底までの 0.5%)
+            double range = 0;
+            if (groundInput.GroundLayers != null && groundInput.GroundLayers.Count > 0)
+            {
+                double bottomAlt = groundInput.GroundLayers[^1].BottomAltitude;
+                range = Math.Abs(groundInput.GroundTopAltitude - bottomAlt);
+            }
+            double lineGap = range > 0 ? range / 200.0 * ratio : 2.0;
+            if (lineGap < 1.5) lineGap = 1.5;
+
+            // 直下 3 本 (alpha 200, 130, 70、太さ 1 — 地盤ウィンドウと統一)
+            // 直接 Line を生成 (DrawLine ヘルパー経由だと StrokeDashArray=[0] で薄い線が不安定)
+            byte[] alphas = [200, 130, 70];
+            for (int i = 0; i < alphas.Length; i++)
+            {
+                double y = yWater + (i + 1) * lineGap;
+                if (y > canvas.ActualHeight) break;
+                var transBrush = new SolidColorBrush(Color.FromArgb(alphas[i], mainColor.R, mainColor.G, mainColor.B));
+                var subLine = new Line
+                {
+                    Stroke = transBrush,
+                    StrokeThickness = 1,
+                    X1 = 0, Y1 = y,
+                    X2 = canvasWidth, Y2 = y
+                };
+                canvas.Children.Add(subLine);
+            }
+
+            // 「▽GWT」マーカー (左端)、土層境界と区別しやすくするための識別ラベル
+            var label = new TextBlock
+            {
+                Text = "▽GWT",
+                Foreground = new SolidColorBrush(mainColor),
+                FontSize = 10,
+                FontWeight = FontWeights.Bold,
+                Background = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255))
+            };
+            label.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            Canvas.SetLeft(label, 2);
+            Canvas.SetTop(label, yWater - label.DesiredSize.Height);
+            canvas.Children.Add(label);
+        }
+
+        // 各データ点に半透明のホバーマーカーを追加 (ToolTip 表示用)
+        private static void AddHoverMarker(Canvas canvas, double x, double y, string tooltipText, Brush color)
+        {
+            const double markerSize = 5.0;
+            var srcColor = ((SolidColorBrush)color).Color;
+            var ellipse = new System.Windows.Shapes.Ellipse
+            {
+                Width = markerSize,
+                Height = markerSize,
+                // 透過すぎると Hit-Test が抜けるため不透明度を上げる
+                Fill = new SolidColorBrush(Color.FromArgb(120, srcColor.R, srcColor.G, srcColor.B)),
+                Stroke = color,
+                StrokeThickness = 1.0,
+                ToolTip = new System.Windows.Controls.ToolTip { Content = tooltipText },
+                Cursor = System.Windows.Input.Cursors.Hand,
+                IsHitTestVisible = true
+            };
+            // ToolTip を素早く表示
+            System.Windows.Controls.ToolTipService.SetInitialShowDelay(ellipse, 100);
+            System.Windows.Controls.ToolTipService.SetBetweenShowDelay(ellipse, 0);
+            System.Windows.Controls.ToolTipService.SetShowDuration(ellipse, 30000);
+            Canvas.SetLeft(ellipse, x - markerSize / 2);
+            Canvas.SetTop(ellipse, y - markerSize / 2);
+            canvas.Children.Add(ellipse);
         }
 
 
@@ -366,12 +462,14 @@ namespace PileDesign.Common
             double canvasWidth = canvas.ActualWidth;
 
             var points = new PointCollection();
+            var pointInfo = new List<(double x, double y, double value, double depth)>();
 
             foreach (var massdata in groundInput.GroundMassesData)
             {
                 double groundDepth = (-massdata.AltitudeDepth + pileTopAltitude) * ratio + topMargin;
                 double groundNvalue = massdata.NValue / 4.0 / 60.0 * canvasWidth;
                 points.Add(new Point(groundNvalue, groundDepth));
+                pointInfo.Add((groundNvalue, groundDepth, massdata.NValue, massdata.GLDepth));
             }
 
             var polyline = new Polyline
@@ -382,6 +480,13 @@ namespace PileDesign.Common
             };
 
             canvas.Children.Add(polyline);
+
+            // 各点にホバーマーカー (N値の数値表示)
+            foreach (var (x, y, val, dep) in pointInfo)
+            {
+                AddHoverMarker(canvas, x, y,
+                    $"GL{dep:0.00}m\nN値 = {val:0.#}", Brushes.Gray);
+            }
 
             double y1 = (-groundInput.GroundTopAltitude + pileTopAltitude) * ratio + topMargin;
             double y2 = (-groundInput.GroundMassesData[^1].AltitudeDepth + pileTopAltitude) * ratio + topMargin;
@@ -412,6 +517,207 @@ namespace PileDesign.Common
                 Canvas.SetTop(text, y1 - textHeight); // 文字の位置を調整
                 canvas.Children.Add(text);
             }
+        }
+
+        // 落ち着いた色のブラシ (再利用)
+        private static readonly SolidColorBrush FLStrokeBrush = new(Color.FromRgb(160, 80, 70));     // 落ち着いた赤茶 (Sienna 系)
+        private static readonly SolidColorBrush FLGridBrush   = new(Color.FromArgb(48, 160, 80, 70));
+        private static readonly SolidColorBrush DispStrokeBrush = new(Color.FromRgb(70, 110, 150));  // 落ち着いた青 (SteelBlue 系)
+        private static readonly SolidColorBrush DispGridBrush   = new(Color.FromArgb(48, 70, 110, 150));
+
+        // 液状化FL描画メソッド (杭姿図右側に重ね描き、FL=0..2 スケール、左→右で値が増加)
+        private static void DrawFLValues(
+            Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin, int levelIndex)
+        {
+            if (groundInput?.GroundMassesData == null || groundInput.GroundMassesData.Count == 0) return;
+
+            // データ未算定 (全値0または欠損) の場合は何も描画しない
+            bool hasData = groundInput.GroundMassesData.Any(m =>
+                m.FL != null && m.FL.Count > levelIndex && m.FL[levelIndex].HasValue && m.FL[levelIndex].Value != 0.0);
+            if (!hasData) return;
+
+            double canvasWidth = canvas.ActualWidth;
+            const double FL_MAX = 2.0;
+            // 左→右で値が増加 (左端 FL=0, 右端 FL=FL_MAX)、右側に少しマージン
+            double leftOrigin = canvasWidth * 0.72;       // FL=0
+            double rightEnd   = canvasWidth * 0.96;       // FL=FL_MAX
+            double xScale = (rightEnd - leftOrigin) / FL_MAX;
+
+            var points = new PointCollection();
+            var pointInfo = new List<(double x, double y, double value, double depth)>();
+            foreach (var m in groundInput.GroundMassesData)
+            {
+                if (m.FL == null || m.FL.Count <= levelIndex) continue;
+                var fl = m.FL[levelIndex];
+                if (!fl.HasValue) continue;
+                double y = (-m.AltitudeDepth + pileTopAltitude) * ratio + topMargin;
+                double flClamped = Math.Min(Math.Max(fl.Value, 0.0), FL_MAX);
+                double x = leftOrigin + flClamped * xScale;
+                points.Add(new Point(x, y));
+                pointInfo.Add((x, y, fl.Value, m.GLDepth));
+            }
+
+            canvas.Children.Add(new Polyline
+            {
+                Stroke = FLStrokeBrush,
+                StrokeThickness = 1.5,
+                Points = points
+            });
+
+            foreach (var (x, y, val, dep) in pointInfo)
+            {
+                AddHoverMarker(canvas, x, y,
+                    $"GL{dep:0.00}m\nFL (L{levelIndex + 1}) = {val:0.000}", FLStrokeBrush);
+            }
+
+            double y1 = (-groundInput.GroundTopAltitude + pileTopAltitude) * ratio + topMargin;
+            double y2 = (-groundInput.GroundMassesData[^1].AltitudeDepth + pileTopAltitude) * ratio + topMargin;
+            for (double fl = 0.0; fl <= FL_MAX + 1e-6; fl += 0.5)
+            {
+                double x = leftOrigin + fl * xScale;
+                canvas.Children.Add(new Line
+                {
+                    Stroke = FLGridBrush,
+                    StrokeThickness = 1,
+                    X1 = x, X2 = x, Y1 = y1, Y2 = y2
+                });
+
+                var text = new TextBlock
+                {
+                    Text = fl.ToString("0.#"),
+                    Foreground = FLStrokeBrush,
+                    FontSize = 10
+                };
+                text.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(text, x - text.DesiredSize.Width / 2);
+                Canvas.SetTop(text, y1 - text.DesiredSize.Height);
+                canvas.Children.Add(text);
+            }
+
+            var title = new TextBlock
+            {
+                Text = $"FL (L{levelIndex + 1})",
+                Foreground = FLStrokeBrush,
+                FontSize = 10,
+                FontWeight = FontWeights.Bold
+            };
+            title.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            // 右揃え (右端 = rightEnd)
+            Canvas.SetLeft(title, rightEnd - title.DesiredSize.Width);
+            Canvas.SetTop(title, y1 - title.DesiredSize.Height * 2.0 - 2);
+            canvas.Children.Add(title);
+        }
+
+        // 地盤変位描画メソッド (杭姿図右側に重ね描き、auto-scale、左→右で値が増加)
+        // withLiquefaction=true: DmaxUStarSigmaGammaCyH (液状化考慮)、false: DmaxUStar (非考慮)
+        private static void DrawDisplacementValues(
+            Canvas canvas, GroundInput groundInput, double pileTopAltitude, double ratio, double topMargin,
+            int levelIndex, bool withLiquefaction)
+        {
+            if (groundInput?.GroundMassesData == null || groundInput.GroundMassesData.Count == 0) return;
+
+            // 値取得関数 (考慮/非考慮 切替)
+            double Get(GroundMassDataInput m)
+            {
+                if (withLiquefaction)
+                {
+                    if (m.DmaxUStarSigmaGammaCyH == null || m.DmaxUStarSigmaGammaCyH.Count <= levelIndex) return 0.0;
+                    return m.DmaxUStarSigmaGammaCyH[levelIndex];
+                }
+                if (m.DmaxUStar == null || m.DmaxUStar.Count <= levelIndex) return 0.0;
+                return m.DmaxUStar[levelIndex];
+            }
+
+            bool hasData = groundInput.GroundMassesData.Any(m => Math.Abs(Get(m)) > 1e-9);
+            if (!hasData) return;
+
+            double maxAbs = groundInput.GroundMassesData
+                .Select(m => Math.Abs(Get(m)))
+                .DefaultIfEmpty(0)
+                .Max();
+            if (maxAbs <= 0) return;
+
+            double scaleMax = NiceCeil(maxAbs);
+
+            double canvasWidth = canvas.ActualWidth;
+            double leftOrigin = canvasWidth * 0.72;       // 変位=0
+            double rightEnd   = canvasWidth * 0.96;       // 変位=scaleMax
+            double xScale = (rightEnd - leftOrigin) / scaleMax;
+
+            var points = new PointCollection();
+            var pointInfo = new List<(double x, double y, double value, double depth)>();
+            foreach (var m in groundInput.GroundMassesData)
+            {
+                double v = Math.Abs(Get(m));
+                double y = (-m.AltitudeDepth + pileTopAltitude) * ratio + topMargin;
+                double x = leftOrigin + v * xScale;
+                points.Add(new Point(x, y));
+                pointInfo.Add((x, y, Get(m), m.GLDepth));
+            }
+
+            canvas.Children.Add(new Polyline
+            {
+                Stroke = DispStrokeBrush,
+                StrokeThickness = 1.5,
+                Points = points
+            });
+
+            string labelPrefix = withLiquefaction ? "変位（液状化含む）" : "変位";
+            foreach (var (x, y, val, dep) in pointInfo)
+            {
+                AddHoverMarker(canvas, x, y,
+                    $"GL{dep:0.00}m\n{labelPrefix} (L{levelIndex + 1}) = {val:0.0} mm", DispStrokeBrush);
+            }
+
+            double y1 = (-groundInput.GroundTopAltitude + pileTopAltitude) * ratio + topMargin;
+            double y2 = (-groundInput.GroundMassesData[^1].AltitudeDepth + pileTopAltitude) * ratio + topMargin;
+            const int tickCount = 4;
+            for (int k = 0; k <= tickCount; k++)
+            {
+                double v = scaleMax * k / tickCount;
+                double x = leftOrigin + v * xScale;
+                canvas.Children.Add(new Line
+                {
+                    Stroke = DispGridBrush,
+                    StrokeThickness = 1,
+                    X1 = x, X2 = x, Y1 = y1, Y2 = y2
+                });
+
+                var text = new TextBlock
+                {
+                    Text = v.ToString("0"),
+                    Foreground = DispStrokeBrush,
+                    FontSize = 10
+                };
+                text.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(text, x - text.DesiredSize.Width / 2);
+                Canvas.SetTop(text, y1 - text.DesiredSize.Height);
+                canvas.Children.Add(text);
+            }
+
+            string titleLabel = withLiquefaction ? "変位（液状化含む）" : "変位";
+            var title = new TextBlock
+            {
+                Text = $"{titleLabel} mm (L{levelIndex + 1})",
+                Foreground = DispStrokeBrush,
+                FontSize = 10,
+                FontWeight = FontWeights.Bold
+            };
+            title.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            // 右揃え (右端 = rightEnd)
+            Canvas.SetLeft(title, rightEnd - title.DesiredSize.Width);
+            Canvas.SetTop(title, y1 - title.DesiredSize.Height * 2.0 - 2);
+            canvas.Children.Add(title);
+        }
+
+        // 値の上限を 1/2/5×10^k に切り上げ (グラフスケール用)
+        private static double NiceCeil(double x)
+        {
+            if (x <= 0) return 1.0;
+            double exp = Math.Pow(10, Math.Floor(Math.Log10(x)));
+            double mantissa = x / exp;
+            double niceMantissa = mantissa <= 1 ? 1 : mantissa <= 2 ? 2 : mantissa <= 5 ? 5 : 10;
+            return niceMantissa * exp;
         }
 
         // ElementDivision描画メソッド

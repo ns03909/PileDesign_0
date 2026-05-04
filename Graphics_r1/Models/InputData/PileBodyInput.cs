@@ -212,12 +212,16 @@ namespace PileDesign.Models.InputData
             "鉄筋定着工法",
             "定着筋方式",
             "埋込み方式",
-            "FT-Pile構法"
+            "FT-Pile構法",
+            "キャプリングパイル工法"
         ];
 
         // 鋼管杭　杭頭タイプオプション
         public static ObservableCollection<string> SteelPileTopTypeOption { get; } =
-        ["鉄筋定着工法"];
+        [
+            "鉄筋定着工法",
+            "キャプリングパイル工法"
+        ];
 
         // 杭頭タイプオプション
         private ObservableCollection<string> _pileTopTypeOption;
@@ -541,6 +545,38 @@ namespace PileDesign.Models.InputData
 
                 // axialN は kN、FTPile は N を期待するため×1000
                 var curve = TryCallMThetaRelationship(ftObj, axialN * 1000);
+                if (curve != null) return PileHeadRotationDef.Combined(curve);
+            }
+
+            // 2.5) キャプリングパイル工法 → PileTop.CapringPile の M-θ を採用
+            if (pileTopType.Contains("キャプリングパイル工法"))
+            {
+                var caprObj = PileTop?.CapringPile;
+                if (caprObj is CapringPile cpr)
+                {
+                    try
+                    {
+                        // axialN は kN、CapringPile は N を期待するため×1000
+                        var (thetasObs, msObs) = cpr.GetMThetaRelationship(axialN * 1000);
+                        var thetas = thetasObs?.Cast<double>().ToList();
+                        var msRaw = msObs?.Cast<double>().ToList();
+                        if (thetas != null && msRaw != null && thetas.Count >= 2 && thetas.Count == msRaw.Count)
+                        {
+                            // 単位変換: M [N·mm] → [kNm] (×10⁻⁶)
+                            var pts = new List<(double theta, double moment)>(thetas.Count);
+                            for (int i = 0; i < thetas.Count; i++)
+                                pts.Add((thetas[i], msRaw[i] * 1e-6));
+                            return PileHeadRotationDef.Combined(new MomentRotationCurve(pts));
+                        }
+                    }
+                    catch
+                    {
+                        // フォールバック
+                    }
+                }
+
+                // 反射フォールバック
+                var curve = TryCallMThetaRelationship(caprObj, axialN * 1000);
                 if (curve != null) return PileHeadRotationDef.Combined(curve);
             }
 

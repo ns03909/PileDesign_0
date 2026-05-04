@@ -117,6 +117,30 @@ namespace PileDesign.ViewModels
             UpdateTemporarySoilPile();
         }
 
+        // 液状化FL 杭姿図への重ね描画
+        [ObservableProperty]
+        private bool _isLiquefactionFLVisible;
+
+        partial void OnIsLiquefactionFLVisibleChanged(bool value) => DrawShapes();
+
+        // 地盤変位 杭姿図への重ね描画
+        [ObservableProperty]
+        private bool _isGroundDisplacementVisible;
+
+        partial void OnIsGroundDisplacementVisibleChanged(bool value) => DrawShapes();
+
+        // 地震レベル (0=L1, 1=L2) — FL / 地盤変位の対象レベル
+        [ObservableProperty]
+        private int _selectedSeismicLevelIndex;
+
+        partial void OnSelectedSeismicLevelIndexChanged(int value) => DrawShapes();
+
+        // 地盤変位 液状化考慮 (true=DmaxUStarSigmaGammaCyH、false=DmaxUStar)
+        [ObservableProperty]
+        private bool _isDisplacementWithLiquefaction;
+
+        partial void OnIsDisplacementWithLiquefactionChanged(bool value) => DrawShapes();
+
         // 選択中地盤
         [ObservableProperty]
         private GroundInput _selectedGroundInput;
@@ -1077,7 +1101,11 @@ namespace PileDesign.ViewModels
                 PileBodies[PileBodyNo - 1].PrecastConcretePileToeHeightRatio,
                 PileBodies[PileBodyNo - 1].PileConstructionType,
                 pileTopAltitude,
-                groundInput);
+                groundInput,
+                showLiquefactionFL: IsLiquefactionFLVisible,
+                showGroundDisplacement: IsGroundDisplacementVisible,
+                seismicLevelIndex: SelectedSeismicLevelIndex,
+                displacementWithLiquefaction: IsDisplacementWithLiquefaction);
         }
     }
 }

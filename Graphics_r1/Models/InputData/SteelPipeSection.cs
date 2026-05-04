@@ -6,7 +6,7 @@ namespace PileDesign.Models.InputData
     /// 鋼管杭断面クラス。
     /// 損傷限界・安全限界曲げモーメントを 2 形態で提供する:
     /// - 中間部・下部 (鋼管のみ): 線形相互作用 (損傷) / 0.2 軸力比分岐 (安全)
-    /// - 杭頭部 (鋼管 + 充填コンクリート CFT): sM + cM 合算
+    /// - 杭頭部 (鋼管 + 充填コンクリート コンクリート充填鋼管部): sM + cM 合算
     /// 出典: 鉄道構造物等設計標準・同解説 強度と変形性能 8 章 鋼管杭。
     /// </summary>
     internal class SteelPipeSection
@@ -83,14 +83,14 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 簡易コンストラクタ (杭中間部・下部のみ使う場合)。
-        /// 杭頭部 CFT 用機能 (sMd, cMd, Ndc) には Fc が必要、安全限界引張 (sNut1) には sigmaB が必要。
+        /// 杭頭部 コンクリート充填鋼管部 用機能 (sMd, cMd, Ndc) には Fc が必要、安全限界引張 (sNut1) には sigmaB が必要。
         /// </summary>
         internal SteelPipeSection(double _D, double _T, double _F, double _beta1)
             : this(_D, _T, _F, _beta1, fc: 0.0, sigmaB: 0.0, e: 205000.0)
         { }
 
         /// <summary>
-        /// 損傷限界 CFT 杭頭部対応コンストラクタ (Fc 指定、sigmaB なし)。
+        /// 損傷限界 コンクリート充填鋼管部 杭頭部対応コンストラクタ (Fc 指定、sigmaB なし)。
         /// </summary>
         internal SteelPipeSection(double _D, double _T, double _F, double _beta1, double fc, double e = 205000.0)
             : this(_D, _T, _F, _beta1, fc, sigmaB: 0.0, e)
@@ -149,29 +149,29 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double ComputeSfc2()
         {
-            // Nc プレースホルダ = Ny (yield axial force)
-            double Ny = 1.5 * sft * sAp;
-            double Nc = Ny;
-            double lambdaC = Math.Sqrt(Ny / Nc);    // = 1 (placeholder)
-            double eLambdaC = 1.0 / Math.Sqrt(0.6);
+            // 暫定実装: Nc (弾性曲げ座屈荷重) の本格算定が未実装のため、柱座屈低減を行わず
+            // sfc2 = sfc1 (= F/1.5) を返す。地盤に支持される杭では Nc が十分大きく λc → 0 と
+            // なり sfc2 は sfc1 にほぼ等しくなる前提。Nc プレースホルダ = Ny のままだと
+            // λc = 1 で過度な低減 (sfc2 ≈ 0.4·F) となり、安全限界軸力が損傷限界を下回る
+            // 異常を生じるため、ここでは保守的に sfc1 を返す。Nc 本格実装後にこの暫定処理を
+            // 解除する想定。
+            return Sfc1;
 
-            // 実細長比換算
-            double lambda = lambdaC * Math.PI * Math.Sqrt(E / F);
-            double Lambda = Math.Sqrt(Math.PI * Math.PI * E / 0.6 / F);
-
-            // 可変安全率 ν = 3/2 + 2/3 × (λ/Λ)²
-            double ratio = lambda / Lambda;
-            double nu = 1.5 + (2.0 / 3.0) * ratio * ratio;
-
-            if (lambda <= Lambda)
-            {
-                double r = lambdaC / eLambdaC;
-                return (1.0 - 0.4 * r * r) * F / nu;
-            }
-            else
-            {
-                return F / (nu * lambdaC * lambdaC);
-            }
+            // 元実装 (Nc プレースホルダ = Ny で λc=1 固定の場合):
+            //   double Ny = 1.5 * sft * sAp;
+            //   double Nc = Ny;                      // placeholder
+            //   double lambdaC = Math.Sqrt(Ny / Nc); // = 1
+            //   double eLambdaC = 1.0 / Math.Sqrt(0.6);
+            //   double lambda = lambdaC * Math.PI * Math.Sqrt(E / F);
+            //   double Lambda = Math.Sqrt(Math.PI * Math.PI * E / 0.6 / F);
+            //   double ratio = lambda / Lambda;
+            //   double nu = 1.5 + (2.0 / 3.0) * ratio * ratio;
+            //   if (lambda <= Lambda) {
+            //       double r = lambdaC / eLambdaC;
+            //       return (1.0 - 0.4 * r * r) * F / nu;
+            //   } else {
+            //       return F / (nu * lambdaC * lambdaC);
+            //   }
         }
 
         // -------------- 使用限界 --------------
@@ -197,7 +197,7 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 損傷限界モーメント (杭頭部、CFT 領域 = 鋼管 + 充填コンクリート)。
+        /// 損傷限界モーメント (杭頭部、コンクリート充填鋼管部 領域 = 鋼管 + 充填コンクリート)。
         /// Md = β1 × sMd            (Ndd < 0)
         /// Md = β1 × (sMd + cMd)    (0 ≤ Ndd ≤ cNdc)
         /// Md = β1 × sMd            (cNdc < Ndd)
@@ -315,20 +315,27 @@ namespace PileDesign.Models.InputData
             return cSigmaCk / denom * (cro4 * g0 - cri4 * gI);
         }
 
+        // コンクリート外円 (半径 cro) での圧縮セグメントの半角。
+        // NA 位置 y_NA = sro - Xn (鋼管中心基準)。半径 cro の円での角度は
+        //   θ = acos(y_NA / cro) = acos((sro - Xn) / cro)
+        // で求まる。サチュレーションは Xn ≥ sro + cro (NA がコン外円の引張縁に到達)。
         private double ComputeCThetaO(double Xn)
         {
             if (Xn <= T) return 0.0;
-            if (Xn > sri + cro) return Math.PI;
-            double arg = (sro - Xn) / sro;
+            if (Xn >= sro + cro) return Math.PI;
+            double arg = (sro - Xn) / cro;
             arg = Math.Clamp(arg, -1.0, 1.0);
             return Math.Acos(arg);
         }
 
+        // コンクリート内円 (半径 cri) での圧縮セグメントの半角。
+        //   θ = acos((sro - Xn) / cri)
+        // サチュレーション: Xn ≥ sro + cri (NA がコン内円の引張縁に到達)。
         private double ComputeCThetaI(double Xn)
         {
             if (Xn <= T + zh) return 0.0;
             if (Xn >= sro + cri) return Math.PI;
-            double arg = (sri - Xn) / sri;
+            double arg = (sro - Xn) / cri;
             arg = Math.Clamp(arg, -1.0, 1.0);
             return Math.Acos(arg);
         }
@@ -383,9 +390,9 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 安全限界曲げモーメント (杭中間部・下部、鋼管のみ)。
-        /// |Nud|/sNuc > 0.2 のとき: Mu = β1 β2 × 1.25 × sσCy1 × (1 − |Nud|/sNuc) × sZe
+        /// |Nud|/sNuc > 0.2 のとき: Mu = β1 β2 × 1.25 × sσCy1 × (1 − |Nud|/sNuc) × sZp
         /// |Nud|/sNuc ≤ 0.2 のとき: Mu = β1 β2 × sσCy1 × sZp (塑性モーメント、軸力依存なし)
-        /// 0.2 境界で不連続性あり (低軸力で塑性、高軸力で線形相互作用、文献 8 章の規定)。
+        /// 0.2 境界で連続 (どちらも sZp を使用する)。
         /// </summary>
         internal double GetUltimateLimitMomentMiddle(double Nud)
         {
@@ -396,7 +403,7 @@ namespace PileDesign.Models.InputData
             double ratio = Math.Abs(Nud) / sNucLocal;
             if (ratio > 0.2)
             {
-                double m = 1.25 * sSigmaCy1 * (1.0 - ratio) * sZe;
+                double m = 1.25 * sSigmaCy1 * (1.0 - ratio) * sZp;
                 return Beta1 * beta2 * Math.Max(0.0, m);
             }
             else
@@ -406,11 +413,11 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 安全限界曲げモーメント (杭頭部 CFT、鋼管 + 充填コンクリート)。
+        /// 安全限界曲げモーメント (杭頭部 コンクリート充填鋼管部、鋼管 + 充填コンクリート)。
         /// Mu = β1 β2 × (sMu + cMu)
         /// sMu = 4 × srm² × t × sin(sθO) × sσU         (鋼管部、塑性近似)
         /// sσU = ((π−sθO) × sσTy + sθO × sσCy1) / π    (角度加重平均応力)
-        /// cMu = (2/3) × cσIr × (cro³ sin³(cθO) − cri³ sin³(cθI))   (CFT 環状部)
+        /// cMu = (2/3) × cσIr × (cro³ sin³(cθO) − cri³ sin³(cθI))   (コンクリート充填鋼管部 環状部)
         /// 中立軸位置 Xn は鋼管+コンクリート全体の軸力釣合 Ns(Xn) + Nc(Xn) = Nud から二分法で求める (approach b)。
         /// </summary>
         internal double GetUltimateLimitMomentHead(double Nud)
@@ -460,13 +467,16 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// Xn から鋼管内面角度 sθI を求める (sri 分母、Xn ≤ T で 0)。
+        /// 鋼管内円 (半径 sri) での圧縮セグメントの半角を Xn から求める。
+        /// NA 位置 y_NA = sro - Xn (鋼管中心基準) に対し、半径 sri の円での角度は
+        ///   θ = acos(y_NA / sri) = acos((sro - Xn) / sri)
+        /// で求まる。サチュレーション: Xn ≥ sro + sri (NA が内円の引張縁に到達)。
         /// </summary>
         private double ComputeSThetaI(double Xn)
         {
             if (Xn <= T) return 0.0;
-            if (Xn >= 2.0 * sro - T) return Math.PI;
-            double arg = (sri - Xn) / sri;
+            if (Xn >= sro + sri) return Math.PI;
+            double arg = (sro - Xn) / sri;
             return Math.Acos(Math.Clamp(arg, -1.0, 1.0));
         }
 
@@ -551,7 +561,7 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 安全限界せん断力 (杭頭部 CFT)。中間部式に Mu/sMu 比を乗じる。
+        /// 安全限界せん断力 (杭頭部 コンクリート充填鋼管部)。中間部式に Mu/sMu 比を乗じる。
         /// Qu = β1 β2 × sQ0 × √(1 − η²) × (Mu / sMu)
         /// 軸力比 η は圧縮では Nuc、引張では Nut で正規化:
         ///   η = Nud / Nuc  (Nud ≥ 0)
@@ -648,10 +658,10 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// 鋼管杭頭部 (CFT) の M-φ 関係を返す。
+        /// 鋼管杭頭部 (コンクリート充填鋼管部) の M-φ 関係を返す。
         /// φ = [0, φ_Md, φ_Mu', φ_u]、M = [0, Md, Mu, Mu]
         /// 杭頭部 EI は L³/EIeq = (L³−(l2+l3)³)/EI1 + ((l2+l3)³−l3³)/EI2 + l3³/EI3 で合成。
-        /// 既定: l1=D (CFT), l2=0 (厚部なし), l3=3D (鋼管のみ)。
+        /// 既定: l1=D (コンクリート充填鋼管部), l2=0 (厚部なし), l3=3D (鋼管のみ)。
         /// </summary>
         internal (System.Collections.Generic.List<double> phis, System.Collections.Generic.List<double> moments)
             GetMPhiRelationshipHead(double Nud)
@@ -744,7 +754,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 杭頭部の 3 セグメント直列合成 EIeq を計算する。
         /// L³/EIeq = (L³ − (l2+l3)³)/EI1 + ((l2+l3)³ − l3³)/EI2 + l3³/EI3
-        /// 既定: l1 = D (CFT), l2 = 0 (厚部分なし、EI2 = EI3 と仮定), l3 = 3D
+        /// 既定: l1 = D (コンクリート充填鋼管部), l2 = 0 (厚部分なし、EI2 = EI3 と仮定), l3 = 3D
         /// </summary>
         private double ComputeEIeqHead()
         {
@@ -753,7 +763,7 @@ namespace PileDesign.Models.InputData
             double l3 = 3.0 * D;
             double L = l1 + l2 + l3;
 
-            double EI1 = E * Iisteel + Ec * Iiconcrete;   // CFT 合成 (鋼管 + 充填コン)
+            double EI1 = E * Iisteel + Ec * Iiconcrete;   // コンクリート充填鋼管部 合成 (鋼管 + 充填コン)
             double EI2 = E * Iisteel;                      // 厚部 (本実装ではデフォルト同一)
             double EI3 = E * Iisteel;                      // 鋼管のみ薄部
 
@@ -767,7 +777,7 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
-        /// CFT 領域における圧縮側鋼管断面積とずれ止め支圧面積の和 ptAc を、Xn から計算する。
+        /// コンクリート充填鋼管部 領域における圧縮側鋼管断面積とずれ止め支圧面積の和 ptAc を、Xn から計算する。
         /// ζ = 2/3 × (1 − ptAc/ptA) の構成要素。
         /// </summary>
         private double ComputePtAc(double Xn)

@@ -271,11 +271,13 @@ namespace PileDesign.Models.InputData
             double sigmaS = 1.2;
             double tauS = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaS, 2) - Math.Pow(sigmaG, 2));
 
-            double Qs1 = 0.6 * alpha * 2.0 * t * I / s0 * 2.0 / 3.0 * tauS;
+            // 使用限界式 (5.4): 斜め引張破壊側は τS のみ ((2/3) 係数なしが正)。
+            double Qs1 = 0.6 * alpha * 2.0 * t * I / s0 * tauS;
 
             double dpc = 15; // PC鋼線の径を15mmとする
             double eta1 = (t - dpc) / t;
             double tauV = 1.9 * Math.Pow(Fc, 0.323);
+            // ウェブ破壊側は (2/3)τV (使用限界の安全率)。
             double Qs2 = 0.6 * alpha * eta1 * 2.0 * t * I / s0 * 2.0 / 3.0 * tauV;
             double Qs = Math.Min(Qs1, Qs2);
             return isFactored ? beta1 * Qs : Qs;
@@ -1006,11 +1008,13 @@ namespace PileDesign.Models.InputData
             double sigmaS = 1.2;
             double tauS = 0.5 * Math.Sqrt(Math.Pow(sigmaG + 2.0 * sigmaS, 2) - Math.Pow(sigmaG, 2));
 
-            double Qs1 = 0.6 * alpha * 2.0 * t * I / s0 * 2.0 / 3.0 * tauS;
+            // 使用限界式 (5.4): 斜め引張破壊側は τS のみ ((2/3) 係数なしが正)。
+            double Qs1 = 0.6 * alpha * 2.0 * t * I / s0 * tauS;
 
             double dpc = 15; // PC鋼線の径を15mmとする
             double eta1 = (t - dpc) / t;
             double tauV = 1.9 * Math.Pow(Fc, 0.323);
+            // ウェブ破壊側は (2/3)τV (使用限界の安全率)。
             double Qs2 = 0.6 * alpha * eta1 * 2.0 * t * I / s0 * 2.0 / 3.0 * tauV;
             double Qs = Math.Min(Qs1, Qs2);
             return isFactored ? beta1 * Qs : Qs;

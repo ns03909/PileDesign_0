@@ -601,7 +601,7 @@
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="8,4,8,4">
         <StackPanel>
             <StackPanel Orientation="Horizontal">
-                
+
                 <ToggleButton ToolTip="地盤表示" IsChecked="{Binding IsGroundLayerOverwrapped}">
                     <svgc:SvgViewbox Source="/Icons/SoilLayerVisible.svg" Style="{StaticResource SvgIconStyle24}"/>
                     <i:Interaction.Triggers>
@@ -613,6 +613,31 @@
                         </i:EventTrigger>
                     </i:Interaction.Triggers>
                 </ToggleButton>
+                <ToggleButton ToolTip="液状化FL を杭姿図右側に重ね描き (要 液状化判定算定)"
+                              IsChecked="{Binding IsLiquefactionFLVisible}"
+                              IsEnabled="{Binding IsGroundLayerOverwrapped}"
+                              Margin="4,0,0,0" Padding="6,0" Height="28">
+                    <TextBlock Text="FL" Foreground="#A05046" FontWeight="Bold"/>
+                </ToggleButton>
+                <ToggleButton ToolTip="地盤変位 を杭姿図右側に重ね描き (要 地盤変位算定)"
+                              IsChecked="{Binding IsGroundDisplacementVisible}"
+                              IsEnabled="{Binding IsGroundLayerOverwrapped}"
+                              Margin="4,0,0,0" Padding="6,0" Height="28">
+                    <TextBlock Text="変位" Foreground="#466E96" FontWeight="Bold"/>
+                </ToggleButton>
+                <ToggleButton ToolTip="地盤変位の液状化考慮 ON: DmaxU* + ΣγCy·H / OFF: DmaxU* のみ"
+                              IsChecked="{Binding IsDisplacementWithLiquefaction}"
+                              IsEnabled="{Binding IsGroundDisplacementVisible}"
+                              Margin="4,0,0,0" Padding="6,0" Height="28">
+                    <TextBlock Text="液状化" FontWeight="Bold"/>
+                </ToggleButton>
+                <ComboBox SelectedIndex="{Binding SelectedSeismicLevelIndex}"
+                          IsEnabled="{Binding IsGroundLayerOverwrapped}"
+                          Margin="4,0,0,0" Width="50" Height="28"
+                          ToolTip="FL/変位 表示の対象地震レベル">
+                    <ComboBoxItem Content="L1"/>
+                    <ComboBoxItem Content="L2"/>
+                </ComboBox>
             </StackPanel>
 
 

@@ -126,10 +126,19 @@ namespace PileDesign.Services
                     // 追加後にPileSectionTypeとPrecastPileNameを設定（デフォルト値を上書き）
                     segment.PileSection.PileSectionType = segDto.PileSectionType;
 
-                    // 既製杭の場合
+                    // 既製杭 / 鋼管杭ライブラリ選択
                     if (!string.IsNullOrEmpty(segDto.PrecastPileName))
                     {
-                        segment.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
+                        if (segment.PileSection.PileBodyType == "鋼管杭")
+                        {
+                            // 鋼管杭ライブラリ (例: "800x17") → SelectedSteelPipePileName セッターが
+                            // PipeDia / PipeTs を library から復元する
+                            segment.PileSection.SelectedSteelPipePileName = segDto.PrecastPileName;
+                        }
+                        else
+                        {
+                            segment.PileSection.SetSelectedPrecastPileByName(segDto.PrecastPileName);
+                        }
                     }
 
                     // 場所打ち杭（鉄筋コンクリート部）の場合

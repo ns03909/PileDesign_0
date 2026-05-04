@@ -15,6 +15,7 @@ namespace PileDesign.Models.InputData
                 {
                     _isApplicable = value;
                     OnPropertyChanged(nameof(IsApplicable));
+                    OnPropertyChanged(nameof(IsApplicableForDocxDisplay));
                 }
             }
         }
@@ -89,6 +90,27 @@ namespace PileDesign.Models.InputData
                 {
                     _isAnalyzed = value;
                     OnPropertyChanged(nameof(IsAnalyzed));
+                    OnPropertyChanged(nameof(IsApplicableForDocxDisplay));
+                }
+            }
+        }
+
+        /// <summary>
+        /// DocxOutputWindow の CheckBox 表示専用プロパティ。
+        /// 未解析時は IsApplicable=true でも未チェック表示にする (UX)。
+        /// 実体 (_isApplicable) は変更しないので CanExecuteAnalysis 等の解析ロジックに影響しない。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsApplicableForDocxDisplay
+        {
+            get => _isApplicable && _isAnalyzed;
+            set
+            {
+                if (_isAnalyzed && _isApplicable != value)
+                {
+                    _isApplicable = value;
+                    OnPropertyChanged(nameof(IsApplicable));
+                    OnPropertyChanged(nameof(IsApplicableForDocxDisplay));
                 }
             }
         }

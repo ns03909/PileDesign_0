@@ -1,0 +1,91 @@
+{
+  "displayName": "設計例集3.5",
+  "groundExampleName": "Example3_5",
+  "additionalGroundExampleNames": ["Example3_5_2"],
+  "loadCaseLevel1": {
+    "forceActionPointX": 16.0,
+    "forceActionPointY": 16.0,
+    "forceActionPointZ": -2.0,
+    "upperMassForce": 9204.0,
+    "foundationMassForce": 1812.0
+  },
+  "loadCaseLevel2": {
+    "forceActionPointX": 16.0,
+    "forceActionPointY": 16.0,
+    "forceActionPointZ": -2.0,
+    "upperMassForce": 13805.0,
+    "foundationMassForce": 7249.0
+  },
+  "loadCaseLevel2Alt": {
+    "forceActionPointX": 8.0,
+    "forceActionPointY": 12.8,
+    "forceActionPointZ": -2.0,
+    "upperMassForce": 17322,
+    "foundationMassForce": 4018
+  },
+  "pileBodies": [
+    {
+      "pileBodyRef": "(P1)",
+      "pileBodyType": "鋼管杭",
+      "pileTopType": "鉄筋定着工法",
+      "pileConstructionType": "埋込み杭（プレボーリング杭）",
+      "pileToeDia": 800,
+      "tipNonPermability": 0.0,
+      "embedmentIntoBearingSoil": 1.0,
+      "pileInnerDia": 0.0,
+      "pileTipStyle": "閉端杭",
+      "settlePileToeDia": 800,
+      "settleAlpha": 0.3,
+      "settleN": 2,
+      "segments": [
+        { "no": 1, "segmentLength": 0.8, "segmentDepth": 0.8, "pileSectionType": "コンクリート充填鋼管部", "precastPileName": "800x17", "concreteFc": 27, "concreteGsi": 1.0, "concreteGamma": 23 },
+        { "no": 2, "segmentLength": 21.7, "segmentDepth": 22.5, "pileSectionType": "鋼管部", "precastPileName": "800x11" }
+      ]
+    }
+  ],
+  "pileLayoutItems": [
+    { "pileNo": 1,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0,  "y": 0.0,  "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [1382, 3842, 1382, 1382], "axialForceLevel2s": [671, 4553, 671, 671] },
+    { "pileNo": 2,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.8, "y": 0.0,  "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3236, 2064, 4685, 5047], "axialForceLevel2s": [3094, 3870, 5018, 6998] },
+    { "pileNo": 3,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.2, "y": 0.0,  "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3728, 3236, 3905, 3905], "axialForceLevel2s": [3870, 3236, -1339, 6245] },
+    { "pileNo": 4,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 32.0, "y": 0.0,  "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [3842, 1382, 4959, 3539], "axialForceLevel2s": [4553, 671, 4156, 3274] },
+
+    { "pileNo": 5,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0,  "y": 6.4,  "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [1382, 3842, 1382, 1382], "axialForceLevel2s": [671, 4553, 671, 671] },
+    { "pileNo": 6,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.8, "y": 6.4,  "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3236, 2064, 4685, 5047], "axialForceLevel2s": [3094, 3870, 5018, 6998] },
+    { "pileNo": 7,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.2, "y": 6.4,  "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3728, 3236, 3905, 3905], "axialForceLevel2s": [3870, 3236, -1339, 6245] },
+    { "pileNo": 8,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 32.0, "y": 6.4,  "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [3842, 1382, 4959, 3539], "axialForceLevel2s": [4553, 671, 4156, 3274] },
+
+    { "pileNo": 9,  "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0,  "y": 12.8, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [1382, 3842, 1382, 1382], "axialForceLevel2s": [671, 4553, 671, 671] },
+    { "pileNo": 10, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.8, "y": 12.8, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3236, 2064, 4685, 5047], "axialForceLevel2s": [3094, 3870, 5018, 6998] },
+    { "pileNo": 11, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.2, "y": 12.8, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3728, 3236, 3905, 3905], "axialForceLevel2s": [3870, 3236, -1339, 6245] },
+    { "pileNo": 12, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 32.0, "y": 12.8, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [3842, 1382, 4959, 3539], "axialForceLevel2s": [4553, 671, 4156, 3274] },
+
+    { "pileNo": 13, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0,  "y": 19.2, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [1382, 3842, 1382, 1382], "axialForceLevel2s": [671, 4553, 671, 671] },
+    { "pileNo": 14, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.8, "y": 19.2, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3236, 2064, 4685, 5047], "axialForceLevel2s": [3094, 3870, 5018, 6998] },
+    { "pileNo": 15, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.2, "y": 19.2, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3728, 3236, 3905, 3905], "axialForceLevel2s": [3870, 3236, -1339, 6245] },
+    { "pileNo": 16, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 32.0, "y": 19.2, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [3842, 1382, 4959, 3539], "axialForceLevel2s": [4553, 671, 4156, 3274] },
+
+    { "pileNo": 17, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0,  "y": 25.6, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [1382, 3842, 1382, 1382], "axialForceLevel2s": [671, 4553, 671, 671] },
+    { "pileNo": 18, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.8, "y": 25.6, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3236, 2064, 4685, 5047], "axialForceLevel2s": [3094, 3870, 5018, 6998] },
+    { "pileNo": 19, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.2, "y": 25.6, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3728, 3236, 3905, 3905], "axialForceLevel2s": [3870, 3236, -1339, 6245] },
+    { "pileNo": 20, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 32.0, "y": 25.6, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [3842, 1382, 4959, 3539], "axialForceLevel2s": [4553, 671, 4156, 3274] },
+
+    { "pileNo": 21, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 0.0,  "y": 32.0, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [1382, 3842, 1382, 1382], "axialForceLevel2s": [671, 4553, 671, 671] },
+    { "pileNo": 22, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 12.8, "y": 32.0, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3236, 2064, 4685, 5047], "axialForceLevel2s": [3094, 3870, 5018, 6998] },
+    { "pileNo": 23, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 19.2, "y": 32.0, "z": -1.4, "axialForceVL0": 3993, "axialForceLevel1s": [3728, 3236, 3905, 3905], "axialForceLevel2s": [3870, 3236, -1339, 6245] },
+    { "pileNo": 24, "pileBodyNo": 1, "groundNo": 1, "soilPileAltNo": 1, "groupPileFactor": 1.0, "pileSpacingFactor": 10, "x": 32.0, "y": 32.0, "z": -1.4, "axialForceVL0": 2995, "axialForceLevel1s": [3842, 1382, 4959, 3539], "axialForceLevel2s": [4553, 671, 4156, 3274] }
+  ],
+  "gridXItems": [
+    { "name": "X1", "coord": 0.0,  "spacing": 0.0 },
+    { "name": "X2", "coord": 12.8, "spacing": 12.8 },
+    { "name": "X3", "coord": 19.2, "spacing": 6.4 },
+    { "name": "X4", "coord": 32.0, "spacing": 12.8 }
+  ],
+  "gridYItems": [
+    { "name": "Y1", "coord": 0.0,  "spacing": 0.0 },
+    { "name": "Y2", "coord": 6.4,  "spacing": 6.4 },
+    { "name": "Y3", "coord": 12.8, "spacing": 6.4 },
+    { "name": "Y4", "coord": 19.2, "spacing": 6.4 },
+    { "name": "Y5", "coord": 25.6, "spacing": 6.4 },
+    { "name": "Y6", "coord": 32.0, "spacing": 6.4 }
+  ]
+}
