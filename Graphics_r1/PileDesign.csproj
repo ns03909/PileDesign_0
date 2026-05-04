@@ -51,6 +51,7 @@
     <None Remove="Help\images\cover.png" />
     <None Remove="Help\images\F.T.Pile構法 既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
     <None Remove="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】%28BCJ評定-FD0141-05%29.png" />
+    <None Remove="Help\images\キャプリングパイル工法.png" />
     <None Remove="Help\images\Fig_6.1.2.png" />
     <None Remove="Help\images\Fig_6.1.3.png" />
     <None Remove="Help\images\Fig_6.1.4.png" />
@@ -606,6 +607,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\images\F.T.Pile構法　既製コンクリート杭設計・施工指針【暫定版】(BCJ評定-FD0141-05).png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\images\キャプリングパイル工法.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Help\images\Fig_6.1.2.png">

@@ -1043,13 +1043,13 @@ namespace PileDesign.ViewModels
                 if (pcd > 0 && barNum > 0 && barDia > 0)
                     DrawMainBars(barNum, barDia, pcd);
 
-                // 引張定着筋 (オプション、円環配置)
+                // 引張定着筋 (オプション、円環配置)。Dc は EffectiveDc を使用 (3-D19 + D≥400 例外対応)
                 var capring = PileTop.CapringPile;
                 if (capring.HasTensionBars && capring.TensionBar != null)
                 {
                     int tNum = capring.TensionBar.BarNum;
                     double tDia = ExtractNumber(capring.TensionBar.BarSize ?? "");
-                    double tPcd = capring.TensionBar.Dc;
+                    double tPcd = capring.EffectiveDc;
                     if (tPcd > 0 && tNum > 0 && tDia > 0)
                         DrawMainBars(tNum, tDia, tPcd);
                 }

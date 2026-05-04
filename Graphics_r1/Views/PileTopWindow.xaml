@@ -586,11 +586,13 @@
                                                     </StackPanel>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="配置径Dc (mm)" Width="100" HorizontalAlignment="Right"/>
-                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.Dc, StringFormat=N0}"
-                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.EffectiveDc, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"
+                                                                 ToolTip="3-D19 + 杭径 D ≥ 400 mm の場合は 180 mm (例外ルール)"/>
                                                         <TextBlock Text="帯筋外径 (mm)" Width="100" HorizontalAlignment="Right"/>
-                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.TensionBar.HoopOutDia, StringFormat=N0}"
-                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                                                        <TextBox Width="50" Text="{Binding PileTop.CapringPile.EffectiveHoopOutDia, StringFormat=N0}"
+                                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"
+                                                                 ToolTip="3-D19 + 杭径 D ≥ 400 mm の場合は 220 mm (例外ルール)"/>
                                                     </StackPanel>
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="定着長さ (キャップ側) 定着版あり (mm)" HorizontalAlignment="Right"/>

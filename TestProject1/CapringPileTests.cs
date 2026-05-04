@@ -257,19 +257,21 @@ namespace TestProject1
         public void Nty_LessThan_Ny()
         {
             var cp = CreateBasic700(hasTensionBars: true);
+            cp.D = 300.0; // 例外条件外 (D < 400) → CSV 既定の Dc=110 が有効
             double ny = cp.GetNy();
             double nty = cp.GetNty();
             // Nty = Ny × D/(D+Dc) < Ny
             Assert.IsTrue(nty < ny, $"Nty should be < Ny. Got Nty={nty}, Ny={ny}");
-            // For D=700, Dc=110: Nty = Ny × 700/810 ≈ 0.864 Ny
-            Assert.AreEqual(0.864, nty / ny, 0.005,
-                $"Nty/Ny ratio for D=700,Dc=110 should be ~0.864");
+            // For D=300, Dc=110: Nty = Ny × 300/410 ≈ 0.732 Ny
+            Assert.AreEqual(0.732, nty / ny, 0.005,
+                $"Nty/Ny ratio for D=300,Dc=110 should be ~0.732");
         }
 
         [TestMethod]
         public void Z_FormulaConsistency()
         {
             var cp = CreateBasic700(hasTensionBars: true);
+            cp.D = 300.0; // 例外条件外 → Dc=110 の CSV 値で公式整合性を検証
             double z = cp.GetZ();
             Assert.IsTrue(z > 0, $"Z (equivalent ring section modulus) should be > 0. Got {z}");
             // Z [mm³] for ns=3, as=286.5 (D19), Dc=110:
@@ -278,7 +280,7 @@ namespace TestProject1
             double inner = 110.0 * 110.0 - 4 * a / Math.PI;
             double zExpected = Math.PI / 32.0 * (Math.Pow(110.0, 4) - inner * inner) / 110.0;
             Assert.AreEqual(zExpected, z, zExpected * 1e-6,
-                $"Z formula. expected={zExpected}, got={z}");
+                $"Z formula at D=300, Dc=110. expected={zExpected}, got={z}");
         }
 
         // ============================================================
@@ -503,6 +505,114 @@ namespace TestProject1
             double muKnm = mu * 1e-6;
             Assert.AreEqual(1750.0, muKnm, 1.0,
                 $"D=700mm, N=5000kN: Mu should be 1750 kN·m. Got {muKnm} kN·m");
+        }
+
+        // ============================================================
+        // 13. 例外ルール: 3-D19 配筋を D ≥ 400 mm 杭に適用する場合 Dc=180, 帯筋外径=220
+        // ============================================================
+        [TestMethod]
+        public void ExceptionRule_3D19_D300_UsesDefaultDc110()
+        {
+            // 杭径 D=300 (例外条件外) → CSV 既定の Dc=110 を使用
+            var cp = CreateBasic700(hasTensionBars: true);
+            cp.D = 300.0;
+            Assert.AreEqual(110.0, cp.EffectiveDc, 1e-9,
+                $"3-D19 + D=300: EffectiveDc should be 110 (default). Got {cp.EffectiveDc}");
+            Assert.AreEqual(150.0, cp.EffectiveHoopOutDia, 1e-9,
+                $"3-D19 + D=300: EffectiveHoopOutDia should be 150 (default). Got {cp.EffectiveHoopOutDia}");
+        }
+
+        [TestMethod]
+        public void ExceptionRule_3D19_D400_UsesExceptionDc180()
+        {
+            // 杭径 D=400 (例外条件境界) → 例外ルールで Dc=180
+            var cp = CreateBasic700(hasTensionBars: true);
+            cp.D = 400.0;
+            Assert.AreEqual(180.0, cp.EffectiveDc, 1e-9,
+                $"3-D19 + D=400: EffectiveDc should be 180 (exception). Got {cp.EffectiveDc}");
+            Assert.AreEqual(220.0, cp.EffectiveHoopOutDia, 1e-9,
+                $"3-D19 + D=400: EffectiveHoopOutDia should be 220 (exception). Got {cp.EffectiveHoopOutDia}");
+        }
+
+        [TestMethod]
+        public void ExceptionRule_3D19_D700_UsesExceptionDc180()
+        {
+            // 杭径 D=700 → 例外ルール継続適用で Dc=180
+            var cp = CreateBasic700(hasTensionBars: true);
+            // CreateBasic700 で D=700 既設定
+            Assert.AreEqual(700.0, cp.D);
+            Assert.AreEqual(180.0, cp.EffectiveDc, 1e-9);
+            Assert.AreEqual(220.0, cp.EffectiveHoopOutDia, 1e-9);
+        }
+
+        [TestMethod]
+        public void ExceptionRule_NotApplied_For_4D19_AtAnyDiameter()
+        {
+            // 4-D19 (BarNum=4) は例外対象外。CSV 既定 Dc=180, HoopOutDia=220 (たまたま値は同じだが、3-D19 の例外ロジックには引っかからない)
+            var cp = CreateBasic700(hasTensionBars: true);
+            cp.TensionBar = new CapringTensionBar
+            {
+                No = 2, BarNum = 4, BarSize = "D19", Dc = 180,
+                HoopOutDia = 220, AnchorLengthCapWithPlate = 500,
+                AnchorLengthCapWithoutPlate = 800, AnchorLengthPileSide = 800,
+                MinPileDia = 400,
+            };
+            cp.D = 700.0;
+            Assert.AreEqual(180.0, cp.EffectiveDc, 1e-9,
+                "4-D19: EffectiveDc should be 180 from CSV (no exception applied)");
+            Assert.AreEqual(220.0, cp.EffectiveHoopOutDia, 1e-9);
+        }
+
+        [TestMethod]
+        public void ExceptionRule_AffectsZAndKtyAndNty()
+        {
+            // 例外適用前後で Z, Kty, Nty の値が変わることを確認
+            var cp1 = CreateBasic700(hasTensionBars: true);
+            cp1.D = 300.0;  // 例外なし
+            cp1.Update();
+            double z1 = cp1.GetZ();
+            double nty1 = cp1.GetNty();
+            double kty1 = cp1.GetKty();
+
+            var cp2 = CreateBasic700(hasTensionBars: true);
+            cp2.D = 400.0;  // 例外あり
+            cp2.Update();
+            double z2 = cp2.GetZ();
+            double nty2 = cp2.GetNty();
+            double kty2 = cp2.GetKty();
+
+            // Dc が 110→180 に増えるので Z は増える (薄肉円環近似で Z ≈ Dc·a/4 ∝ Dc、180/110 ≈ 1.64 倍)
+            double expectedRatio = 180.0 / 110.0;
+            double actualRatio = z2 / z1;
+            Assert.IsTrue(actualRatio > 1.5,
+                $"Z (Dc=180) should be ~{expectedRatio:F2}× larger than Z (Dc=110). " +
+                $"z1={z1}, z2={z2}, ratio={actualRatio:F3}");
+
+            // 同様に Nty / Kty も Dc 増加で変化する (Nty は微減 / Kty は増加方向)
+            Assert.AreNotEqual(nty1, nty2, "Nty should differ when Dc differs");
+            Assert.AreNotEqual(kty1, kty2, "Kty should differ when Dc differs");
+        }
+
+        [TestMethod]
+        public void ExceptionRule_GetCombinedSpecs_ShowsEffectiveValues()
+        {
+            var cp = CreateBasic700(hasTensionBars: true);  // D=700 → 例外適用
+            var specs = cp.GetCombinedSpecs();
+            string? dcValue = null;
+            string? hoopValue = null;
+            foreach (var s in specs)
+            {
+                if (s.Item == "引張定着筋配置径") dcValue = s.Value;
+                if (s.Item == "引張定着筋帯筋外径") hoopValue = s.Value;
+            }
+            Assert.IsNotNull(dcValue);
+            Assert.IsNotNull(hoopValue);
+            Assert.IsTrue(dcValue!.StartsWith("180"),
+                $"Dc spec should show 180 with note. Got: {dcValue}");
+            Assert.IsTrue(hoopValue!.StartsWith("220"),
+                $"HoopOutDia spec should show 220 with note. Got: {hoopValue}");
+            Assert.IsTrue(dcValue.Contains("例外"),
+                $"Dc spec should include exception note. Got: {dcValue}");
         }
     }
 }

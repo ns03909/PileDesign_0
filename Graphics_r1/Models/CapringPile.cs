@@ -37,7 +37,12 @@ namespace PileDesign.Models
             set
             {
                 if (SetProperty(ref _d, value))
+                {
                     OnPropertyChanged(nameof(TensionBarWarning));
+                    // 3-D19 + D ≥ 400 の例外ルールで Dc / HoopOutDia が変わるため通知
+                    OnPropertyChanged(nameof(EffectiveDc));
+                    OnPropertyChanged(nameof(EffectiveHoopOutDia));
+                }
             }
         }
 
@@ -138,7 +143,49 @@ namespace PileDesign.Models
             set
             {
                 if (SetProperty(ref _tensionBar, value))
+                {
                     OnPropertyChanged(nameof(TensionBarWarning));
+                    OnPropertyChanged(nameof(EffectiveDc));
+                    OnPropertyChanged(nameof(EffectiveHoopOutDia));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 引張定着筋の有効配置径 Dc (mm)。
+        /// 例外ルール: 配筋 3-D19 を杭径 D ≥ 400 mm に適用する場合、配置径は 180 mm
+        /// (CSV 表の既定値 110 mm を上書き)。それ以外は CSV 表の値をそのまま返す。
+        /// </summary>
+        public double EffectiveDc
+        {
+            get
+            {
+                if (TensionBar == null) return 0;
+                if (TensionBar.BarNum == 3
+                    && string.Equals(TensionBar.BarSize, "D19", StringComparison.OrdinalIgnoreCase)
+                    && D >= 400.0)
+                {
+                    return 180.0;
+                }
+                return TensionBar.Dc;
+            }
+        }
+
+        /// <summary>
+        /// 引張定着筋の有効帯筋外径 (mm)。3-D19 + D ≥ 400 で 220 mm、それ以外は CSV 表の値。
+        /// </summary>
+        public double EffectiveHoopOutDia
+        {
+            get
+            {
+                if (TensionBar == null) return 0;
+                if (TensionBar.BarNum == 3
+                    && string.Equals(TensionBar.BarSize, "D19", StringComparison.OrdinalIgnoreCase)
+                    && D >= 400.0)
+                {
+                    return 220.0;
+                }
+                return TensionBar.HoopOutDia;
             }
         }
 
@@ -262,8 +309,13 @@ namespace PileDesign.Models
             {
                 combined.Add(new PileLibrary.Spec("引張定着筋", "", TensionBar.Name, ""));
                 combined.Add(new PileLibrary.Spec("引張定着筋鋼種", "", TensionBarGrade, ""));
-                combined.Add(new PileLibrary.Spec("引張定着筋配置径", "Dc", $"{TensionBar.Dc:N0}", "mm"));
-                combined.Add(new PileLibrary.Spec("引張定着筋帯筋外径", "", $"{TensionBar.HoopOutDia:N0}", "mm"));
+                // EffectiveDc / EffectiveHoopOutDia は 3-D19 + D ≥ 400 の例外ルールを反映
+                bool exceptionApplied = TensionBar.BarNum == 3
+                    && string.Equals(TensionBar.BarSize, "D19", StringComparison.OrdinalIgnoreCase)
+                    && D >= 400.0;
+                string dcNote = exceptionApplied ? " (3-D19, D≥400 例外)" : "";
+                combined.Add(new PileLibrary.Spec("引張定着筋配置径", "Dc", $"{EffectiveDc:N0}{dcNote}", "mm"));
+                combined.Add(new PileLibrary.Spec("引張定着筋帯筋外径", "", $"{EffectiveHoopOutDia:N0}{dcNote}", "mm"));
                 combined.Add(new PileLibrary.Spec("定着長さ (パイルキャップ側、定着版あり)", "", $"{TensionBar.AnchorLengthCapWithPlate:N0}", "mm"));
                 combined.Add(new PileLibrary.Spec("定着長さ (パイルキャップ側、定着版なし)", "", $"{TensionBar.AnchorLengthCapWithoutPlate:N0}", "mm"));
                 combined.Add(new PileLibrary.Spec("定着長さ (杭体側)", "", $"{TensionBar.AnchorLengthPileSide:N0}", "mm"));
@@ -379,20 +431,20 @@ namespace PileDesign.Models
         /// <summary>引張定着筋総降伏軸力 Ny = ns·as·σy (N)</summary>
         public double GetNy() => GetTensionBarArea() * SigmaY;
 
-        /// <summary>引張軸力時遷移境界軸力 Nty = Ny · D / (D + Dc) (N)</summary>
+        /// <summary>引張軸力時遷移境界軸力 Nty = Ny · D / (D + Dc) (N)。Dc は EffectiveDc を使用 (3-D19 例外ルール対応)</summary>
         public double GetNty()
         {
             if (!HasTensionBars || TensionBar == null) return 0;
-            double dc = TensionBar.Dc;
+            double dc = EffectiveDc;
             if (D + dc <= 0) return 0;
             return GetNy() * D / (D + dc);
         }
 
-        /// <summary>等価円環断面係数 Z (mm³)</summary>
+        /// <summary>等価円環断面係数 Z (mm³)。Dc は EffectiveDc を使用</summary>
         public double GetZ()
         {
             if (!HasTensionBars || TensionBar == null) return 0;
-            double dc = TensionBar.Dc;
+            double dc = EffectiveDc;
             if (dc <= 0) return 0;
             double a = GetTensionBarArea(); // ns·as
             double inner = dc * dc - 4 * a / Math.PI;
@@ -400,11 +452,11 @@ namespace PileDesign.Models
             return Math.PI / 32.0 * (Math.Pow(dc, 4) - inner * inner) / dc;
         }
 
-        /// <summary>引張軸力時の限界初期回転剛性 Kty = Dc·Z·Es / (2D) (N·mm/rad)</summary>
+        /// <summary>引張軸力時の限界初期回転剛性 Kty = Dc·Z·Es / (2D) (N·mm/rad)。Dc は EffectiveDc を使用</summary>
         public double GetKty()
         {
             if (!HasTensionBars || TensionBar == null || D <= 0) return 0;
-            return TensionBar.Dc * GetZ() * Es / (2.0 * D);
+            return EffectiveDc * GetZ() * Es / (2.0 * D);
         }
 
         /// <summary>引張定着筋による最大抵抗モーメント寄与 Mr = ns·as·σy · (7/8) · D/2 (N·mm)</summary>
