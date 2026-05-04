@@ -451,16 +451,46 @@ namespace PileDesign.Models.InputData
             {
                 var section = CreateSectionCalculator();
 
-                // 断面が生成できない場合はフォールバック
-                if (section == null)
-                {
-                    return CreateLinearFallback();
-                }
-
                 // 単位変換: 軸力 kN → N
                 double axialN_inN = axialN * 1000.0;
 
-                var (phisRaw, msRaw) = section.GetMPhiRelationship(axialN_inN);
+                List<double> phisRaw = null;
+                List<double> msRaw = null;
+
+                // 断面が生成できない場合は、鋼管杭+鋼管部のケースを SteelPipeSection で代替する
+                // (CreateSectionCalculator が ("鋼管杭", _) で null を返すため)
+                if (section == null)
+                {
+                    if (PileBodyType == "鋼管杭"
+                        && (PileSectionType == "鋼管部" || PileSectionType == "鋼管杭"))
+                    {
+                        var sps = TryCreateSteelPipeSection();
+                        if (sps != null)
+                        {
+                            try
+                            {
+                                var (psphi, psm) = sps.GetMPhiRelationshipMiddle(axialN_inN);
+                                if (psphi != null && psm != null && psphi.Count >= 2 && psm.Count == psphi.Count)
+                                {
+                                    phisRaw = psphi;
+                                    msRaw = psm;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine(
+                                    $"[GetMPhiRelationship] SteelPipeSection.GetMPhiRelationshipMiddle 例外: {ex.Message}");
+                            }
+                        }
+                    }
+
+                    if (phisRaw == null)
+                        return CreateLinearFallback();
+                }
+                else
+                {
+                    (phisRaw, msRaw) = section.GetMPhiRelationship(axialN_inN);
+                }
 
                 // 結果が不正な場合もフォールバック
                 if (phisRaw == null || msRaw == null || phisRaw.Count < 2 || msRaw.Count != phisRaw.Count)

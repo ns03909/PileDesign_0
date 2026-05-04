@@ -154,7 +154,7 @@ namespace PileDesign.Models
                 if (D <= 0) return string.Empty;
                 if (TensionBar.MinPileDia > D)
                 {
-                    return $"⚠ 適用最小杭径 {TensionBar.MinPileDia:N0} mm > 杭径 {D:N0} mm — 配筋を見直してください";
+                    return $"⚠ 引張定着筋の適用最小杭径 {TensionBar.MinPileDia:N0} mm > 杭径 {D:N0} mm — 配筋を見直してください";
                 }
                 return string.Empty;
             }
@@ -245,6 +245,31 @@ namespace PileDesign.Models
             {
                 System.Diagnostics.Debug.WriteLine($"[CapringPile] PCRing CSV 読込失敗: {ex.GetType().Name}: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// PCリング + (引張定着筋ありの場合) 引張定着筋諸元を合成した諸元リストを返す。
+        /// PileTop.SelectedPileTopSpecification および計算書の杭頭諸元表で使用する。
+        /// </summary>
+        public ObservableCollection<PileLibrary.Spec> GetCombinedSpecs()
+        {
+            var combined = new ObservableCollection<PileLibrary.Spec>();
+            if (PCRing != null)
+            {
+                foreach (var s in PCRing.GetSpecs()) combined.Add(s);
+            }
+            if (HasTensionBars && TensionBar != null && TensionBar.BarNum > 0)
+            {
+                combined.Add(new PileLibrary.Spec("引張定着筋", "", TensionBar.Name, ""));
+                combined.Add(new PileLibrary.Spec("引張定着筋鋼種", "", TensionBarGrade, ""));
+                combined.Add(new PileLibrary.Spec("引張定着筋配置径", "Dc", $"{TensionBar.Dc:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("引張定着筋帯筋外径", "", $"{TensionBar.HoopOutDia:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("定着長さ (パイルキャップ側、定着版あり)", "", $"{TensionBar.AnchorLengthCapWithPlate:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("定着長さ (パイルキャップ側、定着版なし)", "", $"{TensionBar.AnchorLengthCapWithoutPlate:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("定着長さ (杭体側)", "", $"{TensionBar.AnchorLengthPileSide:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("引張定着筋適用最小杭径", "", $"{TensionBar.MinPileDia:N0}", "mm"));
+            }
+            return combined;
         }
 
         public void LoadTensionBarOptions()
@@ -455,9 +480,16 @@ namespace PileDesign.Models
 
         /// <summary>
         /// 軸力 N に対する完全バイリニア M-θ 曲線を返す (3 点: 原点, (θy, Mu), (θu, Mu))。
+        /// FEM 解析時に Update() が未呼び出しの場合 (deserialize 直後等) は自動的に Update() を呼んで派生量を初期化する。
         /// </summary>
         public (ObservableCollection<double>, ObservableCollection<double>) GetMThetaRelationship(double N)
         {
+            // 派生量未初期化の場合は安全に Update() を呼ぶ (idempotent)
+            if (Ke <= 0 && PCRing != null && PCRing.D > 0)
+            {
+                Update();
+            }
+
             ObservableCollection<double> thetas = [];
             ObservableCollection<double> Ms = [];
 

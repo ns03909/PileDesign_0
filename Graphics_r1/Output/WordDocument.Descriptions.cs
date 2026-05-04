@@ -384,5 +384,105 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, ["②圧縮縁コンクリートが短期許容圧縮応力度(",
                 mathShortTermAllowableStressEq(), "(", Tex(@"\nu"), ": 絞り係数))に達するとき"]);
         }
+
+        // キャプリングパイル工法説明
+        private void AddDescriptionCapringPile(Body body)
+        {
+            AddHeader1(body, "キャプリングパイル工法", 1);
+            AddText(body,
+                "既製コンクリート杭 (PHC / PRC / SC) および鋼管杭の杭頭半剛接合工法。" +
+                "PC リングおよびパイルキャップにより杭頭部の回転を拘束する。",
+                "left");
+
+            AddHeader1(body, "適用範囲", 2);
+            AddText(body, "・適用杭種: PHC 杭、PRC 杭、SC 杭、鋼管杭", "left");
+            AddInlineMathParagraph(body, ["・杭径: ", Tex(@"D = 300\text{〜}1200\,\mathrm{mm}")]);
+            AddInlineMathParagraph(body, ["・杭体コンクリート設計基準強度: ", Tex(@"\sigma_{ck} \ge 80\,\mathrm{N/mm^{2}}")]);
+            AddInlineMathParagraph(body, ["・限界回転角: ", Tex(@"\theta_{u} = 0.03\,\mathrm{rad}"),
+                " (実験結果及び設計許容範囲を考慮)"]);
+
+            AddHeader1(body, "力学モデル (M-θ 完全バイリニア)", 2);
+            AddInlineMathParagraph(body,
+                ["杭頭接合部の回転ばねは、杭頭曲げモーメント ", Tex(@"M_{0}"),
+                " と杭頭回転角 ", Tex(@"\theta_{0}"), " の関係で表す。",
+                "初期回転剛性 ", Tex(@"K_{i}"), "、最大抵抗モーメント ", Tex(@"M_{u}"),
+                "、限界回転角 ", Tex(@"\theta_{u}"), " で定義される完全バイリニアでモデル化する。"]);
+            AddEq(body, @"M_{0}(\theta_{0}) = \begin{cases} K_{i}\cdot\theta_{0} & (0 \le \theta_{0} \le \theta_{y}) \\ M_{u} & (\theta_{y} < \theta_{0} \le \theta_{u}) \end{cases}, \quad \theta_{y} = M_{u}/K_{i}");
+            AddInlineMathParagraph(body, ["ここに、"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{i}"), ": 初期回転剛性[kN·m/rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{u}"), ": 最大抵抗モーメント[kN·m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{y}"), ": 降伏時回転角 (=", Tex(@"M_{u}/K_{i}"), ") [rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{u}"), ": 限界回転角 (=0.03rad)"]);
+            AddInlineMathParagraph(body,
+                [Tex(@"K_{i}"), " および ", Tex(@"M_{u}"),
+                " は、引張定着筋の有無、軸力の方向 (圧縮 / 引張) に応じて以下の 3 ケースに場合分けされる。",
+                "なお、軸力 ", Tex(@"N"), " は圧縮を正とする。"]);
+
+            AddHeader1(body, "ケース① 引張定着筋なし × 軸力圧縮", 2);
+            AddText(body, "引張定着筋を配置しない場合は、軸力 N による圧着のみで回転を抵抗する。", "left");
+            AddEq(body, @"K_{i} = K_{e} = \dfrac{1}{\dfrac{1}{K_{p}} + \dfrac{1}{K_{c}} + \dfrac{1}{K_{b}}}, \quad M_{u} = \dfrac{D}{2}\cdot N");
+
+            AddHeader1(body, "ケース② 引張定着筋あり × 軸力圧縮", 2);
+            AddInlineMathParagraph(body, ["軸力 N による圧着に加え、引張定着筋による曲げ抵抗 ", Tex(@"M_{r}"), " が加算される。"]);
+            AddEq(body, @"K_{i} = K_{e} = \dfrac{1}{\dfrac{1}{K_{p}} + \dfrac{1}{K_{c}} + \dfrac{1}{K_{b}}}, \quad M_{u} = \dfrac{D}{2}\cdot N + M_{r}");
+
+            AddHeader1(body, "ケース③ 引張定着筋あり × 軸力引張", 2);
+            AddInlineMathParagraph(body,
+                ["軸力 ", Tex(@"N"), " が引張側 (", Tex(@"N < 0"),
+                ") の場合、引張軸力レベルに応じて初期回転剛性 ", Tex(@"K_{i}"), " が低減される。",
+                "引張軸力が定着筋降伏軸力相当 ", Tex(@"N_{ty}"), " 以下の領域では、",
+                Tex(@"K_{e}"), " から ", Tex(@"K_{ty}"), " への遷移を楕円相互作用式で評価する。"]);
+            AddEq(body, @"\begin{cases} \left(\dfrac{|N| - N_{ty}}{N_{ty}}\right)^{2} + \left(\dfrac{K_{e} - K_{i}}{K_{e} - K_{ty}}\right)^{2} = 1 & (0 \le |N| \le N_{ty}) \\ K_{i} = K_{ty} & (|N| > N_{ty}) \end{cases}");
+            AddInlineMathParagraph(body,
+                ["最大抵抗モーメントは、定着筋の引張降伏軸力 ", Tex(@"N_{y}"), " に対する余裕に応じて低減される。"]);
+            AddEq(body, @"M_{u} = M_{r}\left(1 - \dfrac{|N|}{N_{y}}\right)");
+
+            AddHeader1(body, "直列ばね Kp / Kc / Kb の定義", 2);
+            AddInlineMathParagraph(body,
+                ["初期回転剛性 ", Tex(@"K_{e}"),
+                " は、杭体部分・PC リング内コンクリート部分・パイルキャップ仮想円柱の 3 ばねの直列合成で評価する。"]);
+            AddEq(body, @"K_{p} = \dfrac{E_{p}\cdot I_{p}}{H_{p}}, \quad K_{c} = \dfrac{E_{c}\cdot I_{c}}{H_{c}}, \quad K_{b} = \dfrac{E_{b}\cdot I_{b}}{H_{b}}");
+            AddInlineMathParagraph(body, ["ここに、"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{p}"), ": 杭体部分の回転剛性[kN·m/rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{p}"), ": 杭体のヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{p}"), ": 杭体の断面二次モーメント[m<^4>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体と PC リングとの重なり長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{c}"), ": PC リング内コンクリート部分の回転剛性[kN·m/rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{c}"), ": PC リング内コンクリートのヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{c}"), ": PC リング内側コンクリートの断面二次モーメント[m<^4>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{c}"), ": 杭頭接合面から PC リング上端までの長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{b}"), ": パイルキャップ部分仮想円柱の回転剛性[kN·m/rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{b}"), ": パイルキャップコンクリートのヤング係数[kN/m<^2>]、", Tex(@"E_{b} = E_{c}"), " とする"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{b}"), ": 仮想円柱の断面二次モーメント[m<^4>]、", Tex(@"I_{b} = I_{c}"), " とする"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{b}"), ": 仮想円柱の高さ[m]、", Tex(@"H_{b} = D/2"), " とする"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D"), ": 杭径[m]"]);
+
+            AddHeader1(body, "引張定着筋関連量", 2);
+            AddInlineMathParagraph(body,
+                ["引張定着筋を等価な円環配置と仮定し、配置径 ", Tex(@"D_{c}"),
+                "、本数 ", Tex(@"n_{s}"), "、1 本あたり断面積 ", Tex(@"a_{s}"),
+                " により以下の量を算定する。鋼種は SD345 または SD390 とする。"]);
+            AddEq(body, @"Z = \dfrac{\pi}{32}\cdot\dfrac{D_{c}^{4} - \left(D_{c}^{2} - \dfrac{4 n_{s} a_{s}}{\pi}\right)^{2}}{D_{c}}");
+            AddEq(body, @"N_{y} = n_{s}\cdot a_{s}\cdot\sigma_{y}, \quad N_{ty} = N_{y}\cdot\dfrac{D}{D + D_{c}}");
+            AddEq(body, @"K_{ty} = \dfrac{D_{c}\cdot Z\cdot E_{s}}{2D}");
+            AddEq(body, @"\phi_{ty} = \dfrac{2\sigma_{y}}{E_{s}(D + D_{c})}, \quad \theta_{ty} = \phi_{ty}\cdot D, \quad M_{ty} = \dfrac{\sigma_{y}\cdot D_{c}\cdot Z}{D + D_{c}}");
+            AddEq(body, @"M_{r} = n_{s}\cdot a_{s}\cdot\sigma_{y}\cdot\dfrac{7}{8}\cdot\dfrac{D}{2}");
+
+            AddInlineMathParagraph(body, ["ここに、"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"Z"), ": 引張定着筋を等価な円環配置と仮定した場合の断面係数[m<^3>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"D_{c}"), ": 引張定着筋の配置径[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"n_{s}"), ": 引張定着筋の本数"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"a_{s}"), ": 引張定着筋 1 本あたりの断面積[m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{y}"), ": 引張定着筋の規格降伏強度[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{s}"), ": 引張定着筋のヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"N_{y}"), ": 引張定着筋の総降伏軸力[kN]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"N_{ty}"), ": 引張軸力時の遷移境界軸力[kN]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{ty}"), ": 引張軸力 ", Tex(@"|N|\ge N_{ty}"), " における初期回転剛性[kN·m/rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{r}"), ": 引張定着筋による最大抵抗モーメント寄与[kN·m]、応力中心距離係数 ", Tex(@"\jmath = 7/8"), "、内部偶力アーム ", Tex(@"D/2")]);
+
+            AddText(body,
+                "出典: 一般社団法人キャプリングパイル工法協会 (CAPIA) 「キャプリングパイル工法 設計マニュアル」 (2023年4月版)",
+                "left");
+        }
     }
 }

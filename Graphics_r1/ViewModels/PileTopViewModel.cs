@@ -121,8 +121,12 @@ namespace PileDesign.ViewModels
         {
             get
             {
-                if (PileSection == null || PileSection.PileDiameter <= 0) return string.Empty;
-                double actualDia = PileSection.PileDiameter;
+                if (PileSection == null) return string.Empty;
+                // 鋼管杭は腐食代考慮前の鋼管外径 (PipeDia) と比較する。
+                // PileSection.PileDiameter は腐食代考慮後の有効径 (断面計算用) のため、PCリング選定の整合性比較には不適切。
+                bool isSteelPipe = PileBodyType?.Contains("鋼管杭") ?? false;
+                double actualDia = (isSteelPipe && PileSection.PipeDia > 0) ? PileSection.PipeDia : PileSection.PileDiameter;
+                if (actualDia <= 0) return string.Empty;
                 const double tol = 1.0;
 
                 if (PileTopType == "キャプリングパイル工法" && PileTop?.CapringPile?.PCRing != null)
@@ -629,7 +633,10 @@ namespace PileDesign.ViewModels
             ObservableCollection<double> ultimateNs,
             ObservableCollection<double> ultimateMs)
         {
+            // 計算書出力経路では PileTopWindowInstance が null
+            if (PileTopWindowInstance == null) return;
             var wpf = PileTopWindowInstance.wpfPlotMN;
+            if (wpf == null) return;
             wpf.Plot.Clear();
 
             string title = "軸力と曲げモーメントの耐力曲線";
@@ -700,7 +707,11 @@ namespace PileDesign.ViewModels
             ObservableCollection<double> axialForces,
             ObservableCollection<(ObservableCollection<double>, ObservableCollection<double>)> thetasMs)
         {
+            // 計算書出力経路 (RenderPileTopViewViaDrawer) では PileTopWindowInstance が null。
+            // この場合チャート描画ターゲットが無いので何もせず return する。
+            if (PileTopWindowInstance == null) return;
             var wpf = PileTopWindowInstance.wpfPlotThetaM;
+            if (wpf == null) return;
             wpf.Plot.Clear();
 
             string title = "回転角と曲げモーメント関係";

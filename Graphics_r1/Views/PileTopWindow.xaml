@@ -108,12 +108,14 @@
                                         </StackPanel>
                                     </GroupBox>
 
-                                    <!-- 最上部杭区間 サマリ表示: 半剛接合工法 (キャプテン / FT-Pile / キャプリング) で表示 -->
+                                    <!-- 最上部杭区間 サマリ表示: 半剛接合工法 (キャプテン / FT-Pile / キャプリング) で表示
+                                         鋼管杭の場合は既存「鋼管 (最上部杭区間)」と重複するため非表示 (鋼管杭の杭径は腐食代考慮前のみなし径=ConcreteOutDia となり混乱を招く) -->
                                     <GroupBox Header="最上部杭区間">
                                         <GroupBox.Style>
                                             <Style TargetType="GroupBox">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
                                                 <Style.Triggers>
+                                                    <!-- 半剛接合 3 工法で表示候補にする -->
                                                     <DataTrigger Binding="{Binding PileTopType}" Value="キャプテンパイル工法">
                                                         <Setter Property="Visibility" Value="Visible"/>
                                                     </DataTrigger>
@@ -122,6 +124,10 @@
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
                                                         <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                    <!-- 鋼管杭は既存「鋼管 (最上部杭区間)」 で十分 → 非表示に上書き -->
+                                                    <DataTrigger Binding="{Binding PileBodyType}" Value="鋼管杭">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -144,21 +150,6 @@
                                                          Visibility="{Binding PileBodyType,
                                                                 Converter={StaticResource VisibilityConverter},
                                                                 ConverterParameter='既製コンクリート杭'}"/>
-                                            </StackPanel>
-
-                                            <!-- 鋼管杭 / SC杭 / 場所打ち鋼管コンクリート杭: 鋼管外径 × 鋼管厚 -->
-                                            <StackPanel Orientation="Horizontal"
-                                                        Visibility="{Binding PileBodyType,
-                                                            Converter={StaticResource VisibilityConverter},
-                                                            ConverterParameter='鋼管杭,場所打ち鋼管コンクリート杭'}">
-                                                <TextBlock Text="鋼管外径 (mm) × 鋼管厚 (mm)：" HorizontalAlignment="Right" Width="180"/>
-                                                <TextBox Text="{Binding DisplayTopSectionPipeDia, StringFormat=N0}"
-                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                         Width="50" HorizontalContentAlignment="Right"/>
-                                                <TextBlock Text=" × " VerticalAlignment="Center"/>
-                                                <TextBox Text="{Binding DisplayTopSectionPipeTs, StringFormat=N0}"
-                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"
-                                                         Width="50" HorizontalContentAlignment="Right"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </GroupBox>

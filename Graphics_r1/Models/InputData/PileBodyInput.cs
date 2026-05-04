@@ -551,6 +551,52 @@ namespace PileDesign.Models.InputData
             // 2.5) キャプリングパイル工法 → PileTop.CapringPile の M-θ を採用
             if (pileTopType.Contains("キャプリングパイル工法"))
             {
+                // PileTopWindow を開かずに F9 で解析開始した場合 CapringPile が未生成のため自動初期化
+                if (PileTop != null && PileTop.CapringPile == null)
+                {
+                    var newCp = new CapringPile(PileTop.PileCapEc)
+                    {
+                        PileBodyType = pileBodyType,
+                        PileCapFc = PileTop.PileCapFc,
+                        PileCapEc = PileTop.PileCapEc,
+                    };
+                    newCp.LoadPCRingOptions();
+                    newCp.LoadTensionBarOptions();
+                    // 最上部杭区間から杭径を取得し PCリングを自動選定
+                    var topSec = PileBodySegments?.FirstOrDefault()?.PileSection;
+                    if (topSec != null)
+                    {
+                        bool isSp = (pileBodyType ?? "").Contains("鋼管杭");
+                        double dia = (isSp && topSec.PipeDia > 0) ? topSec.PipeDia : topSec.PileDiameter;
+                        if (dia > 0)
+                        {
+                            int targetSize = (int)Math.Ceiling(dia / 50.0) * 50;
+                            if (targetSize < 300) targetSize = 300;
+                            if (targetSize > 1200) targetSize = 1200;
+                            var ring = newCp.PCRings.FirstOrDefault(r => r.Name == $"{targetSize}N")
+                                    ?? newCp.PCRings.FirstOrDefault(r => (r.Name ?? "").EndsWith("N") && r.D >= dia)
+                                    ?? newCp.PCRings.FirstOrDefault();
+                            if (ring != null)
+                            {
+                                newCp.PCRing = ring;
+                                newCp.D = ring.D;
+                                newCp.SelectedPCRingName = ring.Name ?? "";
+                            }
+                            if (isSp)
+                            {
+                                newCp.IsConcreteFilledSteelPipe = true;
+                                newCp.SteelPipeWallThickness = topSec.PipeTs;
+                            }
+                        }
+                    }
+                    newCp.Update();
+                    PileTop.CapringPile = newCp;
+                    if (newCp.PCRing != null)
+                        PileTop.SelectedPileTopSpecification = newCp.GetCombinedSpecs();
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[GetMThetaRelationship] CapringPile 自動初期化: D={newCp.D:F0}, Ke={newCp.Ke:E3}, IsCFSP={newCp.IsConcreteFilledSteelPipe}");
+                }
+
                 var caprObj = PileTop?.CapringPile;
                 if (caprObj is CapringPile cpr)
                 {

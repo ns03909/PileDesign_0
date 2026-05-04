@@ -257,12 +257,12 @@ namespace PileDesign.Views
 
                     if (selectedPCRing != null)
                     {
-                        viewModel.PileTop.SelectedPileTopSpecification = selectedPCRing.GetSpecs();
                         viewModel.PileTop.CaptainPile.D = selectedPCRing.D;
                     }
 
                     viewModel.PileTop.CaptainPile.UpdateTDorTB();
                     viewModel.PileTop.CaptainPile.Update();
+                    viewModel.PileTop.SelectedPileTopSpecification = viewModel.PileTop.CaptainPile.GetCombinedSpecs();
                     viewModel.RedrawShapes();
                     viewModel.ChartUpdate();
                     viewModel.RaiseRingDiameterWarningChanged();
@@ -302,7 +302,7 @@ namespace PileDesign.Views
 
                     capringPile.Update();
                     if (capringPile.PCRing != null)
-                        viewModel.PileTop.SelectedPileTopSpecification = capringPile.PCRing.GetSpecs();
+                        viewModel.PileTop.SelectedPileTopSpecification = capringPile.GetCombinedSpecs();
                     viewModel.RedrawShapes();
                     viewModel.ChartUpdate();
                     viewModel.RaiseRingDiameterWarningChanged();
@@ -369,7 +369,7 @@ namespace PileDesign.Views
 
                 if (selectedFTCap != null)
                 {
-                    viewModel.PileTop.SelectedPileTopSpecification = selectedFTCap.GetSpecs();
+                    viewModel.PileTop.SelectedPileTopSpecification = viewModel.PileTop.FTPile.GetCombinedSpecs();
 
                     // 杭の寸法を設定（外径と内径）
                     if (viewModel.PileSection != null)
@@ -572,8 +572,8 @@ namespace PileDesign.Views
                 // 引張定着筋のtD/tB最大値を更新
                 captainPile.UpdateTDorTB();
 
-                // 諸元表示を更新
-                viewModel.PileTop.SelectedPileTopSpecification = targetPCRing.GetSpecs();
+                // 諸元表示を更新 (PCリング + 引張定着筋の合成)
+                viewModel.PileTop.SelectedPileTopSpecification = captainPile.GetCombinedSpecs();
             }
         }
 
@@ -589,7 +589,10 @@ namespace PileDesign.Views
             var capringPile = viewModel.PileTop?.CapringPile;
             if (capringPile?.PCRings == null || capringPile.PCRings.Count == 0) return;
 
-            double pileDia = pileSection.PileDiameter;
+            // 鋼管杭は腐食代考慮前の鋼管外径 (PipeDia) を、それ以外は PileDiameter を使う
+            string pileBodyType = viewModel.PileBodyType ?? "";
+            bool isSteelPipe = pileBodyType.Contains("鋼管杭");
+            double pileDia = (isSteelPipe && pileSection.PipeDia > 0) ? pileSection.PipeDia : pileSection.PileDiameter;
             if (pileDia <= 0) return;
 
             // CapringPile の PCリング標準径: 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200
@@ -622,8 +625,7 @@ namespace PileDesign.Views
             capringPile.D = targetRing.D;
 
             // 鋼管杭+キャプリング: 杭頭はコンクリート充填鋼管部 → 合成 EI モード ON
-            string pileBodyType = viewModel.PileBodyType ?? "";
-            if (pileBodyType.Contains("鋼管杭"))
+            if (isSteelPipe)
             {
                 capringPile.IsConcreteFilledSteelPipe = true;
                 // 管厚は最上部杭区間の鋼管厚から取得 (PileSection.SteelPipeThickness が無ければ ConcreteThickness を試す)
@@ -641,7 +643,7 @@ namespace PileDesign.Views
             }
 
             capringPile.Update();
-            viewModel.PileTop.SelectedPileTopSpecification = targetRing.GetSpecs();
+            viewModel.PileTop.SelectedPileTopSpecification = capringPile.GetCombinedSpecs();
         }
 
         /// <summary>
@@ -700,8 +702,8 @@ namespace PileDesign.Views
                 // FTPileを更新
                 ftPile.Update();
 
-                // 諸元表示を更新
-                viewModel.PileTop.SelectedPileTopSpecification = targetFTCap.GetSpecs();
+                // 諸元表示を更新 (FTキャップ + 引張鉄筋の合成)
+                viewModel.PileTop.SelectedPileTopSpecification = ftPile.GetCombinedSpecs();
             }
         }
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)

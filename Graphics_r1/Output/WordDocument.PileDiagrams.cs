@@ -232,9 +232,10 @@ namespace PileDesign.Output
                 var pileBody = inputModel.PileBodies[pbIdx];
                 if (pileBody?.PileTop == null) continue;
 
-                // 杭頭上面図はキャプテンパイル工法 / FT-Pile 構法 で意味を持つ
+                // 杭頭上面図はキャプテンパイル工法 / FT-Pile 構法 / キャプリングパイル工法 で意味を持つ
                 bool isTargetType = pileBody.PileTopType == "キャプテンパイル工法"
-                                 || pileBody.PileTopType == "FT-Pile構法";
+                                 || pileBody.PileTopType == "FT-Pile構法"
+                                 || pileBody.PileTopType == "キャプリングパイル工法";
                 if (!isTargetType) continue;
 
                 var firstSection = pileBody.PileBodySegments?.FirstOrDefault()?.PileSection;
@@ -321,14 +322,33 @@ namespace PileDesign.Output
             {
                 var pileBody = inputModel.PileBodies[i];
                 var pileTop = pileBody?.PileTop;
-                if (pileTop?.SelectedPileTopSpecification == null
-                    || pileTop.SelectedPileTopSpecification.Count == 0) continue;
+                if (pileTop == null) continue;
+
+                // SelectedPileTopSpecification が空 (PileTopWindow を開かずに F9→計算書出力した等) の場合、
+                // 工法別ライブラリから動的に諸元を生成する。
+                var specs = pileTop.SelectedPileTopSpecification;
+                if (specs == null || specs.Count == 0)
+                {
+                    if (pileBody.PileTopType == "キャプリングパイル工法" && pileTop.CapringPile?.PCRing != null)
+                    {
+                        specs = pileTop.CapringPile.GetCombinedSpecs();
+                    }
+                    else if (pileBody.PileTopType == "キャプテンパイル工法" && pileTop.CaptainPile?.PCRing != null)
+                    {
+                        specs = pileTop.CaptainPile.GetCombinedSpecs();
+                    }
+                    else if (pileBody.PileTopType == "FT-Pile構法" && pileTop.FTPile?.FTCap != null)
+                    {
+                        specs = pileTop.FTPile.GetCombinedSpecs();
+                    }
+                }
+                if (specs == null || specs.Count == 0) continue;
 
                 try
                 {
-                    string caption = $"杭頭諸元 — 杭体 {i + 1}";
+                    string caption = $"杭頭諸元 — 杭体 {i + 1} ({pileBody.PileTopType ?? ""})";
                     AddAutoFigureCaption(body, caption, "表");
-                    AddSpecsTable(body, pileTop.SelectedPileTopSpecification);
+                    AddSpecsTable(body, specs);
                 }
                 catch (Exception ex)
                 {
@@ -338,9 +358,10 @@ namespace PileDesign.Output
         }
 
         // 4 列 (項目 / 記号 / 値 / 単位) の Spec テーブル
+        // 項目列を広く取り、記号・単位列を狭くして長い項目名 (引張定着筋関連) でも 1 行に収まるよう配分
         private static void AddSpecsTable(Body body, IEnumerable<Spec> specs)
         {
-            int[] widths = { 60, 25, 25, 20 }; // mm
+            int[] widths = { 75, 18, 25, 12 }; // mm
             var table = CreateTableWithBordersAndWidths(widths);
 
             // ヘッダ

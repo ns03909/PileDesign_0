@@ -87,7 +87,14 @@ namespace PileDesign.Output
         // FTPile有無判定ヘルパ
         private bool HasCaptainPile()
             => inputModel?.PileBodies != null
-               && inputModel.PileBodies.Any(pb => pb?.PileTop?.CaptainPile != null);
+               && inputModel.PileBodies.Any(pb => pb?.PileTop?.CaptainPile != null
+                   && (pb.PileTopType?.Contains("キャプテンパイル工法") ?? false));
+
+        // キャプリングパイル工法 有無判定ヘルパ
+        private bool HasCapringPile()
+            => inputModel?.PileBodies != null
+               && inputModel.PileBodies.Any(pb => pb?.PileTop?.CapringPile != null
+                   && (pb.PileTopType?.Contains("キャプリングパイル工法") ?? false));
 
 
         readonly double symbolDescTabPosition = 15; // mm
@@ -549,6 +556,16 @@ namespace PileDesign.Output
                     AddLineBreak(body);
                 }
             }
+
+            // キャプリングパイル工法
+            if (HasCapringPile())
+            {
+                if (mainWindowViewModel.CalculationReportLevel >= 2)
+                {
+                    AddDescriptionCapringPile(body);
+                    AddLineBreak(body);
+                }
+            }
         }
 
         // 荷重組合せ + 図・グラフ類
@@ -612,8 +629,9 @@ namespace PileDesign.Output
 
         /// <summary>TOCフィールドを1つ挿入するヘルパ</summary>
         /// <remarks>
-        /// fldChar に Dirty=true を付け、Word が「結果が古いので再計算が必要」と認識するようにする。
-        /// これがないと Word が初回 F9 時に placeholder のままで更新しないケースがある (環境依存)。
+        /// Dirty フラグは敢えて付与しない。Dirty=true を付けると Word が起動時に
+        /// 「他のファイルを参照するフィールドが含まれます」というセキュリティ警告ダイアログを表示し
+        /// 利用者を不安にさせるため。代わりに利用者が手動で TOC 上を Ctrl+A → F9 で更新する。
         /// fieldCode の前後にスペースを入れることで Word の field parser がトークン分解で失敗しないようにする。
         /// </remarks>
         private static void AddTocField(Body body, string fieldCode, string placeholder)
@@ -622,7 +640,6 @@ namespace PileDesign.Output
             tocPara.Append(new Run(new FieldChar
             {
                 FieldCharType = FieldCharValues.Begin,
-                Dirty = OnOffValue.FromBoolean(true) // Word に「結果が古い」と通知 → F9 で必ず再評価
             }));
             var instrRun = new Run();
             // fieldCode は前後に空白を持たせる (例: " TOC \\o ... ") — Word の field parser 互換性
@@ -2204,8 +2221,8 @@ namespace PileDesign.Output
                             int i = rowIdx - 2;
                             if (colIdx == 1) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedPileBodies[i]}", "center", 8), "center");
                             else if (colIdx == 2) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegment[i]}", "center", 8), "center");
-                            else if (colIdx == 3) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentTop[i]}", "center", 8), "center");
-                            else if (colIdx == 4) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentBtm[i]}", "center", 8), "center");
+                            else if (colIdx == 3) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentTop[i]:N3}", "center", 8), "center");
+                            else if (colIdx == 4) SetTableCellWithVerticalAlign(cell, GetParagraph($"{selectedSegmentBtm[i]:N3}", "center", 8), "center");
                             else if (colIdx == 5) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Dmaxs[i][k]:N3}", "center", 8), "center");
                             else if (colIdx == 6) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Qmaxs[i][k]:N1}", "center", 8), "center");
                             else if (colIdx == 7) SetTableCellWithVerticalAlign(cell, GetParagraph($"{Mmaxs[i][k]:N1}", "center", 8), "center");

@@ -749,11 +749,25 @@ namespace PileDesign.Output
                                 if (axialN == 0.0 && double.IsFinite(pileLayout.AxialForce))
                                     axialN = pileLayout.AxialForce;
 
-                                // 曲線取得（CurveXY → Curve → 線形Kθ）
+                                // 曲線取得 (優先順位):
+                                // 1) 入力データ (pileBody.GetMThetaRelationship) — IsPileNonLinear=false で
+                                //    FEM が CurveXY を null にリセットする問題を回避
+                                // 2) FEM 側 CurveXY (非線形ケース)
+                                // 3) 線形 Kθ
                                 double[] thetas;
                                 double[] moments;
                                 string modeTag;
-                                if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
+
+                                PileDesign.FEM.PileHeadRotationDef inputDef = null;
+                                try { inputDef = pileBody.GetMThetaRelationship(axialN); }
+                                catch { /* ignore */ }
+
+                                if (inputDef?.CurveXY != null)
+                                {
+                                    (thetas, moments) = inputDef.CurveXY.ToArrays();
+                                    modeTag = "XY";
+                                }
+                                else if (rs.Mode == RotationalSpringMode.CombinedXY && rs.CurveXY != null)
                                 {
                                     (thetas, moments) = rs.CurveXY.ToArrays();
                                     modeTag = "XY";

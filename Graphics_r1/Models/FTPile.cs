@@ -119,6 +119,29 @@ namespace PileDesign.Models
         public List<FTCap> FTCaps { get; set; }
         public ObservableCollection<string> FTCapOption { get; set; } = [];
 
+        /// <summary>
+        /// FTキャップ + (引張鉄筋ありの場合) 引張鉄筋諸元を合成した諸元リストを返す。
+        /// PileTop.SelectedPileTopSpecification および計算書の杭頭諸元表で使用する。
+        /// </summary>
+        public ObservableCollection<Spec> GetCombinedSpecs()
+        {
+            var combined = new ObservableCollection<Spec>();
+            if (FTCap != null)
+            {
+                foreach (var s in FTCap.GetSpecs()) combined.Add(s);
+            }
+            if (FTPileTensionBars != null && FTPileTensionBars.IsTensionType && FTPileTensionBars.TensionAnchorNum > 0)
+            {
+                combined.Add(new Spec("引張鉄筋本数", "", $"{FTPileTensionBars.TensionAnchorNum:N0}", "本"));
+                combined.Add(new Spec("引張鉄筋規格", "", FTPileTensionBars.SelectedTensionAnchorGrade ?? "", ""));
+                combined.Add(new Spec("引張鉄筋全断面積", "Ag", $"{FTPileTensionBars.Ag:N1}", "mm²"));
+                combined.Add(new Spec("引張鉄筋短期許容応力度", "Ft", $"{FTPileTensionBars.Ft:N0}", "N/mm²"));
+                combined.Add(new Spec("引張鉄筋有効長さ", "Ls", $"{FTPileTensionBars.Ls:N0}", "mm"));
+                combined.Add(new Spec("引張鉄筋配置距離", "Ds", $"{FTPileTensionBars.Ds:N0}", "mm"));
+            }
+            return combined;
+        }
+
         private string _selectedFTCapName;
         public string SelectedFTCapName
         {

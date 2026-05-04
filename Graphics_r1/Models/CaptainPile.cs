@@ -373,6 +373,36 @@ namespace PileDesign.Models
         // CSV テーブル読込は Load*() を明示的に呼んでもらう。
         public CaptainPile() { }
 
+        /// <summary>
+        /// PCリング + (引張定着筋ありの場合) 引張定着筋諸元を合成した諸元リストを返す。
+        /// PileTop.SelectedPileTopSpecification および計算書の杭頭諸元表で使用する。
+        /// </summary>
+        public ObservableCollection<PileLibrary.Spec> GetCombinedSpecs()
+        {
+            var combined = new ObservableCollection<PileLibrary.Spec>();
+            if (PCRing != null)
+            {
+                foreach (var s in PCRing.GetSpecs()) combined.Add(s);
+            }
+            combined.Add(new PileLibrary.Spec("絞り率", "ν", $"{Nu:F2}", ""));
+            if (CTPTensionRebars != null && CTPTensionRebars.HasTensionRebars)
+            {
+                string arrangement = CTPTensionRebars.IsCircleArrangement ? "円形配置"
+                    : (CTPTensionRebars.IsSquareArrangement ? "正方形配置" : "");
+                int barNum = CTPTensionRebars.IsCircleArrangement
+                    ? CTPTensionRebars.SelectedBarNumberCircle
+                    : CTPTensionRebars.SelectedBarNumberSquare;
+                string posLabel = CTPTensionRebars.IsCircleArrangement ? "配置直径tD" : "配置辺長tB";
+
+                combined.Add(new PileLibrary.Spec("引張定着筋", "", $"{barNum}-{CTPTensionRebars.SelectedTensionAnchorDia ?? ""}", ""));
+                combined.Add(new PileLibrary.Spec("引張定着筋規格", "", CTPTensionRebars.SelectedTensionAnchorGrade ?? "", ""));
+                if (!string.IsNullOrEmpty(arrangement))
+                    combined.Add(new PileLibrary.Spec("引張定着筋配置", "", arrangement, ""));
+                combined.Add(new PileLibrary.Spec(posLabel, "", $"{CTPTensionRebars.TDorTB:N0}", "mm"));
+            }
+            return combined;
+        }
+
         // CaptainPileクラス コンストラクタ
         internal CaptainPile(double pileCapFc, double pileCapEc)
         {
