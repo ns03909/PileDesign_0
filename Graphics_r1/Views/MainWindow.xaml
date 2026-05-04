@@ -809,14 +809,7 @@
                         </ribbon:RibbonApplicationMenuItem.Header>
                     </ribbon:RibbonApplicationMenuItem>
 
-                    <ribbon:RibbonApplicationMenuItem Command="{Binding OpenDocxOutputWindowCommand}" ImageSource="pack://application:,,,/Icons/DocxFileOutput.png">
-                        <ribbon:RibbonApplicationMenuItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Docxファイル出力"/>
-                                <TextBlock Text="(なし)" Foreground="Gray" Margin="12,0,0,0"/>
-                            </StackPanel>
-                        </ribbon:RibbonApplicationMenuItem.Header>
-                    </ribbon:RibbonApplicationMenuItem>
+                    <!-- Docx ファイル出力はツール(T) タブの「レポート」グループに移動 (2026-05-04) -->
 
                     <!-- ダミー項目（メニューの高さ確保用） -->
                     <ribbon:RibbonApplicationMenuItem IsEnabled="False" Focusable="False">
@@ -1896,11 +1889,35 @@
 
 
             <ribbon:RibbonTab Header="ツール(T)" KeyTip="T">
-                <ribbon:RibbonGroup Header="サブプログラム">
-                    <ribbon:RibbonButton Label="Chang" ToolTip="Chang"
-                        Command="{Binding OpenChangWindowCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/ChangPile.png"
-                        SmallImageSource="pack://application:,,,/Icons/ChangPile.png"/>
+                <ribbon:RibbonGroup Header="計算書">
+                    <ribbon:RibbonButton Label="Docx 出力"
+                        ToolTip="計算書を Word (.docx) ファイルとして出力"
+                        Command="{Binding OpenDocxOutputWindowCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/DocxFileOutput.png"
+                        SmallImageSource="pack://application:,,,/Icons/DocxFileOutput.png"/>
+                </ribbon:RibbonGroup>
+
+                <ribbon:RibbonGroup Header="エクスポート">
+                    <ribbon:RibbonButton Label="3dm 出力"
+                        ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
+                        Command="{Binding Export3dmFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/rhino8-.png"
+                        SmallImageSource="pack://application:,,,/Icons/rhino8-.png"/>
+                    <ribbon:RibbonButton Label="DXF (3D)"
+                        ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
+                        Command="{Binding ExportDxfFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
+                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
+                    <ribbon:RibbonButton Label="DXF (伏図)"
+                        ToolTip="杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXFファイルにエクスポート"
+                        Command="{Binding ExportDxfPlanFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
+                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
+                    <ribbon:RibbonButton Label="MGT 出力"
+                        ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組み合わせを含む）"
+                        Command="{Binding ExportMgtFileCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/mgtFile.png"
+                        SmallImageSource="pack://application:,,,/Icons/mgtFile.png"/>
                 </ribbon:RibbonGroup>
 
                 <ribbon:RibbonGroup Header="ライブラリ">
@@ -1937,27 +1954,11 @@
                              CommandParameter="2.0"/>
                 </ribbon:RibbonGroup>
 
-                <ribbon:RibbonGroup Header="エクスポート">
-                    <ribbon:RibbonButton Label="3dm 出力"
-                        ToolTip="杭・根入れ部・基礎梁の3Dモデルを Rhino 3D (.3dm) ファイルにエクスポート"
-                        Command="{Binding Export3dmFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/rhino8-.png"
-                        SmallImageSource="pack://application:,,,/Icons/rhino8-.png"/>
-                    <ribbon:RibbonButton Label="DXF (3D)"
-                        ToolTip="杭・根入れ部・基礎梁の3Dモデルを DXF ファイルにエクスポート"
-                        Command="{Binding ExportDxfFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
-                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
-                    <ribbon:RibbonButton Label="DXF (伏図)"
-                        ToolTip="杭伏図（通り心・寸法・杭位置・基礎梁）を2D DXFファイルにエクスポート"
-                        Command="{Binding ExportDxfPlanFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/dxf.png"
-                        SmallImageSource="pack://application:,,,/Icons/dxf.png"/>
-                    <ribbon:RibbonButton Label="MGT 出力"
-                        ToolTip="FEM解析モデルを midas iGen / Gen MGT テキスト形式でエクスポート（非線形地盤ばね・慣性力・強制変位・荷重組み合わせを含む）"
-                        Command="{Binding ExportMgtFileCommand}"
-                        LargeImageSource="pack://application:,,,/Icons/mgtFile.png"
-                        SmallImageSource="pack://application:,,,/Icons/mgtFile.png"/>
+                <ribbon:RibbonGroup Header="サブプログラム">
+                    <ribbon:RibbonButton Label="Chang" ToolTip="Chang"
+                        Command="{Binding OpenChangWindowCommand}"
+                        LargeImageSource="pack://application:,,,/Icons/ChangPile.png"
+                        SmallImageSource="pack://application:,,,/Icons/ChangPile.png"/>
                 </ribbon:RibbonGroup>
 
 
