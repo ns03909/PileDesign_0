@@ -21,8 +21,8 @@
         <!--<KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
         <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />-->
         <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding OkCommand}" />
-        <KeyBinding Key="F9" Command="{Binding ExecuteAnalysisCommand}" />
-        <KeyBinding Key="F9" Modifiers="Control" Command="{Binding ExecuteAdditiveAnalysisCommand}" />
+        <KeyBinding Key="F5" Command="{Binding ExecuteAnalysisCommand}" />
+        <KeyBinding Key="F5" Modifiers="Control" Command="{Binding ExecuteAdditiveAnalysisCommand}" />
     </Window.InputBindings>
     
     <Window.Resources>
@@ -513,7 +513,7 @@
             <!-- ========== 実行 ========== -->
             <TextBlock Text="■ 実行" Style="{StaticResource SectionHeader}"/>
 
-            <Button Content="水平解析実行 (F9)" Command="{Binding ExecuteAnalysisCommand}">
+            <Button Content="水平解析実行 (F5)" Command="{Binding ExecuteAnalysisCommand}">
                 <Button.Style>
                     <Style TargetType="Button">
                         <Style.Triggers>
@@ -525,7 +525,7 @@
                 </Button.Style>
             </Button>
 
-            <Button Content="追加実行 (Ctrl+F9)" Command="{Binding ExecuteAdditiveAnalysisCommand}"
+            <Button Content="追加実行 (Ctrl+F5)" Command="{Binding ExecuteAdditiveAnalysisCommand}"
                     Margin="0,4,0,0"
                     ToolTip="既存結果を保持し、選択中ケースのうち未計算分のみ計算します。&#x0a;前回と異なる解析設定 (ステップ数等) の場合は実行できません。"/>
 

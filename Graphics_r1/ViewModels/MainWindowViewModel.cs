@@ -80,12 +80,87 @@ namespace PileDesign.ViewModels
         /// </summary>
         public void SaveUndoState([System.Runtime.CompilerServices.CallerMemberName] string? description = null)
         {
+            // 直接呼出は「大規模操作」を意味するため、進行中のデバウンスセッションを終了させる
+            // (これ以降の編集は新しい Undo ステップに割り当てられる)
+            if (_undoBatchActive) FlushPendingUndoSnapshot();
+
             var copy = CurrentInputModel.DeepCopy();
             if (copy != null)
             {
                 _undoManager.SaveState(copy, FormatHistoryDescription(description));
                 RaiseUndoStateChanged();
             }
+        }
+
+        // ─────────────── Phase A: Undo スナップショットのデバウンス ───────────────
+        // 同じセッション内 (連続編集) では SaveUndoState を 1 回だけ実行し、
+        // それ以降の編集は同じ Undo ステップにまとめる。
+        // 重い DeepCopy を毎セルで実行する代わりに、連続編集の最初の 1 回のみ実行する。
+        //
+        // 使い方:
+        //   - 高頻度な小編集 (DataGrid セル確定等) は SaveUndoStateDebounced を呼ぶ
+        //   - 大規模操作 (杭追加/削除、ペースト、ファイルロード等) は従来通り SaveUndoState を呼ぶ
+        //     (大規模操作前に FlushPendingUndoSnapshot を呼んで未確定のデバウンスセッションを終了させる)
+        private System.Windows.Threading.DispatcherTimer _undoBatchTimer;
+        private bool _undoBatchActive;
+        // 杭軸力編集など、セル間で 1〜3 秒の navigation が入る用途では 500ms だと毎セル新規 snapshot
+        // になってしまうため、2000ms (2 秒) に延長。Undo 粒度は粗くなるが、1 編集セッション = 1 Undo
+        // ステップというユーザー期待値とも整合する。
+        private const int DefaultUndoBatchDebounceMs = 2000;
+
+        public void SaveUndoStateDebounced(
+            [System.Runtime.CompilerServices.CallerMemberName] string? description = null,
+            int debounceMs = DefaultUndoBatchDebounceMs)
+        {
+            // セッション開始時のみ重い DeepCopy を実行 (pre-edit 状態を捕捉)。
+            // 2 回目以降の連続編集では SaveUndoState をスキップし、デバウンスタイマーだけ更新。
+            if (!_undoBatchActive)
+            {
+                SaveUndoState(description);
+                _undoBatchActive = true;
+            }
+
+            // 既存タイマーがあれば破棄、新規タイマーで debounceMs 後にセッション終了
+            if (_undoBatchTimer == null)
+            {
+                _undoBatchTimer = new System.Windows.Threading.DispatcherTimer();
+                _undoBatchTimer.Tick += (s, e) =>
+                {
+                    _undoBatchTimer.Stop();
+                    _undoBatchActive = false;
+                };
+            }
+            _undoBatchTimer.Stop();
+            _undoBatchTimer.Interval = TimeSpan.FromMilliseconds(debounceMs);
+            _undoBatchTimer.Start();
+        }
+
+        /// <summary>
+        /// 進行中のデバウンスセッションを即時終了する。
+        /// 大規模操作 (ファイル保存・解析実行・ダイアログオープン等) の直前に呼ぶことで、
+        /// セッション中の全編集が 1 つの Undo ステップにまとまり、続く操作は新しい Undo ステップになる。
+        /// </summary>
+        public void FlushPendingUndoSnapshot()
+        {
+            if (_undoBatchTimer != null)
+            {
+                _undoBatchTimer.Stop();
+            }
+            _undoBatchActive = false;
+        }
+
+        /// <summary>
+        /// 進行中のデバウンスセッションを延長する (タイマーをリスタート)。
+        /// セッション開始や snapshot 取得は行わない (active でなければ no-op)。
+        /// DataGrid の BeginningEdit 等から呼んで、ユーザーが連続編集中であることを通知する。
+        /// </summary>
+        public void ExtendUndoBatchSession(int debounceMs = DefaultUndoBatchDebounceMs)
+        {
+            if (!_undoBatchActive) return;
+            if (_undoBatchTimer == null) return;
+            _undoBatchTimer.Stop();
+            _undoBatchTimer.Interval = TimeSpan.FromMilliseconds(debounceMs);
+            _undoBatchTimer.Start();
         }
 
         /// <summary>
@@ -253,13 +328,18 @@ namespace PileDesign.ViewModels
         private bool HandleDataGridCellEditEnding(DataGridCellEditEndingEventArgs e,
             Action customAction = null,
             bool updateTree = true,
+            bool useDebouncedUndo = false,
             [System.Runtime.CompilerServices.CallerMemberName] string? undoDescription = null)
         {
             if (e.EditAction == DataGridEditAction.Commit)
             {
                 // 編集確定の直前に Undo スナップショットを保存
                 // (binding.UpdateSource() より前 = まだモデルは旧値のため pre-edit が捕捉される)
-                SaveUndoState(undoDescription);
+                // useDebouncedUndo=true の場合、連続編集セッションの最初の 1 回のみ DeepCopy 実行 (Phase A)
+                if (useDebouncedUndo)
+                    SaveUndoStateDebounced(undoDescription);
+                else
+                    SaveUndoState(undoDescription);
 
                 // バインディングソースの更新
                 var binding = e.EditingElement.GetBindingExpression(TextBox.TextProperty);
@@ -629,10 +709,12 @@ namespace PileDesign.ViewModels
         }
 
         // 杭軸力更新時更新メソッド
+        // Phase A: useDebouncedUndo=true で連続編集を 1 つの Undo ステップにまとめて DeepCopy 回数を削減
+        // updateTree=false で TreeView の不要な再構築を抑止 (軸力値は TreeView に表示されないため)
         [RelayCommand]
         private void DataGridPileAxialForce_OnCellEditEnding(DataGridCellEditEndingEventArgs e)
         {
-            HandleDataGridCellEditEnding(e);
+            HandleDataGridCellEditEnding(e, updateTree: false, useDebouncedUndo: true);
         }
 
         // 前後杭更新メソッド
@@ -2800,6 +2882,17 @@ namespace PileDesign.ViewModels
             // 杭配置番号の同期（PileNo が未設定の旧ファイルに備える）
             UpdatePileLayoutNo();
 
+            // 地震時軸力モード (絶対 / 変動) を InputModel から復元し、AxialForceModeContext + UI に反映。
+            // VL/L1/L2 の値は既にロード済みなので、Context フラグの設定で即時に変動列の表示も切替可能。
+            // 各杭の変動軸力コレクションを絶対値ベースで再構築 (deserialize 順序に依存しない安定状態を作る)。
+            Common.AxialForceModeContext.IsVariationMode = CurrentInputModel.IsAxialForceVariationMode;
+            if (CurrentInputModel.PileLayoutItems != null)
+            {
+                foreach (var pile in CurrentInputModel.PileLayoutItems)
+                    pile.RebuildVariationFromAbsolute();
+            }
+            OnPropertyChanged(nameof(IsAxialForceVariationMode));
+
             // 解析結果の復元（projectData=null の場合はフラグのみリセット）
             RestoreAnalysisState(projectData);
 
@@ -4582,6 +4675,10 @@ namespace PileDesign.ViewModels
                             // 杭配置番号を確実に同期
                             UpdatePileLayoutNo();
 
+                            // 引張定着筋なしの半剛接合 (キャプテン/F.T.Pile/キャプリング) で
+                            // 入力軸力が引張となっている杭がある場合は警告ダイアログを表示
+                            WarnTensionInputAxialForSemiRigidPiles();
+
                             var viewModel = new HorizontalCalculationViewModel(this);
                             var window = new HorizontalCalculationWindow { DataContext = viewModel };
 
@@ -4614,6 +4711,62 @@ namespace PileDesign.ViewModels
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 引張定着筋なしの杭頭半剛接合工法 (キャプテン/F.T.Pile/キャプリング) を採用する杭で、
+        /// 入力軸力 (常時/L1/L2) が引張となっているケースがあればまとめて警告ダイアログを表示する。
+        /// 該当する場合 M-θ の最大抵抗モーメント Mu = 0 となり、杭頭は事実上ピン接合扱いになるため、
+        /// 解析を続行する前にユーザに気付かせる。
+        /// </summary>
+        private void WarnTensionInputAxialForSemiRigidPiles()
+        {
+            if (CurrentInputModel?.PileLayoutItems == null || CurrentInputModel.PileBodies == null) return;
+            var warnings = new List<string>();
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
+                int idx = pile.PileBodyNo - 1;
+                if (idx < 0 || idx >= CurrentInputModel.PileBodies.Count) continue;
+                var pileBody = CurrentInputModel.PileBodies[idx];
+                var typeName = ViewModels.HorizontalCalculationViewModel.GetSemiRigidWithoutTensionBarPileTopName(pileBody);
+                if (typeName == null) continue;
+
+                // 入力軸力 (kN) — 圧縮を正、引張を負とする符号規約
+                var tensileCases = new List<string>();
+                if (pile.AxialForceVL < 0)
+                    tensileCases.Add($"常時 ({pile.AxialForceVL:N1}kN)");
+                if (pile.AxialForceLevel1s != null)
+                {
+                    for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
+                        if (pile.AxialForceLevel1s[i] < 0)
+                            tensileCases.Add($"L1-{i + 1} ({pile.AxialForceLevel1s[i]:N1}kN)");
+                }
+                if (pile.AxialForceLevel2s != null)
+                {
+                    for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
+                        if (pile.AxialForceLevel2s[i] < 0)
+                            tensileCases.Add($"L2-{i + 1} ({pile.AxialForceLevel2s[i]:N1}kN)");
+                }
+                if (tensileCases.Count > 0)
+                {
+                    warnings.Add($"  ・杭No.{pile.No} ({typeName}): {string.Join(", ", tensileCases)}");
+                }
+            }
+            if (warnings.Count == 0) return;
+
+            var msg =
+                "以下の杭で『引張定着筋なし』の杭頭半剛接合工法を採用していますが、入力軸力が引張となっています。\n" +
+                "この場合、解析中は当該杭の杭頭を「軸剛性 0、曲げ剛性 0」(Uz 並進 master-slave 解放 + Mu=0) " +
+                "として扱います (詳細はヘルプ「引張軸力時の杭頭軸剛性解放」参照)。\n\n" +
+                string.Join("\n", warnings) +
+                "\n\n対応案:\n" +
+                "  ① 引張定着筋を設置する\n" +
+                "  ② 入力軸力を見直す\n" +
+                "  ③ 杭頭工法を変更する";
+            System.Windows.MessageBox.Show(
+                msg, "杭頭半剛接合 軸力チェック",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
         }
 
         /// <summary>
@@ -4838,6 +4991,100 @@ namespace PileDesign.ViewModels
         {
             // 作用点を杭配置の重心に移動
             OnMoveForceActionPointToAverageCenter();
+        }
+
+        /// <summary>
+        /// 地震時軸力の入力/表示モード: false = 絶対 (VL + 変動 を直接編集)、true = 変動 (= 絶対 − VL)。
+        /// ファイル別に永続化 (InputModel.IsAxialForceVariationMode) し、PileLayoutDataItem の setter は
+        /// 静的フラグ AxialForceModeContext.IsVariationMode を参照する (両者を同時に更新)。
+        ///
+        /// 切替時のデータ変化: なし (絶対値は不変、変動値は派生値として表示するだけ)。
+        /// 切替後の編集動作:
+        ///   - 絶対モード: 絶対値を直接編集、VL 変更時は変動が再計算される (絶対は不変)
+        ///   - 変動モード: 変動値を編集すると絶対値が自動更新、VL 変更時は絶対値が Δ VL シフト (変動は不変)
+        /// </summary>
+        public bool IsAxialForceVariationMode
+        {
+            get => CurrentInputModel?.IsAxialForceVariationMode ?? false;
+            set
+            {
+                if (CurrentInputModel == null) return;
+                if (CurrentInputModel.IsAxialForceVariationMode == value) return;
+                CurrentInputModel.IsAxialForceVariationMode = value;
+                Common.AxialForceModeContext.IsVariationMode = value;
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// 全杭の L1/L2 軸力 (AxialForceLevel1s / AxialForceLevel2s) に各杭の VL (VL0 + VLadd) を加算する。
+        /// 入力データが「地震時 ΔN」(増分) の場合に「VL + 地震時」(全軸力) へ変換するためのユーティリティ。
+        /// </summary>
+        [RelayCommand]
+        private void AddVLToL1L2AxialForce()
+        {
+            if (CurrentInputModel?.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
+                return;
+            if (!CheckAndResetAnalysisResults()) return;
+
+            var result = MessageBox.Show(
+                "全杭の L1/L2 軸力に VL (常時軸力) を加算します。\n" +
+                "現在値が「地震時増分 ΔN」のときに「VL + 地震時 = 全軸力」へ変換するために使用します。\n\n" +
+                "実行してよろしいですか?\n" +
+                "(元に戻すには Undo (Ctrl+Z) または「VL を減算」ボタンを使用してください)",
+                "L1/L2 軸力に VL を加算", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+            if (result != MessageBoxResult.OK) return;
+
+            SaveUndoState();
+            ApplyVLOffsetToL1L2(+1.0);
+            UpdateSumAndOTM();
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 全杭の L1/L2 軸力 (AxialForceLevel1s / AxialForceLevel2s) から各杭の VL (VL0 + VLadd) を減算する。
+        /// 「VL を加算」を誤適用した場合の取り消しや、「VL + 地震時」を「地震時 ΔN」へ戻す変換に使用。
+        /// </summary>
+        [RelayCommand]
+        private void SubtractVLFromL1L2AxialForce()
+        {
+            if (CurrentInputModel?.PileLayoutItems == null || CurrentInputModel.PileLayoutItems.Count == 0)
+                return;
+            if (!CheckAndResetAnalysisResults()) return;
+
+            var result = MessageBox.Show(
+                "全杭の L1/L2 軸力から VL (常時軸力) を減算します。\n" +
+                "現在値が「VL + 地震時 = 全軸力」のときに「地震時増分 ΔN」へ変換するために使用します。\n\n" +
+                "実行してよろしいですか?",
+                "L1/L2 軸力から VL を減算", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+            if (result != MessageBoxResult.OK) return;
+
+            SaveUndoState();
+            ApplyVLOffsetToL1L2(-1.0);
+            UpdateSumAndOTM();
+            RequestUpdateWindow();
+        }
+
+        /// <summary>
+        /// 全杭の L1/L2 軸力配列に sign × AxialForceVL を加算する内部ヘルパ。
+        /// sign=+1 で加算、-1 で減算。
+        /// </summary>
+        private void ApplyVLOffsetToL1L2(double sign)
+        {
+            foreach (var pile in CurrentInputModel.PileLayoutItems)
+            {
+                double vl = pile.AxialForceVL;
+                if (pile.AxialForceLevel1s != null)
+                {
+                    for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
+                        pile.AxialForceLevel1s[i] += sign * vl;
+                }
+                if (pile.AxialForceLevel2s != null)
+                {
+                    for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
+                        pile.AxialForceLevel2s[i] += sign * vl;
+                }
+            }
         }
 
         /// <summary>

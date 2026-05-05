@@ -13,6 +13,7 @@ namespace PileDesign.Models.InputData
     {
         private MainWindowViewModel _mainWindowViewModel;
 
+        // [JsonIgnore]: InputModel への back-reference は循環参照を生むため JSON シリアライズ対象外
         [JsonIgnore]
         public InputModel InputModel => _mainWindowViewModel?.CurrentInputModel;
 
@@ -187,9 +188,11 @@ namespace PileDesign.Models.InputData
             get => _axialForceVL0;
             set
             {
+                double oldVL = AxialForceVL;
                 if (SetProperty(ref _axialForceVL0, value))
                 {
                     OnPropertyChanged(nameof(AxialForceVL)); // 追加: VL再計算通知
+                    HandleVLChanged(oldVL, AxialForceVL);
                 }
             }
         }
@@ -201,29 +204,214 @@ namespace PileDesign.Models.InputData
             get => _axialForceVLAdditional;
             set
             {
+                double oldVL = AxialForceVL;
                 if (SetProperty(ref _axialForceVLAdditional, value))
                 {
                     OnPropertyChanged(nameof(AxialForceVL)); // 追加: VL再計算通知
+                    HandleVLChanged(oldVL, AxialForceVL);
                 }
             }
         }
 
         public double AxialForceVL => AxialForceVL0 + AxialForceVLAdditional;
 
-        // レベル1地震時軸力
+        // レベル1地震時軸力 (絶対値、ファイル保存対象)
         private ObservableCollection<double> _axialForceLevel1s;
         public ObservableCollection<double> AxialForceLevel1s
         {
             get => _axialForceLevel1s;
-            set => SetProperty(ref _axialForceLevel1s, value);
+            set
+            {
+                if (_axialForceLevel1s != null)
+                    _axialForceLevel1s.CollectionChanged -= OnAbsoluteL1Changed;
+                if (SetProperty(ref _axialForceLevel1s, value))
+                {
+                    if (_axialForceLevel1s != null)
+                        _axialForceLevel1s.CollectionChanged += OnAbsoluteL1Changed;
+                    SyncVariationL1FromAbsolute();
+                }
+            }
         }
 
-        // レベル2地震時軸力
+        // レベル2地震時軸力 (絶対値、ファイル保存対象)
         private ObservableCollection<double> _axialForceLevel2s;
         public ObservableCollection<double> AxialForceLevel2s
         {
             get => _axialForceLevel2s;
-            set => SetProperty(ref _axialForceLevel2s, value);
+            set
+            {
+                if (_axialForceLevel2s != null)
+                    _axialForceLevel2s.CollectionChanged -= OnAbsoluteL2Changed;
+                if (SetProperty(ref _axialForceLevel2s, value))
+                {
+                    if (_axialForceLevel2s != null)
+                        _axialForceLevel2s.CollectionChanged += OnAbsoluteL2Changed;
+                    SyncVariationL2FromAbsolute();
+                }
+            }
+        }
+
+        // ─────────────── 変動軸力 (= 絶対 − VL、表示用、Json 非永続) ───────────────
+        // AxialForceModeContext.IsVariationMode が true のとき、UI はこちらにバインドする。
+        // 絶対値と双方向同期され、変動値の編集は絶対値の更新に連動する。
+        // ファイル保存形式は絶対値のみ (これらは [JsonIgnore])。
+
+        [JsonIgnore]
+        private bool _isSyncingAxial;
+
+        private ObservableCollection<double> _axialForceVariationLevel1s = [];
+        [JsonIgnore]
+        public ObservableCollection<double> AxialForceVariationLevel1s
+        {
+            get => _axialForceVariationLevel1s;
+            private set
+            {
+                if (_axialForceVariationLevel1s != null)
+                    _axialForceVariationLevel1s.CollectionChanged -= OnVariationL1Changed;
+                if (SetProperty(ref _axialForceVariationLevel1s, value))
+                {
+                    if (_axialForceVariationLevel1s != null)
+                        _axialForceVariationLevel1s.CollectionChanged += OnVariationL1Changed;
+                }
+            }
+        }
+
+        private ObservableCollection<double> _axialForceVariationLevel2s = [];
+        [JsonIgnore]
+        public ObservableCollection<double> AxialForceVariationLevel2s
+        {
+            get => _axialForceVariationLevel2s;
+            private set
+            {
+                if (_axialForceVariationLevel2s != null)
+                    _axialForceVariationLevel2s.CollectionChanged -= OnVariationL2Changed;
+                if (SetProperty(ref _axialForceVariationLevel2s, value))
+                {
+                    if (_axialForceVariationLevel2s != null)
+                        _axialForceVariationLevel2s.CollectionChanged += OnVariationL2Changed;
+                }
+            }
+        }
+
+        private void OnAbsoluteL1Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (_isSyncingAxial) return;
+            _isSyncingAxial = true;
+            try { SyncVariationL1FromAbsolute(); }
+            finally { _isSyncingAxial = false; }
+        }
+
+        private void OnAbsoluteL2Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (_isSyncingAxial) return;
+            _isSyncingAxial = true;
+            try { SyncVariationL2FromAbsolute(); }
+            finally { _isSyncingAxial = false; }
+        }
+
+        private void OnVariationL1Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (_isSyncingAxial) return;
+            _isSyncingAxial = true;
+            try { SyncAbsoluteL1FromVariation(); }
+            finally { _isSyncingAxial = false; }
+        }
+
+        private void OnVariationL2Changed(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (_isSyncingAxial) return;
+            _isSyncingAxial = true;
+            try { SyncAbsoluteL2FromVariation(); }
+            finally { _isSyncingAxial = false; }
+        }
+
+        private void SyncVariationL1FromAbsolute()
+        {
+            if (_axialForceLevel1s == null || _axialForceVariationLevel1s == null) return;
+            double vl = AxialForceVL;
+            int n = _axialForceLevel1s.Count;
+            while (_axialForceVariationLevel1s.Count > n)
+                _axialForceVariationLevel1s.RemoveAt(_axialForceVariationLevel1s.Count - 1);
+            while (_axialForceVariationLevel1s.Count < n)
+                _axialForceVariationLevel1s.Add(0.0);
+            for (int i = 0; i < n; i++)
+                _axialForceVariationLevel1s[i] = _axialForceLevel1s[i] - vl;
+        }
+
+        private void SyncVariationL2FromAbsolute()
+        {
+            if (_axialForceLevel2s == null || _axialForceVariationLevel2s == null) return;
+            double vl = AxialForceVL;
+            int n = _axialForceLevel2s.Count;
+            while (_axialForceVariationLevel2s.Count > n)
+                _axialForceVariationLevel2s.RemoveAt(_axialForceVariationLevel2s.Count - 1);
+            while (_axialForceVariationLevel2s.Count < n)
+                _axialForceVariationLevel2s.Add(0.0);
+            for (int i = 0; i < n; i++)
+                _axialForceVariationLevel2s[i] = _axialForceLevel2s[i] - vl;
+        }
+
+        private void SyncAbsoluteL1FromVariation()
+        {
+            if (_axialForceLevel1s == null || _axialForceVariationLevel1s == null) return;
+            double vl = AxialForceVL;
+            int n = _axialForceVariationLevel1s.Count;
+            while (_axialForceLevel1s.Count > n)
+                _axialForceLevel1s.RemoveAt(_axialForceLevel1s.Count - 1);
+            while (_axialForceLevel1s.Count < n)
+                _axialForceLevel1s.Add(0.0);
+            for (int i = 0; i < n; i++)
+                _axialForceLevel1s[i] = vl + _axialForceVariationLevel1s[i];
+        }
+
+        private void SyncAbsoluteL2FromVariation()
+        {
+            if (_axialForceLevel2s == null || _axialForceVariationLevel2s == null) return;
+            double vl = AxialForceVL;
+            int n = _axialForceVariationLevel2s.Count;
+            while (_axialForceLevel2s.Count > n)
+                _axialForceLevel2s.RemoveAt(_axialForceLevel2s.Count - 1);
+            while (_axialForceLevel2s.Count < n)
+                _axialForceLevel2s.Add(0.0);
+            for (int i = 0; i < n; i++)
+                _axialForceLevel2s[i] = vl + _axialForceVariationLevel2s[i];
+        }
+
+        /// <summary>
+        /// VL (= VL0 + VLAdditional) 変更時の挙動。AxialForceModeContext.IsVariationMode に応じて分岐:
+        ///   - 絶対モード: 絶対値はそのまま、変動値を新 VL から再計算 (= 絶対 − 新 VL)
+        ///   - 変動モード: 変動値を保ち、絶対値を Δ VL だけシフト (= 旧絶対 + (新 VL − 旧 VL))
+        /// </summary>
+        private void HandleVLChanged(double oldVL, double newVL)
+        {
+            if (_isSyncingAxial) return;
+            if (oldVL == newVL) return;
+            _isSyncingAxial = true;
+            try
+            {
+                if (Common.AxialForceModeContext.IsVariationMode)
+                {
+                    // 変動モード: 絶対値を Δ VL だけシフト、変動値は不変
+                    double delta = newVL - oldVL;
+                    if (_axialForceLevel1s != null)
+                    {
+                        for (int i = 0; i < _axialForceLevel1s.Count; i++)
+                            _axialForceLevel1s[i] += delta;
+                    }
+                    if (_axialForceLevel2s != null)
+                    {
+                        for (int i = 0; i < _axialForceLevel2s.Count; i++)
+                            _axialForceLevel2s[i] += delta;
+                    }
+                }
+                else
+                {
+                    // 絶対モード: 絶対値はそのまま、変動値を再計算
+                    SyncVariationL1FromAbsolute();
+                    SyncVariationL2FromAbsolute();
+                }
+            }
+            finally { _isSyncingAxial = false; }
         }
 
         // 常時単杭沈下
@@ -298,16 +486,18 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _groupPileSettlement, value);
         }
 
-        // 解析杭節点
+        // 解析杭節点 (FEM 解析ランタイム状態 — Undo/ファイル保存対象外)
         private ObservableCollection<FEM.Node> pileNodes = [];
+        [JsonIgnore]
         public ObservableCollection<FEM.Node> PileNodes
         {
             get => pileNodes;
             set => SetProperty(ref pileNodes, value);
         }
 
-        // 解析土節点
+        // 解析土節点 (FEM 解析ランタイム状態)
         private ObservableCollection<FEM.Node> soilNodes = [];
+        [JsonIgnore]
         public ObservableCollection<FEM.Node> SoilNodes
         {
             get => soilNodes;
@@ -315,24 +505,27 @@ namespace PileDesign.Models.InputData
         }
 
 
-        // 解析水平地盤ばね
+        // 解析水平地盤ばね (FEM 解析ランタイム状態)
         private ObservableCollection<HorizontalSoilSpring> horizontalSoilSprings = [];
+        [JsonIgnore]
         public ObservableCollection<HorizontalSoilSpring> HorizontalSoilSprings
         {
             get => horizontalSoilSprings;
             set => SetProperty(ref horizontalSoilSprings, value);
         }
 
-        // 解析杭頭回転ばね
+        // 解析杭頭回転ばね (FEM 解析ランタイム状態)
         private RotationalSpring pileTopRotationalSpring;
+        [JsonIgnore]
         public RotationalSpring PileTopRotationalSpring
         {
             get => pileTopRotationalSpring;
             set => SetProperty(ref pileTopRotationalSpring, value);
         }
 
-        // 解析要素
+        // 解析要素 (FEM 解析ランタイム状態)
         private ObservableCollection<FEM.Beam> beams = [];
+        [JsonIgnore]
         public ObservableCollection<FEM.Beam> Beams
         {
             get => beams;
@@ -384,6 +577,18 @@ namespace PileDesign.Models.InputData
                 IsFrontPiles.Add(true);
             }
 
+            // 変動軸力コレクションを初期化 (絶対値が全て 0、VL も 0 なので変動も全て 0)
+            _axialForceVariationLevel1s.CollectionChanged += OnVariationL1Changed;
+            _axialForceVariationLevel2s.CollectionChanged += OnVariationL2Changed;
+            // 変動コレクションのサイズを絶対値に合わせる
+            _isSyncingAxial = true;
+            try
+            {
+                SyncVariationL1FromAbsolute();
+                SyncVariationL2FromAbsolute();
+            }
+            finally { _isSyncingAxial = false; }
+
             // Z変更時にも SoilPile 再評価を通知
             this.PropertyChanged += (s, e) =>
             {
@@ -392,6 +597,79 @@ namespace PileDesign.Models.InputData
                     OnPropertyChanged(nameof(SoilPile));
                 }
             };
+        }
+
+        /// <summary>
+        /// Phase C 案 B: Undo スナップショット用の高速手書き Clone。
+        /// JSON 経由 (DeepCopyUtil.CloneJson) は反射ベースで杭 1 件あたり ~1 ms 掛かるが、
+        /// 本メソッドは値型コピーのみで杭 108 件分が合計 1〜2 ms に収まる。
+        ///
+        /// JsonIgnore 対象 (FEM ランタイム状態 / _isSyncingAxial 等) はコピーしない。
+        /// 解析結果系フィールド (PileNodes, Beams 等) は再解析で復元するため Undo 対象外。
+        /// </summary>
+        public PileLayoutDataItem QuickClone()
+        {
+            var copy = new PileLayoutDataItem
+            {
+                // InputNode 基底
+                UniqueId = this.UniqueId,
+                No = this.No,
+                Type = this.Type,
+                LinkedPileNo = this.LinkedPileNo,
+                IsSelected = this.IsSelected,
+                IsVisible = this.IsVisible,
+                X = this.X,
+                Y = this.Y,
+                Z = this.Z,
+
+                // PileLayoutDataItem 固有 (primitive)
+                PileNo = this.PileNo,
+                PileBodyNo = this.PileBodyNo,
+                GroundNo = this.GroundNo,
+                SoilPileAltNo = this.SoilPileAltNo,
+                ConnectedFoundationNodeNo = this.ConnectedFoundationNodeNo,
+                FoundationBeamDeltaZc = this.FoundationBeamDeltaZc,
+                GroupPileFactor = this.GroupPileFactor,
+                PileSpacingFactor = this.PileSpacingFactor,
+                AxialForceVL0 = this.AxialForceVL0,
+                AxialForceVLAdditional = this.AxialForceVLAdditional,
+                SinglePileSettlementVL = this.SinglePileSettlementVL,
+                PileTipNValue = this.PileTipNValue,
+                Rf = this.Rf,
+                Rp = this.Rp,
+                Ru = this.Ru,
+                GroupPileSettlement = this.GroupPileSettlement,
+                AxialForce = this.AxialForce,
+                AxialForceIncrement = this.AxialForceIncrement,
+            };
+
+            // ObservableCollection の deep copy (要素は double / bool で値型)
+            // setter 経由で代入すると変動軸力同期 (OnAbsoluteL?Changed) が走る点に注意。
+            // QuickClone の出力先 copy では VL もこの段階で確定済なので、変動値の再計算が
+            // 正しい値で実行される (VL=0 で先に L1/L2 が設定される事故を起こさない)。
+            copy.AxialForceLevel1s = new ObservableCollection<double>(this.AxialForceLevel1s);
+            copy.AxialForceLevel2s = new ObservableCollection<double>(this.AxialForceLevel2s);
+            copy.SinglePileSettlementLevel1s = new ObservableCollection<double>(this.SinglePileSettlementLevel1s);
+            copy.SinglePileSettlementLevel2s = new ObservableCollection<double>(this.SinglePileSettlementLevel2s);
+            copy.IsFrontPiles = new ObservableCollection<bool>(this.IsFrontPiles);
+
+            return copy;
+        }
+
+        /// <summary>
+        /// JSON ロード後に呼び出し、絶対値コレクションから変動値コレクションを再構築する。
+        /// JSON deserializer はプロパティ順序が不定で、AxialForceVL0/VLadd と AxialForceLevel1s/2s
+        /// の設定順が逆になると初期同期が不正確になることがあるため、ロード完了後に明示的に再同期する。
+        /// </summary>
+        public void RebuildVariationFromAbsolute()
+        {
+            _isSyncingAxial = true;
+            try
+            {
+                SyncVariationL1FromAbsolute();
+                SyncVariationL2FromAbsolute();
+            }
+            finally { _isSyncingAxial = false; }
         }
 
         public void SetMainWindowViewModel(MainWindowViewModel mainWindowViewModel)

@@ -200,6 +200,15 @@ namespace PileDesign.Views
             if (string.IsNullOrEmpty(path)) return;
             var item = e.Row.Item;
 
+            // 杭本数が多い場合 (例: 108 杭) に変更確定 (UndoService.Push, OnCellEditEndingCommand,
+            // UpdateSumAndOTM, 変動↔絶対 同期) で時間が掛かるため、砂時計カーソルを表示。
+            // リセットは Background 優先度のディスパッチが完了した後 (ApplicationIdle) に実行。
+            System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            Dispatcher.BeginInvoke(() =>
+            {
+                System.Windows.Input.Mouse.OverrideCursor = null;
+            }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
             Dispatcher.BeginInvoke(() =>
             {
                 var key = (item, path);
@@ -272,8 +281,21 @@ namespace PileDesign.Views
 
         private void DataGridPileAxialForce_PasteCompleted(object sender, EventArgs e)
         {
-            if (DataContext is MainWindowViewModel vm)
-                vm.UpdateSumAndOTM();
+            // ペーストは複数セルを一気に書換えるため、CellEditEnding より重くなりやすい。
+            // 砂時計カーソルを表示し、UpdateSumAndOTM 完了後 (ApplicationIdle) にリセット。
+            System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
+            try
+            {
+                if (DataContext is MainWindowViewModel vm)
+                    vm.UpdateSumAndOTM();
+            }
+            finally
+            {
+                Dispatcher.BeginInvoke(() =>
+                {
+                    System.Windows.Input.Mouse.OverrideCursor = null;
+                }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            }
         }
 
         private void DataGridPileLayout_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)

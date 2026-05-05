@@ -3081,18 +3081,41 @@
                                                     <!--<Separator/>-->
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Orientation="Horizontal" Grid.Column="0" >
-                                                            <Button x:Name="ButtonEInput" ToolTip="転倒モーメント簡易入力" 
+                                                            <Button x:Name="ButtonEInput" ToolTip="転倒モーメント簡易入力"
                                                             Command="{Binding AutoOverturningMomentCommand}">
                                                                 <svgc:SvgViewbox Source="/Icons/OTMInput.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             </Button>
-                                                            <Button ToolTip="慣性力作用点のVL重心への移動" 
+                                                            <Button ToolTip="慣性力作用点のVL重心への移動"
                                                             Command="{Binding AutoActionPointXYCommand}">
                                                                 <svgc:SvgViewbox Source="/Icons/MoveActionPointToGravityCenter.svg" Style="{StaticResource SvgIconStyle24}"/>
                                                             </Button>
+                                                            <Separator Width="8"/>
+                                                            <ToggleButton Padding="8,2" Margin="2,0" MinWidth="100"
+                                                                          IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
+                                                                          ToolTip="地震時軸力の入力/表示モードを切替&#x0a;絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集&#x0a;変動モード: L1/L2 列に変動軸力 (= 絶対 − VL) を表示・編集 (VL 変更時は絶対が連動)">
+                                                                <ToggleButton.Style>
+                                                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                                                                        <Setter Property="Content" Value="モード: 絶対"/>
+                                                                        <Style.Triggers>
+                                                                            <Trigger Property="IsChecked" Value="True">
+                                                                                <Setter Property="Content" Value="モード: 変動"/>
+                                                                                <Setter Property="Background" Value="#FFF3E0"/>
+                                                                            </Trigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </ToggleButton.Style>
+                                                            </ToggleButton>
+                                                            <Separator Width="8"/>
+                                                            <Button Content="L1/L2 + VL" Padding="6,2" Margin="2,0"
+                                                                    Command="{Binding AddVLToL1L2AxialForceCommand}"
+                                                                    ToolTip="全杭の L1/L2 軸力に VL (常時軸力) を加算&#x0a;(地震時増分 ΔN → VL + 地震時 = 全軸力 への変換)"/>
+                                                            <Button Content="L1/L2 − VL" Padding="6,2" Margin="2,0"
+                                                                    Command="{Binding SubtractVLFromL1L2AxialForceCommand}"
+                                                                    ToolTip="全杭の L1/L2 軸力から VL (常時軸力) を減算&#x0a;(VL + 地震時 → 地震時増分 ΔN への変換、または「+VL」誤適用の取り消し)"/>
                                                         </StackPanel>
 
                                                     </Grid>
@@ -3363,6 +3386,11 @@
                                                     VerticalAlignment="Top"
                                                     CellStyle="{StaticResource CustomDataGridCellStyle}">
 
+                                                <DataGrid.Resources>
+                                                    <!-- DataGridColumn は visual tree 外のため、Visibility バインドに DataContext を伝搬する Proxy が必要 -->
+                                                    <common:BindingProxy x:Key="AxialForceVMProxy" Data="{Binding}"/>
+                                                </DataGrid.Resources>
+
                                                 <DataGrid.AlternatingRowBackground>
                                                     <ImageBrush/>
                                                 </DataGrid.AlternatingRowBackground>
@@ -3458,7 +3486,8 @@
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="1-1" TextAlignment="Center"/>
@@ -3483,8 +3512,22 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <!-- 変動モード用: Δ1-1 (= AxialForceLevel1s[0] - VL) -->
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[0], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ1-1" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[1], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="1-2" TextAlignment="Center"/>
@@ -3509,8 +3552,21 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[1], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ1-2" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[2], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="1-3" TextAlignment="Center"/>
@@ -3535,8 +3591,21 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[2], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ1-3" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel1s[3], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="1-4" TextAlignment="Center"/>
@@ -3561,8 +3630,21 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel1s[3], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ1-4" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource CrimsonHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="2-1" TextAlignment="Center"/>
@@ -3587,8 +3669,21 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[0], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ2-1" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[1], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource CrimsonHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="2-2" TextAlignment="Center"/>
@@ -3613,8 +3708,21 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[1], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ2-2" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[2], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource CrimsonHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="2-3" TextAlignment="Center"/>
@@ -3639,8 +3747,21 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[2], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ2-3" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="*" Binding="{Binding AxialForceLevel2s[3], StringFormat=N1}" MinWidth="50"
-                                                                        HeaderStyle="{StaticResource CrimsonHeaderStyle}">
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="2-4" TextAlignment="Center"/>
@@ -3663,6 +3784,18 @@
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </DataGridTextColumn.ElementStyle>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="*" Binding="{Binding AxialForceVariationLevel2s[3], StringFormat=N1}" MinWidth="50"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel>
+                                                                <TextBlock Text="Δ2-4" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
                                                     <DataGridTextColumn Width="*" Binding="{Binding SoilPile.R_SLS, StringFormat=N1}"
@@ -3726,7 +3859,7 @@
 
                                                     <DataGridTextColumn Width="*" Binding="{Binding SoilPile.R_ULS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
-                                                        Foreground="Gray" HeaderStyle="{StaticResource CrimsonHeaderStyle}">
+                                                        Foreground="Gray" HeaderStyle="{StaticResource PaleRedHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock TextAlignment="Center">
@@ -3741,7 +3874,7 @@
 
                                                     <DataGridTextColumn Width="*" Binding="{Binding SoilPile.Rt_ULS, StringFormat=N1}"
                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}" MinWidth="50" IsReadOnly="True"
-                                                        Foreground="Gray" HeaderStyle="{StaticResource CrimsonHeaderStyle}">
+                                                        Foreground="Gray" HeaderStyle="{StaticResource PaleRedHeaderStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock TextAlignment="Center">

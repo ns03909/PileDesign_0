@@ -17,7 +17,7 @@ namespace PileDesign.Output
             string text = mainWindowViewModel.LastAnalysisSummaryText;
             if (string.IsNullOrWhiteSpace(text))
             {
-                AddText(body, "（水平解析サマリーレポートは未生成。F9 で水平解析を実行後に出力してください）", "left");
+                AddText(body, "（水平解析サマリーレポートは未生成。F5 で水平解析を実行後に出力してください）", "left");
                 return;
             }
 

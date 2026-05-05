@@ -1,6 +1,7 @@
 ﻿using PileDesign.ViewModels;
 using System;
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
 using System.Windows.Media.Media3D;
 
 namespace PileDesign.Models.InputData
@@ -9,6 +10,9 @@ namespace PileDesign.Models.InputData
     {
         // MainWindowViewModelはデシリアライズ後にセットする
         private MainWindowViewModel? _mainWindowViewModel;
+        // [JsonIgnore]: InputModel への back-reference は循環参照を生むため JSON シリアライズ対象外
+        // (InputModel → LoadCasesInput → LoadCases[] → LoadCase → InputModel の循環)
+        [JsonIgnore]
         public InputModel? InputModel => _mainWindowViewModel?.CurrentInputModel;
 
         // プロパティ

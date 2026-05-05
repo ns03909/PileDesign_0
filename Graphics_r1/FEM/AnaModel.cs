@@ -152,6 +152,17 @@ namespace PileDesign.FEM
             HorizontalSoilSprings = horizontalSoilSprings; // 水平地盤ばねリスト
             RotationalSprings = rotationalSprings;
 
+            BuildDofsAndChains();
+        }
+
+        /// <summary>
+        /// Nodes の Boundary / MasterNodes に基づき、方程式番号の付け直し・F/DF/D ベクトル
+        /// 再確保・Master-Slave チェーン (ResolvedDofMap) の再計算を行う。
+        /// コンストラクタから呼ばれるほか、ケース別に杭頭の master-slave を変更した後の
+        /// 再構築用 (ApplyAxialReleaseAtPileHeads から呼ばれる) としても利用する。
+        /// </summary>
+        public void BuildDofsAndChains()
+        {
             int countFree = 0;
             int countFix = 0;
             var dofForcedDispList = new List<bool>();
@@ -196,6 +207,52 @@ namespace PileDesign.FEM
 
             // Master-Slave チェーン解決: 各ノードの ResolvedDofMap を計算
             ResolveConstraintChains();
+        }
+
+        /// <summary>
+        /// 指定杭の杭頭 Node について、master-slave 関係 (Uz) を解放し、Boundary Uz を free に
+        /// した上で BuildDofsAndChains を再実行する。引張定着筋なし半剛接合 (キャプテン/F.T.Pile/
+        /// キャプリング) で軸力が引張となるケースで「軸剛性 0」を解析的に成立させるために使用。
+        ///
+        /// 前提: caseModel (DeepCopy 済の case-local モデル) に対してのみ呼び出すこと。元モデルや
+        /// 他ケースのモデルを汚染しないよう、呼び出し元はケース内で完結したインスタンスを渡すこと。
+        ///
+        /// 副作用: 方程式数 (CountFree) が変わる場合があるため、VectorD/VectorDD/VectorT/VectorR は
+        /// 再初期化される。すでに解析済の状態は破棄されるため、本メソッドはケース解析開始前に呼ぶ。
+        /// </summary>
+        public void ApplyAxialReleaseAtPileHeads(IEnumerable<int> pileNosToRelease)
+        {
+            if (pileNosToRelease == null) return;
+            var pileNoSet = new HashSet<int>(pileNosToRelease);
+            if (pileNoSet.Count == 0) return;
+
+            int releasedCount = 0;
+            foreach (var pileNo in pileNoSet)
+            {
+                var pileHeadNode = Nodes.FirstOrDefault(n => n.Name == $"杭節点-{pileNo}-0");
+                if (pileHeadNode == null) continue;
+
+                // Uz の master-slave を解放 (PileNode.Uz → CapNode.Uz の連鎖を切る)
+                pileHeadNode.SetMasterNode((int)Dof.Uz, null);
+
+                // Uz の境界条件を free にする (新たに方程式番号を付与するため)
+                if (pileHeadNode.Boundary != null)
+                    pileHeadNode.Boundary.Uz = false;
+
+                // SlaveArm の Uz 寄与もリセット (cross-term 防止)
+                // ※ 他の DOF (Ux/Uy 等) の SlaveArm は他のチェーンで参照されているため触らない
+                releasedCount++;
+            }
+
+            if (releasedCount == 0) return;
+
+            // 方程式番号 + ResolvedDofMap を再構築 (内部で F/DF/D ベクトルも再確保)
+            BuildDofsAndChains();
+
+            // ステップ間で再利用される他のベクトル/状態も無効化 (サイズが変わった可能性)
+            VectorDD = null;
+            VectorT = null;
+            VectorR = null;
         }
 
         // コンストラクタ

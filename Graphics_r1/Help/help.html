@@ -1577,9 +1577,9 @@
                 マニュアル全体を読まずに目的の章節を素早く見つけたい初心者ユーザー向けの機能です。
             </p>
 
-            <h4>解析実行の前提条件チェック (F9 灰色化)</h4>
+            <h4>解析実行の前提条件チェック (F5 灰色化)</h4>
             <p>
-                <strong>F9 解析実行</strong> ボタンは、杭配置・荷重ケース・荷重組合せのいずれかが未入力の場合に
+                <strong>F5 解析実行</strong> ボタンは、杭配置・荷重ケース・荷重組合せのいずれかが未入力の場合に
                 自動的に灰色化（非活性化）されます。マウスを重ねると ToolTip で不足項目が表示されるため、
                 何が足りないかを確認できます。<br>
                 <strong>基礎梁考慮沈下解析</strong> ボタンも同様に、杭配置 ＋ 基礎梁定義 ＋ 単杭沈下解析の完了を満たした場合のみ活性化されます。
@@ -3672,7 +3672,7 @@
             </ul>
             <p><strong>タブ外（常時表示、ウィンドウ下部）:</strong></p>
             <ul>
-                <li><strong>■ 実行</strong>: 「水平解析実行 (F9)」「追加実行 (Ctrl+F9)」「水平解析キャンセル (Esc)」、サマリーコピー / CSV 出力</li>
+                <li><strong>■ 実行</strong>: 「水平解析実行 (F5)」「追加実行 (Ctrl+F5)」「水平解析キャンセル (Esc)」、サマリーコピー / CSV 出力</li>
             </ul>
             <p>解析完了後: ボタンラベルに「<span style="color:#2E7D32; font-weight:bold;">✓</span>」（緑色）が表示されます。</p>
 
@@ -3683,9 +3683,9 @@
             </p>
             <p><strong>使い方:</strong></p>
             <ol>
-                <li>通常通り「水平解析実行 (F9)」で初回の解析を実行（例: U1 のみ選択して計算）</li>
+                <li>通常通り「水平解析実行 (F5)」で初回の解析を実行（例: U1 のみ選択して計算）</li>
                 <li>追加で確認したいケース（例: U2）にチェックを入れる</li>
-                <li>「追加実行 (Ctrl+F9)」を押す → 既存の U1 はスキップされ U2 のみが計算される</li>
+                <li>「追加実行 (Ctrl+F5)」を押す → 既存の U1 はスキップされ U2 のみが計算される</li>
             </ol>
             <p><strong>制約:</strong></p>
             <ul>
@@ -8539,6 +8539,19 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
             </div>
         </div>
 
+        <h4>ケース①′ 引張定着筋なし × 軸力引張 (NG ケース)</h4>
+        <p>
+            引張定着筋を配置せず、かつ軸力 $N$ が引張側 ($N \lt 0$) の場合、杭頭は引張力に抵抗できません。
+            このとき M-θ 関係は $M_u = 0$ となり、$\theta$ によらず $M = 0$ に縮退します
+            (曲げ剛性 0)。さらに、解析中は当該杭頭の <strong>軸方向 (Uz) 並進拘束も解放</strong> します
+            (軸剛性 0)。FEM レベルでの実装の詳細は <a href="#tension-axial-release">「引張軸力時の杭頭軸剛性解放」</a> を参照してください。
+        </p>
+        <div class="formula-block">
+            <div class="formula-left">
+                $$K_i = K_e \quad\text{(形式上)},\qquad M_u = 0$$
+            </div>
+        </div>
+
         <h4>ケース② 引張定着筋あり × 軸力圧縮</h4>
         <p>
             軸力 $N$ による圧着に加え、引張定着筋による曲げ抵抗 $M_r$ が加算されます。
@@ -8871,6 +8884,82 @@ iter  3  ω=0.50  ‖R‖²=1.06E+003>1.0E-05  max|δu|=4.44E-04  K=[1.0E+06,1.4
                 <li>剛床連結・剛体連結：慣性力作用点をマスターとする master-slave 拘束（直接自由度縮退）</li>
                 <li>同位置 CapNode↔ConnectionNode：ペナルティばね（$K_{big}=10^8$）またはRigidLinkビーム</li>
             </ul>
+
+            <h3 id="tension-axial-release">引張軸力時の杭頭軸剛性解放 (引張定着筋なし半剛接合)</h3>
+
+            <h4>適用条件</h4>
+            <p>
+                以下のすべてを満たす杭・荷重ケースに対して、解析中に <strong>杭頭の軸方向 (Uz) 自由度の解放</strong> を行います。
+            </p>
+            <ol>
+                <li>杭頭工法が <strong>キャプテンパイル工法 / F.T.Pile 構法 / キャプリングパイル工法</strong> のいずれか</li>
+                <li>当該工法で <strong>引張定着筋を配置していない</strong> (CapringPile.HasTensionBars / CTPTensionRebars.HasTensionRebars / FTPileTensionBars.IsTensionType がいずれも false)</li>
+                <li>当該荷重ケースの <strong>入力軸力</strong> (常時 + L1/L2 地震時、$kN$、圧縮を正) が <strong>引張</strong> ($N \lt 0$)</li>
+            </ol>
+            <p>
+                判定は荷重ケース解析開始前 (case-local AnaModel 構築直後) に <strong>1 回のみ</strong> 行います。「杭軸力モード」が
+                「入力値 + 応力解析結果」のケースであっても、判定根拠は入力軸力 (case 別) であり、ステップ別の動的切替は行いません
+                (反復中の方程式番号再構築コストを避けるため。詳細は後述「実装上の制約」)。
+            </p>
+
+            <h4>FEM モデル上の処置</h4>
+            <p>
+                通常、本プログラムでは杭頭ノード (PileNode-0) と杭頭キャップノード (CapNode) の間で、軸方向 (Uz) を
+                <strong>master-slave 連鎖</strong> (PileNode.Uz → CapNode.Uz → ActionPoint.Uz) により厳密拘束しています。
+                これにより圧縮軸力は杭頭ペナルティを介さず鉛直力として上部構造へ厳密に伝達されます。
+            </p>
+            <p>
+                上記「適用条件」を満たすケースでは、当該杭の case-local モデル (DeepCopy 後) に対して以下の処置を行います。
+            </p>
+            <ol>
+                <li>
+                    PileNode-0 の <strong>$\mathit{MasterNodes}[\text{Uz}]$ を null に設定</strong> し、master-slave 連鎖を切断する。
+                </li>
+                <li>
+                    PileNode-0 の <strong>境界条件</strong> $\mathit{Boundary}.\text{Uz} = \text{free}$ に変更する。これにより当該 DOF は新たに「自由」と扱われ、独立な方程式番号が付与される。
+                </li>
+                <li>
+                    case-local モデル全体で <strong>方程式番号の再付番</strong> ($\mathit{CountFree}$, $\mathit{CountFix}$, 各ノードの $\mathit{EquationNumber}$ 配列) を再計算する。
+                </li>
+                <li>
+                    解の格納ベクトル ($\mathbf{F}$, $\delta\mathbf{F}$, $\mathbf{d}$, $\delta\mathbf{d}$, $\mathbf{T}$, $\mathbf{R}$) を新サイズで再確保する。
+                </li>
+                <li>
+                    Master-slave チェーン解決 ($\mathit{ResolveConstraintChains}$) を再実行し、各ノードの $\mathit{ResolvedDofMap}$ を更新する。
+                </li>
+            </ol>
+            <p>
+                この処置により、杭頭から CapNode への <strong>軸方向の力伝達経路が完全に消滅</strong> し、杭頭は鉛直方向に自由となります。回転ばね (M-θ) 側は同時に $M_u = 0$ となるため、杭頭は <strong>軸剛性 0、曲げ剛性 0</strong> の状態となり、水平 (Ux/Uy) と捩り (Rz) のみが拘束された「ピン接合 + 軸方向解放」相当の挙動を示します。なお Ux / Uy / Rz の master-slave 連鎖は変更しないため、上部構造の慣性力作用点との水平拘束は維持されます。
+            </p>
+
+            <h4>実装上の制約 (v1)</h4>
+            <ul>
+                <li>
+                    <strong>判定タイミング</strong>: 各ケース解析開始時に 1 回のみ。ステップ進行に伴い軸力が圧縮↔引張で反転しても解放状態は固定されます。
+                    動的切替には反復毎の方程式再構築 (DOF 番号再付番 + ベクトル再確保) が必要となり、計算コスト・収束性影響が大きいため対応していません。
+                </li>
+                <li>
+                    <strong>軸力モード「入力値 + 応力解析結果」</strong>: 解析結果由来の軸力増分 (Fxi 反転加算) は判定に反映されません。
+                    解析結果として圧縮判定だった杭でも、入力軸力が引張であれば解放されます (またその逆も)。
+                </li>
+                <li>
+                    <strong>解析結果の出力</strong>: 当該ケースの解析結果として、解放杭の杭頭軸力は $0$ となります (上部構造から伝達されないため)。
+                    沈下解析・基礎梁考慮鉛直解析の結果には影響しません (これらは別解析で軸力モードを使用しないため)。
+                </li>
+                <li>
+                    <strong>該当しない杭</strong>: 引張定着筋ありの場合、または鋼管杭でも引張定着筋を併用する場合は、本処置は適用されません。M-θ 関係 (ケース②/③) のみで引張軸力を扱います。
+                </li>
+            </ul>
+
+            <h4>該当ログ</h4>
+            <p>
+                ケース解析開始時、解放対象杭がある場合は計算ログに次の形式で記録されます。
+            </p>
+            <pre style="background:#f5f5f5;padding:8px;border:1px solid #ccc;font-family:Consolas,monospace;font-size:11px;">  L1-1[+++] 軸剛性 0 適用: 杭No.[3,7] (引張定着筋なし半剛接合 × 引張軸力 → 杭頭 Uz 解放)</pre>
+            <p>
+                またステップ進行中に解析軸力が引張に転じた場合は、警告として次の形式で 1 杭につき 1 回ログされます (Uz 解放処置自体は適用済かどうかに依らず記録)。
+            </p>
+            <pre style="background:#f5f5f5;padding:8px;border:1px solid #ccc;font-family:Consolas,monospace;font-size:11px;">  NG (引張軸力): 杭No.5 (キャプリングパイル工法, 引張定着筋なし) N=-25.3kN — 杭頭を「軸剛性 0、曲げ剛性 0」で解析 (L2-2[+−+] ステップ8/16)</pre>
 
             <h3>全体剛性マトリクスの組立</h3>
             <p>

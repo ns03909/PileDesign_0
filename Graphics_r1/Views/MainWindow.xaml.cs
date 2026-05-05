@@ -3237,7 +3237,16 @@ namespace PileDesign.Views
                 if (!vm.CheckAndResetElementSplit("杭軸力"))
                 {
                     e.Cancel = true;
+                    return;
                 }
+
+                // Phase A 改善: BeginningEdit を「セッション開始」ポイントとし、編集セッション中は
+                // 連続して延長する。これにより CellEditEnding → 次セル移動 (>500ms) で session timer が
+                // 切れる問題を回避し、編集中は常にデバウンスタイマーが新鮮に保たれる。
+                //
+                // ・初回編集 (session 不在) → SaveUndoStateDebounced が pre-edit snapshot を 1 回取得
+                // ・既セッション中 → snapshot は取らずタイマーだけ延長 (内部で early-return)
+                vm.SaveUndoStateDebounced("DataGridPileAxialForce_OnCellEditEnding");
             }
         }
 

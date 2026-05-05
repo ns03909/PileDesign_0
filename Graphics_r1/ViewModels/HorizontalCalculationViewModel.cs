@@ -2540,6 +2540,28 @@ namespace PileDesign.ViewModels
                             caseModel = targetModel.DeepCopy();
                         }
 
+                        // ── 軸剛性 0 (Uz 解放): 引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) で
+                        //    入力軸力が引張となる杭について、case-local モデルの杭頭 Uz master-slave を
+                        //    解放する。「軸剛性 0、曲げ剛性 0」(Mu=0 と併用) でピン接合的挙動を実現する。
+                        //    判定は入力軸力ベース (UseAnalysisAxialForce=true でも初期推定値で固定)。
+                        //    詳細は help.html「引張軸力時の杭頭軸剛性解放」を参照。
+                        var axialReleasePileNos = GetPileNosForAxialReleaseInCase(loadCase);
+                        if (axialReleasePileNos.Count > 0)
+                        {
+                            try
+                            {
+                                caseModel.ApplyAxialReleaseAtPileHeads(axialReleasePileNos);
+                                await AddLogAsync(
+                                    $"  {caseTag} 軸剛性 0 適用: 杭No.[{string.Join(",", axialReleasePileNos)}] " +
+                                    "(引張定着筋なし半剛接合 × 引張軸力 → 杭頭 Uz 解放)");
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning(ex, "[ApplyAxialReleaseAtPileHeads] 失敗: {CaseTag}", caseTag);
+                                await AddLogAsync($"  {caseTag} ⚠ 軸剛性 0 適用に失敗: {ex.Message}");
+                            }
+                        }
+
                         // v20: 荷重方向の事前検出 — counter-loading (逆方向組合せ) を検出し、
                         // 最初から小さな荷重ステップで実行することで失敗試行のムダを回避
                         //
@@ -2667,6 +2689,10 @@ namespace PileDesign.ViewModels
                             // v28 (2026-04-23): retry attempt でも計測し、改善ゲートで無効 retry を検出する。
                             int iterSumFirstSteps = 0;
 
+                            // 引張定着筋なし半剛接合杭で引張軸力 NG をログ済みの杭番号 (1 ケース内重複抑制)。
+                            // ローカル変数のため MDOP>1 並列でも安全。
+                            var loggedNgTensionPileNos = new HashSet<int>();
+
                             for (int step = 0; step < nStep; step++)
                         {
                             await Task.Yield(); // ここでUIスレッドを解放
@@ -2768,6 +2794,10 @@ namespace PileDesign.ViewModels
                             {
                                 UpdateAxialForceFromAnalysis(caseModel);
                             }
+
+                            // 引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) で軸力モードに応じた
+                            // 軸力が引張になった杭を NG としてログに残す (杭ごとに 1 ケース内 1 回のみ)
+                            await LogTensionForSemiRigidPilesAsync(caseModel, caseTag, step + 1, nStep, loggedNgTensionPileNos);
 
                             // 現ステップ軸力での M–φ 再解決は、杭非線形ONのときのみ
                             if (loadCase.IsPileNonLinear)
@@ -4248,6 +4278,101 @@ namespace PileDesign.ViewModels
             _logQueue.Enqueue($"[{timestamp}] {message}");
             StartLogTimerIfNeeded();
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 杭が「引張定着筋なし」の杭頭半剛接合工法 (キャプテン/F.T.Pile/キャプリング) を採用しているかを判定。
+        /// 該当する場合は工法名を返し、そうでなければ null を返す。引張軸力時に最大抵抗モーメント Mu = 0 と
+        /// なるため、入力軸力 / 解析軸力が引張に転じた場合に注意喚起すべきケースの判別に使用する。
+        /// </summary>
+        public static string? GetSemiRigidWithoutTensionBarPileTopName(PileBodyInput pileBody)
+        {
+            if (pileBody == null) return null;
+            var top = pileBody.PileTopType;
+            if (string.IsNullOrEmpty(top)) return null;
+            if (top.Contains("キャプテンパイル工法"))
+            {
+                bool has = pileBody.PileTop?.CaptainPile?.CTPTensionRebars?.HasTensionRebars ?? false;
+                return has ? null : "キャプテンパイル工法";
+            }
+            if (top.Contains("FT-Pile構法"))
+            {
+                bool has = pileBody.PileTop?.FTPile?.FTPileTensionBars?.IsTensionType ?? false;
+                return has ? null : "FT-Pile構法";
+            }
+            if (top.Contains("キャプリングパイル工法"))
+            {
+                bool has = pileBody.PileTop?.CapringPile?.HasTensionBars ?? false;
+                return has ? null : "キャプリングパイル工法";
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 当該荷重ケースで「引張定着筋なし半剛接合 (キャプテン/F.T.Pile/キャプリング) かつ
+        /// 入力軸力が引張」となる杭の番号一覧を返す。case-local モデルに対する Uz 軸剛性解放
+        /// (ApplyAxialReleaseAtPileHeads) の対象選定に使用する。
+        ///
+        /// 注: UseAnalysisAxialForce=true (入力 + 解析結果モード) であっても、判定は入力軸力
+        /// (常時 + L1/L2 地震時) のみを根拠とする。軸力モードに応じた解析中ステップ別動的解放は
+        /// 方程式番号の再構築が必要で実装コストが高いため v1 では非対応。
+        /// </summary>
+        private List<int> GetPileNosForAxialReleaseInCase(LoadCase loadCase)
+        {
+            var result = new List<int>();
+            if (InputModel?.PileLayoutItems == null || InputModel.PileBodies == null)
+                return result;
+            if (loadCase == null) return result;
+
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                int idx = pile.PileBodyNo - 1;
+                if (idx < 0 || idx >= InputModel.PileBodies.Count) continue;
+                var pileBody = InputModel.PileBodies[idx];
+                if (GetSemiRigidWithoutTensionBarPileTopName(pileBody) == null) continue;
+
+                // 当該ケースの入力軸力 (kN, 圧縮を正とする符号規約)
+                double n_kN;
+                try
+                {
+                    n_kN = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                }
+                catch
+                {
+                    n_kN = pile.AxialForceVL;
+                }
+                if (n_kN < 0) result.Add(pile.No);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 引張定着筋なしの半剛接合杭で軸力が引張になっている場合、NG として一度だけログに残す。
+        /// 1 ケース内で複数ステップにわたって引張が継続しても、各杭につき最初の発生のみを記録する。
+        /// </summary>
+        private async Task LogTensionForSemiRigidPilesAsync(
+            AnaModel caseModel, string caseTag, int stepDisplay, int nStepDisplay,
+            HashSet<int> loggedPileNos)
+        {
+            if (InputModel?.PileLayoutItems == null || InputModel.PileBodies == null) return;
+            foreach (var pile in InputModel.PileLayoutItems)
+            {
+                if (loggedPileNos.Contains(pile.No)) continue;
+                int idx = pile.PileBodyNo - 1;
+                if (idx < 0 || idx >= InputModel.PileBodies.Count) continue;
+                var pileBody = InputModel.PileBodies[idx];
+                var typeName = GetSemiRigidWithoutTensionBarPileTopName(pileBody);
+                if (typeName == null) continue;
+                double n_kN = caseModel.GetAxialForce(pile);
+                if (n_kN < 0)
+                {
+                    loggedPileNos.Add(pile.No);
+                    await AddLogAsync(
+                        $"  NG (引張軸力): 杭No.{pile.No} ({typeName}, 引張定着筋なし) " +
+                        $"N={n_kN:N1}kN — 杭頭を「軸剛性 0、曲げ剛性 0」で解析 " +
+                        $"({caseTag} ステップ{stepDisplay}/{nStepDisplay})");
+                }
+            }
         }
 
         // 荷重ベクトルの更新メソッド　F = F + dF 

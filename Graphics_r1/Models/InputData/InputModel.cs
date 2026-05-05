@@ -119,6 +119,15 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _useAnalysisAxialForce, value);
         }
 
+        // 地震時軸力 入力モード: false = 絶対 (AxialForceLevel1s/2s をそのまま編集)、true = 変動 (= 絶対 − VL を編集)
+        // ファイル別に永続化。モードフラグ自体は AxialForceModeContext (静的) に同期される。
+        private bool _isAxialForceVariationMode = false;
+        public bool IsAxialForceVariationMode
+        {
+            get => _isAxialForceVariationMode;
+            set => SetProperty(ref _isAxialForceVariationMode, value);
+        }
+
         // 一般節点
         private ObservableCollection<InputNode> _inputNodes;
         public ObservableCollection<InputNode> InputNodes
@@ -128,14 +137,19 @@ namespace PileDesign.Models.InputData
         }
 
         // クラス内フィールドに追加
+        [System.Text.Json.Serialization.JsonIgnore]
         private bool _suppressSoilPileNotify;
 
-        // Phase 1: SoilPile キャッシュ最適化
+        // Phase 1: SoilPile キャッシュ最適化 (ランタイム一時データ — シリアライズ対象外)
+        [System.Text.Json.Serialization.JsonIgnore]
         private Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = new();
+        [System.Text.Json.Serialization.JsonIgnore]
         private bool _soilPileCacheValid = false;
 
-        // Phase 2: デバウンス
+        // Phase 2: デバウンス (ランタイム制御 — シリアライズ対象外)
+        [System.Text.Json.Serialization.JsonIgnore]
         private System.Windows.Threading.DispatcherTimer? _regenerateDebounceTimer;
+        [System.Text.Json.Serialization.JsonIgnore]
         private bool _regeneratePending = false;
 
         /// <summary>
@@ -1638,7 +1652,18 @@ namespace PileDesign.Models.InputData
 
         public InputModel DeepCopy()
         {
-            // 解析結果（SoilPiles）を一時退避してシリアライズ対象から除外（OOM対策）
+            var swTotal = System.Diagnostics.Stopwatch.StartNew();
+
+            // Phase C 案 D-2: ハイブリッド手書き Clone。
+            // ・既存の手書き DeepCopy がある型はそれを使用 (LoadCasesInput, GroundInput, PileBodyInput, ...)
+            // ・PileLayoutItems は QuickClone (108 杭で 3ms)
+            // ・FundamentalInput は MemberwiseClone ベースの ShallowCopy (primitive のみのため OK)
+            // ・残り (ElementDivision, EmbedmentInput, FoundationBeamInput, InputNodes, Elements, Grids,
+            //   PileGroupSettlement) は per-item JSON で複製 — sub-tree 単位なら 1 件あたり 1〜数 ms
+            //
+            // 大きな InputModel 全体 1 回の JSON serialize (~200ms) を、各サブツリーへの分割で大幅高速化。
+            // 解析結果系 (SoilPiles) は ElementDivision 内で個別退避してシリアライズから除外。
+
             ObservableCollection<SoilPile> savedSoilPiles = null;
             try
             {
@@ -1648,15 +1673,70 @@ namespace PileDesign.Models.InputData
                     ElementDivision.SoilPiles = [];
                 }
 
-                return PileDesign.Common.DeepCopyUtil.CloneJson(this);
+                var copy = new InputModel
+                {
+                    UseAnalysisAxialForce = this.UseAnalysisAxialForce,
+                    IsAxialForceVariationMode = this.IsAxialForceVariationMode,
+                };
+
+                long tStart = swTotal.ElapsedMilliseconds;
+
+                // ── 既存の手書き DeepCopy を使う型 ──
+                copy.FundamentalInput = this.FundamentalInput?.ShallowCopy();
+                copy.LoadCasesInput = this.LoadCasesInput?.DeepCopy();
+                copy.PileBodies = this.PileBodies != null
+                    ? new ObservableCollection<PileBodyInput>(this.PileBodies.Select(p => p.DeepCopy()))
+                    : null;
+                copy.GroundsInput = this.GroundsInput != null
+                    ? new ObservableCollection<GroundInput>(this.GroundsInput.Select(g => g.DeepCopy()))
+                    : null;
+                long tHand = swTotal.ElapsedMilliseconds - tStart;
+
+                // ── PileLayoutItems は QuickClone (高速) ──
+                if (_pileLayoutItems != null)
+                {
+                    var clonedPli = new ObservableCollection<PileLayoutDataItem>();
+                    foreach (var pile in _pileLayoutItems)
+                        clonedPli.Add(pile.QuickClone());
+                    copy._pileLayoutItems = clonedPli;
+                }
+                long tQc = swTotal.ElapsedMilliseconds - tStart - tHand;
+
+                // ── DeepCopy 未実装型は per-item JSON でクローン ──
+                copy.ElementDivision = PileDesign.Common.DeepCopyUtil.CloneJson(this.ElementDivision);
+                copy.EmbedmentInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.EmbedmentInput);
+                copy.FoundationBeamInput = PileDesign.Common.DeepCopyUtil.CloneJson(this.FoundationBeamInput);
+                copy.PileGroupSettlement = PileDesign.Common.DeepCopyUtil.CloneJson(this.PileGroupSettlement);
+                if (this.InputNodes != null)
+                    copy.InputNodes = new ObservableCollection<InputNode>(
+                        this.InputNodes.Select(n => PileDesign.Common.DeepCopyUtil.CloneJson(n)!).Where(n => n != null));
+                if (this.Elements != null)
+                    copy.Elements = new ObservableCollection<Element>(
+                        this.Elements.Select(e => PileDesign.Common.DeepCopyUtil.CloneJson(e)!).Where(e => e != null));
+                if (this.GridXItems != null)
+                    copy.GridXItems = new ObservableCollection<GridDataItem>(
+                        this.GridXItems.Select(g => PileDesign.Common.DeepCopyUtil.CloneJson(g)!).Where(g => g != null));
+                if (this.GridYItems != null)
+                    copy.GridYItems = new ObservableCollection<GridDataItem>(
+                        this.GridYItems.Select(g => PileDesign.Common.DeepCopyUtil.CloneJson(g)!).Where(g => g != null));
+                long tJsonRest = swTotal.ElapsedMilliseconds - tStart - tHand - tQc;
+
+                // パフォーマンス監視用ログ (Verbose レベル: 通常は出力されない)。
+                // 大規模モデルで遅さが気になる場合は Serilog の MinimumLevel を Verbose に下げて確認。
+                Serilog.Log.Verbose(
+                    "InputModel.DeepCopy total={Total}ms (hand={Hand}, quickClone={Qc}, json-rest={Json}) piles={Piles}",
+                    swTotal.ElapsedMilliseconds, tHand, tQc, tJsonRest, _pileLayoutItems?.Count ?? 0);
+
+                return copy;
             }
             finally
             {
-                // 退避したSoilPilesを復元
+                // 退避した SoilPiles を復元
                 if (savedSoilPiles != null && ElementDivision != null)
                 {
                     ElementDivision.SoilPiles = savedSoilPiles;
                 }
+                swTotal.Stop();
             }
         }
 
